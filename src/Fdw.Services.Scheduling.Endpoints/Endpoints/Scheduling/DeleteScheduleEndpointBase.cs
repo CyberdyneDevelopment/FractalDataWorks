@@ -1,6 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Etl.Thresholds;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Services.Scheduling.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -16,11 +18,14 @@ public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBa
     where TConfig : class, IScheduleImplementationConfiguration
 {
     private readonly ScheduleConfigurationProvider _provider;
+    private readonly WaitThresholdOwnerRelease _release;
 
     /// <inheritdoc />
-    protected DeleteScheduleEndpointBase(ILogger<DeleteScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider) : base(logger)
+    protected DeleteScheduleEndpointBase(
+        ILogger<DeleteScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
     {
         _provider = provider;
+        _release = new WaitThresholdOwnerRelease(gateways, logger);
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -44,6 +49,13 @@ public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBa
         if (existing is null)
         {
             return GenericResult.Success();
+        }
+
+        // The schedule's own level of thresholds on waiting runs goes with it (FDW-3271).
+        var released = await _release.ReleaseSchedule(request.Name, ct).ConfigureAwait(false);
+        if (released.IsFailure)
+        {
+            return released;
         }
 
         var deleteResult = await _provider.Delete(existing.Id, ct).ConfigureAwait(false);

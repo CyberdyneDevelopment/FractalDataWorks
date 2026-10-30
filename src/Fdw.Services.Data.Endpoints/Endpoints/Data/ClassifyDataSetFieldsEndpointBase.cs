@@ -87,7 +87,7 @@ public abstract class ClassifyDataSetFieldsEndpointBase
         foreach (var field in fields.Value!)
             field.ClassificationId = request.ClassificationId;
 
-        var saved = await _dataSetProvider.Save(current, "DataSet", current.Implementation, current.Name, ct).ConfigureAwait(false);
+        var saved = await _dataSetProvider.Update(current, "DataSet", current.Implementation, current.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (field, classificationId) in previous)

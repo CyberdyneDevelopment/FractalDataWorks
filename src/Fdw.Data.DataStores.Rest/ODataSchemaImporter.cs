@@ -14,6 +14,7 @@ using Fdw.Data.SchemaImporters.Abstractions.Configuration;
 using Fdw.Results;
 using Fdw.Services.Connections;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.DataStores.Rest;
 
@@ -22,7 +23,7 @@ namespace Fdw.Data.DataStores.Rest;
 /// Returns a discovered <see cref="DataStoreImplementationConfiguration"/> with HttpPath rows containing
 /// one Endpoint container per EntitySet.
 /// </summary>
-[TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "OData", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "OData")]
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
 public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfiguration>, ISchemaImporter<RestConfiguration>
 {
@@ -34,16 +35,25 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
     private static readonly XNamespace EdmNamespaceV3 = "http://schemas.microsoft.com/ado/2009/11/edm";
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ODataSchemaImporter"/> class without a logger. The
+    /// registration module initializer builds registered options through this constructor.
+    /// </summary>
+    public ODataSchemaImporter()
+        : this(null)
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ODataSchemaImporter"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
-    public ODataSchemaImporter(ILogger<ODataSchemaImporter> logger)
+    public ODataSchemaImporter(ILogger<ODataSchemaImporter>? logger)
         : base(
             name: "OData",
             description: "Imports schema from OData $metadata endpoints",
             dataStoreType: "Rest")
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger ?? NullLogger<ODataSchemaImporter>.Instance;
     }
 
     #region ISchemaImporter Implementation
@@ -78,7 +88,11 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
                 return parseResult.ToNewResult<DataStoreImplementationConfiguration>();
 
             var edmx = parseResult.Value!;
-            var edmNamespace = DetectEdmNamespace(edmx);
+            var namespaceResult = DetectEdmNamespace(edmx);
+            if (!namespaceResult.IsSuccess)
+                return namespaceResult.ToNewResult<DataStoreImplementationConfiguration>();
+
+            var edmNamespace = namespaceResult.Value!;
             var serviceName = edmx.Descendants(edmNamespace + "EntityContainer")
                 .FirstOrDefault()?.Attribute("Name")?.Value ?? "OData Service";
 
@@ -87,26 +101,11 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
                 Name = serviceName,
             };
 
-            var totalEntitySets = 0;
-            foreach (var pathResult in ParseEntitySets(edmx, edmNamespace, baseUrl, options))
-            {
-                if (!pathResult.IsSuccess)
-                {
-                    return pathResult.ToNewResult<DataStoreImplementationConfiguration>();
-                }
+            var entitySetsResult = ImportEntitySets(edmx, edmNamespace, baseUrl, dataStore, options);
+            if (!entitySetsResult.IsSuccess)
+                return entitySetsResult.ToNewResult<DataStoreImplementationConfiguration>();
 
-                if (pathResult.Value is { } path)
-                {
-                    dataStore.Paths.Add(path);
-                    totalEntitySets++;
-                }
-                else
-                {
-                    RestImporterLogger.ODataEntitySetSkipped(_logger, pathResult.CurrentMessage ?? string.Empty);
-                }
-            }
-
-            RestImporterLogger.ODataImportCompleted(_logger, serviceName, totalEntitySets);
+            RestImporterLogger.ODataImportCompleted(_logger, serviceName, entitySetsResult.Value);
 
             return GenericResult<DataStoreImplementationConfiguration>.Success(dataStore);
         }
@@ -115,6 +114,35 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
             return GenericResult<DataStoreImplementationConfiguration>.Failure(
                 RestImporterLogger.ODataImportFailed(_logger, ex));
         }
+    }
+
+    private IGenericResult<int> ImportEntitySets(
+        XDocument edmx,
+        XNamespace edmNamespace,
+        string baseUrl,
+        DataStoreImplementationConfiguration dataStore,
+        SchemaImporterOptions? options)
+    {
+        var totalEntitySets = 0;
+        foreach (var pathResult in ParseEntitySets(edmx, edmNamespace, baseUrl, options))
+        {
+            if (!pathResult.IsSuccess)
+            {
+                return pathResult.ToNewResult<int>();
+            }
+
+            if (pathResult.Value is { } path)
+            {
+                dataStore.Paths.Add(path);
+                totalEntitySets++;
+            }
+            else
+            {
+                RestImporterLogger.ODataEntitySetSkipped(_logger, pathResult.CurrentMessage ?? string.Empty);
+            }
+        }
+
+        return GenericResult<int>.Success(totalEntitySets);
     }
 
     private static (string BaseUrl, string MetadataUrl) NormalizeMetadataUrl(string source)
@@ -369,18 +397,18 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
         }
     }
 
-    private static XNamespace DetectEdmNamespace(XDocument edmx)
+    private static IGenericResult<XNamespace> DetectEdmNamespace(XDocument edmx)
     {
         // Try v4 first
         if (edmx.Descendants(EdmNamespaceV4 + "EntityType").Any())
-            return EdmNamespaceV4;
+            return GenericResult<XNamespace>.Success(EdmNamespaceV4);
 
-        // Fallback to v3
+        // Then v3
         if (edmx.Descendants(EdmNamespaceV3 + "EntityType").Any())
-            return EdmNamespaceV3;
+            return GenericResult<XNamespace>.Success(EdmNamespaceV3);
 
-        // Default to v4
-        return EdmNamespaceV4;
+        // No EntityType in either namespace: there is no schema to import
+        return GenericResult<XNamespace>.Failure(RestDataStoreResultCodes.ByName("ODataNoEntityTypes"));
     }
 
     private static bool ShouldExclude(string containerName, SchemaImporterOptions? options)

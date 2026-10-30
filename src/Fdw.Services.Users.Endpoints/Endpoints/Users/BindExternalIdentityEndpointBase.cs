@@ -9,6 +9,7 @@ using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.ExternalIdentityProviders.Binding;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -121,13 +122,12 @@ public abstract class BindExternalIdentityEndpointBase : Endpoint<BindExternalId
         }
 
         var row = ExternalIdentityRow.For(user.Id, req.Issuer, req.Subject, req.InvitedEmail);
-        var saveResult = await _externalIdentities.Save(row, ExternalIdentityDomain, ExternalIdentityDomain, row.Name, ct)
+        var saveResult = await _externalIdentities.Create(row, ExternalIdentityDomain, ExternalIdentityDomain, row.Name, ct)
             .ConfigureAwait(false);
 
         if (!saveResult.IsSuccess)
         {
-            AddError("The external identity could not be bound.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saveResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 

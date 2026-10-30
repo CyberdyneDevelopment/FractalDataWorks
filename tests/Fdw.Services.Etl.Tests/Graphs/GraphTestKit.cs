@@ -59,7 +59,7 @@ internal static class GraphTestKit
     /// </summary>
     public static GraphPipelineConfiguration Steps(params object[] parts)
     {
-        var graph = new GraphPipelineConfiguration { Name = "Sample", LinkCapacity = 2, IsEnabled = true };
+        var graph = new GraphPipelineConfiguration { Name = "Sample", LinkCapacity = 2, MaxParallelRuns = 1, OverflowBehavior = "Queue", IsEnabled = true };
         foreach (var listed in parts)
         {
             var part = listed switch
@@ -179,6 +179,10 @@ internal static class GraphTestKit
     /// <summary>What a run builds with when its data gateway is the one given.</summary>
     public static FlowBuildContext ContextOn(GraphPipelineConfiguration graph, IDataGateway dataGateway) =>
         Context(graph, dataGateway, null, null, null, null);
+
+    /// <summary>What a run builds with when its data gateway is the one given and it was started with the parameters given.</summary>
+    public static FlowBuildContext ContextOn(GraphPipelineConfiguration graph, IDataGateway dataGateway, IReadOnlyDictionary<string, object?> parameters) =>
+        Context(graph, dataGateway, null, null, null, parameters);
 
     private static FlowBuildContext Context(
         GraphPipelineConfiguration graph, IDataGateway dataGateway, IEtlGateway? etlGateway, IRuleNotifier? notifier = null, GraphTestRun? test = null,

@@ -18,6 +18,10 @@ public sealed class DataSetDestinationComponentType : ComponentTypeBase
         [],
         [
             new StageMember("dataSet", "DataSet", true, "The data set to load.", TakesParameterText: true),
+            new StageMember("targetKind", "TargetKinds", false, "What the destination writes: DataSet (the container of the data set), File (one file, named by physicalName) or Files (one file for each value of splitField); none writes as before."),
+            new StageMember("physicalPath", "Text", false, "For the File and Files kinds: the path to write at in place of the declared container's.", TakesParameterText: true, ReadsWhenStepRuns: true),
+            new StageMember("physicalName", "Text", false, "For the File kind: the name (the file) to write in place of the declared container's.", TakesParameterText: true, ReadsWhenStepRuns: true),
+            new StageMember("splitField", "Text", false, "For the Files kind: the field whose value names the file each row goes to; one file is written for each value, and each holds only that value's rows."),
             new StageMember("loadKind", "LoadStepKinds", true, "How a batch is written: insert, upsert and the others a load step can be."),
             new StageMember("truncateFirst", "Boolean", true, "Whether the target is emptied once, before the first batch is written."),
             new StageMember("keyColumns", "ColumnList", false, "The destination columns that match a row; the load kind says whether it needs them."),

@@ -43,6 +43,30 @@ public static partial class UserEndpointLog
         Exception exception,
         string userId);
 
+    /// <summary>Refuses a colour mode that is not one of the three a person can choose.</summary>
+    [MessageLogging(EventId = 21040, Level = LogLevel.Warning,
+        Message = "Colour mode '{colorMode}' was refused: it is not light, dark or system",
+        ClientMessage = "colorMode must be light, dark or system; '{colorMode}' is not one of them")]
+    public static partial IGenericMessage ColorModeNotOffered(ILogger logger, string colorMode);
+
+    /// <summary>Refuses an update that states a colour mode and a dark mode flag that mean different things.</summary>
+    [MessageLogging(EventId = 21041, Level = LogLevel.Warning,
+        Message = "Colour mode '{colorMode}' was refused: darkMode {darkMode} states the opposite",
+        ClientMessage = "colorMode '{colorMode}' and darkMode {darkMode} disagree; send one of them, or darkMode true only with colorMode dark")]
+    public static partial IGenericMessage ColorModeAndDarkModeDisagree(ILogger logger, string colorMode, bool darkMode);
+
+    /// <summary>Refuses a time zone the server cannot resolve.</summary>
+    [MessageLogging(EventId = 21042, Level = LogLevel.Warning,
+        Message = "Time zone '{timeZoneId}' was refused: the server does not know it",
+        ClientMessage = "timezone '{timeZoneId}' is not a time zone this server knows; send an id such as America/Chicago or UTC")]
+    public static partial IGenericMessage TimeZoneNotKnown(ILogger logger, string timeZoneId);
+
+    /// <summary>Refuses an empty time zone.</summary>
+    [MessageLogging(EventId = 21043, Level = LogLevel.Warning,
+        Message = "An empty time zone was refused",
+        ClientMessage = "timezone is empty; leave it out to keep the stored one, or send an id such as America/Chicago or UTC")]
+    public static partial IGenericMessage TimeZoneEmpty(ILogger logger);
+
     /// <summary>
     /// Logs when the user store could not be read at all.
     /// </summary>

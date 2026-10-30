@@ -10,7 +10,4 @@ public sealed class SecretManagerSummaryResponse
 
     /// <summary>Gets or sets the secret manager type.</summary>
     public string? SecretManagerType { get; set; }
-
-    /// <summary>Gets or sets the description.</summary>
-    public string? Description { get; set; }
 }

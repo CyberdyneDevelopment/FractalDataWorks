@@ -29,6 +29,11 @@ public static class GraphPayloadWriter
             IsEnabled = graph.IsEnabled,
             LinkCapacity = graph.LinkCapacity,
             RequireApprovalToRun = graph.RequireApprovalToRun,
+            MaxParallelRuns = graph.MaxParallelRuns,
+            OverflowBehavior = graph.OverflowBehavior,
+            DelayedStartSeconds = graph.DelayedStartSeconds,
+            DelayedStartTimeOfDay = graph.DelayedStartTimeOfDay,
+            DelayedStartTimeZoneId = graph.DelayedStartTimeZoneId,
             Variables = [.. graph.Variables.Select(variable => new GraphVariablePayload
             {
                 Name = variable.Name, DataType = variable.DataType, Value = variable.ValueText,

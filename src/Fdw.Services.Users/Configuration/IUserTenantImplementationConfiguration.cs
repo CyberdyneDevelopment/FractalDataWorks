@@ -18,6 +18,9 @@ public interface IUserTenantImplementationConfiguration : IImplementationConfigu
     /// <summary>Gets or sets the UserTenants IsDefault.</summary>
     bool IsDefault { get; set; }
 
+    /// <summary>Gets or sets the department the person lands in when they sign in to this tenant; none when they have marked none (FDW-2938).</summary>
+    Guid? DefaultOrganizationId { get; set; }
+
     /// <summary>Gets or sets the UserTenants IsCurrent.</summary>
     bool IsCurrent { get; set; }
 

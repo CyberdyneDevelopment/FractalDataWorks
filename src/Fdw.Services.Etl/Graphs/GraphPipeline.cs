@@ -192,7 +192,7 @@ public sealed class GraphPipeline : EtlPipelineBase
             return notifiable;
         }
 
-        return await RunSteps(options, result, _dataGateways, RunOptions(), cancellationToken).ConfigureAwait(false);
+        return await RunSteps(options, result, _dataGateways, RunOptions(options), cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IGenericResult> RunSteps(
@@ -250,7 +250,8 @@ public sealed class GraphPipeline : EtlPipelineBase
             _runStarter?.Invoke(),
             identity,
             ReporterOf(options),
-            null);
+            null,
+            options.PauseGate);
         var ran = await pipeline.Value.Run(stepContext, cancellationToken).ConfigureAwait(false);
         if (ran.IsFailure)
         {
@@ -273,7 +274,7 @@ public sealed class GraphPipeline : EtlPipelineBase
     }
 
     // The run's counts of rejected rows need no setting: they hold no row (FDW-1720), so there is no limit to state.
-    private FlowRunOptions RunOptions() => new() { LinkCapacity = _configuration.LinkCapacity };
+    private FlowRunOptions RunOptions(PipelineExecutionOptions options) => new() { LinkCapacity = _configuration.LinkCapacity, PauseGate = options.PauseGate };
 
     // Why before anything moves: a Built transformation or a chain of named transformations that no longer resolves must fail the run
     // naming it, not be found halfway through the data.

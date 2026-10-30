@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -17,4 +18,11 @@ public sealed class ScalarCalculationInputKind : CalculationInputKindBase
         : base(name: "Scalar")
     {
     }
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<CalculationSetting> Settings { get; } =
+    [
+        new CalculationSetting("scalarValueType", "ScalarValueTypes", true, "The type of the value"),
+        new CalculationSetting("scalarSerializedValue", "Text", true, "The value, written as text in the type's form", AllowsEmpty: true),
+    ];
 }

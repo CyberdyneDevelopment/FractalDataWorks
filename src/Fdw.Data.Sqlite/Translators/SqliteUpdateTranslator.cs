@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Rows;
 using Fdw.Data.Sqlite.Logging;
 using Fdw.Data.Sqlite.Results;
 using Fdw.Data.Sqlite.Translators;
@@ -106,10 +107,8 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
         if (updateFields.Count == 0)
             throw new InvalidOperationException($"Container {container.Name} has no updatable fields");
 
-        var dataType = data.GetType();
-        var fieldNames = updateFields.Select(f => f.Name)
-            .Where(f => dataType.GetProperty(f) != null)
-            .ToList();
+        var settable = SettableFields(updateFields, data);
+        var fieldNames = settable.Select(s => s.Name).ToList();
 
         if (fieldNames.Count == 0)
             throw new InvalidOperationException($"Data object has no properties matching updatable fields for container {container.Name}");
@@ -120,12 +119,8 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
 
         var command = CreateCommand(sql);
 
-        foreach (var fieldName in fieldNames)
-        {
-            var property = dataType.GetProperty(fieldName);
-            if (property != null)
-                AddParameter(command, $"set_{fieldName}", property.GetValue(data));
-        }
+        foreach (var (name, value) in settable)
+            AddParameter(command, $"set_{name}", value);
 
         if (filter?.Root != null)
         {
@@ -139,23 +134,38 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
             if (pkField == null)
                 throw new InvalidOperationException($"Container {container.Name} has no primary key and no filter provided");
 
-            var pkProperty = dataType.GetProperty(pkField.Name);
-            if (pkProperty != null)
-            {
-                var pkValue = pkProperty.GetValue(data);
-                if (pkValue == null)
-                    return GenericResult<SqliteCommand>.Failure(
-                        SqliteDataResultCodes.ByName("NullPrimaryKeyValue"),
-                        ResultDetails.Create("PrimaryKeyField", pkField.Name));
+            // No filter and no key in the record names no rows; an UPDATE without a WHERE writes every row, so it is refused.
+            if (!RowValues.TryRead(data, pkField.Name, out var pkValue, out _))
+                return GenericResult<SqliteCommand>.Failure(
+                    SqliteDataResultCodes.ByName("MissingPrimaryKeyValue"),
+                    ResultDetails.Create("Container", container.Name, "PrimaryKeyField", pkField.Name));
 
-                AddParameter(command, "where_pk", pkValue);
-                command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {prefix}where_pk";
-            }
+            if (pkValue == null)
+                return GenericResult<SqliteCommand>.Failure(
+                    SqliteDataResultCodes.ByName("NullPrimaryKeyValue"),
+                    ResultDetails.Create("PrimaryKeyField", pkField.Name));
+
+            AddParameter(command, "where_pk", pkValue);
+            command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {prefix}where_pk";
         }
 
         if (returned.Count > 0)
             command.CommandText += $" RETURNING {string.Join(", ", returned.Select(c => dialect.QuoteIdentifier(c)))}";
 
         return GenericResult<SqliteCommand>.Success(command);
+    }
+
+    // Only the fields the record has, in the schema's order. The record is read the one way every route reads it (RowValues), so a dictionary record, which is what a
+    // pipeline's Update load carries, sets its columns as an entity record does.
+    private static List<(string Name, object? Value)> SettableFields(IEnumerable<IField> updateFields, object data)
+    {
+        var settable = new List<(string Name, object? Value)>();
+        foreach (var field in updateFields)
+        {
+            if (RowValues.TryRead(data, field.Name, out var value, out _))
+                settable.Add((field.Name, value));
+        }
+
+        return settable;
     }
 }

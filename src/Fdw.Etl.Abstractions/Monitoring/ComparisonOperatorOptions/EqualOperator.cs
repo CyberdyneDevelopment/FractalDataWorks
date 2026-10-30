@@ -8,7 +8,7 @@ namespace Fdw.Etl.Abstractions.Monitoring.ComparisonOperatorOptions;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(ComparisonOperators), "Equal", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ComparisonOperators), "Equal")]
 public sealed class EqualOperator : ComparisonOperatorBase
 {
     /// <summary>

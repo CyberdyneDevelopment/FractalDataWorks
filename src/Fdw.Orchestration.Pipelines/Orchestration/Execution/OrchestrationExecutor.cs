@@ -687,6 +687,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
     /// <summary>
     /// Core step execution - to be overridden by derived classes or step executors.
     /// </summary>
+    /// <exception cref="InvalidOperationException">No step executor is registered and no derived class runs the step.</exception>
     protected virtual Task<object?> ExecuteStepCore(
         IOrchestrationStep step,
         OrchestrationStepExecutionContext context,
@@ -702,13 +703,11 @@ public class OrchestrationExecutor : IOrchestrationExecutor
             return ExecuteWithStepExecutor(executor, step, context, cancellationToken);
         }
 
-        // No executor found - return null output (step did nothing)
-        OrchestrationLogger.NoStepExecutorFound(
+        // Without an executor the step cannot run, so it fails: a null output would be recorded as a success for work nothing did.
+        throw new InvalidOperationException(OrchestrationLogger.NoStepExecutorFound(
             _logger,
             context.OrchestrationContext.ExecutionId.ToString(),
-            step.StepId);
-
-        return Task.FromResult<object?>(null);
+            step.StepId).Message);
     }
 
     private static async Task<object?> ExecuteWithStepExecutor(

@@ -19,7 +19,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `ICalculationInputResolver` | interface | Resolves calculation inputs by fetching data from their declared sources. |
 | `ICalculationOperation` | interface | Represents a composable calculation operation that can be used as a step in a calculation pipeline. Each… |
 | `ICalculationSourceType` | interface | A calculation catalog origin (e.g. "Default", "Configuration") that owns its own resolution — each… |
-| `ICalculationStepExecutor` | interface | Executes a calculation entity's ordered steps over the registered calculation operations. |
 | `ICalculationTraceRecorder` | interface | Collects the per-step derivation of a single calculation execution as it happens. |
 | `ICalculationTypedConfiguration` | interface | Marker interface for a calculation entity's polymorphic typed body (Formula / Windowed). |
 | `IOperationParameterKind` | interface | Represents a kind of parameter that a calculation operation accepts. Describes the shape of the… |

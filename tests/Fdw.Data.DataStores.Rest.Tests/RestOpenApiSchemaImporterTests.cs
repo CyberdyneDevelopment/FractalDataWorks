@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -30,13 +31,29 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsArgumentNullExceptionWhenLoggerIsNull()
+    public void ConstructorWithoutLoggerBuildsTheImporterTheRegistrationInitializerNeeds()
     {
         // Act
-        var act = () => new RestOpenApiSchemaImporter(null!);
+        var parameterless = new RestOpenApiSchemaImporter();
+        var nullLogger = new RestOpenApiSchemaImporter(null);
 
         // Assert
-        Should.Throw<ArgumentNullException>(act).ParamName.ShouldBe("logger");
+        parameterless.Name.ShouldBe("OpenApi");
+        nullLogger.Name.ShouldBe("OpenApi");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void TypeOptionIsNotRestrictedToItsCompilationSoSchemaImportersRegistersIt()
+    {
+        // Act
+        var option = typeof(RestOpenApiSchemaImporter).GetCustomAttribute<Fdw.Collections.Attributes.TypeOptionAttribute>();
+
+        // Assert
+        option.ShouldNotBeNull();
+        option!.RestrictToCurrentCompilation.ShouldBeFalse();
+        typeof(RestOpenApiSchemaImporter).GetConstructor(Type.EmptyTypes).ShouldNotBeNull();
     }
 
     [Fact]
@@ -247,6 +264,95 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Paths.Count.ShouldBe(1);
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ImportReadsAnIntegerWithNoFormatAsInt64()
+    {
+        // Arrange
+        var importer = CreateImporter();
+        var path = WriteTempFile("integer-no-format.json", OneFieldSpec("""{ "type": "integer" }"""));
+
+        // Act
+        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Paths.Single().Containers[0].Fields.Single(f => f.Name == "Response.count").DataType.ShouldBe("Int64");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ImportFailsNamingTheFieldWhenItDeclaresNoType()
+    {
+        // Arrange
+        var importer = CreateImporter();
+        var path = WriteTempFile("field-no-type.json", OneFieldSpec("{ }"));
+
+        // Act
+        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull();
+        result.Code!.Name.ShouldBe("OpenApiFieldTypeUnknown");
+        result.Details.ShouldNotBeNull();
+        result.Details!.Data["Field"].ShouldBe("Response.count");
+        result.Details!.Data["SourceType"].ShouldBe("(no type declared)");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ImportFailsNamingTheFieldAndSourceTypeWhenNoConverterMapsTheType()
+    {
+        // Arrange
+        var importer = CreateImporter();
+        var path = WriteTempFile("field-unmapped-type.json", OneFieldSpec("""{ "type": "file" }"""));
+
+        // Act
+        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull();
+        result.Code!.Name.ShouldBe("OpenApiFieldTypeUnknown");
+        result.Details.ShouldNotBeNull();
+        result.Details!.Data["Field"].ShouldBe("Response.count");
+        result.Details!.Data["SourceType"].ShouldBe("file");
+    }
+
+    private static string OneFieldSpec(string countSchema) => $$"""
+    {
+      "openapi": "3.0.0",
+      "info": { "title": "One Field", "version": "1.0.0" },
+      "servers": [ { "url": "http://api.example.com" } ],
+      "paths": {
+        "/counts": {
+          "get": {
+            "operationId": "getCount",
+            "responses": {
+              "200": {
+                "description": "A count",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "count": {{countSchema}}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """;
 
     private string WriteTempFile(string fileName, string content)
     {

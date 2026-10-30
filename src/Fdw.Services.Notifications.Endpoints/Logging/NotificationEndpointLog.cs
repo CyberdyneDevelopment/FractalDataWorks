@@ -23,7 +23,8 @@ public static partial class NotificationEndpointLog
 
     /// <summary>Logs when a notification is not found.</summary>
     [MessageLogging(EventId = 31000, Level = LogLevel.Warning,
-        Message = "Notification '{notificationName}' not found")]
+        Message = "Notification '{notificationName}' not found",
+        ClientMessage = "Notification '{notificationName}' was not found")]
     public static partial IGenericMessage NotificationNotFound(ILogger logger, string notificationName);
 
     /// <summary>Logs when listing notification rules.</summary>
@@ -96,6 +97,14 @@ public static partial class NotificationEndpointLog
     public static partial IGenericMessage UnknownNotificationImplementation(
         ILogger logger,
         string notificationName,
-        string implementationName,
+        string? implementationName,
         string knownImplementations);
+
+    /// <summary>Logs at Trace level that the settings of a notification are being set.</summary>
+    [MessageLogging(EventId = 11012, Level = LogLevel.Trace, Message = "Setting the settings of notification '{notificationName}'")]
+    public static partial IGenericMessage SettingNotificationSettings(ILogger logger, string notificationName);
+
+    /// <summary>Logs at Information level that the settings of a notification were set.</summary>
+    [MessageLogging(EventId = 11013, Level = LogLevel.Information, Message = "Set the settings of notification '{notificationName}'")]
+    public static partial IGenericMessage NotificationSettingsSet(ILogger logger, string notificationName);
 }

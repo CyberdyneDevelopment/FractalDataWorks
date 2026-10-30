@@ -8,6 +8,11 @@ namespace Fdw.Services.Etl.Projects.Execution;
 /// Channel-based bounded queue for project execution requests.
 /// Provides backpressure by returning false when the queue is full.
 /// </summary>
+/// <remarks>
+/// Why the full mode is Wait: the channel writer's TryWrite answers false for a full channel only in that mode. In DropWrite mode it
+/// discards the new item and answers true, so the caller is told a request was queued that never was and the queue-full answers of its
+/// callers are never reached (FDW-3181). Nothing here waits: Enqueue only calls TryWrite.
+/// </remarks>
 public sealed class ProjectExecutionQueue
 {
     private readonly Channel<ProjectExecutionRequest> _channel;
@@ -25,7 +30,7 @@ public sealed class ProjectExecutionQueue
         _channel = Channel.CreateBounded<ProjectExecutionRequest>(
             new BoundedChannelOptions(capacity)
             {
-                FullMode = BoundedChannelFullMode.DropWrite,
+                FullMode = BoundedChannelFullMode.Wait,
                 SingleReader = false,
                 SingleWriter = false
             });

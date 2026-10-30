@@ -18,8 +18,8 @@ namespace Fdw.Services.Calculations;
 /// <summary>
 /// Default implementation of <see cref="ICalculationEntityService"/>.
 /// All persistence is routed through <see cref="CalculationConfigurationProvider"/>'s keystone
-/// Get/Save: a single Get composes the full aggregate (header + Inputs + Steps + Formula/Windowed
-/// typed body) and a single Save cascade-persists it. There is no hand-assembly, no Row types, and
+/// Get/Save: a single Get composes the full aggregate (header + Inputs + Steps + the
+/// kind's typed body) and a single Save cascade-persists it. There is no hand-assembly, no Row types, and
 /// no per-type typed-body load/save.
 /// </summary>
 public sealed class CalculationEntityService : ICalculationEntityService
@@ -232,7 +232,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
                 return build.ToNewResult<ICalculationEntity>();
 
             var saveResult = await _provider
-                .Save(build.Value!, CalculationEntityDomain, calculationEntityType, name, cancellationToken)
+                .Update(build.Value!, CalculationEntityDomain, calculationEntityType, name, cancellationToken)
                 .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<ICalculationEntity>();

@@ -26,5 +26,5 @@ public sealed class UpstreamRequestInvalidCode : ClientResultCodeBase
     /// refusal that opted in, so what is shown here is what that host chose to show.
     /// </remarks>
     public override string? FormatClientMessage(IResultDetails? details = null)
-        => details is not null && details.Data.TryGetValue("reason", out var reason) ? reason?.ToString() : null;
+        => RelayedReason(details);
 }

@@ -1,4 +1,5 @@
 using System;
+using Fdw.Services.Etl.Abstractions.OptionTypes;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Results;
@@ -129,12 +130,12 @@ public static class GraphPipelineUses
         var relation = kind.Outputs.Count == 0 ? PipelineUseRelations.Writes : PipelineUseRelations.Reads;
         if (!string.IsNullOrWhiteSpace(component.DataSetName))
         {
-            Add(uses, new PipelineUse(relation, DataSet, component.DataSetName, []));
+            Add(uses, Addressed(new PipelineUse(relation, DataSet, component.DataSetName, []), component, relation));
         }
 
         if (!string.IsNullOrWhiteSpace(component.ContainerName) && !string.IsNullOrWhiteSpace(component.DataStoreName))
         {
-            Add(uses, new PipelineUse(relation, Container, component.ContainerName, ParentsOf(component)));
+            Add(uses, Addressed(new PipelineUse(relation, Container, component.ContainerName, ParentsOf(component)), component, relation));
         }
         else if (!string.IsNullOrWhiteSpace(component.DataStoreName))
         {
@@ -198,4 +199,12 @@ public static class GraphPipelineUses
             uses.Add(use);
         }
     }
+
+    // A destination that writes one file writes that file, not the container as declared (FDW-3193): the use says which, so two runs that write different files
+    // of one container do not wait for each other and two that write the same file do.
+    private static PipelineUse Addressed(PipelineUse use, PipelineComponentConfiguration component, string relation) =>
+        string.Equals(relation, PipelineUseRelations.Writes, StringComparison.Ordinal)
+        && string.Equals(component.TargetKind, TargetKinds.File.Name, StringComparison.OrdinalIgnoreCase)
+            ? use with { PhysicalPath = component.PhysicalPath, PhysicalName = component.PhysicalName }
+            : use;
 }

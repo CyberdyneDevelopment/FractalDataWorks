@@ -19,7 +19,7 @@ namespace Fdw.Services.Notifications.Tests;
 /// </remarks>
 public sealed class NotificationDomainConfigurationTests
 {
-    private static readonly string[] OwnedByTheDomainRow = ["IsEnabled", "SecretManagerName", "SecretKeyName"];
+    private static readonly string[] OwnedByTheDomainRow = ["IsEnabled", "SecretManagerName", "SecretKeyName", "Description"];
 
     private static List<string> ListFieldsOf(string recordName)
     {

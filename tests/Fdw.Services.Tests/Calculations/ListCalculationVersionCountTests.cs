@@ -57,7 +57,7 @@ public class ListCalculationVersionCountTests
     }
 
     private static CalculationEntityDomainConfiguration Calculation(string name) =>
-        new() { Id = Guid.NewGuid(), Name = name, Implementation = "Formula", Description = name + " described" };
+        new() { Id = Guid.NewGuid(), Name = name, Implementation = "Windowed", Description = name + " described" };
 
     private static CalculationVersionDomainConfiguration Version(CalculationEntityDomainConfiguration calculation, string kind, Guid place) => new()
     {

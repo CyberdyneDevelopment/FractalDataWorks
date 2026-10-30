@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Fdw.UI.Services.Formula;
 using Fdw.UI.Services.Pipeline;
 using Fdw.UI.Services.UndoRedo;
 
@@ -17,7 +16,6 @@ public static class UIServiceCollectionExtensions
     {
         services.AddScoped<IUndoRedoManager, UndoRedoManager>();
         services.AddSingleton<IPipelineValidator, PipelineValidator>();
-        services.AddSingleton<IFormulaTokenizer, FormulaTokenizer>();
         return services;
     }
 }

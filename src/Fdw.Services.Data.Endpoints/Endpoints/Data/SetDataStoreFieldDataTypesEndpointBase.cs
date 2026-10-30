@@ -87,7 +87,7 @@ public abstract class SetDataStoreFieldDataTypesEndpointBase
         foreach (var field in fields.Value!)
             field.FrameworkDataType = request.FrameworkDataType;
 
-        var saved = await _dataStoreProvider.Save(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
+        var saved = await _dataStoreProvider.Update(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (field, frameworkDataType) in previous)

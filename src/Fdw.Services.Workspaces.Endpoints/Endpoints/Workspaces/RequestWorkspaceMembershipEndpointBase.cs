@@ -162,7 +162,7 @@ public abstract class RequestWorkspaceMembershipEndpointBase
         if (autoApproved)
             WorkspaceMembershipGrant.Grant(workspace.Value, membershipRequest, workspace.Value.AutoApproveRole!, requestedByUserId, now);
 
-        var saved = await _workspaces.Save(
+        var saved = await _workspaces.Update(
             workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<WorkspaceMembershipRequestDto>();
 

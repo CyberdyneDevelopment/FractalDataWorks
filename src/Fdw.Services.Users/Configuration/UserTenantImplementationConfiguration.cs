@@ -41,6 +41,9 @@ public partial class UserTenantImplementationConfiguration
     /// <summary>Gets or sets whether this is the user's default (preferred) tenant.</summary>
     public bool IsDefault { get; set; }
 
+    /// <summary>Gets or sets the department the person lands in when they sign in to this tenant; none when they have marked none (FDW-2938).</summary>
+    public Guid? DefaultOrganizationId { get; set; }
+
     // ── Soft-delete / version-on-write state ──
 
     /// <summary>Gets or sets whether this row is the current version.</summary>

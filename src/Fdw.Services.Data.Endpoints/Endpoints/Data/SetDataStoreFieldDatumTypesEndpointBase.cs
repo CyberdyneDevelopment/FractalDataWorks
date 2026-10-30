@@ -87,7 +87,7 @@ public abstract class SetDataStoreFieldDatumTypesEndpointBase
         foreach (var field in fields.Value!)
             field.DatumTypeId = request.DatumTypeId;
 
-        var saved = await _dataStoreProvider.Save(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
+        var saved = await _dataStoreProvider.Update(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (field, datumTypeId) in previous)

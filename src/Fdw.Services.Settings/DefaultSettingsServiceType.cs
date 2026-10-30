@@ -111,6 +111,9 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.TryAddSingleton<IServerSettingConfigurationProvider>(sp => sp.GetRequiredService<ServerSettingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IEffectiveSettingsProvider, DefaultEffectiveSettingsProvider>();
+            // Lazy for the factories that read a setting while they build a connection or secret manager (FDW-3284): the settings are read through
+            // connections, so a factory that took the provider itself would wait on the connection it is building.
+            builder.Services.TryAddSingleton(sp => new Lazy<IEffectiveSettingsProvider>(() => sp.GetRequiredService<IEffectiveSettingsProvider>()));
             // Scoped: it finds an organization's tenant through the organization scope, which also checks the caller's right at the organization (FDW-1579, FDW-2840).
             builder.Services.TryAddScoped<IInheritedSettings>(sp => new InheritedSettings(
                 sp.GetRequiredService<IServerSettingConfigurationProvider>(),

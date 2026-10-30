@@ -6,6 +6,7 @@ using Fdw.Data.Transformations;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
+using Fdw.Services.Calculations.Abstractions;
 using Fdw.Services.Etl.Graphs;
 
 namespace Fdw.Operations.Endpoints.TypeCollections;
@@ -35,6 +36,10 @@ internal static class TypeCollectionParameters
             AddComponentSettings(component, parameters);
         if (typeOption is FieldTransformationBase transformation)
             AddTransformationParameters(transformation, parameters);
+        if (typeOption is ICalculationEntityType calculation)
+            AddCalculationSettings(calculation, parameters);
+        if (typeOption is ICalculationInputKind inputKind)
+            AddInputKindSettings(inputKind, parameters);
         return parameters;
     }
 
@@ -93,6 +98,22 @@ internal static class TypeCollectionParameters
             listed.AcceptsParameterText = true;
             parameters.Add(listed);
         }
+    }
+
+    // A calculation kind lists the settings it reads from the configuration a create sends, so the console builds the form of a calculation of
+    // that kind from them; create refuses a configuration member that is not listed here.
+    private static void AddCalculationSettings(ICalculationEntityType calculation, List<TypeCollectionValueParameterDto> parameters)
+    {
+        foreach (var setting in calculation.Settings)
+            parameters.Add(Parameter(setting.Name, setting.Kind, setting.IsRequired, setting.HelpText));
+    }
+
+    // An input kind lists the members of an input it takes, so the console draws an input of that kind from them; create and update refuse an
+    // input member that is not listed here.
+    private static void AddInputKindSettings(ICalculationInputKind inputKind, List<TypeCollectionValueParameterDto> parameters)
+    {
+        foreach (var setting in inputKind.Settings)
+            parameters.Add(Parameter(setting.Name, setting.Kind, setting.IsRequired, setting.HelpText));
     }
 
     private static void AddValueSourceParameters(IValueSourceKind source, List<TypeCollectionValueParameterDto> parameters)

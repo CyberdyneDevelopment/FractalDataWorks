@@ -1,6 +1,6 @@
 # Fdw.Web.Analytics.Clients.Abstractions
 
-The payload models for the analytics, profiling and promotion clients.
+The payload models for the analytics and profiling clients.
 
 The typed client for this domain's API, plus the payload models it sends and receives.
 
@@ -10,10 +10,7 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `CreatePromotionPayload` | class | Represents a request to create a new promotion between environments. |
 | `DataProfilePayload` | class | Represents a data profile for a DataSet, containing row count and profiling metadata. |
-| `EnvironmentPayload` | class | Represents a deployment environment available for promotions. |
-| `PromotionPayload` | class | Represents a promotion request between two environments. |
 
 ## Installation
 

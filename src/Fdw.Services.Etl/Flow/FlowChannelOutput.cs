@@ -18,14 +18,17 @@ internal sealed class FlowChannelOutput : IFlowOutput
     private readonly IReadOnlyList<FlowLinkState> _links;
     private readonly string _component;
     private readonly FlowRejectedRows? _rejected;
+    private readonly IFlowPauseGate? _pauseGate;
 
     /// <summary>Initializes a new instance of the <see cref="FlowChannelOutput"/> class.</summary>
     /// <param name="name">The output node's name.</param>
     /// <param name="links">The links that start at it.</param>
     /// <param name="component">The component the node belongs to.</param>
     /// <param name="rejected">Where the rows written to this node are kept, when it is an error output of a run that keeps them (FDW-1720); none otherwise.</param>
-    public FlowChannelOutput(string name, IReadOnlyList<FlowLinkState> links, string component, FlowRejectedRows? rejected)
+    /// <param name="pauseGate">The gate a batch passes before it leaves the component; none for a run that cannot be paused (FDW-2950).</param>
+    public FlowChannelOutput(string name, IReadOnlyList<FlowLinkState> links, string component, FlowRejectedRows? rejected, IFlowPauseGate? pauseGate)
     {
+        _pauseGate = pauseGate;
         Name = name;
         _links = links ?? throw new ArgumentNullException(nameof(links));
         _component = component ?? throw new ArgumentNullException(nameof(component));
@@ -39,6 +42,13 @@ internal sealed class FlowChannelOutput : IFlowOutput
     public async Task Write(FlowBatch batch, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(batch);
+
+        // Why before the batch leaves: a paused run holds every component at the point it would pass rows on, so nothing new enters the
+        // run while it is paused and every batch already passed on is finished (FDW-2950).
+        if (_pauseGate is not null)
+        {
+            await _pauseGate.WaitWhilePaused(cancellationToken).ConfigureAwait(false);
+        }
 
         // Why before the links: a node with no links drops its rows, and a rejected row that is dropped is the one the record must keep.
         _rejected?.Keep(_component, Name, batch.Rows);

@@ -25,6 +25,12 @@ public sealed class CalculationEntityDetailDto
     /// <summary>Gets or sets the declared inputs for this calculation.</summary>
     public IList<CalculationEntityInputDto> Inputs { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the stored configuration: one member per setting the calculation's kind declares, by the setting's name;
+    /// <see langword="null"/> when the calculation has no stored configuration.
+    /// </summary>
+    public IDictionary<string, object?>? Configuration { get; set; }
+
     /// <summary>Gets or sets the target DataSet name for output.</summary>
     public string? OutputDataSetName { get; set; }
 

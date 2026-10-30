@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Messages;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs;
@@ -155,6 +156,66 @@ public sealed class ScriptKindsTests
 
         ran.IsFailure.ShouldBeTrue();
         ran.CurrentMessage.ShouldNotBeNull().ShouldContain("purge");
+    }
+
+    // The command timeout (FDW-3279): the connection puts the coded message that names the connection and the seconds first and the
+    // handler's own timeout message after it. A step reads the first failure message, as the API does (FDW-3302).
+    private static IReadOnlyList<IGenericMessage> TimedOut()
+        =>
+        [
+            new GenericMessage(MessageSeverity.Error, "Command on SQL Server connection 'Main' ran longer than the connection's command timeout of 5 seconds: WAITFOR", "MSSQL-81010"),
+            new GenericMessage(MessageSeverity.Error, "SQL query timeout on 'WAITFOR'", "MSSQL-81001")
+        ];
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AnExecuteSqlStepThatTimedOutSaysWhichConnectionAndHowManySeconds()
+    {
+        var fake = new ScriptingGateway([], fails: true, failure: TimedOut());
+        var step = new FlowExecuteSql("purge", fake.Gateway, "Warehouse", "WAITFOR DELAY '00:00:40'", [], null);
+
+        var ran = await step.Run(GraphTestKit.StepContext(new FlowVariables(), new FlowRunTally(new FlowExecutor())), TestContext.Current.CancellationToken);
+
+        ran.IsFailure.ShouldBeTrue();
+        var said = ran.CurrentMessage.ShouldNotBeNull();
+        said.ShouldContain("connection 'Main'");
+        said.ShouldContain("5 seconds");
+        said.ShouldNotContain("SQL query timeout");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AnExecuteSqlStepWhoseFailureCarriedNoCodedMessageSaysSoAndListsWhatItCarried()
+    {
+        var fake = new ScriptingGateway([], fails: true);
+        var step = new FlowExecuteSql("purge", fake.Gateway, "Warehouse", "DELETE FROM dbo.T", [], null);
+
+        var ran = await step.Run(GraphTestKit.StepContext(new FlowVariables(), new FlowRunTally(new FlowExecutor())), TestContext.Current.CancellationToken);
+
+        ran.IsFailure.ShouldBeTrue();
+        var said = ran.CurrentMessage.ShouldNotBeNull();
+        said.ShouldContain("no coded failure message");
+        said.ShouldContain("script refused");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AScriptSourceThatTimedOutSaysWhichConnectionAndHowManySeconds()
+    {
+        var fake = new ScriptingGateway([], fails: true, failure: TimedOut());
+        var (sink, _) = Sink("dst");
+        var graph = Graph([new FlowScriptSource("src", fake.Gateway, "Warehouse", "WAITFOR DELAY '00:00:40'; SELECT 1", [], 3, 2), sink], [Link("src", "dst")]);
+
+        var result = await new FlowExecutor().Run(graph, Options(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        var said = result.CurrentMessage.ShouldNotBeNull();
+        said.ShouldContain("connection 'Main'");
+        said.ShouldContain("5 seconds");
+        said.ShouldNotContain("SQL query timeout");
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -17,4 +18,11 @@ public sealed class ContainerCalculationInputKind : CalculationInputKindBase
         : base(name: "Container")
     {
     }
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<CalculationSetting> Settings { get; } =
+    [
+        new CalculationSetting("connectionName", "Connection", true, "The connection the container is reached through"),
+        new CalculationSetting("containerPath", "Text", true, "The path of the container within the connection"),
+    ];
 }

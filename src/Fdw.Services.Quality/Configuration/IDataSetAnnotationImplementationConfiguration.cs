@@ -28,6 +28,15 @@ public interface IDataSetAnnotationImplementationConfiguration : IImplementation
     /// <summary>Gets or sets the DataSetAnnotation DataClassification.</summary>
     string? DataClassification { get; set; }
 
+    /// <summary>Gets or sets whether the annotation has been resolved.</summary>
+    bool IsResolved { get; set; }
+
+    /// <summary>Gets or sets when the annotation was resolved; empty while it is not resolved.</summary>
+    DateTimeOffset? ResolvedDate { get; set; }
+
+    /// <summary>Gets or sets the user id of the person who resolved the annotation; empty while it is not resolved.</summary>
+    Guid? ResolvedBy { get; set; }
+
     /// <summary>Gets or sets the DataSetAnnotation Tags.</summary>
     IList<DataSetAnnotationTagConfiguration> Tags { get; set; }
 

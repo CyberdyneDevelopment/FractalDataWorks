@@ -1,6 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Etl.Thresholds;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Pipelines.Abstractions;
@@ -15,11 +17,14 @@ public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBa
     where TConfig : IPipelineImplementationConfiguration
 {
     private readonly PipelineServiceConfigurationProvider _provider;
+    private readonly WaitThresholdOwnerRelease _release;
 
     /// <inheritdoc />
-    protected DeletePipelineEndpointBase(ILogger<DeletePipelineEndpointBase<TConfig>> logger, PipelineServiceConfigurationProvider provider) : base(logger)
+    protected DeletePipelineEndpointBase(
+        ILogger<DeletePipelineEndpointBase<TConfig>> logger, PipelineServiceConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
     {
         _provider = provider;
+        _release = new WaitThresholdOwnerRelease(gateways, logger);
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -44,6 +49,13 @@ public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBa
         if (existing == null)
         {
             return GenericResult.Success();
+        }
+
+        // The pipeline's own level of thresholds on waiting runs goes with it, and a pipeline another owner's threshold counts is not deleted (FDW-3271).
+        var released = await _release.ReleasePipeline(request.Name, ct).ConfigureAwait(false);
+        if (released.IsFailure)
+        {
+            return released;
         }
 
         var deleteResult = await _provider.Delete(existing.Id, ct).ConfigureAwait(false);

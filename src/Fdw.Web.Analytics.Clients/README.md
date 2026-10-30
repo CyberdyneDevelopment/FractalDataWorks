@@ -1,6 +1,6 @@
 # Fdw.Web.Analytics.Clients
 
-The API clients for analytics, profiling and promotion.
+The API clients for analytics and profiling.
 
 The typed client for this domain's API, plus the payload models it sends and receives.
 
@@ -12,7 +12,6 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 |---|---|---|
 | `AnalyticsApiClient` | class | API client for analytics endpoints. |
 | `ProfileApiClient` | class | API client for data profiling endpoints. |
-| `PromotionApiClient` | class | API client for promotion and environment management endpoints. |
 
 ## Installation
 

@@ -36,7 +36,6 @@
     <Project Path="src/Fdw.Collections.Analyzers/Fdw.Collections.Analyzers.csproj" />
     <Project Path="src/Fdw.Collections.CodeFixes/Fdw.Collections.CodeFixes.csproj" />
     <Project Path="src/Fdw.Collections.SourceGenerators/Fdw.Collections.SourceGenerators.csproj" />
-    <Project Path="src/Fdw.Expressions/Fdw.Expressions.csproj" />
     <Project Path="src/Fdw.SourceGenerators/Fdw.SourceGenerators.csproj" />
   </Folder>
 
@@ -348,8 +347,6 @@
     <Project Path="src/Fdw.Web.Clients/Fdw.Web.Clients.csproj" />
     <Project Path="src/Fdw.Web.Endpoints/Fdw.Web.Endpoints.csproj" />
     <Project Path="src/Fdw.Web.Http.Authentication/Fdw.Web.Http.Authentication.csproj" />
-    <Project Path="src/Fdw.Web.Search.Clients.Models/Fdw.Web.Search.Clients.Models.csproj" />
-    <Project Path="src/Fdw.Web.Search.Endpoints/Fdw.Web.Search.Endpoints.csproj" />
     <Project Path="src/Fdw.WebMcp.Abstractions/Fdw.WebMcp.Abstractions.csproj" />
     <Project Path="src/Fdw.WebMcp.Hosting/Fdw.WebMcp.Hosting.csproj" />
     <Project Path="src/Fdw.WebMcp.Mcp/Fdw.WebMcp.Mcp.csproj" />
@@ -445,7 +442,6 @@
     <Project Path="src/Fdw.Web.Clients.Abstractions/Fdw.Web.Clients.Abstractions.csproj" />
     <Project Path="src/Fdw.Web.Http.Abstractions/Fdw.Web.Http.Abstractions.csproj" />
     <Project Path="src/Fdw.Web.RestEndpoints/Fdw.Web.RestEndpoints.csproj" />
-    <Project Path="src/Fdw.Web.Search.Clients/Fdw.Web.Search.Clients.csproj" />
   </Folder>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -492,6 +488,14 @@
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/Fdw.Analyzers.Tests/Fdw.Analyzers.Tests.csproj" />
+    <Project Path="tests/Fdw.Aui.Tests/Fdw.Aui.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.CodeBuilder.Abstractions.Tests/Fdw.CodeBuilder.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Commands.Abstractions.Tests/Fdw.Commands.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Commands.Data.Abstractions.Tests/Fdw.Commands.Data.Abstractions.Tests.csproj" />
@@ -569,7 +573,6 @@
       <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
-    <Project Path="tests/Fdw.Expressions.Tests/Fdw.Expressions.Tests.csproj" />
     <Project Path="tests/Fdw.Mcp.Bus.Tests/Fdw.Mcp.Bus.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
@@ -615,6 +618,14 @@
     </Project>
     <Project Path="tests/Fdw.Orchestration.Abstractions.Tests/Fdw.Orchestration.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Orchestration.Pipelines.Abstractions.Tests/Fdw.Orchestration.Pipelines.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Orchestration.Pipelines.Tests/Fdw.Orchestration.Pipelines.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.Processors.Abstractions.Tests/Fdw.Processors.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Protocols.Tds.Tests/Fdw.Protocols.Tds.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
@@ -916,7 +927,6 @@
     <Project Path="tests/Fdw.Web.Calculations.Clients.Tests/Fdw.Web.Calculations.Clients.Tests.csproj" />
     <Project Path="tests/Fdw.Web.Clients.Abstractions.Tests/Fdw.Web.Clients.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Web.Http.Abstractions.Tests/Fdw.Web.Http.Abstractions.Tests.csproj" />
-    <Project Path="tests/Fdw.Web.Search.Clients.Tests/Fdw.Web.Search.Clients.Tests.csproj" />
     <Project Path="tests/Fdw.WebMcp.Hosting.Tests/Fdw.WebMcp.Hosting.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />

@@ -47,6 +47,8 @@ public sealed class OrganizationRolesTests
                 .ReturnsAsync(() => GenericResult<IReadOnlyList<IOrganizationRoleImplementationConfiguration>>.Success([.. Stored]));
             Roles.Setup(r => r.Save(It.IsAny<OrganizationRoleImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult.Success());
+            Roles.Setup(r => r.Update(It.IsAny<OrganizationRoleImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(GenericResult.Success());
             Roles.Setup(r => r.Delete(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
             Access.Setup(a => a.Members(Tenant, Finance, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success([]));
@@ -64,8 +66,11 @@ public sealed class OrganizationRolesTests
                 Permissions = [.. permissions.Select(p => new OrganizationRolePermissionConfiguration { PermissionName = p })],
             });
 
-        public void NothingSaved() =>
+        public void NothingSaved()
+        {
             Roles.Verify(r => r.Save(It.IsAny<OrganizationRoleImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            Roles.Verify(r => r.Update(It.IsAny<OrganizationRoleImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
 
         public void HeldBy(string role, params Guid[] people) =>
             Access.Setup(a => a.Members(Tenant, Finance, It.IsAny<CancellationToken>()))
@@ -184,6 +189,25 @@ public sealed class OrganizationRolesTests
         result.IsSuccess.ShouldBeTrue();
         rig.Access.Verify(a => a.Replace(Jo, Tenant, Finance, "Clerk", It.Is<IReadOnlyList<string>>(p => p.SequenceEqual(new[] { "datasets:read", "datasets:write" })), It.IsAny<CancellationToken>()), Times.Once);
         rig.Access.Verify(a => a.Replace(Sam, Tenant, Finance, "Clerk", It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ChangingARoleUpdatesTheHeldRoleUnderItsOwnIdAndNeverMintsOne()
+    {
+        var rig = new Rig();
+        rig.Has("Clerk", permissions: ["datasets:read"]);
+        var held = rig.Stored.Single();
+
+        var result = await rig.Service().Redefine(Finance, "Clerk", "Reads and writes", ["datasets:read", "datasets:write"], TestContext.Current.CancellationToken);
+
+        // A role removed since it was read must not come back through the write (FDW-3179), so the change is an update of the role it read.
+        result.IsSuccess.ShouldBeTrue();
+        rig.Roles.Verify(r => r.Update(
+            It.Is<OrganizationRoleImplementationConfiguration>(c => c.Id == held.Id && c.RoleName == "Clerk"),
+            "OrganizationRole", "OrganizationRole", $"{Finance}:Clerk", It.IsAny<CancellationToken>()), Times.Once);
+        rig.Roles.Verify(r => r.Save(It.IsAny<OrganizationRoleImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

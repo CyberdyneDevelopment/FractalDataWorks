@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Aui\Fdw.Aui.csproj" />
+  </ItemGroup>
+</Project>

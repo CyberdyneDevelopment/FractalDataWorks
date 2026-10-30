@@ -21,17 +21,9 @@ public sealed class RankCalculationType : WindowedCalculationTypeBase
         category: "Windowed",
         calculate: (rows, col, _) =>
         {
-            var values = rows
-                .Select(r => r.TryGetValue<decimal>(col, out var v) ? v : 0m)
-                .ToList();
-
-            var sorted = values.OrderBy(v => v).ToList();
-
-            var result = new List<decimal>(values.Count);
-            foreach (var value in values)
-                result.Add(sorted.IndexOf(value) + 1);
-
-            return result;
+            var values = WindowedColumn.Read(rows, col);
+            var sorted = values.OfType<decimal>().OrderBy(v => v).ToList();
+            return values.Select(v => v.HasValue ? (decimal?)(sorted.IndexOf(v.Value) + 1) : null).ToList();
         },
         toSql: (col, _) => $"RANK() OVER (ORDER BY {col})")
     { }

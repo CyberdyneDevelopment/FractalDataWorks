@@ -169,7 +169,7 @@ public static class GraphFlowBuilder
         }
 
         if (!ParameterSettings.LateOf(stored).Any(setting => ParameterSettings.HoldsParameter(setting.Text)) && !ScriptTokens.Holds(stored.ScriptText)
-            && ParameterSettings.MappingConstants(stored).Count == 0 && !NamesCalculatedValue(stored, context))
+            && ParameterSettings.MappingConstants(stored).Count == 0 && !NamesCalculatedValue(stored, context) && !ReadsFilesFromVariable(stored, context))
         {
             return Assemble(stored, context, flowContext, null);
         }
@@ -185,6 +185,11 @@ public static class GraphFlowBuilder
         stored.Stages.Any(stage => PipelineRunParameterReferences.Names(stage.FilterExpression)
             .Concat(stage.Checks.SelectMany(check => PipelineRunParameterReferences.Names(check.Expression)))
             .Any(name => !context.Parameters.ContainsKey(name)));
+
+    // Why a list of files that is not a run parameter is read when the stage starts (FDW-3194): it can only be a variable, such as the batch a round of a for each
+    // took, and a variable has its value only then.
+    internal static bool ReadsFilesFromVariable(PipelineComponentConfiguration stored, FlowBuildContext context) =>
+        stored.FilesList is { } list && !context.Parameters.ContainsKey(list);
 
     private static IGenericResult<IFlowComponent> Assemble(
         PipelineComponentConfiguration stored, FlowBuildContext context, FlowBuildContext flowContext, IReadOnlyDictionary<string, object?>? runValues)

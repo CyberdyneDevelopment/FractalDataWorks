@@ -40,6 +40,19 @@ public sealed class PipelineWatermarksTests
                 return Task.FromResult(result);
             });
 
+    // The writes answer in turn: the first call gets the first result, the second the second, and so on.
+    private void WritesReturn(params IGenericResult<int>[] results)
+    {
+        var next = new Queue<IGenericResult<int>>(results);
+        _gateway
+            .Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Returns((IDataCommand command, DataStoreTarget target, CancellationToken token) =>
+            {
+                _calls.Add((command, target));
+                return Task.FromResult(next.Dequeue());
+            });
+    }
+
     private static IGenericResult<IEnumerable<EtlPipelineWatermarkRecord>> Rows(params EtlPipelineWatermarkRecord[] rows) =>
         GenericResult<IEnumerable<EtlPipelineWatermarkRecord>>.Success(rows);
 
@@ -172,9 +185,76 @@ public sealed class PipelineWatermarksTests
         update.Data.Id.ShouldBe(existing.Id);
         update.Data.LastSuccessfulRun.ShouldBe(Started);
         update.Data.ExecutionId.ShouldBe(execution);
-        var condition = update.Filter!.Root.ShouldBeOfType<FilterCondition>();
-        condition.PropertyName.ShouldBe("Id");
-        condition.Value.ShouldBe(existing.Id);
+        var group = update.Filter!.Root.ShouldBeOfType<FilterGroup>();
+        group.Nodes.Cast<FilterCondition>().Select(c => (c.PropertyName, c.Operator.Name, c.Value))
+            .ShouldBe(new[] { ("Id", "Equal", (object?)existing.Id), ("LastSuccessfulRun", "LessThan", Started) });
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task RecordLeavesAWatermarkThatIsAlreadyAheadOfTheRunWhereItIsAndWritesNothing()
+    {
+        // Arrange
+        var existing = Stored();
+        existing.LastSuccessfulRun = Started.AddMinutes(5);
+
+        // Act
+        var result = await PipelineWatermarks.Record(
+            _gateway.Object, "Ops", existing, Pipeline, Tenant, Started, Guid.NewGuid(), "copy", NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        _calls.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task RecordUpdatesTheRowAnOverlappingRunInsertedFirstInsteadOfFailing()
+    {
+        // Arrange: the insert is refused, and the row is there when it is read again
+        var inserted = Stored();
+        inserted.LastSuccessfulRun = Started.AddMinutes(-5);
+        WritesReturn(GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("duplicate")), GenericResult<int>.Success(1));
+        ReadReturns(Rows(inserted));
+        var execution = Guid.NewGuid();
+
+        // Act
+        var result = await PipelineWatermarks.Record(
+            _gateway.Object, "Ops", null, Pipeline, Tenant, Started, execution, "copy", NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        _calls.Count.ShouldBe(3);
+        _calls[0].Command.ShouldBeOfType<InsertCommand<EtlPipelineWatermarkRecord>>();
+        _calls[1].Command.ShouldBeAssignableTo<IQueryCommand>();
+        var update = _calls[2].Command.ShouldBeOfType<UpdateCommand<EtlPipelineWatermarkRecord>>();
+        update.Data.Id.ShouldBe(inserted.Id);
+        update.Data.LastSuccessfulRun.ShouldBe(Started);
+        update.Data.ExecutionId.ShouldBe(execution);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task RecordDoesNotMoveTheWatermarkBackWhenTheRowAnOverlappingRunInsertedIsLater()
+    {
+        // Arrange: the insert is refused, and the row read again is later than this run's start
+        var inserted = Stored();
+        inserted.LastSuccessfulRun = Started.AddMinutes(3);
+        WritesReturn(GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("duplicate")));
+        ReadReturns(Rows(inserted));
+
+        // Act
+        var result = await PipelineWatermarks.Record(
+            _gateway.Object, "Ops", null, Pipeline, Tenant, Started, Guid.NewGuid(), "copy", NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        _calls.Count.ShouldBe(2);
+        _calls[0].Command.ShouldBeOfType<InsertCommand<EtlPipelineWatermarkRecord>>();
+        _calls[1].Command.ShouldBeAssignableTo<IQueryCommand>();
     }
 
     [Fact]
@@ -182,8 +262,9 @@ public sealed class PipelineWatermarksTests
     [Trait("Category", "DataIntegrity")]
     public async Task RecordFailsLoudSayingTheDataLoadedButTheWatermarkDidNotMove()
     {
-        // Arrange
+        // Arrange: the insert is refused and the row is still not there when it is read again, so the failure is real
         WriteReturns(GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("write refused")));
+        ReadReturns(Rows());
 
         // Act
         var result = await PipelineWatermarks.Record(
@@ -194,6 +275,24 @@ public sealed class PipelineWatermarksTests
         result.Messages[^1].Code.ShouldBe("PIPELINERUN-20233");
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("loaded its data");
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("write refused");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task RecordFailsLoudWithTheUpdatesReasonWhenTheConditionalUpdateIsRefused()
+    {
+        // Arrange
+        WriteReturns(GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("update refused")));
+
+        // Act
+        var result = await PipelineWatermarks.Record(
+            _gateway.Object, "Ops", Stored(), Pipeline, Tenant, Started, Guid.NewGuid(), "copy", NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("PIPELINERUN-20233");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("update refused");
     }
 
     [Fact]

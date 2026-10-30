@@ -10,7 +10,7 @@ namespace Fdw.Services.Calculations.Configuration;
 /// </summary>
 /// <remarks>
 /// Maps to <c>calc.CalculationEntity</c> in ConfigurationDb. Everything a calculation is beyond these fields
-/// lives on its per-kind implementation (Formula, Windowed); these live here, on the domain row, so a page of
+/// lives on its per-kind implementation (Windowed); these live here, on the domain row, so a page of
 /// calculations is one read of one table. Reading a calculation stamps them onto its implementation; saving one
 /// whose values differ writes a new version of this row from them (FDW-978, FDW-1006). The defaults are the
 /// implementation's own.

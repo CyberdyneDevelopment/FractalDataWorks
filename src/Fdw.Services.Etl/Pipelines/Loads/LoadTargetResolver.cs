@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
@@ -85,6 +86,30 @@ public sealed class LoadTargetResolver
             ? Task.FromResult<IGenericResult<LoadTarget>>(GenericResult<LoadTarget>.Failure(
                 PipelineRunLog.LoadServiceMissing(_logger, owner, "data store provider")))
             : Resolve(owner, string.Concat(dataStoreName, "/", containerName), dataStoreName, pathName, containerName, cancellationToken);
+
+    /// <summary>
+    /// Resolves what a load unit writes to (FDW-3193): the data set or container it names, and for the File kind that container at the file the unit
+    /// states. The Files kind resolves to the declared container; the executor moves it once for each value of the split field.
+    /// </summary>
+    /// <param name="unit">The load.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The target, or a failure saying why the unit cannot be written to.</returns>
+    public async Task<IGenericResult<LoadTarget>> ForUnit(LoadUnit unit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(unit);
+        var declared = unit.DataSet is not null
+            ? await ForDataSet(unit.Owner, unit.DataSet, cancellationToken).ConfigureAwait(false)
+            : await ForContainer(unit.Owner, unit.DataStore!, unit.Path!, unit.Container!, cancellationToken).ConfigureAwait(false);
+        if (declared.IsFailure || unit.Addressing is not { } addressing)
+            return declared;
+
+        if (declared.Value!.Container.Path is not IFilePath)
+            return GenericResult<LoadTarget>.Failure(PipelineRunLog.TargetNotAFile(_logger, unit.Owner, declared.Value.Description));
+
+        return addressing.Splits
+            ? declared
+            : declared.Value.Readdressed(unit.Owner, _logger, addressing.PhysicalPath, addressing.PhysicalName);
+    }
 
     private async Task<IGenericResult<LoadTarget>> Resolve(
         string owner,

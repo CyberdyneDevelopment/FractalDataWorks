@@ -67,7 +67,7 @@ public sealed class FlowStageStep : IFlowStep, IFlowFailureHook
 
         var options = records is null
             ? context.Options
-            : new FlowRunOptions { LinkCapacity = context.Options.LinkCapacity, Progress = context.Options.Progress, Stages = records };
+            : context.Options.WithStages(records);
         var ran = await context.Executor.Execute(_graph, options, cancellationToken).ConfigureAwait(false);
 
         // Why a failed flow is recorded too, and without the run's token: a run that was stopped still did something, and the record of

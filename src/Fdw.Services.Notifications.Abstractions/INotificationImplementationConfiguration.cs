@@ -20,4 +20,7 @@ public interface INotificationImplementationConfiguration : IImplementationConfi
 
     /// <summary>Gets or sets the key of the notification's credentials in the secret manager, or null when it needs none.</summary>
     string? SecretKeyName { get; set; }
+
+    /// <summary>Gets or sets what the notification is for, kept on the domain row.</summary>
+    string? Description { get; set; }
 }

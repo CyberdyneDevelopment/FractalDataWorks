@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Rows;
 using Fdw.Data.PostgreSql.Logging;
 using Fdw.Data.PostgreSql.Results;
 using Fdw.Data.PostgreSql.Translators;
@@ -103,6 +104,13 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
 
             return Task.FromResult(GenericResult<NpgsqlCommand>.Success(npgsqlCommand));
         }
+        catch (MissingPrimaryKeyException ex)
+        {
+            return Task.FromResult(
+                GenericResult<NpgsqlCommand>.Failure(
+                    PostgreSqlDataResultCodes.ByName("MissingPrimaryKeyValue"),
+                    ResultDetails.Create("Container", ex.ContainerName, "PrimaryKeyField", ex.PrimaryKeyField)));
+        }
         catch (NullPrimaryKeyException ex)
         {
             return Task.FromResult(
@@ -143,11 +151,8 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
             throw new InvalidOperationException($"Container {container.Name} has no updatable fields");
         }
 
-        // Only include fields that have matching properties on the data object
-        var dataType = data.GetType();
-        var fieldNames = updateFields.Select(f => f.Name)
-            .Where(f => dataType.GetProperty(f) != null)
-            .ToList();
+        var settable = SettableFields(updateFields, data);
+        var fieldNames = settable.Select(s => s.Name).ToList();
 
         if (fieldNames.Count == 0)
         {
@@ -165,13 +170,9 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
         var command = CreateCommand(sql);
 
         // Add SET parameters from data object
-        foreach (var fieldName in fieldNames)
+        foreach (var (name, value) in settable)
         {
-            var property = dataType.GetProperty(fieldName);
-            if (property != null)
-            {
-                AddParameter(command, $"set_{fieldName}", property.GetValue(data));
-            }
+            AddParameter(command, $"set_{name}", value);
         }
 
         // Build WHERE clause
@@ -189,24 +190,78 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
                 throw new InvalidOperationException($"Container {container.Name} has no primary key and no filter provided");
             }
 
-            var pkProperty = dataType.GetProperty(pkField.Name);
-            if (pkProperty != null)
+            // No filter and no key in the record names no rows; an UPDATE without a WHERE writes every row, so it is refused.
+            if (!RowValues.TryRead(data, pkField.Name, out var pkValue, out _))
             {
-                var pkValue = pkProperty.GetValue(data);
-                if (pkValue == null)
-                {
-                    throw new NullPrimaryKeyException(pkField.Name);
-                }
-
-                AddParameter(command, "where_pk", pkValue);
-                command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {p}where_pk";
+                throw new MissingPrimaryKeyException(container.Name, pkField.Name);
             }
+
+            if (pkValue == null)
+            {
+                throw new NullPrimaryKeyException(pkField.Name);
+            }
+
+            AddParameter(command, "where_pk", pkValue);
+            command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {p}where_pk";
         }
 
         if (returned.Count > 0)
             command.CommandText += $" RETURNING {string.Join(", ", returned.Select(c => dialect.QuoteIdentifier(c)))}";
 
         return command;
+    }
+
+    // Only the fields the record has, in the schema's order. The record is read the one way every route reads it (RowValues), so a dictionary record, which is what a
+    // pipeline's Update load carries, sets its columns as an entity record does.
+    private static List<(string Name, object? Value)> SettableFields(IEnumerable<IField> updateFields, object data)
+    {
+        var settable = new List<(string Name, object? Value)>();
+        foreach (var field in updateFields)
+        {
+            if (RowValues.TryRead(data, field.Name, out var value, out _))
+            {
+                settable.Add((field.Name, value));
+            }
+        }
+
+        return settable;
+    }
+
+    /// <summary>
+    /// Sentinel exception used to signal a record that does not carry the primary key to the Translate method.
+    /// </summary>
+    private sealed class MissingPrimaryKeyException : InvalidOperationException
+    {
+        public MissingPrimaryKeyException()
+        {
+            ContainerName = string.Empty;
+            PrimaryKeyField = string.Empty;
+        }
+
+        public MissingPrimaryKeyException(string message)
+            : base(message)
+        {
+            ContainerName = string.Empty;
+            PrimaryKeyField = string.Empty;
+        }
+
+        public MissingPrimaryKeyException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+            ContainerName = string.Empty;
+            PrimaryKeyField = string.Empty;
+        }
+
+        public MissingPrimaryKeyException(string containerName, string fieldName)
+            : base($"Record for container '{containerName}' does not carry primary key '{fieldName}'")
+        {
+            ContainerName = containerName;
+            PrimaryKeyField = fieldName;
+        }
+
+        public string ContainerName { get; }
+
+        public string PrimaryKeyField { get; }
     }
 
     /// <summary>

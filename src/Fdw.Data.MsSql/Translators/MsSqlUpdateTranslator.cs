@@ -7,6 +7,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Rows;
 using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
@@ -114,6 +115,13 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
 
             return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
         }
+        catch (MissingPrimaryKeyException ex)
+        {
+            return Task.FromResult(
+                GenericResult<SqlCommand>.Failure(
+                    MsSqlDataResultCodes.ByName("MissingPrimaryKeyValue"),
+                    ResultDetails.Create("Container", ex.ContainerName, "PrimaryKeyField", ex.PrimaryKeyField)));
+        }
         catch (NullPrimaryKeyException ex)
         {
             return Task.FromResult(
@@ -180,12 +188,8 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
             throw new InvalidOperationException($"Container {container.Name} has no updatable fields");
         }
 
-        // Only include fields that have matching properties on the data object
-        var dataType = data.GetType();
-        var fieldNames = updateFields.Select(f => f.Name)
-            .Where(f => dataType.GetProperty(f) != null)
-            .Where(f => !ModifyAuditColumns.Any(a => string.Equals(a.Column, f, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
+        var settable = SettableFields(updateFields, data);
+        var fieldNames = settable.Select(s => s.Name).ToList();
 
         if (fieldNames.Count == 0)
         {
@@ -209,11 +213,12 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         command.Parameters.AddRange(soft.Parameters.ToArray());
 
         // Add SET parameters from data object
-        foreach (var fieldName in fieldNames)
+        foreach (var (name, value, type) in settable)
         {
-            var property = dataType.GetProperty(fieldName);
-            if (property != null)
-                AddParameter(command, $"set_{fieldName}", property.GetValue(data), property.PropertyType);
+            if (type is null)
+                AddParameter(command, $"set_{name}", value);
+            else
+                AddParameter(command, $"set_{name}", value, type);
         }
 
         // Build WHERE clause
@@ -233,22 +238,78 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
                 throw new InvalidOperationException($"Container {container.Name} has no primary key and no filter provided");
             }
 
-            var pkProperty = dataType.GetProperty(pkField.Name);
-            if (pkProperty != null)
+            // No filter and no key in the record names no rows; an UPDATE without a WHERE writes every row, so it is refused.
+            if (!RowValues.TryRead(data, pkField.Name, out var pkValue, out _))
             {
-                var pkValue = pkProperty.GetValue(data);
-                if (pkValue == null)
-                {
-                    // Return null sentinel so Translate can produce a specific result code
-                    throw new NullPrimaryKeyException(pkField.Name);
-                }
-
-                AddParameter(command, "where_pk", pkValue);
-                command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {prefix}where_pk";
+                throw new MissingPrimaryKeyException(container.Name, pkField.Name);
             }
+
+            if (pkValue == null)
+            {
+                throw new NullPrimaryKeyException(pkField.Name);
+            }
+
+            AddParameter(command, "where_pk", pkValue);
+            command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {prefix}where_pk";
         }
 
         return command;
+    }
+
+    // Only the fields the record has. The record is read the one way every route reads it (RowValues), so a dictionary record, which is what a pipeline's Update
+    // load carries, sets its columns as an entity record does. A null a dictionary record gives takes its column's type, as an insert's does.
+    private static List<(string Name, object? Value, Type? Type)> SettableFields(IReadOnlyList<IField> updateFields, object data)
+    {
+        var settable = new List<(string Name, object? Value, Type? Type)>();
+        foreach (var field in updateFields)
+        {
+            if (ModifyAuditColumns.Any(a => string.Equals(a.Column, field.Name, StringComparison.OrdinalIgnoreCase))
+                || !RowValues.TryRead(data, field.Name, out var value, out var declaredType))
+            {
+                continue;
+            }
+
+            settable.Add((field.Name, value, declaredType ?? (value is null ? field.FieldType.ClrType : null)));
+        }
+
+        return settable;
+    }
+
+    /// <summary>
+    /// Sentinel exception used to signal a record that does not carry the primary key to the Translate method.
+    /// </summary>
+    private sealed class MissingPrimaryKeyException : InvalidOperationException
+    {
+        public MissingPrimaryKeyException()
+        {
+            ContainerName = string.Empty;
+            PrimaryKeyField = string.Empty;
+        }
+
+        public MissingPrimaryKeyException(string message)
+            : base(message)
+        {
+            ContainerName = string.Empty;
+            PrimaryKeyField = string.Empty;
+        }
+
+        public MissingPrimaryKeyException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+            ContainerName = string.Empty;
+            PrimaryKeyField = string.Empty;
+        }
+
+        public MissingPrimaryKeyException(string containerName, string fieldName)
+            : base($"Record for container '{containerName}' does not carry primary key '{fieldName}'")
+        {
+            ContainerName = containerName;
+            PrimaryKeyField = fieldName;
+        }
+
+        public string ContainerName { get; }
+
+        public string PrimaryKeyField { get; }
     }
 
     /// <summary>

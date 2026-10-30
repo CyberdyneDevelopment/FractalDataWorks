@@ -73,4 +73,74 @@ public sealed class UpstreamProblemBodyTests
         Captured(result, ResultDetailKeys.UpstreamReferenceId).ShouldBeNull();
         Captured(result, ResultDetailKeys.UpstreamCode).ShouldBeNull();
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AConflictProblemBodyHandsItsReasonToTheCaller()
+    {
+        var body = "{\"title\":\"The request conflicted with the current state of the resource\",\"status\":409,\"detail\":\"The pipeline 'AfcPlayersLoad' is counted by the threshold 'Backlog' of Server\","
+            + $"\"code\":\"WAITTHRESHOLD-42160\",\"referenceId\":\"{ReferenceId}\"}}";
+        var sut = CreateClient(HttpStatusCode.Conflict, body, "application/problem+json");
+
+        var result = await sut.Post<TestModel, TestModel>("api/items", new TestModel(), TestContext.Current.CancellationToken);
+
+        result.Code.ShouldNotBeNull().Name.ShouldBe("UpstreamConflict");
+        Captured(result, "reason").ShouldBe("The pipeline 'AfcPlayersLoad' is counted by the threshold 'Backlog' of Server");
+        result.Code.FormatClientMessage(result.Details).ShouldBe("The pipeline 'AfcPlayersLoad' is counted by the threshold 'Backlog' of Server");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ARefusedTriggerBodyThatStatesReasonAndNotDetailHandsItsReasonToTheCaller()
+    {
+        var body = "{\"executionId\":\"01a18cdc-fc5f-7f15-9aa4-fc11aa47a0df\",\"status\":\"ServerBusy\",\"reason\":\"The server is not taking new runs: the threshold 'Queue full' of Server fires\"}";
+        var sut = CreateClient(HttpStatusCode.ServiceUnavailable, body, "application/json");
+
+        var result = await sut.Post<TestModel, TestModel>("api/items", new TestModel(), TestContext.Current.CancellationToken);
+
+        result.Code.ShouldNotBeNull().Name.ShouldBe("UpstreamUnavailable");
+        result.Code.FormatClientMessage(result.Details).ShouldBe("The server is not taking new runs: the threshold 'Queue full' of Server fires");
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "")]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "<html>Service Unavailable</html>")]
+    [InlineData(HttpStatusCode.BadGateway, "{\"reason\":\"upstream said so\"}")]
+    public async Task AnAnswerWithNoReasonOrACallThatFailedHandsNoReasonToTheCaller(HttpStatusCode status, string body)
+    {
+        var sut = CreateClient(status, body, status == HttpStatusCode.ServiceUnavailable ? "text/html" : "application/json");
+
+        var result = await sut.Post<TestModel, TestModel>("api/items", new TestModel(), TestContext.Current.CancellationToken);
+
+        result.Code.ShouldNotBeNull().FormatClientMessage(result.Details).ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ARefusedTriggerBodyKeepsTheIdOfTheExecutionItClosed()
+    {
+        var body = "{\"executionId\":\"01a18cdc-fc5f-7f15-9aa4-fc11aa47a0df\",\"status\":\"ServerBusy\",\"reason\":\"The server is not taking new runs\"}";
+        var sut = CreateClient(HttpStatusCode.ServiceUnavailable, body, "application/json");
+
+        var result = await sut.Post<TestModel, TestModel>("api/items", new TestModel(), TestContext.Current.CancellationToken);
+
+        Captured(result, ResultDetailKeys.ExecutionId).ShouldBe("01a18cdc-fc5f-7f15-9aa4-fc11aa47a0df");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AnAnswerWithNoExecutionIdKeepsNone()
+    {
+        var sut = CreateClient(HttpStatusCode.ServiceUnavailable, ProblemBody, "application/problem+json");
+
+        var result = await sut.Post<TestModel, TestModel>("api/items", new TestModel(), TestContext.Current.CancellationToken);
+
+        Captured(result, ResultDetailKeys.ExecutionId).ShouldBeNull();
+    }
 }

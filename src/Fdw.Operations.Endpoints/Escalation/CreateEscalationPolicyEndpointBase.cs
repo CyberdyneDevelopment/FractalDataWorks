@@ -5,6 +5,7 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Escalation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -54,8 +55,7 @@ public abstract class CreateEscalationPolicyEndpointBase : Endpoint<EscalationPo
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.CreateEscalationPolicyFailed(_logger, result.CurrentMessage!);
-                AddError("Failed to create escalation policy");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

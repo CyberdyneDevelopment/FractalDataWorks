@@ -33,6 +33,7 @@ public sealed class FlowStepContext
     /// <param name="identity">Who the run is; null when it is untracked, which an Execute Pipeline step refuses.</param>
     /// <param name="reporter">Records how the steps went; null when the run is untracked, which records nothing.</param>
     /// <param name="reportParent">The stage record a step started now is recorded under; null for a step of the run itself.</param>
+    /// <param name="pauseGate">The gate a step waits at while its run is paused; null for a run nobody can pause.</param>
     public FlowStepContext(
         FlowVariables variables,
         IFlowExecutor executor,
@@ -40,7 +41,8 @@ public sealed class FlowStepContext
         IPipelineRunStarter? starter,
         FlowRunIdentity? identity,
         IFlowReporter? reporter,
-        Guid? reportParent)
+        Guid? reportParent,
+        IFlowPauseGate? pauseGate = null)
     {
         Variables = variables ?? throw new ArgumentNullException(nameof(variables));
         Executor = executor ?? throw new ArgumentNullException(nameof(executor));
@@ -49,6 +51,7 @@ public sealed class FlowStepContext
         Identity = identity;
         Reporter = reporter;
         ReportParent = reportParent;
+        PauseGate = pauseGate;
     }
 
     /// <summary>Gets the variables in scope.</summary>
@@ -72,12 +75,15 @@ public sealed class FlowStepContext
     /// <summary>Gets the stage record a step started now is recorded under; null for a step of the run itself.</summary>
     public Guid? ReportParent { get; }
 
+    /// <summary>Gets the gate a step waits at while its run is paused; empty for a run nobody can pause (a test run, a pipeline started in a step's own scope).</summary>
+    public IFlowPauseGate? PauseGate { get; }
+
     /// <summary>Makes the context a nested scope sees: the same run with a child variable scope.</summary>
     /// <returns>The child context.</returns>
-    public FlowStepContext CreateChild() => new(Variables.CreateChild(), Executor, Options, Starter, Identity, Reporter, ReportParent);
+    public FlowStepContext CreateChild() => new(Variables.CreateChild(), Executor, Options, Starter, Identity, Reporter, ReportParent, PauseGate);
 
     /// <summary>Makes the context the steps inside a step see: the same scope, recorded under that step's stage.</summary>
     /// <param name="stage">The stage record of the step.</param>
     /// <returns>The context for the step and the steps inside it.</returns>
-    public FlowStepContext WithReportParent(Guid stage) => new(Variables, Executor, Options, Starter, Identity, Reporter, stage);
+    public FlowStepContext WithReportParent(Guid stage) => new(Variables, Executor, Options, Starter, Identity, Reporter, stage, PauseGate);
 }

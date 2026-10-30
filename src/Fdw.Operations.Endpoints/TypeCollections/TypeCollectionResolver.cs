@@ -7,6 +7,7 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Abstractions.OptionTypes;
 
 namespace Fdw.Operations.Endpoints.TypeCollections;
 
@@ -192,6 +193,7 @@ internal static class TypeCollectionResolver
             ExpectedProperties = GetStringListProperty(typeOption, "ExpectedProperties"),
             RequiredProperties = GetStringListProperty(typeOption, "RequiredProperties"),
             Parameters = TypeCollectionParameters.For(typeOption),
+            Levels = typeOption is IWaitThresholdMode mode ? mode.Levels : null,
             AcceptsRejectedRecords = typeOption is IAcceptsRejectedRecordsShape rejects ? rejects.AcceptsRejectedRecords : null,
             ReservedColumns = typeOption is IReservedColumnsShape reserved ? reserved.ReservedColumns : null,
             Inputs = typeOption is IFlowComponentShape component ? Nodes(component.Inputs) : null,

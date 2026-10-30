@@ -41,24 +41,24 @@ public class CalculationConfigurationProviderTests
             "PlatformConfiguration", "calc", "CalculationEntity");
 
         // Registered exactly as DefaultCalculationServiceType registers it.
-        domain.Register("Formula", new FormulaCalculationConfigurationProvider(
-            NullLogger<FormulaCalculationConfigurationProvider>.Instance,
+        domain.Register("Windowed", new WindowedCalculationConfigurationProvider(
+            NullLogger<WindowedCalculationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
-            "PlatformConfiguration", "calc", "FormulaCalculationConfiguration"));
+            "PlatformConfiguration", "calc", "WindowedCalculationConfiguration"));
 
         var result = await domain.Get(EntityId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        var formula = result.Value.ShouldBeOfType<FormulaCalculationConfiguration>();
-        formula.FormulaBody.ShouldBe("[A]+[B]");
-        formula.Inputs.Count.ShouldBe(2);
-        formula.Steps.Count.ShouldBe(1);
-        formula.Steps[0].Fields.Count.ShouldBe(2);
-        formula.Steps[0].Operands.Count.ShouldBe(1);
+        var windowed = result.Value.ShouldBeOfType<WindowedCalculationConfiguration>();
+        windowed.TargetField.ShouldBe("WeightLbs");
+        windowed.Inputs.Count.ShouldBe(2);
+        windowed.Steps.Count.ShouldBe(1);
+        windowed.Steps[0].Fields.Count.ShouldBe(2);
+        windowed.Steps[0].Operands.Count.ShouldBe(1);
 
         // The domain row is what names the member; the implementation carries the rest.
-        formula.Name.ShouldBe("Calc1");
-        formula.Implementation.ShouldBe("Formula");
+        windowed.Name.ShouldBe("Calc1");
+        windowed.Implementation.ShouldBe("Windowed");
     }
 
     private sealed class AggregateGateway : IConfigurationGateway
@@ -73,11 +73,11 @@ public class CalculationConfigurationProviderTests
 
         private readonly IReadOnlyList<IDataStore> _stores;
         private readonly List<CalculationEntityDomainConfiguration> _rows;
-        private readonly List<FormulaCalculationInputConfiguration> _inputs;
-        private readonly List<FormulaCalculationStepConfiguration> _steps;
-        private readonly List<FormulaCalculationStepFieldConfiguration> _fields;
-        private readonly List<FormulaCalculationStepOperandConfiguration> _operands;
-        private readonly List<FormulaCalculationConfiguration> _formula;
+        private readonly List<WindowedCalculationInputConfiguration> _inputs;
+        private readonly List<WindowedCalculationStepConfiguration> _steps;
+        private readonly List<WindowedCalculationStepFieldConfiguration> _fields;
+        private readonly List<WindowedCalculationStepOperandConfiguration> _operands;
+        private readonly List<WindowedCalculationConfiguration> _windowed;
 
         public AggregateGateway()
         {
@@ -85,26 +85,26 @@ public class CalculationConfigurationProviderTests
             [
                 new CalculationEntityDomainConfiguration
                 {
-                    Id = EntityId, Name = "Calc1", Domain = "CalculationEntity", Implementation = "Formula",
+                    Id = EntityId, Name = "Calc1", Domain = "CalculationEntity", Implementation = "Windowed",
                 }
             ];
             _inputs =
             [
-                new FormulaCalculationInputConfiguration { Id = Guid.NewGuid(), InputAlias = "A", InputKind = "DataSet", Ordinal = 0 },
-                new FormulaCalculationInputConfiguration { Id = Guid.NewGuid(), InputAlias = "B", InputKind = "DataSet", Ordinal = 1 }
+                new WindowedCalculationInputConfiguration { Id = Guid.NewGuid(), InputAlias = "A", InputKind = "DataSet", Ordinal = 0 },
+                new WindowedCalculationInputConfiguration { Id = Guid.NewGuid(), InputAlias = "B", InputKind = "DataSet", Ordinal = 1 }
             ];
-            _steps = [new FormulaCalculationStepConfiguration { Id = StepId, Name = "Step1", OperationType = "Add", OutputAlias = "S1" }];
+            _steps = [new WindowedCalculationStepConfiguration { Id = StepId, Name = "Step1", OperationType = "Add", OutputAlias = "S1" }];
             _fields =
             [
-                new FormulaCalculationStepFieldConfiguration { Id = Guid.NewGuid(), StepFieldRole = "GroupBy", Ordinal = 0 },
-                new FormulaCalculationStepFieldConfiguration { Id = Guid.NewGuid(), StepFieldRole = "OrderBy", Ordinal = 1 }
+                new WindowedCalculationStepFieldConfiguration { Id = Guid.NewGuid(), StepFieldRole = "GroupBy", Ordinal = 0 },
+                new WindowedCalculationStepFieldConfiguration { Id = Guid.NewGuid(), StepFieldRole = "OrderBy", Ordinal = 1 }
             ];
-            _operands = [new FormulaCalculationStepOperandConfiguration { Id = Guid.NewGuid(), Name = "op1", OperandType = "Input", InputAlias = "A" }];
-            _formula =
+            _operands = [new WindowedCalculationStepOperandConfiguration { Id = Guid.NewGuid(), Name = "op1", OperandType = "Input", InputAlias = "A" }];
+            _windowed =
             [
-                new FormulaCalculationConfiguration
+                new WindowedCalculationConfiguration
                 {
-                    Id = EntityId, FormulaBody = "[A]+[B]", FormulaLanguage = "CSharp",
+                    Id = EntityId, TargetField = "WeightLbs", WindowFunction = "Sum",
                 }
             ];
             _stores = [BuildTree()];
@@ -119,20 +119,20 @@ public class CalculationConfigurationProviderTests
         {
             if (typeof(T) == typeof(IEnumerable<CalculationEntityDomainConfiguration>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)_rows.AsEnumerable()));
-            if (typeof(T) == typeof(IEnumerable<FormulaCalculationConfiguration>))
-                return Task.FromResult(GenericResult<T>.Success((T)(object)_formula.AsEnumerable()));
+            if (typeof(T) == typeof(IEnumerable<WindowedCalculationConfiguration>))
+                return Task.FromResult(GenericResult<T>.Success((T)(object)_windowed.AsEnumerable()));
             return Task.FromResult(GenericResult<T>.Success((T)(object)Array.Empty<object>().AsEnumerable()));
         }
 
         public Task<IGenericResult<IEnumerable<object>>> Execute(IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken = default)
         {
-            if (rowType == typeof(FormulaCalculationInputConfiguration))
+            if (rowType == typeof(WindowedCalculationInputConfiguration))
                 return Task.FromResult(GenericResult<IEnumerable<object>>.Success(_inputs.Cast<object>()));
-            if (rowType == typeof(FormulaCalculationStepConfiguration))
+            if (rowType == typeof(WindowedCalculationStepConfiguration))
                 return Task.FromResult(GenericResult<IEnumerable<object>>.Success(_steps.Cast<object>()));
-            if (rowType == typeof(FormulaCalculationStepFieldConfiguration))
+            if (rowType == typeof(WindowedCalculationStepFieldConfiguration))
                 return Task.FromResult(GenericResult<IEnumerable<object>>.Success(_fields.Cast<object>()));
-            if (rowType == typeof(FormulaCalculationStepOperandConfiguration))
+            if (rowType == typeof(WindowedCalculationStepOperandConfiguration))
                 return Task.FromResult(GenericResult<IEnumerable<object>>.Success(_operands.Cast<object>()));
             return Task.FromResult(GenericResult<IEnumerable<object>>.Success(Enumerable.Empty<object>()));
         }
@@ -160,37 +160,37 @@ public class CalculationConfigurationProviderTests
 
             // The implementation container: it carries the outbound Foreign key to its domain, and its
             // own keys, because it is the owner the children hang from.
-            var formulaContainer = Container("FormulaCalculationConfiguration",
+            var windowedContainer = Container("WindowedCalculationConfiguration",
             [
-                Key("Foreign", "FK_FormulaCalculationConfiguration_CalculationEntity", "CalculationEntityRowId", entityContainer),
-                Key("Physical", "PK_FormulaCalculationConfiguration", "RowId", null),
-                Key("Logical", "AK_FormulaCalculation", "Id", null)
+                Key("Foreign", "FK_WindowedCalculationConfiguration_CalculationEntity", "CalculationEntityRowId", entityContainer),
+                Key("Physical", "PK_WindowedCalculationConfiguration", "RowId", null),
+                Key("Logical", "AK_WindowedCalculation", "Id", null)
             ]);
 
             // The implementation owns its inputs and steps, each held by the implementation's RowId, as
-            // calc.FormulaCalculationInput / calc.FormulaCalculationStep declare (FDW-944).
-            var inputContainer = Container("FormulaCalculationInput",
+            // calc.WindowedCalculationInput / calc.WindowedCalculationStep declare (FDW-944).
+            var inputContainer = Container("WindowedCalculationInput",
             [
-                Key("Foreign", "FK_FormulaCalculationInput_FormulaCalculationConfiguration", "FormulaCalculationConfigurationRowId", formulaContainer),
-                Key("Physical", "PK_FormulaCalculationInput", "RowId", null),
-                Key("Logical", "AK_FormulaCalculationInput", "Id", null)
+                Key("Foreign", "FK_WindowedCalculationInput_WindowedCalculationConfiguration", "WindowedCalculationConfigurationRowId", windowedContainer),
+                Key("Physical", "PK_WindowedCalculationInput", "RowId", null),
+                Key("Logical", "AK_WindowedCalculationInput", "Id", null)
             ]);
 
             // The step owns its fields and operands, so the child read resolves its Physical (RowId)
             // and Logical (Id) key columns from metadata to build the join — it needs both.
-            var stepContainer = Container("FormulaCalculationStep",
+            var stepContainer = Container("WindowedCalculationStep",
             [
-                Key("Foreign", "FK_FormulaCalculationStep_FormulaCalculationConfiguration", "FormulaCalculationConfigurationRowId", formulaContainer),
-                Key("Physical", "PK_FormulaCalculationStep", "RowId", null),
-                Key("Logical", "AK_FormulaCalculationStep", "Id", null)
+                Key("Foreign", "FK_WindowedCalculationStep_WindowedCalculationConfiguration", "WindowedCalculationConfigurationRowId", windowedContainer),
+                Key("Physical", "PK_WindowedCalculationStep", "RowId", null),
+                Key("Logical", "AK_WindowedCalculationStep", "Id", null)
             ]);
-            var fieldContainer = Container("FormulaCalculationStepField",
-                [Key("Foreign", "FK_FormulaCalculationStepField_FormulaCalculationStep", "FormulaCalculationStepRowId", stepContainer)]);
-            var operandContainer = Container("FormulaCalculationStepOperand",
-                [Key("Foreign", "FK_FormulaCalculationStepOperand_FormulaCalculationStep", "FormulaCalculationStepRowId", stepContainer)]);
+            var fieldContainer = Container("WindowedCalculationStepField",
+                [Key("Foreign", "FK_WindowedCalculationStepField_WindowedCalculationStep", "WindowedCalculationStepRowId", stepContainer)]);
+            var operandContainer = Container("WindowedCalculationStepOperand",
+                [Key("Foreign", "FK_WindowedCalculationStepOperand_WindowedCalculationStep", "WindowedCalculationStepRowId", stepContainer)]);
 
             var containers = new List<IDataContainer>
-            { entityContainer, formulaContainer, inputContainer, stepContainer, fieldContainer, operandContainer };
+            { entityContainer, windowedContainer, inputContainer, stepContainer, fieldContainer, operandContainer };
 
             // Each container lists the Foreign keys that reference it, as ConfigurationDb's calc.* DDL
             // declares them: an owner is found only through these.

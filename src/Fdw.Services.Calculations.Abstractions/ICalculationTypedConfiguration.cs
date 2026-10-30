@@ -4,7 +4,7 @@ using Fdw.Configuration;
 namespace Fdw.Services.Calculations.Abstractions;
 
 /// <summary>
-/// Marker interface for a calculation entity's polymorphic typed body (Formula / Windowed).
+/// Marker interface for a calculation entity's polymorphic typed body (Windowed).
 /// </summary>
 /// <remarks>
 /// Why: the PocoMapperGenerator detects a header's typed body by a property named <c>Configuration</c>

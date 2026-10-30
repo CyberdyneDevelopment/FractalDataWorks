@@ -72,6 +72,6 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
             return graph.ToNewResult<GraphPayload>();
         }
 
-        return await GraphSave.Save(_provider, graph.Value, Logger, ct).ConfigureAwait(false);
+        return await GraphSave.Update(_provider, graph.Value, Logger, ct).ConfigureAwait(false);
     }
 }

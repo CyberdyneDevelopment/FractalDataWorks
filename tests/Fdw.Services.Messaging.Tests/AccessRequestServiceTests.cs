@@ -212,7 +212,7 @@ public sealed class AccessRequestServiceTests
         var result = await fixture.Service.Approve(Guid.NewGuid(), Guid.NewGuid(), "ok", TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91000");
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31001");
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public sealed class AccessRequestServiceTests
         var result = await fixture.Service.Deny(Guid.NewGuid(), Guid.NewGuid(), "no", TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91000");
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31001");
     }
 
     [Fact]

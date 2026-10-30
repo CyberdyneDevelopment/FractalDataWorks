@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Flow;
 using static Fdw.Services.Etl.Tests.Flow.FlowTestKit;
 
@@ -359,5 +360,46 @@ public sealed class FlowExecutorTests
             yield return Row(i);
             await Task.Yield();
         }
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task APausedRunPassesNoRowsOnUntilItIsResumed()
+    {
+        var (sink, rows) = Sink("dst");
+        var graph = Graph([Source("src", 10, batchSize: 3), sink], [Link("src", "dst")]);
+        var gate = new PipelineRunPauseGate();
+        gate.Pause().ShouldBeTrue();
+
+        var running = _sut.Run(graph, new FlowRunOptions { LinkCapacity = 2, PauseGate = gate }, TestContext.Current.CancellationToken);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+
+        running.IsCompleted.ShouldBeFalse();
+        rows.Count.ShouldBe(0);
+
+        gate.Resume().ShouldBeTrue();
+        var result = await running;
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        rows.Count.ShouldBe(10);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ACancelledPausedRunEndsInsteadOfWaitingForever()
+    {
+        var (sink, _) = Sink("dst");
+        var graph = Graph([Source("src", 10, batchSize: 3), sink], [Link("src", "dst")]);
+        var gate = new PipelineRunPauseGate();
+        gate.Pause().ShouldBeTrue();
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+
+        var running = _sut.Run(graph, new FlowRunOptions { LinkCapacity = 2, PauseGate = gate }, cancel.Token);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        await cancel.CancelAsync();
+
+        var result = await running.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        result.IsFailure.ShouldBeTrue();
     }
 }

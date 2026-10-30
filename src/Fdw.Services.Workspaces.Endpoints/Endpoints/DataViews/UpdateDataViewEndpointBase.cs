@@ -79,7 +79,7 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
 
         // After the checks, because the loaded view is the cached instance: a refusal must leave it as it was read.
         Apply(request, view);
-        var saved = await _variations.Save(
+        var saved = await _variations.Update(
             view, "DataSetVariation", DataViewDataSetVariationConfiguration.ImplementationName, view.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<DataViewResponse>();
 

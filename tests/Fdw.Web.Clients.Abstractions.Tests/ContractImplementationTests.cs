@@ -12,7 +12,6 @@ using DataDataSetFieldDto = Fdw.Services.Data.Clients.Models.DataSetFieldPayload
 using CalcDataSetFieldDto = Fdw.Web.Calculations.Clients.Models.DataSetFieldPayload;
 using CalcTypeStats = Fdw.Web.Calculations.Clients.Models.CalculationTypeStats;
 
-using AnalyticsEnvironmentDto = Fdw.Web.Analytics.Clients.Models.EnvironmentPayload;
 using AnalyticsCalcTypeStats = Fdw.Web.Analytics.Clients.Models.CalculationTypeStats;
 
 using OpsEnvironmentDto = Fdw.Operations.Clients.Models.EnvironmentPayload;
@@ -437,42 +436,6 @@ public sealed class ContractImplementationTests
 #pragma warning restore CA1859
 
         contract.LastExecuted.ShouldBeNull();
-    }
-
-    // -----------------------------------------------------------------------
-    // Analytics.Clients: EnvironmentPayload -> IEnvironmentInfo
-    // -----------------------------------------------------------------------
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void AnalyticsEnvironmentDtoImplementsIEnvironmentInfo()
-    {
-        var dto = new AnalyticsEnvironmentDto();
-        IEnvironmentInfo contract = dto;
-        contract.ShouldNotBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void AnalyticsEnvironmentDtoPropertiesAccessibleThroughInterface()
-    {
-        var id = Guid.NewGuid();
-        var dto = new AnalyticsEnvironmentDto
-        {
-            Id = id,
-            Name = "Production",
-            Description = "Live production environment"
-        };
-
-#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
-        IEnvironmentInfo contract = dto;
-#pragma warning restore CA1859
-
-        contract.Id.ShouldBe(id);
-        contract.Name.ShouldBe("Production");
-        contract.Description.ShouldBe("Live production environment");
     }
 
     // -----------------------------------------------------------------------

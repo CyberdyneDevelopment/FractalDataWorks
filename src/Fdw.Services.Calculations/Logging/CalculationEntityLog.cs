@@ -80,6 +80,30 @@ internal static partial class CalculationEntityLog
     [MessageLogging(EventId = 11035, Level = LogLevel.Warning, Message = "Skipped input '{alias}': {reason}")]
     public static partial IGenericMessage InputResolutionSkipped(ILogger logger, string alias, string reason);
 
+    [MessageLogging(EventId = 21022, Level = LogLevel.Warning,
+        Message = "Calculation input '{alias}' is a {kind} input, which the calculation service does not read yet",
+        ClientMessage = "Calculation input '{alias}' is a {kind} input, which calculations do not read yet")]
+    public static partial IGenericMessage InputKindNotRead(ILogger logger, string alias, string kind);
+
+    [MessageLogging(EventId = 21026, Level = LogLevel.Warning,
+        Message = "Calculation input '{alias}' is a DataSet input with no data set name",
+        ClientMessage = "Calculation input '{alias}' is a DataSet input and names no data set")]
+    public static partial IGenericMessage DataSetInputNamesNoDataSet(ILogger logger, string alias);
+
+    [MessageLogging(EventId = 21027, Level = LogLevel.Warning,
+        Message = "Calculation input '{alias}' is a DataSet input, and this run states no row cap, so it has no caller to read the data set as",
+        ClientMessage = "Calculation input '{alias}' is a DataSet input, and a calculation reads a data set as the caller who runs it; this run has no caller")]
+    public static partial IGenericMessage DataSetInputHasNoCaller(ILogger logger, string alias);
+
+    [MessageLogging(EventId = 61021, Level = LogLevel.Error,
+        Message = "Calculation input '{alias}' is a DataSet input, and no IDataSetRowReader is registered to read it")]
+    public static partial IGenericMessage DataSetRowReaderNotRegistered(ILogger logger, string alias);
+
+    [MessageLogging(EventId = 21023, Level = LogLevel.Warning,
+        Message = "Calculation '{name}' is a {entityType} calculation with no input rows to compute over",
+        ClientMessage = "Calculation '{name}' has no input rows to compute over; give it a DataSet input that provides rows")]
+    public static partial IGenericMessage NoInputRows(ILogger logger, string name, string entityType);
+
     // --- Windowed execution ---
 
     [MessageLogging(EventId = 11036, Level = LogLevel.Information, Message = "Starting windowed execution '{name}' with function '{windowFunction}' across {partitionCount} partitions")]
@@ -91,22 +115,18 @@ internal static partial class CalculationEntityLog
     [MessageLogging(EventId = 91004, Level = LogLevel.Error, Message = "Windowed execution '{name}' failed")]
     public static partial IGenericMessage WindowedExecutionFailed(ILogger logger, Exception ex, string name);
 
-    // --- Formula execution ---
+    [MessageLogging(EventId = 21020, Level = LogLevel.Warning,
+        Message = "Calculation '{name}' names window function '{windowFunction}', which is not offered; the offered functions are {offered}",
+        ClientMessage = "The window function '{windowFunction}' is not offered; the offered functions are {offered}")]
+    public static partial IGenericMessage WindowFunctionNotOffered(ILogger logger, string name, string windowFunction, string offered);
 
-    [MessageLogging(EventId = 11038, Level = LogLevel.Debug, Message = "Compiling formula for calculation '{name}'")]
-    public static partial IGenericMessage FormulaCompilationStarted(ILogger logger, string name);
+    [MessageLogging(EventId = 21021, Level = LogLevel.Warning,
+        Message = "Calculation '{name}' was given a windowed spec that is a {suppliedType}, not a WindowedCalculationSpec",
+        ClientMessage = "The windowed spec is not a WindowedCalculationSpec")]
+    public static partial IGenericMessage WindowedSpecInvalid(ILogger logger, string name, string suppliedType);
 
-    [MessageLogging(EventId = 11039, Level = LogLevel.Debug, Message = "Formula compilation succeeded for calculation '{name}'")]
-    public static partial IGenericMessage FormulaCompilationSucceeded(ILogger logger, string name);
-
-    [MessageLogging(EventId = 91005, Level = LogLevel.Error, Message = "Formula compilation failed for calculation '{name}'")]
-    public static partial IGenericMessage FormulaCompilationFailed(ILogger logger, Exception ex, string name);
-
-    [MessageLogging(EventId = 11040, Level = LogLevel.Debug, Message = "Executing formula for calculation '{name}'")]
-    public static partial IGenericMessage FormulaExecutionStarted(ILogger logger, string name);
-
-    [MessageLogging(EventId = 11041, Level = LogLevel.Information, Message = "Formula execution succeeded for calculation '{name}'")]
-    public static partial IGenericMessage FormulaExecutionSucceeded(ILogger logger, string name);
+    [MessageLogging(EventId = 61020, Level = LogLevel.Error, Message = "Calculation '{name}' has no windowed configuration loaded")]
+    public static partial IGenericMessage WindowedConfigurationNotLoaded(ILogger logger, string name);
 
     // --- CRUD operations ---
 
@@ -136,9 +156,6 @@ internal static partial class CalculationEntityLog
 
     [MessageLogging(EventId = 71013, Level = LogLevel.Error, Message = "Failed to delete calculation '{id}'")]
     public static partial IGenericMessage DeleteCalculationFailed(ILogger logger, Exception ex, Guid id);
-
-    [MessageLogging(EventId = 61000, Level = LogLevel.Error, Message = "Calculation '{name}' formula configuration not loaded — typed configuration record missing from entity")]
-    public static partial IGenericMessage FormulaConfigurationNotLoaded(ILogger logger, string name);
 
     // --- Typed configuration save ---
 

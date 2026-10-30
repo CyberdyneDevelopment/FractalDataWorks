@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using Fdw.Collections;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Commands.Data.Abstractions.Caching;
+using Fdw.Commands.Data.Abstractions.Timeouts;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -303,6 +304,18 @@ public class QueryCommandBuilder<T>
     public QueryCommandBuilder<T> WithMetadata(string key, object value)
     {
         _metadata[key] = value;
+        return this;
+    }
+
+    /// <summary>
+    /// Gives the query a command timeout of its own, which every connection kind applies over its own (FDW-3324).
+    /// </summary>
+    /// <param name="timeout">The timeout, longer than zero.</param>
+    /// <param name="owner">Who sets the limit, in the words a failure uses, for example <c>secret manager 'MsSqlSecrets'</c>.</param>
+    /// <returns>This builder for chaining.</returns>
+    public QueryCommandBuilder<T> CommandTimeout(TimeSpan timeout, string owner)
+    {
+        CommandTimeoutPolicy.Set(_metadata, timeout, owner);
         return this;
     }
 

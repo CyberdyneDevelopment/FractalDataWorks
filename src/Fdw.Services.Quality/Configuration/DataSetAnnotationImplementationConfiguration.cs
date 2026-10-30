@@ -69,6 +69,15 @@ public sealed partial class DataSetAnnotationImplementationConfiguration
     /// </summary>
     public string? DataClassification { get; set; }
 
+    /// <inheritdoc />
+    public bool IsResolved { get; set; }
+
+    /// <inheritdoc />
+    public DateTimeOffset? ResolvedDate { get; set; }
+
+    /// <inheritdoc />
+    public Guid? ResolvedBy { get; set; }
+
     /// <summary>
     /// Gets or sets the tags for this annotation.
     /// </summary>

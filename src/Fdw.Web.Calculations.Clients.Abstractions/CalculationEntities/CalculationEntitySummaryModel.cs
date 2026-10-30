@@ -23,7 +23,7 @@ public sealed class CalculationEntitySummaryModel
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the calculation entity type name (e.g. "Formula", "Windowed").
+    /// Gets or sets the calculation entity type name (e.g. "Windowed").
     /// </summary>
     public string CalculationEntityType { get; set; } = string.Empty;
 

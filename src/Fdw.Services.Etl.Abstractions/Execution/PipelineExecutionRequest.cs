@@ -82,4 +82,10 @@ public sealed class PipelineExecutionRequest
     /// rows from each source and writes nothing; null means a real run.
     /// </summary>
     public int? TestRowsPerSource { get; init; }
+
+    /// <summary>
+    /// Gets when a run that was held back (DelayedStart) is due, for a run the host takes up again after a restart (FDW-3216); none for a run that is
+    /// not recovered, whose hold the scheduler works out itself.
+    /// </summary>
+    public DateTimeOffset? HeldUntil { get; init; }
 }

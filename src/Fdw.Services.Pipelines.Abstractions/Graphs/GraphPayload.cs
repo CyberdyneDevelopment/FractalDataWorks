@@ -30,6 +30,21 @@ public class GraphPayload
     /// </summary>
     public bool RequireApprovalToRun { get; set; }
 
+    /// <summary>Gets or sets how many runs of the pipeline may run at once; a save states it (FDW-3117).</summary>
+    public int? MaxParallelRuns { get; set; }
+
+    /// <summary>Gets or sets what happens to a run triggered while that many are active, the name of an option of <c>OverflowBehaviors</c>; a save states it (FDW-3117).</summary>
+    public string? OverflowBehavior { get; set; }
+
+    /// <summary>Gets or sets the seconds a held run waits, for the <c>DelayedStart</c> behavior with a delay (FDW-3129).</summary>
+    public int? DelayedStartSeconds { get; set; }
+
+    /// <summary>Gets or sets the time of day (<c>HH:mm</c>) a held run joins the queue, for the <c>DelayedStart</c> behavior with a time of day (FDW-3129).</summary>
+    public string? DelayedStartTimeOfDay { get; set; }
+
+    /// <summary>Gets or sets the time zone the time of day is read in (FDW-3129).</summary>
+    public string? DelayedStartTimeZoneId { get; set; }
+
     /// <summary>Gets or sets the variables the graph declares, in scope in every component.</summary>
     public IList<GraphVariablePayload> Variables { get; set; } = [];
 

@@ -8,7 +8,7 @@ namespace Fdw.Etl.Abstractions.Monitoring.AlertSeverityOptions;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(AlertSeverities), "Info", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(AlertSeverities), "Info")]
 public sealed class InfoSeverity : AlertSeverityBase
 {
     /// <summary>

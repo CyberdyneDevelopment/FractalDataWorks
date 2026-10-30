@@ -113,7 +113,7 @@ public abstract class UpdateWorkspaceMemberRoleEndpointBase
         row.ModifyDate = DateTimeOffset.UtcNow;
 
         // row is the instance inside the aggregate's Members, so the aggregate already carries the change.
-        var saved = await _workspaces.Save(_workspace!, _workspace!.Domain, _workspace.Implementation, _workspace.Name, ct).ConfigureAwait(false);
+        var saved = await _workspaces.Update(_workspace!, _workspace!.Domain, _workspace.Implementation, _workspace.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<WorkspaceMemberDto>();
 
         return GenericResult<WorkspaceMemberDto>.Success(ToDto(row));

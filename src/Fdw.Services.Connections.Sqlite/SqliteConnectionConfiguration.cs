@@ -97,9 +97,13 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     public bool ForeignKeys { get; set; }
 
     /// <summary>
-    /// Gets or sets the default command timeout in seconds.
+    /// Gets or sets the default command timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3284).
     /// </summary>
-    public int DefaultTimeout { get; set; } = 30;
+    /// <remarks>
+    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultCommandTimeoutSeconds, and
+    /// is not built when that is not set either.
+    /// </remarks>
+    public int? DefaultTimeout { get; set; }
 
     // ========================================
     // Authentication (like every other connection: a selector + a KVP the auth method parses)

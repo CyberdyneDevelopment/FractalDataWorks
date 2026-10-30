@@ -125,12 +125,12 @@ public sealed class EscalationService : IEscalationService
         OperationsLog.EscalationCreatingPolicy(_logger, policy.Name);
 
         var saved = await _provider
-            .Save(BuildConfig(policy, id: null), EscalationPolicyDomain, EscalationPolicyDomain, policy.Name, cancellationToken)
+            .Create(BuildConfig(policy, id: null), EscalationPolicyDomain, EscalationPolicyDomain, policy.Name, cancellationToken)
             .ConfigureAwait(false);
         if (!saved.IsSuccess)
             return saved.ToNewResult<IEscalationPolicy>();
 
-        // Save writes the domain row and the implementation together and hands back neither: the
+        // Create writes the domain row and the implementation together and hands back neither: the
         // domain row's id is minted inside it. Read it back by the name it was written under.
         var written = await _provider.Get(policy.Name, cancellationToken).ConfigureAwait(false);
         if (!written.IsSuccess)
@@ -152,7 +152,7 @@ public sealed class EscalationService : IEscalationService
         OperationsLog.EscalationUpdatingPolicy(_logger, policyId);
 
         var saveResult = await _provider
-            .Save(BuildConfig(policy, id: policyId), EscalationPolicyDomain, EscalationPolicyDomain, policy.Name, cancellationToken)
+            .Update(BuildConfig(policy, id: policyId), EscalationPolicyDomain, EscalationPolicyDomain, policy.Name, cancellationToken)
             .ConfigureAwait(false);
         if (!saveResult.IsSuccess)
             return saveResult.ToNewResult<IEscalationPolicy>();
@@ -177,8 +177,9 @@ public sealed class EscalationService : IEscalationService
 
         var result = await _provider.Delete(policyId, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
-            return GenericResult.Failure(
-                OperationsLog.EscalationPersistFailed(_logger, "Failed to delete policy"));
+            return FailureCategory.IsMissing(result)
+                ? result
+                : GenericResult.Failure(OperationsLog.EscalationPersistFailed(_logger, "Failed to delete policy"));
 
         OperationsLog.EscalationPolicyDeleted(_logger, policyId);
         return GenericResult.Success();

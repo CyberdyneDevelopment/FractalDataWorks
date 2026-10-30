@@ -26,6 +26,8 @@ public sealed class NotificationMapperTests
         public string? SecretManagerName { get; set; }
 
         public string? SecretKeyName { get; set; }
+
+        public string? Description { get; set; }
     }
 
     [Fact]
@@ -51,6 +53,26 @@ public sealed class NotificationMapperTests
         var detail = NotificationMapper.ToDetail(new StoredNotification { Name = "Alerts", IsEnabled = false });
 
         detail.IsEnabled.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void ADetailCarriesTheDescriptionItWasStoredWith()
+    {
+        var detail = NotificationMapper.ToDetail(new StoredNotification { Name = "Alerts", Description = "pages the on-call" });
+
+        detail.Description.ShouldBe("pages the on-call");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void ASummaryCarriesTheDescriptionOfItsDomainRow()
+    {
+        var summary = NotificationMapper.ToSummary(new NotificationDomainConfiguration { Name = "Alerts", Description = "pages the on-call" });
+
+        summary.Description.ShouldBe("pages the on-call");
     }
 
     [Fact]

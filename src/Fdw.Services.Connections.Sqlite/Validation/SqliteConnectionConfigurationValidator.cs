@@ -25,5 +25,10 @@ public sealed class SqliteConnectionConfigurationValidator : FdwConfigurationVal
         RuleFor(x => x.Cache)
             .NotEmpty()
             .WithMessage("Cache is required (e.g., Default, Shared, Private)");
+
+        RuleFor(x => x.DefaultTimeout)
+            .GreaterThan(0)
+            .When(x => x.DefaultTimeout.HasValue)
+            .WithMessage("DefaultTimeout must be greater than 0 when it is stated; leave it out to take the instance's DefaultCommandTimeoutSeconds");
     }
 }

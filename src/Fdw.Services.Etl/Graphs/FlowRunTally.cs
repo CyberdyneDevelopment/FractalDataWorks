@@ -66,7 +66,7 @@ public sealed class FlowRunTally : IFlowExecutor, IFlowRunCounts
         FlowRunOutcome outcome;
         try
         {
-            outcome = await _inner.Execute(graph, new FlowRunOptions { LinkCapacity = options.LinkCapacity, Progress = pending, Stages = options.Stages }, cancellationToken).ConfigureAwait(false);
+            outcome = await _inner.Execute(graph, options.WithProgress(pending), cancellationToken).ConfigureAwait(false);
         }
         finally
         {

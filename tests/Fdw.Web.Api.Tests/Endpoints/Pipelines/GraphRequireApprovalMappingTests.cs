@@ -14,6 +14,8 @@ public sealed class GraphRequireApprovalMappingTests
         Name = "Nightly",
         IsEnabled = true,
         LinkCapacity = 4,
+        MaxParallelRuns = 1,
+        OverflowBehavior = "Queue",
         RequireApprovalToRun = requireApprovalToRun,
     };
 
@@ -37,7 +39,7 @@ public sealed class GraphRequireApprovalMappingTests
     [Trait("Category", "DataIntegrity")]
     public void APayloadThatOmitsTheSettingStatesFalse()
     {
-        var payload = new GraphPayload { Name = "Nightly", IsEnabled = true, LinkCapacity = 4 };
+        var payload = new GraphPayload { Name = "Nightly", IsEnabled = true, LinkCapacity = 4, MaxParallelRuns = 1, OverflowBehavior = "Queue" };
 
         payload.RequireApprovalToRun.ShouldBeFalse();
         GraphPayloadReader.Read(payload, System.Guid.NewGuid()).Value!.RequireApprovalToRun.ShouldBeFalse();

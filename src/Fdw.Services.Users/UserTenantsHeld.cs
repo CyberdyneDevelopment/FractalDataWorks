@@ -80,7 +80,8 @@ public sealed class UserTenantsHeld : IUserTenantsHeld
                 .Where(row => present.Contains(row.Number("UserTenantsRowId")))
                 .Select(row => new HeldTenant(
                     row.Identifier("TenantId") ?? throw new InvalidOperationException("a membership has no tenant"),
-                    row.Flag("IsDefault") ?? throw new InvalidOperationException("a membership does not say whether it is the default")))
+                    row.Flag("IsDefault") ?? throw new InvalidOperationException("a membership does not say whether it is the default"),
+                    row.Identifier("DefaultOrganizationId")))
                 .ToList();
             UserTenantsHeldLog.Read(_logger, userId.ToString("D"), held.Count);
             return GenericResult<IReadOnlyList<HeldTenant>>.Success(held);

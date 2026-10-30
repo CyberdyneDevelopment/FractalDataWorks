@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Calculations;
 using Fdw.Configuration;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Calculations.Abstractions;
 using Fdw.Services.Calculations.Tests.TestSupport;
@@ -16,11 +18,9 @@ namespace Fdw.Services.Calculations.Tests;
 
 /// <summary>
 /// Covers <see cref="WindowedCalculationEntityType"/>: typed-configuration validation, row
-/// aggregation across inputs, and the sealed <see cref="CalculationEntityBase{TConfiguration}"/>
-/// dispatch. The window-function/target-field/partition/order-by wiring is a documented stub in the
-/// production code (hardcoded to "Rank" with no partition/order fields read from configuration) —
-/// see the tests marked "(defect)" below, which characterize that current behavior without
-/// endorsing it.
+/// aggregation across inputs, dispatch of the configured window function through
+/// <c>WindowedCalculationTypes</c>, and the sealed <see cref="CalculationEntityBase{TConfiguration}"/>
+/// dispatch. Partition and order fields are not part of the configuration yet and are not covered.
 /// </summary>
 [Trait("Priority", "P1")]
 [Trait("Category", "CoreFramework")]
@@ -34,62 +34,232 @@ public class WindowedCalculationEntityTypeTests
             ResolvedValue = new List<Dictionary<string, object>>(rows)
         };
 
-    [Fact]
-    public async Task ExecuteEmptyInputsReturnsSuccessWithZeroRows()
-    {
-        var type = new WindowedCalculationEntityType();
-        var entity = new TestCalculationEntity { CalculationEntityType = "Windowed" };
-
-        var result = await type.Execute(entity, [], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        using var doc = JsonDocument.Parse(result.Value!);
-        doc.RootElement.GetProperty("RowCount").GetInt32().ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task ExecuteWithRowsAppliesHardcodedRankRegardlessOfConfiguration()
-    {
-        var type = new WindowedCalculationEntityType();
-        var entity = new TestCalculationEntity
+    private static TestCalculationEntity EntityFor(string windowFunction, string targetField = "Score")
+        => new()
         {
             CalculationEntityType = "Windowed",
             TypedConfiguration = new WindowedCalculationConfiguration
             {
-                TargetField = "Score",
-                WindowFunction = "Sum",
-                OutputFieldName = "Rank"
+                TargetField = targetField,
+                WindowFunction = windowFunction,
+                OutputFieldName = "Result"
             }
         };
-        var inputs = new List<ResolvedCalculationInput>
-        {
-            DataSetInput("A",
-                new Dictionary<string, object> { ["Score"] = 10m },
-                new Dictionary<string, object> { ["Score"] = 20m },
-                new Dictionary<string, object> { ["Score"] = 30m })
-        };
 
-        var result = await type.Execute(entity, inputs, Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+    private static ResolvedCalculationInput ScoreInput(params decimal[] scores)
+        => DataSetInput("A", [.. scores.Select(score => new Dictionary<string, object> { ["Score"] = score })]);
+
+    private static async Task<List<decimal?>> RunColumn(string windowFunction, params decimal[] scores)
+    {
+        var result = await new WindowedCalculationEntityType().Execute(
+            EntityFor(windowFunction), [ScoreInput(scores)], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         using var doc = JsonDocument.Parse(result.Value!);
-        doc.RootElement.GetProperty("WindowFunction").GetString().ShouldBe("Rank");
+        return [.. doc.RootElement.GetProperty("Rows").EnumerateArray().Select(row =>
+            row.GetProperty("Result").ValueKind == JsonValueKind.Null ? (decimal?)null : row.GetProperty("Result").GetDecimal())];
+    }
+
+    [Fact]
+    public async Task ExecuteEmptyInputsFailsWithNoInputRows()
+    {
+        var type = new WindowedCalculationEntityType();
+
+        var result = await type.Execute(EntityFor("Rank"), [], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21023");
+        var advice = result.Messages[^1].ShouldBeAssignableTo<IClientMessage>().ClientText;
+        advice.ShouldContain("DataSet input");
+        advice.ShouldNotContain("Scalar");
+    }
+
+    [Fact]
+    public async Task ExecuteWithoutTypedConfigurationFailsAsNotLoaded()
+    {
+        var type = new WindowedCalculationEntityType();
+        var entity = new TestCalculationEntity { CalculationEntityType = "Windowed" };
+
+        var result = await type.Execute(entity, [ScoreInput(1m)], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-61020");
+    }
+
+    [Fact]
+    public async Task ExecuteWithAnUnofferedWindowFunctionFailsNamingTheOfferedOnes()
+    {
+        var type = new WindowedCalculationEntityType();
+
+        var result = await type.Execute(EntityFor("Median"), [ScoreInput(1m)], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21020");
+        result.Messages[^1].Message.ShouldContain("DenseRank");
+    }
+
+    [Fact]
+    public async Task ExecuteWithATargetFieldNoRowCarriesFails()
+    {
+        var type = new WindowedCalculationEntityType();
+
+        var result = await type.Execute(EntityFor("Rank", "Missing"), [ScoreInput(1m)], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21002");
+    }
+
+    [Fact]
+    public async Task ExecuteReportsTheConfiguredFunctionAndOneRowPerInput()
+    {
+        var type = new WindowedCalculationEntityType();
+
+        var result = await type.Execute(EntityFor("Sum"), [ScoreInput(10m, 20m, 30m)], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        using var doc = JsonDocument.Parse(result.Value!);
+        doc.RootElement.GetProperty("WindowFunction").GetString().ShouldBe("Sum");
         doc.RootElement.GetProperty("PartitionCount").GetInt32().ShouldBe(1);
         doc.RootElement.GetProperty("RowCount").GetInt32().ShouldBe(3);
+    }
+
+    [Theory]
+    [InlineData("RowNumber", new[] { 1, 2, 3, 4 })]
+    [InlineData("Rank", new[] { 1, 2, 2, 4 })]
+    [InlineData("DenseRank", new[] { 1, 2, 2, 3 })]
+    [InlineData("RunningTotal", new[] { 10, 30, 50, 80 })]
+    [InlineData("Sum", new[] { 10, 30, 50, 80 })]
+    [InlineData("Count", new[] { 1, 2, 3, 4 })]
+    [InlineData("Min", new[] { 10, 10, 10, 10 })]
+    [InlineData("Max", new[] { 10, 20, 20, 30 })]
+    public async Task ExecuteComputesEachOfferedFunctionOverTheRows(string windowFunction, int[] expected)
+    {
+        var column = await RunColumn(windowFunction, 10m, 20m, 20m, 30m);
+
+        column.ShouldBe(expected.Select(value => (decimal?)value).ToList());
+    }
+
+    [Fact]
+    public async Task ExecuteAvgIsTheRunningAverage()
+    {
+        (await RunColumn("Avg", 10m, 20m, 30m)).ShouldBe([10m, 15m, 20m]);
+    }
+
+    [Fact]
+    public async Task ExecuteLeadHasNoValueInTheLastRow()
+    {
+        (await RunColumn("Lead", 10m, 20m, 30m)).ShouldBe([20m, 30m, null]);
+    }
+
+    [Fact]
+    public async Task ExecuteLagHasNoValueInTheFirstRow()
+    {
+        (await RunColumn("Lag", 10m, 20m, 30m)).ShouldBe([null, 10m, 20m]);
+    }
+
+    private static ICalculationContext ContextWith(object spec)
+    {
+        var context = new Mock<ICalculationContext>();
+        context.SetupGet(c => c.Parameters)
+            .Returns(new Dictionary<string, object?> { [WindowedCalculationSpec.ParameterName] = spec });
+        return context.Object;
+    }
+
+    private static ResolvedCalculationInput TeamScores(params (string Team, decimal Score)[] rows)
+        => DataSetInput("A", [.. rows.Select(row => new Dictionary<string, object> { ["Team"] = row.Team, ["Score"] = row.Score })]);
+
+    private static async Task<JsonElement> RunSpec(WindowedCalculationSpec spec, params (string Team, decimal Score)[] rows)
+    {
+        var result = await new WindowedCalculationEntityType().Execute(
+            EntityFor("Rank"), [TeamScores(rows)], ContextWith(spec), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        return JsonDocument.Parse(result.Value!).RootElement.Clone();
+    }
+
+    [Fact]
+    public async Task ExecuteRunsTheSpecTheCallerSuppliesInsteadOfTheStoredConfiguration()
+    {
+        var root = await RunSpec(
+            new WindowedCalculationSpec { TargetField = "Score", WindowFunction = "Sum", OutputFieldName = "Total" },
+            ("A", 1m), ("A", 2m));
+
+        root.GetProperty("WindowFunction").GetString().ShouldBe("Sum");
+        root.GetProperty("ResultField").GetString().ShouldBe("Total");
+        root.GetProperty("Rows").EnumerateArray().Select(row => row.GetProperty("Total").GetDecimal()).ShouldBe([1m, 3m]);
+    }
+
+    [Fact]
+    public async Task ExecuteNumbersRowsWithinEachPartitionInTheOrderTheSpecStates()
+    {
+        var root = await RunSpec(
+            new WindowedCalculationSpec
+            {
+                TargetField = "Score",
+                WindowFunction = "RowNumber",
+                OutputFieldName = "Place",
+                PartitionByFields = ["Team"],
+                OrderByFields = [new WindowOrderField { FieldName = "Score", Descending = true }]
+            },
+            ("A", 10m), ("B", 5m), ("A", 20m));
+
+        root.GetProperty("PartitionCount").GetInt32().ShouldBe(2);
+        root.GetProperty("Rows").EnumerateArray().Select(row => row.GetProperty("Place").GetDecimal()).ShouldBe([2m, 1m, 1m]);
+    }
+
+    [Fact]
+    public async Task ExecuteOrdersTheWholeSetWhenThereIsNoPartition()
+    {
+        var root = await RunSpec(
+            new WindowedCalculationSpec
+            {
+                TargetField = "Score",
+                WindowFunction = "RowNumber",
+                OutputFieldName = "Place",
+                OrderByFields = [new WindowOrderField { FieldName = "Score", Descending = true }]
+            },
+            ("A", 10m), ("A", 30m), ("A", 20m));
+
+        root.GetProperty("PartitionCount").GetInt32().ShouldBe(1);
+        root.GetProperty("Rows").EnumerateArray().Select(row => row.GetProperty("Place").GetDecimal()).ShouldBe([3m, 1m, 2m]);
+    }
+
+    [Fact]
+    public async Task ExecuteWithAPartitionFieldNoRowCarriesFails()
+    {
+        var spec = new WindowedCalculationSpec
+        {
+            TargetField = "Score", WindowFunction = "Rank", OutputFieldName = "Place", PartitionByFields = ["League"]
+        };
+
+        var result = await new WindowedCalculationEntityType().Execute(
+            EntityFor("Rank"), [TeamScores(("A", 1m))], ContextWith(spec), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21002");
+    }
+
+    [Fact]
+    public async Task ExecuteWithASuppliedSpecThatIsNotASpecFails()
+    {
+        var result = await new WindowedCalculationEntityType().Execute(
+            EntityFor("Rank"), [TeamScores(("A", 1m))], ContextWith("not a spec"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21021");
     }
 
     [Fact]
     public async Task ExecuteAggregatesRowsFromMultipleInputs()
     {
         var type = new WindowedCalculationEntityType();
-        var entity = new TestCalculationEntity { CalculationEntityType = "Windowed" };
         var inputs = new List<ResolvedCalculationInput>
         {
-            DataSetInput("A", new Dictionary<string, object> { ["X"] = 1m }),
-            DataSetInput("B", new Dictionary<string, object> { ["X"] = 2m }, new Dictionary<string, object> { ["X"] = 3m })
+            DataSetInput("A", new Dictionary<string, object> { ["Score"] = 1m }),
+            DataSetInput("B", new Dictionary<string, object> { ["Score"] = 2m }, new Dictionary<string, object> { ["Score"] = 3m })
         };
 
-        var result = await type.Execute(entity, inputs, Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+        var result = await type.Execute(EntityFor("RowNumber"), inputs, Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         using var doc = JsonDocument.Parse(result.Value!);
@@ -97,10 +267,9 @@ public class WindowedCalculationEntityTypeTests
     }
 
     [Fact]
-    public async Task ExecuteIgnoresInputsWhoseResolvedValueIsNotRowData()
+    public async Task ExecuteFailsWithNoInputRowsWhenNoInputResolvedValueIsRowData()
     {
         var type = new WindowedCalculationEntityType();
-        var entity = new TestCalculationEntity { CalculationEntityType = "Windowed" };
         var scalarInput = new ResolvedCalculationInput
         {
             InputAlias = "S",
@@ -108,11 +277,13 @@ public class WindowedCalculationEntityTypeTests
             ResolvedValue = 42
         };
 
-        var result = await type.Execute(entity, [scalarInput], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+        var result = await type.Execute(EntityFor("Rank"), [scalarInput], Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeTrue();
-        using var doc = JsonDocument.Parse(result.Value!);
-        doc.RootElement.GetProperty("RowCount").GetInt32().ShouldBe(0);
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21023");
+        var advice = result.Messages[^1].ShouldBeAssignableTo<IClientMessage>().ClientText;
+        advice.ShouldContain("DataSet input");
+        advice.ShouldNotContain("Scalar");
     }
 
     [Fact]
@@ -121,12 +292,10 @@ public class WindowedCalculationEntityTypeTests
     public async Task ExecuteCancelledTokenReturnsWindowedExecutionFailed()
     {
         var type = new WindowedCalculationEntityType();
-        var entity = new TestCalculationEntity { CalculationEntityType = "Windowed" };
-        var inputs = new List<ResolvedCalculationInput> { DataSetInput("A", new Dictionary<string, object> { ["X"] = 1m }) };
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var result = await type.Execute(entity, inputs, Mock.Of<ICalculationContext>(), cts.Token);
+        var result = await type.Execute(EntityFor("Rank"), [ScoreInput(1m)], Mock.Of<ICalculationContext>(), cts.Token);
 
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("CALCULATIONS-91004");
@@ -203,5 +372,19 @@ public class WindowedCalculationEntityTypeTests
         var type = new WindowedCalculationEntityType();
 
         type.TypedContainerName.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public void ValidateTypedConfigurationUnofferedWindowFunctionReturnsFailure()
+    {
+        var type = new WindowedCalculationEntityType();
+        var config = new WindowedCalculationConfiguration { TargetField = "Score", WindowFunction = "Median" };
+
+        var result = type.ValidateConfiguration(config);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21020");
     }
 }

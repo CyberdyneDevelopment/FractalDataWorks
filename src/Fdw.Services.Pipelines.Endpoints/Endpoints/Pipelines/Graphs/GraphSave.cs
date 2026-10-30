@@ -21,8 +21,22 @@ public static class GraphSave
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>The saved graph as the API states it, or the refusal or failure.</returns>
-    public static async Task<IGenericResult<GraphPayload>> Save(
+    public static Task<IGenericResult<GraphPayload>> Save(
         PipelineServiceConfigurationProvider provider, GraphPipelineConfiguration graph, ILogger logger, CancellationToken ct)
+        => Write(provider, graph, logger, mayCreate: true, ct);
+
+    /// <summary>Judges a graph and updates the pipeline it identifies; a pipeline removed since it was read is not brought back.</summary>
+    /// <param name="provider">The pipeline domain's configuration provider.</param>
+    /// <param name="graph">The graph to save, carrying the Id of the pipeline it replaces.</param>
+    /// <param name="logger">The logger a refusal is written to.</param>
+    /// <param name="ct">Cancels the save.</param>
+    /// <returns>The saved graph as the API states it, or the refusal or failure.</returns>
+    public static Task<IGenericResult<GraphPayload>> Update(
+        PipelineServiceConfigurationProvider provider, GraphPipelineConfiguration graph, ILogger logger, CancellationToken ct)
+        => Write(provider, graph, logger, mayCreate: false, ct);
+
+    private static async Task<IGenericResult<GraphPayload>> Write(
+        PipelineServiceConfigurationProvider provider, GraphPipelineConfiguration graph, ILogger logger, bool mayCreate, CancellationToken ct)
     {
         var problems = GraphShapeValidator.Problems(graph, logger);
         if (problems.Count > 0)
@@ -30,7 +44,9 @@ public static class GraphSave
             return GraphRefusal.Of<GraphPayload>(string.Join("; ", problems.Select(problem => problem.Reason)));
         }
 
-        var saved = await provider.Save(graph, "Pipeline", graph.Implementation, graph.Name, ct).ConfigureAwait(false);
+        var saved = mayCreate
+            ? await provider.Save(graph, "Pipeline", graph.Implementation, graph.Name, ct).ConfigureAwait(false)
+            : await provider.Update(graph, "Pipeline", graph.Implementation, graph.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<GraphPayload>();

@@ -16,7 +16,7 @@ public sealed class CreateCalculationEntityRequest
     /// <summary>Gets or sets the optional description.</summary>
     public string? Description { get; set; }
 
-    /// <summary>Gets or sets the calculation entity type name (e.g. "Formula", "Windowed").</summary>
+    /// <summary>Gets or sets the calculation entity type name (e.g. "Windowed").</summary>
     public string CalculationEntityType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the declared inputs for this calculation.</summary>
@@ -33,8 +33,8 @@ public sealed class CreateCalculationEntityRequest
 
     /// <summary>
     /// Gets or sets the calculation type's own settings, as a JSON object read into the configuration
-    /// class <see cref="CalculationEntityType"/> declares — for Formula, <c>FormulaLanguage</c>,
-    /// <c>FormulaBody</c> and <c>TimeoutSeconds</c>. Required: the implementation is the record the
+    /// class <see cref="CalculationEntityType"/> declares — for Windowed, <c>TargetField</c> and
+    /// <c>WindowFunction</c>. Required: the implementation is the record the
     /// calculation is written as.
     /// </summary>
     public JsonElement? Configuration { get; set; }

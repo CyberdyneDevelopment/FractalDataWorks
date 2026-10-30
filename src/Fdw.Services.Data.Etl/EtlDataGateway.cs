@@ -216,7 +216,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
     /// <inheritdoc/>
     /// <remarks>
     /// The declared container is resolved and its connection found exactly as for any command; then the connection is handed the container
-    /// with its path and/or name replaced (<see cref="OverriddenContainer"/>). The result cache is not used: its key names the declared
+    /// with its path and/or name replaced (<see cref="ReaddressedContainer"/>). The result cache is not used: its key names the declared
     /// container, not the address read, so a cached page of one file could answer for another (FDW-1952).
     /// </remarks>
     public async Task<IGenericResult<T>> Execute<T>(
@@ -240,11 +240,11 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
                     return resolved.ToNewResult<T>();
 
                 var (declared, connection) = resolved.Value;
-                if (declared.Path is not IReaddressablePath movable)
+                var container = ReaddressedContainer.TryMake(declared, pathOverride, containerNameOverride);
+                if (container is null)
                     return GenericResult<T>.Failure(EtlDataGatewayLogger.AddressOverrideRefused(
                         _logger, target.DataStore, $"the declared container '{declared.Name}' has {(declared.Path is null ? "no path" : $"a path of the kind '{declared.Path.GetType().Name}'")}, which cannot be read at another place"));
 
-                var container = new OverriddenContainer(declared, movable.Readdress(pathOverride, containerNameOverride), containerNameOverride);
                 return await RunOnContainer(command, target, c => connection.Execute<T>(command, container, c), ct).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
@@ -647,7 +647,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
             return cfgResult.ToNewResult<T>();
         if (cfgResult.Value is null)
             return GenericResult<T>.Failure(
-                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "configuration provider returned a null value for a successful result"));
+                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, DataGatewayLogger.DataSetNotVisibleReason));
 
         var config = cfgResult.Value;
 

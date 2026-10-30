@@ -31,21 +31,21 @@ namespace Fdw.Services.Calculations.Tests;
 [Trait("Category", "CoreFramework")]
 public class CalculationEntityServiceTests
 {
-    private static FormulaCalculationConfiguration SampleConfig(Guid id, string name = "Calc1") => new()
+    private static WindowedCalculationConfiguration SampleConfig(Guid id, string name = "Calc1") => new()
     {
         Id = id,
         Name = name,
         Description = "desc",
-        Implementation = "Formula",
-        FormulaBody = "1+1",
-        FormulaLanguage = "CSharp",
+        Implementation = "Windowed",
+        TargetField = "WeightLbs",
+        WindowFunction = "Sum",
         OutputDataSetName = "OutDs",
         ResultFieldName = "Result",
         ResultDataTypeName = "Decimal",
         IsEnabled = true,
         Inputs =
         [
-            new FormulaCalculationInputConfiguration { InputAlias = "A", InputKind = "DataSet", DataSetName = "Ds1", Ordinal = 0 }
+            new WindowedCalculationInputConfiguration { InputAlias = "A", InputKind = "DataSet", DataSetName = "Ds1", Ordinal = 0 }
         ],
         Steps = []
     };
@@ -69,7 +69,7 @@ public class CalculationEntityServiceTests
         result.Value!.Id.ShouldBe(id);
         result.Value.Name.ShouldBe("Calc1");
         result.Value.Description.ShouldBe("desc");
-        result.Value.CalculationEntityType.ShouldBe("Formula");
+        result.Value.CalculationEntityType.ShouldBe("Windowed");
         result.Value.Inputs.Count.ShouldBe(1);
         result.Value.Inputs[0].InputAlias.ShouldBe("A");
         result.Value.Inputs[0].Kind.ShouldBe(CalculationInputKinds.ByName("DataSet"));
@@ -87,7 +87,7 @@ public class CalculationEntityServiceTests
         var config = SampleConfig(Guid.NewGuid());
         config.Inputs =
         [
-            new FormulaCalculationInputConfiguration
+            new WindowedCalculationInputConfiguration
             {
                 InputAlias = "Lit",
                 InputKind = "Scalar",
@@ -278,7 +278,7 @@ public class CalculationEntityServiceTests
     }
 
     [Theory]
-    [InlineData("Formula")]
+    [InlineData("Windowed")]
     [InlineData("Windowed")]
     public async Task ValidateCalculationKnownTypeReturnsSuccess(string entityType)
     {
@@ -323,7 +323,7 @@ public class CalculationEntityServiceTests
         var inputs = new List<CalculationInput> { new() { Kind = null!, InputAlias = "A" } };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Formula", inputs, new CalculationOutputSpec(), null, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", inputs, new CalculationOutputSpec(), null, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
@@ -338,7 +338,7 @@ public class CalculationEntityServiceTests
         var store = new CalculationStore();
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Formula", [], new CalculationOutputSpec(), null, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), null, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
@@ -352,7 +352,7 @@ public class CalculationEntityServiceTests
         var store = new CalculationStore();
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Formula", [], new CalculationOutputSpec(),
+            "Name", null, "Windowed", [], new CalculationOutputSpec(),
             Mock.Of<IGenericConfiguration>(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -365,10 +365,10 @@ public class CalculationEntityServiceTests
     public async Task CreateCalculationSaveFailurePropagates()
     {
         var store = new CalculationStore().SaveFails("save failed");
-        var typedConfig = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Formula", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldBe("save failed");
@@ -380,10 +380,10 @@ public class CalculationEntityServiceTests
         var saved = SampleConfig(Guid.NewGuid(), "Name");
         ICalculationEntityImplementationConfiguration? written = null;
         var store = new CalculationStore().Holds(saved).Saves(record => written = record);
-        var typedConfig = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", "desc", "Formula", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
+            "Name", "desc", "Windowed", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Id.ShouldBe(saved.Id);
@@ -398,10 +398,10 @@ public class CalculationEntityServiceTests
     public async Task CreateCalculationThrowsReturnsCreateCalculationFailed()
     {
         var store = new CalculationStore().SaveThrows(new InvalidOperationException("boom"));
-        var typedConfig = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Formula", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("CALCULATIONS-71011");
@@ -433,10 +433,10 @@ public class CalculationEntityServiceTests
         // Delete must be irrelevant, because Update must not call it at all.
         var saved = SampleConfig(Guid.NewGuid(), "Name");
         var store = new CalculationStore().Holds(saved).Saves().DeleteFails("delete failed");
-        var typedConfig = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            saved.Id, "Name", null, "Formula", [], new CalculationOutputSpec(), true, typedConfig,
+            saved.Id, "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
             TestContext.Current.CancellationToken);
 
         store.DeletedTimes(Times.Never());
@@ -447,11 +447,12 @@ public class CalculationEntityServiceTests
     [Fact]
     public async Task UpdateCalculationSaveFailurePropagates()
     {
-        var store = new CalculationStore().SaveFails("save failed");
-        var typedConfig = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
+        var held = SampleConfig(Guid.NewGuid(), "Name");
+        var store = new CalculationStore().Holds(held).SaveFails("save failed");
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            Guid.NewGuid(), "Name", null, "Formula", [], new CalculationOutputSpec(), true, typedConfig,
+            held.Id, "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -459,14 +460,29 @@ public class CalculationEntityServiceTests
     }
 
     [Fact]
+    public async Task UpdateCalculationOfAMissingCalculationFailsNotFoundAndSavesNothing()
+    {
+        var store = new CalculationStore().Saves();
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
+
+        var result = await ServiceOver(store).UpdateCalculation(
+            Guid.NewGuid(), "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("SERVICES-31061");
+        store.SavedTimes(Times.Never());
+    }
+
+    [Fact]
     public async Task UpdateCalculationSuccessReturnsMappedEntity()
     {
         var saved = SampleConfig(Guid.NewGuid(), "Renamed");
         var store = new CalculationStore().Holds(saved).Saves();
-        var typedConfig = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            saved.Id, "Renamed", null, "Formula", [], new CalculationOutputSpec(), true, typedConfig,
+            saved.Id, "Renamed", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
@@ -476,11 +492,12 @@ public class CalculationEntityServiceTests
     [Fact]
     public async Task UpdateCalculationThrowsReturnsUpdateCalculationFailed()
     {
-        var store = new CalculationStore().SaveThrows(new InvalidOperationException("boom"));
-        var typedConfig = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
+        var held = SampleConfig(Guid.NewGuid(), "Name");
+        var store = new CalculationStore().Holds(held).SaveThrows(new InvalidOperationException("boom"));
+        var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            Guid.NewGuid(), "Name", null, "Formula", [], new CalculationOutputSpec(), true, typedConfig,
+            held.Id, "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -573,14 +590,38 @@ public class CalculationEntityServiceTests
         var resolver = new Mock<ICalculationInputResolver>();
         resolver
             .Setup(r => r.Resolve(It.IsAny<IReadOnlyList<CalculationInput>>(), It.IsAny<ICalculationContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<ResolvedCalculationInput>>.Success(
+            [
+                // A Windowed calculation runs over the rows its data set input resolved to, not over a scalar.
+                new ResolvedCalculationInput
+                {
+                    InputAlias = "A",
+                    Kind = CalculationInputKinds.ByName("DataSet"),
+                    ResolvedValue = new List<Dictionary<string, object>> { new() { ["WeightLbs"] = 4.5m } }
+                }
+            ]));
+        var service = ServiceOver(new CalculationStore().Holds(SampleConfig(Guid.NewGuid())), resolver.Object);
+
+        var result = await service.ExecuteCalculation("Calc1", Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldNotBeNull();
+        result.Value.ShouldContain("\"RowCount\":1");
+    }
+
+    [Fact]
+    public async Task ExecuteCalculationWithNoResolvedInputsFailsWithNoInputRows()
+    {
+        var resolver = new Mock<ICalculationInputResolver>();
+        resolver
+            .Setup(r => r.Resolve(It.IsAny<IReadOnlyList<CalculationInput>>(), It.IsAny<ICalculationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<ResolvedCalculationInput>>.Success([]));
         var service = ServiceOver(new CalculationStore().Holds(SampleConfig(Guid.NewGuid())), resolver.Object);
 
         var result = await service.ExecuteCalculation("Calc1", Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("\"RowCount\":0");
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21023");
     }
 
     [Fact]

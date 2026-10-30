@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Fdw.Conventions;
 using Fdw.Results;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Etl.Abstractions;
@@ -54,6 +55,16 @@ public static class GraphPayloadReader
             return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state linkCapacity");
         }
 
+        if (payload.MaxParallelRuns is null)
+        {
+            return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state maxParallelRuns");
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.OverflowBehavior))
+        {
+            return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state overflowBehavior");
+        }
+
         return Place(payload, id, null, transformationIds);
     }
 
@@ -88,6 +99,7 @@ public static class GraphPayloadReader
         return Place(payload, id, problems, transformationIds);
     }
 
+    [ConventionOverride(MaxCyclomaticComplexity = 21)]
     private static IGenericResult<GraphPipelineConfiguration> Place(
         GraphPayload payload, Guid id, List<GraphProblem>? problems, IReadOnlyDictionary<string, Guid> transformationIds)
     {
@@ -111,6 +123,11 @@ public static class GraphPayloadReader
             Description = payload.Description,
             LinkCapacity = payload.LinkCapacity is { } capacity ? capacity : 0,
             RequireApprovalToRun = payload.RequireApprovalToRun,
+            MaxParallelRuns = payload.MaxParallelRuns is { } parallel ? parallel : 0,
+            OverflowBehavior = payload.OverflowBehavior is { } overflow ? overflow : string.Empty,
+            DelayedStartSeconds = payload.DelayedStartSeconds,
+            DelayedStartTimeOfDay = payload.DelayedStartTimeOfDay,
+            DelayedStartTimeZoneId = payload.DelayedStartTimeZoneId,
         };
 
         foreach (var variable in payload.Variables)

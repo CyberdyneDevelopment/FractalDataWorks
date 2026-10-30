@@ -18,7 +18,7 @@ internal sealed class TestCalculationEntity : ICalculationEntity
 
     public string? Description { get; init; }
 
-    public string CalculationEntityType { get; init; } = "Formula";
+    public string CalculationEntityType { get; init; } = "Windowed";
 
     public string CalculationSource { get; init; } = "Default";
 
@@ -57,7 +57,7 @@ internal sealed class ThrowsOnceCalculationEntity : ICalculationEntity
 
     public string? Description { get; init; }
 
-    public string CalculationEntityType { get; init; } = "Formula";
+    public string CalculationEntityType { get; init; } = "Windowed";
 
     public string CalculationSource { get; init; } = "Default";
 

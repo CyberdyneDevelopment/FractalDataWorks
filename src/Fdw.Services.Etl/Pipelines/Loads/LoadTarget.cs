@@ -44,4 +44,15 @@ public sealed class LoadTarget
         => Container.Path is IDatabasePath path
             ? GenericResult<QuerySource>.Success(new QuerySource(path.ObjectName, path.Schema, path.Database) { Filter = filter })
             : GenericResult<QuerySource>.Failure(PipelineRunLog.SourceNotTableLike(logger, owner, Description));
+
+    /// <summary>Makes the same target at another path and/or file name (FDW-3193), through the one way a container is moved.</summary>
+    /// <param name="owner">What the load is, for the refusal message.</param>
+    /// <param name="logger">The logger the refusal is written to.</param>
+    /// <param name="pathPart">The path part to use in place of the declared one; none or blank keeps it.</param>
+    /// <param name="namePart">The name part to use in place of the declared one; none or blank keeps it.</param>
+    /// <returns>The moved target, or a failure when the container's path cannot be moved.</returns>
+    public IGenericResult<LoadTarget> Readdressed(string owner, ILogger logger, string? pathPart, string? namePart)
+        => ReaddressedContainer.TryMake(Container, pathPart, namePart) is { } moved
+            ? GenericResult<LoadTarget>.Success(new LoadTarget(string.Concat(Description, " as ", moved.Name), moved, ConnectionId))
+            : GenericResult<LoadTarget>.Failure(PipelineRunLog.LoadTargetUnusable(logger, owner, Description, "the path of its container cannot be moved to another place"));
 }

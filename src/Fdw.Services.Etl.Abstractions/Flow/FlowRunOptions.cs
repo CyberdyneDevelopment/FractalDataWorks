@@ -22,4 +22,19 @@ public sealed class FlowRunOptions
     /// it is not a buffering choice, so it may be left out.
     /// </summary>
     public IFlowStageObserver? Stages { get; init; }
+
+    /// <summary>Gets the gate every batch passes before it leaves a component, so a paused run holds with the batches it started finished; empty for a run nobody can pause (FDW-2950).</summary>
+    public IFlowPauseGate? PauseGate { get; init; }
+
+    /// <summary>Makes the options a run with other progress sees: the same in every other respect, so a field added here cannot be dropped by a copy.</summary>
+    /// <param name="progress">The progress the run reports to.</param>
+    /// <returns>The options.</returns>
+    public FlowRunOptions WithProgress(IFlowRunProgress? progress)
+        => new() { LinkCapacity = LinkCapacity, Progress = progress, Stages = Stages, PauseGate = PauseGate };
+
+    /// <summary>Makes the options a run with another stage observer sees: the same in every other respect.</summary>
+    /// <param name="stages">The observer of the run's stages.</param>
+    /// <returns>The options.</returns>
+    public FlowRunOptions WithStages(IFlowStageObserver? stages)
+        => new() { LinkCapacity = LinkCapacity, Progress = Progress, Stages = stages, PauseGate = PauseGate };
 }

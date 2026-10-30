@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Fdw.ServiceTypes;
 using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -25,6 +27,16 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
     /// </summary>
     public INotificationChannel Channel => NotificationChannels.ByName(_channelName);
 
+    /// <inheritdoc />
+    public IReadOnlyList<NotificationSettingField> Settings { get; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Why abstract and not a constructor argument: the collection's NotFound sentinel is generated and built with default
+    /// constructor arguments, which cannot include a delegate; an abstract member is stubbed on the sentinel by the generator.
+    /// </remarks>
+    public abstract INotificationImplementationConfiguration NewConfiguration();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationTypeBase{TService, TFactory, TConfiguration}"/> class.
     /// </summary>
@@ -32,12 +44,14 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
     /// <param name="channelName">The name of the notification channel.</param>
     /// <param name="displayName">The display name for UI.</param>
     /// <param name="description">Description of the notification type.</param>
+    /// <param name="settings">The settings a notification of this type needs beyond the ones every notification has.</param>
     /// <param name="defaultContainerName">The default container name for this notification type.</param>
     protected NotificationTypeBase(
         string name,
         string channelName,
         string displayName,
         string description,
+        IReadOnlyList<NotificationSettingField> settings,
         string defaultContainerName = "")
         : base(
             name,
@@ -50,5 +64,6 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
             defaultContainerName: defaultContainerName)
     {
         _channelName = channelName;
+        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
     }
 }

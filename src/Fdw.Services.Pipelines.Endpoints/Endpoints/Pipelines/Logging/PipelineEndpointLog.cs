@@ -92,4 +92,22 @@ public static partial class PipelineEndpointLog
     [MessageLogging(EventId = 22019, Level = LogLevel.Warning,
         Message = "In {owner}: data set '{dataSet}' cannot be loaded or read by a load: {reason}")]
     public static partial IGenericMessage LoadDataSetUnusable(ILogger logger, string owner, string dataSet, string reason);
+
+    /// <summary>Logs a history list asked with both a success flag and a status.</summary>
+    [MessageLogging(EventId = 20728, Level = LogLevel.Warning,
+        Message = "A history list is asked with success={success} and status '{status}'",
+        ClientMessage = "Give success or status, not both: success=false already means status Failed, and success=true means status Succeeded")]
+    public static partial IGenericMessage HistorySuccessAndStatusBothGiven(ILogger logger, bool success, string status);
+
+    /// <summary>Logs a history read made while the operational connection is not configured.</summary>
+    [MessageLogging(EventId = 61072, Level = LogLevel.Error, Message = "The execution history is read while PipelineServiceTypes.OperationalConnection is not configured")]
+    public static partial IGenericMessage HistoryConnectionNotConfigured(ILogger logger);
+
+    /// <summary>Logs a page of runs that returned no result.</summary>
+    [MessageLogging(EventId = 61070, Level = LogLevel.Error, Message = "The read of {take} run(s) after {skip} in etl.PipelineExecution returned no result")]
+    public static partial IGenericMessage HistoryPageReturnedNoResult(ILogger logger, int skip, int take);
+
+    /// <summary>Logs a count of runs that returned no number.</summary>
+    [MessageLogging(EventId = 61071, Level = LogLevel.Error, Message = "The count over etl.PipelineExecution returned no number")]
+    public static partial IGenericMessage HistoryCountReturnedNoNumber(ILogger logger);
 }

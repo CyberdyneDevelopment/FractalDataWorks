@@ -19,7 +19,8 @@ public static class NotificationMapper
         Implementation = notification.Implementation,
         IsEnabled = notification.IsEnabled,
         SecretManagerName = notification.SecretManagerName,
-        SecretKeyName = notification.SecretKeyName
+        SecretKeyName = notification.SecretKeyName,
+        Description = notification.Description
     };
 
     /// <summary>Maps a domain row, as read by the list, to the summary the list answers.</summary>
@@ -30,6 +31,7 @@ public static class NotificationMapper
         Id = item.Id,
         Name = item.Name,
         Implementation = item.Implementation,
-        IsEnabled = item.IsEnabled
+        IsEnabled = item.IsEnabled,
+        Description = item.Description
     };
 }

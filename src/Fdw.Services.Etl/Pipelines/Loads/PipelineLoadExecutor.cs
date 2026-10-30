@@ -119,13 +119,56 @@ public sealed class PipelineLoadExecutor
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var target = unit.DataSet is not null
-            ? await _resolver.ForDataSet(unit.Owner, unit.DataSet, cancellationToken).ConfigureAwait(false)
-            : await _resolver.ForContainer(unit.Owner, unit.DataStore!, unit.Path!, unit.Container!, cancellationToken).ConfigureAwait(false);
+        var target = await _resolver.ForUnit(unit, cancellationToken).ConfigureAwait(false);
         if (target.IsFailure)
             return target.ToNewResult<List<PlannedStep>>();
 
-        var source = await Source(unit, target.Value!, parameters, cancellationToken).ConfigureAwait(false);
+        return unit.Addressing is { Splits: true } addressing
+            ? await PlanFiles(unit, addressing, target.Value!, rows, parameters, now, cancellationToken).ConfigureAwait(false)
+            : await PlanTarget(unit, target.Value!, rows, parameters, now, cancellationToken).ConfigureAwait(false);
+    }
+
+    // A Files destination (FDW-3193): the rows are split by the value of one field, and the unit is planned once for each file at its own address.
+    // Every value is judged before any file is planned, and every file is planned before any is written, so nothing is written for a run that has a bad value.
+    private async Task<IGenericResult<List<PlannedStep>>> PlanFiles(
+        LoadUnit unit,
+        LoadAddressing addressing,
+        LoadTarget declared,
+        IReadOnlyList<IDictionary<string, object?>> rows,
+        IReadOnlyDictionary<string, object?> parameters,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var files = LoadFileSplit.Group(unit.Owner, ((IFilePath)declared.Container.Path).Extension, addressing.SplitField!, rows, _logger);
+        if (files.IsFailure)
+            return files.ToNewResult<List<PlannedStep>>();
+
+        var planned = new List<PlannedStep>();
+        foreach (var file in files.Value!)
+        {
+            var moved = declared.Readdressed(unit.Owner, _logger, addressing.PhysicalPath, file.FileName);
+            if (moved.IsFailure)
+                return moved.ToNewResult<List<PlannedStep>>();
+
+            var steps = await PlanTarget(unit, moved.Value!, file.Rows, parameters, now, cancellationToken).ConfigureAwait(false);
+            if (steps.IsFailure)
+                return steps;
+
+            planned.AddRange(steps.Value!);
+        }
+
+        return GenericResult<List<PlannedStep>>.Success(planned);
+    }
+
+    private async Task<IGenericResult<List<PlannedStep>>> PlanTarget(
+        LoadUnit unit,
+        LoadTarget target,
+        IReadOnlyList<IDictionary<string, object?>> rows,
+        IReadOnlyDictionary<string, object?> parameters,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var source = await Source(unit, target, parameters, cancellationToken).ConfigureAwait(false);
         if (source.IsFailure)
             return source.ToNewResult<List<PlannedStep>>();
 
@@ -138,7 +181,7 @@ public sealed class PipelineLoadExecutor
             ? commands.ToNewResult<List<PlannedStep>>()
             : GenericResult<List<PlannedStep>>.Success(commands.Value!
                 .Select(command => new PlannedStep(
-                    command, target.Value!.Container, target.Value.ConnectionId, target.Value.Description, unit.Owner,
+                    command, target.Container, target.ConnectionId, target.Description, unit.Owner,
                     builder.RequiredCapabilities(unit.Row)))
                 .ToList());
     }

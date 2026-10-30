@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.Web.RestEndpoints.Configuration;
@@ -27,6 +28,7 @@ public sealed class JwtSecurityConfiguration
     /// Gets or sets the secret key for JWT token validation.
     /// In production, this should be stored securely.
     /// </summary>
+    [SecretValue]
     public string SecretKey { get; init; } = string.Empty;
 
     /// <summary>

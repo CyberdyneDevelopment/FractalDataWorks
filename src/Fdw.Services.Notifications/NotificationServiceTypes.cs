@@ -136,6 +136,12 @@ public partial class NotificationServiceTypes
                 return provider;
             });
 
+            // The notification lists, read from the store the rest of the domain's configuration is on.
+            builder.Services.TryAddSingleton<INotificationLists>(sp => new NotificationLists(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                NotificationServiceTypes.ConfigurationConnection,
+                sp.GetService<ILogger<NotificationLists>>()));
+
             // Sends a notification through a named rule. Scoped because the rule's notification service is resolved
             // through the scoped provider above.
             builder.Services.AddScoped<IRuleNotifier>(sp => new RuleNotifier(

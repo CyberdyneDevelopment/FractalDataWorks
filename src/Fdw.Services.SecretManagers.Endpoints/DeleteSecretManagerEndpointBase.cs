@@ -1,4 +1,5 @@
 using System;
+using Fdw.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -72,9 +74,7 @@ public abstract class DeleteSecretManagerEndpointBase : Endpoint<DeleteSecretMan
             var deleteResult = await _configProvider.Delete(existing.Id, ct).ConfigureAwait(false);
             if (deleteResult.IsFailure)
             {
-                SecretManagerEndpointLog.DeleteFailed(_logger, deleteResult.CurrentMessage ?? "Unknown error");
-                AddError(deleteResult.CurrentMessage ?? "Failed to delete secret manager configuration");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(deleteResult, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

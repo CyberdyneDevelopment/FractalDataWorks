@@ -351,4 +351,79 @@ public sealed class MsSqlUpdateTranslatorTests
     {
         _sut.Name.ShouldBe("Update");
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateSetsTheColumnsADictionaryRecordNames()
+    {
+        // FDW-3309: a pipeline Update load sends each row as IDictionary<string, object?>. The translator
+        // looked for CLR properties and found none, so the row failed with "no properties matching".
+        var container = CreateContainer(
+            fields: [CreateField("Id").Object, CreateField("Name").Object, CreateField("Email").Object],
+            primaryKeyFieldName: "Id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["Name"] = "Updated", ["Email"] = "new@test.com" };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("[Name] = @set_Name");
+        result.Value.CommandText.ShouldContain("[Email] = @set_Email");
+        result.Value.CommandText.ShouldNotContain("[Id] = @set_Id");
+        result.Value.CommandText.ShouldContain("WHERE [Id] = @where_p0");
+        result.Value.Parameters["@set_Name"].Value.ShouldBe("Updated");
+        result.Value.Parameters["@set_Email"].Value.ShouldBe("new@test.com");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateSetsOnlyTheColumnsADictionaryRecordCarries()
+    {
+        var container = CreateContainer(
+            fields: [CreateField("Id").Object, CreateField("Name").Object, CreateField("Email").Object],
+            primaryKeyFieldName: "Id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["Email"] = "only@test.com", ["NotAColumn"] = 1 };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("[Email] = @set_Email");
+        result.Value.CommandText.ShouldNotContain("@set_Name");
+        result.Value.CommandText.ShouldNotContain("NotAColumn");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateBindsANullInADictionaryRecordAsTheColumnsOwnType()
+    {
+        var binary = new Mock<IFieldType>();
+        binary.Setup(t => t.ClrType).Returns(typeof(byte[]));
+        var payload = CreateField("Payload");
+        payload.Setup(f => f.FieldType).Returns(binary.Object);
+        var container = CreateContainer(fields: [CreateField("Id").Object, payload.Object], primaryKeyFieldName: "Id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["Payload"] = null };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Parameters["@set_Payload"].SqlDbType.ShouldBe(System.Data.SqlDbType.VarBinary);
+        result.Value.Parameters["@set_Payload"].Value.ShouldBe(DBNull.Value);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateFailsWhenADictionaryRecordNamesNoUpdatableColumn()
+    {
+        var container = CreateContainer(
+            fields: [CreateField("Id").Object, CreateField("Name").Object],
+            primaryKeyFieldName: "Id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["Id"] = 42, ["Other"] = "x" };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+    }
 }

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.Web.RestEndpoints.Configuration;
@@ -26,6 +27,7 @@ public sealed class OAuth2SecurityConfiguration
     /// <summary>
     /// Gets or sets the client secret for OAuth2.
     /// </summary>
+    [SecretValue]
     public string ClientSecret { get; init; } = string.Empty;
 
     /// <summary>

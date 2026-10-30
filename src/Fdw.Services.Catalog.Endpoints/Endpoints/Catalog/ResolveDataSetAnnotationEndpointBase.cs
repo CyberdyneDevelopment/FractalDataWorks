@@ -1,12 +1,15 @@
-using System.Collections.Generic;
-using System.Linq;
+using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Catalog.Clients.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -37,50 +40,70 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
         Summary(s => s.Summary = "Resolve DataSet annotation");
     }
 
-    /// <summary>
-    /// Marks the annotation as resolved by re-saving it through the provider.
-    /// The DB DEFAULT (sysdatetimeoffset()) on ModifiedAt is refreshed on UPDATE by the provider.
-    /// </summary>
+    /// <summary>Marks the annotation resolved by the caller and answers it. An annotation that is already resolved answers 409.</summary>
     public override async Task HandleAsync(DataSetAnnotationIdRequest req, CancellationToken ct)
     {
         var getResult = await _provider.Get(req.AnnotationId, ct).ConfigureAwait(false);
 
         if (!getResult.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query annotation", Details = getResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(getResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
-        if (getResult.Value is null)
+        if (getResult.Value is not { } annotation)
         {
             await Send.NotFoundAsync(ct).ConfigureAwait(false);
             return;
         }
 
-        var annotation = getResult.Value;
+        var refusal = Refuse(annotation, req.AnnotationId.ToString());
+        if (refusal is not null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(refusal), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        annotation.IsResolved = true;
+        annotation.ResolvedDate = DateTimeOffset.UtcNow;
+        annotation.ResolvedBy = CallerId();
+
         var saveResult = await _provider
-            .Save(annotation, annotation.Domain, annotation.Implementation, annotation.Name, ct)
+            .Update(annotation, annotation.Domain, annotation.Implementation, annotation.Name, ct)
             .ConfigureAwait(false);
 
         if (!saveResult.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to resolve annotation", Details = saveResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saveResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
-        await Send.OkAsync(MapToDto(getResult.Value), ct).ConfigureAwait(false);
+        await Send.OkAsync(MapToDto(annotation), ct).ConfigureAwait(false);
+    }
+
+    private IGenericMessage? Refuse(IDataSetAnnotationImplementationConfiguration annotation, string annotationId)
+    {
+        if (annotation.IsResolved)
+        {
+            return DataSetAnnotationLog.AlreadyResolved(Logger, annotationId);
+        }
+
+        return CallerId() is null ? DataSetAnnotationLog.ResolverUnknown(Logger, annotationId) : null;
+    }
+
+    private Guid? CallerId()
+    {
+        if (Guid.TryParse(HttpContext.User.FindFirstValue("sub"), out var subject))
+        {
+            return subject;
+        }
+
+        return Guid.TryParse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var identifier) ? identifier : null;
     }
 
     /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
     protected virtual DataSetAnnotationPayload MapToDto(IDataSetAnnotationImplementationConfiguration config)
     {
-        return new DataSetAnnotationPayload
-        {
-            DataSetName = config.DataSetName,
-            Owner = config.BusinessOwner,
-            Steward = config.TechnicalOwner,
-            Classification = config.DataClassification,
-            Tags = config.Tags.Select(t => t.Tag).ToList()
-        };
+        return DataSetAnnotationPayloadMapper.Map(config);
     }
 }

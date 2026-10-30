@@ -3,8 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Calculations;
+using Fdw.Results;
 using Fdw.Services.Calculations.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Web.RestEndpoints.Pagination;
 
 namespace Fdw.Calculations.Endpoints.CalculationEntities;
 
@@ -55,7 +58,15 @@ public abstract class ExecuteCalculationEntityEndpointBase : Endpoint<ExecuteCal
         }
 
         var entity = entityResult.Value!;
-        var context = CreateExecutionContext();
+        var rowCap = PaginationQuery.ResolveCalculatedRowCap(HttpContext, Logger);
+        if (rowCap.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(
+                rowCap.ToNewResult<ExecuteCalculationEntityResponse>(), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var context = CreateExecutionContext(rowCap.Value);
 
         var result = await _service.ExecuteCalculation(entity.Name, context, ct).ConfigureAwait(false);
 
@@ -63,8 +74,8 @@ public abstract class ExecuteCalculationEntityEndpointBase : Endpoint<ExecuteCal
 
         if (result.IsFailure)
         {
-            AddError(result.Messages?.ToString() ?? "Calculation execution failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(
+                result.ToNewResult<ExecuteCalculationEntityResponse>(), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -79,5 +90,7 @@ public abstract class ExecuteCalculationEntityEndpointBase : Endpoint<ExecuteCal
     /// <summary>
     /// Creates the execution context for the calculation. Override to provide custom context.
     /// </summary>
-    protected virtual ICalculationContext CreateExecutionContext() => new CalculationContext(_dataGateways);
+    protected virtual ICalculationContext CreateExecutionContext(int dataSetRowCap) => new CalculationContext(
+        _dataGateways,
+        new Dictionary<string, object?>(StringComparer.Ordinal) { [CalculationDataSetRead.RowCapParameterName] = dataSetRowCap });
 }

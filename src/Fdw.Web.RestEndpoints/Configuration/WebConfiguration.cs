@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 // using Fdw.Web.Http.Abstractions.Base;
+using Fdw.Configuration;
 using Fdw.Configuration.Abstractions;
 
 namespace Fdw.Web.RestEndpoints.Configuration;
@@ -40,6 +41,7 @@ public sealed class WebConfiguration : ConfigurationBase<WebConfiguration>
     /// <summary>
     /// Gets or sets the password for the SSL certificate.
     /// </summary>
+    [SecretValue]
     public string? SslCertificatePassword { get; init; }
 
     /// <summary>

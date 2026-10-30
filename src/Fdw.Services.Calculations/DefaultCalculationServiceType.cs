@@ -44,7 +44,6 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         {
             var services = host.Services;
             var domain = services.GetRequiredService<ICalculationConfigurationProvider>();
-            domain.Register("Formula", services.GetRequiredService<IFormulaCalculationConfigurationProvider>());
             domain.Register("Windowed", services.GetRequiredService<IWindowedCalculationConfigurationProvider>());
     
             return GenericResult<IHost>.Success(host);
@@ -54,7 +53,6 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         {
 
             builder.Services.TryAddSingleton<ICalculationInputResolver, DefaultCalculationInputResolver>();
-            builder.Services.TryAddSingleton<ICalculationStepExecutor, CalculationStepExecutor>();
             builder.Services.TryAddSingleton<ICalculationEntityService, CalculationEntityService>();
             builder.Services.TryAddSingleton<ICalculationCatalogProvider, CalculationCatalogProvider>();
             builder.Services.TryAddSingleton<ICalculationEntityProvider, DefaultCalculationEntityProvider>();
@@ -74,7 +72,6 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             });
             builder.Services.TryAddSingleton<ICalculationVersionConfigurationProvider>(sp => sp.GetRequiredService<CalculationVersionConfigurationProvider>());
 
-            builder.Services.AddSingleton<IFormulaCalculationConfigurationProvider, FormulaCalculationConfigurationProvider>(sp => new FormulaCalculationConfigurationProvider(sp.GetRequiredService<ILogger<FormulaCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "FormulaCalculationConfiguration"));
             builder.Services.AddSingleton<IWindowedCalculationConfigurationProvider, WindowedCalculationConfigurationProvider>(sp => new WindowedCalculationConfigurationProvider(sp.GetRequiredService<ILogger<WindowedCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "WindowedCalculationConfiguration"));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

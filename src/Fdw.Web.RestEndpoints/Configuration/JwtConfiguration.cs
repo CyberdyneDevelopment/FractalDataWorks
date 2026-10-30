@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.Web.RestEndpoints.Configuration;
@@ -21,6 +22,7 @@ public sealed class JwtConfiguration
     /// <summary>
     /// Gets or sets the JWT signing key.
     /// </summary>
+    [SecretValue]
     public string SecretKey { get; init; } = string.Empty;
 
     /// <summary>

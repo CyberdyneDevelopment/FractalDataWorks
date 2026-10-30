@@ -58,7 +58,9 @@ public abstract class VerifyIdentityEndpointBase : Endpoint<VerifyIdentityReques
             s.Summary = "Verify a managed identity can obtain a token";
             s.Description =
                 "Asks the identity to authenticate against its configured provider and reports the "
-                + "issuer, audience, granted scopes and expiry. Never returns the token itself.";
+                + "issuer, audience, granted scopes and expiry. Never returns the token itself. "
+                + "When no token can be had it answers 200 with succeeded false and the failure text; "
+                + "an identity that is not configured answers 404.";
         });
     }
 
@@ -86,7 +88,7 @@ public abstract class VerifyIdentityEndpointBase : Endpoint<VerifyIdentityReques
         var identity = await Identities.Get(req.Name, ct).ConfigureAwait(false);
         if (!identity.IsSuccess || identity.Value is not { } service)
         {
-            IdentityEndpointLog.IdentityVerificationFailed(Logger, req.Name, req.Audience, identity.CurrentMessage ?? "not found");
+            IdentityEndpointLog.IdentityVerificationFailed(Logger, req.Name, req.Audience, identity.CurrentMessage);
             await Send.ResponseAsync(
                 new VerifyIdentityResponse
                 {
@@ -105,8 +107,11 @@ public abstract class VerifyIdentityEndpointBase : Endpoint<VerifyIdentityReques
 
         if (!acquired.IsSuccess || acquired.Value is not { } token)
         {
-            IdentityEndpointLog.IdentityVerificationFailed(Logger, req.Name, req.Audience, acquired.CurrentMessage ?? "no token");
-            await Send.ResponseAsync(
+            // Why 200 and not a 5xx: this is a diagnostic, and "the provider refused" is its answer, not
+            // a fault of this server. A 502 is also replaced by the gateway in front of the API with its own
+            // body, so the failure text this endpoint exists to deliver would never reach the caller.
+            IdentityEndpointLog.IdentityVerificationFailed(Logger, req.Name, req.Audience, acquired.CurrentMessage);
+            await Send.OkAsync(
                 new VerifyIdentityResponse
                 {
                     Succeeded = false,
@@ -115,7 +120,7 @@ public abstract class VerifyIdentityEndpointBase : Endpoint<VerifyIdentityReques
                     Audience = req.Audience,
                     Failure = acquired.CurrentMessage,
                 },
-                502, ct).ConfigureAwait(false);
+                ct).ConfigureAwait(false);
             return;
         }
 

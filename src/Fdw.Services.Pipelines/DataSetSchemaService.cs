@@ -104,7 +104,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
         })];
 
         var result = await _provider
-            .Save(dataSet, dataSet.Domain, dataSet.Implementation, dataSet.Name, cancellationToken)
+            .Update(dataSet, dataSet.Domain, dataSet.Implementation, dataSet.Name, cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)

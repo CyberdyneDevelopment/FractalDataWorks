@@ -16,11 +16,28 @@ public static class ScriptSave
     /// <param name="logger">The logger.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The script as it was saved, or the failure.</returns>
-    public static async Task<IGenericResult<ScriptPayload>> Save(ScriptConfigurationProvider provider, SqlScriptConfiguration script, ILogger logger, CancellationToken ct)
+    public static Task<IGenericResult<ScriptPayload>> Save(ScriptConfigurationProvider provider, SqlScriptConfiguration script, ILogger logger, CancellationToken ct)
+        => Write(provider, script, logger, mayCreate: true, ct);
+
+    /// <summary>Updates the script it identifies; a script removed since it was read is not brought back.</summary>
+    /// <param name="provider">The stored scripts.</param>
+    /// <param name="script">The stored script, already checked, carrying the Id of the script it replaces.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The script as it was saved, or the failure.</returns>
+    public static Task<IGenericResult<ScriptPayload>> Update(ScriptConfigurationProvider provider, SqlScriptConfiguration script, ILogger logger, CancellationToken ct)
+        => Write(provider, script, logger, mayCreate: false, ct);
+
+    private static async Task<IGenericResult<ScriptPayload>> Write(
+        ScriptConfigurationProvider provider, SqlScriptConfiguration script, ILogger logger, bool mayCreate, CancellationToken ct)
     {
-        var saved = await provider
-            .Save(script, ScriptPayloadReader.DomainName, ScriptPayloadReader.ImplementationName, script.Name, ct)
-            .ConfigureAwait(false);
+        var saved = mayCreate
+            ? await provider
+                .Save(script, ScriptPayloadReader.DomainName, ScriptPayloadReader.ImplementationName, script.Name, ct)
+                .ConfigureAwait(false)
+            : await provider
+                .Update(script, ScriptPayloadReader.DomainName, ScriptPayloadReader.ImplementationName, script.Name, ct)
+                .ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<ScriptPayload>();

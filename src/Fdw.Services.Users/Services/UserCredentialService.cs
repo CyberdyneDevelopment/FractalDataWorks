@@ -226,7 +226,7 @@ public sealed class UserCredentialService : IUserCredentialService
         cfg.LastPasswordChangedAt = DateTimeOffset.UtcNow;
         cfg.MustChangePasswordOnLogin = false;
 
-        var updateResult = await _userProvider.Save(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
+        var updateResult = await _userProvider.Update(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
             UserLog.VaultStoreFailed(_logger, userId, secretType);
@@ -288,7 +288,7 @@ public sealed class UserCredentialService : IUserCredentialService
         var cfg = userResult.Value;
         cfg.MustChangePasswordOnLogin = true;
 
-        var result = await _userProvider.Save(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
+        var result = await _userProvider.Update(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             UserCredentialLog.ForceChangeFailed(_logger, userId);
@@ -347,7 +347,7 @@ public sealed class UserCredentialService : IUserCredentialService
     {
         cfg.FailedLoginCount = failedCount;
         cfg.LockoutEnd = lockoutEnd;
-        var saveResult = await _userProvider.Save(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
+        var saveResult = await _userProvider.Update(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
         return saveResult.IsSuccess
             ? GenericResult<int>.Success(1)
             : saveResult.ToNewResult<int>();

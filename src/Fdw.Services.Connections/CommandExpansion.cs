@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Abstractions.Timeouts;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions.Logging;
@@ -57,6 +58,9 @@ public static class CommandExpansion
         int? maxSerialInsert,
         CancellationToken cancellationToken = default)
     {
+        if (CommandTimeoutPolicy.TryGet(command, out _, out var timeoutOwner))
+            return GenericResult<T>.Failure(ConnectionLogger.ExpansionCannotCarryCommandTimeout(logger, command.CommandType, timeoutOwner));
+
         if (typeof(T) != typeof(int))
             return GenericResult<T>.Failure(ConnectionLogger.ExpansionResultNotCount(logger, command.CommandType, typeof(T).Name));
 
@@ -104,6 +108,9 @@ public static class CommandExpansion
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
+        if (CommandTimeoutPolicy.TryGet(command, out _, out var timeoutOwner))
+            return GenericResult<TResult>.Failure(ConnectionLogger.ExpansionCannotCarryCommandTimeout(logger, command.CommandType, timeoutOwner));
+
         var expansion = command.Expand(container);
         if (expansion.IsFailure)
             return expansion.ToNewResult<TResult>();

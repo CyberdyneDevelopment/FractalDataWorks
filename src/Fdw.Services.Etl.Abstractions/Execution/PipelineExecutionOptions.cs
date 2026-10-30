@@ -75,6 +75,9 @@ public sealed record PipelineExecutionOptions
     /// </summary>
     public IReadOnlyList<string>? RunRoles { get; init; }
 
+    /// <summary>Gets the gate the run's flow steps wait at while the run is paused; empty for a run nobody can pause.</summary>
+    public Fdw.Services.Etl.Abstractions.Flow.IFlowPauseGate? PauseGate { get; init; }
+
     /// <summary>
     /// Gets the production-mode defaults (no test mode, no sample retention).
     /// </summary>
