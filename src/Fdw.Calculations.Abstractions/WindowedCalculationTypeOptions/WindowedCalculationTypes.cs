@@ -1,3 +1,4 @@
+using System.Linq;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 
@@ -13,4 +14,6 @@ namespace Fdw.Calculations.Abstractions.WindowedCalculationTypeOptions;
 [TypeCollection(typeof(WindowedCalculationTypeBase), typeof(IWindowedCalculationType), typeof(WindowedCalculationTypes))]
 public sealed partial class WindowedCalculationTypes : TypeCollectionBase<WindowedCalculationTypeBase, IWindowedCalculationType>
 {
+    /// <summary>Gets the names of the offered window functions, comma separated, for messages that tell a caller what it may use.</summary>
+    public static string OfferedNames => string.Join(", ", All().Select(option => option.Name));
 }

@@ -114,7 +114,7 @@ public sealed class ThemeConfigurationProvider
         if (previous is not null)
         {
             previous.IsDefault = false;
-            var cleared = await Save(previous, previous.Domain, previous.Implementation, previous.Name, unit, ct).ConfigureAwait(false);
+            var cleared = await Update(previous, previous.Domain, previous.Implementation, previous.Name, unit, ct).ConfigureAwait(false);
             if (cleared.IsFailure)
             {
                 await unit.Rollback(ct).ConfigureAwait(false);
@@ -123,7 +123,7 @@ public sealed class ThemeConfigurationProvider
         }
 
         chosen.IsDefault = true;
-        var marked = await Save(chosen, chosen.Domain, chosen.Implementation, chosen.Name, unit, ct).ConfigureAwait(false);
+        var marked = await Update(chosen, chosen.Domain, chosen.Implementation, chosen.Name, unit, ct).ConfigureAwait(false);
         if (marked.IsFailure)
         {
             await unit.Rollback(ct).ConfigureAwait(false);

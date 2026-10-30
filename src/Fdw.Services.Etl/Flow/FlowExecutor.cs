@@ -62,7 +62,7 @@ public sealed class FlowExecutor : IFlowExecutor
         }
 
         var stopwatch = Stopwatch.StartNew();
-        var run = FlowRun.Build(graph, options.LinkCapacity);
+        var run = FlowRun.Build(graph, options.LinkCapacity, options.PauseGate);
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Why a completion source per component: a component in a later stage waits on the completion of each earlier one, which is

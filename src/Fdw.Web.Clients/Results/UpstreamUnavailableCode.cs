@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 using Fdw.Results;
+using Fdw.Results.Abstractions;
 
 namespace Fdw.Web.Clients.Abstractions.Results;
 
@@ -15,4 +16,8 @@ public sealed class UpstreamUnavailableCode : ClientResultCodeBase
             "{method} {uri} answered {statusCode}: {detail}", isRetryable: true)
     {
     }
+
+    /// <inheritdoc/>
+    public override string? FormatClientMessage(IResultDetails? details = null)
+        => RelayedReason(details);
 }

@@ -315,7 +315,7 @@ public class AuthenticationFlowAdministrationTests
             var configuration = new Mock<IAuthenticationFlowConfigurationProvider>();
             configuration.Setup(c => c.Get(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<IReadOnlyList<IAuthenticationFlowImplementationConfiguration>>.Success(_rows));
-            configuration.Setup(c => c.Save(
+            configuration.Setup(c => c.Update(
                     It.IsAny<AuthenticationFlowImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Callback<AuthenticationFlowImplementationConfiguration, string, string, string, CancellationToken>((saved, _, _, _, _) => Saved = saved)
                 .ReturnsAsync(GenericResult.Success());

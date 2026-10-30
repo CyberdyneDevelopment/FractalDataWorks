@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 using Fdw.Services.Pipelines;
+using Fdw.Services.Pipelines.Endpoints.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -54,7 +56,7 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
         Summary(s =>
         {
             s.Summary = "List pipeline execution history";
-            s.Description = "Returns a paginated list of pipeline execution history with optional filtering by pipeline name and success status.";
+            s.Description = "Returns a paginated list of pipeline execution history, newest first, with optional filtering by pipeline name and either success (false means the stored status Failed) or status (the stored status of the run: Running, Succeeded, Failed). Each run answers its stored status beside success.";
             s.ExampleRequest = new ListPipelineHistoryRequest { Page = 1, PageSize = 25, PipelineName = "NflDataSync" };
         });
     }
@@ -65,12 +67,18 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
         var paging = PaginationQuery.ResolvePage(HttpContext, EndpointLogger, req.Page, req.PageSize);
         if (paging.IsFailure)
         {
-            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(paging, HttpContext);
-            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            await Refuse(paging).ConfigureAwait(false);
             return;
         }
 
         var page = paging.Value!;
+
+        if (req.Success is { } successAsked && !string.IsNullOrWhiteSpace(req.Status))
+        {
+            await Refuse(GenericResult.Failure(
+                PipelineEndpointLog.HistorySuccessAndStatusBothGiven(EndpointLogger, successAsked, req.Status))).ConfigureAwait(false);
+            return;
+        }
 
         // Fails here as well as in the Registration phase: registration proves it for a real host,
         // and this proves it for anything that reaches the endpoint without having run registration.
@@ -84,83 +92,75 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
             return;
         }
 
-        OnFetchingExecutionHistory(req.PipelineName ?? "all pipelines");
+        OnFetchingExecutionHistory(req.PipelineName);
 
-        // Build filter conditions
+        var filter = HistoryFilter(req);
+
+        var rows = await PipelineExecutionHistory.Page(DataGateway, EndpointLogger, filter, page.Skip, page.Take, ct).ConfigureAwait(false);
+        if (rows.IsFailure)
+        {
+            OnExecutionHistoryFetchFailed(rows.CurrentMessage);
+            await Refuse(rows).ConfigureAwait(false);
+            return;
+        }
+
+        var total = await PipelineExecutionHistory.Count(DataGateway, EndpointLogger, filter, ct).ConfigureAwait(false);
+        if (total.IsFailure)
+        {
+            OnExecutionHistoryFetchFailed(total.CurrentMessage);
+            await Refuse(total).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(new PaginatedResponse<PipelineExecutionRecord>
+        {
+            Items = rows.Value!.Select(MapToExecutionRecord).ToList(),
+            Page = req.Page,
+            PageSize = page.Take,
+            TotalCount = total.Value
+        }, ct).ConfigureAwait(false);
+    }
+
+    // Success is the stored status Succeeded (true) or Failed (false); Status is the stored status as given.
+    // The request is refused before this when both are given, so at most one of the two adds a condition.
+    private static FilterExpression? HistoryFilter(ListPipelineHistoryRequest req)
+    {
         var conditions = new List<IFilterNode>();
 
         if (!string.IsNullOrWhiteSpace(req.PipelineName))
         {
-            conditions.Add(new FilterCondition
-            {
-                PropertyName = "PipelineName",
-                Operator = FilterOperators.ByName("Equal"),
-                Value = req.PipelineName
-            });
+            conditions.Add(Equal("PipelineName", req.PipelineName));
         }
 
-        if (req.Success.HasValue)
+        if (req.Success is { } success)
         {
-            // Map Success bool to Status string
-            var status = req.Success.Value ? "Succeeded" : "Failed";
-            conditions.Add(new FilterCondition
-            {
-                PropertyName = "Status",
-                Operator = FilterOperators.ByName("Equal"),
-                Value = status
-            });
+            conditions.Add(Equal("Status", success ? "Succeeded" : "Failed"));
         }
 
-        FilterExpression? filter = null;
-        if (conditions.Count == 1)
+        if (!string.IsNullOrWhiteSpace(req.Status))
         {
-            filter = new FilterExpression { Root = conditions[0] };
-        }
-        else if (conditions.Count > 1)
-        {
-            filter = new FilterExpression
-            {
-                Root = new FilterGroup
-                {
-                    Operator = LogicalOperator.And,
-                    Nodes = conditions
-                }
-            };
+            conditions.Add(Equal("Status", req.Status));
         }
 
-        var command = new QueryCommand<PipelineExecutionDbRecord>
+        return conditions.Count switch
         {
-            Filter = filter
+            0 => null,
+            1 => new FilterExpression { Root = conditions[0] },
+            _ => new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = conditions } }
         };
+    }
 
-        var result = await DataGateway.Execute<IEnumerable<PipelineExecutionDbRecord>>(
-            command, new DataStoreTarget(PipelineServiceTypes.OperationalConnection, "etl", "PipelineExecution"), ct).ConfigureAwait(false);
+    private static FilterCondition Equal(string propertyName, string value) => new()
+    {
+        PropertyName = propertyName,
+        Operator = FilterOperators.ByName("Equal"),
+        Value = value
+    };
 
-        if (!result.IsSuccess)
-        {
-            OnExecutionHistoryFetchFailed(result.CurrentMessage ?? "Unknown error");
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution history", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
-            return;
-        }
-
-        var allRecords = result.Value?.ToList() ?? [];
-        var totalCount = allRecords.Count;
-
-        // Apply sorting and pagination in-memory
-        var sorted = allRecords.OrderByDescending(r => r.StartedAt);
-        var items = sorted
-            .Skip(page.Skip)
-            .Take(page.Take)
-            .Select(MapToExecutionRecord)
-            .ToList();
-
-        await Send.OkAsync(new PaginatedResponse<PipelineExecutionRecord>
-        {
-            Items = items,
-            Page = req.Page,
-            PageSize = page.Take,
-            TotalCount = totalCount
-        }, ct).ConfigureAwait(false);
+    private Task<FastEndpoints.Void> Refuse(IGenericResult failure)
+    {
+        var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(failure, HttpContext);
+        return Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode));
     }
 
     /// <summary>
@@ -170,8 +170,9 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
     {
         ExecutionId = dbRecord.Id,
         PipelineName = dbRecord.PipelineName,
-        StartedAt = dbRecord.StartedAt,
-        CompletedAt = dbRecord.CompletedAt,
+        StartedAt = dbRecord.StartedAt?.UtcDateTime,
+        CompletedAt = dbRecord.CompletedAt?.UtcDateTime,
+        Status = dbRecord.Status,
         Success = string.Equals(dbRecord.Status, "Succeeded", StringComparison.OrdinalIgnoreCase),
         ErrorMessage = dbRecord.ErrorMessage,
         RecordsExtracted = dbRecord.RecordsExtracted,
@@ -183,8 +184,8 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
     };
 
     /// <summary>Called when fetching execution history. Override for custom logging.</summary>
-    protected virtual void OnFetchingExecutionHistory(string pipelineName) { }
+    protected virtual void OnFetchingExecutionHistory(string? pipelineName) { }
 
     /// <summary>Called when execution history fetch fails. Override for custom logging.</summary>
-    protected virtual void OnExecutionHistoryFetchFailed(string error) { }
+    protected virtual void OnExecutionHistoryFetchFailed(string? error) { }
 }

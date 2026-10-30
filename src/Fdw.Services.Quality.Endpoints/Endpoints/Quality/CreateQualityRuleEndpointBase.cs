@@ -6,6 +6,7 @@ using Fdw.Services.Quality;
 using System.Linq;
 using Fdw.Services.Quality.Abstractions.TypeCollections.QualityRuleTypeOptions;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -66,11 +67,11 @@ public abstract class CreateQualityRuleEndpointBase : Endpoint<CreateQualityRule
             req.IsEnabled, req.Description, req.MinValue, req.MaxValue,
             req.Pattern, req.Expression);
 
-        var result = await _provider.Save(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
+        var result = await _provider.Create(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to create quality rule", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

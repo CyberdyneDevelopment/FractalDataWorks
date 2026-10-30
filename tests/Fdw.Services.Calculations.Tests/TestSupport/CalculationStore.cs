@@ -31,7 +31,7 @@ namespace Fdw.Services.Calculations.Tests.TestSupport;
 internal sealed class CalculationStore
 {
     private const string EntityDomain = "CalculationEntity";
-    private const string OneImplementation = "Formula";
+    private const string OneImplementation = "Windowed";
     private const string StoreName = "PlatformConfiguration";
 
     public CalculationStore()

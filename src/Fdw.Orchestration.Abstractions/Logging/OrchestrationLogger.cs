@@ -389,7 +389,7 @@ public static partial class OrchestrationLogger
     [MessageLogging(
         EventId = 61000,
         Level = LogLevel.Error,
-        Message = "No step executor found: ExecutionId={executionId}, StepId={stepId}, returning null output")]
+        Message = "No step executor is registered, so step '{stepId}' of execution {executionId} was not run and fails. Register an IOrchestrationStepExecutor or run steps with a derived executor")]
     public static partial IGenericMessage NoStepExecutorFound(
         ILogger logger,
         string executionId,

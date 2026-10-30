@@ -609,7 +609,7 @@ public sealed partial class DataGatewayService : IDataGateway
             return cfgResult.ToNewResult<T>();
         if (cfgResult.Value is null)
             return GenericResult<T>.Failure(
-                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "configuration provider returned a null value for a successful result"));
+                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, DataGatewayLogger.DataSetNotVisibleReason));
 
         var config = cfgResult.Value;
 

@@ -37,8 +37,11 @@ public sealed partial class UserPreferencesImplementationConfiguration
     /// <summary>Gets or sets the optional UI theme name.</summary>
     public string? ThemeName { get; set; }
 
-    /// <summary>Gets or sets whether dark mode is enabled.</summary>
+    /// <summary>Gets or sets whether dark mode is enabled: the legacy mirror of <see cref="ColorMode"/>, true only when the mode is dark.</summary>
     public bool DarkMode { get; set; }
+
+    /// <summary>Gets or sets the colour mode the person chose (<see cref="UserColorModes"/>); null when they have not chosen.</summary>
+    public string? ColorMode { get; set; }
 
     /// <summary>Gets or sets the optional preferred language code.</summary>
     public string? Language { get; set; }

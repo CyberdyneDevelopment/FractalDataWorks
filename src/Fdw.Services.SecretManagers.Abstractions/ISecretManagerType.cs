@@ -28,6 +28,14 @@ public interface ISecretManagerType<TService, TFactory, TConfiguration> : ISecre
 /// </summary>
 public interface ISecretManagerType : IServiceType
 {
+    /// <summary>Gets the name to show a person.</summary>
+    /// <remarks>Implemented by <c>TypeOptionBase.DisplayName</c>; declared here so callers holding the interface can show it.</remarks>
+    string DisplayName { get; }
+
+    /// <summary>Gets what the type does, in the type's own words.</summary>
+    /// <remarks>Implemented by <c>TypeOptionBase.Description</c>; declared here so callers holding the interface can show it.</remarks>
+    string Description { get; }
+
     /// <summary>
     /// Gets the secret store types supported by this provider.
     /// </summary>

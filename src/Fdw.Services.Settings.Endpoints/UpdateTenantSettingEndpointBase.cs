@@ -77,7 +77,7 @@ public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<U
         if (request.SettingValue is not null) setting.SettingValue = request.SettingValue;
         if (request.IsActive.HasValue) setting.IsActive = request.IsActive.Value;
 
-        var saveResult = await _provider.Save(setting, "TenantSetting", "TenantSetting", setting.Name, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Update(setting, "TenantSetting", "TenantSetting", setting.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<TenantSettingSummaryDto>();

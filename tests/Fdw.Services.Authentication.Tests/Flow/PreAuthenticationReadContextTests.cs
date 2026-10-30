@@ -79,7 +79,7 @@ public sealed class PreAuthenticationReadContextTests
                 accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
 
                 // The login lands in the DEFAULT membership, not the first one or the home tenant.
-                IReadOnlyList<HeldTenant> rows = [new HeldTenant(Guid.NewGuid(), false), new HeldTenant(tenantId, true)];
+                IReadOnlyList<HeldTenant> rows = [new HeldTenant(Guid.NewGuid(), false, null), new HeldTenant(tenantId, true, null)];
                 return Task.FromResult(GenericResult<IReadOnlyList<HeldTenant>>.Success(rows));
             });
 
@@ -88,6 +88,36 @@ public sealed class PreAuthenticationReadContextTests
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(tenantId);
         accessor.Current.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ASignInLandsInTheDepartmentThePersonMarkedAsDefaultInTheirDefaultTenant()
+    {
+        var userId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var finance = Guid.NewGuid();
+        var memberships = new Mock<IUserTenantsHeld>();
+        IReadOnlyList<HeldTenant> rows = [new HeldTenant(Guid.NewGuid(), false, Guid.NewGuid()), new HeldTenant(tenantId, true, finance)];
+        memberships.Setup(p => p.Get(userId, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<HeldTenant>>.Success(rows));
+
+        var landing = await new UserTenantResolver(memberships.Object, new AuthenticationContextAccessor()).LandingFor(userId, TestContext.Current.CancellationToken);
+
+        landing.IsSuccess.ShouldBeTrue();
+        landing.Value.ShouldBe(new Landing(tenantId, finance));
+    }
+
+    [Fact]
+    public async Task ASignInWithNoDepartmentMarkedLandsInTheTenantWithNone()
+    {
+        var userId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var memberships = new Mock<IUserTenantsHeld>();
+        IReadOnlyList<HeldTenant> rows = [new HeldTenant(tenantId, true, null)];
+        memberships.Setup(p => p.Get(userId, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<HeldTenant>>.Success(rows));
+
+        var landing = await new UserTenantResolver(memberships.Object, new AuthenticationContextAccessor()).LandingFor(userId, TestContext.Current.CancellationToken);
+
+        landing.Value.ShouldBe(new Landing(tenantId, null));
     }
 
     [Theory]
@@ -108,7 +138,7 @@ public sealed class PreAuthenticationReadContextTests
         });
         // The binding stamps a resolved row's first use, and that write runs under the same system
         // context the read does.
-        identities.Setup(p => p.Save(
+        identities.Setup(p => p.Update(
                 It.IsAny<IExternalIdentityImplementationConfiguration>(),
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(() =>
@@ -118,10 +148,10 @@ public sealed class PreAuthenticationReadContextTests
             });
 
         var tenants = new Mock<ITenantResolver>();
-        tenants.Setup(p => p.TenantFor(userId, It.IsAny<CancellationToken>())).Returns(() =>
+        tenants.Setup(p => p.LandingFor(userId, It.IsAny<CancellationToken>())).Returns(() =>
         {
             accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
-            return Task.FromResult(GenericResult<Guid>.Success(tenantId));
+            return Task.FromResult(GenericResult<Landing>.Success(new Landing(tenantId, null)));
         });
 
         var result = await new ExternalIdentityBinding(identities.Object, tenants.Object, accessor)
@@ -130,9 +160,9 @@ public sealed class PreAuthenticationReadContextTests
         result.IsSuccess.ShouldBeTrue();
         (result.Value is not null).ShouldBe(bound);
         accessor.Current.ShouldBeNull();
-        tenants.Verify(p => p.TenantFor(userId, It.IsAny<CancellationToken>()), bound ? Times.Once() : Times.Never());
+        tenants.Verify(p => p.LandingFor(userId, It.IsAny<CancellationToken>()), bound ? Times.Once() : Times.Never());
         identities.Verify(
-            p => p.Save(It.IsAny<IExternalIdentityImplementationConfiguration>(),
+            p => p.Update(It.IsAny<IExternalIdentityImplementationConfiguration>(),
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             bound ? Times.Once() : Times.Never());
     }

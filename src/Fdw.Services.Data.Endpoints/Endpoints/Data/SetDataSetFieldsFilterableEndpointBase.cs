@@ -79,7 +79,7 @@ public abstract class SetDataSetFieldsFilterableEndpointBase
         foreach (var field in fields.Value!)
             field.IsFilterable = request.IsFilterable;
 
-        var saved = await _dataSetProvider.Save(current, "DataSet", current.Implementation, current.Name, ct).ConfigureAwait(false);
+        var saved = await _dataSetProvider.Update(current, "DataSet", current.Implementation, current.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (field, isFilterable) in previous)

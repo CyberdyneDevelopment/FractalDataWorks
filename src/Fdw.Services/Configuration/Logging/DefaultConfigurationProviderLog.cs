@@ -57,6 +57,101 @@ public static partial class DefaultConfigurationProviderLog
         Message = "No {typeName} domain row found for '{key}'")]
     public static partial IGenericMessage DomainRowNotFound(ILogger logger, string typeName, string key);
 
+    /// <summary>Logs a record that is one member saved under the name of another.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="typeName">The configuration type.</param>
+    /// <param name="name">The name the other member carries.</param>
+    /// <param name="recordId">The Id the record carries, which names a different member.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 41061, Level = LogLevel.Warning,
+        Message = "{typeName} {recordId} cannot be saved as '{name}': another {typeName} already carries that name",
+        ClientMessage = "The name '{name}' is already carried by another {typeName}")]
+    public static partial IGenericMessage NameHeldByAnotherMember(ILogger logger, string typeName, string name, Guid recordId);
+
+    /// <summary>Logs that a delete named a row the provider does not hold. The delete fails; a row that is not there is not deleted.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation contract this provider composes.</param>
+    /// <param name="key">The name or id the delete was asked for.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 31060, Level = LogLevel.Warning,
+        Message = "{typeName} '{key}' was not found, so there is nothing to delete",
+        ClientMessage = "{typeName} '{key}' was not found, so there is nothing to delete")]
+    public static partial IGenericMessage DeleteTargetNotFound(ILogger logger, string typeName, string key);
+
+    /// <summary>Logs that an update named a member the provider does not hold. The update fails; an update never creates a member.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation contract this provider composes.</param>
+    /// <param name="key">The name the update was asked for.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 31061, Level = LogLevel.Warning,
+        Message = "{typeName} '{key}' was not found, so there is nothing to update",
+        ClientMessage = "{typeName} '{key}' was not found, so there is nothing to update")]
+    public static partial IGenericMessage UpdateTargetNotFound(ILogger logger, string typeName, string key);
+
+    /// <summary>Logs that a create named a member the provider already holds. The create fails; a create never replaces a member.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation contract this provider composes.</param>
+    /// <param name="key">The name the create was asked for.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 40001, Level = LogLevel.Warning,
+        Message = "{typeName} '{key}' already exists, so it is not created",
+        ClientMessage = "{typeName} '{key}' already exists, so it is not created")]
+    public static partial IGenericMessage CreateTargetExists(ILogger logger, string typeName, string key);
+
+    /// <summary>Logs that a record holds a tree of its own type but its implementation container declares no Foreign key to the domain's durable Id to hang it from.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation contract this provider composes.</param>
+    /// <param name="container">The implementation container that was searched.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61080, Level = LogLevel.Error,
+        Message = "{typeName} holds a list of its own type, but container '{container}' declares no Foreign key to the domain's Logical key to hang its members from")]
+    public static partial IGenericMessage TreeLinkNotDeclared(ILogger logger, string typeName, string container);
+
+    /// <summary>Logs that a record holds a tree of its own type and its implementation container declares more than one Foreign key to the domain's durable Id.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation contract this provider composes.</param>
+    /// <param name="container">The implementation container that was searched.</param>
+    /// <param name="count">How many such keys it declares.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61081, Level = LogLevel.Error,
+        Message = "{typeName} holds a list of its own type, but container '{container}' declares {count} Foreign keys to the domain's Logical key; which one holds the parent is not configured")]
+    public static partial IGenericMessage TreeLinkAmbiguous(ILogger logger, string typeName, string container, int count);
+
+    /// <summary>Logs that the Foreign key a tree hangs from names a field the record does not carry.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The record type.</param>
+    /// <param name="column">The field the key names.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61082, Level = LogLevel.Error,
+        Message = "{typeName} is hung as a tree from field '{column}', which the record does not carry")]
+    public static partial IGenericMessage TreeLinkNotOnRecord(ILogger logger, string typeName, string column);
+
+    /// <summary>Logs that the parent links of a tree lead back to a member already on the way down.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The record type.</param>
+    /// <param name="name">The member the cycle was met at.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61083, Level = LogLevel.Error,
+        Message = "{typeName} '{name}' is its own ancestor: the parent links of the tree form a cycle")]
+    public static partial IGenericMessage TreeCycle(ILogger logger, string typeName, string name);
+
+    /// <summary>Refuses a read as of a past instant of a record that holds a tree, whose members are not read as of that instant.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The record type.</param>
+    /// <param name="name">The record asked for.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 21080, Level = LogLevel.Warning,
+        Message = "{typeName} '{name}' holds a tree and was asked for as of a past instant; its members are not read as of that instant",
+        ClientMessage = "{typeName} '{name}' holds a tree, and a tree cannot be read as of a past instant; read the current one")]
+    public static partial IGenericMessage TreeAsOfNotSupported(ILogger logger, string typeName, string name);
+
+    /// <summary>Logs that the read of every member of a domain, made to hang a tree, returned no result.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation contract this provider composes.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61084, Level = LogLevel.Error, Message = "The read of every {typeName} member, made to hang a tree, returned no result")]
+    public static partial IGenericMessage DomainListReturnedNoResult(ILogger logger, string typeName);
+
     /// <summary>A domain row was found and its implementation composed.</summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The implementation contract this provider composes.</param>

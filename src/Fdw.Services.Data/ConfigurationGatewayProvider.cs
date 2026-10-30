@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
@@ -13,7 +14,7 @@ namespace Fdw.Services.Data;
 /// <summary>
 /// Holds the configuration gateways by the connection each one opened.
 /// </summary>
-public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
+public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider, IDatabaseGenerationCatalog
 {
     private readonly ConcurrentDictionary<string, IConfigurationGateway> _gateways =
         new(StringComparer.OrdinalIgnoreCase);
@@ -85,6 +86,9 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
         ConfigurationGatewayProviderLog.GatewayRegistered(_logger, gateway.ConnectionName, gateway.GetType().Name);
         return GenericResult.Success();
     }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<IDatabaseGenerationSource> Sources() => [.. _gateways.Values.OfType<IDatabaseGenerationSource>()];
 
     private string Held()
         => _gateways.IsEmpty

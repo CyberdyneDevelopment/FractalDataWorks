@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Results;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -78,8 +79,7 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.AccessRequestApproveFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
-                if (result.CurrentMessage is not null
-                    && result.CurrentMessage.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                if (FailureCategory.IsMissing(result))
                 {
                     await Send.NotFoundAsync(ct).ConfigureAwait(false);
                     return;

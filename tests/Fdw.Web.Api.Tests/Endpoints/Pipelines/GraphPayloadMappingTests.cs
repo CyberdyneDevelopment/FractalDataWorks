@@ -37,6 +37,8 @@ public sealed class GraphPayloadMappingTests
             Name = "OrdersFlow",
             IsEnabled = true,
             LinkCapacity = 4,
+            MaxParallelRuns = 1,
+            OverflowBehavior = "Queue",
             Components = [source, map, split],
             Links =
             [
@@ -422,6 +424,8 @@ public sealed class GraphPayloadMappingTests
             Name = "OrdersHistoryFlow",
             IsEnabled = true,
             LinkCapacity = 4,
+            MaxParallelRuns = 1,
+            OverflowBehavior = "Queue",
             Components = [source, load],
             Links = [new GraphLinkPayload { From = new GraphNodePayload { Component = "src", Node = "output" }, To = new GraphNodePayload { Component = "load", Node = "input" } }],
         };
@@ -595,7 +599,7 @@ public sealed class GraphPayloadMappingTests
         loop.Settings["end"] = Json("{\"parameter\":\"Last\"}");
         var payload = new GraphPayload
         {
-            Name = "Bound", IsEnabled = true, LinkCapacity = 4,
+            Name = "Bound", IsEnabled = true, LinkCapacity = 4, MaxParallelRuns = 1, OverflowBehavior = "Queue",
             Components = [source, loop],
         };
 
@@ -624,7 +628,7 @@ public sealed class GraphPayloadMappingTests
         source.Settings["batchSize"] = Json("{\"name\":\"Size\"}");
         var payload = new GraphPayload
         {
-            Name = "Bad", IsEnabled = true, LinkCapacity = 4,
+            Name = "Bad", IsEnabled = true, LinkCapacity = 4, MaxParallelRuns = 1, OverflowBehavior = "Queue",
             Components = [source],
         };
 

@@ -82,16 +82,16 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
                 BindingLog.Ambiguous(_logger, issuer, matches.Count));
         }
 
-        var tenant = await _tenants.TenantFor(matches[0].UserId, cancellationToken).ConfigureAwait(false);
-        if (tenant.IsFailure)
-            return tenant.ToNewResult<Principal?>();
+        var landing = await _tenants.LandingFor(matches[0].UserId, cancellationToken).ConfigureAwait(false);
+        if (landing.IsFailure)
+            return landing.ToNewResult<Principal?>();
 
         BindingLog.Bound(_logger, issuer, matches[0].UserId);
 
         await StampFirstUse(matches[0], cancellationToken).ConfigureAwait(false);
 
         return GenericResult<Principal?>.Success(
-            new Principal { Id = matches[0].UserId, TenantId = tenant.Value });
+            new Principal { Id = matches[0].UserId, TenantId = landing.Value!.TenantId, OrganizationId = landing.Value.OrganizationId });
     }
 
     /// <inheritdoc />
@@ -128,22 +128,22 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
             return GenericResult<Principal?>.Failure(BindingLog.Ambiguous(_logger, issuer, invitations.Count));
 
         var invitation = invitations[0];
-        var tenant = await _tenants.TenantFor(invitation.UserId, cancellationToken).ConfigureAwait(false);
-        if (tenant.IsFailure)
-            return tenant.ToNewResult<Principal?>();
+        var landing = await _tenants.LandingFor(invitation.UserId, cancellationToken).ConfigureAwait(false);
+        if (landing.IsFailure)
+            return landing.ToNewResult<Principal?>();
 
         // Redeemed in the same write that proves it: the subject is stated, so every later sign-in
         // resolves through Resolve by the pair and the address is never consulted again. A failed
         // write refuses the sign-in -- unlike a first-use stamp, this write IS the binding.
         invitation.ExternalSubject = subjectId;
         invitation.BoundAt = DateTimeOffset.UtcNow;
-        var saved = await _identities.Save(
+        var saved = await _identities.Update(
             invitation, ExternalIdentityDomain, ExternalIdentityDomain, invitation.Name, cancellationToken).ConfigureAwait(false);
         if (saved.IsFailure)
             return GenericResult<Principal?>.Failure(BindingLog.InvitationNotRedeemed(_logger, issuer, invitation.UserId));
 
         BindingLog.InvitationRedeemed(_logger, issuer, invitation.UserId);
-        return GenericResult<Principal?>.Success(new Principal { Id = invitation.UserId, TenantId = tenant.Value });
+        return GenericResult<Principal?>.Success(new Principal { Id = invitation.UserId, TenantId = landing.Value!.TenantId, OrganizationId = landing.Value.OrganizationId });
     }
 
     /// <summary>
@@ -167,7 +167,7 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
 
         configuration.BoundAt = DateTimeOffset.UtcNow;
 
-        var saved = await _identities.Save(
+        var saved = await _identities.Update(
             configuration,
             ExternalIdentityDomain,
             ExternalIdentityDomain,

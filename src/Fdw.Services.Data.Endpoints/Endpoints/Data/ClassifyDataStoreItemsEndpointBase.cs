@@ -90,7 +90,7 @@ public abstract class ClassifyDataStoreItemsEndpointBase
         foreach (var item in items.Value!)
             item.SetClassificationId(request.ClassificationId);
 
-        var saved = await _dataStoreProvider.Save(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
+        var saved = await _dataStoreProvider.Update(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (item, classificationId) in previous)

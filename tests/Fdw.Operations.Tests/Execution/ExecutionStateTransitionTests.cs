@@ -75,4 +75,29 @@ public sealed class ExecutionStateTransitionTests
         ExecutionStateTypes.Cancelled.IsTerminal.ShouldBeTrue();
         ExecutionStateTypes.Cancelled.CanTransitionTo("Scheduled").ShouldBeFalse();
     }
+
+    [Theory]
+    [InlineData("Running")]
+    [InlineData("Completed")]
+    [InlineData("Failed")]
+    [InlineData("Cancelled")]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void APausedRunCanResumeBeCancelledOrEndByItself(string target)
+    {
+        // Why Completed and Failed: a pause holds a run at its next batch, but the work before that batch goes on; a run paused during
+        // it can end there. If the row could not follow, it would stay Paused for good after the run was gone (FDW-2950).
+        ExecutionStateTypes.Paused.CanTransitionTo(target).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("Scheduled")]
+    [InlineData("Initialized")]
+    [InlineData("AwaitingApproval")]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void APausedRunCannotGoBackToBeforeItStarted(string target)
+    {
+        ExecutionStateTypes.Paused.CanTransitionTo(target).ShouldBeFalse();
+    }
 }

@@ -42,7 +42,7 @@ namespace Fdw.Services.Data;
 /// via the IDataNode tree, fires follow-up queries for each child container whose FK key points to
 /// the parent, and populates the matching collection property on each parent POCO via reflection.
 /// </remarks>
-public sealed partial class ConfigurationGateway : IConfigurationGateway, IDerivedConfigurationCache
+public sealed partial class ConfigurationGateway : IConfigurationGateway, IDerivedConfigurationCache, IDatabaseGenerationSource
 {
     /// <inheritdoc />
     public string ConnectionName { get; }
@@ -467,6 +467,30 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         {
             return GenericResult<T>.Failure(
                 ConfigurationGatewayLog.ExecuteException(_logger, ex, target.Container));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<DatabaseGenerationReading>> DatabaseGeneration(CancellationToken cancellationToken = default)
+    {
+        var connectionResult = await BuildConnection(cancellationToken).ConfigureAwait(false);
+        if (!connectionResult.IsSuccess || connectionResult.Value is null)
+            return connectionResult.ToNewResult<DatabaseGenerationReading>();
+
+        if (connectionResult.Value is not IDatabaseGenerationConnection generationConnection)
+            return GenericResult<DatabaseGenerationReading>.Success(DatabaseGenerationReading.CannotTell);
+
+        try
+        {
+            var generation = await generationConnection.DatabaseGeneration(cancellationToken).ConfigureAwait(false);
+            return generation.IsSuccess && generation.Value is { } told
+                ? GenericResult<DatabaseGenerationReading>.Success(DatabaseGenerationReading.Of(told))
+                : generation.ToNewResult<DatabaseGenerationReading>();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return GenericResult<DatabaseGenerationReading>.Failure(
+                ConfigurationGatewayLog.GenerationNotRead(_logger, ConnectionName, ex.Message));
         }
     }
 

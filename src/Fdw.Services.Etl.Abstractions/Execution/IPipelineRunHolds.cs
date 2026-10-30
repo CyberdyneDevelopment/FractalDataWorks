@@ -12,8 +12,12 @@ namespace Fdw.Services.Etl.Abstractions.Execution;
 /// The values never reach the run's record or its events, so a value its author did not opt in to show stays private.
 /// </para>
 /// <para>
-/// Why memory: the queue the request would have entered is memory too, so a restart empties both. A hold that is gone at approval is
-/// reported as lost, never recreated.
+/// Why memory, and what a restart does (FDW-3216): the holds themselves are memory, but the request of each held run is also stored in
+/// etl.PipelineRunRequest (see <see cref="IPipelineRunRequestStore"/>), a table only the engine reads, so the host puts the holds back when it starts.
+/// A run's values are not secrets: a secret is never passed as a run value, it belongs to a connection.
+/// </para>
+/// <para>
+/// A hold that is gone at approval is reported as lost, never recreated.
 /// </para>
 /// </remarks>
 public interface IPipelineRunHolds

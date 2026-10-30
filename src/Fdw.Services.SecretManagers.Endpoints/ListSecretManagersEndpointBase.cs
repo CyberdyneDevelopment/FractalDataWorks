@@ -61,10 +61,13 @@ public abstract class ListSecretManagersEndpointBase : EndpointWithoutRequest<Pa
         SecretManagerEndpointLog.ListingSecretManagers(_logger);
 
         var getAllResult = await _configProvider.Get(ct).ConfigureAwait(false);
-        var allConfigs = getAllResult.IsSuccess && getAllResult.Value is not null
-            ? getAllResult.Value
-            : [];
-        var configs = allConfigs
+        if (getAllResult.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(getAllResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var configs = getAllResult.Value!
             .Select(c => new SecretManagerSummaryResponse
             {
                 Name = c.Name,

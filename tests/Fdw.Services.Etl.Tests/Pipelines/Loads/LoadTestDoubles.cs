@@ -38,6 +38,45 @@ internal static class LoadTestDoubles
         return container.Object;
     }
 
+    /// <summary>A container that is one file of a data store (FDW-3193): its name, the connection of its store and the path of the file, like "exports/Players.csv".</summary>
+    internal static IDataContainer FileContainer(string name, Guid connectionId, string pathValue)
+    {
+        var store = new Mock<IDataStore>();
+        store.SetupGet(s => s.ConnectionId).Returns(connectionId);
+        var path = new Mock<IDataNodePath>();
+        path.SetupGet(p => p.Store).Returns(store.Object);
+        var container = new Mock<IDataContainer>();
+        container.SetupGet(c => c.Name).Returns(name);
+        container.SetupGet(c => c.Parent).Returns(path.Object);
+        container.SetupGet(c => c.Path).Returns(new StubFilePath(pathValue));
+        return container.Object;
+    }
+
+    /// <summary>A path that names one file, moved the way a file-system path moves.</summary>
+    internal sealed class StubFilePath(string pathValue) : IFilePath
+    {
+        /// <inheritdoc/>
+        public string PathValue => pathValue;
+
+        /// <inheritdoc/>
+        public string Domain => "File";
+
+        /// <inheritdoc/>
+        public string FileName => pathValue[(pathValue.LastIndexOf('/') + 1)..];
+
+        /// <inheritdoc/>
+        public string Extension => System.IO.Path.GetExtension(FileName);
+
+        /// <inheritdoc/>
+        public IPath Readdress(string? pathPart, string? namePart)
+        {
+            var nameAt = pathValue.LastIndexOf('/') + 1;
+            return new StubFilePath(
+                (string.IsNullOrWhiteSpace(pathPart) ? pathValue[..nameAt] : pathPart.TrimEnd('/') + "/")
+                + (string.IsNullOrWhiteSpace(namePart) ? pathValue[nameAt..] : namePart));
+        }
+    }
+
     /// <summary>A data set provider that knows the named data sets, each with its sources.</summary>
     internal static Mock<IDataSetConfigurationProvider> DataSetProviderOf(params (string Name, DataSetSourceConfiguration[] Sources)[] sets)
     {
@@ -131,6 +170,7 @@ internal static class LoadTestDoubles
             _name = name;
             _events = events;
             Commands = [];
+            Targets = [];
 
             var transaction = new Mock<IDataConnectionTransaction>();
             transaction
@@ -139,6 +179,7 @@ internal static class LoadTestDoubles
                 {
                     _events.Add($"exec:{_name}:{command.CommandType}");
                     Commands.Add(command);
+                    Targets.Add(container.Path.PathValue);
                     return string.Equals(command.CommandType, failVerb, StringComparison.Ordinal)
                         ? GenericResult<int>.Failure(new Fdw.Messages.GenericMessage($"{command.CommandType} failed"))
                         : GenericResult<int>.Success(1);
@@ -174,5 +215,8 @@ internal static class LoadTestDoubles
 
         /// <summary>Gets the commands executed on it, in order.</summary>
         internal List<IDataCommand> Commands { get; }
+
+        /// <summary>Gets the path value of the container each command ran against, in order.</summary>
+        internal List<string> Targets { get; }
     }
 }

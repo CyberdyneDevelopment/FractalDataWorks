@@ -379,7 +379,9 @@ public static class GraphComponentValidator
             .Concat(ExecuteProblems(component, scope, Problem))
             .Concat(ExecuteSqlProblems(component, scope, Problem))
             .Concat(NotifyProblems(component, Problem))
-            .Concat(ReadOnlyTargetProblems(graph, component, Problem));
+            .Concat(ReadOnlyTargetProblems(graph, component, Problem))
+            .Concat(BatchSizeProblems(component, Problem))
+            .Concat(TargetKindProblems(component, scope, Problem));
     }
 
     private static IEnumerable<GraphProblem> LoopProblems(
@@ -412,6 +414,44 @@ public static class GraphComponentValidator
     }
 
     // No component changes a parameter the graph declared read-only: not a set variable component, and not a component that keeps its result in one.
+    // What a container source states about the kind of thing it reads (FDW-3089), and what a destination states about what it writes (FDW-3193); any other component states none of it.
+    private static IEnumerable<GraphProblem> TargetKindProblems(PipelineComponentConfiguration component, VariableScope scope, Func<string, string, GraphProblem> problem)
+    {
+        if (component.ComponentType.Equals("ContainerSource", StringComparison.OrdinalIgnoreCase))
+        {
+            return TargetKindRules.Problems(component).Select(found => problem(found.Field, found.Message)).Concat(FilesListProblems(component, scope, problem));
+        }
+
+        if (component.ComponentType.Equals("ContainerDestination", StringComparison.OrdinalIgnoreCase)
+            || component.ComponentType.Equals("DataSetDestination", StringComparison.OrdinalIgnoreCase))
+        {
+            return TargetKindRules.WriteProblems(component).Select(found => problem(found.Field, found.Message));
+        }
+
+        return component.TargetKind is null && component.FilesList is null && component.SplitField is null
+            ? []
+            : [problem("targetKind", $"component '{component.Name}' is not a container source or a destination, so it states no targetKind, filesList or splitField")];
+    }
+
+    // The list of files a container source reads is a run parameter or a variable of the graph, or the variable of a for each that holds the source (FDW-3194).
+    // A list the run names is judged when the run starts.
+    private static IEnumerable<GraphProblem> FilesListProblems(PipelineComponentConfiguration component, VariableScope scope, Func<string, string, GraphProblem> problem)
+    {
+        if (component.FilesList is { } list && !IsBound(component, "filesList") && !scope.Contains(list))
+        {
+            yield return problem("filesList", $"container source '{component.Name}' reads its list of files from '{list}', which is not a run parameter or a variable in scope");
+        }
+    }
+
+    // A for each that takes items in batches takes at least one a round (FDW-3086). A size the run names is judged when the run starts.
+    private static IEnumerable<GraphProblem> BatchSizeProblems(PipelineComponentConfiguration component, Func<string, string, GraphProblem> problem)
+    {
+        if (component.ComponentType.Equals("ForEach", StringComparison.OrdinalIgnoreCase) && !IsBound(component, "batchSize") && component.BatchSize < 1)
+        {
+            yield return problem("batchSize", $"for each '{component.Name}' takes {component.BatchSize} items a round, which is not at least one");
+        }
+    }
+
     private static IEnumerable<GraphProblem> ReadOnlyTargetProblems(
         GraphPipelineConfiguration graph, PipelineComponentConfiguration component, Func<string, string, GraphProblem> problem)
     {

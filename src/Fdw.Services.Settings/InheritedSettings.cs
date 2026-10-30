@@ -343,7 +343,7 @@ public sealed class InheritedSettings : IInheritedSettings
             }
 
             server.IsLocked = false;
-            var savedServer = await _server.Save(server, "ServerSetting", "ServerSetting", server.Name, cancellationToken).ConfigureAwait(false);
+            var savedServer = await _server.Update(server, "ServerSetting", "ServerSetting", server.Name, cancellationToken).ConfigureAwait(false);
             return savedServer.IsFailure ? InheritedSettingsLog.WriteFailed(_logger, $"The platform value of '{settingName}'", savedServer.CurrentMessage) : null;
         }
 
@@ -356,7 +356,7 @@ public sealed class InheritedSettings : IInheritedSettings
         }
 
         tenant.IsLocked = false;
-        var savedTenant = await _tenants.Save(tenant, "TenantSetting", "TenantSetting", tenant.Name, cancellationToken).ConfigureAwait(false);
+        var savedTenant = await _tenants.Update(tenant, "TenantSetting", "TenantSetting", tenant.Name, cancellationToken).ConfigureAwait(false);
         return savedTenant.IsFailure ? InheritedSettingsLog.WriteFailed(_logger, $"The tenant value of '{settingName}'", savedTenant.CurrentMessage) : null;
     }
 }

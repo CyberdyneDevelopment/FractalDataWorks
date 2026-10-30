@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Calculations.Abstractions.CalculationTypeOptions;
-using Fdw.Calculations.Endpoints.Validators;
 using Fdw.Data.DataContainers.Abstractions;
-using Fdw.Commands.Data;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Web.Calculations.Clients.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Extensions;
+using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -21,18 +25,15 @@ namespace Fdw.Calculations.Endpoints;
 /// </summary>
 public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculationRequest, ExecuteCalculationResponse>
 {
-    private readonly IConfigurationGateway _configurationGateway;
-    private readonly IDataGatewayProvider? _dataGateways;
+    private readonly IDataSetResolver _resolver;
 
     /// <summary>Initializes a new instance of the <see cref="ExecuteCalculationEndpointBase"/> class.</summary>
     protected ExecuteCalculationEndpointBase(
         ILogger logger,
-        IConfigurationGateway configurationGateway,
-        IDataGatewayProvider? dataGateways = null)
+        IDataSetResolver resolver)
     {
         EndpointLogger = logger;
-        _configurationGateway = configurationGateway;
-        _dataGateways = dataGateways;
+        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
     }
 
     /// <summary>
@@ -60,16 +61,37 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
     /// <inheritdoc />
     public override async Task HandleAsync(ExecuteCalculationRequest req, CancellationToken ct)
     {
-        
-        if (req.DataSetName.Length > 0 && !await DataSetLookup.Exists(_configurationGateway, req.DataSetName, ct).ConfigureAwait(false))
+        // The name is resolved as /data resolves it, so the name of a view is found as well as the name of a data set.
+        if (req.DataSetName.Length > 0)
         {
-            await HttpContext.WriteNotFound("DataSet", req.DataSetName, ct).ConfigureAwait(false);
-            return;
+            var resolved = await _resolver.Resolve(req.DataSetName, ct).ConfigureAwait(false);
+            if (resolved.IsFailure)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(
+                    resolved.ToNewResult<ExecuteCalculationResponse>(), HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (resolved.Value is null)
+            {
+                await HttpContext.WriteNotFound("DataSet", req.DataSetName, ct).ConfigureAwait(false);
+                return;
+            }
         }
 
-        var values = req.Values.Count > 0
-            ? req.Values
-            : await ProjectFromDataSet(req.DataSetName, req.FieldName, ct).ConfigureAwait(false);
+        IReadOnlyList<decimal> values = req.Values;
+        if (values.Count == 0)
+        {
+            var projected = await ProjectFromDataSet(req, ct).ConfigureAwait(false);
+            if (!projected.IsSuccess || projected.Value is not { } read)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(
+                    projected.ToNewResult<ExecuteCalculationResponse>(), HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            values = read;
+        }
 
         // Validator guarantees CalculationTypes.ByName(...) returns a real option.
         var calculationType = CalculationTypes.ByName(req.CalculationType);
@@ -106,36 +128,59 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
         }
     }
 
+    // The values of a data set's field, read as the caller through the data set row reader, up to the cap /data uses for calculated reads.
+    // A row with no value in the field is skipped, as an aggregate skips it; a value that is not a number is refused.
+    private async Task<IGenericResult<IReadOnlyList<decimal>>> ProjectFromDataSet(ExecuteCalculationRequest req, CancellationToken ct)
+    {
+        var rowCap = PaginationQuery.ResolveCalculatedRowCap(HttpContext, EndpointLogger);
+        if (rowCap.IsFailure)
+            return rowCap.ToNewResult<IReadOnlyList<decimal>>();
+
+        var services = HttpContext.RequestServices;
+        if (services.GetService(typeof(IDataSetRowReader)) is not IDataSetRowReader reader
+            || services.GetService(typeof(IDataGatewayProvider)) is not IDataGatewayProvider gateways)
+            return GenericResult<IReadOnlyList<decimal>>.Failure(CalculationEndpointLog.DataSetReaderUnavailable(EndpointLogger));
+
+        var read = await reader.Read(gateways.ByName("Main"), req.DataSetName, rowCap.Value, ct).ConfigureAwait(false);
+        if (!read.IsSuccess || read.Value is not { } rows)
+            return read.ToNewResult<IReadOnlyList<decimal>>();
+
+        return FieldValues(rows, req);
+    }
+
+    // The numbers in the request's field of the rows. Every row of one read carries the same columns, so the column is found once.
+    private IGenericResult<IReadOnlyList<decimal>> FieldValues(IReadOnlyList<Dictionary<string, object?>> rows, ExecuteCalculationRequest req)
+    {
+        var values = new List<decimal>(rows.Count);
+        if (rows.Count == 0)
+            return GenericResult<IReadOnlyList<decimal>>.Success(values);
+
+        var column = rows[0].Keys.FirstOrDefault(key => string.Equals(key, req.FieldName, StringComparison.OrdinalIgnoreCase));
+        if (column is null)
+            return GenericResult<IReadOnlyList<decimal>>.Failure(
+                CalculationEndpointLog.FieldNotInDataSet(EndpointLogger, req.FieldName, req.DataSetName));
+
+        foreach (var row in rows)
+        {
+            if (row[column] is not { } raw)
+                continue;
+
+            if (!decimal.TryParse(Convert.ToString(raw, CultureInfo.InvariantCulture), NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
+                return GenericResult<IReadOnlyList<decimal>>.Failure(
+                    CalculationEndpointLog.FieldValueNotNumber(EndpointLogger, req.FieldName, req.DataSetName));
+
+            values.Add(number);
+        }
+
+        return GenericResult<IReadOnlyList<decimal>>.Success(values);
+    }
+
     /// <summary>
     /// Gets the data set name from the request for logging purposes.
     /// Override to extract from custom request properties.
     /// </summary>
     protected virtual string GetDataSetName(ExecuteCalculationRequest req) =>
         req.DataSetName.Length > 0 ? req.DataSetName : "inline";
-
-    private async Task<IReadOnlyList<decimal>> ProjectFromDataSet(string dataSetName, string fieldName, CancellationToken ct)
-    {
-        if (dataSetName.Length == 0 || fieldName.Length == 0) return Array.Empty<decimal>();
-
-        if (_dataGateways is null) return Array.Empty<decimal>();
-        var gateway = _dataGateways.ByName("Main");
-
-        var cmd = new QueryCommand<Dictionary<string, object?>>();
-        var dataResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
-            cmd, new DataStoreTarget(dataSetName, null, dataSetName), ct).ConfigureAwait(false);
-        if (!dataResult.IsSuccess || dataResult.Value is null) return Array.Empty<decimal>();
-
-        var projected = new List<decimal>();
-        foreach (var row in dataResult.Value)
-        {
-            if (row.TryGetValue(fieldName, out var raw) && raw is not null
-                && decimal.TryParse(raw.ToString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
-            {
-                projected.Add(parsed);
-            }
-        }
-        return projected;
-    }
 
     /// <summary>
     /// Called after a calculation has been successfully executed.

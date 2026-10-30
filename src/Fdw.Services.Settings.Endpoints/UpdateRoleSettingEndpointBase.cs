@@ -78,7 +78,7 @@ public abstract class UpdateRoleSettingEndpointBase : CrudUpdateEndpointBase<Upd
         if (request.SettingValue is not null) setting.SettingValue = request.SettingValue;
         if (request.IsActive.HasValue) setting.IsActive = request.IsActive.Value;
 
-        var saveResult = await _provider.Save(setting, "RoleSetting", "RoleSetting", setting.Name, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Update(setting, "RoleSetting", "RoleSetting", setting.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<RoleSettingSummaryDto>();

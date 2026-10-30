@@ -88,12 +88,15 @@ public class TypeCollectionComponentShapeTests
             // The members of the stage-backed tools (Filter, Calculate, Sort, Aggregate, Distinct, Latest by, Validate).
             "SortFieldList", "Calculation", "Aggregation", "Distinct", "LatestBy", "CheckList", "ValidateFailAction", "ComputeSpec", "FieldMappings",
         ];
-        string[] collections = ["LoadStepKinds", "JoinKinds", "SplitRoutings", "SoftDeleteModes", "RunPoints"];
+        // Why read from the resolver: the console draws a setting whose kind names a type collection with one generic choice control, so the collections that
+        // exist are the ones the resolver lists, not a list kept here that goes stale when a component names another collection.
+        var collections = TypeCollectionResolver.FindAll().Select(collection => collection.Name).ToList();
 
         var unknown = ComponentTypes.All().SelectMany(k => k.Settings).Select(s => s.Kind)
             .Where(kind => !rendered.Contains(kind) && !collections.Contains(kind)).Distinct().ToList();
 
         unknown.ShouldBeEmpty();
+        collections.ShouldContain("TargetKinds");
         JoinKinds.All().Select(k => k.Name).ShouldBe(["FullOuter", "Inner", "LeftOuter"], ignoreOrder: true);
         SplitRoutings.All().Select(k => k.Name).ShouldBe(["AllMatches", "FirstMatch"], ignoreOrder: true);
     }

@@ -5,6 +5,7 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -66,14 +67,14 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
 
         var config = BuildConfiguration(req);
 
-        var result = await _roleProvider.Save(config, RoleDomain, RoleImplementation, req.Name, ct).ConfigureAwait(false);
+        var result = await _roleProvider.Create(config, RoleDomain, RoleImplementation, req.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            await Send.ResponseAsync(new RoleSummaryResponse { Name = req.Name }, 400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 
-        // Save stamps the record it was handed -- name, domain, implementation and the domain row's
+        // Create stamps the record it was handed -- name, domain, implementation and the domain row's
         // durable Id -- and returns no value of its own, so the record IS what was written.
         var audited = await RoleChangeAudit.RecordRole(Resolve<IAdministrativeAudit>(), User, "RoleCreated", req.Name,
             null, RoleChangeAudit.Describe(config.DisplayName, config.Description), ct).ConfigureAwait(false);

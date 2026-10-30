@@ -115,7 +115,7 @@ public abstract class UpdateWorkspaceRelationshipEndpointBase
         row.ModifyDate = DateTimeOffset.UtcNow;
 
         // row is the instance inside the aggregate's Relationships, so the aggregate already carries the change.
-        var saved = await _workspaces.Save(_workspace!, _workspace!.Domain, _workspace.Implementation, _workspace.Name, ct).ConfigureAwait(false);
+        var saved = await _workspaces.Update(_workspace!, _workspace!.Domain, _workspace.Implementation, _workspace.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<WorkspaceMapEdgeDto>();
 
         return GenericResult<WorkspaceMapEdgeDto>.Success(ToDto(row));

@@ -12,6 +12,13 @@ namespace Fdw.Services.Data.Logging;
 public static partial class DataGatewayLogger
 {
     /// <summary>
+    /// The reason given when the data set provider answers success with no data set (FDW-3170). Row-level security hides a row from a caller
+    /// that is not admitted to its tenant, so the provider cannot tell a data set that does not exist from one that another tenant owns, and the
+    /// reason says both rather than only "not found".
+    /// </summary>
+    public const string DataSetNotVisibleReason = "no data set of that name is visible to the tenant this caller acts in: it does not exist, or another tenant owns it";
+
+    /// <summary>
     /// Logs when a data command is being routed to a connection.
     /// </summary>
     /// <param name="logger">The logger instance.</param>

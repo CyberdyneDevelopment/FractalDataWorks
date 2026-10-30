@@ -15,4 +15,11 @@ public abstract class ScalarValueTypeBase : TypeOptionBase<ScalarValueTypeBase>,
         : base(name)
     {
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A type with no format takes any text, the empty text included: that is a String or a CharArray. A type with a format overrides
+    /// this and says which text it takes.
+    /// </remarks>
+    public virtual bool IsValidText(string serializedValue) => serializedValue is not null;
 }

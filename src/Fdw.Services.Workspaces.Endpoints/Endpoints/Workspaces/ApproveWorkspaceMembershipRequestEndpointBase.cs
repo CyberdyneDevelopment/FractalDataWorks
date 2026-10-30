@@ -91,7 +91,7 @@ public abstract class ApproveWorkspaceMembershipRequestEndpointBase : Endpoint<A
         // The request and the membership it grants are children of the workspace aggregate: one save
         // writes both under the workspace's current row.
         WorkspaceMembershipGrant.Grant(workspace.Value, found, grantedRole.Name, reviewedByUserId, now);
-        var saved = await _workspaces.Save(
+        var saved = await _workspaces.Update(
             workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) { await SendError(saved, ct).ConfigureAwait(false); return; }
 

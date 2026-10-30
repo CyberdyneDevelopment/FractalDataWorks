@@ -14,7 +14,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `DefaultQualityServiceType` | class | Default quality service type that registers quality, catalog, and promotion services with the dependency… |
+| `DefaultQualityServiceType` | class | Default quality service type that registers quality and catalog services with the dependency… |
 
 Shipped options are reference implementations, not canon — a consumer adds a kind by declaring its own option against this collection, in its own assembly.
 
@@ -28,13 +28,9 @@ Configuration classes are `[ManagedConfiguration]`: they generate their own DDL,
 | `DataSetAnnotationFieldBusinessNameConfiguration` | class | Configuration for a data set annotation field business name. Child of DataSetAnnotationConfiguration. |
 | `DataSetAnnotationFieldDescriptionConfiguration` | class | Configuration for a data set annotation field description. Child of DataSetAnnotationConfiguration. |
 | `DataSetAnnotationTagConfiguration` | class | Configuration for a data set annotation tag. Child of DataSetAnnotationConfiguration. |
-| `EnvironmentApproverConfiguration` | class | Configuration for an individual environment approver. Child of EnvironmentConfiguration. |
-| `EnvironmentConfiguration` | class | Configuration for deployment environments. Stored in quality.Environment table. |
 | `GlossaryTermConfiguration` | class | Configuration for business glossary terms. Stored in catalog.GlossaryTerm table. |
 | `GlossaryTermLinkedDataSetConfiguration` | class | Configuration for a glossary term linked data set. Child of GlossaryTermConfiguration. |
 | `GlossaryTermRelationConfiguration` | class | Configuration for a glossary term relation. Child of GlossaryTermConfiguration. |
-| `PromotionRequestConfiguration` | class | Configuration for promotion requests between environments. Stored in quality.PromotionRequest table. |
-| `PromotionRequestItemConfiguration` | class | Configuration for an individual promotion request item. Child of PromotionRequestConfiguration. |
 | `QualityRuleConfiguration` | class | Configuration for quality validation rules. Stored in quality.QualityRule table. |
 | `QualityRuleReferenceValueConfiguration` | class | Configuration for an individual quality rule reference value. Child of QualityRuleConfiguration. |
 

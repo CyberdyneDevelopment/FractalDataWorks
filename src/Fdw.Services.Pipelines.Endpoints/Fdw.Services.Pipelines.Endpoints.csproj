@@ -62,7 +62,6 @@
     <ProjectReference Include="..\Fdw.Schema.Clients.Abstractions\Fdw.Schema.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
     <ProjectReference Include="..\Fdw.Services.Catalog.Clients.Models\Fdw.Services.Catalog.Clients.Models.csproj" />
-    <ProjectReference Include="..\Fdw.Web.Search.Clients.Models\Fdw.Web.Search.Clients.Models.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\Fdw.Services.Notifications.Abstractions\Fdw.Services.Notifications.Abstractions.csproj" />
   </ItemGroup>

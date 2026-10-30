@@ -23,7 +23,6 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 | `DataSetFieldsPayload` | class | Groups all fields for a single DataSet, used in bulk field enumeration for formula autocomplete. |
 | `FieldInfoPayload` | class | Lightweight field descriptor used in bulk DataSet field enumeration for formula autocomplete. |
 | `PeriodComparisonTypePayload` | class | Represents a period comparison type used for time-based calculations. |
-| `ValidateFormulaPayload` | class | Request to validate a formula expression against a target DataSet. |
 | `WindowedCalculationRequestPayload` | class | Request to execute a windowed calculation. |
 | `WindowedCalculationResponsePayload` | class | Response from a windowed calculation execution. |
 | `WindowedOrderFieldPayload` | class | Specifies a field and sort direction for windowed calculation ordering. |

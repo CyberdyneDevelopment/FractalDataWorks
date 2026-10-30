@@ -28,6 +28,18 @@ public interface ICalculationEntityType : ITypeOption<Guid, CalculationEntityTyp
     string? TypedContainerName { get; }
 
     /// <summary>
+    /// Gets the settings this kind reads from the configuration a create or update sends, in the order a form shows them.
+    /// </summary>
+    IReadOnlyList<CalculationSetting> Settings { get; }
+
+    /// <summary>
+    /// Reads the value of each declared setting from a configuration of this kind, by the setting's name.
+    /// </summary>
+    /// <param name="configuration">A configuration of this kind's <see cref="ConfigurationType"/>.</param>
+    /// <returns>One entry per declared setting.</returns>
+    IReadOnlyDictionary<string, object?> SettingValues(IGenericConfiguration configuration);
+
+    /// <summary>
     /// Builds a typed <see cref="IGenericConfiguration"/> from a raw node configuration dictionary.
     /// Returns <c>null</c> for entity types that carry no typed configuration.
     /// Used by the graph-compile bridge to construct typed config from designer node state.

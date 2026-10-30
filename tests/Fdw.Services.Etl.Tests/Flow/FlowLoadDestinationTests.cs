@@ -26,6 +26,18 @@ public sealed class FlowLoadDestinationTests
         FlowLoadDestination.NeedsWholeSet(Unit("MarkerMatches")).ShouldBeTrue();
     }
 
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData("File")]
+    [InlineData("Files")]
+    public void ALoadThatWritesAFileOrFilesIsGivenEveryRowAtOnceSoEachFileIsWrittenOnce(string kind)
+    {
+        var addressing = LoadAddressing.Of(kind, null, "daily.csv", "Team");
+
+        FlowLoadDestination.NeedsWholeSet(Unit(null).WithAddressing(addressing)).ShouldBeTrue();
+    }
+
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]

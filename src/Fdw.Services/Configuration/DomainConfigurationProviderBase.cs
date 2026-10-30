@@ -18,6 +18,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using CmdBuilders = Fdw.Commands.Data.Extensions;
 
 namespace Fdw.Services.Configuration;
 
@@ -169,7 +170,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (row.IsFailure) return row.ToNewResult<TImplementationConfiguration>();
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
-            : await Compose(member, provider => provider.Get(member.Id, levels, ct)).ConfigureAwait(false);
+            : await Compose(member, provider => provider.Get(member.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -187,7 +188,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (row.IsFailure) return row.ToNewResult<TImplementationConfiguration>();
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
-            : await Compose(member, provider => provider.Get(member.Id, levels, ct)).ConfigureAwait(false);
+            : await Compose(member, provider => provider.Get(member.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -199,7 +200,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         // The instant reaches the implementation read too, or the answer mixes two versions.
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
-            : await Compose(member, provider => provider.Get(member.Id, asOf, ct)).ConfigureAwait(false);
+            : await Compose(member, provider => provider.Get(member.Id, asOf, ct), ConfigurationLevels.WholeAggregate, asOf, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -403,7 +404,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var composed = 0;
         foreach (var row in rows)
         {
-            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct)).ConfigureAwait(false);
+            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
             if (loaded.IsSuccess)
             {
                 if (loaded.Value is null) continue;
@@ -481,7 +482,12 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     // Reads a domain row's implementation through the provider the row names, then stamps the row's
     // identity onto it.
     private async Task<IGenericResult<TImplementationConfiguration>> Compose(
-        TDomain row, Func<IImplementationConfigurationProvider<TImplementationConfiguration>, Task<IGenericResult<TImplementationConfiguration>>> read)
+        TDomain row,
+        Func<IImplementationConfigurationProvider<TImplementationConfiguration>, Task<IGenericResult<TImplementationConfiguration>>> read,
+        int levels,
+        DateTimeOffset? asOf,
+        CancellationToken ct,
+        bool attachTrees = true)
     {
         var provider = Provider(row);
         if (provider.IsFailure) return provider.ToNewResult<TImplementationConfiguration>();
@@ -504,11 +510,116 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             var stamped = StampListFields(row, loaded.Value);
             if (stamped.IsFailure) return stamped.ToNewResult<TImplementationConfiguration>();
 
+            // The members of a tree are members of this domain, so they can only be hung once this one's identity is stamped.
+            if (attachTrees)
+            {
+                var hung = await AttachTrees(loaded.Value, levels, asOf, ct).ConfigureAwait(false);
+                if (hung.IsFailure) return hung.ToNewResult<TImplementationConfiguration>();
+            }
+
             DefaultConfigurationProviderLog.DomainRowComposed(
                 _logger, typeof(TImplementationConfiguration).Name, row.Name, row.Id, row.Implementation!);
         }
 
         return loaded;
+    }
+
+    // A record that holds a list of its own type is a tree (see ConfigurationTrees): its members are the other members of this
+    // domain whose parent link names it. Every member is composed once, flat, and hung in memory.
+    private async Task<IGenericResult> AttachTrees(TImplementationConfiguration root, int levels, DateTimeOffset? asOf, CancellationToken ct)
+    {
+        // A record with no generated mapper declares no child lists, so it holds no tree.
+        var recordType = root.GetType();
+        var mapper = PocoMapperCollection.ByName(recordType.Name);
+        if (mapper == PocoMapperCollection.NotFound)
+            return GenericResult.Success();
+
+        var trees = mapper.CascadeChildren.Where(d => ConfigurationTrees.IsTree(d, recordType)).ToList();
+        if (trees.Count == 0 || levels <= 0)
+            return GenericResult.Success();
+
+        if (asOf is not null)
+            return GenericResult.Failure(DefaultConfigurationProviderLog.TreeAsOfNotSupported(_logger, recordType.Name, root.Name));
+
+        var link = TreeLink(root);
+        if (link.IsFailure) return link;
+
+        var members = await ComposeMembers(levels - 1, ct).ConfigureAwait(false);
+        if (members.IsFailure) return members;
+
+        return ConfigurationTrees.Attach(root, members.Value!, link.Value!, trees, mapper, levels, _logger);
+    }
+
+    // Every member of the domain, composed to the given levels but not hung into trees.
+    private async Task<IGenericResult<IReadOnlyList<IImplementationConfiguration>>> ComposeMembers(int levels, CancellationToken ct)
+    {
+        var gateway = _gatewayProvider.Get(DataStoreName);
+        if (gateway.IsFailure) return gateway.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
+
+        var rows = await gateway.Value!.Execute<IEnumerable<TDomain>>(
+            _commands.List(DataStoreName, PathName), Target, ct).ConfigureAwait(false);
+        if (!rows.IsSuccess) return rows.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
+
+        var members = new List<IImplementationConfiguration>();
+        if (rows.Value is null)
+            return GenericResult<IReadOnlyList<IImplementationConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.DomainListReturnedNoResult(_logger, typeof(TImplementationConfiguration).Name));
+
+        foreach (var row in rows.Value)
+        {
+            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct), levels, null, ct, attachTrees: false).ConfigureAwait(false);
+            if (!loaded.IsSuccess) return loaded.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
+            if (loaded.Value is not null) members.Add(loaded.Value);
+        }
+
+        return GenericResult<IReadOnlyList<IImplementationConfiguration>>.Success(members);
+    }
+
+    // The field a member's parent is named in: the one Foreign key from its implementation container to this domain's durable Id.
+    private IGenericResult<string> TreeLink(TImplementationConfiguration root)
+    {
+        if (!_implementations.TryGetValue(root.Implementation, out var provider))
+            return GenericResult<string>.Failure(DefaultConfigurationProviderLog.NoImplementationProvider(_logger, root.Name, root.Implementation));
+
+        var links = LinksToDomain(provider.ContainerName);
+        if (links.IsFailure) return links.ToNewResult<string>();
+
+        return links.Value!.Count switch
+        {
+            0 => GenericResult<string>.Failure(DefaultConfigurationProviderLog.TreeLinkNotDeclared(_logger, root.GetType().Name, provider.ContainerName)),
+            1 => GenericResult<string>.Success(links.Value[0]),
+            _ => GenericResult<string>.Failure(DefaultConfigurationProviderLog.TreeLinkAmbiguous(_logger, root.GetType().Name, provider.ContainerName, links.Value.Count)),
+        };
+    }
+
+    // The fields of an implementation container that are Foreign keys to this domain's durable Id, read from the store's configuration.
+    private IGenericResult<List<string>> LinksToDomain(string implementationContainer)
+    {
+        var gateway = _gatewayProvider.Get(DataStoreName);
+        if (gateway.IsFailure) return gateway.ToNewResult<List<string>>();
+
+        var path = gateway.Value!.DataStores
+            .FirstOrDefault(store => string.Equals(store.Name, DataStoreName, StringComparison.Ordinal))?
+            .Path(PathName);
+        var domain = path is { IsSuccess: true, Value: not null } ? path.Value.Container(_commands.TableName) : null;
+        if (domain is not { IsSuccess: true, Value: not null })
+            return GenericResult<List<string>>.Failure(
+                DefaultConfigurationProviderLog.ContainerNotFoundInStore(_logger, typeof(TDomain).Name, _commands.TableName, DataStoreName));
+
+        var logical = ConfigurationKeys.FieldOf(domain.Value.Keys, "Logical");
+        if (logical is null)
+            return GenericResult<List<string>>.Failure(
+                DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TImplementationConfiguration).Name, domain.Value.Name));
+
+        var referencing = domain.Value.ReferencingKeys;
+        if (referencing.IsFailure) return referencing.ToNewResult<List<string>>();
+
+        return GenericResult<List<string>>.Success(referencing.Value!
+            .Where(b => string.Equals(b.Owner.Name, implementationContainer, StringComparison.Ordinal)
+                        && b.Key.KeyFields.Count == 1
+                        && string.Equals(b.Key.KeyFields[0].ReferencedField?.Name, logical, StringComparison.Ordinal))
+            .Select(b => b.Key.KeyFields[0].LocalField.Name)
+            .ToList());
     }
 
     /// <summary>The record's properties beyond the four every domain has, in the order its mapper declares them.</summary>
@@ -620,7 +731,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var found = new List<TImplementationConfiguration>();
         foreach (var row in rows.Value ?? [])
         {
-            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct)).ConfigureAwait(false);
+            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
             if (!loaded.IsSuccess) return loaded.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
             if (loaded.Value is null) continue;
             found.Add(loaded.Value);
@@ -648,9 +759,30 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult> Save<T>(
+    public Task<IGenericResult> Save<T>(
         T implementationConfiguration, string domain, string implementationName, string name,
         CancellationToken ct = default)
+        where T : TImplementationConfiguration
+        => WriteInOwnUnit(implementationConfiguration, domain, implementationName, name, mayCreate: true, mayReplace: true, ct);
+
+    /// <inheritdoc/>
+    public Task<IGenericResult> Update<T>(
+        T implementationConfiguration, string domain, string implementationName, string name,
+        CancellationToken ct = default)
+        where T : TImplementationConfiguration
+        => WriteInOwnUnit(implementationConfiguration, domain, implementationName, name, mayCreate: false, mayReplace: true, ct);
+
+    /// <inheritdoc/>
+    public Task<IGenericResult> Create<T>(
+        T implementationConfiguration, string domain, string implementationName, string name,
+        CancellationToken ct = default)
+        where T : TImplementationConfiguration
+        => WriteInOwnUnit(implementationConfiguration, domain, implementationName, name, mayCreate: true, mayReplace: false, ct);
+
+    // One write in a unit of its own: opened here, committed on success and rolled back on a failure.
+    private async Task<IGenericResult> WriteInOwnUnit<T>(
+        T implementationConfiguration, string domain, string implementationName, string name, bool mayCreate, bool mayReplace,
+        CancellationToken ct)
         where T : TImplementationConfiguration
     {
         // Checked before the unit is opened: a save naming an implementation nothing is registered
@@ -663,7 +795,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (unit.IsFailure) return unit;
 
         await using var scope = unit.Value!;
-        var saved = await Save(implementationConfiguration, domain, implementationName, name, scope, ct).ConfigureAwait(false);
+        var saved = await WriteMember(implementationConfiguration, domain, implementationName, name, mayCreate, mayReplace, scope, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             await scope.Rollback(ct).ConfigureAwait(false);
@@ -679,21 +811,33 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// For an operation made of several records — replacing a set rather than writing one — so they
     /// land together. A single save uses the overload without a unit, which opens and commits its own.
     /// </remarks>
-    public async Task<IGenericResult> Save<T>(
+    public Task<IGenericResult> Save<T>(
         T implementationConfiguration, string domain, string implementationName, string name,
         ConfigurationWriteScope unit, CancellationToken ct = default)
         where T : TImplementationConfiguration
-    {
-        if (!_implementations.TryGetValue(implementationName, out var provider))
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
+        => WriteMember(implementationConfiguration, domain, implementationName, name, mayCreate: true, mayReplace: true, unit, ct);
 
-        // A minted domain row goes back with an implementation that is refused, because the caller
-        // rolls the whole unit back. One left behind names an implementation that does not exist, and
-        // every later read of that name fails to compose.
-        if (provider is not IConfigurationWriteParticipant<TImplementationConfiguration> writable)
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ProviderCannotJoinWrite(_logger, name, provider.GetType().FullName ?? "(null)"));
+    /// <summary>Updates an existing member inside a unit of work the caller opened and will commit.</summary>
+    /// <remarks>
+    /// The sibling of the unit overload of <c>Save</c> that never creates a member: the record must identify one that exists.
+    /// </remarks>
+    public Task<IGenericResult> Update<T>(
+        T implementationConfiguration, string domain, string implementationName, string name,
+        ConfigurationWriteScope unit, CancellationToken ct = default)
+        where T : TImplementationConfiguration
+        => WriteMember(implementationConfiguration, domain, implementationName, name, mayCreate: false, mayReplace: true, unit, ct);
+
+    // The write Save, Update and Create make. Only a Save or a Create (mayCreate) may mint a member; an Update whose record identifies
+    // none fails, so a read that outlived its row cannot bring the member back or overwrite one made since under its name.
+    // Only a Save or an Update (mayReplace) may write over a member; a Create whose name or Id is taken fails, so a create cannot
+    // overwrite the member it collides with.
+    private async Task<IGenericResult> WriteMember<T>(
+        T implementationConfiguration, string domain, string implementationName, string name, bool mayCreate, bool mayReplace,
+        ConfigurationWriteScope unit, CancellationToken ct)
+        where T : TImplementationConfiguration
+    {
+        var writable = WritableImplementation(implementationName, name);
+        if (writable.IsFailure) return writable;
 
         var domainContainer = unit.Container(PathName, _commands.TableName);
         if (domainContainer.IsFailure) return domainContainer;
@@ -708,14 +852,24 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         implementationConfiguration.Domain = domain;
         implementationConfiguration.Implementation = implementationName;
 
-        // The name identifies the member, so a row already carrying it is the row to hang from.
+        // The name identifies the member, so a row already carrying it is the row to hang from. A name no row carries is a new
+        // member, unless the record's Id names a member: then the record is that member under a new name.
         // The two rows are never written apart: a domain row naming an implementation that was not
         // written is the record that fails to compose on the next read.
         var current = OnlyRow(existing.Value, name);
         if (current.IsFailure) return current;
+        var target = await CheckTarget(current.Value, implementationConfiguration.Id, name, mayCreate, mayReplace, unit, ct).ConfigureAwait(false);
+        if (target.IsFailure) return target;
+
+        if (current.Value is { } holder)
+        {
+            var named = await RefuseOtherMembersName(holder, implementationConfiguration.Id, name, unit, ct).ConfigureAwait(false);
+            if (named.IsFailure) return named;
+        }
+
         var domainRow = current.Value is { } found
-            ? await CurrentDomainRow(found, implementationConfiguration, writable, domainContainer.Value!, unit, ct).ConfigureAwait(false)
-            : await MintDomainRow(name, domain, implementationName, implementationConfiguration, unit, ct).ConfigureAwait(false);
+            ? await CurrentDomainRow(found, implementationConfiguration, writable.Value!, domainContainer.Value!, unit, ct).ConfigureAwait(false)
+            : await RenamedOrMintedDomainRow(name, domain, implementationName, implementationConfiguration, unit, ct).ConfigureAwait(false);
         if (domainRow.IsFailure) return domainRow;
         var domainId = domainRow.Value.Id;
 
@@ -723,12 +877,88 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
         // The implementation fills the Foreign key its container declares to this domain container
         // from the domain row's key values; this provider passes them and names no column.
-        var saved = await writable.Save(implementationConfiguration, domainContainer.Value!, domainRow.Value.Keys, unit, ct).ConfigureAwait(false);
+        var saved = await writable.Value!.Save(implementationConfiguration, domainContainer.Value!, domainRow.Value.Keys, unit, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved;
 
         DefaultConfigurationProviderLog.DomainRowSaved(
             _logger, typeof(TImplementationConfiguration).Name, name, domainId, domainRow.Value.Action);
         return saved;
+    }
+
+    // The provider that writes an implementation, which has to join the caller's unit of work.
+    // A minted domain row goes back with an implementation that is refused, because the caller
+    // rolls the whole unit back. One left behind names an implementation that does not exist, and
+    // every later read of that name fails to compose.
+    private IGenericResult<IConfigurationWriteParticipant<TImplementationConfiguration>> WritableImplementation(
+        string implementationName, string name)
+    {
+        if (!_implementations.TryGetValue(implementationName, out var provider))
+            return GenericResult<IConfigurationWriteParticipant<TImplementationConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
+
+        return provider is IConfigurationWriteParticipant<TImplementationConfiguration> writable
+            ? GenericResult<IConfigurationWriteParticipant<TImplementationConfiguration>>.Success(writable)
+            : GenericResult<IConfigurationWriteParticipant<TImplementationConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.ProviderCannotJoinWrite(_logger, name, provider.GetType().FullName ?? "(null)"));
+    }
+
+    // What the kind of write requires of the member the record names: a Save requires nothing, an Update requires one, a Create requires none.
+    private Task<IGenericResult> CheckTarget(
+        TDomain? holder, Guid recordId, string name, bool mayCreate, bool mayReplace, ConfigurationWriteScope unit, CancellationToken ct)
+        => !mayCreate ? UpdateTarget(holder, recordId, name, unit, ct)
+            : !mayReplace ? CreateTarget(holder, recordId, name, unit, ct)
+            : Task.FromResult<IGenericResult>(GenericResult.Success());
+
+    /// <summary>Refuses an update whose record identifies no existing member.</summary>
+    /// <remarks>
+    /// The row under the name is the member when the record carries no Id (the name identifies it) or carries that row's Id. Otherwise the
+    /// record's Id has to name a member: the same member under another name is a rename, and another member is refused further on as one
+    /// member saved under the name of another. A record with no Id and no row under its name, or an Id that names no member, is a read
+    /// that outlived its row, so it fails where a save would mint a member (or write over one made since under the same name).
+    /// </remarks>
+    private async Task<IGenericResult> UpdateTarget(
+        TDomain? holder, Guid recordId, string name, ConfigurationWriteScope unit, CancellationToken ct)
+    {
+        if (holder is not null && (recordId == Guid.Empty || recordId == holder.Id))
+            return GenericResult.Success();
+
+        if (recordId == Guid.Empty)
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.UpdateTargetNotFound(_logger, typeof(TImplementationConfiguration).Name, name));
+
+        var named = await unit.Read<IEnumerable<TDomain>>(
+            _commands.Get(DataStoreName, PathName, recordId), Target, ct).ConfigureAwait(false);
+        if (!named.IsSuccess) return named.ToNewResult<TImplementationConfiguration>();
+
+        return named.Value?.FirstOrDefault() is not null
+            ? GenericResult.Success()
+            : GenericResult.Failure(
+                DefaultConfigurationProviderLog.UpdateTargetNotFound(_logger, typeof(TImplementationConfiguration).Name, name));
+    }
+
+    /// <summary>Refuses a create whose name or Id already identifies a member.</summary>
+    /// <remarks>
+    /// A row under the name is a member, so the create fails. A record that carries an Id is refused too when that Id names a member: written
+    /// under a free name it would rename that member, which is an update and not a create.
+    /// </remarks>
+    private async Task<IGenericResult> CreateTarget(
+        TDomain? holder, Guid recordId, string name, ConfigurationWriteScope unit, CancellationToken ct)
+    {
+        if (holder is not null)
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.CreateTargetExists(_logger, typeof(TImplementationConfiguration).Name, name));
+
+        if (recordId == Guid.Empty)
+            return GenericResult.Success();
+
+        var named = await unit.Read<IEnumerable<TDomain>>(
+            _commands.Get(DataStoreName, PathName, recordId), Target, ct).ConfigureAwait(false);
+        if (!named.IsSuccess) return named.ToNewResult<TImplementationConfiguration>();
+
+        return named.Value?.FirstOrDefault() is not null
+            ? GenericResult.Failure(
+                DefaultConfigurationProviderLog.CreateTargetExists(_logger, typeof(TImplementationConfiguration).Name, name))
+            : GenericResult.Success();
     }
 
     /// <summary>The domain row a save of an existing member hangs its implementation from.</summary>
@@ -794,6 +1024,81 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             ? GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Success((wanted.Id, keys, "reversioned"))
             : GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Failure(
                 DefaultConfigurationProviderLog.WriteReturnedNoRow(_logger, _commands.TableName));
+    }
+
+    /// <summary>Refuses a record that is one member saved under the name of another.</summary>
+    /// <remarks>
+    /// A record carrying the Id of a current member is that member. The row that carries the name is the row the save writes into, so a record
+    /// that is member A saved under member B's name would overwrite B and leave A as it was. A record whose Id names no member (a create mints a
+    /// fresh Id) is a new record and saves into the row that carries the name, as it always did.
+    /// </remarks>
+    private async Task<IGenericResult> RefuseOtherMembersName(
+        TDomain holder, Guid recordId, string name, ConfigurationWriteScope unit, CancellationToken ct)
+    {
+        if (recordId == Guid.Empty || recordId == holder.Id)
+            return GenericResult.Success();
+
+        var named = await unit.Read<IEnumerable<TDomain>>(
+            _commands.Get(DataStoreName, PathName, recordId), Target, ct).ConfigureAwait(false);
+        if (!named.IsSuccess) return named.ToNewResult<TImplementationConfiguration>();
+
+        return named.Value?.FirstOrDefault() is not null
+            ? GenericResult.Failure(DefaultConfigurationProviderLog.NameHeldByAnotherMember(_logger, typeof(TImplementationConfiguration).Name, name, recordId))
+            : GenericResult.Success();
+    }
+
+    /// <summary>The domain row a record with no row under its name hangs from: the member its Id names, renamed, or a new member.</summary>
+    /// <remarks>
+    /// A member's durable identity is its Id and its name is an attribute of it, so a loaded member saved under another name is the
+    /// same member renamed. Reading it as a new member left the old one current beside it. A record whose Id names no member (a
+    /// create mints a fresh Id) is a new member.
+    /// </remarks>
+    private async Task<IGenericResult<(Guid Id, IReadOnlyDictionary<string, object?> Keys, string Action)>> RenamedOrMintedDomainRow(
+        string name,
+        string domain,
+        string implementationName,
+        TImplementationConfiguration implementation,
+        ConfigurationWriteScope unit,
+        CancellationToken ct)
+    {
+        if (implementation.Id == Guid.Empty)
+            return await MintDomainRow(name, domain, implementationName, implementation, unit, ct).ConfigureAwait(false);
+
+        var named = await unit.Read<IEnumerable<TDomain>>(
+            _commands.Get(DataStoreName, PathName, implementation.Id), Target, ct).ConfigureAwait(false);
+        if (!named.IsSuccess) return named.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
+
+        return named.Value?.FirstOrDefault() is { } renamed
+            ? await RenameDomainRow(renamed, name, unit, ct).ConfigureAwait(false)
+            : await MintDomainRow(name, domain, implementationName, implementation, unit, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Gives a member's domain row its new name, in place.</summary>
+    /// <remarks>
+    /// Why in place and not a new version of the row: the domain tables declare their unique index on Id without a version filter, and other
+    /// tables cite that Id, so a domain row has one row for its whole life and its Id is its identity. A new version under the same Id would
+    /// be refused by the index (FDW-3082). The implementation is saved against the same row's keys afterwards, as for any update.
+    /// </remarks>
+    private async Task<IGenericResult<(Guid Id, IReadOnlyDictionary<string, object?> Keys, string Action)>> RenameDomainRow(
+        TDomain row, string name, ConfigurationWriteScope unit, CancellationToken ct)
+    {
+        var update = CmdBuilders.Update.In<DomainRowRename>(_commands.TableName)
+            .DataStore(DataStoreName)
+            .Path(PathName)
+            .Where("Id", row.Id)
+            .Where("IsCurrent", true)
+            .Where("IsDeleted", false)
+            .Value(new DomainRowRename { Name = name });
+        var renamed = await unit.Read<int>(update.Command, update.Target, ct).ConfigureAwait(false);
+        if (!renamed.IsSuccess) return renamed.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
+        if (renamed.Value != 1)
+            return GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Failure(
+                DefaultConfigurationProviderLog.DomainRowNotFound(_logger, typeof(TImplementationConfiguration).Name, row.Id.ToString()));
+
+        var stored = await ExistingDomainRow(row, unit, ct).ConfigureAwait(false);
+        return stored.IsSuccess
+            ? GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Success((row.Id, stored.Value.Keys, "renamed"))
+            : stored.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
     }
 
     // The columns the row holds that the record does not map, as the store returned them.
@@ -885,7 +1190,9 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     {
         var found = await ResolveRowForDelete(id, unit, ct).ConfigureAwait(false);
         if (found.IsFailure) return found;
-        if (found.Value is not { } row) return GenericResult.Success();
+        if (found.Value is not { } row)
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.DeleteTargetNotFound(_logger, typeof(TImplementationConfiguration).Name, id.ToString()));
 
         if (row.Implementation is not { } implementation || !_implementations.TryGetValue(implementation, out var provider))
             return GenericResult.Failure(
@@ -957,8 +1264,8 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (single.IsFailure) return single;
         if (single.Value is not { } row)
         {
-            DefaultConfigurationProviderLog.DomainRowNotFound(_logger, typeof(TImplementationConfiguration).Name, name);
-            return GenericResult.Success();
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.DeleteTargetNotFound(_logger, typeof(TImplementationConfiguration).Name, name));
         }
 
         return await Delete(row.Id, ct).ConfigureAwait(false);
@@ -991,6 +1298,17 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         string domain, string implementationName, string name, CancellationToken ct)
         => implementationConfiguration is TImplementationConfiguration typed
             ? await Save(typed, domain, implementationName, name, ct).ConfigureAwait(false)
+            : GenericResult.Failure(
+                DefaultConfigurationProviderLog.UntypedSaveTypeMismatch(
+                    _logger,
+                    typeof(TImplementationConfiguration).Name,
+                    implementationConfiguration?.GetType().Name ?? "(null)"));
+
+    async Task<IGenericResult> IDomainConfigurationProvider.Update(
+        IImplementationConfiguration implementationConfiguration,
+        string domain, string implementationName, string name, CancellationToken ct)
+        => implementationConfiguration is TImplementationConfiguration typed
+            ? await Update(typed, domain, implementationName, name, ct).ConfigureAwait(false)
             : GenericResult.Failure(
                 DefaultConfigurationProviderLog.UntypedSaveTypeMismatch(
                     _logger,

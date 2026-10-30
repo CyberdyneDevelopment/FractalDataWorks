@@ -5,7 +5,7 @@
        versions and outside one. Move these lines into your own repo's file if you want one place for them. -->
   <PropertyGroup>
     <!-- The shared FractalDataWorks helpers float on this base, as the reference apps float theirs: the newest published version that matches. -->
-    <FdwVersion>1.4.3-rc*</FdwVersion>
+    <FdwVersion>1.4.4-rc*</FdwVersion>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Why: without this a floating PackageVersion is NU1011. -->
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>

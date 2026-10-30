@@ -63,6 +63,36 @@ public sealed class GraphShapeValidatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
+    public void AGraphThatDoesNotStateItsParallelRunsIsRefusedNamingEachValue()
+    {
+        var graph = Graph([DataSetSource("src")], []);
+        graph.MaxParallelRuns = 0;
+        graph.OverflowBehavior = "Delay";
+
+        var problems = GraphShapeValidator.Problems(graph, NullLogger.Instance);
+
+        problems.Select(Path).ShouldContain("maxParallelRuns");
+        problems.Select(Path).ShouldContain("overflowBehavior");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AGraphThatStatesItsParallelRunsRaisesNoProblemForThem()
+    {
+        var graph = Graph([DataSetSource("src")], []);
+        graph.MaxParallelRuns = 5;
+        graph.OverflowBehavior = "Refuse";
+
+        var problems = GraphShapeValidator.Problems(graph, NullLogger.Instance);
+
+        problems.Select(Path).ShouldNotContain("maxParallelRuns");
+        problems.Select(Path).ShouldNotContain("overflowBehavior");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
     public void ALinkToAComponentThatIsNotThereIsPlacedOnThatLink()
     {
         var graph = Graph([DataSetSource("src")], [Link("src", "ghost")], Dropped("src"));

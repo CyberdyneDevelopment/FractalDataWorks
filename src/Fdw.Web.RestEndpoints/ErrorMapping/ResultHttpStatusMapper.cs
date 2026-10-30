@@ -65,7 +65,7 @@ public static class ResultHttpStatusMapper
         // never sets result.Code, so a failure built from a [MessageLogging] message reaches here with
         // only that message's Code ("PREFIX-31550"). Its number encodes the category exactly as a
         // ResultCode's does; ignoring it answered 500 for every such NotFound/validation failure.
-        if (code is null && ExtractMessageCode(result) is { } messageCode)
+        if (code is null && result.FirstFailureMessage() is { } messageCode)
         {
             var category = ResultCategories.ById(messageCode.Number / 10000);
             if (!ReferenceEquals(category, ResultCategories.NotFound) && category.IsFailure)
@@ -137,33 +137,6 @@ public static class ResultHttpStatusMapper
         return null;
     }
 
-    /// <summary>
-    /// The first message code on <paramref name="result"/> whose number is in a failure category
-    /// (20000 and up), parsed from the generator's "PREFIX-NNNNN" form.
-    /// </summary>
-    /// <remarks>
-    /// Success and progress codes (10000-19999) are skipped: a failure that logged progress on its
-    /// way must not be answered as a success status.
-    /// </remarks>
-    private static (string Code, int Number, IGenericMessage Message)? ExtractMessageCode(IGenericResult result)
-    {
-        foreach (var message in result.Messages)
-        {
-            if (message?.Code is not { Length: > 0 } text)
-                continue;
-
-            var dash = text.LastIndexOf('-');
-            if (dash < 0 || !int.TryParse(text[(dash + 1)..], System.Globalization.NumberStyles.None,
-                    System.Globalization.CultureInfo.InvariantCulture, out var number))
-                continue;
-
-            if (number >= 20000)
-                return (text, number, message);
-        }
-
-        return null;
-    }
-
     /// <summary>Builds the RFC 7807 body, carrying FDW's own fields as extensions.</summary>
     /// <remarks>
     /// Why ProblemDetails and not a bespoke model: every HTTP client, OpenAPI generator and agent
@@ -215,6 +188,11 @@ public static class ResultHttpStatusMapper
         if (RelayedText(relayed, ResultDetailKeys.UpstreamCode) is { } upstreamCode)
         {
             problem.Extensions["upstreamCode"] = upstreamCode;
+        }
+
+        if (RelayedText(relayed, ResultDetailKeys.ExecutionId) is { } executionId)
+        {
+            problem.Extensions["executionId"] = executionId;
         }
     }
 }

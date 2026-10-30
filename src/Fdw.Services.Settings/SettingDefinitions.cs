@@ -139,6 +139,65 @@ public static class SettingDefinitions
     public const string MaxConcurrentQueries = "MaxConcurrentQueries";
 
     /// <summary>
+    /// The most pipeline runs in flight on the whole ETL host at once (FDW-3085). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: a run fails to start when the setting is absent or not positive, and no limit is assumed. It is read at server level; a
+    /// tenant's own cap is <see cref="MaxConcurrentPipelineRunsPerTenant"/>.
+    /// </remarks>
+    public const string MaxConcurrentPipelineRunsPerServer = "MaxConcurrentPipelineRunsPerServer";
+
+    /// <summary>
+    /// The most pipeline runs in flight for one tenant at once (FDW-3085). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required, and resolved server, then tenant, so a tenant can raise or lower it for itself. A tenant never gets more runs in flight
+    /// than <see cref="MaxConcurrentPipelineRunsPerServer"/> allows the host.
+    /// </remarks>
+    public const string MaxConcurrentPipelineRunsPerTenant = "MaxConcurrentPipelineRunsPerTenant";
+
+    /// <summary>
+    /// The most pipeline triggers the ETL host holds before it starts them (FDW-3155). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: the host does not start when the setting is absent or not positive, and no number is assumed. It is read once, at host
+    /// start, for the host; a change takes effect at the next start. A trigger that arrives while the host holds that many is dropped.
+    /// </remarks>
+    public const string MaxQueuedPipelineTriggers = "MaxQueuedPipelineTriggers";
+
+    /// <summary>
+    /// How many times the ETL host starts the same pipeline run again after the host stopped while it ran (FDW-3236). DataType: Int32. Zero or more.
+    /// </summary>
+    /// <remarks>
+    /// Required, with no number assumed: while the setting is not set, the host starts no cut-off run again. It closes each as failed, naming the setting.
+    /// Read when the host starts. Zero is a number someone sets and means a cut-off run is never started again.
+    /// </remarks>
+    public const string MaxPipelineRunRestarts = "MaxPipelineRunRestarts";
+
+    /// <summary>
+    /// How often a host looks at its configuration databases to see whether one was dropped and created again, in seconds (FDW-3207).
+    /// DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: a host that registers the settings does not start when the setting is absent or not positive, and no number is assumed.
+    /// It is read once, at host start, for the host; a change takes effect at the next start. When a look finds a database reset or
+    /// out of reach, the host empties its result cache.
+    /// </remarks>
+    public const string ResetWatchIntervalSeconds = "ResetWatchIntervalSeconds";
+
+    /// <summary>
+    /// The command timeout, in seconds, of a connection or secret manager that states none of its own (FDW-3284).
+    /// DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required, with no number assumed in code or in a column: a connection or secret manager that states no command timeout and finds no
+    /// positive row is not built, and the failure names it and this setting. A connection that states its own timeout never reads it.
+    /// The connections a host needs before it can read its settings (the platform configuration and the auth database in
+    /// <c>configurationSchema.json</c>) state their own.
+    /// </remarks>
+    public const string DefaultCommandTimeoutSeconds = "DefaultCommandTimeoutSeconds";
+
+    /// <summary>
     /// Maximum number of rows returned by data preview endpoints.
     /// DataType: Int32. Default: 1000. Min: 1. Max: 100000.
     /// </summary>
@@ -212,6 +271,12 @@ public static class SettingDefinitions
             [PasswordLinkUrl] = new("String", "The console page a set-password link opens; the token follows as #token=."),
             [PasswordLinkNotificationChannel] = new("String", "The notification channel a set-password link is emailed through."),
             [MaxConcurrentQueries] = new("Int32", "Maximum number of concurrent queries allowed per tenant."),
+            [MaxConcurrentPipelineRunsPerServer] = new("Int32", "The most pipeline runs in flight on the whole ETL host at once."),
+            [MaxConcurrentPipelineRunsPerTenant] = new("Int32", "The most pipeline runs in flight for one tenant at once; a tenant may override the server's value."),
+            [MaxQueuedPipelineTriggers] = new("Int32", "The most pipeline triggers the ETL host holds before it starts them; a trigger past that is dropped. Read at host start."),
+            [MaxPipelineRunRestarts] = new("Int32", "How many times the ETL host starts the same pipeline run again after the host stopped while it ran. Not set: a cut-off run is closed as failed and not started again. Read at host start."),
+            [ResetWatchIntervalSeconds] = new("Int32", "How often, in seconds, a host looks at its configuration databases to see whether one was reset; the host then empties its result cache. Read at host start."),
+            [DefaultCommandTimeoutSeconds] = new("Int32", "The command timeout, in seconds, of a connection or secret manager that states none of its own. Not set: such a connection is not built."),
             [MaxPreviewRows] = new("Int32", "Maximum number of rows returned by data preview endpoints."),
             [DefaultTimeoutMs] = new("Int32", "Default timeout in milliseconds for data operations."),
             [EnableLineageTracking] = new("Boolean", "Whether data lineage tracking is enabled."),

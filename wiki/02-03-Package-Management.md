@@ -213,7 +213,6 @@ FractalDataWorks distributes API endpoints as 21 per-domain NuGet packages. Each
 | `Fdw.Services.Catalog.Endpoints` | Glossary, annotations |
 | `Fdw.Operations.Endpoints` | Executions, dataflow, config metadata |
 | `Fdw.Schema.Endpoints` | Schema discovery |
-| `Fdw.Web.Search.Endpoints` | Full-text search |
 | `Fdw.UI.Themes.Endpoints` | Theme CRUD |
 | `Fdw.Services.Authentication.Endpoints` | Authentication (login, refresh, logout, user info) |
 | `Fdw.Calculations.Endpoints` | Calculation execution and type listing |

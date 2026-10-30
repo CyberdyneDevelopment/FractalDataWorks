@@ -40,9 +40,23 @@ public sealed class OrchestrationNodeConfigurationWriter
     /// <summary>
     /// Validates and persists the orchestration node configuration.
     /// </summary>
-    public async Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> Save(
+    public Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> Save(
         OrchestrationNodeImplementationConfiguration config,
         CancellationToken cancellationToken = default)
+        => Write(config, mayCreate: true, cancellationToken);
+
+    /// <summary>
+    /// Validates and persists a change to an orchestration node that exists; a node removed since it was read is not brought back.
+    /// </summary>
+    public Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> Update(
+        OrchestrationNodeImplementationConfiguration config,
+        CancellationToken cancellationToken = default)
+        => Write(config, mayCreate: false, cancellationToken);
+
+    private async Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> Write(
+        OrchestrationNodeImplementationConfiguration config,
+        bool mayCreate,
+        CancellationToken cancellationToken)
     {
         if (config == null) throw new ArgumentNullException(nameof(config));
 
@@ -57,7 +71,9 @@ public sealed class OrchestrationNodeConfigurationWriter
 
         try
         {
-            var saveResult = await _provider.Save(config, "OrchestrationNode", config.Implementation, config.Name, cancellationToken).ConfigureAwait(false);
+            var saveResult = mayCreate
+                ? await _provider.Save(config, "OrchestrationNode", config.Implementation, config.Name, cancellationToken).ConfigureAwait(false)
+                : await _provider.Update(config, "OrchestrationNode", config.Implementation, config.Name, cancellationToken).ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<OrchestrationNodeImplementationConfiguration>();
 

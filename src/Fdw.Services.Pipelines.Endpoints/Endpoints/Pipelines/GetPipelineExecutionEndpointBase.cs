@@ -117,8 +117,9 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
     {
         ExecutionId = dbRecord.Id,
         PipelineName = dbRecord.PipelineName,
-        StartedAt = dbRecord.StartedAt,
-        CompletedAt = dbRecord.CompletedAt,
+        StartedAt = dbRecord.StartedAt?.UtcDateTime,
+        CompletedAt = dbRecord.CompletedAt?.UtcDateTime,
+        Status = dbRecord.Status,
         Success = string.Equals(dbRecord.Status, "Succeeded", StringComparison.OrdinalIgnoreCase),
         ErrorMessage = dbRecord.ErrorMessage,
         RecordsExtracted = dbRecord.RecordsExtracted,

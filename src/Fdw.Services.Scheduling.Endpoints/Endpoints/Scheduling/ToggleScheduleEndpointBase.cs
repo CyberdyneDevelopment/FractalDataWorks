@@ -66,7 +66,7 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
         // body, so every "toggle" set it to false. Setting an explicit value is the update endpoint's job.
         var updated = UpdateEnabledStatus((TConfig)existingResult.Value, !existingResult.Value.IsEnabled);
 
-        var saveResult = await _provider.Save(updated, "Schedule", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Update(updated, "Schedule", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to save schedule" }, statusCode: StatusCodes.Status500InternalServerError)).ConfigureAwait(false);

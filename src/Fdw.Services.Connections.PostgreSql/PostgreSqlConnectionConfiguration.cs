@@ -113,9 +113,13 @@ public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConf
     public string SslMode { get; set; } = "Prefer";
 
     /// <summary>
-    /// Gets or sets the command timeout in seconds.
+    /// Gets or sets the command timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3284).
     /// </summary>
-    public int CommandTimeout { get; set; } = 30;
+    /// <remarks>
+    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultCommandTimeoutSeconds, and
+    /// is not built when that is not set either.
+    /// </remarks>
+    public int? CommandTimeout { get; set; }
 
     /// <inheritdoc/>
     public int MaxSerialInsert { get; set; }

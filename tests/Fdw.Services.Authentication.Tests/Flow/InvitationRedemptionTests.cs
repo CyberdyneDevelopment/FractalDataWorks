@@ -36,7 +36,7 @@ public class InvitationRedemptionTests
         result.Value.TenantId.ShouldBe(VendorTenant);
         invitation.ExternalSubject.ShouldBe("oid-123");
         invitation.BoundAt.ShouldNotBeNull();
-        identities.Verify(i => i.Save(invitation, "ExternalIdentity", "ExternalIdentity", invitation.Name, It.IsAny<CancellationToken>()), Times.Once);
+        identities.Verify(i => i.Update(invitation, "ExternalIdentity", "ExternalIdentity", invitation.Name, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class InvitationRedemptionTests
     public async Task AnInvitationThatCannotBeWrittenRefusesTheSignIn()
     {
         var (binding, identities) = Build(Invitation("vendor@partner.example"));
-        identities.Setup(i => i.Save(It.IsAny<IExternalIdentityImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        identities.Setup(i => i.Update(It.IsAny<IExternalIdentityImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult.Failure(new Fdw.Messages.GenericMessage("write failed")));
 
         var result = await binding.RedeemInvitation(Issuer, "oid-123", "vendor@partner.example", TestContext.Current.CancellationToken);
@@ -101,10 +101,10 @@ public class InvitationRedemptionTests
         var identities = new Mock<IExternalIdentityConfigurationProvider>();
         identities.Setup(i => i.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<IExternalIdentityImplementationConfiguration>>.Success(rows));
-        identities.Setup(i => i.Save(It.IsAny<IExternalIdentityImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        identities.Setup(i => i.Update(It.IsAny<IExternalIdentityImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult.Success());
         var tenants = new Mock<ITenantResolver>();
-        tenants.Setup(t => t.TenantFor(VendorId, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(VendorTenant));
+        tenants.Setup(t => t.LandingFor(VendorId, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Landing>.Success(new Landing(VendorTenant, null)));
         return (new ExternalIdentityBinding(identities.Object, tenants.Object, new AuthenticationContextAccessor()), identities);
     }
 }

@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.Calculations.Clients.CalculationEntities;
-using Fdw.Web.Calculations.Clients.Formula;
 using Fdw.Web.Calculations.Clients.Models;
 
 namespace Fdw.Web.Calculations.Clients;
@@ -56,11 +55,6 @@ public interface ICalculationApiClient
     Task<IGenericResult> DeleteCalculation(Guid id, CancellationToken ct = default);
 
     /// <summary>
-    /// Validates a calculation formula.
-    /// </summary>
-    Task<IGenericResult<PreviewFormulaResponse>> ValidateFormula(ValidateFormulaPayload request, CancellationToken ct = default);
-
-    /// <summary>
     /// Previews a calculation with sample data.
     /// </summary>
     Task<IGenericResult<PreviewCalculationResponse>> PreviewCalculation(PreviewCalculationRequest request, CancellationToken ct = default);
@@ -75,11 +69,6 @@ public interface ICalculationApiClient
     /// Avoids N+1 requests when the formula editor needs field lists from every DataSet.
     /// </summary>
     Task<IGenericResult<IReadOnlyList<DataSetFieldsPayload>>> GetDataSetFields(CancellationToken ct = default);
-
-    /// <summary>
-    /// Gets the catalogue of built-in and user-defined functions available in formula expressions.
-    /// </summary>
-    Task<IGenericResult<IReadOnlyList<FunctionInfo>>> GetFunctions(CancellationToken ct = default);
 
     /// <summary>
     /// Executes a windowed calculation.

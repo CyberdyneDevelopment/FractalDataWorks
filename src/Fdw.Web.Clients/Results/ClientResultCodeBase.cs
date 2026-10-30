@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Fdw.Results;
 using Fdw.Results.Abstractions;
 
 namespace Fdw.Web.Clients.Abstractions.Results;
@@ -28,4 +29,13 @@ public abstract class ClientResultCodeBase : ResultCodeBase
         : base(number, name, severity, messageTemplate, "CLIENT", isRetryable)
     {
     }
+
+    /// <summary>
+    /// The reason the downstream service gave for refusing the call, as the client captured it, or none when the service gave none. A code that hands it to the
+    /// caller returns it from <c>FormatClientMessage</c>: the downstream wrote it for the caller, and nothing is invented when it did not.
+    /// </summary>
+    /// <param name="details">The details of the failure.</param>
+    /// <returns>The downstream's reason, or none.</returns>
+    protected static string? RelayedReason(IResultDetails? details) =>
+        details is not null && details.Data.TryGetValue("reason", out var reason) ? reason?.ToString() : null;
 }

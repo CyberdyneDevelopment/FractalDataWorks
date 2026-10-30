@@ -10,7 +10,7 @@ namespace Fdw.Services.Workspaces;
 /// <remarks>
 /// Deliberately mirrors <c>msg.AccessRequest</c> column for column so the review path is a shape
 /// reviewers already know. It is configuration rather than operational data because approving it
-/// changes configuration, following <c>quality.PromotionRequest</c>.
+/// changes configuration.
 /// </remarks>
 [GenerateMapper]
 public sealed partial class WorkspaceMembershipRequestConfiguration : IGenericConfiguration

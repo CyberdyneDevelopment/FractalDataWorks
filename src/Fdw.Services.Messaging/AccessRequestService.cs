@@ -214,7 +214,7 @@ public sealed class AccessRequestService : IAccessRequestService
             if (result.Value == 0)
             {
                 return GenericResult.Failure(
-                    MessagingLog.AccessRequestFailed(_logger, requestIdStr, "AccessRequest not found"));
+                    MessagingLog.AccessRequestNotFound(_logger, requestIdStr));
             }
 
             MessagingLog.AccessRequestApproved(_logger, requestIdStr, reviewerIdStr);
@@ -271,7 +271,7 @@ public sealed class AccessRequestService : IAccessRequestService
             if (result.Value == 0)
             {
                 return GenericResult.Failure(
-                    MessagingLog.AccessRequestFailed(_logger, requestIdStr, "AccessRequest not found"));
+                    MessagingLog.AccessRequestNotFound(_logger, requestIdStr));
             }
 
             MessagingLog.AccessRequestDenied(_logger, requestIdStr, reviewerIdStr);

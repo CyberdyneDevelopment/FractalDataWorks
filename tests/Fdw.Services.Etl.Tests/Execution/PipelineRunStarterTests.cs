@@ -40,7 +40,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     private readonly Mock<IDataGatewayProvider> _gateways = new();
     private readonly Mock<IPipelineConfigurationProvider> _pipelines = new();
     private readonly Mock<IPipelineExecutionQueue> _queue = new();
-    private readonly PipelineRunSlot _slot = new();
+    private readonly PipelineRunScheduler _scheduler = new(TimeProvider.System);
     private readonly Mock<IPipelineStatusBroadcaster> _broadcaster = new();
     private readonly Mock<IExecutionCompletionSignaler> _signaler = new();
     private readonly List<PipelineExecutionRequest> _enqueued = [];
@@ -88,7 +88,7 @@ public sealed class PipelineRunStarterTests : IDisposable
         _queue
             .Setup(q => q.Enqueue(It.IsAny<PipelineExecutionRequest>(), It.IsAny<CancellationToken>()))
             .Callback<PipelineExecutionRequest, CancellationToken>((request, _) => _enqueued.Add(request))
-            .Returns(new ValueTask<bool>(true));
+            .Returns(new ValueTask<PipelineEnqueueResult>(PipelineEnqueueResult.Accepted));
         _broadcaster
             .Setup(b => b.BroadcastStatusChange(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<Guid?>()))
             .Returns(Task.CompletedTask);
@@ -96,7 +96,6 @@ public sealed class PipelineRunStarterTests : IDisposable
 
     public void Dispose()
     {
-        _slot.Dispose();
         EtlPipelineTypes.OperationalConnection = null;
     }
 
@@ -110,7 +109,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     }
 
     private PipelineRunStarter Sut(bool withSignaler = true) => new(
-        _tracker.Object, _gateways.Object, _pipelines.Object, _queue.Object, _slot, _broadcaster.Object,
+        _tracker.Object, _gateways.Object, _pipelines.Object, _queue.Object, _scheduler, _broadcaster.Object,
         withSignaler ? _signaler.Object : null, NullLogger<PipelineRunStarter>.Instance);
 
     private void Pipeline(params PipelineParameterConfiguration[] declared)
@@ -479,13 +478,31 @@ public sealed class PipelineRunStarterTests : IDisposable
         Pipeline();
         _queue
             .Setup(q => q.Enqueue(It.IsAny<PipelineExecutionRequest>(), It.IsAny<CancellationToken>()))
-            .Returns(new ValueTask<bool>(false));
+            .Returns(new ValueTask<PipelineEnqueueResult>(PipelineEnqueueResult.Full("The queue of pipeline triggers holds 1 and is full")));
 
         var result = await Sut().Start(Start(awaitCompletion: true), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
         _tracker.Verify(t => t.Complete(Child, false, "QueueFull", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         _signaler.Verify(s => s.Register(Child), Times.Once);
+        _signaler.Verify(s => s.Deregister(Child), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ARunAThresholdStopsClosesTheItemItOpenedAsServerBusyNamingTheThresholdAndReleasesTheCompletion()
+    {
+        Pipeline();
+        _queue
+            .Setup(q => q.Enqueue(It.IsAny<PipelineExecutionRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<PipelineEnqueueResult>(PipelineEnqueueResult.Stopped("The server is not taking new runs: the threshold 'Queue full' fires")));
+
+        var result = await Sut().Start(Start(awaitCompletion: true), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Queue full");
+        _tracker.Verify(t => t.Complete(Child, false, "ServerBusy", It.Is<string?>(message => message!.Contains("Queue full")), It.IsAny<CancellationToken>()), Times.Once);
         _signaler.Verify(s => s.Deregister(Child), Times.Once);
     }
 
@@ -535,21 +552,23 @@ public sealed class PipelineRunStarterTests : IDisposable
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public async Task ARunThatWaitsForTheRunItStartedHandsItsSlotBackAndTakesItAgain()
+    public async Task ARunThatWaitsForTheRunItStartedHandsItsPlaceBackAndTakesItAgain()
     {
-        await _slot.Acquire(TestContext.Current.CancellationToken);
-        _slot.MarkHeld();
-        var slotWasFreeWhileWaiting = false;
+        // Both runs write the same table and the limits allow four, so only the hand-back lets the child in.
+        var claim = PipelineRunClaim.Writing(new PipelineRunIdentity(Guid.NewGuid(), Guid.NewGuid(), "Consolidate", null), ["store//Sales"], new PipelineRunLimitValues(4, 4), null);
+        var place = await _scheduler.Enter(claim, TestContext.Current.CancellationToken);
+        _scheduler.Hold(place);
+        var childRanWhileWaiting = false;
         _signaler.Setup(s => s.Await(Child, It.IsAny<CancellationToken>())).Returns(async () =>
         {
-            slotWasFreeWhileWaiting = await Task.Run(async () =>
+            childRanWhileWaiting = await Task.Run(async () =>
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
                 try
                 {
-                    await _slot.Acquire(timeout.Token);
-                    _slot.MarkHeld();
-                    _slot.Release();
+                    var childPlace = await _scheduler.Enter(claim, timeout.Token);
+                    _scheduler.Hold(childPlace);
+                    _scheduler.Release(childPlace);
                     return true;
                 }
                 catch (OperationCanceledException)
@@ -562,8 +581,8 @@ public sealed class PipelineRunStarterTests : IDisposable
 
         await Sut().Await(Child, TestContext.Current.CancellationToken);
 
-        slotWasFreeWhileWaiting.ShouldBeTrue();
+        childRanWhileWaiting.ShouldBeTrue();
         using var afterwards = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-        await Should.ThrowAsync<OperationCanceledException>(() => _slot.Acquire(afterwards.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => _scheduler.Enter(claim, afterwards.Token));
     }
 }

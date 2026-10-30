@@ -51,8 +51,15 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
         var config = DataSetAnnotationRequestMapper.FromPayload(
             req.DataSetName, req.Owner, req.Steward, req.Classification, req.Tags);
 
-        if (getResult.Value is not null)
-            config.Id = getResult.Value.Id;
+        if (getResult.Value is { } stored)
+        {
+            config.Id = stored.Id;
+            // Why: an update states the note's content, not whether someone resolved it. A new row built from the request alone would
+            // save every updated note as unresolved.
+            config.IsResolved = stored.IsResolved;
+            config.ResolvedDate = stored.ResolvedDate;
+            config.ResolvedBy = stored.ResolvedBy;
+        }
 
         var result = await _provider.Save(config, "DataSetAnnotation", "DataSetAnnotation", config.Name, ct).ConfigureAwait(false);
 

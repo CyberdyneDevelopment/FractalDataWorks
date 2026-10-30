@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Quality;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 
 namespace Fdw.Services.Catalog.Endpoints;
@@ -39,9 +40,9 @@ public abstract class DeleteGlossaryTermEndpointBase : Endpoint<GlossaryTermIdRe
     {
         var result = await _provider.Delete(req.Id, ct).ConfigureAwait(false);
 
-        if (!result.IsSuccess)
+        if (result.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to delete glossary term", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -1,40 +1,24 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using FastEndpoints;
-using Fdw.Operations.Abstractions;
+using System;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
-using Microsoft.AspNetCore.Http;
+using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
 /// <summary>
-/// Endpoint to resume a paused execution.
+/// Endpoint to resume an execution.
 /// </summary>
-public abstract class ResumeExecutionEndpointBase : Endpoint<ExecutionStateRequest, ExecutionDetailDto>
+public abstract class ResumeExecutionEndpointBase : ExecutionRunStateEndpointBase
 {
-    private readonly IExecutionTracker _tracker;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ResumeExecutionEndpointBase"/> class.
     /// </summary>
-    protected ResumeExecutionEndpointBase(ILogger logger, IExecutionTracker tracker)
+    protected ResumeExecutionEndpointBase(ILogger logger, IExecutionTracker tracker, IExecutionRunControl runControl, IUserNames userNames)
+        : base(logger, tracker, runControl, userNames)
     {
-        EndpointLogger = logger;
-        _tracker = tracker;
     }
-
-    /// <summary>
-    /// Gets the execution tracker.
-    /// </summary>
-    protected IExecutionTracker Tracker => _tracker;
-
-    /// <summary>
-    /// Gets the logger instance.
-    /// </summary>
-    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -49,85 +33,38 @@ public abstract class ResumeExecutionEndpointBase : Endpoint<ExecutionStateReque
         Summary(s =>
         {
             s.Summary = "Resume execution";
-            s.Description = "Resumes a paused execution. Can only resume executions in Paused state.";
+            s.Description = "Resumes a paused execution: its run goes on from where it held.";
         });
     }
 
     /// <inheritdoc/>
-    public override async Task HandleAsync(ExecutionStateRequest req, CancellationToken ct)
-    {
-        
-        OnResumingExecution(req.Id);
+    protected override IExecutionStateType TargetState => ExecutionStateTypes.Running;
 
-        // Get current execution
-        var itemResult = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);
-        if (!itemResult.IsSuccess || itemResult.Value == null)
-        {
-            OnExecutionNotFound(req.Id);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
-            return;
-        }
+    /// <inheritdoc/>
+    protected override string Verb => "resume";
 
-        var execution = itemResult.Value;
+    /// <inheritdoc/>
+    protected override IGenericResult Act(Guid executionId) => RunControl.Resume(executionId);
 
-        // Check if already in terminal state
-        if (execution.State.IsTerminal)
-        {
-            OnExecutionAlreadyTerminal(req.Id, execution.State.Name);
-            ThrowError($"Execution is already in terminal state '{execution.State.Name}'", 409);
-            return;
-        }
+    /// <inheritdoc/>
+    protected override void Undo(Guid executionId) => RunControl.Pause(executionId);
 
-        // Transition back to Running
-        var transitionResult = await _tracker.TransitionState(
-            req.Id,
-            ExecutionStateTypes.Running,
-            message: req.Message ?? "Resumed via API",
-            actor: req.Actor ?? "API:ResumeEndpoint",
-            cancellationToken: ct).ConfigureAwait(false);
+    /// <inheritdoc/>
+    protected override void OnRequested(Guid id) => OnResumingExecution(id);
 
-        if (!transitionResult.IsSuccess)
-        {
-            var errorMessage = transitionResult.CurrentMessage ?? "Failed to resume execution";
-            OnResumeFailed(req.Id, errorMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to resume execution", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
-            return;
-        }
+    /// <inheritdoc/>
+    protected override void OnNotFound(Guid id) => OnExecutionNotFound(id);
 
-        OnExecutionResumed(req.Id);
+    /// <inheritdoc/>
+    protected override void OnTerminal(Guid id, string state) => OnExecutionAlreadyTerminal(id, state);
 
-        // Get updated execution
-        var updatedResult = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);
-        var updatedExecution = updatedResult.IsSuccess ? updatedResult.Value ?? execution : execution;
+    /// <inheritdoc/>
+    protected override void OnFailed(Guid id, string error) => OnResumeFailed(id, error);
 
-        await Send.OkAsync(MapToDetailDto(updatedExecution), ct).ConfigureAwait(false);
-    }
+    /// <inheritdoc/>
+    protected override void OnDone(Guid id) => OnExecutionResumed(id);
 
-    /// <summary>
-    /// Maps an execution item to a detail DTO.
-    /// </summary>
-    protected virtual ExecutionDetailDto MapToDetailDto(IExecutionItem item)
-    {
-        return new ExecutionDetailDto
-        {
-            Id = item.Id,
-            ParentId = item.ParentId,
-            RootId = item.RootId,
-            ItemType = item.ItemType.Name,
-            Name = item.Name,
-            State = item.State.Name,
-            CorrelationId = item.CorrelationId,
-            TriggerSource = item.TriggerSource,
-            Parameters = item.Parameters,
-            CreatedAt = item.CreatedAt,
-            StartedAt = item.StartedAt,
-            CompletedAt = item.CompletedAt,
-            ResultCode = item.ResultCode,
-            ResultMessage = item.ResultMessage
-        };
-    }
-
-    /// <summary>Called when resuming execution. Override for custom logging.</summary>
+    /// <summary>Called when resumeing an execution. Override for custom logging.</summary>
     protected virtual void OnResumingExecution(Guid id) { }
 
     /// <summary>Called when execution is not found. Override for custom logging.</summary>
@@ -139,6 +76,6 @@ public abstract class ResumeExecutionEndpointBase : Endpoint<ExecutionStateReque
     /// <summary>Called when resume fails. Override for custom logging.</summary>
     protected virtual void OnResumeFailed(Guid id, string error) { }
 
-    /// <summary>Called when execution is resumed. Override for custom logging.</summary>
+    /// <summary>Called when the execution is done. Override for custom logging.</summary>
     protected virtual void OnExecutionResumed(Guid id) { }
 }

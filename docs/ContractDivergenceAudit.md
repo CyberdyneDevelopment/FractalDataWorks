@@ -1,13 +1,13 @@
 # Client/Server Contract Divergence Audit
 
-The 38 request/response names declared in both `Fdw.Web.Api` and a client package whose
+The 40 request/response names declared in both `Fdw.Web.Api` and a client package whose
 **field sets genuinely differ**. Per decision D1 these were audited, not changed: the two-layer
 design is deliberate and `Fdw.ContractParity.Tests` documents the reasons.
 
 `JUSTIFIED` = the difference is explained by route-binding or a client-side routing discriminator.
 `REVIEW` = no such explanation found in the shape alone; worth a human look for accidental drift.
 
-**9 justified / 29 to review.**
+**9 justified / 26 to review.**
 
 | Type | Client package | Server-only fields | Client-only fields | Verdict | Basis |
 |---|---|---|---|---|---|
@@ -16,7 +16,6 @@ design is deliberate and `Fdw.ContractParity.Tests` documents the reasons.
 | `CatalogSearchRequest` | Services.Catalog.Clients.Abstractions | `EntityTypes`, `Tags` | `EntityType` | **REVIEW** | — |
 | `CreateDataSetRequest` | Services.Data.Clients.Abstractions | `Aggregates`, `FederationStrategy`, `KeyFields`, `SourceDataSetName` | — | **REVIEW** | — |
 | `CreateDataSetSourceRequest` | Services.Data.Clients.Abstractions | `SourceDataSetId`, `SourceKind` | `FieldMappings` | **REVIEW** | — |
-| `CreatePromotionRequest` | Web.Analytics.Clients.Abstractions | `Items`, `Notes`, `RequestedBy` | — | **REVIEW** | — |
 | `CreateQualityRuleRequest` | Services.Quality.Abstractions | `FieldName`, `IsEnabled`, `MaxValue`, `MinValue`, `Pattern`, `Severity` | — | **REVIEW** | — |
 | `DataPreviewRequest` | Services.Data.Clients.Abstractions | `Columns` | `Filters`, `Page`, `PageSize` | **REVIEW** | — |
 | `DataPreviewResponse` | Services.Data.Clients.Abstractions | `Messages`, `RowCount`, `Source` | `TotalRowCount` | **REVIEW** | — |
@@ -30,7 +29,6 @@ design is deliberate and `Fdw.ContractParity.Tests` documents the reasons.
 | `DataStoreFieldDto` | Services.Data.Clients.Abstractions | `Description`, `FrameworkDataType` | `MaxLength`, `Precision`, `Scale` | **REVIEW** | — |
 | `DataStorePathDto` | Services.Data.Clients.Abstractions | `Path` | `PhysicalPath` | **REVIEW** | — |
 | `DataStoreSummaryDto` | Services.Data.Clients.Abstractions | `ConnectionId`, `ContainerCount`, `StoreType` | `Id`, `Name` | **REVIEW** | — |
-| `EnvironmentDto` | Operations.Abstractions | `Approvers`, `ConnectionName`, `Order`, `RequiresApproval` | — | **REVIEW** | — |
 | `ExecuteDdlRequest` | Schema.Clients.Abstractions | `Columns`, `Name`, `SchemaName`, `TableName` | `ConnectionName`, `Ddl` | **REVIEW** | — |
 | `GenerateDdlRequest` | Services.Connections.Abstractions | `Name` | — | **JUSTIFIED** | server-only fields are route-bound identifiers |
 | `GetMeResponse` | Services.Authentication.Abstractions | `AvailableTenants`, `Id`, `TenantId` | `UserId` | **REVIEW** | — |
@@ -39,7 +37,6 @@ design is deliberate and `Fdw.ContractParity.Tests` documents the reasons.
 | `PersonalAccessTokenSummary` | Services.Authentication.Abstractions | — | `IsRevoked` | **REVIEW** | — |
 | `PipelineDetailDto` | UI.Pipelines.Clients.Abstractions | `DestinationConnectionName`, `DestinationDataSet`, `IsEnabled`, `PipelineType`, `SourceConnectionName`, `SourceDataSet`, `Transforms`, `UpdatedAt` | `Connections`, `Id`, `ModifiedAt`, `Name`, `Status`, `Tasks` | **REVIEW** | — |
 | `PipelineSummaryDto` | UI.Pipelines.Clients.Abstractions | `PipelineType` | `CreatedAt`, `Description`, `ModifiedAt`, `Name`, `Status` | **REVIEW** | — |
-| `PromotionDto` | Web.Analytics.Clients.Abstractions | `ApprovedAt`, `ApprovedBy`, `CompletedAt`, `CreatedAt`, `Items`, `Notes`, `RequestedBy` | — | **REVIEW** | — |
 | `QualityCheckResultDto` | Services.Quality.Abstractions | `ErrorMessage`, `ExecutedAt`, `FailureCount`, `Status`, `TotalCount` | `Message`, `Passed`, `RuleName` | **REVIEW** | — |
 | `SaveSourceMappingsRequest` | Schema.Clients.Abstractions | `Name` | `DataSetName` | **JUSTIFIED** | server-only fields are route-bound identifiers |
 | `SchemaFieldDto` | Data.Components | `Ordinal` | `MaxLength`, `Precision`, `Scale` | **REVIEW** | — |

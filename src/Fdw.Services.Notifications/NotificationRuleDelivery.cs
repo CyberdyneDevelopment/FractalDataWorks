@@ -19,26 +19,6 @@ namespace Fdw.Services.Notifications;
 public static class NotificationRuleDelivery
 {
     /// <summary>
-    /// The rule severity vocabulary (log levels) mapped to the delivery-urgency vocabulary of
-    /// <see cref="NotificationPriorities"/>, so a rule left at the default "Info" still sends.
-    /// </summary>
-    private static readonly Dictionary<string, string> PriorityBySeverity =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Low"] = "Low",
-            ["Info"] = "Normal",
-            ["Information"] = "Normal",
-            ["Normal"] = "Normal",
-            ["Warning"] = "High",
-            ["Warn"] = "High",
-            ["High"] = "High",
-            ["Error"] = "Critical",
-            ["Critical"] = "Critical",
-            ["Fatal"] = "Critical",
-            ["Severe"] = "Critical",
-        };
-
-    /// <summary>
     /// Sends the notification through the rule.
     /// </summary>
     /// <param name="provider">Resolves the rule's notification service by name.</param>
@@ -54,7 +34,7 @@ public static class NotificationRuleDelivery
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        if (!PriorityBySeverity.TryGetValue(rule.Severity, out var priorityName))
+        if (!NotificationRuleSeverities.TryPriority(rule.Severity, out var priorityName))
         {
             return GenericResult.Failure(
                 NotificationResultCodes.ByName("RuleSeverityInvalid"),

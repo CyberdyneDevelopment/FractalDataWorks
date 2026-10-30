@@ -82,7 +82,7 @@ public sealed class WebhookTriggers
     public async Task<IGenericResult<WebhookCreatedPayload>> Create(IAuthenticationContext caller, WebhookPayload request, CancellationToken ct)
     {
         var (secret, hash, prefix) = WebhookSecret.Create();
-        var saved = await Save(caller, request, Guid.CreateVersion7(), new WebhookSecretHash(hash, prefix, DateTimeOffset.UtcNow), ct)
+        var saved = await Save(caller, request, Guid.CreateVersion7(), new WebhookSecretHash(hash, prefix, DateTimeOffset.UtcNow), mayCreate: true, ct)
             .ConfigureAwait(false);
         if (saved.IsFailure || saved.Value is not { } payload)
         {
@@ -119,7 +119,7 @@ public sealed class WebhookTriggers
                 : WebhookRefusal.Of<WebhookPayload>($"no webhook trigger is named '{request.Name}'");
         }
 
-        return await Save(caller, request, current.Id, new WebhookSecretHash(current.SecretHash, current.SecretPrefix, current.SecretCreatedAt), ct)
+        return await Save(caller, request, current.Id, new WebhookSecretHash(current.SecretHash, current.SecretPrefix, current.SecretCreatedAt), mayCreate: false, ct)
             .ConfigureAwait(false);
     }
 
@@ -142,7 +142,7 @@ public sealed class WebhookTriggers
         trigger.SecretPrefix = prefix;
         trigger.SecretCreatedAt = DateTimeOffset.UtcNow;
         var saved = await _provider
-            .Save(trigger, WebhookPayloadReader.DomainName, WebhookPayloadReader.ImplementationName, trigger.Name, ct)
+            .Update(trigger, WebhookPayloadReader.DomainName, WebhookPayloadReader.ImplementationName, trigger.Name, ct)
             .ConfigureAwait(false);
         if (saved.IsFailure)
         {
@@ -156,8 +156,9 @@ public sealed class WebhookTriggers
         });
     }
 
+    // Only a create may make the trigger; a replace of a trigger removed since it was read fails instead of bringing it back.
     private async Task<IGenericResult<WebhookPayload>> Save(
-        IAuthenticationContext caller, WebhookPayload request, Guid id, WebhookSecretHash secret, CancellationToken ct)
+        IAuthenticationContext caller, WebhookPayload request, Guid id, WebhookSecretHash secret, bool mayCreate, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         var pipeline = await _pipelines.Get(request.Pipeline, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
@@ -178,9 +179,13 @@ public sealed class WebhookTriggers
             return trigger.ToNewResult<WebhookPayload>();
         }
 
-        var saved = await _provider
-            .Save(checkedTrigger, WebhookPayloadReader.DomainName, WebhookPayloadReader.ImplementationName, checkedTrigger.Name, ct)
-            .ConfigureAwait(false);
+        var saved = mayCreate
+            ? await _provider
+                .Save(checkedTrigger, WebhookPayloadReader.DomainName, WebhookPayloadReader.ImplementationName, checkedTrigger.Name, ct)
+                .ConfigureAwait(false)
+            : await _provider
+                .Update(checkedTrigger, WebhookPayloadReader.DomainName, WebhookPayloadReader.ImplementationName, checkedTrigger.Name, ct)
+                .ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<WebhookPayload>();

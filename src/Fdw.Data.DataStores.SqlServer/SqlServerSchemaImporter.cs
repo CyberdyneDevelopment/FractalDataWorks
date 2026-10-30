@@ -16,6 +16,7 @@ using Fdw.Results.Abstractions;
 using Fdw.Services.Connections;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.DataStores.SqlServer;
 
@@ -24,23 +25,32 @@ namespace Fdw.Data.DataStores.SqlServer;
 /// Returns a discovered <see cref="DataStoreImplementationConfiguration"/> with DatabasePath rows containing
 /// Table/View/StoredProcedure container configs and their field configs.
 /// </summary>
-[TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "SqlServer", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "SqlServer")]
 [ExcludeFromCodeCoverage] // Excluded: requires SQL Server connection
 public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServerConfiguration>, ISchemaImporter<SqlServerConfiguration>
 {
     private readonly ILogger<SqlServerSchemaImporter> _logger;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="SqlServerSchemaImporter"/> class without a logger. The
+    /// registration module initializer builds registered options through this constructor.
+    /// </summary>
+    public SqlServerSchemaImporter()
+        : this(null)
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="SqlServerSchemaImporter"/> class.
     /// </summary>
     /// <param name="logger">Logger instance for diagnostic output.</param>
-    public SqlServerSchemaImporter(ILogger<SqlServerSchemaImporter> logger)
+    public SqlServerSchemaImporter(ILogger<SqlServerSchemaImporter>? logger)
         : base(
             name: "SqlServer",
             description: "Imports schema from SQL Server databases via INFORMATION_SCHEMA",
             dataStoreType: "SqlServer")
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger ?? NullLogger<SqlServerSchemaImporter>.Instance;
     }
 
     #region ISchemaImporter Implementation

@@ -24,7 +24,7 @@ namespace Fdw.Services.Authentication.Binding;
 /// </para>
 /// <para>
 /// A user with no default membership has nowhere to land, and is refused rather than placed in one
-/// of their tenants by guesswork.
+/// of their tenants by guesswork. The department they marked as their default in it, if any, lands with the tenant (FDW-2938).
 /// </para>
 /// </remarks>
 public sealed class UserTenantResolver : ITenantResolver
@@ -50,17 +50,26 @@ public sealed class UserTenantResolver : ITenantResolver
     /// <inheritdoc />
     public async Task<IGenericResult<Guid>> TenantFor(Guid userId, CancellationToken cancellationToken = default)
     {
+        var landing = await LandingFor(userId, cancellationToken).ConfigureAwait(false);
+        return landing.IsFailure
+            ? landing.ToNewResult<Guid>()
+            : GenericResult<Guid>.Success(landing.Value!.TenantId);
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<Landing>> LandingFor(Guid userId, CancellationToken cancellationToken = default)
+    {
         // This platform authentication lookup precedes the request authentication context.
         using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         // The person's own memberships are read by the person's id, so the cost of a sign-in does not grow with the number of users (FDW-2714).
         var memberships = await _memberships.Get(userId, cancellationToken).ConfigureAwait(false);
         if (memberships.IsFailure)
-            return memberships.ToNewResult<Guid>();
+            return memberships.ToNewResult<Landing>();
 
         // A filtered unique index allows one current default per user, so this is zero or one.
         return memberships.Value!.Where(m => m.IsDefault).ToList() is [var membership] && membership.TenantId != Guid.Empty
-            ? GenericResult<Guid>.Success(membership.TenantId)
-            : GenericResult<Guid>.Failure(BindingLog.TenantUnknown(_logger, userId));
+            ? GenericResult<Landing>.Success(new Landing(membership.TenantId, membership.DefaultOrganizationId))
+            : GenericResult<Landing>.Failure(BindingLog.TenantUnknown(_logger, userId));
     }
 }

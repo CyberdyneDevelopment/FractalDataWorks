@@ -21,4 +21,12 @@ internal static class PreferenceEndpointIdentity
                ?? user.FindFirst("sub")?.Value;
         return Guid.TryParse(sub, out userId);
     }
+
+    /// <summary>
+    /// Gets the name a person's preferences row is written under: the person's id. The row's own Id is minted when it is first
+    /// saved, so the row is found by this name and never by the person's id as an Id.
+    /// </summary>
+    /// <param name="userId">The person's id.</param>
+    /// <returns>The row's name.</returns>
+    public static string RowName(Guid userId) => userId.ToString();
 }

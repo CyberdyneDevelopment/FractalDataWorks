@@ -3,6 +3,9 @@ using System.IO;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Aui.Logging;
@@ -42,9 +45,15 @@ public sealed class AuiMiddleware
             AuiLog.AgentDetected(_logger, path);
 
             var route = path.Replace(".aui", string.Empty);
-            var userId = Guid.Empty; // Placeholder: extract from claims
 
-            var result = await auiService.GetManifest(userId, route).ConfigureAwait(false);
+            var caller = new ClaimsPrincipalAuthenticationContext(context.User);
+            if (!caller.IsAuthenticated || !Guid.TryParse(caller.UserId, out var userId))
+            {
+                await Answer(GenericResult.Failure(AuiLog.SignInRequired(_logger, path)), context).ConfigureAwait(false);
+                return;
+            }
+
+            var result = await auiService.GetManifest(userId, route, context.RequestAborted).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -53,10 +62,15 @@ public sealed class AuiMiddleware
                 return;
             }
 
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await Answer(result, context).ConfigureAwait(false);
             return;
         }
 
         await _next(context).ConfigureAwait(false);
+    }
+
+    private static Task Answer(IGenericResult failure, HttpContext context)
+    {
+        return ResultHttpStatusMapper.Answer(failure, context).ExecuteAsync(context);
     }
 }

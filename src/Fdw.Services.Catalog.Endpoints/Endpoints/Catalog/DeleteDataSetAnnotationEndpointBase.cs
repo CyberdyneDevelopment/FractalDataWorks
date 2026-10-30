@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Quality;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 
 namespace Fdw.Services.Catalog.Endpoints;
@@ -39,9 +40,9 @@ public abstract class DeleteDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
     {
         var result = await _provider.Delete(req.AnnotationId, ct).ConfigureAwait(false);
 
-        if (!result.IsSuccess)
+        if (result.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to delete annotation", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

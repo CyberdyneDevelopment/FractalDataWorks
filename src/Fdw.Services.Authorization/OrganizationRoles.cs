@@ -73,7 +73,7 @@ public sealed class OrganizationRoles : IOrganizationRoles
             return GenericResult<OrganizationRoleView>.Failure(OrganizationAccessLog.RoleExists(_logger, organizationId, roleName));
         }
 
-        var saved = await Save(organizationId, roleName, description, false, judged.Value.Permissions, cancellationToken).ConfigureAwait(false);
+        var saved = await Save(organizationId, roleName, description, false, judged.Value.Permissions, null, cancellationToken).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<OrganizationRoleView>();
@@ -101,7 +101,7 @@ public sealed class OrganizationRoles : IOrganizationRoles
                 : GenericResult<OrganizationRoleView>.Failure(OrganizationAccessLog.RoleNotFound(_logger, organizationId, roleName));
         }
 
-        var saved = await Save(organizationId, roleName, description, existing.Value.IsBuiltIn, judged.Value.Permissions, cancellationToken).ConfigureAwait(false);
+        var saved = await Save(organizationId, roleName, description, existing.Value.IsBuiltIn, judged.Value.Permissions, existing.Value, cancellationToken).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<OrganizationRoleView>();
@@ -245,21 +245,30 @@ public sealed class OrganizationRoles : IOrganizationRoles
             all.Value.FirstOrDefault(role => Live(role, organizationId) && string.Equals(role.RoleName, roleName, StringComparison.OrdinalIgnoreCase)));
     }
 
+    // Writes the role: a new one when none is held, otherwise the held role updated under its own Id, so a role removed since it was read
+    // is not brought back by the write.
     private async Task<IGenericResult> Save(
-        Guid organizationId, string roleName, string? description, bool isBuiltIn, IReadOnlyList<string> permissions, CancellationToken cancellationToken)
+        Guid organizationId, string roleName, string? description, bool isBuiltIn, IReadOnlyList<string> permissions,
+        IOrganizationRoleImplementationConfiguration? held, CancellationToken cancellationToken)
     {
         var name = NameOf(organizationId, roleName);
-        var saved = await _roles.Save(
-            new OrganizationRoleImplementationConfiguration
-            {
-                Name = name,
-                OrganizationId = organizationId,
-                RoleName = roleName,
-                Description = description,
-                IsBuiltIn = isBuiltIn,
-                Permissions = [.. permissions.Select(permission => new OrganizationRolePermissionConfiguration { PermissionName = permission })],
-            },
-            RoleDomain, RoleDomain, name, cancellationToken).ConfigureAwait(false);
+        var role = new OrganizationRoleImplementationConfiguration
+        {
+            Name = name,
+            OrganizationId = organizationId,
+            RoleName = roleName,
+            Description = description,
+            IsBuiltIn = isBuiltIn,
+            Permissions = [.. permissions.Select(permission => new OrganizationRolePermissionConfiguration { PermissionName = permission })],
+        };
+        if (held is not null)
+        {
+            role.Id = held.Id;
+        }
+
+        var saved = held is null
+            ? await _roles.Save(role, RoleDomain, RoleDomain, name, cancellationToken).ConfigureAwait(false)
+            : await _roles.Update(role, RoleDomain, RoleDomain, name, cancellationToken).ConfigureAwait(false);
         return saved.IsSuccess
             ? saved
             : GenericResult.Failure(OrganizationAccessLog.WriteFailed(_logger, $"Role '{roleName}' of organization '{organizationId}'", saved.CurrentMessage));

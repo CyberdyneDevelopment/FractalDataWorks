@@ -9,7 +9,6 @@ This package declares 4 interface(s), 1 service/provider type(s).
 | Type | Kind | Purpose |
 |---|---|---|
 | `ICommand` | interface | Represents a command that can be executed and undone. |
-| `IFormulaTokenizer` | interface | Tokenizes formula expressions for syntax highlighting. |
 | `IPipelineValidator` | interface | Validates pipeline definitions. |
 | `IUndoRedoManager` | interface | Manages undo/redo operations for commands. |
 
@@ -24,10 +23,7 @@ This package declares 4 interface(s), 1 service/provider type(s).
 | Type | Kind | Purpose |
 |---|---|---|
 | `CompositeCommand` | class | Command that executes multiple commands as a single unit. |
-| `FormulaTokenizer` | class | Tokenizes formula expressions for syntax highlighting. Uses character-by-character parsing (no regex per… |
 | `PipelineValidator` | class | Validates pipeline definitions. |
-| `Token` | class | Represents a token in a formula expression. |
-| `TokenType` | enum | Types of tokens in a formula. |
 | `UIServiceCollectionExtensions` | class | Extension methods for registering UI services. |
 
 ## Installation

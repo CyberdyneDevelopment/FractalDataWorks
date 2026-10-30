@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Abstractions.OptionTypes;
 using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs.Building;
 using Microsoft.Extensions.Logging;
@@ -40,6 +41,17 @@ public static class GraphShapeValidator
             problems.Add(new GraphProblem(["linkCapacity"], $"graph pipeline '{graph.Name}' does not state how many batches a link buffers ({graph.LinkCapacity} is not at least one)"));
         }
 
+        if (graph.MaxParallelRuns < 1)
+        {
+            problems.Add(new GraphProblem(["maxParallelRuns"], $"graph pipeline '{graph.Name}' does not state how many of its runs may run at once ({graph.MaxParallelRuns} is not at least one)"));
+        }
+
+        if (ReferenceEquals(OverflowBehaviors.ByName(graph.OverflowBehavior), OverflowBehaviors.NotFound))
+        {
+            problems.Add(new GraphProblem(["overflowBehavior"], $"graph pipeline '{graph.Name}' names the overflow behavior '{graph.OverflowBehavior}', which is not one of {nameof(OverflowBehaviors)}"));
+        }
+
+        problems.AddRange(DelayedStartProblems(graph));
         problems.AddRange(LinkEndProblems(graph));
         var broken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         problems.AddRange(GraphComponentValidator.Problems(graph, broken, logger));
@@ -49,6 +61,22 @@ public static class GraphShapeValidator
         }
 
         return problems;
+    }
+
+    // The delay or time of day of an overflow behavior that holds a run (FDW-3129): a behavior that holds states exactly one of them, with a
+    // time zone for a time of day; any other behavior states none. An unknown behavior is reported by the caller and judged by nothing here.
+    private static IEnumerable<GraphProblem> DelayedStartProblems(GraphPipelineConfiguration graph)
+    {
+        var behavior = OverflowBehaviors.ByName(graph.OverflowBehavior);
+        if (ReferenceEquals(behavior, OverflowBehaviors.NotFound))
+        {
+            return [];
+        }
+
+        var found = behavior.HoldsWhenFull
+            ? PipelineDelayedStart.TryRead(graph.DelayedStartSeconds, graph.DelayedStartTimeOfDay, graph.DelayedStartTimeZoneId, out _)
+            : PipelineDelayedStart.Unexpected(graph.DelayedStartSeconds, graph.DelayedStartTimeOfDay, graph.DelayedStartTimeZoneId, behavior.Name);
+        return found.Select(problem => new GraphProblem([problem.Field], $"graph pipeline '{graph.Name}': {problem.Message}"));
     }
 
     // A line whose end names a component the graph does not have. No level can judge it: a level takes the lines with an end among its own

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Moq;
+using Npgsql;
 using Shouldly;
 using Xunit;
 
@@ -187,5 +189,169 @@ public sealed class PostgreSqlUpdateTranslatorTests
         var result = await _sut.Translate(genericCommand.Object, container.Object, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
+    }
+
+    private static Mock<IFilterableCommand> CreateUpdateById(object record)
+    {
+        var command = new Mock<IFilterableCommand>();
+        command.Setup(c => c.Filter).Returns(new FilterExpression
+        {
+            Root = new FilterCondition { PropertyName = "id", Operator = new EqualOperator(), Value = 42 }
+        });
+        command.As<IDataCommandWithInput>().Setup(c => c.InputData).Returns(record);
+        return command;
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslateUpdateSetsTheColumnsADictionaryRecordNames()
+    {
+        // FDW-3309: a pipeline Update load sends each row as IDictionary<string, object?>. The translator
+        // looked for CLR properties and found none, so the row failed with "no properties matching".
+        var container = CreateContainer(
+            fields: [CreateField("id").Object, CreateField("name").Object, CreateField("email").Object],
+            primaryKeyFieldName: "id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["name"] = "Updated", ["email"] = "new@test.com" };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("\"name\" = @set_name");
+        result.Value.CommandText.ShouldContain("\"email\" = @set_email");
+        result.Value.CommandText.ShouldNotContain("\"id\" = @set_id");
+        result.Value.CommandText.ShouldContain("WHERE \"id\" = @where_p0");
+        result.Value.Parameters.Cast<NpgsqlParameter>().Single(p => p.ParameterName == "set_name").Value.ShouldBe("Updated");
+        result.Value.Parameters.Cast<NpgsqlParameter>().Single(p => p.ParameterName == "set_email").Value.ShouldBe("new@test.com");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslateUpdateSetsOnlyTheColumnsADictionaryRecordCarries()
+    {
+        var container = CreateContainer(
+            fields: [CreateField("id").Object, CreateField("name").Object, CreateField("email").Object],
+            primaryKeyFieldName: "id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["email"] = "only@test.com", ["not_a_column"] = 1 };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("\"email\" = @set_email");
+        result.Value.CommandText.ShouldNotContain("@set_name");
+        result.Value.CommandText.ShouldNotContain("not_a_column");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslateUpdateBindsANullInADictionaryRecordAsDbNull()
+    {
+        var container = CreateContainer(fields: [CreateField("id").Object, CreateField("name").Object], primaryKeyFieldName: "id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["name"] = null };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Parameters.Cast<NpgsqlParameter>().Single(p => p.ParameterName == "set_name").Value.ShouldBe(System.DBNull.Value);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslateUpdateFailsWhenADictionaryRecordNamesNoUpdatableColumn()
+    {
+        var container = CreateContainer(fields: [CreateField("id").Object, CreateField("name").Object], primaryKeyFieldName: "id");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["id"] = 42, ["other"] = "x" };
+
+        var result = await _sut.Translate(CreateUpdateById(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+    }
+
+    private static Mock<IFilterableCommand> CreateUpdateWithNoFilter(object record)
+    {
+        var command = new Mock<IFilterableCommand>();
+        command.Setup(c => c.Filter).Returns((IFilterExpression?)null);
+        command.As<IDataCommandWithInput>().Setup(c => c.InputData).Returns(record);
+        return command;
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateRefusesAnEntityRecordWithoutThePrimaryKeyWhenThereIsNoFilter()
+    {
+        // FDW-3321: with no filter and no key in the record there is no WHERE to build. The statement used
+        // to be issued without one and wrote every row of the table.
+        var container = CreateContainer(
+            name: "customers",
+            fields: [CreateField("customer_key").Object, CreateField("name").Object],
+            primaryKeyFieldName: "customer_key");
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(new { name = "x" }).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull().Name.ShouldBe("MissingPrimaryKeyValue");
+        result.Details!.GetValue<string>("Container").ShouldBe("customers");
+        result.Details.GetValue<string>("PrimaryKeyField").ShouldBe("customer_key");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateRefusesADictionaryRecordWithoutThePrimaryKeyWhenThereIsNoFilter()
+    {
+        var container = CreateContainer(
+            name: "customers",
+            fields: [CreateField("customer_key").Object, CreateField("name").Object],
+            primaryKeyFieldName: "customer_key");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["name"] = "x" };
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull().Name.ShouldBe("MissingPrimaryKeyValue");
+        result.Details!.GetValue<string>("Container").ShouldBe("customers");
+        result.Details.GetValue<string>("PrimaryKeyField").ShouldBe("customer_key");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateKeepsRefusingANullPrimaryKeyWhenThereIsNoFilter()
+    {
+        var container = CreateContainer(
+            name: "customers",
+            fields: [CreateField("customer_key").Object, CreateField("name").Object],
+            primaryKeyFieldName: "customer_key");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["customer_key"] = null, ["name"] = "x" };
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull().Name.ShouldBe("NullPrimaryKeyValue");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateTakesTheKeyFromADictionaryRecordWhenThereIsNoFilter()
+    {
+        var container = CreateContainer(
+            name: "customers",
+            fields: [CreateField("customer_key").Object, CreateField("name").Object],
+            primaryKeyFieldName: "customer_key");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["customer_key"] = 42, ["name"] = "x" };
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("WHERE \"customer_key\" = @where_pk");
     }
 }

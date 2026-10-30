@@ -542,4 +542,19 @@ public class ResultHttpStatusMapperTests
     }
 
     #endregion
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void MapReportsTheExecutionIdTheDownstreamClosedAndOmitsItWhenThereIsNone()
+    {
+        var withId = ResultDetails.Create(ResultDetailKeys.UpstreamCode, "WAITTHRESHOLD-22150", ResultDetailKeys.ExecutionId, "01a18cdc-fc5f-7f15-9aa4-fc11aa47a0df");
+        var stopped = CreateFailureRelayingADownstream(CreateInternalCode(), ownCode: true, withId);
+
+        var (_, response) = ResultHttpStatusMapper.Map(stopped, CreateHttpContext("proxy-trace-4"));
+        var (_, without) = ResultHttpStatusMapper.Map(CreateFailureRelayingADownstream(CreateInternalCode(), ownCode: true, DownstreamDetails()), CreateHttpContext("proxy-trace-5"));
+
+        response.Extensions["executionId"].ShouldBe("01a18cdc-fc5f-7f15-9aa4-fc11aa47a0df");
+        without.Extensions.ContainsKey("executionId").ShouldBeFalse();
+    }
 }

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Operations.Abstractions;
 using Fdw.Operations.Abstractions.Execution;
+using Fdw.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -61,9 +62,7 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
 
         if (!result.IsSuccess)
         {
-            var errorMessage = result.CurrentMessage ?? "Unknown error";
-
-            if (errorMessage.Contains("not found", System.StringComparison.OrdinalIgnoreCase))
+            if (FailureCategory.IsMissing(result))
             {
                 OnExecutionNotFound(req.Id);
                 await Send.ResultAsync(TypedResults.Json(new
@@ -74,8 +73,8 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
                 return;
             }
 
-            OnExecutionFetchFailed(req.Id, errorMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
+            OnExecutionFetchFailed(req.Id, result.CurrentMessage);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -130,7 +129,7 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
     /// <summary>
     /// Called when execution fetch fails. Override for custom logging.
     /// </summary>
-    protected virtual void OnExecutionFetchFailed(Guid id, string error)
+    protected virtual void OnExecutionFetchFailed(Guid id, string? error)
     {
     }
 

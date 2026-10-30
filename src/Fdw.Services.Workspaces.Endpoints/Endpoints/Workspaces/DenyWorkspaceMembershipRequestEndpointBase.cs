@@ -85,7 +85,7 @@ public abstract class DenyWorkspaceMembershipRequestEndpointBase : Endpoint<Deny
         found.ReviewNotes = req.ReviewNotes;
 
         // The request is a child of the workspace aggregate; found is the instance inside it.
-        var saved = await _workspaces.Save(
+        var saved = await _workspaces.Update(
             workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) { await SendError(saved, ct).ConfigureAwait(false); return; }
 

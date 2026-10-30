@@ -98,7 +98,7 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
 
         ApplyPaths(updated, request);
 
-        var saveResult = await _dataStoreProvider.Save(updated, "DataStore", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
+        var saveResult = await _dataStoreProvider.Update(updated, "DataStore", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<DataStoreDetailResponse>();

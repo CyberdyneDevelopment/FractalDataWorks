@@ -193,7 +193,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
                         _logger, flowName, administrator.UserId, string.Join(", ", administrator.AuthenticationMethods))));
         }
 
-        var saved = await _rows.Save(flow, FlowDomain, flow.Implementation, flow.Name, cancellationToken).ConfigureAwait(false);
+        var saved = await _rows.Update(flow, FlowDomain, flow.Implementation, flow.Name, cancellationToken).ConfigureAwait(false);
         if (saved.IsFailure)
             return GenericResult<AuthenticationFlowState>.Failure(FlowAdministrationLog.FlowSaveFailed(_logger, flowName, saved.CurrentMessage));
 

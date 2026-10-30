@@ -14,7 +14,7 @@ namespace Fdw.Data.Files.Paths;
 /// Format: /path/to/file.ext or /path/to/*.csv
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires filesystem access
-public sealed class FilePath : PathBase, IDataPath<IStorageContainer>, IReaddressablePath
+public sealed class FilePath : PathBase, IDataPath<IStorageContainer>, IFilePath
 {
     private readonly List<IStorageContainer> _containers;
 

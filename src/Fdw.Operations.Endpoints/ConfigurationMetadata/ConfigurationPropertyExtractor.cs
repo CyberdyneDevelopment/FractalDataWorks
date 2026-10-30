@@ -58,6 +58,7 @@ public static class ConfigurationPropertyExtractor
             DisplayName = displayAttr?.Name ?? FormatDisplayName(property.Name),
             PropertyType = propertyType,
             IsRequired = requiredAttr != null || IsRequiredByType(property.PropertyType),
+            CanBeEmpty = CanBeEmpty(property),
             IsSecret = propertyType == ConfigurationPropertyTypeDtos.Secret,
             DefaultValue = GetDefaultValue(property),
             Description = descAttr?.Description ?? displayAttr?.Description,
@@ -67,6 +68,20 @@ public static class ConfigurationPropertyExtractor
             ValidationRules = validationRules.Count > 0 ? validationRules : null,
             AllowedValues = allowedValues
         };
+    }
+
+    /// <summary>
+    /// Says whether a configuration property can be emptied: a non-nullable value type cannot, and a reference type cannot when it is
+    /// annotated non-nullable. The one rule for every description of a property and for every refusal to clear one.
+    /// </summary>
+    /// <param name="property">The configuration property.</param>
+    /// <returns><see langword="true"/> when the property can be set to null.</returns>
+    public static bool CanBeEmpty(PropertyInfo property)
+    {
+        ArgumentNullException.ThrowIfNull(property);
+        return property.PropertyType.IsValueType
+            ? Nullable.GetUnderlyingType(property.PropertyType) is not null
+            : new NullabilityInfoContext().Create(property).WriteState != NullabilityState.NotNull;
     }
 
     private static bool IsRequiredByType(Type type) =>
@@ -199,8 +214,8 @@ public static class ConfigurationPropertyExtractor
     {
         var result = System.Text.RegularExpressions.Regex.Replace(
             propertyName,
-            "(?<!^)([A-Z])",
-            " $1",
+            "(?<!^)(?<letter>[A-Z])",
+            " ${letter}",
             System.Text.RegularExpressions.RegexOptions.ExplicitCapture,
             TimeSpan.FromSeconds(1));
 

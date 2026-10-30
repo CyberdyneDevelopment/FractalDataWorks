@@ -84,13 +84,6 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
     /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
     protected virtual DataSetAnnotationPayload MapToDto(IDataSetAnnotationImplementationConfiguration config)
     {
-        return new DataSetAnnotationPayload
-        {
-            DataSetName = config.DataSetName,
-            Owner = config.BusinessOwner,
-            Steward = config.TechnicalOwner,
-            Classification = config.DataClassification,
-            Tags = config.Tags.Select(t => t.Tag).ToList()
-        };
+        return DataSetAnnotationPayloadMapper.Map(config);
     }
 }

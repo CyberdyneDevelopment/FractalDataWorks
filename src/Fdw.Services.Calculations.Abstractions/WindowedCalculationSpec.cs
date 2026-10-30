@@ -7,6 +7,9 @@ namespace Fdw.Services.Calculations.Abstractions;
 /// </summary>
 public sealed class WindowedCalculationSpec
 {
+    /// <summary>The name a caller gives the spec in the execution context's parameters to run the calculation with it instead of its stored configuration.</summary>
+    public const string ParameterName = "WindowedCalculationSpec";
+
     /// <summary>Gets the fields used to partition rows for the window.</summary>
     public IReadOnlyList<string> PartitionByFields { get; init; } = [];
 

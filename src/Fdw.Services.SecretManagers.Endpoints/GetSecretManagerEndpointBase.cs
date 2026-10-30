@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using Fdw.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -70,12 +73,30 @@ public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRe
         // SecretManagerType IS the implementation the domain row names. Description and
         // Environment are columns on the sec.SecretManager domain row, which a domain read does
         // not carry, so they are the app's to fill -- second-wave-split payload, not invented here.
+        var option = SecretManagerTypes.ByName(config.Implementation);
+        if (ReferenceEquals(option, SecretManagerTypes.NotFound))
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(
+                GenericResult.Failure(SecretManagerEndpointLog.SecretManagerTypeUnknown(
+                    _logger, config.Implementation, string.Join(", ", SecretManagerTypes.All().Select(known => known.Value.Name)))),
+                HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var shown = SecretManagerSettings.Shown(option, config, _logger);
+        if (shown.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(shown, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         var detail = new SecretManagerDetailResponse
         {
             Id = config.Id,
             Name = config.Name,
             SecretManagerType = config.Implementation,
-            Implementation = config.Implementation
+            Implementation = config.Implementation,
+            Configuration = shown.Value
         };
 
         await Send.OkAsync(detail, ct).ConfigureAwait(false);

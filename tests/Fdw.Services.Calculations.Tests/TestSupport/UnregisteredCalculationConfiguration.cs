@@ -38,5 +38,5 @@ internal sealed class UnregisteredCalculationConfiguration : ICalculationEntityI
     public IReadOnlyList<ICalculationStepConfiguration> Steps { get; } = [];
 
     public void ReplaceInputs(IReadOnlyList<CalculationInput> inputs)
-        => Inputs = [.. inputs.Select(CalculationInputConfigurationBase.From<FormulaCalculationInputConfiguration>)];
+        => Inputs = [.. inputs.Select(CalculationInputConfigurationBase.From<WindowedCalculationInputConfiguration>)];
 }
