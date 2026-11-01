@@ -44,7 +44,7 @@ public abstract partial class PaymentMethods : TypeCollectionBase<PaymentMethodB
 
 ## TypeCollection Attribute
 
-From [`TypeCollectionAttribute.cs:12-28`](../src/Fdw.Collections/Attributes/TypeCollectionAttribute.cs#L12-L28):
+From [`TypeCollectionAttribute.cs:12-28`](../src/foundation/collections/Fdw.Collections/Attributes/TypeCollectionAttribute.cs#L12-L28):
 
 ```csharp
 [TypeCollection(typeof(BaseType), typeof(InterfaceType), typeof(CollectionType))]
@@ -58,7 +58,7 @@ From [`TypeCollectionAttribute.cs:12-28`](../src/Fdw.Collections/Attributes/Type
 
 ## Generated Members
 
-The source generator creates the following members (see [`TypeCollectionGenerator.cs`](../src/Fdw.Collections.SourceGenerators/TypeCollectionGenerator.cs)):
+The source generator creates the following members (see [`TypeCollectionGenerator.cs`](../src/foundation/collections/Fdw.Collections.SourceGenerators/TypeCollectionGenerator.cs)):
 
 ```csharp
 // Static accessors for each [TypeOption] discovered

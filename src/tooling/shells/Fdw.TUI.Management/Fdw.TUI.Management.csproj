@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.TUI.Management</RootNamespace>
+
+    <!-- Package Information -->
+    <PackageId>Fdw.TUI.Management</PackageId>
+    <Title>Fdw TUI Management</Title>
+    <Description>Console-based management application for Fdw. Provides configuration management, monitoring, and log viewing via terminal UI.</Description>
+    <Authors>Fdw</Authors>
+    <Copyright>Copyright © Fdw</Copyright>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\ui\Fdw.UI.Rendering.Spectre\Fdw.UI.Rendering.Spectre.csproj" />
+    <ProjectReference Include="..\..\..\ui\Fdw.UI.Components\Fdw.UI.Components.csproj" />
+    <ProjectReference Include="..\..\..\ui\Fdw.UI.Themes\Fdw.UI.Themes.csproj" />
+    <ProjectReference Include="..\..\..\configuration\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\endpoints\Fdw.Web.Clients\Fdw.Web.Clients.csproj" />
+    <ProjectReference Include="..\..\..\connections\Fdw.Services.Connections.Clients\Fdw.Services.Connections.Clients.csproj" />
+    <ProjectReference Include="..\..\..\identity\authentication\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
+    <ProjectReference Include="..\..\..\foundation\registration\Fdw.Services.Registration\Fdw.Services.Registration.csproj" />
+    <ProjectReference Include="..\..\..\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\foundation\registration\Fdw.Services.Registration.SourceGenerators\Fdw.Services.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\data\Fdw.Services.Data.Clients\Fdw.Services.Data.Clients.csproj" />
+    <ProjectReference Include="..\..\..\pipelines\Fdw.Services.Pipelines.Clients\Fdw.Services.Pipelines.Clients.csproj" />
+    <ProjectReference Include="..\..\..\secrets\secretmanagers\Fdw.Services.SecretManagers.Clients\Fdw.Services.SecretManagers.Clients.csproj" />
+    <ProjectReference Include="..\..\..\notifications\Fdw.Services.Notifications.Clients\Fdw.Services.Notifications.Clients.csproj" />
+    <ProjectReference Include="..\..\..\scheduling\Fdw.Services.Scheduling.Clients\Fdw.Services.Scheduling.Clients.csproj" />
+    <ProjectReference Include="..\..\..\identity\users\Fdw.Services.Users.Clients\Fdw.Services.Users.Clients.csproj" />
+    <ProjectReference Include="..\..\..\identity\authorization\Fdw.Services.Authorization.Clients\Fdw.Services.Authorization.Clients.csproj" />
+    <ProjectReference Include="..\..\..\configuration\Fdw.Services.Settings.Clients\Fdw.Services.Settings.Clients.csproj" />
+    <ProjectReference Include="..\..\..\identity\multitenancy\Fdw.Services.Multitenancy.Clients\Fdw.Services.Multitenancy.Clients.csproj" />
+    <ProjectReference Include="..\..\..\observability\quality\Fdw.Services.Quality.Clients\Fdw.Services.Quality.Clients.csproj" />
+    <ProjectReference Include="..\..\..\pipelines\Fdw.Services.Etl.Projects.Clients\Fdw.Services.Etl.Projects.Clients.csproj" />
+    <ProjectReference Include="..\..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

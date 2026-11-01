@@ -686,16 +686,16 @@ VALUES
 
 ### Connections (Primary Reference)
 See the MsSql Connection implementation:
-- [`Services.Connections.Abstractions`](../src/Fdw.Services.Connections.Abstractions/)
-- [`Services.Connections`](../src/Fdw.Services.Connections/)
-- [`Services.Connections.MsSql`](../src/Fdw.Services.Connections.MsSql/)
+- [`Services.Connections.Abstractions`](../src/connections/Fdw.Services.Connections.Abstractions/)
+- [`Services.Connections`](../src/connections/Fdw.Services.Connections/)
+- [`Services.Connections.MsSql`](../src/connections/Fdw.Services.Connections.MsSql/)
 
 ### DataStores (Three-Phase Pattern)
 See the DataStore implementation for another complete example:
-- [`Services.Data.Abstractions`](../src/Fdw.Services.Data.Abstractions/) - `IDataStoreServiceType`, `IDataStoreFactory`, `IDataStoreConfiguration`
-- [`Services.Data`](../src/Fdw.Services.Data/) - `DataStoreServiceTypes`, `DefaultDataStoreProvider`
-- [`Data.DataStores.SqlServer`](../src/Fdw.Data.DataStores.SqlServer/) - `MsSqlDataStoreServiceType`
-- [`Data.DataStores.Rest`](../src/Fdw.Data.DataStores.Rest/) - `RestDataStoreServiceType`
+- [`Services.Data.Abstractions`](../src/data/Fdw.Services.Data.Abstractions/) - `IDataStoreServiceType`, `IDataStoreFactory`, `IDataStoreConfiguration`
+- [`Services.Data`](../src/data/Fdw.Services.Data/) - `DataStoreServiceTypes`, `DefaultDataStoreProvider`
+- [`Data.DataStores.SqlServer`](../src/datasets/Fdw.Data.DataStores.SqlServer/) - `MsSqlDataStoreServiceType`
+- [`Data.DataStores.Rest`](../src/datasets/Fdw.Data.DataStores.Rest/) - `RestDataStoreServiceType`
 
 **Key Pattern Differences:**
 - DataStores have `TranslatorType` for command translation (MsSql → SQL, Rest → HTTP)

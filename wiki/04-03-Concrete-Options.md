@@ -77,7 +77,7 @@ public sealed class BankTransferPayment : PaymentMethodBase
 
 ## TypeOption Attribute
 
-From [`TypeOptionAttribute.cs:14-20`](../src/Fdw.Collections/Attributes/TypeOptionAttribute.cs#L14-L20):
+From [`TypeOptionAttribute.cs:14-20`](../src/foundation/collections/Fdw.Collections/Attributes/TypeOptionAttribute.cs#L14-L20):
 
 ```csharp
 public TypeOptionAttribute(Type collectionType, string name)

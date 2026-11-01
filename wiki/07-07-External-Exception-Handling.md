@@ -40,7 +40,7 @@ SqlException (error 229)
 
 ## SQL Server Reference Implementation
 
-File structure in `src/Fdw.Services.Connections.MsSql/ErrorHandlers/`:
+File structure in `src/connections/Fdw.Services.Connections.MsSql/ErrorHandlers/`:
 
 ```
 ErrorHandlers/
@@ -52,7 +52,7 @@ ErrorHandlers/
 
 ### Interface
 
-From [`ISqlErrorHandler.cs`](../src/Fdw.Services.Connections.MsSql/ErrorHandlers/ISqlErrorHandler.cs):
+From [`ISqlErrorHandler.cs`](../src/connections/Fdw.Services.Connections.MsSql/ErrorHandlers/ISqlErrorHandler.cs):
 
 ```csharp
 public interface ISqlErrorHandler : ITypeOption<int, SqlErrorHandlerBase>
@@ -70,7 +70,7 @@ Key design choices:
 
 ### Base Class (CRTP)
 
-From [`SqlErrorHandlerBase.cs`](../src/Fdw.Services.Connections.MsSql/ErrorHandlers/SqlErrorHandlerBase.cs):
+From [`SqlErrorHandlerBase.cs`](../src/connections/Fdw.Services.Connections.MsSql/ErrorHandlers/SqlErrorHandlerBase.cs):
 
 ```csharp
 [ExcludeFromCodeCoverage]
@@ -89,7 +89,7 @@ The parameterless constructor exists for the source-generated Empty/NotFound sen
 
 ### TypeCollection with Lookup
 
-From [`SqlErrorHandlers.cs`](../src/Fdw.Services.Connections.MsSql/ErrorHandlers/SqlErrorHandlers.cs):
+From [`SqlErrorHandlers.cs`](../src/connections/Fdw.Services.Connections.MsSql/ErrorHandlers/SqlErrorHandlers.cs):
 
 ```csharp
 [TypeCollection(typeof(SqlErrorHandlerBase), typeof(ISqlErrorHandler), typeof(SqlErrorHandlers))]
@@ -122,7 +122,7 @@ The lazy dictionary is built once on first use from the source-generated `All()`
 
 ### Example Handler: PermissionDenied
 
-From [`PermissionDeniedHandler.cs`](../src/Fdw.Services.Connections.MsSql/ErrorHandlers/PermissionDeniedHandler.cs):
+From [`PermissionDeniedHandler.cs`](../src/connections/Fdw.Services.Connections.MsSql/ErrorHandlers/PermissionDeniedHandler.cs):
 
 ```csharp
 [TypeOption(typeof(SqlErrorHandlers), "PermissionDenied")]
@@ -213,9 +213,9 @@ catch (SqlException ex)
 
 ### Endpoint Error Response
 
-The CRUD endpoint base classes in `src/Fdw.Web.RestEndpoints/Crud/` handle failed results by mapping them to HTTP responses via `ResultHttpStatusMapper`.
+The CRUD endpoint base classes in `src/endpoints/Fdw.Web.RestEndpoints/Crud/` handle failed results by mapping them to HTTP responses via `ResultHttpStatusMapper`.
 
-From [`CrudGetEndpoint.cs`](../src/Fdw.Web.RestEndpoints/Crud/CrudGetEndpoint.cs):
+From [`CrudGetEndpoint.cs`](../src/endpoints/Fdw.Web.RestEndpoints/Crud/CrudGetEndpoint.cs):
 
 ```csharp
 protected virtual async Task SendErrorResponse(IGenericResult result, CancellationToken ct)
@@ -246,7 +246,7 @@ This goes to structured logging (Seq/Application Insights) and is queryable by E
 
 ### Client-Side: Return Only Safe Messages
 
-The `ErrorResponse` DTO in `src/Fdw.Web.RestEndpoints/Models/ErrorResponse.cs` contains only information safe for the client:
+The `ErrorResponse` DTO in `src/endpoints/Fdw.Web.RestEndpoints/Models/ErrorResponse.cs` contains only information safe for the client:
 
 ```csharp
 public sealed class ErrorResponse
@@ -280,7 +280,7 @@ The `ReferenceId` bridges the gap -- support staff can correlate the client's re
 
 ## API Endpoint Usage
 
-The CRUD endpoint bases in `src/Fdw.Web.RestEndpoints/Crud/` call `SendErrorResponse()` when an operation returns a failure result. The flow in `HandleAsync`:
+The CRUD endpoint bases in `src/endpoints/Fdw.Web.RestEndpoints/Crud/` call `SendErrorResponse()` when an operation returns a failure result. The flow in `HandleAsync`:
 
 ```csharp
 var result = await FindByIdentifier(req, ct).ConfigureAwait(false);

@@ -64,7 +64,7 @@ public abstract class PaymentMethodBase : TypeOptionBase<int, PaymentMethodBase>
 
 ## Framework Base Class
 
-From [`TypeOptionBase.cs:12-88`](../src/Fdw.Collections/TypeOptionBase.cs):
+From [`TypeOptionBase.cs:12-88`](../src/foundation/collections/Fdw.Collections/TypeOptionBase.cs):
 
 ```csharp
 public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>

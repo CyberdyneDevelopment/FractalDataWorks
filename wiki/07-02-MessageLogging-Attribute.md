@@ -4,7 +4,7 @@ The `[MessageLogging]` attribute defines structured log messages that return `IG
 
 ## Attribute Parameters
 
-From [`MessageLoggingAttribute.cs:82-116`](../src/Fdw.MessageLogging.Abstractions/MessageLoggingAttribute.cs#L82-L116):
+From [`MessageLoggingAttribute.cs:82-116`](../src/foundation/messagelogging/Fdw.MessageLogging.Abstractions/MessageLoggingAttribute.cs#L82-L116):
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -42,7 +42,7 @@ public static partial IGenericMessage ApiError(ILogger logger);
 
 ### Basic Usage (Debug Level)
 
-From [`ConnectionProviderLogger.cs`](../src/Fdw.Services.Connections/Logging/ConnectionProviderLogger.cs):
+From [`ConnectionProviderLogger.cs`](../src/connections/Fdw.Services.Connections/Logging/ConnectionProviderLogger.cs):
 
 ```csharp
 [MessageLogging(
@@ -88,7 +88,7 @@ Note: The `Exception` parameter is placed immediately after `ILogger` for proper
 
 ### Error Level (Specific Failure Modes)
 
-From [`ConnectionProviderLogger.cs`](../src/Fdw.Services.Connections/Logging/ConnectionProviderLogger.cs):
+From [`ConnectionProviderLogger.cs`](../src/connections/Fdw.Services.Connections/Logging/ConnectionProviderLogger.cs):
 
 ```csharp
 [MessageLogging(

@@ -9,15 +9,15 @@
 ## File Location
 
 ```
-src/Fdw.Data.{TypeSystem}/
+src/data/Fdw.Data.{TypeSystem}/
 └── Importers/
     └── {Name}SchemaImporter.cs
 ```
 
 **Examples:**
-- `src/Fdw.Data.MsSql/Importers/MsSqlSchemaImporter.cs` (was SqlServerSchemaImporter in DataStores.SqlServer)
-- `src/Fdw.Data.JsonSchema/Importers/RestOpenApiSchemaImporter.cs` (move from DataStores.Rest)
-- `src/Fdw.Data.JsonSchema/Importers/ODataSchemaImporter.cs` (move from DataStores.Rest)
+- `src/connections/Fdw.Data.MsSql/Importers/MsSqlSchemaImporter.cs` (was SqlServerSchemaImporter in DataStores.SqlServer)
+- `src/schema/Fdw.Data.JsonSchema/Importers/RestOpenApiSchemaImporter.cs` (move from DataStores.Rest)
+- `src/schema/Fdw.Data.JsonSchema/Importers/ODataSchemaImporter.cs` (move from DataStores.Rest)
 
 **Why the move?** Importers need converters to map types. Converters live in type-system projects. Importers belong with their converters.
 
@@ -339,4 +339,4 @@ var clrType = sqlType switch {
 
 ---
 
-**See**: `src/Fdw.Data.MsSql/Importers/` for working example (was in DataStores.SqlServer, moved to Data.MsSql)
+**See**: `src/connections/Fdw.Data.MsSql/Importers/` for working example (was in DataStores.SqlServer, moved to Data.MsSql)

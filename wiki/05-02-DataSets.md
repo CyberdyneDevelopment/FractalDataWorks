@@ -16,7 +16,7 @@ Best for: Strongly-typed datasets with calculated fields.
 
 The `DataSetTypes` collection uses `[MutableTypeCollection]` to allow runtime registration.
 
-From [`DataSetTypes.cs:12-15`](../src/Fdw.Data.DataSets.Abstractions/DataSetTypes.cs#L12-L15):
+From [`DataSetTypes.cs:12-15`](../src/datasets/Fdw.Data.DataSets.Abstractions/DataSetTypes.cs#L12-L15):
 
 ```csharp
 [MutableTypeCollection(typeof(DataSetTypeBase), typeof(IDataSetType), typeof(DataSetTypes))]
@@ -27,7 +27,7 @@ public abstract partial class DataSetTypes : TypeCollectionBase<DataSetTypeBase,
 
 Dataset implementations extend `DataSetTypeBase` and use the `[TypeOption]` attribute:
 
-From [`DataSetTypeBase.cs:29-41`](../src/Fdw.Data.DataSets.Abstractions/DataSetTypeBase.cs#L29-L41) (constructor signature):
+From [`DataSetTypeBase.cs:29-41`](../src/datasets/Fdw.Data.DataSets.Abstractions/DataSetTypeBase.cs#L29-L41) (constructor signature):
 
 ```csharp
 protected DataSetTypeBase(
@@ -124,7 +124,7 @@ Best for: Dynamic/tenant-specific configuration.
 
 The concrete `DataSetConfiguration` class lives in the `Fdw.Data.DataSets` package (net10.0) and applies the `[ManagedConfiguration]` pattern. The aggregate is exposed via the concrete class — there is no `IDataSetConfiguration` interface in the abstractions package.
 
-From [`DataSetConfiguration.cs`](../src/Fdw.Data.DataSets/DataSetConfiguration.cs):
+From [`DataSetConfiguration.cs`](../src/datasets/Fdw.Data.DataSets/DataSetConfiguration.cs):
 
 ```csharp
 public sealed partial class DataSetConfiguration
@@ -146,7 +146,7 @@ public sealed partial class DataSetConfiguration
 
 #### IDataSetProvider
 
-From [`IDataSetProvider.cs`](../src/Fdw.Services.Data.Abstractions/IDataSetProvider.cs):
+From [`IDataSetProvider.cs`](../src/data/Fdw.Services.Data.Abstractions/IDataSetProvider.cs):
 
 ```csharp
 /// <summary>
@@ -201,7 +201,7 @@ Use the Management TUI (`fdw tui`) or POST to `/api/admin/datasets`.
 
 All configuration methods use identical query code. See [05-01-DataGateway-Pattern.md](05-01-DataGateway-Pattern.md) for detailed examples.
 
-From [`QueryCommand.cs:59-72`](../src/Fdw.Commands.Data/Commands/QueryCommand.cs#L59-L72):
+From [`QueryCommand.cs:59-72`](../src/commands/Fdw.Commands.Data/Commands/QueryCommand.cs#L59-L72):
 
 ```csharp
 public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCommand
@@ -233,7 +233,7 @@ var result = await _dataGateway.Execute<IEnumerable<Customer>>(query, ct);
 
 Calculated fields execute after the database query, in-memory.
 
-From [`CalculatedDataField.cs:10-60`](../src/Fdw.Data.DataSets.Abstractions/CalculatedDataField.cs#L10-L60):
+From [`CalculatedDataField.cs:10-60`](../src/datasets/Fdw.Data.DataSets.Abstractions/CalculatedDataField.cs#L10-L60):
 
 ```csharp
 public sealed class CalculatedDataField : IDataField

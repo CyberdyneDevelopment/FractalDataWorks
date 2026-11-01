@@ -171,7 +171,7 @@ Not all endpoints fit the CRUD pattern. Custom actions inherit directly from Fas
 
 ### Example: TestConnection
 
-From [`TestConnectionEndpoint.cs`](../src/Fdw.Services.Connections.Endpoints/TestConnectionEndpoint.cs):
+From [`TestConnectionEndpoint.cs`](../src/connections/Fdw.Services.Connections.Endpoints/TestConnectionEndpoint.cs):
 
 ```csharp
 public class TestConnectionEndpoint : Endpoint<TestConnectionRequest, TestConnectionResponse>
@@ -277,8 +277,8 @@ While developing alongside FractalDataWorks:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\..\src\Fdw.Services.Connections.Endpoints\..." />
-  <ProjectReference Include="..\..\src\Fdw.Services.Data.Endpoints\..." />
+  <ProjectReference Include="..\..\src\connections\Fdw.Services.Connections.Endpoints\..." />
+  <ProjectReference Include="..\..\src\data\Fdw.Services.Data.Endpoints\..." />
 </ItemGroup>
 ```
 

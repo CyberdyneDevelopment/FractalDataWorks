@@ -61,7 +61,7 @@ public interface IResultCode : ITypeOption<int, ResultCodeBase>
 }
 ```
 
-(See [`IResultCode.cs`](../src/Fdw.Results.Abstractions/IResultCode.cs) for the full interface including XML docs.)
+(See [`IResultCode.cs`](../src/foundation/results/Fdw.Results.Abstractions/IResultCode.cs) for the full interface including XML docs.)
 
 ### IResultSeverity
 
@@ -116,7 +116,7 @@ Services.{Domain}/
 
 ### Four Required Components
 
-From [`DataServiceResultCodes.cs`](../src/Fdw.Services.Data/Results/DataServiceResultCodes.cs):
+From [`DataServiceResultCodes.cs`](../src/data/Fdw.Services.Data/Results/DataServiceResultCodes.cs):
 
 ```csharp
 // 1. Interface (optional but recommended)

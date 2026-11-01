@@ -12,7 +12,7 @@ TypeCollections are enhanced enums with O(1) lookups and rich behavior. They rep
 
 ## Quick Example
 
-From [`FilterOperators.cs`](../src/Fdw.Data/Operators/FilterOperators.cs):
+From [`FilterOperators.cs`](../src/data/Fdw.Data/Operators/FilterOperators.cs):
 
 ```csharp
 // Access via static property (generated)
@@ -30,9 +30,9 @@ Console.WriteLine($"   All operators: {string.Join(", ", FilterOperators.All().S
 // Each operator knows how to generate SQL predicates, etc.
 ```
 
-For TypeCollections with terminal state handling, see [`ExecutionStatuses`](../src/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/):
+For TypeCollections with terminal state handling, see [`ExecutionStatuses`](../src/pipelines/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/):
 
-From [`IExecutionStatus.cs:12-27`](../src/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L27):
+From [`IExecutionStatus.cs:12-27`](../src/pipelines/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L27):
 
 ```csharp
 public interface IExecutionStatus : ITypeOption<int, ExecutionStatusBase>

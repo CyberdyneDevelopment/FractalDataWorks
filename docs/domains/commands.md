@@ -83,7 +83,7 @@ var result = await dataGateway.Execute(command, cancellationToken);
 
 `Query.From<T>(dataStoreName, pathName, containerName)` returns a
 `QueryCommandBuilder<T>` (see
-`public/src/Fdw.Commands.Data.Fluency/Query.cs`).
+`public/src/commands/Fdw.Commands.Data.Fluency/Query.cs`).
 
 ### DataGateway-Only Data Access
 

@@ -7,15 +7,15 @@
 ## File Location
 
 ```
-src/Fdw.Data.{TypeSystem}/
+src/data/Fdw.Data.{TypeSystem}/
 └── Converters/
     ├── {TypeSystem}Converters.cs          ← TypeCollection (create once)
     └── {TypeSystem}{Type}Converter.cs     ← Individual converters (one per type)
 ```
 
 **Examples:**
-- `src/Fdw.Data.MsSql/Converters/MsSqlInt32Converter.cs`
-- `src/Fdw.Data.JsonSchema/Converters/JsonSchemaIntegerInt64Converter.cs`
+- `src/connections/Fdw.Data.MsSql/Converters/MsSqlInt32Converter.cs`
+- `src/schema/Fdw.Data.JsonSchema/Converters/JsonSchemaIntegerInt64Converter.cs`
 
 ---
 
@@ -158,7 +158,7 @@ public override object? ToDb(object? clrValue)
 Before creating converters, create the TypeCollection:
 
 ```csharp
-// src/Fdw.Data.{TypeSystem}/Converters/{TypeSystem}Converters.cs
+// src/data/Fdw.Data.{TypeSystem}/Converters/{TypeSystem}Converters.cs
 
 using System.Linq;
 using Fdw.Collections;
@@ -283,4 +283,4 @@ Note the composite keys for types with formats.
 
 ---
 
-**See**: `src/Fdw.Data.MsSql/Converters/` for complete working examples
+**See**: `src/connections/Fdw.Data.MsSql/Converters/` for complete working examples

@@ -378,3 +378,49 @@ agent-tools/
 
 # Auto-generated Tailwind safelist (emitted by generate-tailwind-safelist.{ps1,sh} at build/pack)
 src/FractalDataWorks.UI/wwwroot/tailwind-safelist.html
+
+# BEGIN domain guides (written by tools/reorg/gen_domain_guides.py)
+# The root .gitignore ignores CLAUDE.md; each domain folder's guide is tracked.
+!/src/ai/aegis/CLAUDE.md
+!/src/ai/agents/CLAUDE.md
+!/src/calculations/CLAUDE.md
+!/src/catalog/CLAUDE.md
+!/src/commands/CLAUDE.md
+!/src/configuration/CLAUDE.md
+!/src/connections/CLAUDE.md
+!/src/data/CLAUDE.md
+!/src/datasets/CLAUDE.md
+!/src/documents/CLAUDE.md
+!/src/endpoints/CLAUDE.md
+!/src/foundation/abstractions/CLAUDE.md
+!/src/foundation/analyzers/CLAUDE.md
+!/src/foundation/collections/CLAUDE.md
+!/src/foundation/messagelogging/CLAUDE.md
+!/src/foundation/registration/CLAUDE.md
+!/src/foundation/results/CLAUDE.md
+!/src/foundation/security/CLAUDE.md
+!/src/foundation/services/CLAUDE.md
+!/src/foundation/validation/CLAUDE.md
+!/src/hosts/CLAUDE.md
+!/src/identity/authentication/CLAUDE.md
+!/src/identity/authorization/CLAUDE.md
+!/src/identity/multitenancy/CLAUDE.md
+!/src/identity/users/CLAUDE.md
+!/src/notifications/CLAUDE.md
+!/src/observability/quality/CLAUDE.md
+!/src/observability/resiliency/CLAUDE.md
+!/src/observability/telemetry/CLAUDE.md
+!/src/pipelines/CLAUDE.md
+!/src/rowsources/CLAUDE.md
+!/src/scheduling/CLAUDE.md
+!/src/schema/CLAUDE.md
+!/src/secrets/credentials/CLAUDE.md
+!/src/secrets/secretmanagers/CLAUDE.md
+!/src/tooling/devsession/CLAUDE.md
+!/src/tooling/mcp/CLAUDE.md
+!/src/tooling/roslyn/CLAUDE.md
+!/src/tooling/shells/CLAUDE.md
+!/src/transformations/CLAUDE.md
+!/src/ui/CLAUDE.md
+!/src/workspaces/CLAUDE.md
+# END domain guides

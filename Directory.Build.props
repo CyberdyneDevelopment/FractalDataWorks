@@ -209,7 +209,7 @@
        (1.0.0.0) because assembly identity is always 4-part and cannot carry a prerelease tag;
        NuGet normalizes the trailing zero revision away, so the PACKAGE is 1.0.0-rc.1. -->
   <PropertyGroup>
-    <VersionPrefix>1.4.4</VersionPrefix>
+    <VersionPrefix>1.4.5</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
@@ -247,22 +247,22 @@
 
   <!-- Fdw Code Style Analyzers - Applied to all projects except samples and the analyzers themselves -->
   <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('/samples/')) AND !$(MSBuildProjectDirectory.Contains('\samples\')) AND '$(MSBuildProjectName)' != 'Fdw.Analyzers' AND '$(MSBuildProjectName)' != 'Fdw.CodeFixes' AND '$(MSBuildProjectName)' != 'Fdw.Conventions.Analyzers' AND '$(MSBuildProjectName)' != 'Fdw.Conventions.CodeFixes' AND '$(MSBuildProjectName)' != 'Fdw.ServiceTypes.Analyzers' AND '$(MSBuildProjectName)' != 'Fdw.Collections.Analyzers'">
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Analyzers\Fdw.Analyzers.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\foundation\analyzers\Fdw.Analyzers\Fdw.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.CodeFixes\Fdw.CodeFixes.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\foundation\analyzers\Fdw.CodeFixes\Fdw.CodeFixes.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Conventions.Analyzers\Fdw.Conventions.Analyzers.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\foundation\analyzers\Fdw.Conventions.Analyzers\Fdw.Conventions.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Conventions.CodeFixes\Fdw.Conventions.CodeFixes.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\foundation\analyzers\Fdw.Conventions.CodeFixes\Fdw.Conventions.CodeFixes.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.ServiceTypes.Analyzers\Fdw.ServiceTypes.Analyzers.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\foundation\analyzers\Fdw.ServiceTypes.Analyzers\Fdw.ServiceTypes.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Collections.Analyzers\Fdw.Collections.Analyzers.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\foundation\collections\Fdw.Collections.Analyzers\Fdw.Collections.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
   </ItemGroup>

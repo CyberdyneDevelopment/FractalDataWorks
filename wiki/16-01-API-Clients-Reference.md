@@ -27,7 +27,7 @@ Every typed API client:
 
 Located in `Fdw.Web.Clients/ApiClientBase.cs` (namespace `Fdw.Web.Clients.Abstractions`), the base class provides protected HTTP methods that wrap `HttpClient` calls with three catch blocks (`HttpRequestException`, `JsonException`, `Exception`) and emit structured logging via `ClientLog`. Every method returns `IGenericResult` or `IGenericResult<T>` — no exceptions cross the client boundary for business-logic failures. Its `RequestUri(path)` helper resolves the ABSOLUTE URI (base address + path) for every log call — a relative path alone hides which host/port the client actually hit, which is exactly the detail needed when a misconfigured base address is the fault.
 
-See `public/src/Fdw.Web.Clients/ApiClientBase.cs` for the authoritative method signatures.
+See `public/src/endpoints/Fdw.Web.Clients/ApiClientBase.cs` for the authoritative method signatures.
 
 ## ClientLog (EventIds 11000-11002, 71000-71002, 91000-91003)
 
@@ -67,7 +67,7 @@ Every client follows the same shape:
 - `XxxClientType : ApiClientTypeBase<XxxApiClient>` — `[Implementation(typeof(ApiClientTypes), "...")]`
 - DTOs / requests / responses live in the matching `Abstractions` package
 
-For the canonical wiring of clients into an app, see `src/Fdw.TUI.Management/Program.cs` in this repo.
+For the canonical wiring of clients into an app, see `src/tooling/shells/Fdw.TUI.Management/Program.cs` in this repo.
 
 ## See Also
 
