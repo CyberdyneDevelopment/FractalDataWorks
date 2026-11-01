@@ -13,7 +13,7 @@ A domain needs polymorphic configuration if and only if **both** are true:
 | Situation | Pattern |
 |---|---|
 | Single TypeOption — one variant only | Single flat table. No typed body. |
-| Multi-variant, same field shape, different values | [Pattern A — typed columns](../src/Fdw.Configuration.SourceGenerators/README.md). One table. |
+| Multi-variant, same field shape, different values | [Pattern A — typed columns](../src/configuration/Fdw.Configuration.SourceGenerators/README.md). One table. |
 | Multi-variant, **different field shapes** | **This pattern.** Parent + typed body per variant. |
 | Open-set extension via name/value pairs | Pattern C — Properties (see internal `configuration-properties-pattern` skill in `claude-tools`) |
 

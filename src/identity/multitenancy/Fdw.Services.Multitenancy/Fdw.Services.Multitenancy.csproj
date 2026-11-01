@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <IsPublicProject>true</IsPublicProject>
+
+    <Title>Fdw Multi-Tenancy</Title>
+    <Description>Multi-tenancy service domain: ServiceTypeCollection selecting SingleTenant/Sql tenant resolution per host</Description>
+    <PackageTags>multitenancy;tenant;service-domain</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\foundation\abstractions\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\..\..\configuration\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\..\..\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\..\authentication\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
+    <!-- Fdw.Services.Data supplies ConfigurationSchema — MultitenancyTypes.Configure reads the host's
+         declared Multitenancy choice off it. No cycle: Fdw.Services.Data does not reference Multitenancy. -->
+    <ProjectReference Include="..\..\..\data\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Source generators -->
+    <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\configuration\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\data\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\foundation\services\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\..\authorization\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+</Project>

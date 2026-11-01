@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Source Generators -->
+    <ProjectReference Include="..\..\data\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\configuration\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Fdw Framework -->
+    <ProjectReference Include="..\..\data\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\..\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\foundation\services\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines.Abstractions\Fdw.Services.Pipelines.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\..\hosts\Fdw.SignalR\Fdw.SignalR.csproj" />
+    <ProjectReference Include="..\..\data\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <!-- Why: DataSetSchemaService delegates to DataSetConfigurationProvider which owns the
+         DataSet field gateway. Services.Pipelines does not reference Services.Data elsewhere;
+         this single reference allows provider injection without a direct gateway call. -->
+    <ProjectReference Include="..\..\data\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\commands\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
+    <ProjectReference Include="..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
+    <ProjectReference Include="..\..\workspaces\Fdw.Services.Workspaces.Abstractions\Fdw.Services.Workspaces.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- FrameworkReference provides Microsoft.Extensions.* packages -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

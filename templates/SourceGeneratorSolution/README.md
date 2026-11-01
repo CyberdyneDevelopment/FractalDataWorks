@@ -157,8 +157,8 @@ When `MyFeature.Abstractions` is published as a NuGet package:
 
 Update SourceGenerators references:
 ```xml
-<ProjectReference Include="..\..\src\Fdw.SourceGenerators\..." />
-<ProjectReference Include="..\..\src\Fdw.CodeBuilder.CSharp\..." />
+<ProjectReference Include="..\..\src\foundation\analyzers\Fdw.SourceGenerators\..." />
+<ProjectReference Include="..\..\src\tooling\roslyn\Fdw.CodeBuilder.CSharp\..." />
 ```
 
 ### Implement Generator Logic

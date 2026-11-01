@@ -1,0 +1,446 @@
+project	kind	domain	group	old_dir	new_dir
+Fdw.Aegis	src	aegis	ai	public/src/Fdw.Aegis	public/src/ai/aegis/Fdw.Aegis
+Fdw.Aegis.Abstractions	src	aegis	ai	public/src/Fdw.Aegis.Abstractions	public/src/ai/aegis/Fdw.Aegis.Abstractions
+Fdw.Aegis.Configuration	src	aegis	ai	public/src/Fdw.Aegis.Configuration	public/src/ai/aegis/Fdw.Aegis.Configuration
+Fdw.Aegis.McpServer	src	aegis	ai	public/src/Fdw.Aegis.McpServer	public/src/ai/aegis/Fdw.Aegis.McpServer
+Fdw.Agents.Clients	src	agents	ai	public/src/Fdw.Agents.Clients	public/src/ai/agents/Fdw.Agents.Clients
+Fdw.Aui	src	agents	ai	public/src/Fdw.Aui	public/src/ai/agents/Fdw.Aui
+Fdw.Aui.Abstractions	src	agents	ai	public/src/Fdw.Aui.Abstractions	public/src/ai/agents/Fdw.Aui.Abstractions
+Fdw.Intelligence	src	agents	ai	public/src/Fdw.Intelligence	public/src/ai/agents/Fdw.Intelligence
+Fdw.Intelligence.Abstractions	src	agents	ai	public/src/Fdw.Intelligence.Abstractions	public/src/ai/agents/Fdw.Intelligence.Abstractions
+Fdw.Services.Agents	src	agents	ai	public/src/Fdw.Services.Agents	public/src/ai/agents/Fdw.Services.Agents
+Fdw.Services.Agents.Abstractions	src	agents	ai	public/src/Fdw.Services.Agents.Abstractions	public/src/ai/agents/Fdw.Services.Agents.Abstractions
+Fdw.Calculations	src	calculations		public/src/Fdw.Calculations	public/src/calculations/Fdw.Calculations
+Fdw.Calculations.Abstractions	src	calculations		public/src/Fdw.Calculations.Abstractions	public/src/calculations/Fdw.Calculations.Abstractions
+Fdw.Calculations.Aggregations	src	calculations		public/src/Fdw.Calculations.Aggregations	public/src/calculations/Fdw.Calculations.Aggregations
+Fdw.Calculations.Endpoints	src	calculations		public/src/Fdw.Calculations.Endpoints	public/src/calculations/Fdw.Calculations.Endpoints
+Fdw.Calculations.SignalR	src	calculations		public/src/Fdw.Calculations.SignalR	public/src/calculations/Fdw.Calculations.SignalR
+Fdw.Services.Calculations	src	calculations		public/src/Fdw.Services.Calculations	public/src/calculations/Fdw.Services.Calculations
+Fdw.Services.Calculations.Abstractions	src	calculations		public/src/Fdw.Services.Calculations.Abstractions	public/src/calculations/Fdw.Services.Calculations.Abstractions
+Fdw.Web.Calculations.Clients	src	calculations		public/src/Fdw.Web.Calculations.Clients	public/src/calculations/Fdw.Web.Calculations.Clients
+Fdw.Web.Calculations.Clients.Abstractions	src	calculations		public/src/Fdw.Web.Calculations.Clients.Abstractions	public/src/calculations/Fdw.Web.Calculations.Clients.Abstractions
+Fdw.Data.Lineage	src	catalog		public/src/Fdw.Data.Lineage	public/src/catalog/Fdw.Data.Lineage
+Fdw.Services.Catalog.Clients	src	catalog		public/src/Fdw.Services.Catalog.Clients	public/src/catalog/Fdw.Services.Catalog.Clients
+Fdw.Services.Catalog.Clients.Models	src	catalog		public/src/Fdw.Services.Catalog.Clients.Models	public/src/catalog/Fdw.Services.Catalog.Clients.Models
+Fdw.Services.Catalog.Endpoints	src	catalog		public/src/Fdw.Services.Catalog.Endpoints	public/src/catalog/Fdw.Services.Catalog.Endpoints
+Fdw.Commands.Abstractions	src	commands		public/src/Fdw.Commands.Abstractions	public/src/commands/Fdw.Commands.Abstractions
+Fdw.Commands.Data	src	commands		public/src/Fdw.Commands.Data	public/src/commands/Fdw.Commands.Data
+Fdw.Commands.Data.Abstractions	src	commands		public/src/Fdw.Commands.Data.Abstractions	public/src/commands/Fdw.Commands.Data.Abstractions
+Fdw.Commands.Data.Fluency	src	commands		public/src/Fdw.Commands.Data.Fluency	public/src/commands/Fdw.Commands.Data.Fluency
+Fdw.Commands.Development.Abstractions	src	commands		public/src/Fdw.Commands.Development.Abstractions	public/src/commands/Fdw.Commands.Development.Abstractions
+Fdw.Configuration	src	configuration		public/src/Fdw.Configuration	public/src/configuration/Fdw.Configuration
+Fdw.Configuration.Abstractions	src	configuration		public/src/Fdw.Configuration.Abstractions	public/src/configuration/Fdw.Configuration.Abstractions
+Fdw.Configuration.Endpoints	src	configuration		public/src/Fdw.Configuration.Endpoints	public/src/configuration/Fdw.Configuration.Endpoints
+Fdw.Configuration.SourceGenerators	src	configuration		public/src/Fdw.Configuration.SourceGenerators	public/src/configuration/Fdw.Configuration.SourceGenerators
+Fdw.Configuration.UI.SourceGenerators	src	configuration		public/src/Fdw.Configuration.UI.SourceGenerators	public/src/configuration/Fdw.Configuration.UI.SourceGenerators
+Fdw.Services.Settings	src	configuration		public/src/Fdw.Services.Settings	public/src/configuration/Fdw.Services.Settings
+Fdw.Services.Settings.Clients	src	configuration		public/src/Fdw.Services.Settings.Clients	public/src/configuration/Fdw.Services.Settings.Clients
+Fdw.Services.Settings.Endpoints	src	configuration		public/src/Fdw.Services.Settings.Endpoints	public/src/configuration/Fdw.Services.Settings.Endpoints
+Fdw.Data.Http	src	connections		public/src/Fdw.Data.Http	public/src/connections/Fdw.Data.Http
+Fdw.Data.MsSql	src	connections		public/src/Fdw.Data.MsSql	public/src/connections/Fdw.Data.MsSql
+Fdw.Data.OData	src	connections		public/src/Fdw.Data.OData	public/src/connections/Fdw.Data.OData
+Fdw.Data.OpenApi	src	connections		public/src/Fdw.Data.OpenApi	public/src/connections/Fdw.Data.OpenApi
+Fdw.Data.PostgreSql	src	connections		public/src/Fdw.Data.PostgreSql	public/src/connections/Fdw.Data.PostgreSql
+Fdw.Data.Sqlite	src	connections		public/src/Fdw.Data.Sqlite	public/src/connections/Fdw.Data.Sqlite
+Fdw.Schema.Ddl.MsSql	src	connections		public/src/Fdw.Schema.Ddl.MsSql	public/src/connections/Fdw.Schema.Ddl.MsSql
+Fdw.Services.Connections	src	connections		public/src/Fdw.Services.Connections	public/src/connections/Fdw.Services.Connections
+Fdw.Services.Connections.Abstractions	src	connections		public/src/Fdw.Services.Connections.Abstractions	public/src/connections/Fdw.Services.Connections.Abstractions
+Fdw.Services.Connections.Clients	src	connections		public/src/Fdw.Services.Connections.Clients	public/src/connections/Fdw.Services.Connections.Clients
+Fdw.Services.Connections.Endpoints	src	connections		public/src/Fdw.Services.Connections.Endpoints	public/src/connections/Fdw.Services.Connections.Endpoints
+Fdw.Services.Connections.Http	src	connections		public/src/Fdw.Services.Connections.Http	public/src/connections/Fdw.Services.Connections.Http
+Fdw.Services.Connections.Http.Abstractions	src	connections		public/src/Fdw.Services.Connections.Http.Abstractions	public/src/connections/Fdw.Services.Connections.Http.Abstractions
+Fdw.Services.Connections.MsSql	src	connections		public/src/Fdw.Services.Connections.MsSql	public/src/connections/Fdw.Services.Connections.MsSql
+Fdw.Services.Connections.PostgreSql	src	connections		public/src/Fdw.Services.Connections.PostgreSql	public/src/connections/Fdw.Services.Connections.PostgreSql
+Fdw.Services.Connections.RoslynWorkspace	src	connections		public/src/Fdw.Services.Connections.RoslynWorkspace	public/src/connections/Fdw.Services.Connections.RoslynWorkspace
+Fdw.Services.Connections.RoslynWorkspace.Abstractions	src	connections		public/src/Fdw.Services.Connections.RoslynWorkspace.Abstractions	public/src/connections/Fdw.Services.Connections.RoslynWorkspace.Abstractions
+Fdw.Services.Connections.RoslynWorkspace.Registration	src	connections		public/src/Fdw.Services.Connections.RoslynWorkspace.Registration	public/src/connections/Fdw.Services.Connections.RoslynWorkspace.Registration
+Fdw.Services.Connections.Sql	src	connections		public/src/Fdw.Services.Connections.Sql	public/src/connections/Fdw.Services.Connections.Sql
+Fdw.Services.Connections.Sqlite	src	connections		public/src/Fdw.Services.Connections.Sqlite	public/src/connections/Fdw.Services.Connections.Sqlite
+Fdw.Sql.Commands	src	connections		public/src/Fdw.Sql.Commands	public/src/connections/Fdw.Sql.Commands
+Fdw.Sql.Commands.Abstractions	src	connections		public/src/Fdw.Sql.Commands.Abstractions	public/src/connections/Fdw.Sql.Commands.Abstractions
+Fdw.Types.MsSql	src	connections		public/src/Fdw.Types.MsSql	public/src/connections/Fdw.Types.MsSql
+Fdw.Data	src	data		public/src/Fdw.Data	public/src/data/Fdw.Data
+Fdw.Data.Abstractions	src	data		public/src/Fdw.Data.Abstractions	public/src/data/Fdw.Data.Abstractions
+Fdw.Data.Builders	src	data		public/src/Fdw.Data.Builders	public/src/data/Fdw.Data.Builders
+Fdw.Data.Configuration	src	data		public/src/Fdw.Data.Configuration	public/src/data/Fdw.Data.Configuration
+Fdw.Data.DataContainers.Abstractions	src	data		public/src/Fdw.Data.DataContainers.Abstractions	public/src/data/Fdw.Data.DataContainers.Abstractions
+Fdw.Data.DataNodes	src	data		public/src/Fdw.Data.DataNodes	public/src/data/Fdw.Data.DataNodes
+Fdw.Data.DataPaths	src	data		public/src/Fdw.Data.DataPaths	public/src/data/Fdw.Data.DataPaths
+Fdw.Data.Files	src	data		public/src/Fdw.Data.Files	public/src/data/Fdw.Data.Files
+Fdw.Data.Importers.Abstractions	src	data		public/src/Fdw.Data.Importers.Abstractions	public/src/data/Fdw.Data.Importers.Abstractions
+Fdw.Data.Serialization	src	data		public/src/Fdw.Data.Serialization	public/src/data/Fdw.Data.Serialization
+Fdw.Data.SourceGenerators	src	data		public/src/Fdw.Data.SourceGenerators	public/src/data/Fdw.Data.SourceGenerators
+Fdw.Services.Data	src	data		public/src/Fdw.Services.Data	public/src/data/Fdw.Services.Data
+Fdw.Services.Data.Abstractions	src	data		public/src/Fdw.Services.Data.Abstractions	public/src/data/Fdw.Services.Data.Abstractions
+Fdw.Services.Data.Clients	src	data		public/src/Fdw.Services.Data.Clients	public/src/data/Fdw.Services.Data.Clients
+Fdw.Services.Data.Clients.Models	src	data		public/src/Fdw.Services.Data.Clients.Models	public/src/data/Fdw.Services.Data.Clients.Models
+Fdw.Services.Data.Endpoints	src	data		public/src/Fdw.Services.Data.Endpoints	public/src/data/Fdw.Services.Data.Endpoints
+Fdw.Services.Data.Etl	src	data		public/src/Fdw.Services.Data.Etl	public/src/data/Fdw.Services.Data.Etl
+Fdw.Services.Data.Etl.Registration	src	data		public/src/Fdw.Services.Data.Etl.Registration	public/src/data/Fdw.Services.Data.Etl.Registration
+Fdw.Services.Data.SignalR	src	data		public/src/Fdw.Services.Data.SignalR	public/src/data/Fdw.Services.Data.SignalR
+Fdw.Services.Execution.Abstractions	src	data		public/src/Fdw.Services.Execution.Abstractions	public/src/data/Fdw.Services.Execution.Abstractions
+Fdw.Data.DataSets	src	datasets		public/src/Fdw.Data.DataSets	public/src/datasets/Fdw.Data.DataSets
+Fdw.Data.DataSets.Abstractions	src	datasets		public/src/Fdw.Data.DataSets.Abstractions	public/src/datasets/Fdw.Data.DataSets.Abstractions
+Fdw.Data.DataStores.Rest	src	datasets		public/src/Fdw.Data.DataStores.Rest	public/src/datasets/Fdw.Data.DataStores.Rest
+Fdw.Data.DataStores.SqlServer	src	datasets		public/src/Fdw.Data.DataStores.SqlServer	public/src/datasets/Fdw.Data.DataStores.SqlServer
+Fdw.Documents.Abstractions	src	documents		public/src/Fdw.Documents.Abstractions	public/src/documents/Fdw.Documents.Abstractions
+Fdw.Web.Api	src	endpoints		public/src/Fdw.Web.Api	public/src/endpoints/Fdw.Web.Api
+Fdw.Web.Clients	src	endpoints		public/src/Fdw.Web.Clients	public/src/endpoints/Fdw.Web.Clients
+Fdw.Web.Clients.Abstractions	src	endpoints		public/src/Fdw.Web.Clients.Abstractions	public/src/endpoints/Fdw.Web.Clients.Abstractions
+Fdw.Web.Endpoints	src	endpoints		public/src/Fdw.Web.Endpoints	public/src/endpoints/Fdw.Web.Endpoints
+Fdw.Web.Http.Abstractions	src	endpoints		public/src/Fdw.Web.Http.Abstractions	public/src/endpoints/Fdw.Web.Http.Abstractions
+Fdw.Web.RestEndpoints	src	endpoints		public/src/Fdw.Web.RestEndpoints	public/src/endpoints/Fdw.Web.RestEndpoints
+Fdw.Abstractions	src	abstractions	foundation	public/src/Fdw.Abstractions	public/src/foundation/abstractions/Fdw.Abstractions
+Fdw.Types.Abstractions	src	abstractions	foundation	public/src/Fdw.Types.Abstractions	public/src/foundation/abstractions/Fdw.Types.Abstractions
+Fdw.Analyzers	src	analyzers	foundation	public/src/Fdw.Analyzers	public/src/foundation/analyzers/Fdw.Analyzers
+Fdw.CodeFixes	src	analyzers	foundation	public/src/Fdw.CodeFixes	public/src/foundation/analyzers/Fdw.CodeFixes
+Fdw.Conventions.Analyzers	src	analyzers	foundation	public/src/Fdw.Conventions.Analyzers	public/src/foundation/analyzers/Fdw.Conventions.Analyzers
+Fdw.Conventions.CodeFixes	src	analyzers	foundation	public/src/Fdw.Conventions.CodeFixes	public/src/foundation/analyzers/Fdw.Conventions.CodeFixes
+Fdw.Conventions.FileSplitter	src	analyzers	foundation	public/src/Fdw.Conventions.FileSplitter	public/src/foundation/analyzers/Fdw.Conventions.FileSplitter
+Fdw.ServiceTypes.Analyzers	src	analyzers	foundation	public/src/Fdw.ServiceTypes.Analyzers	public/src/foundation/analyzers/Fdw.ServiceTypes.Analyzers
+Fdw.ServiceTypes.CodeFixes	src	analyzers	foundation	public/src/Fdw.ServiceTypes.CodeFixes	public/src/foundation/analyzers/Fdw.ServiceTypes.CodeFixes
+Fdw.SourceGenerators	src	analyzers	foundation	public/src/Fdw.SourceGenerators	public/src/foundation/analyzers/Fdw.SourceGenerators
+Fdw.Collections	src	collections	foundation	public/src/Fdw.Collections	public/src/foundation/collections/Fdw.Collections
+Fdw.Collections.Analyzers	src	collections	foundation	public/src/Fdw.Collections.Analyzers	public/src/foundation/collections/Fdw.Collections.Analyzers
+Fdw.Collections.CodeFixes	src	collections	foundation	public/src/Fdw.Collections.CodeFixes	public/src/foundation/collections/Fdw.Collections.CodeFixes
+Fdw.Collections.SourceGenerators	src	collections	foundation	public/src/Fdw.Collections.SourceGenerators	public/src/foundation/collections/Fdw.Collections.SourceGenerators
+Fdw.StateCollections	src	collections	foundation	public/src/Fdw.StateCollections	public/src/foundation/collections/Fdw.StateCollections
+Fdw.StateCollections.Abstractions	src	collections	foundation	public/src/Fdw.StateCollections.Abstractions	public/src/foundation/collections/Fdw.StateCollections.Abstractions
+Fdw.MessageLogging.Abstractions	src	messagelogging	foundation	public/src/Fdw.MessageLogging.Abstractions	public/src/foundation/messagelogging/Fdw.MessageLogging.Abstractions
+Fdw.MessageLogging.SourceGenerators	src	messagelogging	foundation	public/src/Fdw.MessageLogging.SourceGenerators	public/src/foundation/messagelogging/Fdw.MessageLogging.SourceGenerators
+Fdw.Messages	src	messagelogging	foundation	public/src/Fdw.Messages	public/src/foundation/messagelogging/Fdw.Messages
+Fdw.Registration.SourceGenerators	src	registration	foundation	public/src/Fdw.Registration.SourceGenerators	public/src/foundation/registration/Fdw.Registration.SourceGenerators
+Fdw.Services.Registration	src	registration	foundation	public/src/Fdw.Services.Registration	public/src/foundation/registration/Fdw.Services.Registration
+Fdw.Services.Registration.SourceGenerators	src	registration	foundation	public/src/Fdw.Services.Registration.SourceGenerators	public/src/foundation/registration/Fdw.Services.Registration.SourceGenerators
+Fdw.Results	src	results	foundation	public/src/Fdw.Results	public/src/foundation/results/Fdw.Results
+Fdw.Results.Abstractions	src	results	foundation	public/src/Fdw.Results.Abstractions	public/src/foundation/results/Fdw.Results.Abstractions
+Fdw.Claims.Abstractions	src	security	foundation	public/src/Fdw.Claims.Abstractions	public/src/foundation/security/Fdw.Claims.Abstractions
+Fdw.Security.Encryption	src	security	foundation	public/src/Fdw.Security.Encryption	public/src/foundation/security/Fdw.Security.Encryption
+Fdw.Security.Hashing	src	security	foundation	public/src/Fdw.Security.Hashing	public/src/foundation/security/Fdw.Security.Hashing
+Fdw.Processors.Abstractions	src	services	foundation	public/src/Fdw.Processors.Abstractions	public/src/foundation/services/Fdw.Processors.Abstractions
+Fdw.Services	src	services	foundation	public/src/Fdw.Services	public/src/foundation/services/Fdw.Services
+Fdw.Services.Abstractions	src	services	foundation	public/src/Fdw.Services.Abstractions	public/src/foundation/services/Fdw.Services.Abstractions
+Fdw.Validation	src	validation	foundation	public/src/Fdw.Validation	public/src/foundation/validation/Fdw.Validation
+Fdw.Validation.Abstractions	src	validation	foundation	public/src/Fdw.Validation.Abstractions	public/src/foundation/validation/Fdw.Validation.Abstractions
+Fdw.Validation.FastEndpoints	src	validation	foundation	public/src/Fdw.Validation.FastEndpoints	public/src/foundation/validation/Fdw.Validation.FastEndpoints
+Fdw.Hosting.Abstractions	src	hosts		public/src/Fdw.Hosting.Abstractions	public/src/hosts/Fdw.Hosting.Abstractions
+Fdw.Hosting.Cli	src	hosts		public/src/Fdw.Hosting.Cli	public/src/hosts/Fdw.Hosting.Cli
+Fdw.Services.Hosts	src	hosts		public/src/Fdw.Services.Hosts	public/src/hosts/Fdw.Services.Hosts
+Fdw.Services.Hosts.Abstractions	src	hosts		public/src/Fdw.Services.Hosts.Abstractions	public/src/hosts/Fdw.Services.Hosts.Abstractions
+Fdw.SignalR	src	hosts		public/src/Fdw.SignalR	public/src/hosts/Fdw.SignalR
+Fdw.Services.Authentication	src	authentication	identity	public/src/Fdw.Services.Authentication	public/src/identity/authentication/Fdw.Services.Authentication
+Fdw.Services.Authentication.Abstractions	src	authentication	identity	public/src/Fdw.Services.Authentication.Abstractions	public/src/identity/authentication/Fdw.Services.Authentication.Abstractions
+Fdw.Services.Authentication.Endpoints	src	authentication	identity	public/src/Fdw.Services.Authentication.Endpoints	public/src/identity/authentication/Fdw.Services.Authentication.Endpoints
+Fdw.Services.ExternalIdentityProviders	src	authentication	identity	public/src/Fdw.Services.ExternalIdentityProviders	public/src/identity/authentication/Fdw.Services.ExternalIdentityProviders
+Fdw.Services.ExternalIdentityProviders.Abstractions	src	authentication	identity	public/src/Fdw.Services.ExternalIdentityProviders.Abstractions	public/src/identity/authentication/Fdw.Services.ExternalIdentityProviders.Abstractions
+Fdw.Services.Identity	src	authentication	identity	public/src/Fdw.Services.Identity	public/src/identity/authentication/Fdw.Services.Identity
+Fdw.Services.Identity.Abstractions	src	authentication	identity	public/src/Fdw.Services.Identity.Abstractions	public/src/identity/authentication/Fdw.Services.Identity.Abstractions
+Fdw.Services.Identity.ClientCredentials	src	authentication	identity	public/src/Fdw.Services.Identity.ClientCredentials	public/src/identity/authentication/Fdw.Services.Identity.ClientCredentials
+Fdw.Services.Identity.Endpoints	src	authentication	identity	public/src/Fdw.Services.Identity.Endpoints	public/src/identity/authentication/Fdw.Services.Identity.Endpoints
+Fdw.Services.Identity.JwtAssertion	src	authentication	identity	public/src/Fdw.Services.Identity.JwtAssertion	public/src/identity/authentication/Fdw.Services.Identity.JwtAssertion
+Fdw.Services.SessionState	src	authentication	identity	public/src/Fdw.Services.SessionState	public/src/identity/authentication/Fdw.Services.SessionState
+Fdw.Services.SessionState.Abstractions	src	authentication	identity	public/src/Fdw.Services.SessionState.Abstractions	public/src/identity/authentication/Fdw.Services.SessionState.Abstractions
+Fdw.Services.SessionState.Clients	src	authentication	identity	public/src/Fdw.Services.SessionState.Clients	public/src/identity/authentication/Fdw.Services.SessionState.Clients
+Fdw.Services.SessionState.Clients.Registration	src	authentication	identity	public/src/Fdw.Services.SessionState.Clients.Registration	public/src/identity/authentication/Fdw.Services.SessionState.Clients.Registration
+Fdw.Web.Http.Authentication	src	authentication	identity	public/src/Fdw.Web.Http.Authentication	public/src/identity/authentication/Fdw.Web.Http.Authentication
+Fdw.Services.Authorization	src	authorization	identity	public/src/Fdw.Services.Authorization	public/src/identity/authorization/Fdw.Services.Authorization
+Fdw.Services.Authorization.Abstractions	src	authorization	identity	public/src/Fdw.Services.Authorization.Abstractions	public/src/identity/authorization/Fdw.Services.Authorization.Abstractions
+Fdw.Services.Authorization.Clients	src	authorization	identity	public/src/Fdw.Services.Authorization.Clients	public/src/identity/authorization/Fdw.Services.Authorization.Clients
+Fdw.Services.Authorization.Endpoints	src	authorization	identity	public/src/Fdw.Services.Authorization.Endpoints	public/src/identity/authorization/Fdw.Services.Authorization.Endpoints
+Fdw.Services.Multitenancy	src	multitenancy	identity	public/src/Fdw.Services.Multitenancy	public/src/identity/multitenancy/Fdw.Services.Multitenancy
+Fdw.Services.Multitenancy.Abstractions	src	multitenancy	identity	public/src/Fdw.Services.Multitenancy.Abstractions	public/src/identity/multitenancy/Fdw.Services.Multitenancy.Abstractions
+Fdw.Services.Multitenancy.Clients	src	multitenancy	identity	public/src/Fdw.Services.Multitenancy.Clients	public/src/identity/multitenancy/Fdw.Services.Multitenancy.Clients
+Fdw.Services.Multitenancy.Endpoints	src	multitenancy	identity	public/src/Fdw.Services.Multitenancy.Endpoints	public/src/identity/multitenancy/Fdw.Services.Multitenancy.Endpoints
+Fdw.Services.Users	src	users	identity	public/src/Fdw.Services.Users	public/src/identity/users/Fdw.Services.Users
+Fdw.Services.Users.Abstractions	src	users	identity	public/src/Fdw.Services.Users.Abstractions	public/src/identity/users/Fdw.Services.Users.Abstractions
+Fdw.Services.Users.Clients	src	users	identity	public/src/Fdw.Services.Users.Clients	public/src/identity/users/Fdw.Services.Users.Clients
+Fdw.Services.Users.Endpoints	src	users	identity	public/src/Fdw.Services.Users.Endpoints	public/src/identity/users/Fdw.Services.Users.Endpoints
+Fdw.Services.Messaging	src	notifications		public/src/Fdw.Services.Messaging	public/src/notifications/Fdw.Services.Messaging
+Fdw.Services.Messaging.Abstractions	src	notifications		public/src/Fdw.Services.Messaging.Abstractions	public/src/notifications/Fdw.Services.Messaging.Abstractions
+Fdw.Services.Messaging.Clients	src	notifications		public/src/Fdw.Services.Messaging.Clients	public/src/notifications/Fdw.Services.Messaging.Clients
+Fdw.Services.Messaging.Endpoints	src	notifications		public/src/Fdw.Services.Messaging.Endpoints	public/src/notifications/Fdw.Services.Messaging.Endpoints
+Fdw.Services.Notifications	src	notifications		public/src/Fdw.Services.Notifications	public/src/notifications/Fdw.Services.Notifications
+Fdw.Services.Notifications.Abstractions	src	notifications		public/src/Fdw.Services.Notifications.Abstractions	public/src/notifications/Fdw.Services.Notifications.Abstractions
+Fdw.Services.Notifications.Clients	src	notifications		public/src/Fdw.Services.Notifications.Clients	public/src/notifications/Fdw.Services.Notifications.Clients
+Fdw.Services.Notifications.Endpoints	src	notifications		public/src/Fdw.Services.Notifications.Endpoints	public/src/notifications/Fdw.Services.Notifications.Endpoints
+Fdw.Services.Notifications.System	src	notifications		public/src/Fdw.Services.Notifications.System	public/src/notifications/Fdw.Services.Notifications.System
+Fdw.Services.Quality	src	quality	observability	public/src/Fdw.Services.Quality	public/src/observability/quality/Fdw.Services.Quality
+Fdw.Services.Quality.Abstractions	src	quality	observability	public/src/Fdw.Services.Quality.Abstractions	public/src/observability/quality/Fdw.Services.Quality.Abstractions
+Fdw.Services.Quality.Clients	src	quality	observability	public/src/Fdw.Services.Quality.Clients	public/src/observability/quality/Fdw.Services.Quality.Clients
+Fdw.Services.Quality.Endpoints	src	quality	observability	public/src/Fdw.Services.Quality.Endpoints	public/src/observability/quality/Fdw.Services.Quality.Endpoints
+Fdw.Services.RateLimiting	src	resiliency	observability	public/src/Fdw.Services.RateLimiting	public/src/observability/resiliency/Fdw.Services.RateLimiting
+Fdw.Services.RateLimiting.Abstractions	src	resiliency	observability	public/src/Fdw.Services.RateLimiting.Abstractions	public/src/observability/resiliency/Fdw.Services.RateLimiting.Abstractions
+Fdw.Services.Resiliency	src	resiliency	observability	public/src/Fdw.Services.Resiliency	public/src/observability/resiliency/Fdw.Services.Resiliency
+Fdw.Services.Resiliency.Abstractions	src	resiliency	observability	public/src/Fdw.Services.Resiliency.Abstractions	public/src/observability/resiliency/Fdw.Services.Resiliency.Abstractions
+Fdw.Services.Resiliency.Polly	src	resiliency	observability	public/src/Fdw.Services.Resiliency.Polly	public/src/observability/resiliency/Fdw.Services.Resiliency.Polly
+Fdw.Services.Resiliency.PrimaryBackup	src	resiliency	observability	public/src/Fdw.Services.Resiliency.PrimaryBackup	public/src/observability/resiliency/Fdw.Services.Resiliency.PrimaryBackup
+Fdw.Services.Resiliency.RetryNotify	src	resiliency	observability	public/src/Fdw.Services.Resiliency.RetryNotify	public/src/observability/resiliency/Fdw.Services.Resiliency.RetryNotify
+Fdw.Services.Logging	src	telemetry	observability	public/src/Fdw.Services.Logging	public/src/observability/telemetry/Fdw.Services.Logging
+Fdw.Services.Logging.Abstractions	src	telemetry	observability	public/src/Fdw.Services.Logging.Abstractions	public/src/observability/telemetry/Fdw.Services.Logging.Abstractions
+Fdw.Services.Telemetry	src	telemetry	observability	public/src/Fdw.Services.Telemetry	public/src/observability/telemetry/Fdw.Services.Telemetry
+Fdw.Services.Telemetry.Abstractions	src	telemetry	observability	public/src/Fdw.Services.Telemetry.Abstractions	public/src/observability/telemetry/Fdw.Services.Telemetry.Abstractions
+Fdw.Web.Analytics.Clients	src	telemetry	observability	public/src/Fdw.Web.Analytics.Clients	public/src/observability/telemetry/Fdw.Web.Analytics.Clients
+Fdw.Web.Analytics.Clients.Abstractions	src	telemetry	observability	public/src/Fdw.Web.Analytics.Clients.Abstractions	public/src/observability/telemetry/Fdw.Web.Analytics.Clients.Abstractions
+Fdw.Etl.Abstractions	src	pipelines		public/src/Fdw.Etl.Abstractions	public/src/pipelines/Fdw.Etl.Abstractions
+Fdw.Operations	src	pipelines		public/src/Fdw.Operations	public/src/pipelines/Fdw.Operations
+Fdw.Operations.Abstractions	src	pipelines		public/src/Fdw.Operations.Abstractions	public/src/pipelines/Fdw.Operations.Abstractions
+Fdw.Operations.Clients	src	pipelines		public/src/Fdw.Operations.Clients	public/src/pipelines/Fdw.Operations.Clients
+Fdw.Operations.Endpoints	src	pipelines		public/src/Fdw.Operations.Endpoints	public/src/pipelines/Fdw.Operations.Endpoints
+Fdw.Orchestration.Abstractions	src	pipelines		public/src/Fdw.Orchestration.Abstractions	public/src/pipelines/Fdw.Orchestration.Abstractions
+Fdw.Orchestration.Pipelines	src	pipelines		public/src/Fdw.Orchestration.Pipelines	public/src/pipelines/Fdw.Orchestration.Pipelines
+Fdw.Services.Etl	src	pipelines		public/src/Fdw.Services.Etl	public/src/pipelines/Fdw.Services.Etl
+Fdw.Services.Etl.Abstractions	src	pipelines		public/src/Fdw.Services.Etl.Abstractions	public/src/pipelines/Fdw.Services.Etl.Abstractions
+Fdw.Services.Etl.JobTriggerSources	src	pipelines		public/src/Fdw.Services.Etl.JobTriggerSources	public/src/pipelines/Fdw.Services.Etl.JobTriggerSources
+Fdw.Services.Etl.Projects	src	pipelines		public/src/Fdw.Services.Etl.Projects	public/src/pipelines/Fdw.Services.Etl.Projects
+Fdw.Services.Etl.Projects.Clients	src	pipelines		public/src/Fdw.Services.Etl.Projects.Clients	public/src/pipelines/Fdw.Services.Etl.Projects.Clients
+Fdw.Services.Etl.Projects.Registration	src	pipelines		public/src/Fdw.Services.Etl.Projects.Registration	public/src/pipelines/Fdw.Services.Etl.Projects.Registration
+Fdw.Services.EtlGateway	src	pipelines		public/src/Fdw.Services.EtlGateway	public/src/pipelines/Fdw.Services.EtlGateway
+Fdw.Services.EtlGateway.Registration	src	pipelines		public/src/Fdw.Services.EtlGateway.Registration	public/src/pipelines/Fdw.Services.EtlGateway.Registration
+Fdw.Services.EtlMappers	src	pipelines		public/src/Fdw.Services.EtlMappers	public/src/pipelines/Fdw.Services.EtlMappers
+Fdw.Services.EtlMappers.Abstractions	src	pipelines		public/src/Fdw.Services.EtlMappers.Abstractions	public/src/pipelines/Fdw.Services.EtlMappers.Abstractions
+Fdw.Services.EtlMappers.Dynamic	src	pipelines		public/src/Fdw.Services.EtlMappers.Dynamic	public/src/pipelines/Fdw.Services.EtlMappers.Dynamic
+Fdw.Services.EtlMappers.Pooled	src	pipelines		public/src/Fdw.Services.EtlMappers.Pooled	public/src/pipelines/Fdw.Services.EtlMappers.Pooled
+Fdw.Services.Pipelines	src	pipelines		public/src/Fdw.Services.Pipelines	public/src/pipelines/Fdw.Services.Pipelines
+Fdw.Services.Pipelines.Abstractions	src	pipelines		public/src/Fdw.Services.Pipelines.Abstractions	public/src/pipelines/Fdw.Services.Pipelines.Abstractions
+Fdw.Services.Pipelines.Clients	src	pipelines		public/src/Fdw.Services.Pipelines.Clients	public/src/pipelines/Fdw.Services.Pipelines.Clients
+Fdw.Services.Pipelines.Endpoints	src	pipelines		public/src/Fdw.Services.Pipelines.Endpoints	public/src/pipelines/Fdw.Services.Pipelines.Endpoints
+Fdw.UI.Pipelines.Clients	src	pipelines		public/src/Fdw.UI.Pipelines.Clients	public/src/pipelines/Fdw.UI.Pipelines.Clients
+Fdw.UI.Pipelines.Clients.Models	src	pipelines		public/src/Fdw.UI.Pipelines.Clients.Models	public/src/pipelines/Fdw.UI.Pipelines.Clients.Models
+Fdw.UI.Pipelines.Endpoints	src	pipelines		public/src/Fdw.UI.Pipelines.Endpoints	public/src/pipelines/Fdw.UI.Pipelines.Endpoints
+Fdw.Data.RowSources	src	rowsources		public/src/Fdw.Data.RowSources	public/src/rowsources/Fdw.Data.RowSources
+Fdw.Data.RowSources.Abstractions	src	rowsources		public/src/Fdw.Data.RowSources.Abstractions	public/src/rowsources/Fdw.Data.RowSources.Abstractions
+Fdw.Data.RowSources.DataReader	src	rowsources		public/src/Fdw.Data.RowSources.DataReader	public/src/rowsources/Fdw.Data.RowSources.DataReader
+Fdw.Data.RowSources.Delimited	src	rowsources		public/src/Fdw.Data.RowSources.Delimited	public/src/rowsources/Fdw.Data.RowSources.Delimited
+Fdw.Data.RowSources.FixedWidth	src	rowsources		public/src/Fdw.Data.RowSources.FixedWidth	public/src/rowsources/Fdw.Data.RowSources.FixedWidth
+Fdw.Data.RowSources.FixedWidth.Abstractions	src	rowsources		public/src/Fdw.Data.RowSources.FixedWidth.Abstractions	public/src/rowsources/Fdw.Data.RowSources.FixedWidth.Abstractions
+Fdw.Data.RowSources.Http	src	rowsources		public/src/Fdw.Data.RowSources.Http	public/src/rowsources/Fdw.Data.RowSources.Http
+Fdw.Data.RowSources.Json	src	rowsources		public/src/Fdw.Data.RowSources.Json	public/src/rowsources/Fdw.Data.RowSources.Json
+Fdw.Data.RowSources.Xml	src	rowsources		public/src/Fdw.Data.RowSources.Xml	public/src/rowsources/Fdw.Data.RowSources.Xml
+Fdw.Services.Scheduling	src	scheduling		public/src/Fdw.Services.Scheduling	public/src/scheduling/Fdw.Services.Scheduling
+Fdw.Services.Scheduling.Abstractions	src	scheduling		public/src/Fdw.Services.Scheduling.Abstractions	public/src/scheduling/Fdw.Services.Scheduling.Abstractions
+Fdw.Services.Scheduling.Clients	src	scheduling		public/src/Fdw.Services.Scheduling.Clients	public/src/scheduling/Fdw.Services.Scheduling.Clients
+Fdw.Services.Scheduling.Endpoints	src	scheduling		public/src/Fdw.Services.Scheduling.Endpoints	public/src/scheduling/Fdw.Services.Scheduling.Endpoints
+Fdw.Data.JsonSchema	src	schema		public/src/Fdw.Data.JsonSchema	public/src/schema/Fdw.Data.JsonSchema
+Fdw.Schema.Abstractions	src	schema		public/src/Fdw.Schema.Abstractions	public/src/schema/Fdw.Schema.Abstractions
+Fdw.Schema.Clients	src	schema		public/src/Fdw.Schema.Clients	public/src/schema/Fdw.Schema.Clients
+Fdw.Schema.Clients.Abstractions	src	schema		public/src/Fdw.Schema.Clients.Abstractions	public/src/schema/Fdw.Schema.Clients.Abstractions
+Fdw.Schema.Ddl	src	schema		public/src/Fdw.Schema.Ddl	public/src/schema/Fdw.Schema.Ddl
+Fdw.Schema.Ddl.Tasks	src	schema		public/src/Fdw.Schema.Ddl.Tasks	public/src/schema/Fdw.Schema.Ddl.Tasks
+Fdw.Schema.Endpoints	src	schema		public/src/Fdw.Schema.Endpoints	public/src/schema/Fdw.Schema.Endpoints
+Fdw.Services.Credentials	src	credentials	secrets	public/src/Fdw.Services.Credentials	public/src/secrets/credentials/Fdw.Services.Credentials
+Fdw.Services.Credentials.Abstractions	src	credentials	secrets	public/src/Fdw.Services.Credentials.Abstractions	public/src/secrets/credentials/Fdw.Services.Credentials.Abstractions
+Fdw.Services.Credentials.Sql	src	credentials	secrets	public/src/Fdw.Services.Credentials.Sql	public/src/secrets/credentials/Fdw.Services.Credentials.Sql
+Fdw.Services.DataVault	src	credentials	secrets	public/src/Fdw.Services.DataVault	public/src/secrets/credentials/Fdw.Services.DataVault
+Fdw.Services.DataVault.Abstractions	src	credentials	secrets	public/src/Fdw.Services.DataVault.Abstractions	public/src/secrets/credentials/Fdw.Services.DataVault.Abstractions
+Fdw.Services.TokenManagers	src	credentials	secrets	public/src/Fdw.Services.TokenManagers	public/src/secrets/credentials/Fdw.Services.TokenManagers
+Fdw.Services.TokenManagers.Abstractions	src	credentials	secrets	public/src/Fdw.Services.TokenManagers.Abstractions	public/src/secrets/credentials/Fdw.Services.TokenManagers.Abstractions
+Fdw.Services.SecretManagers	src	secretmanagers	secrets	public/src/Fdw.Services.SecretManagers	public/src/secrets/secretmanagers/Fdw.Services.SecretManagers
+Fdw.Services.SecretManagers.Abstractions	src	secretmanagers	secrets	public/src/Fdw.Services.SecretManagers.Abstractions	public/src/secrets/secretmanagers/Fdw.Services.SecretManagers.Abstractions
+Fdw.Services.SecretManagers.Clients	src	secretmanagers	secrets	public/src/Fdw.Services.SecretManagers.Clients	public/src/secrets/secretmanagers/Fdw.Services.SecretManagers.Clients
+Fdw.Services.SecretManagers.Endpoints	src	secretmanagers	secrets	public/src/Fdw.Services.SecretManagers.Endpoints	public/src/secrets/secretmanagers/Fdw.Services.SecretManagers.Endpoints
+Fdw.DevSession	src	devsession	tooling	public/src/Fdw.DevSession	public/src/tooling/devsession/Fdw.DevSession
+Fdw.DevSession.Abstractions	src	devsession	tooling	public/src/Fdw.DevSession.Abstractions	public/src/tooling/devsession/Fdw.DevSession.Abstractions
+Fdw.DevSession.McpServer	src	devsession	tooling	public/src/Fdw.DevSession.McpServer	public/src/tooling/devsession/Fdw.DevSession.McpServer
+Fdw.Mcp.Bus	src	mcp	tooling	public/src/Fdw.Mcp.Bus	public/src/tooling/mcp/Fdw.Mcp.Bus
+Fdw.Mcp.Bus.Abstractions	src	mcp	tooling	public/src/Fdw.Mcp.Bus.Abstractions	public/src/tooling/mcp/Fdw.Mcp.Bus.Abstractions
+Fdw.Mcp.Hosting	src	mcp	tooling	public/src/Fdw.Mcp.Hosting	public/src/tooling/mcp/Fdw.Mcp.Hosting
+Fdw.WebMcp.Abstractions	src	mcp	tooling	public/src/Fdw.WebMcp.Abstractions	public/src/tooling/mcp/Fdw.WebMcp.Abstractions
+Fdw.WebMcp.Hosting	src	mcp	tooling	public/src/Fdw.WebMcp.Hosting	public/src/tooling/mcp/Fdw.WebMcp.Hosting
+Fdw.WebMcp.Mcp	src	mcp	tooling	public/src/Fdw.WebMcp.Mcp	public/src/tooling/mcp/Fdw.WebMcp.Mcp
+Fdw.CodeBuilder.Abstractions	src	roslyn	tooling	public/src/Fdw.CodeBuilder.Abstractions	public/src/tooling/roslyn/Fdw.CodeBuilder.Abstractions
+Fdw.CodeBuilder.Analysis	src	roslyn	tooling	public/src/Fdw.CodeBuilder.Analysis	public/src/tooling/roslyn/Fdw.CodeBuilder.Analysis
+Fdw.CodeBuilder.Analysis.CSharp	src	roslyn	tooling	public/src/Fdw.CodeBuilder.Analysis.CSharp	public/src/tooling/roslyn/Fdw.CodeBuilder.Analysis.CSharp
+Fdw.CodeBuilder.CSharp	src	roslyn	tooling	public/src/Fdw.CodeBuilder.CSharp	public/src/tooling/roslyn/Fdw.CodeBuilder.CSharp
+Fdw.Roslyn.Commands	src	roslyn	tooling	public/src/Fdw.Roslyn.Commands	public/src/tooling/roslyn/Fdw.Roslyn.Commands
+Fdw.Roslyn.Commands.Abstractions	src	roslyn	tooling	public/src/Fdw.Roslyn.Commands.Abstractions	public/src/tooling/roslyn/Fdw.Roslyn.Commands.Abstractions
+Fdw.Sql.Workspace	src	roslyn	tooling	public/src/Fdw.Sql.Workspace	public/src/tooling/roslyn/Fdw.Sql.Workspace
+Fdw.Workspace.Management	src	roslyn	tooling	public/src/Fdw.Workspace.Management	public/src/tooling/roslyn/Fdw.Workspace.Management
+Fdw.Workspace.Roslyn	src	roslyn	tooling	public/src/Fdw.Workspace.Roslyn	public/src/tooling/roslyn/Fdw.Workspace.Roslyn
+Fdw.Services.Terminal.Abstractions	src	shells	tooling	public/src/Fdw.Services.Terminal.Abstractions	public/src/tooling/shells/Fdw.Services.Terminal.Abstractions
+Fdw.TUI.Management	src	shells	tooling	public/src/Fdw.TUI.Management	public/src/tooling/shells/Fdw.TUI.Management
+Fdw.VsCodeShell	src	shells	tooling	public/src/Fdw.VsCodeShell	public/src/tooling/shells/Fdw.VsCodeShell
+Fdw.VsCodeShell.Abstractions	src	shells	tooling	public/src/Fdw.VsCodeShell.Abstractions	public/src/tooling/shells/Fdw.VsCodeShell.Abstractions
+Fdw.Data.Transformations	src	transformations		public/src/Fdw.Data.Transformations	public/src/transformations/Fdw.Data.Transformations
+Fdw.Data.Transformations.Boolean	src	transformations		public/src/Fdw.Data.Transformations.Boolean	public/src/transformations/Fdw.Data.Transformations.Boolean
+Fdw.Data.Transformations.Conditional	src	transformations		public/src/Fdw.Data.Transformations.Conditional	public/src/transformations/Fdw.Data.Transformations.Conditional
+Fdw.Data.Transformations.DateTime	src	transformations		public/src/Fdw.Data.Transformations.DateTime	public/src/transformations/Fdw.Data.Transformations.DateTime
+Fdw.Data.Transformations.Injection	src	transformations		public/src/Fdw.Data.Transformations.Injection	public/src/transformations/Fdw.Data.Transformations.Injection
+Fdw.Data.Transformations.Numeric	src	transformations		public/src/Fdw.Data.Transformations.Numeric	public/src/transformations/Fdw.Data.Transformations.Numeric
+Fdw.Data.Transformations.Text	src	transformations		public/src/Fdw.Data.Transformations.Text	public/src/transformations/Fdw.Data.Transformations.Text
+Fdw.Services.Transformations.Abstractions	src	transformations		public/src/Fdw.Services.Transformations.Abstractions	public/src/transformations/Fdw.Services.Transformations.Abstractions
+Fdw.UI	src	ui		public/src/Fdw.UI	public/src/ui/Fdw.UI
+Fdw.UI.Abstractions	src	ui		public/src/Fdw.UI.Abstractions	public/src/ui/Fdw.UI.Abstractions
+Fdw.UI.Components	src	ui		public/src/Fdw.UI.Components	public/src/ui/Fdw.UI.Components
+Fdw.UI.Components.RazorConsole	src	ui		public/src/Fdw.UI.Components.RazorConsole	public/src/ui/Fdw.UI.Components.RazorConsole
+Fdw.UI.Components.RazorConsole.SourceGenerators	src	ui		public/src/Fdw.UI.Components.RazorConsole.SourceGenerators	public/src/ui/Fdw.UI.Components.RazorConsole.SourceGenerators
+Fdw.UI.Components.TUI	src	ui		public/src/Fdw.UI.Components.TUI	public/src/ui/Fdw.UI.Components.TUI
+Fdw.UI.Lineage.Clients.Abstractions	src	ui		public/src/Fdw.UI.Lineage.Clients.Abstractions	public/src/ui/Fdw.UI.Lineage.Clients.Abstractions
+Fdw.UI.Rendering.Spectre	src	ui		public/src/Fdw.UI.Rendering.Spectre	public/src/ui/Fdw.UI.Rendering.Spectre
+Fdw.UI.Schema.Clients.Abstractions	src	ui		public/src/Fdw.UI.Schema.Clients.Abstractions	public/src/ui/Fdw.UI.Schema.Clients.Abstractions
+Fdw.UI.Services	src	ui		public/src/Fdw.UI.Services	public/src/ui/Fdw.UI.Services
+Fdw.UI.Themes	src	ui		public/src/Fdw.UI.Themes	public/src/ui/Fdw.UI.Themes
+Fdw.UI.Themes.Abstractions	src	ui		public/src/Fdw.UI.Themes.Abstractions	public/src/ui/Fdw.UI.Themes.Abstractions
+Fdw.UI.Themes.Clients	src	ui		public/src/Fdw.UI.Themes.Clients	public/src/ui/Fdw.UI.Themes.Clients
+Fdw.UI.Themes.Endpoints	src	ui		public/src/Fdw.UI.Themes.Endpoints	public/src/ui/Fdw.UI.Themes.Endpoints
+Fdw.UI.Themes.Registration	src	ui		public/src/Fdw.UI.Themes.Registration	public/src/ui/Fdw.UI.Themes.Registration
+Fdw.UI.Web.Abstractions	src	ui		public/src/Fdw.UI.Web.Abstractions	public/src/ui/Fdw.UI.Web.Abstractions
+Fdw.Protocols.Tds	src	workspaces		public/src/Fdw.Protocols.Tds	public/src/workspaces/Fdw.Protocols.Tds
+Fdw.Services.Workspaces	src	workspaces		public/src/Fdw.Services.Workspaces	public/src/workspaces/Fdw.Services.Workspaces
+Fdw.Services.Workspaces.Abstractions	src	workspaces		public/src/Fdw.Services.Workspaces.Abstractions	public/src/workspaces/Fdw.Services.Workspaces.Abstractions
+Fdw.Services.Workspaces.Endpoints	src	workspaces		public/src/Fdw.Services.Workspaces.Endpoints	public/src/workspaces/Fdw.Services.Workspaces.Endpoints
+Fdw.Services.Workspaces.Tds	src	workspaces		public/src/Fdw.Services.Workspaces.Tds	public/src/workspaces/Fdw.Services.Workspaces.Tds
+Fdw.Tds.Endpoints	src	workspaces		public/src/Fdw.Tds.Endpoints	public/src/workspaces/Fdw.Tds.Endpoints
+Fdw.ContractParity.Tests	tests	_cross		public/tests/Fdw.ContractParity.Tests	public/tests/_cross/Fdw.ContractParity.Tests
+Fdw.Integration.Tests	tests	_cross		public/tests/Fdw.Integration.Tests	public/tests/_cross/Fdw.Integration.Tests
+Fdw.ServiceTypes.Integration.Tests	tests	_cross		public/tests/Fdw.ServiceTypes.Integration.Tests	public/tests/_cross/Fdw.ServiceTypes.Integration.Tests
+Fdw.ServiceTypes.Tests	tests	_cross		public/tests/Fdw.ServiceTypes.Tests	public/tests/_cross/Fdw.ServiceTypes.Tests
+Fdw.Aegis.Abstractions.Tests	tests	aegis	ai	public/tests/Fdw.Aegis.Abstractions.Tests	public/tests/ai/aegis/Fdw.Aegis.Abstractions.Tests
+Fdw.Aegis.McpServer.Tests	tests	aegis	ai	public/tests/Fdw.Aegis.McpServer.Tests	public/tests/ai/aegis/Fdw.Aegis.McpServer.Tests
+Fdw.Aui.Tests	tests	agents	ai	public/tests/Fdw.Aui.Tests	public/tests/ai/agents/Fdw.Aui.Tests
+Fdw.Services.Calculations.Tests	tests	calculations		public/tests/Fdw.Services.Calculations.Tests	public/tests/calculations/Fdw.Services.Calculations.Tests
+Fdw.Web.Calculations.Clients.Tests	tests	calculations		public/tests/Fdw.Web.Calculations.Clients.Tests	public/tests/calculations/Fdw.Web.Calculations.Clients.Tests
+Fdw.Data.Lineage.Tests	tests	catalog		public/tests/Fdw.Data.Lineage.Tests	public/tests/catalog/Fdw.Data.Lineage.Tests
+Fdw.Services.Catalog.Clients.Tests	tests	catalog		public/tests/Fdw.Services.Catalog.Clients.Tests	public/tests/catalog/Fdw.Services.Catalog.Clients.Tests
+Fdw.Commands.Abstractions.Tests	tests	commands		public/tests/Fdw.Commands.Abstractions.Tests	public/tests/commands/Fdw.Commands.Abstractions.Tests
+Fdw.Commands.Data.Abstractions.Tests	tests	commands		public/tests/Fdw.Commands.Data.Abstractions.Tests	public/tests/commands/Fdw.Commands.Data.Abstractions.Tests
+Fdw.Commands.Data.Fluency.Tests	tests	commands		public/tests/Fdw.Commands.Data.Fluency.Tests	public/tests/commands/Fdw.Commands.Data.Fluency.Tests
+Fdw.Commands.Data.Tests	tests	commands		public/tests/Fdw.Commands.Data.Tests	public/tests/commands/Fdw.Commands.Data.Tests
+Fdw.Configuration.SourceGenerators.Tests	tests	configuration		public/tests/Fdw.Configuration.SourceGenerators.Tests	public/tests/configuration/Fdw.Configuration.SourceGenerators.Tests
+Fdw.Configuration.Tests	tests	configuration		public/tests/Fdw.Configuration.Tests	public/tests/configuration/Fdw.Configuration.Tests
+Fdw.Services.Settings.Tests	tests	configuration		public/tests/Fdw.Services.Settings.Tests	public/tests/configuration/Fdw.Services.Settings.Tests
+Fdw.Data.MsSql.Tests	tests	connections		public/tests/Fdw.Data.MsSql.Tests	public/tests/connections/Fdw.Data.MsSql.Tests
+Fdw.Data.OData.Tests	tests	connections		public/tests/Fdw.Data.OData.Tests	public/tests/connections/Fdw.Data.OData.Tests
+Fdw.Schema.Ddl.MsSql.Tests	tests	connections		public/tests/Fdw.Schema.Ddl.MsSql.Tests	public/tests/connections/Fdw.Schema.Ddl.MsSql.Tests
+Fdw.Services.Connections.Abstractions.Tests	tests	connections		public/tests/Fdw.Services.Connections.Abstractions.Tests	public/tests/connections/Fdw.Services.Connections.Abstractions.Tests
+Fdw.Services.Connections.Clients.Tests	tests	connections		public/tests/Fdw.Services.Connections.Clients.Tests	public/tests/connections/Fdw.Services.Connections.Clients.Tests
+Fdw.Services.Connections.Http.Abstractions.Tests	tests	connections		public/tests/Fdw.Services.Connections.Http.Abstractions.Tests	public/tests/connections/Fdw.Services.Connections.Http.Abstractions.Tests
+Fdw.Services.Connections.Http.Tests	tests	connections		public/tests/Fdw.Services.Connections.Http.Tests	public/tests/connections/Fdw.Services.Connections.Http.Tests
+Fdw.Services.Connections.Limits.Tests	tests	connections		public/tests/Fdw.Services.Connections.Limits.Tests	public/tests/connections/Fdw.Services.Connections.Limits.Tests
+Fdw.Services.Connections.PostgreSql.Tests	tests	connections		public/tests/Fdw.Services.Connections.PostgreSql.Tests	public/tests/connections/Fdw.Services.Connections.PostgreSql.Tests
+Fdw.Services.Connections.RoslynWorkspace.Abstractions.Tests	tests	connections		public/tests/Fdw.Services.Connections.RoslynWorkspace.Abstractions.Tests	public/tests/connections/Fdw.Services.Connections.RoslynWorkspace.Abstractions.Tests
+Fdw.Services.Connections.RoslynWorkspace.Tests	tests	connections		public/tests/Fdw.Services.Connections.RoslynWorkspace.Tests	public/tests/connections/Fdw.Services.Connections.RoslynWorkspace.Tests
+Fdw.Services.Connections.Sql.Tests	tests	connections		public/tests/Fdw.Services.Connections.Sql.Tests	public/tests/connections/Fdw.Services.Connections.Sql.Tests
+Fdw.Services.Connections.TestDouble	tests	connections		public/tests/Fdw.Services.Connections.TestDouble	public/tests/connections/Fdw.Services.Connections.TestDouble
+Fdw.Services.Connections.Tests	tests	connections		public/tests/Fdw.Services.Connections.Tests	public/tests/connections/Fdw.Services.Connections.Tests
+Fdw.Data.Abstractions.Tests	tests	data		public/tests/Fdw.Data.Abstractions.Tests	public/tests/data/Fdw.Data.Abstractions.Tests
+Fdw.Data.Builders.Tests	tests	data		public/tests/Fdw.Data.Builders.Tests	public/tests/data/Fdw.Data.Builders.Tests
+Fdw.Data.DataContainers.Abstractions.Tests	tests	data		public/tests/Fdw.Data.DataContainers.Abstractions.Tests	public/tests/data/Fdw.Data.DataContainers.Abstractions.Tests
+Fdw.Data.DataNodes.Tests	tests	data		public/tests/Fdw.Data.DataNodes.Tests	public/tests/data/Fdw.Data.DataNodes.Tests
+Fdw.Data.Importers.Abstractions.Tests	tests	data		public/tests/Fdw.Data.Importers.Abstractions.Tests	public/tests/data/Fdw.Data.Importers.Abstractions.Tests
+Fdw.Data.SourceGenerators.Tests	tests	data		public/tests/Fdw.Data.SourceGenerators.Tests	public/tests/data/Fdw.Data.SourceGenerators.Tests
+Fdw.Data.Tests	tests	data		public/tests/Fdw.Data.Tests	public/tests/data/Fdw.Data.Tests
+Fdw.Services.Data.Abstractions.Tests	tests	data		public/tests/Fdw.Services.Data.Abstractions.Tests	public/tests/data/Fdw.Services.Data.Abstractions.Tests
+Fdw.Services.Data.Clients.Tests	tests	data		public/tests/Fdw.Services.Data.Clients.Tests	public/tests/data/Fdw.Services.Data.Clients.Tests
+Fdw.Services.Data.Endpoints.Tests	tests	data		public/tests/Fdw.Services.Data.Endpoints.Tests	public/tests/data/Fdw.Services.Data.Endpoints.Tests
+Fdw.Services.Data.Etl.Tests	tests	data		public/tests/Fdw.Services.Data.Etl.Tests	public/tests/data/Fdw.Services.Data.Etl.Tests
+Fdw.Services.Data.Tests	tests	data		public/tests/Fdw.Services.Data.Tests	public/tests/data/Fdw.Services.Data.Tests
+Fdw.Services.Execution.Abstractions.Tests	tests	data		public/tests/Fdw.Services.Execution.Abstractions.Tests	public/tests/data/Fdw.Services.Execution.Abstractions.Tests
+Fdw.Data.DataSets.Abstractions.Tests	tests	datasets		public/tests/Fdw.Data.DataSets.Abstractions.Tests	public/tests/datasets/Fdw.Data.DataSets.Abstractions.Tests
+Fdw.Data.DataSets.Tests	tests	datasets		public/tests/Fdw.Data.DataSets.Tests	public/tests/datasets/Fdw.Data.DataSets.Tests
+Fdw.Data.DataStores.Rest.Tests	tests	datasets		public/tests/Fdw.Data.DataStores.Rest.Tests	public/tests/datasets/Fdw.Data.DataStores.Rest.Tests
+Fdw.Data.DataStores.SqlServer.Tests	tests	datasets		public/tests/Fdw.Data.DataStores.SqlServer.Tests	public/tests/datasets/Fdw.Data.DataStores.SqlServer.Tests
+Fdw.Data.DataStores.Tests	tests	datasets		public/tests/Fdw.Data.DataStores.Tests	public/tests/datasets/Fdw.Data.DataStores.Tests
+Fdw.Documents.Abstractions.Tests	tests	documents		public/tests/Fdw.Documents.Abstractions.Tests	public/tests/documents/Fdw.Documents.Abstractions.Tests
+Fdw.Web.Api.Tests	tests	endpoints		public/tests/Fdw.Web.Api.Tests	public/tests/endpoints/Fdw.Web.Api.Tests
+Fdw.Web.Clients.Abstractions.Tests	tests	endpoints		public/tests/Fdw.Web.Clients.Abstractions.Tests	public/tests/endpoints/Fdw.Web.Clients.Abstractions.Tests
+Fdw.Web.Http.Abstractions.Tests	tests	endpoints		public/tests/Fdw.Web.Http.Abstractions.Tests	public/tests/endpoints/Fdw.Web.Http.Abstractions.Tests
+Fdw.Web.RestEndpoints.Tests	tests	endpoints		public/tests/Fdw.Web.RestEndpoints.Tests	public/tests/endpoints/Fdw.Web.RestEndpoints.Tests
+Fdw.Abstractions.Tests	tests	abstractions	foundation	public/tests/Fdw.Abstractions.Tests	public/tests/foundation/abstractions/Fdw.Abstractions.Tests
+Fdw.Types.Abstractions.Tests	tests	abstractions	foundation	public/tests/Fdw.Types.Abstractions.Tests	public/tests/foundation/abstractions/Fdw.Types.Abstractions.Tests
+Fdw.Analyzers.Tests	tests	analyzers	foundation	public/tests/Fdw.Analyzers.Tests	public/tests/foundation/analyzers/Fdw.Analyzers.Tests
+Fdw.Conventions.Analyzers.Tests	tests	analyzers	foundation	public/tests/Fdw.Conventions.Analyzers.Tests	public/tests/foundation/analyzers/Fdw.Conventions.Analyzers.Tests
+Fdw.ServiceTypes.Analyzers.Tests	tests	analyzers	foundation	public/tests/Fdw.ServiceTypes.Analyzers.Tests	public/tests/foundation/analyzers/Fdw.ServiceTypes.Analyzers.Tests
+Fdw.Collections.Analyzers.Tests	tests	collections	foundation	public/tests/Fdw.Collections.Analyzers.Tests	public/tests/foundation/collections/Fdw.Collections.Analyzers.Tests
+Fdw.Collections.SourceGenerators.Tests	tests	collections	foundation	public/tests/Fdw.Collections.SourceGenerators.Tests	public/tests/foundation/collections/Fdw.Collections.SourceGenerators.Tests
+Fdw.Collections.Tests	tests	collections	foundation	public/tests/Fdw.Collections.Tests	public/tests/foundation/collections/Fdw.Collections.Tests
+Fdw.MessageLogging.Abstractions.Tests	tests	messagelogging	foundation	public/tests/Fdw.MessageLogging.Abstractions.Tests	public/tests/foundation/messagelogging/Fdw.MessageLogging.Abstractions.Tests
+Fdw.MessageLogging.SourceGenerators.Tests	tests	messagelogging	foundation	public/tests/Fdw.MessageLogging.SourceGenerators.Tests	public/tests/foundation/messagelogging/Fdw.MessageLogging.SourceGenerators.Tests
+Fdw.Messages.Tests	tests	messagelogging	foundation	public/tests/Fdw.Messages.Tests	public/tests/foundation/messagelogging/Fdw.Messages.Tests
+Fdw.Registration.SourceGenerators.Tests	tests	registration	foundation	public/tests/Fdw.Registration.SourceGenerators.Tests	public/tests/foundation/registration/Fdw.Registration.SourceGenerators.Tests
+Fdw.Services.Registration.SourceGenerators.Tests	tests	registration	foundation	public/tests/Fdw.Services.Registration.SourceGenerators.Tests	public/tests/foundation/registration/Fdw.Services.Registration.SourceGenerators.Tests
+Fdw.Services.Registration.Tests	tests	registration	foundation	public/tests/Fdw.Services.Registration.Tests	public/tests/foundation/registration/Fdw.Services.Registration.Tests
+Fdw.Results.Abstractions.Tests	tests	results	foundation	public/tests/Fdw.Results.Abstractions.Tests	public/tests/foundation/results/Fdw.Results.Abstractions.Tests
+Fdw.Results.Tests	tests	results	foundation	public/tests/Fdw.Results.Tests	public/tests/foundation/results/Fdw.Results.Tests
+Fdw.Processors.Abstractions.Tests	tests	services	foundation	public/tests/Fdw.Processors.Abstractions.Tests	public/tests/foundation/services/Fdw.Processors.Abstractions.Tests
+Fdw.Services.Abstractions.Tests	tests	services	foundation	public/tests/Fdw.Services.Abstractions.Tests	public/tests/foundation/services/Fdw.Services.Abstractions.Tests
+Fdw.Services.Tests	tests	services	foundation	public/tests/Fdw.Services.Tests	public/tests/foundation/services/Fdw.Services.Tests
+Fdw.Validation.Tests	tests	validation	foundation	public/tests/Fdw.Validation.Tests	public/tests/foundation/validation/Fdw.Validation.Tests
+Fdw.SignalR.Tests	tests	hosts		public/tests/Fdw.SignalR.Tests	public/tests/hosts/Fdw.SignalR.Tests
+Fdw.Services.Authentication.Abstractions.Tests	tests	authentication	identity	public/tests/Fdw.Services.Authentication.Abstractions.Tests	public/tests/identity/authentication/Fdw.Services.Authentication.Abstractions.Tests
+Fdw.Services.Authentication.Tests	tests	authentication	identity	public/tests/Fdw.Services.Authentication.Tests	public/tests/identity/authentication/Fdw.Services.Authentication.Tests
+Fdw.Services.ExternalIdentityProviders.Tests	tests	authentication	identity	public/tests/Fdw.Services.ExternalIdentityProviders.Tests	public/tests/identity/authentication/Fdw.Services.ExternalIdentityProviders.Tests
+Fdw.Services.Identity.Tests	tests	authentication	identity	public/tests/Fdw.Services.Identity.Tests	public/tests/identity/authentication/Fdw.Services.Identity.Tests
+Fdw.Services.SessionState.Tests	tests	authentication	identity	public/tests/Fdw.Services.SessionState.Tests	public/tests/identity/authentication/Fdw.Services.SessionState.Tests
+Fdw.Services.Authorization.Abstractions.Tests	tests	authorization	identity	public/tests/Fdw.Services.Authorization.Abstractions.Tests	public/tests/identity/authorization/Fdw.Services.Authorization.Abstractions.Tests
+Fdw.Services.Authorization.Clients.Tests	tests	authorization	identity	public/tests/Fdw.Services.Authorization.Clients.Tests	public/tests/identity/authorization/Fdw.Services.Authorization.Clients.Tests
+Fdw.Services.Authorization.Tests	tests	authorization	identity	public/tests/Fdw.Services.Authorization.Tests	public/tests/identity/authorization/Fdw.Services.Authorization.Tests
+Fdw.Services.Multitenancy.Abstractions.Tests	tests	multitenancy	identity	public/tests/Fdw.Services.Multitenancy.Abstractions.Tests	public/tests/identity/multitenancy/Fdw.Services.Multitenancy.Abstractions.Tests
+Fdw.Services.Multitenancy.Clients.Tests	tests	multitenancy	identity	public/tests/Fdw.Services.Multitenancy.Clients.Tests	public/tests/identity/multitenancy/Fdw.Services.Multitenancy.Clients.Tests
+Fdw.Services.Multitenancy.Endpoints.Tests	tests	multitenancy	identity	public/tests/Fdw.Services.Multitenancy.Endpoints.Tests	public/tests/identity/multitenancy/Fdw.Services.Multitenancy.Endpoints.Tests
+Fdw.Services.Users.Abstractions.Tests	tests	users	identity	public/tests/Fdw.Services.Users.Abstractions.Tests	public/tests/identity/users/Fdw.Services.Users.Abstractions.Tests
+Fdw.Services.Users.Clients.Tests	tests	users	identity	public/tests/Fdw.Services.Users.Clients.Tests	public/tests/identity/users/Fdw.Services.Users.Clients.Tests
+Fdw.Services.Users.Tests	tests	users	identity	public/tests/Fdw.Services.Users.Tests	public/tests/identity/users/Fdw.Services.Users.Tests
+Fdw.Services.Messaging.Tests	tests	notifications		public/tests/Fdw.Services.Messaging.Tests	public/tests/notifications/Fdw.Services.Messaging.Tests
+Fdw.Services.Notifications.Abstractions.Tests	tests	notifications		public/tests/Fdw.Services.Notifications.Abstractions.Tests	public/tests/notifications/Fdw.Services.Notifications.Abstractions.Tests
+Fdw.Services.Notifications.Tests	tests	notifications		public/tests/Fdw.Services.Notifications.Tests	public/tests/notifications/Fdw.Services.Notifications.Tests
+Fdw.Services.Quality.Abstractions.Tests	tests	quality	observability	public/tests/Fdw.Services.Quality.Abstractions.Tests	public/tests/observability/quality/Fdw.Services.Quality.Abstractions.Tests
+Fdw.Services.Quality.Clients.Tests	tests	quality	observability	public/tests/Fdw.Services.Quality.Clients.Tests	public/tests/observability/quality/Fdw.Services.Quality.Clients.Tests
+Fdw.Services.Quality.Tests	tests	quality	observability	public/tests/Fdw.Services.Quality.Tests	public/tests/observability/quality/Fdw.Services.Quality.Tests
+Fdw.Services.RateLimiting.Abstractions.Tests	tests	resiliency	observability	public/tests/Fdw.Services.RateLimiting.Abstractions.Tests	public/tests/observability/resiliency/Fdw.Services.RateLimiting.Abstractions.Tests
+Fdw.Services.RateLimiting.Tests	tests	resiliency	observability	public/tests/Fdw.Services.RateLimiting.Tests	public/tests/observability/resiliency/Fdw.Services.RateLimiting.Tests
+Fdw.Services.Resiliency.Abstractions.Tests	tests	resiliency	observability	public/tests/Fdw.Services.Resiliency.Abstractions.Tests	public/tests/observability/resiliency/Fdw.Services.Resiliency.Abstractions.Tests
+Fdw.Services.Resiliency.Polly.Tests	tests	resiliency	observability	public/tests/Fdw.Services.Resiliency.Polly.Tests	public/tests/observability/resiliency/Fdw.Services.Resiliency.Polly.Tests
+Fdw.Services.Resiliency.Tests	tests	resiliency	observability	public/tests/Fdw.Services.Resiliency.Tests	public/tests/observability/resiliency/Fdw.Services.Resiliency.Tests
+Fdw.Web.Analytics.Clients.Tests	tests	telemetry	observability	public/tests/Fdw.Web.Analytics.Clients.Tests	public/tests/observability/telemetry/Fdw.Web.Analytics.Clients.Tests
+Fdw.Operations.Clients.Tests	tests	pipelines		public/tests/Fdw.Operations.Clients.Tests	public/tests/pipelines/Fdw.Operations.Clients.Tests
+Fdw.Operations.Endpoints.Tests	tests	pipelines		public/tests/Fdw.Operations.Endpoints.Tests	public/tests/pipelines/Fdw.Operations.Endpoints.Tests
+Fdw.Operations.Tests	tests	pipelines		public/tests/Fdw.Operations.Tests	public/tests/pipelines/Fdw.Operations.Tests
+Fdw.Orchestration.Abstractions.Tests	tests	pipelines		public/tests/Fdw.Orchestration.Abstractions.Tests	public/tests/pipelines/Fdw.Orchestration.Abstractions.Tests
+Fdw.Orchestration.Pipelines.Abstractions.Tests	tests	pipelines		public/tests/Fdw.Orchestration.Pipelines.Abstractions.Tests	public/tests/pipelines/Fdw.Orchestration.Pipelines.Abstractions.Tests
+Fdw.Orchestration.Pipelines.Tests	tests	pipelines		public/tests/Fdw.Orchestration.Pipelines.Tests	public/tests/pipelines/Fdw.Orchestration.Pipelines.Tests
+Fdw.Services.Etl.Abstractions.Tests	tests	pipelines		public/tests/Fdw.Services.Etl.Abstractions.Tests	public/tests/pipelines/Fdw.Services.Etl.Abstractions.Tests
+Fdw.Services.Etl.Projects.Tests	tests	pipelines		public/tests/Fdw.Services.Etl.Projects.Tests	public/tests/pipelines/Fdw.Services.Etl.Projects.Tests
+Fdw.Services.Etl.Tests	tests	pipelines		public/tests/Fdw.Services.Etl.Tests	public/tests/pipelines/Fdw.Services.Etl.Tests
+Fdw.Services.EtlMappers.Abstractions.Tests	tests	pipelines		public/tests/Fdw.Services.EtlMappers.Abstractions.Tests	public/tests/pipelines/Fdw.Services.EtlMappers.Abstractions.Tests
+Fdw.Services.EtlMappers.Dynamic.Tests	tests	pipelines		public/tests/Fdw.Services.EtlMappers.Dynamic.Tests	public/tests/pipelines/Fdw.Services.EtlMappers.Dynamic.Tests
+Fdw.Services.EtlMappers.Pooled.Tests	tests	pipelines		public/tests/Fdw.Services.EtlMappers.Pooled.Tests	public/tests/pipelines/Fdw.Services.EtlMappers.Pooled.Tests
+Fdw.Services.EtlMappers.Tests	tests	pipelines		public/tests/Fdw.Services.EtlMappers.Tests	public/tests/pipelines/Fdw.Services.EtlMappers.Tests
+Fdw.Services.Pipelines.Abstractions.Tests	tests	pipelines		public/tests/Fdw.Services.Pipelines.Abstractions.Tests	public/tests/pipelines/Fdw.Services.Pipelines.Abstractions.Tests
+Fdw.Services.Pipelines.Clients.Tests	tests	pipelines		public/tests/Fdw.Services.Pipelines.Clients.Tests	public/tests/pipelines/Fdw.Services.Pipelines.Clients.Tests
+Fdw.Services.Pipelines.Tests	tests	pipelines		public/tests/Fdw.Services.Pipelines.Tests	public/tests/pipelines/Fdw.Services.Pipelines.Tests
+Fdw.Data.RowSources.Abstractions.Tests	tests	rowsources		public/tests/Fdw.Data.RowSources.Abstractions.Tests	public/tests/rowsources/Fdw.Data.RowSources.Abstractions.Tests
+Fdw.Data.RowSources.Http.Abstractions.Tests	tests	rowsources		public/tests/Fdw.Data.RowSources.Http.Abstractions.Tests	public/tests/rowsources/Fdw.Data.RowSources.Http.Abstractions.Tests
+Fdw.Data.RowSources.RoundTrip.Tests	tests	rowsources		public/tests/Fdw.Data.RowSources.RoundTrip.Tests	public/tests/rowsources/Fdw.Data.RowSources.RoundTrip.Tests
+Fdw.Data.RowSources.Tests	tests	rowsources		public/tests/Fdw.Data.RowSources.Tests	public/tests/rowsources/Fdw.Data.RowSources.Tests
+Fdw.Services.Scheduling.Abstractions.Tests	tests	scheduling		public/tests/Fdw.Services.Scheduling.Abstractions.Tests	public/tests/scheduling/Fdw.Services.Scheduling.Abstractions.Tests
+Fdw.Services.Scheduling.Clients.Tests	tests	scheduling		public/tests/Fdw.Services.Scheduling.Clients.Tests	public/tests/scheduling/Fdw.Services.Scheduling.Clients.Tests
+Fdw.Services.Scheduling.Tests	tests	scheduling		public/tests/Fdw.Services.Scheduling.Tests	public/tests/scheduling/Fdw.Services.Scheduling.Tests
+Fdw.Data.JsonSchema.Tests	tests	schema		public/tests/Fdw.Data.JsonSchema.Tests	public/tests/schema/Fdw.Data.JsonSchema.Tests
+Fdw.Schema.Abstractions.Tests	tests	schema		public/tests/Fdw.Schema.Abstractions.Tests	public/tests/schema/Fdw.Schema.Abstractions.Tests
+Fdw.Schema.Clients.Tests	tests	schema		public/tests/Fdw.Schema.Clients.Tests	public/tests/schema/Fdw.Schema.Clients.Tests
+Fdw.Schema.Ddl.Tests	tests	schema		public/tests/Fdw.Schema.Ddl.Tests	public/tests/schema/Fdw.Schema.Ddl.Tests
+Fdw.Schema.Tests	tests	schema		public/tests/Fdw.Schema.Tests	public/tests/schema/Fdw.Schema.Tests
+Fdw.Services.SecretManagers.Abstractions.Tests	tests	secretmanagers	secrets	public/tests/Fdw.Services.SecretManagers.Abstractions.Tests	public/tests/secrets/secretmanagers/Fdw.Services.SecretManagers.Abstractions.Tests
+Fdw.Services.SecretManagers.TestDouble	tests	secretmanagers	secrets	public/tests/Fdw.Services.SecretManagers.TestDouble	public/tests/secrets/secretmanagers/Fdw.Services.SecretManagers.TestDouble
+Fdw.Services.SecretManagers.Tests	tests	secretmanagers	secrets	public/tests/Fdw.Services.SecretManagers.Tests	public/tests/secrets/secretmanagers/Fdw.Services.SecretManagers.Tests
+Fdw.DevSession.Tests	tests	devsession	tooling	public/tests/Fdw.DevSession.Tests	public/tests/tooling/devsession/Fdw.DevSession.Tests
+Fdw.Mcp.Bus.Tests	tests	mcp	tooling	public/tests/Fdw.Mcp.Bus.Tests	public/tests/tooling/mcp/Fdw.Mcp.Bus.Tests
+Fdw.Mcp.Hosting.SampleTools	tests	mcp	tooling	public/tests/Fdw.Mcp.Hosting.SampleTools	public/tests/tooling/mcp/Fdw.Mcp.Hosting.SampleTools
+Fdw.Mcp.Hosting.Tests	tests	mcp	tooling	public/tests/Fdw.Mcp.Hosting.Tests	public/tests/tooling/mcp/Fdw.Mcp.Hosting.Tests
+Fdw.WebMcp.Hosting.Tests	tests	mcp	tooling	public/tests/Fdw.WebMcp.Hosting.Tests	public/tests/tooling/mcp/Fdw.WebMcp.Hosting.Tests
+Fdw.WebMcp.Mcp.Tests	tests	mcp	tooling	public/tests/Fdw.WebMcp.Mcp.Tests	public/tests/tooling/mcp/Fdw.WebMcp.Mcp.Tests
+Fdw.CodeBuilder.Abstractions.Tests	tests	roslyn	tooling	public/tests/Fdw.CodeBuilder.Abstractions.Tests	public/tests/tooling/roslyn/Fdw.CodeBuilder.Abstractions.Tests
+Fdw.CodeBuilder.Analysis.CSharp.Tests	tests	roslyn	tooling	public/tests/Fdw.CodeBuilder.Analysis.CSharp.Tests	public/tests/tooling/roslyn/Fdw.CodeBuilder.Analysis.CSharp.Tests
+Fdw.CodeBuilder.Analysis.Tests	tests	roslyn	tooling	public/tests/Fdw.CodeBuilder.Analysis.Tests	public/tests/tooling/roslyn/Fdw.CodeBuilder.Analysis.Tests
+Fdw.CodeBuilder.CSharp.Tests	tests	roslyn	tooling	public/tests/Fdw.CodeBuilder.CSharp.Tests	public/tests/tooling/roslyn/Fdw.CodeBuilder.CSharp.Tests
+Fdw.Roslyn.Commands.Refactoring.Tests	tests	roslyn	tooling	public/tests/Fdw.Roslyn.Commands.Refactoring.Tests	public/tests/tooling/roslyn/Fdw.Roslyn.Commands.Refactoring.Tests
+Fdw.Roslyn.Commands.Tests	tests	roslyn	tooling	public/tests/Fdw.Roslyn.Commands.Tests	public/tests/tooling/roslyn/Fdw.Roslyn.Commands.Tests
+Fdw.Sql.Workspace.Tests	tests	roslyn	tooling	public/tests/Fdw.Sql.Workspace.Tests	public/tests/tooling/roslyn/Fdw.Sql.Workspace.Tests
+Fdw.Workspace.Management.Tests	tests	roslyn	tooling	public/tests/Fdw.Workspace.Management.Tests	public/tests/tooling/roslyn/Fdw.Workspace.Management.Tests
+Fdw.VsCodeShell.Tests	tests	shells	tooling	public/tests/Fdw.VsCodeShell.Tests	public/tests/tooling/shells/Fdw.VsCodeShell.Tests
+Fdw.Data.Transformations.Tests	tests	transformations		public/tests/Fdw.Data.Transformations.Tests	public/tests/transformations/Fdw.Data.Transformations.Tests
+Fdw.UI.Components.TUI.Tests	tests	ui		public/tests/Fdw.UI.Components.TUI.Tests	public/tests/ui/Fdw.UI.Components.TUI.Tests
+Fdw.UI.Tests	tests	ui		public/tests/Fdw.UI.Tests	public/tests/ui/Fdw.UI.Tests
+Fdw.UI.Themes.Clients.Tests	tests	ui		public/tests/Fdw.UI.Themes.Clients.Tests	public/tests/ui/Fdw.UI.Themes.Clients.Tests
+Fdw.Protocols.Tds.Tests	tests	workspaces		public/tests/Fdw.Protocols.Tds.Tests	public/tests/workspaces/Fdw.Protocols.Tds.Tests
+Fdw.Tds.Endpoints.Tests	tests	workspaces		public/tests/Fdw.Tds.Endpoints.Tests	public/tests/workspaces/Fdw.Tds.Endpoints.Tests

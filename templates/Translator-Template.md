@@ -7,7 +7,7 @@
 ## File Location
 
 ```
-src/Fdw.Data.{TypeSystem}/
+src/data/Fdw.Data.{TypeSystem}/
 └── Translators/
     ├── {TypeSystem}DataCommandTranslatorBase.cs    ← Base class (create once)
     ├── {TypeSystem}DataCommandTranslators.cs       ← TypeCollection (create once)
@@ -18,8 +18,8 @@ src/Fdw.Data.{TypeSystem}/
 ```
 
 **Examples:**
-- `src/Fdw.Data.MsSql/Translators/MsSqlQueryTranslator.cs`
-- `src/Fdw.Data.Http/Translators/RestQueryTranslator.cs`
+- `src/connections/Fdw.Data.MsSql/Translators/MsSqlQueryTranslator.cs`
+- `src/connections/Fdw.Data.Http/Translators/RestQueryTranslator.cs`
 
 ---
 
@@ -264,4 +264,4 @@ public async Task ShouldTranslateSimpleQuery()
 
 ---
 
-**See**: `src/Fdw.Data.MsSql/Translators/` for complete working examples
+**See**: `src/connections/Fdw.Data.MsSql/Translators/` for complete working examples

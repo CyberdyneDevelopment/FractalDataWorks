@@ -9,14 +9,14 @@
 ## File Location
 
 ```
-src/Fdw.Data.{SourceTypeSystem}/
+src/data/Fdw.Data.{SourceTypeSystem}/
 └── Mappers/
     └── {Source}To{Target}Mapper.cs
 ```
 
 **OR** (for generic/cross-cutting mappers):
 ```
-src/Fdw.Data.Abstractions/
+src/data/Fdw.Data.Abstractions/
 └── Mappers/
     ├── IDataMapper.cs
     ├── DataMapperBase.cs
@@ -25,8 +25,8 @@ src/Fdw.Data.Abstractions/
 ```
 
 **Examples:**
-- `src/Fdw.Data.JsonSchema/Mappers/JsonIntegerToMsSqlBigIntMapper.cs`
-- `src/Fdw.Data.Abstractions/Mappers/DefaultDataMapper.cs`
+- `src/schema/Fdw.Data.JsonSchema/Mappers/JsonIntegerToMsSqlBigIntMapper.cs`
+- `src/data/Fdw.Data.Abstractions/Mappers/DefaultDataMapper.cs`
 
 ---
 

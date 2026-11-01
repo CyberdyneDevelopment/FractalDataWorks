@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<Nullable>enable</Nullable>
+		<RootNamespace>Fdw.Services.Users</RootNamespace>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\foundation\abstractions\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+		<ProjectReference Include="..\..\..\foundation\results\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+		<ProjectReference Include="..\..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+		<ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+		<ProjectReference Include="..\..\..\foundation\abstractions\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+		<ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\..\..\data\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+		<ProjectReference Include="..\..\..\data\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+		<ProjectReference Include="..\..\..\secrets\credentials\Fdw.Services.Credentials.Abstractions\Fdw.Services.Credentials.Abstractions.csproj" />
+	</ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.ComponentModel.Annotations" />
+  </ItemGroup>
+</Project>

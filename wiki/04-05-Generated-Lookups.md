@@ -46,7 +46,7 @@ Console.WriteLine($"   All payment methods: {string.Join(", ", PaymentMethods.Al
 
 ## Polymorphic Usage
 
-Use properties instead of switch statements. From [`IExecutionStatus.cs:12-48`](../src/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L48):
+Use properties instead of switch statements. From [`IExecutionStatus.cs:12-48`](../src/pipelines/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L48):
 
 ```csharp
 // CORRECT: Use polymorphism

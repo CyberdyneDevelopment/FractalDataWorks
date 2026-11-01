@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\pipelines\Fdw.Orchestration.Abstractions\Fdw.Orchestration.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
+  </ItemGroup>
+</Project>

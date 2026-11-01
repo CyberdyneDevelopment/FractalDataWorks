@@ -30,7 +30,7 @@ This means:
 
 ## Folder-Based Namespaces
 
-Subfolders add to the namespace. From [`Fdw.Commands.Abstractions`](../src/Fdw.Commands.Abstractions/):
+Subfolders add to the namespace. From [`Fdw.Commands.Abstractions`](../src/commands/Fdw.Commands.Abstractions/):
 
 ```
 Fdw.Commands.Abstractions/
@@ -43,12 +43,12 @@ Fdw.Commands.Abstractions/
 
 | Type | Convention | Actual Example |
 |------|------------|----------------|
-| MessageLogging | `{Domain}Log.cs` | [`EtlLog.cs`](../src/Fdw.Services.Etl/Logging/EtlLog.cs) |
-| LoggerMessage | `{Domain}Logger.cs` | [`CommandLogger.cs`](../src/Fdw.Commands.Abstractions/Logging/CommandLogger.cs) |
+| MessageLogging | `{Domain}Log.cs` | [`EtlLog.cs`](../src/pipelines/Fdw.Services.Etl/Logging/EtlLog.cs) |
+| LoggerMessage | `{Domain}Logger.cs` | [`CommandLogger.cs`](../src/commands/Fdw.Commands.Abstractions/Logging/CommandLogger.cs) |
 | TypeCollection | `{Type}s.cs` | [`PaymentMethods.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs) |
 | TypeOption | `{Name}{Type}.cs` | [`CreditCardPayment.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/Options/CreditCardPayment.cs) |
-| Endpoint | `{Type}Endpoint.cs` (or `{Type}EndpointBase.cs` for generic bases) | [`ListConnectionsEndpointBase.cs`](../src/Fdw.Services.Connections.Endpoints/ListConnectionsEndpointBase.cs) |
-| Configuration | `{Type}Configuration.cs` | [`MsSqlConnectionConfiguration.cs`](../src/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs) |
+| Endpoint | `{Type}Endpoint.cs` (or `{Type}EndpointBase.cs` for generic bases) | [`ListConnectionsEndpointBase.cs`](../src/connections/Fdw.Services.Connections.Endpoints/ListConnectionsEndpointBase.cs) |
+| Configuration | `{Type}Configuration.cs` | [`MsSqlConnectionConfiguration.cs`](../src/connections/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs) |
 
 ## Class Naming
 

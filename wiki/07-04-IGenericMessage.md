@@ -4,7 +4,7 @@
 
 ## Interface Definition
 
-From [`IGenericMessage.cs:8-27`](../src/Fdw.Abstractions/IGenericMessage.cs#L8-L27):
+From [`IGenericMessage.cs:8-27`](../src/foundation/abstractions/Fdw.Abstractions/IGenericMessage.cs#L8-L27):
 
 ```csharp
 public interface IGenericMessage
@@ -31,7 +31,7 @@ public interface IGenericMessage
 
 A generic variant with strongly typed severity is also available:
 
-From [`IGenericMessage.cs:29-40`](../src/Fdw.Abstractions/IGenericMessage.cs#L29-L40):
+From [`IGenericMessage.cs:29-40`](../src/foundation/abstractions/Fdw.Abstractions/IGenericMessage.cs#L29-L40):
 
 ```csharp
 public interface IGenericMessage<TSeverity> : IGenericMessage where TSeverity : Enum

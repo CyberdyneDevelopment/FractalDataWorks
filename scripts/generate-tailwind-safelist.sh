@@ -5,7 +5,7 @@
 #   @source "./path/to/tailwind-safelist.html";
 #
 # Usage: ./generate-tailwind-safelist.sh [output-path]
-#   Default output: public/src/Fdw.UI/wwwroot/tailwind-safelist.html
+#   Default output: public/src/ui/Fdw.UI/wwwroot/tailwind-safelist.html
 
 set -e
 

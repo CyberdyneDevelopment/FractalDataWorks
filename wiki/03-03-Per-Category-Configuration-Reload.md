@@ -24,9 +24,9 @@ no external reloader registry that propagates changes.
   underlying `IConfigurationRoot` reload.
 
 See `public/src/Fdw.Configuration.Writers/DefaultConfigurationReloader.cs`,
-`public/src/Fdw.Services.Data/DataGatewayService.cs` (built-in caching),
-`public/src/Fdw.Services.Data/ConfigurationGateway.cs` (built-in caching),
-`public/src/Fdw.Services.Data/DataGatewayResultCache.cs` (singleton cache store), and the per-domain
+`public/src/data/Fdw.Services.Data/DataGatewayService.cs` (built-in caching),
+`public/src/data/Fdw.Services.Data/ConfigurationGateway.cs` (built-in caching),
+`public/src/data/Fdw.Services.Data/DataGatewayResultCache.cs` (singleton cache store), and the per-domain
 `*ConfigurationProvider.cs` files for the authoritative behaviour.
 
 ## What Was Removed

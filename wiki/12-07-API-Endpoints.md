@@ -62,7 +62,7 @@ Consumer projects reference only the endpoint packages they need, rather than a 
 
 ## Tier 1: Abstract CRUD Base Classes
 
-Located in [`src/Fdw.Web.RestEndpoints/Crud/`](../src/Fdw.Web.RestEndpoints/Crud/).
+Located in [`src/endpoints/Fdw.Web.RestEndpoints/Crud/`](../src/endpoints/Fdw.Web.RestEndpoints/Crud/).
 
 Each base class provides a complete `HandleAsync()` implementation with structured error handling. Derived classes only implement the abstract data-access methods.
 
@@ -70,7 +70,7 @@ Each base class provides a complete `HandleAsync()` implementation with structur
 
 Two overloads: parameterless (for simple lists) and with a request type (for filtered/paginated lists).
 
-From [`CrudListEndpoint.cs`](../src/Fdw.Web.RestEndpoints/Crud/CrudListEndpoint.cs):
+From [`CrudListEndpoint.cs`](../src/endpoints/Fdw.Web.RestEndpoints/Crud/CrudListEndpoint.cs):
 
 ```csharp
 public abstract class CrudListEndpoint<TSummary> : EndpointWithoutRequest<List<TSummary>>
@@ -93,7 +93,7 @@ public abstract class CrudListEndpoint<TSummary> : EndpointWithoutRequest<List<T
 
 ### CrudGetEndpoint
 
-From [`CrudGetEndpoint.cs`](../src/Fdw.Web.RestEndpoints/Crud/CrudGetEndpoint.cs):
+From [`CrudGetEndpoint.cs`](../src/endpoints/Fdw.Web.RestEndpoints/Crud/CrudGetEndpoint.cs):
 
 ```csharp
 public abstract class CrudGetEndpoint<TRequest, TDetail> : Endpoint<TRequest, TDetail>
@@ -116,7 +116,7 @@ The `HandleAsync()` flow: resolve logger, call `OnBeforeGet()`, call `FindByIden
 
 ### CrudCreateEndpoint
 
-From [`CrudCreateEndpoint.cs`](../src/Fdw.Web.RestEndpoints/Crud/CrudCreateEndpoint.cs):
+From [`CrudCreateEndpoint.cs`](../src/endpoints/Fdw.Web.RestEndpoints/Crud/CrudCreateEndpoint.cs):
 
 ```csharp
 public abstract class CrudCreateEndpoint<TCreateRequest, TDetail> : Endpoint<TCreateRequest, TDetail>
@@ -146,7 +146,7 @@ The `HandleAsync()` flow: `OnBeforeCreate()` -> `CheckExists()` (409 if duplicat
 
 ### CrudUpdateEndpoint
 
-From [`CrudUpdateEndpoint.cs`](../src/Fdw.Web.RestEndpoints/Crud/CrudUpdateEndpoint.cs):
+From [`CrudUpdateEndpoint.cs`](../src/endpoints/Fdw.Web.RestEndpoints/Crud/CrudUpdateEndpoint.cs):
 
 ```csharp
 public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUpdateRequest, TDetail>
@@ -170,7 +170,7 @@ public abstract class CrudUpdateEndpoint<TUpdateRequest, TDetail> : Endpoint<TUp
 
 ### CrudDeleteEndpoint
 
-From [`CrudDeleteEndpoint.cs`](../src/Fdw.Web.RestEndpoints/Crud/CrudDeleteEndpoint.cs):
+From [`CrudDeleteEndpoint.cs`](../src/endpoints/Fdw.Web.RestEndpoints/Crud/CrudDeleteEndpoint.cs):
 
 ```csharp
 public abstract class CrudDeleteEndpoint<TRequest> : Endpoint<TRequest, object>
@@ -216,7 +216,7 @@ Each endpoint package contains:
 
 ### Example: Generic Base Endpoint
 
-From [`ListConnectionsEndpointBase.cs`](../src/Fdw.Services.Connections.Endpoints/ListConnectionsEndpointBase.cs):
+From [`ListConnectionsEndpointBase.cs`](../src/connections/Fdw.Services.Connections.Endpoints/ListConnectionsEndpointBase.cs):
 
 ```csharp
 public abstract class ListConnectionsEndpointBase : CrudListEndpoint<ConnectionSummaryDto>
@@ -245,7 +245,7 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpoint<ConnectionS
 
 ### Example: Generic Base with Type Parameter
 
-From [`GetConnectionEndpointBase.cs`](../src/Fdw.Services.Connections.Endpoints/GetConnectionEndpointBase.cs):
+From [`GetConnectionEndpointBase.cs`](../src/connections/Fdw.Services.Connections.Endpoints/GetConnectionEndpointBase.cs):
 
 ```csharp
 public abstract class GetConnectionEndpointBase<TConfig> : CrudGetEndpoint<ConnectionNameRequest, ConnectionDetailDto>
@@ -283,7 +283,7 @@ Different domains use different data access strategies depending on their data s
 
 ## Contract Base Types
 
-Located in [`src/Fdw.Web.Endpoints/Contracts/`](../src/Fdw.Web.Endpoints/Contracts/).
+Located in [`src/endpoints/Fdw.Web.Endpoints/Contracts/`](../src/endpoints/Fdw.Web.Endpoints/Contracts/).
 
 These provide consistent shapes for all endpoint DTOs and requests:
 
@@ -299,7 +299,7 @@ These provide consistent shapes for all endpoint DTOs and requests:
 
 ### Example: Domain DTOs
 
-From [`ConnectionSummaryDto.cs`](../src/Fdw.Services.Connections.Endpoints/ConnectionSummaryDto.cs) and [`ConnectionDetailDto.cs`](../src/Fdw.Services.Connections.Endpoints/ConnectionDetailDto.cs):
+From [`ConnectionSummaryDto.cs`](../src/connections/Fdw.Services.Connections.Endpoints/ConnectionSummaryDto.cs) and [`ConnectionDetailDto.cs`](../src/connections/Fdw.Services.Connections.Endpoints/ConnectionDetailDto.cs):
 
 ```csharp
 public class ConnectionSummaryDto : ResourceSummary
@@ -359,7 +359,7 @@ Build with `dotnet build -c Develop` to enable `AllowAnonymous()` for local deve
 
 ## Security Endpoint Bases
 
-Located in [`src/Fdw.Web.RestEndpoints/Security/`](../src/Fdw.Web.RestEndpoints/Security/).
+Located in [`src/endpoints/Fdw.Web.RestEndpoints/Security/`](../src/endpoints/Fdw.Web.RestEndpoints/Security/).
 
 For endpoints that don't fit the CRUD pattern but need consistent security configuration, FDW provides four security-level base classes:
 
@@ -376,7 +376,7 @@ Each base class sets `Configure()` with the appropriate auth and rate limiting. 
 
 ## ApiEndpointLog
 
-Located in [`src/Fdw.Schema.Endpoints/ApiEndpointLog.cs`](../src/Fdw.Schema.Endpoints/ApiEndpointLog.cs).
+Located in [`src/schema/Fdw.Schema.Endpoints/ApiEndpointLog.cs`](../src/schema/Fdw.Schema.Endpoints/ApiEndpointLog.cs).
 
 Generic CRUD logging shared across endpoint packages. EventId range: **4500-4530**.
 

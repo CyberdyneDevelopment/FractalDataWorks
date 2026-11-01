@@ -37,7 +37,7 @@ var command = Insert.Into<Customer>("Customers")
 
 ## The IDataGateway Interface
 
-From [`IDataGateway.cs:9-24`](../src/Fdw.Services.Data.Abstractions/IDataGateway.cs#L9-L24):
+From [`IDataGateway.cs:9-24`](../src/data/Fdw.Services.Data.Abstractions/IDataGateway.cs#L9-L24):
 
 ```csharp
 /// <summary>
@@ -86,7 +86,7 @@ FractalDataWorks provides four core data commands that work across all connectio
 
 Retrieves data (SELECT operation). Returns `IEnumerable<T>`.
 
-From [`QueryCommand.cs:60-106`](../src/Fdw.Commands.Data/Commands/QueryCommand.cs#L60-L106):
+From [`QueryCommand.cs:60-106`](../src/commands/Fdw.Commands.Data/Commands/QueryCommand.cs#L60-L106):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Query")]
@@ -133,7 +133,7 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
 
 Inserts new records (INSERT operation). Returns the inserted entity or affected row count.
 
-From [`InsertCommand.cs:35-47`](../src/Fdw.Commands.Data/Commands/InsertCommand.cs#L35-L47):
+From [`InsertCommand.cs:35-47`](../src/commands/Fdw.Commands.Data/Commands/InsertCommand.cs#L35-L47):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Insert")]
@@ -155,7 +155,7 @@ public sealed class InsertCommand<T> : DataCommandBase<int, T>
 
 Updates existing records (UPDATE operation). Returns affected row count.
 
-From [`UpdateCommand.cs:47-65`](../src/Fdw.Commands.Data/Commands/UpdateCommand.cs#L47-L65):
+From [`UpdateCommand.cs:47-65`](../src/commands/Fdw.Commands.Data/Commands/UpdateCommand.cs#L47-L65):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Update")]
@@ -183,7 +183,7 @@ public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableComma
 
 Deletes records (DELETE operation). Returns affected row count.
 
-From [`DeleteCommand.cs:45-62`](../src/Fdw.Commands.Data/Commands/DeleteCommand.cs#L45-L62):
+From [`DeleteCommand.cs:45-62`](../src/commands/Fdw.Commands.Data/Commands/DeleteCommand.cs#L45-L62):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Delete")]

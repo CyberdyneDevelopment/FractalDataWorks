@@ -214,6 +214,6 @@ For routes the framework does not cover, create an API client in your project th
 
 - [12-07 API Endpoints](12-07-API-Endpoints.md) -- Per-domain endpoint architecture
 - [12-08 Customizing Endpoints](12-08-Customizing-Endpoints.md) -- Thin closure pattern details
-- [Web.RestEndpoints](../src/Fdw.Web.RestEndpoints/) -- Tier 1 CRUD base classes
+- [Web.RestEndpoints](../src/endpoints/Fdw.Web.RestEndpoints/) -- Tier 1 CRUD base classes
 - [12-01 Creating a Server](12-01-Creating-A-Server.md) -- Hosting startup
 - [11-01 Management UI Overview](11-01-Management-UI-Overview.md) -- The web console and the terminal UI

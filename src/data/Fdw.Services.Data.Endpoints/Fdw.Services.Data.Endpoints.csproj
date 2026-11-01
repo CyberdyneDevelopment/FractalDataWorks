@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Description>HTTP endpoints for the Data domain, extracted from Fdw.Web.Api.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\endpoints\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
+    <ProjectReference Include="..\..\endpoints\Fdw.Web.Endpoints\Fdw.Web.Endpoints.csproj" />
+    <ProjectReference Include="..\..\connections\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <ProjectReference Include="..\..\connections\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\..\identity\users\Fdw.Services.Users\Fdw.Services.Users.csproj" />
+    <ProjectReference Include="..\..\identity\authentication\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <ProjectReference Include="..\..\scheduling\Fdw.Services.Scheduling.Abstractions\Fdw.Services.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\..\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\..\commands\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+    <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\identity\authorization\Fdw.Services.Authorization\Fdw.Services.Authorization.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
+    <ProjectReference Include="..\..\identity\multitenancy\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\services\Fdw.Services\Fdw.Services.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Operations.Endpoints\Fdw.Operations.Endpoints.csproj" />
+    <!-- References merged from folded *.Endpoints packages -->
+    <ProjectReference Include="..\..\schema\Fdw.Schema.Abstractions\Fdw.Schema.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\configuration\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\hosts\Fdw.Hosting.Abstractions\Fdw.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\identity\authorization\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\validation\Fdw.Validation.FastEndpoints\Fdw.Validation.FastEndpoints.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Services.Pipelines.Abstractions\Fdw.Services.Pipelines.Abstractions.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />
+    <ProjectReference Include="..\..\observability\quality\Fdw.Services.Quality\Fdw.Services.Quality.csproj" />
+    <ProjectReference Include="..\..\scheduling\Fdw.Services.Scheduling\Fdw.Services.Scheduling.csproj" />
+    <ProjectReference Include="..\..\identity\users\Fdw.Services.Users.Abstractions\Fdw.Services.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\security\Fdw.Security.Hashing\Fdw.Security.Hashing.csproj" />
+    <ProjectReference Include="..\..\secrets\secretmanagers\Fdw.Services.SecretManagers.Abstractions\Fdw.Services.SecretManagers.Abstractions.csproj" />
+    <ProjectReference Include="..\..\secrets\secretmanagers\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+    <ProjectReference Include="..\..\ui\Fdw.UI.Themes\Fdw.UI.Themes.csproj" />
+    <ProjectReference Include="..\..\datasets\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
+    <ProjectReference Include="..\..\datasets\Fdw.Data.DataSets.Abstractions\Fdw.Data.DataSets.Abstractions.csproj" />
+    <ProjectReference Include="..\..\calculations\Fdw.Calculations.Aggregations\Fdw.Calculations.Aggregations.csproj" />
+    <ProjectReference Include="..\..\identity\authentication\Fdw.Services.ExternalIdentityProviders\Fdw.Services.ExternalIdentityProviders.csproj" />
+    <ProjectReference Include="..\..\schema\Fdw.Schema.Clients.Abstractions\Fdw.Schema.Clients.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
+    <ProjectReference Include="..\..\catalog\Fdw.Services.Catalog.Clients.Models\Fdw.Services.Catalog.Clients.Models.csproj" />
+    <ProjectReference Include="..\..\rowsources\Fdw.Data.RowSources\Fdw.Data.RowSources.csproj" />
+    <ProjectReference Include="..\..\rowsources\Fdw.Data.RowSources.Abstractions\Fdw.Data.RowSources.Abstractions.csproj" />
+    <ProjectReference Include="..\..\endpoints\Fdw.Web.Http.Abstractions\Fdw.Web.Http.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+  </ItemGroup>
+
+</Project>

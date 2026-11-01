@@ -259,7 +259,7 @@ public partial class MsSqlConnectionConfiguration : IConnectionConfiguration
 The attribute carries only the `ServiceCategory` / `ServiceType` discriminators; the schema, table
 name, and parent relationship are derived from the `IDataContainer` metadata, not from the
 attribute. See the real class at
-[`src/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs`](../src/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs)
+[`src/connections/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs`](../src/connections/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs)
 for the full typed-body shape.
 
 ### 2. Generated DDL (as a `DdlDefinition` object)
@@ -347,4 +347,4 @@ separate "startup" tier. See [Configuration Guide](03-06-Configuration-Guide.md)
 - [Cache-Backed Providers](03-04-Cache-Backed-Providers.md) — on-demand DataSet/DataStore/Pipeline loading
 - [JSON-Driven Configuration](03-05-JSON-Driven-Configuration.md) — the shipped schema file shape
 - [Polymorphic Configuration Pattern](03-07-Polymorphic-Configuration-Pattern.md) — parent header vs typed body rules
-- [Configuration.SourceGenerators README](../src/Fdw.Configuration.SourceGenerators/README.md) — generator reference
+- [Configuration.SourceGenerators README](../src/configuration/Fdw.Configuration.SourceGenerators/README.md) — generator reference
