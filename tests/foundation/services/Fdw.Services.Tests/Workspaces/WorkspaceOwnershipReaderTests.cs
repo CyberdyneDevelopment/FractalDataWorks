@@ -13,13 +13,15 @@ using Xunit;
 namespace Fdw.Services.Tests.Workspaces;
 
 /// <summary>
-/// Verifies that a workspace's ownership names the tenant that owns it and the organization that names it as its
-/// default (FDW-1101): a name is unique within a tenant only, so a caller who sees several tenants needs both.
+/// Verifies that a workspace's ownership names the tenant that owns it and, read through the workspace's own organization, the
+/// organization that names it as its default (FDW-1101, FDW-3668): a name is unique within a tenant only, so a caller who sees
+/// several tenants needs both.
 /// </summary>
 [Collection(nameof(ServicesTestCollection))]
 public sealed class WorkspaceOwnershipReaderTests
 {
     private static readonly Guid Tenant = Guid.NewGuid();
+    private static readonly Guid Organization = Guid.NewGuid();
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -27,7 +29,7 @@ public sealed class WorkspaceOwnershipReaderTests
     public async Task NamesTheOrganizationWhoseDefaultItIs()
     {
         var workspace = Workspace();
-        var organization = new OrganizationConfiguration { Id = Guid.NewGuid(), Name = "AFC", TenantId = Tenant, DefaultWorkspaceId = workspace.Id };
+        var organization = new OrganizationConfiguration { Id = Organization, Name = "AFC", TenantId = Tenant, DefaultWorkspaceId = workspace.Id };
 
         var result = await WorkspaceOwnershipReader.Read(Organizations(organization), workspace, NullLogger.Instance, TestContext.Current.CancellationToken);
 
@@ -42,7 +44,7 @@ public sealed class WorkspaceOwnershipReaderTests
     public async Task NamesNoOrganizationWhenTheDefaultIsAnotherWorkspace()
     {
         var workspace = Workspace();
-        var organization = new OrganizationConfiguration { Id = Guid.NewGuid(), Name = "AFC", TenantId = Tenant, DefaultWorkspaceId = Guid.NewGuid() };
+        var organization = new OrganizationConfiguration { Id = Organization, Name = "AFC", TenantId = Tenant, DefaultWorkspaceId = Guid.NewGuid() };
 
         var result = await WorkspaceOwnershipReader.Read(Organizations(organization), workspace, NullLogger.Instance, TestContext.Current.CancellationToken);
 
@@ -68,12 +70,27 @@ public sealed class WorkspaceOwnershipReaderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Workspaces")]
+    public async Task RefusesAWorkspaceThatNamesNoOrganization()
+    {
+        var workspace = Workspace();
+        workspace.OrganizationId = Guid.Empty;
+        var organizations = new Mock<IOrganizationProvider>();
+
+        var result = await WorkspaceOwnershipReader.Read(organizations.Object, workspace, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        organizations.Verify(provider => provider.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Workspaces")]
     public async Task PassesOnAnOrganizationReadThatFailed()
     {
         var organizations = new Mock<IOrganizationProvider>();
         organizations
-            .Setup(provider => provider.GetDefault(Tenant, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("no default organization")));
+            .Setup(provider => provider.Get(Organization, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("organization unavailable")));
 
         var result = await WorkspaceOwnershipReader.Read(organizations.Object, Workspace(), NullLogger.Instance, TestContext.Current.CancellationToken);
 
@@ -81,13 +98,13 @@ public sealed class WorkspaceOwnershipReaderTests
     }
 
     private static WorkspaceImplementationConfiguration Workspace()
-        => new() { Id = Guid.NewGuid(), Name = "afc-default", TenantId = Tenant };
+        => new() { Id = Guid.NewGuid(), Name = "afc-default", TenantId = Tenant, OrganizationId = Organization };
 
     private static IOrganizationProvider Organizations(OrganizationConfiguration organization)
     {
         var organizations = new Mock<IOrganizationProvider>();
         organizations
-            .Setup(provider => provider.GetDefault(Tenant, It.IsAny<CancellationToken>()))
+            .Setup(provider => provider.Get(Organization, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(organization));
         return organizations.Object;
     }

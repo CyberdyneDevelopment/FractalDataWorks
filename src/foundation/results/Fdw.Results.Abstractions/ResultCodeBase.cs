@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
 using Fdw.Collections;
+using Fdw.Collections.Attributes;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Results.Abstractions;
@@ -33,7 +34,7 @@ public abstract class ResultCodeBase : TypeOptionBase<int, ResultCodeBase>, IRes
     /// Initializes a new instance of the <see cref="ResultCodeBase"/> class.
     /// </summary>
     protected ResultCodeBase(
-        int id,
+        [TypeOptionId] int id,
         string name,
         string code,
         int eventId,
@@ -58,7 +59,7 @@ public abstract class ResultCodeBase : TypeOptionBase<int, ResultCodeBase>, IRes
     /// ResultCategories where it is needed; the code itself only carries the number.
     /// </summary>
     protected ResultCodeBase(
-        int number,
+        [TypeOptionId] int number,
         string name,
         IResultSeverity severity,
         string messageTemplate,
@@ -129,15 +130,13 @@ public abstract class ResultCodeBase : TypeOptionBase<int, ResultCodeBase>, IRes
     /// <summary>
     /// Gets the LogLevel corresponding to this result code's severity.
     /// </summary>
-    public LogLevel LogLevel => Severity?.Name switch
-    {
-        "Critical" => LogLevel.Critical,
-        "Error" => LogLevel.Error,
-        "Warning" => LogLevel.Warning,
-        "Information" => LogLevel.Information,
-        "Success" => LogLevel.Information,
-        _ => LogLevel.Error
-    };
+    /// <remarks>
+    /// Why the severity's own number and not a switch on its name: every severity states the log level it stands for
+    /// (<see cref="IResultSeverity.LogLevelValue"/>, the numbers of <see cref="Microsoft.Extensions.Logging.LogLevel"/>), so a name
+    /// that the switch did not list (Trace, Debug, or a severity a downstream assembly adds) was read as Error. Only the NotFound
+    /// sentinel has no severity, and it is an error by definition (FDW-3463).
+    /// </remarks>
+    public LogLevel LogLevel => Severity is null ? LogLevel.Error : (LogLevel)Severity.LogLevelValue;
 
     /// <summary>
     /// Logs this result code with the provided details to the logger.

@@ -59,6 +59,10 @@ namespace Fdw.Services.Scheduling.Abstractions.Models;
 /// </example>
 public sealed class Schedule : IGenericSchedule
 {
+    /// <summary>The id of a process the caller names none for: a new one.</summary>
+    [PlatformDefault]
+    private static string NewProcessId => Guid.NewGuid().ToString("N");
+
     private readonly Dictionary<string, object> _metadata;
     private readonly ILogger<Schedule> _logger;
 
@@ -108,13 +112,13 @@ public sealed class Schedule : IGenericSchedule
         ProcessId = processId ?? throw new ArgumentNullException(nameof(processId));
         CronExpression = cronExpression ?? throw new ArgumentNullException(nameof(cronExpression));
         IsActive = isActive;
-        TimeZoneId = timeZoneId ?? "UTC";
+        TimeZoneId = timeZoneId ?? throw new ArgumentNullException(nameof(timeZoneId));
         NextExecution = nextExecution;
         Metadata = metadata;
 
         // Extended properties
-        Id = id ?? scheduleId;
-        Name = name ?? scheduleName;
+        Id = id ?? throw new ArgumentNullException(nameof(id));
+        Name = name ?? throw new ArgumentNullException(nameof(name));
         ProcessType = processType ?? throw new ArgumentNullException(nameof(processType));
         ProcessConfiguration = processConfiguration ?? throw new ArgumentNullException(nameof(processConfiguration));
         Trigger = trigger ?? throw new ArgumentNullException(nameof(trigger));
@@ -371,7 +375,7 @@ public sealed class Schedule : IGenericSchedule
             throw new ArgumentException("Schedule name cannot be null or empty", nameof(name));
         }
 
-        var actualProcessId = processId ?? Guid.NewGuid().ToString("N");
+        var actualProcessId = processId ?? NewProcessId;
         var cronExpression = ExtractCronExpression(trigger);
         var timeZoneId = ExtractTimeZoneId(trigger);
 

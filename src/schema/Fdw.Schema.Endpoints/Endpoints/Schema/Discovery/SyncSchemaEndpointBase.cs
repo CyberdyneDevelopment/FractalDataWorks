@@ -84,7 +84,7 @@ public abstract class SyncSchemaEndpointBase : Endpoint<SyncSchemaRequest, SyncS
 
             if (!result.IsSuccess || result.Value == null)
             {
-                var message = result.CurrentMessage ?? "Schema sync failed";
+                var message = result.NoValueReason().Message;
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.ConnectionName, "sync");
                 AddError(message);
                 await Send.ErrorsAsync(result.IsSuccess ? 404 : 400, ct).ConfigureAwait(false);

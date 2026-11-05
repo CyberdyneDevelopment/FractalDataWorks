@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
@@ -32,6 +33,31 @@ public static class SecretManagerSettings
     /// <returns>The configuration, or a coded refusal that names the type, the setting or the reason.</returns>
     public static IGenericResult<ISecretManagerImplementationConfiguration> Read(
         string typeName, JsonElement? sent, ISecretManagerImplementationConfiguration? stored, ILogger logger)
+        => Read(typeName, sent, stored, fillNew: null, logger);
+
+    /// <summary>
+    /// Reads the sent settings of a new secret manager: a value the caller leaves out takes the
+    /// tuning default its secret manager type carries (FDW-3823): the host's registration override, else the value the type declares.
+    /// </summary>
+    /// <param name="typeName">The secret manager type the settings are for.</param>
+    /// <param name="sent">The settings the caller sent.</param>
+    /// <param name="name">The secret manager being created, for the messages.</param>
+    /// <param name="settings">The settings that hold the defaults.</param>
+    /// <param name="tenantId">The caller's tenant, whose settings apply.</param>
+    /// <param name="logger">The logger.</param>
+    /// <returns>The configuration, or a coded refusal that names the type, the setting or the reason.</returns>
+    public static IGenericResult<ISecretManagerImplementationConfiguration> ReadNew(
+        string typeName, JsonElement? sent, string name, Lazy<IEffectiveSettingsProvider> settings, Guid? tenantId, ILogger logger)
+        => Read(typeName, sent, stored: null,
+            (option, body) => ConfigurationCreateDefaults.Fill(
+                body, option.ConfigurationType, option, property => ConfigurationCreateDefaults.IsStated(body, property), settings, tenantId,
+                "secret manager", name, logger),
+            logger);
+
+    // Why fillNew is a delegate: only a create fills omitted values from settings; an update keeps the stored ones.
+    private static IGenericResult<ISecretManagerImplementationConfiguration> Read(
+        string typeName, JsonElement? sent, ISecretManagerImplementationConfiguration? stored,
+        Func<ISecretManagerType, JsonObject, IGenericResult<JsonObject>>? fillNew, ILogger logger)
     {
         var option = SecretManagerTypes.ByName(typeName);
         if (ReferenceEquals(option, SecretManagerTypes.NotFound))
@@ -46,9 +72,15 @@ public static class SecretManagerSettings
         }
 
         var merged = Merge(option.ConfigurationType, typeName, settings, stored, logger);
-        return merged.IsFailure || merged.Value is null
-            ? merged.ToNewResult<ISecretManagerImplementationConfiguration>()
-            : Deserialize(option.ConfigurationType, typeName, merged.Value, logger);
+        if (merged.IsFailure || merged.Value is null)
+        {
+            return merged.ToNewResult<ISecretManagerImplementationConfiguration>();
+        }
+
+        var filled = fillNew is null ? merged : fillNew(option, merged.Value);
+        return filled.IsFailure || filled.Value is null
+            ? filled.ToNewResult<ISecretManagerImplementationConfiguration>()
+            : Deserialize(option.ConfigurationType, typeName, filled.Value, logger);
     }
 
     // The stored settings, if any, with each sent member laid over them. A sent member the type does not take is refused.

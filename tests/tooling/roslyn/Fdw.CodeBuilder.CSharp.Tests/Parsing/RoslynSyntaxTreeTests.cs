@@ -44,11 +44,11 @@ public class RoslynSyntaxTreeTests
     {
         // Arrange
         var code = "class Test { }";
-        var tree = CSharpSyntaxTree.ParseText(code, cancellationToken: TestContext.Current.CancellationToken);
         var filePath = "Test.cs";
+        var tree = CSharpSyntaxTree.ParseText(code, path: filePath, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var syntaxTree = new RoslynSyntaxTree(tree, code, "csharp", filePath);
+        var syntaxTree = new RoslynSyntaxTree(tree, code, "csharp");
 
         // Assert
         syntaxTree.FilePath.ShouldBe(filePath);
@@ -294,7 +294,7 @@ public class RoslynSyntaxTreeTests
         var syntaxTree = new RoslynSyntaxTree(tree, code, "csharp");
 
         // Find position of "Property"
-        var position = code.IndexOf("Property");
+        var position = code.IndexOf("Property", System.StringComparison.Ordinal);
 
         // Act
         var node = syntaxTree.GetNodeAtPosition(position);

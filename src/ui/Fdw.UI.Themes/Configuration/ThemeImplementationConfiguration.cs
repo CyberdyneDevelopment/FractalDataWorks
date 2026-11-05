@@ -56,12 +56,12 @@ public partial class ThemeImplementationConfiguration
     /// <summary>
     /// Gets or sets the primary brand color.
     /// </summary>
-    public string PrimaryColor { get; set; } = "#7209B7";
+    public string PrimaryColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the secondary/accent color.
     /// </summary>
-    public string SecondaryColor { get; set; } = "#F72585";
+    public string SecondaryColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the tertiary color for additional accents.
@@ -71,46 +71,46 @@ public partial class ThemeImplementationConfiguration
     /// <summary>
     /// Gets or sets the main background color.
     /// </summary>
-    public string BackgroundColor { get; set; } = "#0F1115";
+    public string BackgroundColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the surface/card background color.
     /// </summary>
-    public string SurfaceColor { get; set; } = "#16191F";
+    public string SurfaceColor { get; set; } = string.Empty;
 
     // Semantic Colors
 
     /// <summary>
     /// Gets or sets the error color.
     /// </summary>
-    public string ErrorColor { get; set; } = "#DC2626";
+    public string ErrorColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the warning color.
     /// </summary>
-    public string WarningColor { get; set; } = "#F59E0B";
+    public string WarningColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the success color.
     /// </summary>
-    public string SuccessColor { get; set; } = "#10B981";
+    public string SuccessColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the info color.
     /// </summary>
-    public string InfoColor { get; set; } = "#00B4D8";
+    public string InfoColor { get; set; } = string.Empty;
 
     // Text Colors
 
     /// <summary>
     /// Gets or sets the primary text color.
     /// </summary>
-    public string TextPrimary { get; set; } = "#E2E8F0";
+    public string TextPrimary { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the secondary/muted text color.
     /// </summary>
-    public string TextSecondary { get; set; } = "#94A3B8";
+    public string TextSecondary { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the disabled text color.
@@ -132,29 +132,29 @@ public partial class ThemeImplementationConfiguration
     /// <summary>
     /// Gets or sets the primary font family.
     /// </summary>
-    public string FontFamily { get; set; } = "Space Grotesk, system-ui, sans-serif";
+    public string FontFamily { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the monospace font family.
     /// </summary>
-    public string FontFamilyMono { get; set; } = "JetBrains Mono, monospace";
+    public string FontFamilyMono { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the base font size in pixels.
     /// </summary>
-    public int FontSizeBase { get; set; } = 14;
+    public int FontSizeBase { get; set; }
 
     /// <summary>
     /// Gets or sets the border radius in pixels.
     /// </summary>
-    public int BorderRadius { get; set; } = 6;
+    public int BorderRadius { get; set; }
 
     // Mode & Branding
 
     /// <summary>
     /// Gets or sets whether this is a dark mode theme.
     /// </summary>
-    public bool IsDarkMode { get; set; } = true;
+    public bool IsDarkMode { get; set; }
 
     /// <summary>
     /// Gets or sets whether this theme is the system default.
@@ -174,7 +174,7 @@ public partial class ThemeImplementationConfiguration
     /// <summary>
     /// Gets or sets the application name displayed in the UI.
     /// </summary>
-    public string AppName { get; set; } = "Fdw";
+    public string AppName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the favicon URL.

@@ -73,7 +73,7 @@ public sealed class UiFeedbackServiceTests
                 {
                     Writes.Add(target.Container);
                     return Task.FromResult<IGenericResult<int>>(
-                        Writes.Count == FailWrite ? GenericResult<int>.Failure(Array.Empty<Fdw.Messages.IGenericMessage>()) : GenericResult<int>.Success(UpdatedRows));
+                        Writes.Count == FailWrite ? GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")) : GenericResult<int>.Success(UpdatedRows));
                 });
 
             var messaging = new Mock<IMessagingConfigurationProvider>(MockBehavior.Loose);
@@ -388,7 +388,7 @@ public sealed class UiFeedbackServiceTests
         var result = await fixture.Service.Create(request, Ct);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71004");
+        result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
         fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackAnchor", "UiFeedbackComment", "UiFeedbackAgreement", "AlertAction", "AlertEveryoneAction", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
     }
 
@@ -1502,7 +1502,7 @@ public sealed class UiFeedbackServiceTests
         var result = await fixture.Service.Create(ValidRequest(), Ct);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71004");
+        result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
         fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackTag", "UiFeedbackAnchor", "UiFeedbackAnchor", "UiFeedbackComment", "UiFeedbackAgreement", "AlertAction", "AlertEveryoneAction", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
     }
 }

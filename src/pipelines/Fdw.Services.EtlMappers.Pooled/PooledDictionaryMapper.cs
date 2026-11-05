@@ -31,7 +31,10 @@ public sealed class PooledDictionaryMapper : IEtlRowMapper
         PooledDictionaryMapperConfiguration configuration)
     {
         _logger = logger;
-        _pool = new DictionaryPool(configuration.MaxPoolSize, configuration.MaxDictionarySize);
+        // The factory states both from the Pooled type's declared values (FDW-3956); a configuration built around it must state them too.
+        _pool = new DictionaryPool(
+            configuration.MaxPoolSize ?? throw new ArgumentException("The configuration states no MaxPoolSize.", nameof(configuration)),
+            configuration.MaxDictionarySize ?? throw new ArgumentException("The configuration states no MaxDictionarySize.", nameof(configuration)));
     }
 
     /// <inheritdoc />

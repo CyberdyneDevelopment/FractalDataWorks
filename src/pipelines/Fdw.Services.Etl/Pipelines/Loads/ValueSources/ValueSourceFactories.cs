@@ -5,8 +5,8 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Etl.Pipelines.Loads.ValueSources;
 
 /// <summary>
-/// Builds the command-layer value source for each <c>ValueSourceKinds</c> kind: Column, Constant, CurrentTimestamp and
-/// NextSequenceValue (FDW-1109).
+/// Builds the command-layer value source for each <c>ValueSourceKinds</c> kind: Column, Constant, CurrentTimestamp,
+/// NextSequenceValue (FDW-1109) and UuidV7 (FDW-3400).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeCollection(typeof(ValueSourceFactoryBase), typeof(IValueSourceFactory), typeof(ValueSourceFactories))]

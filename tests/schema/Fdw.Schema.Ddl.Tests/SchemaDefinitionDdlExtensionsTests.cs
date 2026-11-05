@@ -14,6 +14,11 @@ namespace Fdw.Schema.Ddl.Tests;
 
 public sealed class SchemaDefinitionDdlExtensionsTests
 {
+    private static readonly DdlGenerationOptions Options = new()
+    {
+        SchemaName = "dbo", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false,
+    };
+
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
@@ -24,10 +29,10 @@ public sealed class SchemaDefinitionDdlExtensionsTests
         var commands = new List<IDdlCommand> { new CreateSchemaCommand { Name = "dbo" } };
 
         generator
-            .Setup(g => g.GenerateCommands(schema.Object, null))
+            .Setup(g => g.GenerateCommands(schema.Object, Options))
             .Returns(GenericResult<IReadOnlyList<IDdlCommand>>.Success(commands));
 
-        var result = schema.Object.ToDdlCommands(generator.Object);
+        var result = schema.Object.ToDdlCommands(generator.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Count.ShouldBe(1);
@@ -40,7 +45,7 @@ public sealed class SchemaDefinitionDdlExtensionsTests
     {
         var schema = new Mock<ISchemaDefinition<IPropertyDefinition>>();
         var generator = new Mock<IDdlGenerator>();
-        var options = new DdlGenerationOptions();
+        var options = new DdlGenerationOptions() { SchemaName = "dbo", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false };
         var commands = new List<IDdlCommand>();
 
         generator
@@ -61,11 +66,11 @@ public sealed class SchemaDefinitionDdlExtensionsTests
         var generator = new Mock<IDdlGenerator>();
 
         generator
-            .Setup(g => g.GenerateCommands(schema.Object, null))
+            .Setup(g => g.GenerateCommands(schema.Object, Options))
             .Returns(GenericResult<IReadOnlyList<IDdlCommand>>.Failure(
                 Results.DdlResultCodes.ByName("CommandGenerationFailed")));
 
-        var result = schema.Object.ToDdlCommands(generator.Object);
+        var result = schema.Object.ToDdlCommands(generator.Object, Options);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -80,14 +85,14 @@ public sealed class SchemaDefinitionDdlExtensionsTests
         var commands = new List<IDdlCommand> { new CreateSchemaCommand { Name = "dbo" } };
 
         generator
-            .Setup(g => g.GenerateCommands(schema.Object, null))
+            .Setup(g => g.GenerateCommands(schema.Object, Options))
             .Returns(GenericResult<IReadOnlyList<IDdlCommand>>.Success(commands));
 
         generator
             .Setup(g => g.GenerateScript(It.IsAny<IReadOnlyList<IDdlCommand>>()))
             .Returns(GenericResult<string>.Success("CREATE SCHEMA dbo;"));
 
-        var result = schema.Object.ToSqlScript(generator.Object);
+        var result = schema.Object.ToSqlScript(generator.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe("CREATE SCHEMA dbo;");
@@ -102,11 +107,11 @@ public sealed class SchemaDefinitionDdlExtensionsTests
         var generator = new Mock<IDdlGenerator>();
 
         generator
-            .Setup(g => g.GenerateCommands(schema.Object, null))
+            .Setup(g => g.GenerateCommands(schema.Object, Options))
             .Returns(GenericResult<IReadOnlyList<IDdlCommand>>.Failure(
                 Results.DdlResultCodes.ByName("CommandGenerationFailed")));
 
-        var result = schema.Object.ToSqlScript(generator.Object);
+        var result = schema.Object.ToSqlScript(generator.Object, Options);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -120,11 +125,11 @@ public sealed class SchemaDefinitionDdlExtensionsTests
         var generator = new Mock<IDdlGenerator>();
 
         generator
-            .Setup(g => g.GenerateCommands(schema.Object, null))
+            .Setup(g => g.GenerateCommands(schema.Object, Options))
             .Returns(GenericResult<IReadOnlyList<IDdlCommand>>.Failure(
                 Results.DdlResultCodes.ByName("CommandGenerationFailed")));
 
-        var result = schema.Object.ToSqlScript(generator.Object);
+        var result = schema.Object.ToSqlScript(generator.Object, Options);
 
         result.IsSuccess.ShouldBeFalse();
         result.Messages.Count.ShouldBeGreaterThan(0);
@@ -139,10 +144,10 @@ public sealed class SchemaDefinitionDdlExtensionsTests
         var generator = new Mock<IDdlGenerator>();
 
         generator
-            .Setup(g => g.GenerateCommands(schema.Object, null))
+            .Setup(g => g.GenerateCommands(schema.Object, Options))
             .Returns(GenericResult<IReadOnlyList<IDdlCommand>>.Success(null!));
 
-        var result = schema.Object.ToSqlScript(generator.Object);
+        var result = schema.Object.ToSqlScript(generator.Object, Options);
 
         result.Messages.Count.ShouldBeGreaterThan(0);
     }
@@ -156,10 +161,10 @@ public sealed class SchemaDefinitionDdlExtensionsTests
         var generator = new Mock<IDdlGenerator>();
 
         generator
-            .Setup(g => g.GenerateCommands(schema.Object, null))
+            .Setup(g => g.GenerateCommands(schema.Object, Options))
             .Returns(GenericResult<IReadOnlyList<IDdlCommand>>.Success(new List<IDdlCommand>()));
 
-        var result = schema.Object.ToSqlScript(generator.Object);
+        var result = schema.Object.ToSqlScript(generator.Object, Options);
 
         result.Messages.Count.ShouldBeGreaterThan(0);
     }
@@ -171,7 +176,7 @@ public sealed class SchemaDefinitionDdlExtensionsTests
     {
         var schema = new Mock<ISchemaDefinition<IPropertyDefinition>>();
         var generator = new Mock<IDdlGenerator>();
-        var options = new DdlGenerationOptions();
+        var options = new DdlGenerationOptions() { SchemaName = "dbo", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false };
         var commands = new List<IDdlCommand> { new CreateSchemaCommand { Name = "dbo" } };
 
         generator

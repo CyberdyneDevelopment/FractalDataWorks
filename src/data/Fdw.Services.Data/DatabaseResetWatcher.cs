@@ -185,7 +185,7 @@ public sealed class DatabaseResetWatcher : BackgroundService
             return false;
 
         if (!now.Reachable)
-            DatabaseResetWatcherLog.Unreachable(_logger, connection, reading.CurrentMessage ?? "no reason was given");
+            DatabaseResetWatcherLog.Unreachable(_logger, connection, reading.NoValueReason().Message);
         else if (!before.Reachable)
             DatabaseResetWatcherLog.Reachable(_logger, connection, now.Generation);
         else

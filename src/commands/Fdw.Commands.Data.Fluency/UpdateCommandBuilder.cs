@@ -181,13 +181,17 @@ public class UpdateCommandBuilder<T>
     /// and its <see cref="DataStoreTarget"/> address.
     /// </summary>
     /// <param name="entity">The entity data to update with.</param>
-    /// <exception cref="InvalidOperationException">Thrown when DataStore or Path is not specified.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when DataStore or Path is not specified, or a filter group is still open.</exception>
     public DataGatewayCall Value(T entity)
     {
         if (string.IsNullOrWhiteSpace(_dataStoreName))
             throw new InvalidOperationException("DataStore must be specified. Call DataStore() before Value().");
         if (string.IsNullOrWhiteSpace(_pathName))
             throw new InvalidOperationException("Path must be specified. Call Path() before Value().");
+        // A condition written inside a group reaches the filter only when EndGroup() closes that group, so building with a group still
+        // open would drop its conditions: a Delete or Update would reach every row and a Query would return every row (FDW-3598).
+        if (_groupStack.Count > 0)
+            throw new InvalidOperationException($"{_groupStack.Count} filter group(s) still open. Call EndGroup() for each BeginAndGroup() or BeginOrGroup() before Value().");
 
         IFilterExpression? filter = null;
 

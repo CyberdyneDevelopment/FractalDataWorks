@@ -12,6 +12,7 @@ using Fdw.Results;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Data.MsSql.Tests.TestSupport;
 
 namespace Fdw.Data.MsSql.Tests.Translators;
 
@@ -24,7 +25,8 @@ public sealed class MsSqlQueryTranslatorTests
         string name = "Customers",
         string schema = "dbo",
         string database = "",
-        IField[]? fields = null)
+        IField[]? fields = null,
+        string? declaredKey = null)
     {
         var dbPath = new DatabasePath(database, schema, name);
         var containerSchema = new Mock<IContainerSchema>();
@@ -33,7 +35,11 @@ public sealed class MsSqlQueryTranslatorTests
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
+        container.As<IStorageContainer>().Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
+        if (declaredKey is not null)
+            container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = declaredKey });
+
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
@@ -48,6 +54,7 @@ public sealed class MsSqlQueryTranslatorTests
         bool isComputed = false)
     {
         var field = new Mock<IField>();
+        field.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
         field.Setup(f => f.Name).Returns(name);
         field.Setup(f => f.IsIdentity).Returns(isIdentity);
         field.Setup(f => f.IsComputed).Returns(isComputed);
@@ -356,7 +363,7 @@ public sealed class MsSqlQueryTranslatorTests
     public async Task TranslateSelectWithPaging()
     {
         var fields = new[] { CreateField("Id").Object };
-        var container = CreateContainer(fields: fields);
+        var container = CreateContainer(fields: fields, declaredKey: "Id");
 
         var paging = new PagingExpression { Skip = 20, Take = 10 };
 
@@ -377,8 +384,9 @@ public sealed class MsSqlQueryTranslatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateSelectWithPagingUsesFirstFieldWhenNoPrimaryKey()
+    public async Task TranslateSelectWithPagingRefusesAContainerThatDeclaresNoPrimaryKeyInsteadOfGuessingAnOrder()
     {
+        // FDW-3454: the order was the first field, then the first returned field, then "1"; a guess is not an order.
         var fields = new[] { CreateField("Name").Object, CreateField("Email").Object };
         var container = CreateContainer(fields: fields);
 
@@ -390,6 +398,56 @@ public sealed class MsSqlQueryTranslatorTests
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
         queryCommand.Setup(q => q.Paging).Returns(paging);
+
+        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldEndWith("-21020");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Customers");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateSelectWithPagingOrdersByTheDeclaredKeyNotByTheFirstField()
+    {
+        var fields = new[] { CreateField("Name").Object, CreateField("Email").Object };
+        var container = CreateContainer(fields: fields, declaredKey: "Email");
+
+        var paging = new PagingExpression { Skip = 0, Take = 50 };
+
+        var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
+        queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
+        queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
+        queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
+        queryCommand.Setup(q => q.Paging).Returns(paging);
+
+        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("ORDER BY [Email]");
+        result.Value.CommandText.ShouldNotContain("ORDER BY [Name]");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateSelectWithPagingAndAStatedOrderingNeedsNoDeclaredKey()
+    {
+        var fields = new[] { CreateField("Name").Object, CreateField("Email").Object };
+        var container = CreateContainer(fields: fields);
+        var orderedField = new Mock<IOrderedField>();
+        orderedField.Setup(f => f.PropertyName).Returns("Name");
+        orderedField.Setup(f => f.Direction).Returns(new AscendingDirection());
+        var ordering = new OrderingExpression { OrderedFields = [orderedField.Object] };
+
+        var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
+        queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
+        queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
+        queryCommand.Setup(q => q.Ordering).Returns(ordering);
+        queryCommand.Setup(q => q.Paging).Returns(new PagingExpression { Skip = 0, Take = 50 });
 
         var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
 

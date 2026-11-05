@@ -47,9 +47,6 @@ public abstract class DecideExecutionEndpointBase : Endpoint<ExecutionStateReque
     /// <summary>Gets the state the decision moves the run to.</summary>
     protected abstract IExecutionStateType Target { get; }
 
-    /// <summary>Gets the message the state-change event carries when the request gives none.</summary>
-    protected abstract string DefaultMessage { get; }
-
     /// <summary>Gets the one-line summary of the endpoint.</summary>
     protected abstract string EndpointSummary { get; }
 
@@ -98,7 +95,7 @@ public abstract class DecideExecutionEndpointBase : Endpoint<ExecutionStateReque
             return;
         }
 
-        var moved = await _tracker.TransitionState(req.Id, Target, req.Message ?? DefaultMessage, actor, ct).ConfigureAwait(false);
+        var moved = await _tracker.TransitionState(req.Id, Target, req.Message, actor, ct).ConfigureAwait(false);
         if (moved.IsFailure)
         {
             // The run was waiting a moment ago; the only way the move is refused is that someone decided it first.

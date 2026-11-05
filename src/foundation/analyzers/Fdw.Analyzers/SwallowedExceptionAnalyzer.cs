@@ -118,7 +118,7 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
         if (declaration == null)
             return false;
 
-        return IsCancellationExceptionType(context.SemanticModel.GetTypeInfo(declaration.Type).Type);
+        return IsCancellationExceptionType(context.SemanticModel.GetTypeInfo(declaration.Type, context.CancellationToken).Type);
     }
 
     // Why: walks the base chain so TaskCanceledException, which derives from
@@ -205,7 +205,7 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
         if (declaration == null)
             return true;
 
-        var type = context.SemanticModel.GetTypeInfo(declaration.Type).Type;
+        var type = context.SemanticModel.GetTypeInfo(declaration.Type, context.CancellationToken).Type;
 
         if (type == null)
             return false;
@@ -218,7 +218,7 @@ public sealed class SwallowedExceptionAnalyzer : DiagnosticAnalyzer
         if (declaration == null)
             return false;
 
-        var type = context.SemanticModel.GetTypeInfo(declaration.Type).Type;
+        var type = context.SemanticModel.GetTypeInfo(declaration.Type, context.CancellationToken).Type;
         if (type == null)
             return false;
 

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Fdw.Services.Tags.Endpoints</RootNamespace>
+    <AssemblyName>Fdw.Services.Tags.Endpoints</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
+    <ProjectReference Include="..\..\endpoints\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
+    <ProjectReference Include="..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+  </ItemGroup>
+
+</Project>

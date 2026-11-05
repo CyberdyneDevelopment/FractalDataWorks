@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Messages;
+using Fdw.Conventions;
 
 namespace Fdw.Results;
 
@@ -31,7 +32,7 @@ public static class ExceptionResultExtensions
                     MessageSeverity.Error,
                     inner.Message,
                     inner.GetType().Name,
-                    inner.Source ?? "Unknown"));
+                    inner.Source ?? LogPlaceholders.NoSource));
             }
         }
         else
@@ -43,7 +44,7 @@ public static class ExceptionResultExtensions
                     MessageSeverity.Error,
                     current.Message,
                     current.GetType().Name,
-                    current.Source ?? "Unknown"));
+                    current.Source ?? LogPlaceholders.NoSource));
                 current = current.InnerException;
             }
         }

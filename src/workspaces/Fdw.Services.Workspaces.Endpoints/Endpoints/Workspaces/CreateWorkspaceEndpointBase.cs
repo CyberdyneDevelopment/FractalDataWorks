@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions.Results;
@@ -104,13 +102,8 @@ public abstract class CreateWorkspaceEndpointBase : CrudCreateEndpointBase<Creat
         var classification = DataClassificationValidator.Validate(request.ClassificationId, Logger);
         if (classification.IsFailure) return classification.ToNewResult<WorkspaceDetailResponse>();
 
-        // The workspace is written in the caller's active tenant, so that is the tenant its organization must be one of.
-        if (request.OrganizationId is { } organizationId)
-        {
-            var inTenant = await WorkspaceOrganizationCheck.Check(
-                Resolve<IOrganizationProvider>(), request.Name, organizationId, caller.ActiveTenantId, Logger, ct).ConfigureAwait(false);
-            if (inTenant.IsFailure) return inTenant.ToNewResult<WorkspaceDetailResponse>();
-        }
+        var organization = await ResolveOrganization(request, caller.ActiveTenantId, ct).ConfigureAwait(false);
+        if (organization.IsFailure) return organization.ToNewResult<WorkspaceDetailResponse>();
 
         var config = new WorkspaceImplementationConfiguration
         {
@@ -134,7 +127,7 @@ public abstract class CreateWorkspaceEndpointBase : CrudCreateEndpointBase<Creat
             JoinPolicy = request.JoinPolicy,
             AutoApproveRole = request.AutoApproveRole,
             StandInSeed = request.StandInSeed,
-            OrganizationId = request.OrganizationId,
+            OrganizationId = organization.Value,
         };
 
         // Resolved before anything is written, so a host that has not registered it refuses cleanly
@@ -149,7 +142,7 @@ public abstract class CreateWorkspaceEndpointBase : CrudCreateEndpointBase<Creat
         var saved = await _provider.Save(config, "Workspace", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<WorkspaceDetailResponse>();
 
-        var permitted = await CreatePermissions(permissions, config, ct).ConfigureAwait(false);
+        var permitted = await WorkspacePermissionsOrUndo.Create(permissions, _provider, config.Id, config.Name, Logger, ct).ConfigureAwait(false);
         if (permitted.IsFailure) return permitted.ToNewResult<WorkspaceDetailResponse>();
 
         // The owning tenant is the one the row was written in, which the database stamps from the session, so it is
@@ -169,37 +162,32 @@ public abstract class CreateWorkspaceEndpointBase : CrudCreateEndpointBase<Creat
             : GenericResult<WorkspaceDetailResponse>.Success(WorkspaceResponseMapper.ToDetail(stored.Value, ownership.Value!));
     }
 
-    /// <summary>Creates the workspace's own permissions, undoing the workspace if that fails.</summary>
-    /// <remarks>
-    /// A workspace without its permissions cannot be granted to anyone by role (FDW-937), so it is not
-    /// left behind half-made. The undo tries both of its steps whatever the other did -- removing
-    /// whichever permission was made, and deleting the workspace -- because neither depends on the
-    /// other. Should either fail, the result names the undo that failed so it can be repaired by hand.
-    /// </remarks>
-    private async Task<IGenericResult> CreatePermissions(
-        IWorkspacePermissions permissions, WorkspaceImplementationConfiguration config, CancellationToken ct)
+    // The organization the workspace goes in (FDW-3668). The workspace is written in the caller's active tenant, so that is the tenant a named
+    // organization must be one of. A request that names none is placed in that tenant's default organization, which is a real row; a tenant
+    // with none, or a caller acting in no tenant, is a failure and not a guess.
+    private async Task<IGenericResult<Guid>> ResolveOrganization(CreateWorkspaceRequest request, Guid? activeTenantId, CancellationToken ct)
     {
-        var created = await permissions.Create(config.Id, config.Name, ct).ConfigureAwait(false);
-        if (created.IsSuccess) return created;
-
-        WorkspaceLifecycleLog.UndoingCreate(Logger, config.Name, string.Join(" <- ", created.CodeChain.Select(code => code.Name)));
-        var retired = await permissions.Remove(config.Id, ct).ConfigureAwait(false);
-        var deleted = await _provider.Delete(config.Id, ct).ConfigureAwait(false);
-        if (retired.IsSuccess && deleted.IsSuccess)
+        var organizations = Resolve<IOrganizationProvider>();
+        if (request.OrganizationId is { } named)
         {
-            WorkspaceLifecycleLog.CreateUndone(Logger, config.Name);
-            return created;
+            var inTenant = await WorkspaceOrganizationCheck.Check(organizations, request.Name, named, activeTenantId, Logger, ct).ConfigureAwait(false);
+            return inTenant.IsFailure ? inTenant.ToNewResult<Guid>() : GenericResult<Guid>.Success(named);
         }
 
-        var id = config.Id.ToString("D", CultureInfo.InvariantCulture);
-        var left = (retired.IsSuccess, deleted.IsSuccess) switch
+        if (activeTenantId is not { } tenantId)
         {
-            (false, false) => $"the workspace and its permissions workspaces/{id}:*",
-            (false, true) => $"its permissions workspaces/{id}:*",
-            _ => "the workspace",
-        };
-        return GenericResult.Failure(
-            WorkspacesResultCodes.ByName("WorkspaceCompensationFailed"), Logger,
-            ResultDetails.Create("name", config.Name, "step", "creating its permissions", "undo", left));
+            return GenericResult<Guid>.Failure(
+                WorkspacesResultCodes.ByName("DefaultOrganizationMissing"), Logger,
+                ResultDetails.Create("name", request.Name, "reason", "the caller is acting in no tenant"));
+        }
+
+        var tenantDefault = await organizations.GetDefault(tenantId, ct).ConfigureAwait(false);
+        if (tenantDefault.IsFailure) return tenantDefault.ToNewResult<Guid>();
+
+        return tenantDefault.Value is { } found
+            ? GenericResult<Guid>.Success(found.Id)
+            : GenericResult<Guid>.Failure(
+                WorkspacesResultCodes.ByName("DefaultOrganizationMissing"), Logger,
+                ResultDetails.Create("name", request.Name, "reason", "the tenant has no default organization"));
     }
 }

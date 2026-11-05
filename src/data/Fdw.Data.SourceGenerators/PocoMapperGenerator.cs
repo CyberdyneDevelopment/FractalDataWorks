@@ -107,6 +107,10 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                     continue;
                 }
 
+                // A property the type holds but does not store is neither a column nor a child table.
+                if (HasAttribute(p, NotStoredAttributeFullName))
+                    continue;
+
                 var hasPublicSetter = p.SetMethod != null && p.SetMethod.DeclaredAccessibility == Accessibility.Public;
 
                 // Property-collection (KVP) child: IDictionary<string, string> / <string, string?>.
@@ -716,6 +720,11 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
 
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
+    private const string NotStoredAttributeFullName = "Fdw.Data.NotStoredAttribute";
+
+    private static bool HasAttribute(IPropertySymbol prop, string fullName)
+        => prop.GetAttributes().Any(attr => attr.AttributeClass is not null
+            && string.Equals(attr.AttributeClass.ToDisplayString(), fullName, StringComparison.Ordinal));
 
     // The table a name/value child's rows live in, as its [ConfigurationChildTable] declares, or null
     // when it declares none. A name/value child has no element type whose registration could name its

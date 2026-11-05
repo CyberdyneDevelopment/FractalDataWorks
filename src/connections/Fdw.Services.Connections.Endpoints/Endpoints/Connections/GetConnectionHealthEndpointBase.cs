@@ -8,6 +8,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -66,7 +67,7 @@ public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameR
 
         if (!result.IsSuccess)
         {
-            ConnectionEndpointLog.HealthHistoryLoadFailed(_logger, req.Name, result.CurrentMessage ?? "Unknown error");
+            ConnectionEndpointLog.HealthHistoryLoadFailed(_logger, req.Name, result.FailureReason().Message);
             await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
             return;
         }

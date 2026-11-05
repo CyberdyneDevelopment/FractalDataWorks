@@ -117,6 +117,23 @@ public static partial class ConnectionLogger
         Message = "Command type '{commandType}' assembles its own result from its expanded commands; in one transaction: {inTransaction}")]
     public static partial IGenericMessage TraceExpansionTransaction(ILogger logger, string commandType, bool inTransaction);
 
+    /// <summary>Traces whether a command that expands into commands answering a row count runs them in one transaction.</summary>
+    [MessageLogging(
+        EventId = 11005,
+        Level = LogLevel.Trace,
+        Message = "Command type '{commandType}' runs its expanded commands for a row count; in one transaction: {inTransaction}")]
+    public static partial IGenericMessage TraceCountedExpansionTransaction(ILogger logger, string commandType, bool inTransaction);
+
+    /// <summary>
+    /// Warns that a connection that cannot open a transaction (an HTTP or Roslyn workspace connection) runs the commands a command
+    /// expands into one after another: a step that fails leaves the steps before it done, with nothing to roll them back.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11006,
+        Level = LogLevel.Warning,
+        Message = "Connection '{connectionName}' cannot open a transaction, so the commands command type '{commandType}' expands into run one after another; a failed step leaves the steps before it in place")]
+    public static partial IGenericMessage ExpansionRunsWithoutTransaction(ILogger logger, string connectionName, string commandType);
+
     /// <summary>Logs a command that expands into commands answering rows, run as one that answers a row count.</summary>
     [MessageLogging(
         EventId = 90005,

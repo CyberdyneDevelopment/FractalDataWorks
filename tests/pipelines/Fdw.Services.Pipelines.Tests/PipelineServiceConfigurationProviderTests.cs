@@ -1,5 +1,6 @@
 using Fdw.Configuration;
 using System;
+using System.Linq;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using Xunit;
 using Fdw.Services.Data;
+using Fdw.ServiceTypes;
 
 namespace Fdw.Services.Pipelines.Tests;
 
@@ -50,6 +52,73 @@ public sealed class PipelineServiceConfigurationProviderTests
         asDomain.ShouldBeSameAs(concrete);
         concrete.DataStoreName.ShouldBe(PipelineServiceTypes.ConfigurationConnection);
         concrete.PathName.ShouldBe("pipe");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Workspaces")]
+    public void ThePipelineProviderPlacesItsNewMembersThroughThePlacementTheHostRegistered()
+    {
+        // FDW-3692: pipelines are created through the ETL host, so the provider must take the placement from the host's own container,
+        // whichever host that is, or every pipeline create there is refused.
+        var registered = new Moq.Mock<IConfigurationPlacement>().Object;
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddLogging();
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        builder.Services.AddSingleton(registered);
+        PipelineServiceTypes.OperationalConnection = "OpsDb";
+
+        PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
+
+        using var provider = builder.Services.BuildServiceProvider();
+        var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
+        concrete.Placement.ShouldBeSameAs(registered);
+        concrete.PlacementKind.ShouldBe("Pipeline");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Workspaces")]
+    public void ThePipelineProviderRefusesToPlaceWhenTheHostRegisteredNoPlacement()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddLogging();
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        PipelineServiceTypes.OperationalConnection = "OpsDb";
+
+        PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
+
+        using var provider = builder.Services.BuildServiceProvider();
+        provider.GetRequiredService<PipelineServiceConfigurationProvider>().Placement.ShouldBeOfType<UnavailablePlacement>();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Configuration")]
+    public void RegisterOffersNoSecondServiceProviderForThePipelineDomain()
+    {
+        // FDW-3608: the pipeline domain's one service provider is EtlPipelineProvider, which holds the
+        // Graph factory. This collection registered a second one over the same rows that held no factory
+        // and that nothing resolved; it is gone, and this collection registers configuration only.
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddLogging();
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        var previous = PipelineServiceTypes.OperationalConnection;
+        try
+        {
+            PipelineServiceTypes.OperationalConnection = "OpsDb";
+
+            PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true).IsSuccess.ShouldBeTrue();
+
+            builder.Services.ShouldNotContain(d =>
+                d.ServiceType.IsGenericType
+                && d.ServiceType.GetGenericTypeDefinition() == typeof(IDomainServiceProvider<,>)
+                && d.ServiceType.GetGenericArguments()[1] == typeof(IPipelineImplementationConfiguration));
+        }
+        finally
+        {
+            PipelineServiceTypes.OperationalConnection = previous;
+        }
     }
 
     [Fact]

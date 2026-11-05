@@ -18,6 +18,7 @@ public sealed class TenantSettingConfigurationValidatorTests
         // Arrange
         var config = new TenantSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.NewGuid(),
             SettingName = "MaxRows",
             SettingValue = "500"
@@ -38,6 +39,7 @@ public sealed class TenantSettingConfigurationValidatorTests
         // Arrange
         var config = new TenantSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.Empty,
             SettingName = "MaxRows",
             SettingValue = "500"
@@ -58,6 +60,7 @@ public sealed class TenantSettingConfigurationValidatorTests
         // Arrange
         var config = new TenantSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.NewGuid(),
             SettingName = string.Empty,
             SettingValue = "500"
@@ -78,6 +81,7 @@ public sealed class TenantSettingConfigurationValidatorTests
         // Arrange
         var config = new TenantSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.NewGuid(),
             SettingName = "MaxRows",
             SettingValue = string.Empty

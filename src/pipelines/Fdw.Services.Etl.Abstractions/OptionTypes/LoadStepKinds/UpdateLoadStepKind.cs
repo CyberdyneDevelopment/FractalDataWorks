@@ -10,4 +10,7 @@ public sealed class UpdateLoadStepKind : LoadStepKindBase
     public UpdateLoadStepKind() : base("Update", "The output rows update the rows with matching keys.", usesKeyColumns: true, usesCompareColumns: false, usesWriteColumns: true, allowsVersioning: false, allowsSoftDelete: true, usesSourceDataSet: false, usesRows: true, acceptsRejectedRecords: false)
     {
     }
+
+    /// <inheritdoc/>
+    public override bool RepeatsToSameResult => true;
 }

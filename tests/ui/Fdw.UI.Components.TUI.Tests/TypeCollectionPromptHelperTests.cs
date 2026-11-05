@@ -49,7 +49,7 @@ public sealed class TypeCollectionPromptHelperTests
         var emptyOptions = Enumerable.Empty<TestTypeOption>();
 
         // Act
-        var result = TypeCollectionPromptHelper.Prompt(console, "Select:", emptyOptions);
+        var result = TypeCollectionPromptHelper.Prompt(console, "Select:", emptyOptions, new TUIThemeConfiguration());
 
         // Assert
         result.ShouldBe(0);
@@ -69,26 +69,10 @@ public sealed class TypeCollectionPromptHelperTests
         };
 
         // Act - passes when empty; verifies IEnumerable<TOption> is accepted without reflection
-        var emptyResult = TypeCollectionPromptHelper.Prompt(console, "Select:", Enumerable.Empty<TestTypeOption>());
+        var emptyResult = TypeCollectionPromptHelper.Prompt(console, "Select:", Enumerable.Empty<TestTypeOption>(), new TUIThemeConfiguration());
 
         // Assert - compile-time type safety: no reflection invoked on empty path
         emptyResult.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Ui")]
-    public void PromptWithNullThemeStillReturnsZeroForEmpty()
-    {
-        // Arrange
-        var console = CreateOffscreenConsole();
-
-        // Act
-        var result = TypeCollectionPromptHelper.Prompt<TestTypeOption>(
-            console, "Pick:", Enumerable.Empty<TestTypeOption>(), theme: null);
-
-        // Assert
-        result.ShouldBe(0);
     }
 
     [Fact]
@@ -143,25 +127,10 @@ public sealed class TypeCollectionPromptHelperTests
         }
 
         // Act
-        TypeCollectionPromptHelper.Prompt(console, "Select:", TrackingEnumerable());
+        TypeCollectionPromptHelper.Prompt(console, "Select:", TrackingEnumerable(), new TUIThemeConfiguration());
 
         // Assert - enumerated exactly once (materialised via ToList inside helper)
         enumerationCount.ShouldBe(1);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Ui")]
-    public void PromptWithExplicitNullThemeReturnsZeroForEmpty()
-    {
-        // Arrange
-        var console = CreateOffscreenConsole();
-
-        // Act - explicit null theme tests the null-theme fallback path in the helper
-        var result = TypeCollectionPromptHelper.Prompt<TestTypeOption>(
-            console, "Select:", Enumerable.Empty<TestTypeOption>(), theme: null);
-
-        // Assert
-        result.ShouldBe(0);
-    }
 }

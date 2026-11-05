@@ -58,9 +58,6 @@ public sealed class ODataQueryTranslator : ODataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
-        ODataQueryTranslatorLog.Translating(
-            NullLogger<ODataQueryTranslator>.Instance, container?.Name ?? "<null>");
-
         try
         {
             if (container == null)
@@ -70,6 +67,8 @@ public sealed class ODataQueryTranslator : ODataCommandTranslatorBase
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("ContainerNull")));
             }
+
+            ODataQueryTranslatorLog.Translating(NullLogger<ODataQueryTranslator>.Instance, container.Name);
 
             // Get QueryCommand-specific properties via metadata
             var filter = command.Metadata?.TryGetValue("Filter", out var filterObj) == true
@@ -131,7 +130,7 @@ public sealed class ODataQueryTranslator : ODataCommandTranslatorBase
             var request = new HttpRequestMessage(HttpMethod.Get, relativePath + queryString);
 
             ODataQueryTranslatorLog.Translated(
-                NullLogger<ODataQueryTranslator>.Instance, container.Name, request.RequestUri?.ToString() ?? relativePath + queryString);
+                NullLogger<ODataQueryTranslator>.Instance, container.Name, relativePath + queryString);
 
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Success(request));
@@ -139,7 +138,7 @@ public sealed class ODataQueryTranslator : ODataCommandTranslatorBase
         catch (Exception ex)
         {
             ODataQueryTranslatorLog.QueryTranslationFailed(
-                NullLogger<ODataQueryTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
+                NullLogger<ODataQueryTranslator>.Instance, ex, container.Name, ex.Message);
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Failure(
                     ODataResultCodes.ByName("QueryTranslationFailed"),

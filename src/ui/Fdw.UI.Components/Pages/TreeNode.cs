@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.UI.Abstractions.Pages;
+using Fdw.Conventions;
 
 namespace Fdw.UI.Components.Pages;
 
@@ -93,21 +94,33 @@ public sealed class TreeNode : ITreeNode
     public T? GetMetadata<T>(string key) =>
         _metadata.TryGetValue(key, out var value) && value is T typed ? typed : default;
 
+    /// <summary>The icon a section node shows when its caller states none, declared by the node type.</summary>
+    [PlatformDefault]
+    public const string SectionIcon = "📁";
+
+    /// <summary>The icon an item node shows when its caller states none, declared by the node type.</summary>
+    [PlatformDefault]
+    public const string ItemIcon = "📄";
+
+    /// <summary>The icon a field node shows when its caller states none, declared by the node type.</summary>
+    [PlatformDefault]
+    public const string FieldIcon = "•";
+
     /// <summary>
     /// Creates a node for a configuration section.
     /// </summary>
     public static TreeNode Section(string id, string label, string? icon = null) =>
-        new() { Id = id, Label = label, NodeType = "section", Icon = icon ?? "📁" };
+        new() { Id = id, Label = label, NodeType = "section", Icon = icon ?? SectionIcon };
 
     /// <summary>
     /// Creates a node for a configuration item.
     /// </summary>
     public static TreeNode Item(string id, string label, object? data = null, string? icon = null) =>
-        new() { Id = id, Label = label, NodeType = "item", Data = data, Icon = icon ?? "📄", AllowChildren = false };
+        new() { Id = id, Label = label, NodeType = "item", Data = data, Icon = icon ?? ItemIcon, AllowChildren = false };
 
     /// <summary>
     /// Creates a node for a field/property.
     /// </summary>
     public static TreeNode Field(string id, string label, object? value, string? icon = null) =>
-        new() { Id = id, Label = $"{label}: {value}", NodeType = "field", Data = value, Icon = icon ?? "•", AllowChildren = false, IsSelectable = false };
+        new() { Id = id, Label = $"{label}: {value}", NodeType = "field", Data = value, Icon = icon ?? FieldIcon, AllowChildren = false, IsSelectable = false };
 }

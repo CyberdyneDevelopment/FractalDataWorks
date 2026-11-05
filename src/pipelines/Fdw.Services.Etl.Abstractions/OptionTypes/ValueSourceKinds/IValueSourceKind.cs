@@ -3,7 +3,7 @@ using Fdw.Collections;
 namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 
 /// <summary>
-/// Where a loaded column gets its value: a column of the source row, the next value of a sequence, the current time or a constant (FDW-1108).
+/// Where a loaded column gets its value: a column of the source row, the next value of a sequence, the current time, a constant (FDW-1108) or a new UUIDv7 (FDW-3400).
 /// </summary>
 public interface IValueSourceKind : ITypeOption<int, IValueSourceKind>
 {
@@ -21,4 +21,7 @@ public interface IValueSourceKind : ITypeOption<int, IValueSourceKind>
 
     /// <summary>Gets whether the kind carries a constant value and the type that reads it.</summary>
     bool RequiresConstant { get; }
+
+    /// <summary>Gets whether the column the kind fills must hold a Guid, which a graph is refused for when its destination's data set field is of another type.</summary>
+    bool RequiresGuidColumn { get; }
 }

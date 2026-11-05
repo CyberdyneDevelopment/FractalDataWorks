@@ -484,7 +484,7 @@ public class TestPoco
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "TestPocoPocoMapper.g.cs");
 
         generated.ShouldNotBeNull();
-        var mapFromDictStart = generated.IndexOf("MapFromDictionary");
+        var mapFromDictStart = generated.IndexOf("MapFromDictionary", StringComparison.Ordinal);
         var mapFromDictSection = generated.Substring(mapFromDictStart);
 
         mapFromDictSection.ShouldContain("try");
@@ -1175,6 +1175,59 @@ namespace Test
 
         generated.ShouldNotBeNull();
         generated.ShouldContain("public global::System.Collections.Generic.IReadOnlyDictionary<string, string?>? ReadDictionary(object parent) => null;");
+    }
+
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "SourceGen")]
+    public void ANotStoredListIsNotACascadeChildAndAnUnmarkedOneStillIs()
+    {
+        var source = @"
+using System.Collections.Generic;
+using Fdw.Data;
+
+namespace Fdw.Configuration
+{
+    public interface IGenericConfiguration
+    {
+    }
+}
+
+namespace Test
+{
+    using Fdw.Configuration;
+
+    [GenerateMapper]
+    public class ChildItem : IGenericConfiguration
+    {
+        public int Id { get; set; }
+    }
+
+    [GenerateMapper]
+    public class MixedOwner
+    {
+        public int Id { get; set; }
+        public IList<ChildItem> Items { get; set; } = new List<ChildItem>();
+
+        [NotStored]
+        public IList<ChildItem> Hidden { get; set; } = new List<ChildItem>();
+
+        [NotStored]
+        public string Computed { get; set; } = string.Empty;
+    }
+}
+";
+
+        var (compilation, diagnostics) = CompilationHelper.RunGenerator(source);
+
+        diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "MixedOwnerPocoMapper.g.cs");
+
+        generated.ShouldNotBeNull();
+        generated.ShouldContain("Items");
+        generated.ShouldNotContain("Hidden");
+        generated.ShouldNotContain("Computed");
     }
 
     #endregion

@@ -14,8 +14,8 @@ public sealed class ConfigurationInstanceDetailResponse
     /// <summary>Gets or sets the instance name.</summary>
     public required string Name { get; set; }
 
-    /// <summary>Gets or sets the service type.</summary>
-    public required string ServiceType { get; set; }
+    /// <summary>Gets or sets the service type the stored record names, or null when the record names none.</summary>
+    public required string? ServiceType { get; set; }
 
     /// <summary>Gets or sets the category.</summary>
     public required string Category { get; set; }

@@ -12,7 +12,8 @@ namespace Fdw.Services.Etl.Graphs;
 /// <remarks>
 /// A node the kind names is always there. A node the person building the graph names is there when its setting names it (a
 /// split's filtered outputs, an error or unmatched output) or, when no setting names it, when a link uses it (a union's inputs).
-/// This is the one place that rule is written, so the check of a graph and a description of its nodes cannot disagree.
+/// This is the one place that rule is written, so the check of a graph and a description of its nodes cannot disagree. A completion line (one that leaves a
+/// <c>done</c> output, FDW-3640) names no row node, so it is left out: the inputs it arrives at are not mistaken for a union's.
 /// </remarks>
 public static class ComponentShapes
 {
@@ -31,9 +32,10 @@ public static class ComponentShapes
             return ([], []);
         }
 
-        var fromLinks = links.Where(link => string.Equals(link.ToComponent, component.Name, StringComparison.OrdinalIgnoreCase))
+        var rows = CompletionLines.Rows(links);
+        var fromLinks = rows.Where(link => string.Equals(link.ToComponent, component.Name, StringComparison.OrdinalIgnoreCase))
             .Select(link => link.ToInput);
-        var toLinks = links.Where(link => string.Equals(link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
+        var toLinks = rows.Where(link => string.Equals(link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
             .Select(link => link.FromOutput);
         return (Names(component, kind.Inputs, fromLinks), Names(component, kind.Outputs, toLinks));
     }
@@ -52,7 +54,7 @@ public static class ComponentShapes
             return [];
         }
 
-        var toLinks = links.Where(link => string.Equals(link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
+        var toLinks = CompletionLines.Rows(links).Where(link => string.Equals(link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
             .Select(link => link.FromOutput);
         return Names(component, [.. kind.Outputs.Where(spec => spec.IsError)], toLinks);
     }

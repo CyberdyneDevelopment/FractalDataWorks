@@ -17,12 +17,12 @@ public static class RecordWriterBytes
     /// <summary>Writes records through a binary format and returns the finished file.</summary>
     /// <param name="format">The format; it must report <see cref="IRecordWriterType.WritesBinary"/>.</param>
     /// <param name="fields">The container's field children.</param>
-    /// <param name="options">Format-specific options; null requests the format's defaults.</param>
+    /// <param name="options">Format-specific options, built by <see cref="IRecordWriterType.CreateOptions(Fdw.Data.Abstractions.IStorageContainer)"/>.</param>
     /// <param name="write">Writes the rows into the writer it is given.</param>
     /// <returns>The file's bytes.</returns>
     /// <exception cref="NotSupportedException">The format is a text format.</exception>
     public static byte[] Write(
-        IRecordWriterType format, IReadOnlyList<IDataField> fields, RowWriterOptions? options, Action<IRecordWriter<DataRecord>> write)
+        IRecordWriterType format, IReadOnlyList<IDataField> fields, RowWriterOptions options, Action<IRecordWriter<DataRecord>> write)
     {
         if (format is null)
         {

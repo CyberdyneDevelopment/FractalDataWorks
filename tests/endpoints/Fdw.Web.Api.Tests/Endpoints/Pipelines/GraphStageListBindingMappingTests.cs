@@ -26,7 +26,7 @@ public sealed class GraphStageListBindingMappingTests
             LinkCapacity = 4,
             MaxParallelRuns = 1,
             OverflowBehavior = "Queue",
-            Parameters = [new GraphParameterPayload { Name = "Keys", DataType = "String", IsRequired = true, IsList = true }],
+                Parameters = [new GraphParameterPayload { Name = "Keys", DataType = "String", IsRequired = true, IsList = true }],
             Components = [once],
         };
     }
@@ -73,7 +73,7 @@ public sealed class GraphStageListBindingMappingTests
             LinkCapacity = 4,
             MaxParallelRuns = 1,
             OverflowBehavior = "Queue",
-            Parameters = [new GraphParameterPayload { Name = "Order", DataType = "String", IsRequired = true, IsList = true }],
+                Parameters = [new GraphParameterPayload { Name = "Order", DataType = "String", IsRequired = true, IsList = true }],
             Components = [ordered],
         };
 

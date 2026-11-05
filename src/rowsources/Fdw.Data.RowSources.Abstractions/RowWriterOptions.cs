@@ -21,7 +21,7 @@ public class RowWriterOptions
     public IList<string> Columns { get; set; } = new List<string>();
 
     /// <summary>
-    /// Gets or sets the buffer size for streaming write operations. Default is 16KB.
+    /// Gets or sets the buffer size for streaming write operations.
     /// </summary>
-    public int BufferSize { get; set; } = 16 * 1024;
+    public int BufferSize { get; set; }
 }

@@ -61,7 +61,7 @@ public readonly struct DataRecord : IEquatable<DataRecord>
     /// <summary>
     /// Gets the number of fields in this record (equal to <see cref="RecordSchema.FieldCount"/>).
     /// </summary>
-    public int FieldCount => _schema?.FieldCount ?? 0;
+    public int FieldCount => _schema.FieldCount;
 
     /// <summary>
     /// Gets the field values as a read-only span window over the backing array — zero-copy access for

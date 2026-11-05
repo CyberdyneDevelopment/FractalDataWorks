@@ -72,51 +72,12 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
             builder.Services.TryAddSingleton<IPipelineConfigurationProvider>(sp =>
                 new PipelineServiceConfigurationProvider(
                     sp.GetRequiredService<ILogger<PipelineServiceConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "Pipeline"));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "Pipeline",
+                    ConfigurationPlacementSource.From(sp)));
             builder.Services.TryAddSingleton<PipelineServiceConfigurationProvider>(
                 sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-
-            // Published under the closed generic as well as the domain interface: a consumer asking
-            // for IDomainServiceProvider<IGenericService, IPipelineImplementationConfiguration>
-            // and one asking for IPipelineServiceProvider must get the SAME instance, or the second
-            // gets a provider whose factory registrations the first one made.
-            builder.Services.AddScoped<IDomainServiceProvider<IGenericService, IPipelineImplementationConfiguration>>(
-                sp => sp.GetRequiredService<IPipelineServiceProvider>());
-
-            builder.Services.AddScoped<IPipelineServiceProvider>(sp =>
-            {
-                var provider = new PipelineServiceProvider(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<PipelineServiceProvider>()
-                    ?? NullLogger<PipelineServiceProvider>.Instance);
-
-                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<PipelineServiceTypes>()
-                    ?? NullLogger<PipelineServiceTypes>.Instance;
-                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(PipelineServiceTypes), provider.GetType().Name);
-
-                var cfgProvider = sp.GetService<IPipelineConfigurationProvider>();
-                if (cfgProvider is not null)
-                {
-                    var domainResult = provider.Register(cfgProvider);
-                    if (domainResult.IsSuccess)
-                        ServiceTypeLog.DomainConfigurationSourceAttached(
-                            stLogger, nameof(PipelineServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name);
-                    else
-                        ServiceTypeLog.DomainConfigurationSourceRejected(
-                            stLogger, nameof(PipelineServiceTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
-                }
-                else
-                {
-                    ServiceTypeLog.DomainHasNoConfigurationSource(
-                        stLogger,
-                        nameof(PipelineServiceTypes),
-                        provider.GetType().Name,
-                        typeof(IPipelineConfigurationProvider).ToString());
-                }
-
-                return provider;
-            });
 
             // A stored SQL script is its own domain with one implementation, Sql (FDW-1442). It is registered beside the
             // pipeline domain and is read through its own provider; it never appears among the pipelines.

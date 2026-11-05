@@ -34,7 +34,7 @@ public sealed class EqualOperator : FilterOperatorBase
 
         return value switch
         {
-            string str => $"'{str.Replace("'", "''")}'",
+            string str => $"'{str.Replace("'", "''", StringComparison.Ordinal)}'",
             int or long or short or byte => value.ToString()!,
             decimal or double or float => value.ToString()!,
             bool b => b.ToString().ToLowerInvariant(),

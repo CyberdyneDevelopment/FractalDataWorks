@@ -210,7 +210,7 @@ public class ImplementationModuleInitializerGenerator : IIncrementalGenerator
     {
         var options = new List<ModuleInitOptionModel>();
         var diagnostics = new List<string>();
-        var currentAssemblyName = compilation.AssemblyName ?? "";
+        var currentAssemblyName = compilation.AssemblyName ?? string.Empty;
 
         diagnostics.Add($"Assembly: {currentAssemblyName} (DLL mode — scanning own types for cross-assembly Implementations)");
 
@@ -275,7 +275,7 @@ public class ImplementationModuleInitializerGenerator : IIncrementalGenerator
 
             // Only generate registration for cross-assembly options.
             // Same-assembly options are handled by Collections.SourceGenerators static constructors.
-            var collectionAssemblyName = collectionType.ContainingAssembly?.Name ?? "";
+            var collectionAssemblyName = collectionType.ContainingAssembly?.Name ?? string.Empty;
             if (string.Equals(collectionAssemblyName, currentAssemblyName, StringComparison.Ordinal))
                 continue;
 
@@ -285,9 +285,9 @@ public class ImplementationModuleInitializerGenerator : IIncrementalGenerator
             options.Add(new ModuleInitOptionModel(
                 OptionTypeName: type.Name,
                 OptionFullTypeName: type.ToDisplayString(),
-                OptionNamespace: type.ContainingNamespace?.ToDisplayString() ?? "",
+                OptionNamespace: type.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 CollectionFullName: collectionFullName,
-                CollectionNamespace: collectionType.ContainingNamespace?.ToDisplayString() ?? "",
+                CollectionNamespace: collectionType.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 CollectionClassName: collectionType.Name
             ));
         }
@@ -414,9 +414,9 @@ public class ImplementationModuleInitializerGenerator : IIncrementalGenerator
             options.Add(new ModuleInitOptionModel(
                 OptionTypeName: type.Name,
                 OptionFullTypeName: type.ToDisplayString(),
-                OptionNamespace: type.ContainingNamespace?.ToDisplayString() ?? "",
+                OptionNamespace: type.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 CollectionFullName: collectionType.ToDisplayString(),
-                CollectionNamespace: collectionType.ContainingNamespace?.ToDisplayString() ?? "",
+                CollectionNamespace: collectionType.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 CollectionClassName: collectionType.Name
             ));
         }

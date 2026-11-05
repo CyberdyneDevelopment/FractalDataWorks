@@ -78,17 +78,6 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     /// <summary>Gets the authorization policy required to stream this resource.</summary>
     protected abstract string PolicyName { get; }
 
-    /// <summary>
-    /// Gets the record format served when the client expressed no preference, by
-    /// <see cref="IRecordWriterType.Format"/> name.
-    /// </summary>
-    /// <remarks>
-    /// Stated by the endpoint rather than defaulted by the framework: an endpoint knows what its
-    /// callers read, and a framework picking for it would make the served format depend on which
-    /// formats happened to be registered.
-    /// </remarks>
-    protected abstract string DefaultFormat { get; }
-
     /// <summary>Gets the pending character count at which the response buffer is drained.</summary>
     /// <remarks>
     /// A buffer size, not a value standing in for missing configuration: it trades syscalls against
@@ -101,18 +90,16 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     protected virtual int DrainThresholdBytes => 32 * 1024;
 
     /// <summary>
-    /// Builds the writer options for the negotiated format over the record source's columns. Override to set options the
-    /// format's own defaults leave off.
+    /// Gets the format choices the request states, by the keys the formats read (<c>Separator</c>, <c>HasHeader</c>, <c>QuoteChar</c>,
+    /// <c>WriteByteOrderMark</c>, <c>NeutralizeFormulas</c>, <c>RootElementName</c>, <c>RowElementName</c>, <c>SheetName</c> and so on).
     /// </summary>
-    /// <param name="format">The negotiated format.</param>
-    /// <param name="columns">The ordered column names the writer emits.</param>
-    /// <returns>Options of the concrete type the format's writer expects.</returns>
+    /// <param name="request">The request.</param>
+    /// <returns>The stated choices; a choice the negotiated format needs and the request leaves out refuses the stream before it starts.</returns>
     /// <remarks>
-    /// An export a person opens in a spreadsheet turns on the delimited writer's byte order mark and formula guard here. They
-    /// are off in the format's own defaults because a machine reader must see the value unchanged.
+    /// Why the request (FDW-3823): an export has no container to state them, and a choice is never defaulted. Mike: "why in the fuck
+    /// would you make a selection that is a default". The caller, the console, sends them.
     /// </remarks>
-    protected virtual RowWriterOptions WriterOptions(IRecordWriterType format, IReadOnlyList<string> columns)
-        => format.CreateOptions(columns);
+    protected abstract IReadOnlyDictionary<string, object> FormatChoices(TRequest request);
 
     /// <summary>Gets the documentation tag this endpoint appears under.</summary>
     protected virtual string EndpointTag => ResourceName;
@@ -170,17 +157,10 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     {
         var resource = ResourceIdentifier(req);
 
-        var named = HttpContext.Request.Query["format"].ToString();
-        var format = string.IsNullOrWhiteSpace(named)
-            ? NegotiateFormat(HttpContext.Request.Headers.Accept.ToString())
-            : FormatNamed(named);
+        var (format, refusalStatus) = ResolveFormat(resource);
         if (format is null)
         {
-            StreamRecordsEndpointLog.FormatNotAcceptable(Logger, resource, string.IsNullOrWhiteSpace(named) ? HttpContext.Request.Headers.Accept.ToString() : named);
-            AddError(string.IsNullOrWhiteSpace(named)
-                ? $"No available record format satisfies the Accept header. Available: {AvailableMediaTypes()}."
-                : $"No record format is named '{named}'. Available: {AvailableFormatNames()}.");
-            await Send.ErrorsAsync(406, ct).ConfigureAwait(false);
+            await Send.ErrorsAsync(refusalStatus, ct).ConfigureAwait(false);
             return;
         }
 
@@ -211,7 +191,17 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
             StreamRecordsEndpointLog.CursorOpened(Logger, resource, source.Schema.Fields.Count);
             StreamRecordsEndpointLog.FormatNegotiated(Logger, resource, format.Format, format.MediaType);
 
-            await Stream(source, format, resource, ct).ConfigureAwait(false);
+            // Why before the stream starts (FDW-3823): a choice the request leaves out is still answered with a status naming it.
+            var options = format.CreateOptions(ColumnsOf(source), FormatChoices(req), resource);
+            if (options.IsFailure)
+            {
+                StreamRecordsEndpointLog.StreamNotStarted(Logger, resource);
+                var (optionsStatus, optionsProblem) = ResultHttpStatusMapper.Map(options, HttpContext);
+                await Send.ResultAsync(TypedResults.Json(optionsProblem, statusCode: optionsStatus)).ConfigureAwait(false);
+                return;
+            }
+
+            await Stream(source, format, options.Value!, resource, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -219,8 +209,7 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         }
     }
 
-    private async Task Stream(
-        IRecordSource<DataRecord> source, IRecordWriterType format, string resource, CancellationToken ct)
+    private static List<string> ColumnsOf(IRecordSource<DataRecord> source)
     {
         var columns = new List<string>(source.Schema.Fields.Count);
         foreach (var field in source.Schema.Fields)
@@ -228,6 +217,12 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
             columns.Add(field.Name);
         }
 
+        return columns;
+    }
+
+    private async Task Stream(
+        IRecordSource<DataRecord> source, IRecordWriterType format, RowWriterOptions options, string resource, CancellationToken ct)
+    {
         HttpContext.Response.StatusCode = 200;
         HttpContext.Response.ContentType = format.MediaType;
 
@@ -243,7 +238,7 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         }
 
         using var sink = new ResponseSink(HttpContext.Response.Body, format.WritesBinary, DrainThresholdChars, DrainThresholdBytes);
-        var writer = sink.CreateWriter(format, WriterOptions(format, columns));
+        var writer = sink.CreateWriter(format, options);
         var rowCount = 0L;
         string? failure = null;
         var ceilingHit = false;
@@ -254,7 +249,7 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
             {
                 if (record.IsFailure)
                 {
-                    failure = record.CurrentMessage ?? "A record could not be read.";
+                    failure = record.FailureReason().Message;
                     break;
                 }
 
@@ -352,25 +347,42 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         return null;
     }
 
-    private IRecordWriterType? NegotiateFormat(string acceptHeader)
+    // The format the request names, by ?format= or the Accept header; the refusal's status when it names none (400) or one no writer
+    // serves (406), with the error added. Why no format of the endpoint's own (FDW-3823): the format is the caller's choice, and an
+    // endpoint that served one when the caller named none made that selection for it. Mike: "why in the fuck would you make a
+    // selection that is a default".
+    private (IRecordWriterType? Format, int RefusalStatus) ResolveFormat(string resource)
     {
-        var requested = RecordWriterTypes.ByAcceptHeader(acceptHeader);
-        if (!ReferenceEquals(requested, RecordWriterTypes.NotFound))
+        var named = HttpContext.Request.Query["format"].ToString();
+        var accept = HttpContext.Request.Headers.Accept.ToString();
+        if (string.IsNullOrWhiteSpace(named) && StatesNoPreference(accept))
         {
-            return requested;
+            StreamRecordsEndpointLog.FormatNotStated(Logger, resource);
+            AddError($"The request names no record format: state it with ?format= or an Accept header. Available: {AvailableFormatNames()}.");
+            return (null, 400);
         }
 
-        if (!StatesNoPreference(acceptHeader))
+        var format = string.IsNullOrWhiteSpace(named) ? Accepted(accept) : FormatNamed(named);
+        if (format is not null)
         {
-            return null;
+            return (format, 0);
         }
 
-        var fallbackToDeclared = RecordWriterTypes.ByName(DefaultFormat);
-        return ReferenceEquals(fallbackToDeclared, RecordWriterTypes.NotFound) ? null : fallbackToDeclared;
+        StreamRecordsEndpointLog.FormatNotAcceptable(Logger, resource, string.IsNullOrWhiteSpace(named) ? accept : named);
+        AddError(string.IsNullOrWhiteSpace(named)
+            ? $"No available record format satisfies the Accept header. Available: {AvailableMediaTypes()}."
+            : $"No record format is named '{named}'. Available: {AvailableFormatNames()}.");
+        return (null, 406);
     }
 
-    // Why a wildcard is treated as no preference rather than as an unsatisfiable request: */* says the
-    // client will take whatever the endpoint serves, which is what DefaultFormat states.
+    private static IRecordWriterType? Accepted(string acceptHeader)
+    {
+        var requested = RecordWriterTypes.ByAcceptHeader(acceptHeader);
+        return ReferenceEquals(requested, RecordWriterTypes.NotFound) ? null : requested;
+    }
+
+    // Why a wildcard names no format: */* says the client takes whatever is served, and the endpoint serves no format the caller did
+    // not name, so it is the same as no Accept header at all.
     private static bool StatesNoPreference(string acceptHeader)
     {
         if (string.IsNullOrWhiteSpace(acceptHeader))
@@ -381,13 +393,13 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         foreach (var entry in acceptHeader.Split(','))
         {
             var trimmed = entry.Trim();
-            var separator = trimmed.IndexOf(';');
+            var separator = trimmed.IndexOf(';', StringComparison.Ordinal);
             if (separator >= 0)
             {
                 trimmed = trimmed.Substring(0, separator).Trim();
             }
 
-            if (trimmed.Length > 0 && !trimmed.EndsWith("/*", StringComparison.Ordinal) && trimmed != "*")
+            if (trimmed.Length > 0 && !trimmed.EndsWith("/*", StringComparison.Ordinal) && !string.Equals(trimmed, "*", StringComparison.Ordinal))
             {
                 return false;
             }

@@ -82,7 +82,7 @@ public class RecordWriterTypesMediaTypeTests
 
         foreach (var format in RecordWriterTypes.All())
         {
-            var options = format.CreateOptions(columns);
+            var options = format.CreateOptions(columns, TestRowFormats.Choices, "test").Value!;
 
             options.ShouldNotBeNull();
             options.Columns.ShouldBe(columns, $"{format.Format} dropped the column list");
@@ -98,7 +98,7 @@ public class RecordWriterTypesMediaTypeTests
         var delimited = RecordWriterTypes.ByName("Delimited");
         using var target = new StringWriter();
 
-        using var writer = delimited.CreateWriter(target, delimited.CreateOptions(["id", "name"]));
+        using var writer = delimited.CreateWriter(target, delimited.CreateOptions(["id", "name"], TestRowFormats.Choices, "test").Value!);
 
         writer.ShouldNotBeNull();
     }

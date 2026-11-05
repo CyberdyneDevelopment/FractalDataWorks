@@ -59,7 +59,7 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     /// <param name="id">The unique identifier for this type option value.</param>
     /// <param name="name">The name of this type option value.</param>
     /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
-    protected TypeOptionBase(TKey id, string name) : this(id, name, string.Empty)
+    protected TypeOptionBase([TypeOptionId] TKey id, string name) : this(id, name, string.Empty)
     {
     }
 
@@ -70,7 +70,7 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     /// <param name="name">The name of this type option value.</param>
     /// <param name="category">The category of this type option value. Pass null or empty string for default "NotCategorized".</param>
     /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
-    protected TypeOptionBase(TKey id, string name, string? category)
+    protected TypeOptionBase([TypeOptionId] TKey id, string name, string? category)
     {
         if (name == null) throw new ArgumentNullException(nameof(name));
 
@@ -100,8 +100,8 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
         Name = name;
         _category = category ?? string.Empty;
         ConfigurationKey = $"TypeOptions:{name}";
-        DisplayName = displayName ?? name;
-        Description = description ?? $"Type option: {name}";
+        DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
+        Description = description ?? throw new ArgumentNullException(nameof(description));
     }
 
     /// <summary>
@@ -121,9 +121,9 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
         Id = id;
         Name = name;
         _category = category ?? string.Empty;
-        ConfigurationKey = configurationKey ?? $"TypeOptions:{name}";
-        DisplayName = displayName ?? name;
-        Description = description ?? $"Type option: {name}";
+        ConfigurationKey = configurationKey ?? throw new ArgumentNullException(nameof(configurationKey));
+        DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
+        Description = description ?? throw new ArgumentNullException(nameof(description));
     }
 
     /// <summary>
@@ -272,8 +272,13 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// Why an override and not the base initializer: the concrete type is not available there —
     /// "this" is illegal in an initializer and TBase is the family base, the same for every option
     /// in it. GetType() here returns the option itself.
+    ///
+    /// Why a branch and not a fallback (FDW-3580): an option's id is the one it states or the one its type determines; there is no
+    /// third value and nothing is assumed.
     /// </remarks>
-    public override int Id => _id ?? GenerateIdFromName(GetType().FullName ?? GetType().Name);
+    public override int Id => _id is { } stated
+        ? stated
+        : GenerateIdFromName(GetType().FullName ?? throw new InvalidOperationException("An option type has no full name; only an open generic parameter lacks one."));
 
     /// <summary>
     /// Derives a stable identifier from an option's name using FNV-1a.

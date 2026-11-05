@@ -9,7 +9,7 @@ namespace Fdw.Services.Etl.Tests.Pipelines.Loads;
 /// </summary>
 public sealed class LoadRowsTests
 {
-    private static readonly IReadOnlyList<KeyValuePair<string, object?>> NoValues = [];
+    private static readonly IReadOnlyList<KeyValuePair<string, Func<object?>>> NoValues = [];
 
     private static List<IDictionary<string, object?>> Rows() =>
     [
@@ -51,7 +51,7 @@ public sealed class LoadRowsTests
     public void ShapeAddsTheValuesTheValueSourcesGive()
     {
         // Arrange
-        IReadOnlyList<KeyValuePair<string, object?>> values = [new("Batch", 7L), new("LoadedBy", "etl")];
+        IReadOnlyList<KeyValuePair<string, Func<object?>>> values = [new("Batch", () => 7L), new("LoadedBy", () => "etl")];
 
         // Act
         var result = LoadRows.Shape("test", Rows(), ["Id"], values, NullLogger.Instance);
@@ -60,6 +60,24 @@ public sealed class LoadRowsTests
         result.IsSuccess.ShouldBeTrue();
         result.Value![0]["Batch"].ShouldBe(7L);
         result.Value[1]["LoadedBy"].ShouldBe("etl");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void ShapeCallsAProducerOncePerRowSoEachRowGetsItsOwnValue()
+    {
+        // Arrange
+        var calls = 0;
+        IReadOnlyList<KeyValuePair<string, Func<object?>>> values = [new("Number", () => ++calls)];
+
+        // Act
+        var result = LoadRows.Shape("test", Rows(), ["Id"], values, NullLogger.Instance);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        calls.ShouldBe(2);
+        result.Value!.Select(r => r["Number"]).ShouldBe(new object?[] { 1, 2 });
     }
 
     [Fact]
@@ -85,7 +103,7 @@ public sealed class LoadRowsTests
     {
         // Arrange
         var rows = Rows();
-        IReadOnlyList<KeyValuePair<string, object?>> values = [new("Batch", 7L)];
+        IReadOnlyList<KeyValuePair<string, Func<object?>>> values = [new("Batch", () => 7L)];
 
         // Act
         LoadRows.Shape("test", rows, ["Id"], values, NullLogger.Instance);
@@ -115,7 +133,7 @@ public sealed class LoadRowsTests
     public void ShapeFailsLoudWhenAColumnIsNamedAndSuppliedByAValueSource()
     {
         // Arrange
-        IReadOnlyList<KeyValuePair<string, object?>> values = [new("name", "z")];
+        IReadOnlyList<KeyValuePair<string, Func<object?>>> values = [new("name", () => "z")];
 
         // Act
         var result = LoadRows.Shape("test", Rows(), ["Id", "Name"], values, NullLogger.Instance);
@@ -131,7 +149,7 @@ public sealed class LoadRowsTests
     public void ShapeFailsLoudWhenARowAlreadyCarriesAFieldAValueSourceSupplies()
     {
         // Arrange: no columns named, so every field travels, and one is also supplied
-        IReadOnlyList<KeyValuePair<string, object?>> values = [new("Name", "z")];
+        IReadOnlyList<KeyValuePair<string, Func<object?>>> values = [new("Name", () => "z")];
 
         // Act
         var result = LoadRows.Shape("test", Rows(), null, values, NullLogger.Instance);

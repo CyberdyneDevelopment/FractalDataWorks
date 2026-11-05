@@ -56,6 +56,13 @@ public sealed class AesGcmEncryptionCommandExecutor : IEncryptionCommandExecutor
         ILogger<AesGcmEncryptionCommandExecutor>? logger = null)
     {
         _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
+
+        // Why a throw here and a result everywhere else: a constructor cannot return a result, and a
+        // zero or negative lifetime would silently mean "never cache" — a secret-manager round trip
+        // on every suspend and resume.
+        if (cacheLifetime <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(cacheLifetime), cacheLifetime, "The key cache lifetime must be positive.");
+
         _cacheLifetime = cacheLifetime;
         _logger = logger ?? NullLogger<AesGcmEncryptionCommandExecutor>.Instance;
     }
@@ -65,7 +72,10 @@ public sealed class AesGcmEncryptionCommandExecutor : IEncryptionCommandExecutor
         EncryptCommand command, CancellationToken cancellationToken = default)
     {
         if (command is null)
-            throw new ArgumentNullException(nameof(command));
+            return GenericResult<byte[]>.Failure(EncryptionLog.RequiredValueMissing(_logger, nameof(EncryptCommand)));
+
+        if (command.Plaintext is null)
+            return GenericResult<byte[]>.Failure(EncryptionLog.RequiredValueMissing(_logger, nameof(EncryptCommand.Plaintext)));
 
         var key = await ResolveKey(command.SecretManagerName, command.SecretKeyName, cancellationToken)
             .ConfigureAwait(false);
@@ -95,7 +105,10 @@ public sealed class AesGcmEncryptionCommandExecutor : IEncryptionCommandExecutor
         DecryptCommand command, CancellationToken cancellationToken = default)
     {
         if (command is null)
-            throw new ArgumentNullException(nameof(command));
+            return GenericResult<byte[]>.Failure(EncryptionLog.RequiredValueMissing(_logger, nameof(DecryptCommand)));
+
+        if (command.Ciphertext is null)
+            return GenericResult<byte[]>.Failure(EncryptionLog.RequiredValueMissing(_logger, nameof(DecryptCommand.Ciphertext)));
 
         if (command.Ciphertext.Length < NonceSizeBytes + TagSizeBytes)
             return GenericResult<byte[]>.Failure(EncryptionLog.CiphertextTooShort(_logger));
@@ -135,6 +148,14 @@ public sealed class AesGcmEncryptionCommandExecutor : IEncryptionCommandExecutor
     private async Task<IGenericResult<byte[]>> ResolveKey(
         string secretManagerName, string keyName, CancellationToken cancellationToken)
     {
+        // Why checked here and not left to the secret manager: GetSecretManagerCommand throws on an
+        // empty key name, and an empty manager name would only fail later as "unresolved".
+        if (string.IsNullOrWhiteSpace(secretManagerName))
+            return GenericResult<byte[]>.Failure(EncryptionLog.RequiredValueMissing(_logger, nameof(EncryptCommand.SecretManagerName)));
+
+        if (string.IsNullOrWhiteSpace(keyName))
+            return GenericResult<byte[]>.Failure(EncryptionLog.RequiredValueMissing(_logger, nameof(EncryptCommand.SecretKeyName)));
+
         var cacheKey = CacheKey(secretManagerName, keyName);
         if (_cache.TryGetValue(cacheKey, out var hit) && hit.LoadedAt.Add(_cacheLifetime) > DateTimeOffset.UtcNow)
         {

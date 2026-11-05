@@ -34,6 +34,9 @@ public static class GraphPayloadWriter
             DelayedStartSeconds = graph.DelayedStartSeconds,
             DelayedStartTimeOfDay = graph.DelayedStartTimeOfDay,
             DelayedStartTimeZoneId = graph.DelayedStartTimeZoneId,
+            IsTemplate = graph.IsTemplate,
+            TemplateName = graph.TemplateName,
+            TemplateVersion = graph.TemplateVersion,
             Variables = [.. graph.Variables.Select(variable => new GraphVariablePayload
             {
                 Name = variable.Name, DataType = variable.DataType, Value = variable.ValueText,

@@ -66,7 +66,7 @@ public sealed class ExceptionNotPropagatedAnalyzer : DiagnosticAnalyzer
 
         if (enclosingMethod is MethodDeclarationSyntax methodDecl)
         {
-            var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDecl);
+            var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDecl, context.CancellationToken);
             if (methodSymbol == null)
                 return;
 
@@ -75,7 +75,7 @@ public sealed class ExceptionNotPropagatedAnalyzer : DiagnosticAnalyzer
         }
         else if (enclosingMethod is LocalFunctionStatementSyntax localFunc)
         {
-            var localSymbol = context.SemanticModel.GetDeclaredSymbol(localFunc);
+            var localSymbol = context.SemanticModel.GetDeclaredSymbol(localFunc, context.CancellationToken);
             if (localSymbol == null)
                 return;
 
@@ -271,7 +271,7 @@ public sealed class ExceptionNotPropagatedAnalyzer : DiagnosticAnalyzer
 
             // Accept non-GenericResult helper methods whose return type implements IGenericResult
             // (delegating result creation to a helper method like HandleCancellation/HandleException)
-            var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
+            var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
             if (symbolInfo.Symbol is IMethodSymbol calledMethod)
             {
                 var containingTypeName = calledMethod.ContainingType?.Name;
@@ -298,7 +298,7 @@ public sealed class ExceptionNotPropagatedAnalyzer : DiagnosticAnalyzer
         SyntaxNodeAnalysisContext context)
     {
         // Get the method symbol
-        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
+        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
             return false;
 
@@ -342,7 +342,7 @@ public sealed class ExceptionNotPropagatedAnalyzer : DiagnosticAnalyzer
         InvocationExpressionSyntax invocation,
         SyntaxNodeAnalysisContext context)
     {
-        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
+        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
             return false;
 

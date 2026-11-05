@@ -67,7 +67,10 @@ public class FlowFailureReasonTests
     public void OfSaysSoWhenTheFailureCarriedNoMessagesAtAll()
     {
         var logger = EnabledLogger();
-        IGenericResult failed = GenericResult.Failure(new List<IGenericMessage>());
+        var failedResult = new Mock<IGenericResult>();
+        failedResult.SetupGet(r => r.IsSuccess).Returns(false);
+        failedResult.SetupGet(r => r.Messages).Returns(new System.Collections.Generic.List<Fdw.Messages.IGenericMessage>());
+        IGenericResult failed = failedResult.Object;
 
         var reason = FlowFailureReason.Of(failed, logger.Object, "purge", "Warehouse");
 

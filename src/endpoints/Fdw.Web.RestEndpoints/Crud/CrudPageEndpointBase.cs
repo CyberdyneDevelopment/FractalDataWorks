@@ -94,6 +94,13 @@ public abstract class CrudPageEndpointBase<TItem, TSummary> : EndpointWithoutReq
     /// </remarks>
     protected ListSearch Search { get; set; } = ListSearch.None;
 
+    /// <summary>Gets the tags this request names with <c>?tag=</c>; none when it names none (FDW-3816).</summary>
+    /// <remarks>
+    /// Read from the request before the page is loaded, for every list; a list that can be filtered by tag narrows its page with it. Settable so a
+    /// test that calls a list's load method directly can state them, or leave them out, without a running host.
+    /// </remarks>
+    protected IReadOnlyList<string> TaggedWith { get; set; } = [];
+
     /// <inheritdoc/>
     public override void Configure()
     {
@@ -149,6 +156,8 @@ public abstract class CrudPageEndpointBase<TItem, TSummary> : EndpointWithoutReq
 
                 Search = search.Value!;
             }
+
+            TaggedWith = TagQuery.Read(HttpContext);
 
             EndpointLogger.PaginatedListRequest(Logger, GetType().Name, paging.Value!.Skip, paging.Value.Take);
 

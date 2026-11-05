@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Authentication.Validation;
 
@@ -116,7 +117,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         if (result.IsFailure)
         {
             AuthenticationValidationLog.OpaqueCredentialRejected(
-                _log, "agent key", result.CurrentMessage ?? "validation service error");
+                _log, "agent key", result.FailureReason().Message);
             return AuthenticateResult.Fail("Agent key validation failed.");
         }
 
@@ -171,7 +172,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         if (result.IsFailure)
         {
             AuthenticationValidationLog.OpaqueCredentialRejected(
-                _log, "personal access token", result.CurrentMessage ?? "validation service error");
+                _log, "personal access token", result.FailureReason().Message);
             return AuthenticateResult.Fail("Personal access token validation failed.");
         }
 
@@ -236,7 +237,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         if (tenantId.IsFailure)
         {
             AuthenticationValidationLog.PermissionResolutionFailed(
-                _log, userId.ToString(), tenantId.CurrentMessage ?? "no reason given");
+                _log, userId.ToString(), tenantId.FailureReason().Message);
             return null;
         }
 
@@ -244,7 +245,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         if (tenant.IsFailure || tenant.Value is null)
         {
             AuthenticationValidationLog.PermissionResolutionFailed(
-                _log, userId.ToString(), tenant.CurrentMessage ?? "the tenant could not be read");
+                _log, userId.ToString(), tenant.NoValueReason().Message);
             return null;
         }
 
@@ -254,7 +255,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         if (!resolved.IsSuccess || resolved.Value is not { } authorization)
         {
             AuthenticationValidationLog.PermissionResolutionFailed(
-                _log, userId.ToString(), resolved.CurrentMessage ?? "no reason given");
+                _log, userId.ToString(), resolved.NoValueReason().Message);
             return null;
         }
 
@@ -297,7 +298,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         if (entry.IsFailure || entry.Value is not IApiKeyAuthenticationConfiguration service)
         {
             AuthenticationValidationLog.ApiKeyServiceUnreadable(
-                _log, serviceName, entry.CurrentMessage ?? "its row is not an ApiKey implementation");
+                _log, serviceName, entry.IsFailure ? entry.FailureReason().Message : "its row is not an ApiKey implementation");
             return AuthenticateResult.Fail("The API key service could not be read.");
         }
 

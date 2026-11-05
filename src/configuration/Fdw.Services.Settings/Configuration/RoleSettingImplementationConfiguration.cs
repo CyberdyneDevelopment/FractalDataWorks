@@ -61,6 +61,6 @@ public sealed partial class RoleSettingImplementationConfiguration
     /// <summary>
     /// Gets or sets whether this setting override is active.
     /// </summary>
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
 
 }

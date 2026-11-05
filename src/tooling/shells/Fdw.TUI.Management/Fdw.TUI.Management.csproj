@@ -58,6 +58,7 @@
     <ProjectReference Include="..\..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
     <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.TUI.Management.App\Fdw.TUI.Management.App.csproj" />
   </ItemGroup>
 
 </Project>

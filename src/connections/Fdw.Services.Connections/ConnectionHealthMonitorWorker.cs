@@ -144,7 +144,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
                 if (IsConnectionContainerAbsent(allResult))
                     return false;
 
-                ConnectionHealthMonitorWorkerLog.LoadConnectionsFailed(_logger, allResult.CurrentMessage ?? "Unknown error");
+                ConnectionHealthMonitorWorkerLog.LoadConnectionsFailed(_logger, allResult.FailureReason().Message);
                 return true;
             }
 
@@ -192,7 +192,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
                 if (IsConnectionContainerAbsent(allResult))
                     return null;
 
-                ConnectionHealthMonitorWorkerLog.LoadConnectionsFailed(_logger, allResult.CurrentMessage ?? "Unknown error");
+                ConnectionHealthMonitorWorkerLog.LoadConnectionsFailed(_logger, allResult.FailureReason().Message);
                 return _shortestScan;
             }
 
@@ -282,12 +282,15 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             // By Id, which reads the connection whole and builds it: the scan read rows alone, and a
             // connection is built from its children too (AdditionalProperties, Limits) (FDW-970).
             var getResult = await services.GetRequiredService<IConnectionProvider>().Get(connection.Id, ct).ConfigureAwait(false);
-            if (!getResult.IsSuccess || getResult.Value is null)
+            if (!getResult.IsSuccess)
             {
-                var reason = getResult.CurrentMessage ?? "Connection could not be resolved";
+                var reason = getResult.FailureReason().Message;
                 ConnectionHealthMonitorWorkerLog.ConnectionResolutionFailed(_logger, connection.Name, reason);
                 return (false, reason, null);
             }
+
+            if (getResult.Value is null)
+                return (false, ConnectionHealthMonitorWorkerLog.ConnectionResolvedEmpty(_logger, connection.Name).Message, null);
 
             if (getResult.Value is not ISupportsHealthProbe probe)
             {
@@ -303,7 +306,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             if (probeResult.IsSuccess)
                 return (true, null, responseTimeMs);
 
-            var message = probeResult.CurrentMessage ?? "Probe failed";
+            var message = probeResult.FailureReason().Message;
             ConnectionHealthMonitorWorkerLog.ProbeFailed(_logger, connection.Name, message);
             return (false, message, responseTimeMs);
         }
@@ -326,7 +329,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             connection.Id, connection.Name, success, responseTimeMs, message, ct).ConfigureAwait(false);
         if (!recordResult.IsSuccess)
         {
-            ConnectionHealthMonitorWorkerLog.PersistHistoryFailed(_logger, connection.Name, recordResult.CurrentMessage ?? "Record failed");
+            ConnectionHealthMonitorWorkerLog.PersistHistoryFailed(_logger, connection.Name, recordResult.FailureReason().Message);
             return;
         }
 

@@ -15,11 +15,6 @@ public static partial class DataSetResolverLog
         Message = "Resolved '{name}' to a {kind}")]
     public static partial IGenericMessage Resolved(ILogger logger, string name, string kind);
 
-    /// <summary>Refuses a name that a data set and a variation both have.</summary>
-    [MessageLogging(EventId = 41000, Level = LogLevel.Warning,
-        Message = "'{name}' is the name of both a data set and a {kind} variation, and one name must mean one thing")]
-    public static partial IGenericMessage Ambiguous(ILogger logger, string name, string kind);
-
     /// <summary>Refuses a variation whose data set no longer exists.</summary>
     [MessageLogging(EventId = 40000, Level = LogLevel.Error,
         Message = "The {kind} variation '{name}' varies the data set {dataSetId}, which no longer exists")]

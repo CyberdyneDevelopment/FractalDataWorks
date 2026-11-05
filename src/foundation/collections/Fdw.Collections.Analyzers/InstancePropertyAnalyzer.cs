@@ -50,7 +50,7 @@ This violates the TypeOption pattern architecture. Access instances via collecti
     {
         var propertyDeclaration = (PropertyDeclarationSyntax)context.Node;
         var semanticModel = context.SemanticModel;
-        var propertySymbol = semanticModel.GetDeclaredSymbol(propertyDeclaration);
+        var propertySymbol = semanticModel.GetDeclaredSymbol(propertyDeclaration, context.CancellationToken);
 
         if (propertySymbol == null)
             return;

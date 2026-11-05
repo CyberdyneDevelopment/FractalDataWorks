@@ -10,7 +10,7 @@ namespace Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 [ExcludeFromCodeCoverage]
 public sealed class RunningStateType : ExecutionStateTypeBase
 {
-    private static readonly string[] ValidTransitionsArray = new[] { "Completed", "Failed", "Paused", "Retrying", "Compensating", "Cancelled" };
+    private static readonly string[] ValidTransitionsArray = new[] { "Completed", "Failed", "Paused", "Retrying", "Compensating", "Cancelled", "Interrupted" };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RunningStateType"/> class.

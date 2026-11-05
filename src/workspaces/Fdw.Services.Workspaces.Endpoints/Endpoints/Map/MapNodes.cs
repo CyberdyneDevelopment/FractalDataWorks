@@ -66,8 +66,9 @@ internal static class MapNodes
     /// <summary>A container node, named within its data store.</summary>
     /// <param name="container">The container.</param>
     /// <param name="dataStoreId">The logical id of the data store it is in.</param>
+    /// <param name="dataStoreName">The name of the data store it is in.</param>
     /// <param name="path">The path of the data store it sits under.</param>
-    public static MapNodeDto Container(DataContainerConfiguration container, Guid dataStoreId, DataPathConfiguration path) => new()
+    public static MapNodeDto Container(DataContainerConfiguration container, Guid dataStoreId, string dataStoreName, DataPathConfiguration path) => new()
     {
         Id = MapNodeIds.Container(container.Id),
         Label = container.Name,
@@ -75,6 +76,8 @@ internal static class MapNodes
         CanExplode = false,
         Metadata = Metadata(
             ("dataStoreId", dataStoreId.ToString("D", CultureInfo.InvariantCulture)),
+            ("dataStore", dataStoreName),
+            ("pathName", path.Name),
             ("path", path.PathValue),
             ("format", container.Format),
             ("description", container.Description)),

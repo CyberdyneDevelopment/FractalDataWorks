@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fdw.Abstractions;
+using Fdw.Messages;
 
 namespace Fdw.Commands.Data.Abstractions;
 
@@ -17,8 +18,8 @@ public interface IScriptedDataCommand : IGenericCommand
     IReadOnlyList<ScriptParameter> Parameters { get; }
 
     /// <summary>Lists what is wrong with the command itself, before any store is reached.</summary>
-    /// <returns>The first problem in words, or null when the command is sound.</returns>
-    string? FirstProblem();
+    /// <returns>The first problem, as a message, or null when the command is sound.</returns>
+    IGenericMessage? FirstProblem();
 }
 
 /// <summary>A scripted command whose type parameter carries the result type, so a caller's Execute infers it.</summary>

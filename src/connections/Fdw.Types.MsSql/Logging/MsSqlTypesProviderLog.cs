@@ -56,4 +56,13 @@ public static partial class MsSqlTypesProviderLog
         Level = LogLevel.Error,
         Message = "Failed to save TypeOption '{optionName}': {errorMessage}")]
     public static partial IGenericMessage SaveOptionFailed(ILogger logger, Exception ex, string optionName, string errorMessage);
+
+    /// <summary>
+    /// Logs when a stored TypeCollection names a collection kind the platform does not declare (FDW-3580).
+    /// </summary>
+    [MessageLogging(
+        EventId = 71005,
+        Level = LogLevel.Error,
+        Message = "TypeCollection '{collectionName}' is stored with collection kind '{kindName}', which CollectionKinds does not declare")]
+    public static partial IGenericMessage UnknownCollectionKind(ILogger logger, string collectionName, string kindName);
 }

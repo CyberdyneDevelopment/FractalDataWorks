@@ -24,7 +24,7 @@ public partial class UserNotificationPreferenceConfiguration
     public string Channel { get; set; } = string.Empty;
 
     /// <summary>Gets or sets whether this preference is enabled.</summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets whether this is the current version of the record.</summary>
     public bool IsCurrent { get; set; } = true;

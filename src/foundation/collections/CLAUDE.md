@@ -10,7 +10,6 @@ fractaldataworks:
 
 - `Fdw.Collections`
 - `Fdw.Collections.Analyzers` (not a package)
-- `Fdw.Collections.CodeFixes` (not a package)
 - `Fdw.Collections.SourceGenerators`
 - `Fdw.StateCollections`
 - `Fdw.StateCollections.Abstractions`
@@ -29,7 +28,7 @@ The public interfaces and abstract bases the domain's `.Abstractions` projects d
 ## Rules that matter here
 
 - A TypeCollection collects and dedupes its options; a new constructor parameter on an option base must be defaultable, or the generated not-found sentinel fails every host.
-- No fallbacks: a missing value fails with a MessageLogging error and a failed result. The only `??` allowed is `logger ?? NullLogger<T>.Instance` in a constructor.
+- No fallbacks: a `??` never falls back to a value that could be a real one, and a missing value fails with a MessageLogging error and a failed result. Allowed: a null logger, `?? string.Empty`, `?? []`, `??=` on a field or local, a chain of failure results or messages, a `[PlaceholderText]` constant, a `[PlatformDefault]` member, and a member Mike approved with `[ApprovedFallback]`. Never a default message. FDW055 enforces it.
 - Log through MessageLogging (source-generated messages), never raw `ILogger` calls.
 - Return `IGenericResult` with a ResultCode; a failure never carries a plain string.
 - All data access goes through `IDataGateway.Execute()` with command objects. No `SqlConnection`, `SqlCommand` or connection string outside the connection projects.

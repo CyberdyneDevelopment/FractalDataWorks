@@ -184,7 +184,7 @@ internal static class ImplementationDiscovery
                 return null;
 
             var collectionType = attribute.ConstructorArguments[0].Value as ITypeSymbol;
-            var optionName = attribute.ConstructorArguments[1].Value?.ToString() ?? "";
+            var optionName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
 
             if (collectionType == null || string.IsNullOrEmpty(optionName))
                 return null;
@@ -218,7 +218,8 @@ internal static class ImplementationDiscovery
                             Name: p.Name,
                             Type: p.Type.ToDisplayString(),
                             HasDefaultValue: p.HasExplicitDefaultValue,
-                            DefaultValue: FormatDefaultValue(p)
+                            DefaultValue: FormatDefaultValue(p),
+                            IsValueType: p.Type.IsValueType
                         ))
                         .ToImmutableArray()
                 ))
@@ -273,7 +274,7 @@ internal static class ImplementationDiscovery
                     {
                         if (attr.ConstructorArguments.Length > 0)
                         {
-                            var methodName = attr.ConstructorArguments[0].Value?.ToString() ?? "";
+                            var methodName = attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
 
                             var isUnique = attr.ConstructorArguments.Length <= 2
                                 || attr.ConstructorArguments[2].Value is not bool u || u;

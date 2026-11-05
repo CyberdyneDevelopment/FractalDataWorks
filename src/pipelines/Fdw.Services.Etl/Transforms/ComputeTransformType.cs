@@ -233,10 +233,12 @@ public sealed class ComputeTransformType : TransformTypeBase
             return "a mapping states a blank input or field";
         }
 
-        return BlankBinding(compute)
-            ?? (compute.ComputeInputs.Select(mapping => mapping.InputName).Distinct(StringComparer.Ordinal).Count() == compute.ComputeInputs.Count
-                ? null
-                : "two mappings feed the same input");
+        if (BlankBinding(compute) is { } blank)
+            return blank;
+
+        return compute.ComputeInputs.Select(mapping => mapping.InputName).Distinct(StringComparer.Ordinal).Count() == compute.ComputeInputs.Count
+            ? null
+            : "two mappings feed the same input";
     }
 
     // A table, output or single value binding names what it binds; a blank name binds nothing.

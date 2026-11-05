@@ -51,7 +51,7 @@ public sealed class NotificationDispatcher : INotificationDispatcher
         var validationResult = service.Validate(request);
         if (!validationResult.IsSuccess)
         {
-            var message = validationResult.CurrentMessage ?? "Validation failed";
+            var message = validationResult.FailureReason().Message;
             NotificationLogger.ValidationFailed(_logger, message);
             return GenericResult<INotificationResult>.Failure(
                 NotificationResultCodes.ByName("ValidationFailed"),
@@ -68,7 +68,7 @@ public sealed class NotificationDispatcher : INotificationDispatcher
         }
         else
         {
-            NotificationLogger.NotificationFailed(_logger, request.RequestId, request.ChannelName, result.CurrentMessage ?? "Unknown error");
+            NotificationLogger.NotificationFailed(_logger, request.RequestId, request.ChannelName, result.FailureReason().Message);
         }
 
         return result;
@@ -108,7 +108,7 @@ public sealed class NotificationDispatcher : INotificationDispatcher
             }
             else
             {
-                results.Add(NotificationResult.Failed(request.RequestId, result.CurrentMessage ?? "Unknown error"));
+                results.Add(NotificationResult.Failed(request.RequestId, result.NoValueReason().Message));
                 failCount++;
             }
         }

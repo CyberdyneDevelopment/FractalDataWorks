@@ -1,3 +1,6 @@
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Results;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 
 namespace Fdw.Services.Etl.Projects.Abstractions;
@@ -11,7 +14,8 @@ namespace Fdw.Services.Etl.Projects.Abstractions;
 /// <list type="number">
 /// <item>If the entity has an explicit (non-null) value, use it.</item>
 /// <item>Otherwise, use the parent's effective value.</item>
-/// <item>At Project level, the parent is <see cref="IServerPolicyDefaults"/>.</item>
+/// <item>At Project level and at a root node, the parent is the server's defaults, read from
+/// <see cref="IServerPolicyDefaultConfigurationProvider"/> when the policy is resolved (FDW-3580).</item>
 /// </list>
 /// </remarks>
 public interface IEffectivePolicyResolver
@@ -20,8 +24,9 @@ public interface IEffectivePolicyResolver
     /// Resolves the effective policy for a project, inheriting from server defaults for NULL fields.
     /// </summary>
     /// <param name="project">The project configuration.</param>
-    /// <returns>The fully resolved policy snapshot with no null values.</returns>
-    ExecutionPolicySnapshot ResolveForProject(ProjectConfiguration project);
+    /// <param name="cancellationToken">Cancels the read of the server defaults.</param>
+    /// <returns>The fully resolved policy snapshot with no null values, or the failed read of the server defaults.</returns>
+    Task<IGenericResult<ExecutionPolicySnapshot>> ResolveForProject(ProjectConfiguration project, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Resolves the effective policy for a stage, inheriting from the parent project's effective policy for NULL fields.
@@ -54,6 +59,7 @@ public interface IEffectivePolicyResolver
     /// from the server defaults for NULL fields (FDW-1740).
     /// </summary>
     /// <param name="node">The root orchestration node configuration.</param>
-    /// <returns>The fully resolved policy snapshot with no null values.</returns>
-    ExecutionPolicySnapshot ResolveForRootNode(IOrchestrationNodeImplementationConfiguration node);
+    /// <param name="cancellationToken">Cancels the read of the server defaults.</param>
+    /// <returns>The fully resolved policy snapshot with no null values, or the failed read of the server defaults.</returns>
+    Task<IGenericResult<ExecutionPolicySnapshot>> ResolveForRootNode(IOrchestrationNodeImplementationConfiguration node, CancellationToken cancellationToken = default);
 }

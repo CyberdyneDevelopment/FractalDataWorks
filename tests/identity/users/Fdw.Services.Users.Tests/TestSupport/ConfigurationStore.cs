@@ -188,6 +188,9 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
         store.Implementations
             .Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns((Guid id, int _, CancellationToken _) => Task.FromResult(store.Serve(id)));
+        store.Implementations
+            .Setup(p => p.GetSet(It.IsAny<IEnumerable<Guid>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns((IEnumerable<Guid> ids, int _, CancellationToken _) => Task.FromResult(store.ServeSet(ids)));
         store.SaveSucceeds();
         store.Implementations
             .Setup(p => p.Supersede(It.IsAny<IDataContainer>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
@@ -295,6 +298,23 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
     /// </summary>
     /// <param name="id">The record that is served and then removed.</param>
     public void LosesTheRowAfterItIsRead(Guid id) => _removeAfterServing = id;
+
+    // The records a set read answers with, keyed by the id each was asked under; an id the store does not hold has no entry, as a single read answers nothing.
+    private IGenericResult<IReadOnlyDictionary<Guid, TContract>> ServeSet(IEnumerable<Guid> ids)
+    {
+        var served = new Dictionary<Guid, TContract>();
+        foreach (var id in ids.ToList())
+        {
+            var one = Serve(id);
+            if (!one.IsSuccess)
+                return GenericResult<IReadOnlyDictionary<Guid, TContract>>.Failure(new GenericMessage(one.CurrentMessage ?? string.Empty));
+
+            if (one.Value is not null)
+                served[id] = one.Value;
+        }
+
+        return GenericResult<IReadOnlyDictionary<Guid, TContract>>.Success(served);
+    }
 
     // The record a read by id answers with; the one the store was told to lose is gone from the next read on.
     private IGenericResult<TContract> Serve(Guid id)

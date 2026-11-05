@@ -11,7 +11,7 @@ public class InProcMcpToolSourceTests
     [Fact]
     public async Task SourceRespondsToInvokeWithResult()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         await using var source = new InProcMcpToolSource("test",
             (toolName, args, ct) => Task.FromResult<object>(new { tool = toolName, echoed = args.GetProperty("value").GetInt32() }));
 
@@ -33,7 +33,7 @@ public class InProcMcpToolSourceTests
     [Fact]
     public async Task SourceHandlerThrowsPublishesErrorEvent()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         await using var source = new InProcMcpToolSource("test",
             (toolName, args, ct) => throw new InvalidOperationException("deliberate"));
 
@@ -52,7 +52,7 @@ public class InProcMcpToolSourceTests
     [Fact]
     public async Task SourceStopHaltsThePump()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         var invocations = 0;
         var source = new InProcMcpToolSource("test",
             (t, a, ct) => { Interlocked.Increment(ref invocations); return Task.FromResult<object>(new { }); });

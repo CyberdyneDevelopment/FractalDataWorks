@@ -9,5 +9,5 @@ namespace Fdw.Configuration.Persistence.Schema;
 public sealed class NoActionForeignKeyAction : ForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="NoActionForeignKeyAction"/>.</summary>
-    public NoActionForeignKeyAction() : base("NoAction") { }
+    public NoActionForeignKeyAction() : base("NoAction", "NO ACTION") { }
 }

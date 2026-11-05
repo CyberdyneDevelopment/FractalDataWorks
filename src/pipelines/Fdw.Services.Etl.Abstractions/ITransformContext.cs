@@ -62,11 +62,11 @@ public interface ITransformContext : IExecutionContext
     void ReportError(string error, IDictionary<string, object?>? record = null);
 
     /// <summary>
-    /// Rejects a record: it leaves the stream, is reported as an error like any other, and is kept with the stage that
+    /// Rejects a record: it leaves the stream, is reported as an error like any other, and is kept with the component that
     /// rejected it and why, so the pipeline's reject steps can write it (FDW-1142).
     /// </summary>
-    /// <param name="stage">The name of the stage that rejected the record.</param>
-    /// <param name="reason">Why the stage rejected it.</param>
+    /// <param name="component">The name of the component that rejected the record.</param>
+    /// <param name="reason">Why the component rejected it.</param>
     /// <param name="record">The rejected record.</param>
-    void Reject(string stage, string reason, IDictionary<string, object?> record);
+    void Reject(string component, string reason, IDictionary<string, object?> record);
 }

@@ -62,7 +62,7 @@ public sealed class TenantConfiguration : IGenericConfiguration
     /// Gets or sets whether a user can list or switch into this tenant.
     /// Resolved from <c>tenant.Tenants.IsSelectable</c>; never hardcoded.
     /// </summary>
-    public bool IsSelectable { get; set; } = true;
+    public bool IsSelectable { get; set; }
 
     /// <summary>
     /// Gets or sets the connection name for tenant isolation.

@@ -36,7 +36,7 @@ public abstract class SchemaImporterBase<TConfig> : TypeOptionBase<SchemaImporte
     /// </summary>
     public abstract Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
-        SchemaImporterOptions? options = null,
+        SchemaImporterOptions options,
         CancellationToken cancellationToken = default);
 
     /// <summary>

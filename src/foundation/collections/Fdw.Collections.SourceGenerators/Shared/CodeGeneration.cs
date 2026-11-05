@@ -495,182 +495,193 @@ internal static class CodeGeneration
 #pragma warning restore FDW006, FDW007
 
     /// <summary>
-    /// Generates default argument values for a constructor call.
+    /// Generates the NotFound sentinel's arguments for a base constructor call.
     /// </summary>
     public static string GenerateDefaultArguments(ImmutableArray<ParameterModel> parameters)
     {
-        if (parameters.Length == 0)
-            return string.Empty;
-
-        var args = parameters.Select(p => GetDefaultValueForType(p.Type));
-        return string.Join(", ", args);
+        return string.Join(", ", parameters.Select(p => GetSentinelArgument(p).Expression));
     }
 
     /// <summary>
-    /// Gets parameters that cannot be safely defaulted (unknown reference types).
+    /// Gets the parameters the NotFound sentinel can only pass null to (TC009).
     /// </summary>
     public static ImmutableArray<ParameterModel> GetUnsafeParameters(ImmutableArray<ParameterModel> parameters)
     {
         return parameters
-            .Where(p => !CanSafelyDefault(p.Type))
+            .Where(p => !GetSentinelArgument(p).IsSafe)
             .ToImmutableArray();
     }
 
     /// <summary>
-    /// Determines if a type can be safely defaulted without risking null reference issues.
+    /// Whether a collection emits its NotFound sentinel: it does unless one of its options is itself named NotFound.
     /// </summary>
-    private static bool CanSafelyDefault(string typeName)
+    public static bool GeneratesNotFound(IEnumerable<string> optionNames)
     {
-        // Nullable types are safe (null is a valid value)
-        if (typeName.EndsWith("?", StringComparison.Ordinal))
-            return true;
-
-        // Arrays are safe (Array.Empty<T>() or new T[0])
-        if (typeName.EndsWith("[]", StringComparison.Ordinal))
-            return true;
-
-        // Check if it's a known safe type
-        return typeName switch
-        {
-            // Strings
-            "string" or "System.String" => true,
-            // Integers
-            "int" or "System.Int32" => true,
-            "long" or "System.Int64" => true,
-            "short" or "System.Int16" => true,
-            "byte" or "System.Byte" => true,
-            "sbyte" or "System.SByte" => true,
-            "uint" or "System.UInt32" => true,
-            "ulong" or "System.UInt64" => true,
-            "ushort" or "System.UInt16" => true,
-            // Floating point
-            "float" or "System.Single" => true,
-            "double" or "System.Double" => true,
-            "decimal" or "System.Decimal" => true,
-            // Boolean
-            "bool" or "System.Boolean" => true,
-            // Char
-            "char" or "System.Char" => true,
-            // Common value types
-            "System.Guid" or "Guid" => true,
-            "System.DateTime" or "DateTime" => true,
-            "System.DateTimeOffset" or "DateTimeOffset" => true,
-            "System.TimeSpan" or "TimeSpan" => true,
-            // Type (now handled)
-            "Type" or "System.Type" => true,
-            // Common enums (value types - default gives 0)
-            "System.Data.DbType" or "DbType" => true,
-            // Unknown types - not safe
-            _ => false
-        };
+        return !optionNames.Any(n => string.Equals(n, "NotFound", StringComparison.Ordinal));
     }
 
     /// <summary>
-    /// Gets the appropriate default value for a type.
+    /// Reports TC009 for each base constructor parameter the NotFound sentinel can only pass null to.
     /// </summary>
-    private static string GetDefaultValueForType(string typeName)
+    /// <remarks>
+    /// Why every collection kind calls this, whatever its option count: all six generators emit the sentinel
+    /// through <see cref="GenerateDefaultArguments"/>, and the sentinel is built in the collection's static
+    /// initializer. A base constructor that rejects the null throws there and stops every host at startup (FDW-2931).
+    /// </remarks>
+    public static void ReportSentinelHostileParameters(
+        SourceProductionContext context,
+        string collectionClassName,
+        ImmutableArray<ParameterModel> parameters)
     {
-        // Handle nullable types
-        if (typeName.EndsWith("?", StringComparison.Ordinal))
-            return "null";
-
-        // Handle arrays
-        if (typeName.EndsWith("[]", StringComparison.Ordinal))
+        foreach (var param in GetUnsafeParameters(parameters))
         {
-            var elementType = typeName.Substring(0, typeName.Length - 2);
-            return $"System.Array.Empty<{elementType}>()";
+            context.ReportDiagnostic(Diagnostic.Create(
+                TypeCollectionGeneratorDiagnostics.UnknownConstructorParameterType,
+                Location.None,
+                collectionClassName,
+                param.Name,
+                param.Type));
         }
-
-        // Handle IReadOnlyList<T>
-        if (typeName.StartsWith("System.Collections.Generic.IReadOnlyList<", StringComparison.Ordinal) ||
-            typeName.StartsWith("IReadOnlyList<", StringComparison.Ordinal))
-        {
-            var start = typeName.IndexOf('<') + 1;
-            var end = typeName.LastIndexOf('>');
-            var elementType = typeName.Substring(start, end - start);
-            return $"System.Array.Empty<{elementType}>()";
-        }
-
-        // Handle IReadOnlyCollection<T>
-        if (typeName.StartsWith("System.Collections.Generic.IReadOnlyCollection<", StringComparison.Ordinal) ||
-            typeName.StartsWith("IReadOnlyCollection<", StringComparison.Ordinal))
-        {
-            var start = typeName.IndexOf('<') + 1;
-            var end = typeName.LastIndexOf('>');
-            var elementType = typeName.Substring(start, end - start);
-            return $"System.Array.Empty<{elementType}>()";
-        }
-
-        // Handle IEnumerable<T>
-        if (typeName.StartsWith("System.Collections.Generic.IEnumerable<", StringComparison.Ordinal) ||
-            typeName.StartsWith("IEnumerable<", StringComparison.Ordinal))
-        {
-            var start = typeName.IndexOf('<') + 1;
-            var end = typeName.LastIndexOf('>');
-            var elementType = typeName.Substring(start, end - start);
-            return $"System.Array.Empty<{elementType}>()";
-        }
-
-        // Handle IReadOnlyDictionary<TKey, TValue>
-        if (typeName.StartsWith("System.Collections.Generic.IReadOnlyDictionary<", StringComparison.Ordinal) ||
-            typeName.StartsWith("IReadOnlyDictionary<", StringComparison.Ordinal))
-        {
-            var start = typeName.IndexOf('<') + 1;
-            var end = typeName.LastIndexOf('>');
-            var typeArgs = typeName.Substring(start, end - start);
-            return $"new System.Collections.Generic.Dictionary<{typeArgs}>()";
-        }
-
-        // Handle common types
-        // NOTE: Use "NotFound" for strings instead of string.Empty to avoid issues
-        // with base classes that validate non-empty names (e.g., DataCommandTranslatorBase)
-        return typeName switch
-        {
-            "string" => "\"NotFound\"",
-            "System.String" => "\"NotFound\"",
-            "int" => "0",
-            "System.Int32" => "0",
-            "long" => "0L",
-            "System.Int64" => "0L",
-            "short" => "0",
-            "System.Int16" => "0",
-            "byte" => "0",
-            "System.Byte" => "0",
-            "sbyte" => "0",
-            "System.SByte" => "0",
-            "uint" => "0U",
-            "System.UInt32" => "0U",
-            "ulong" => "0UL",
-            "System.UInt64" => "0UL",
-            "ushort" => "0",
-            "System.UInt16" => "0",
-            "float" => "0f",
-            "System.Single" => "0f",
-            "double" => "0d",
-            "System.Double" => "0d",
-            "decimal" => "0m",
-            "System.Decimal" => "0m",
-            "bool" => "false",
-            "System.Boolean" => "false",
-            "char" => "'\\0'",
-            "System.Char" => "'\\0'",
-            "System.Guid" => "System.Guid.Empty",
-            "Guid" => "System.Guid.Empty",
-            "System.DateTime" => "default",
-            "DateTime" => "default",
-            "System.DateTimeOffset" => "default",
-            "DateTimeOffset" => "default",
-            "System.TimeSpan" => "default",
-            "TimeSpan" => "default",
-            "object" => "null!",
-            "System.Object" => "null!",
-            "Type" => "typeof(object)",
-            "System.Type" => "typeof(object)",
-            // Common enums - use default (gives 0 value)
-            "System.Data.DbType" or "DbType" => "default(System.Data.DbType)",
-            _ => $"default({typeName})!"
-        };
     }
+
+    /// <summary>
+    /// Gets the parameters of the base constructor the NotFound sentinel calls: the protected one with the fewest parameters.
+    /// </summary>
+    public static ImmutableArray<ParameterModel> ExtractSentinelConstructorParameters(INamedTypeSymbol? baseType)
+    {
+        if (baseType == null)
+            return ImmutableArray<ParameterModel>.Empty;
+
+        var ctor = baseType.InstanceConstructors
+            .Where(c => c.DeclaredAccessibility == Accessibility.Protected)
+            .OrderBy(c => c.Parameters.Length)
+            .FirstOrDefault();
+
+        if (ctor == null)
+            return ImmutableArray<ParameterModel>.Empty;
+
+        return ctor.Parameters
+            .Select(p => new ParameterModel(
+                Name: p.Name,
+                Type: p.Type.ToDisplayString(),
+                HasDefaultValue: p.HasExplicitDefaultValue,
+                DefaultValue: string.Empty,
+                IsValueType: p.Type.IsValueType))
+            .ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The one table for the sentinel's constructor arguments: the expression passed, and whether it is safe.
+    /// </summary>
+    /// <remarks>
+    /// Why one table: the TC009 check and the emitted arguments used to be two lists that disagreed. An
+    /// IReadOnlyList or an enum was built non-null yet reported, so the check could not be trusted. Safe means the
+    /// argument is non-null, or the parameter is declared nullable so the base accepts null by design.
+    /// </remarks>
+    private static (string Expression, bool IsSafe) GetSentinelArgument(ParameterModel parameter)
+    {
+        var typeName = parameter.Type;
+
+        if (typeName.EndsWith("?", StringComparison.Ordinal))
+            return ("null", true);
+
+        if (typeName.EndsWith("[]", StringComparison.Ordinal))
+            return ($"System.Array.Empty<{typeName.Substring(0, typeName.Length - 2)}>()", true);
+
+        if (TryGetReadOnlyCollectionArgument(typeName, out var collectionArgument))
+            return (collectionArgument, true);
+
+        if (KnownTypeArguments.TryGetValue(typeName, out var knownArgument))
+            return (knownArgument, true);
+
+        if (parameter.IsValueType)
+            return ($"default({typeName})", true);
+
+        return ($"default({typeName})!", false);
+    }
+
+    private static readonly string[] EmptyArrayInterfaces =
+    [
+        "IReadOnlyList<",
+        "IReadOnlyCollection<",
+        "IEnumerable<",
+    ];
+
+    /// <summary>
+    /// An empty value for a read-only collection interface: an empty array, or an empty dictionary.
+    /// </summary>
+    private static bool TryGetReadOnlyCollectionArgument(string typeName, out string argument)
+    {
+        var shortName = typeName.StartsWith("System.Collections.Generic.", StringComparison.Ordinal)
+            ? typeName.Substring("System.Collections.Generic.".Length)
+            : typeName;
+
+        var start = typeName.IndexOf('<') + 1;
+        var typeArgs = start > 0 ? typeName.Substring(start, typeName.LastIndexOf('>') - start) : string.Empty;
+
+        if (EmptyArrayInterfaces.Any(i => shortName.StartsWith(i, StringComparison.Ordinal)))
+        {
+            argument = $"System.Array.Empty<{typeArgs}>()";
+            return true;
+        }
+
+        if (shortName.StartsWith("IReadOnlyDictionary<", StringComparison.Ordinal))
+        {
+            argument = $"new System.Collections.Generic.Dictionary<{typeArgs}>()";
+            return true;
+        }
+
+        argument = string.Empty;
+        return false;
+    }
+
+    /// <summary>
+    /// The sentinel's argument for each type it knows by name.
+    /// </summary>
+    /// <remarks>
+    /// Why "NotFound" for a string and not string.Empty: some bases reject an empty name (DataCommandTranslatorBase).
+    /// </remarks>
+    private static readonly Dictionary<string, string> KnownTypeArguments = new(StringComparer.Ordinal)
+    {
+        ["string"] = "\"NotFound\"",
+        ["System.String"] = "\"NotFound\"",
+        ["int"] = "0",
+        ["System.Int32"] = "0",
+        ["long"] = "0L",
+        ["System.Int64"] = "0L",
+        ["short"] = "0",
+        ["System.Int16"] = "0",
+        ["byte"] = "0",
+        ["System.Byte"] = "0",
+        ["sbyte"] = "0",
+        ["System.SByte"] = "0",
+        ["uint"] = "0U",
+        ["System.UInt32"] = "0U",
+        ["ulong"] = "0UL",
+        ["System.UInt64"] = "0UL",
+        ["ushort"] = "0",
+        ["System.UInt16"] = "0",
+        ["float"] = "0f",
+        ["System.Single"] = "0f",
+        ["double"] = "0d",
+        ["System.Double"] = "0d",
+        ["decimal"] = "0m",
+        ["System.Decimal"] = "0m",
+        ["bool"] = "false",
+        ["System.Boolean"] = "false",
+        ["char"] = "'\\0'",
+        ["System.Char"] = "'\\0'",
+        ["System.Guid"] = "System.Guid.Empty",
+        ["Guid"] = "System.Guid.Empty",
+        ["System.DateTime"] = "default",
+        ["DateTime"] = "default",
+        ["System.DateTimeOffset"] = "default",
+        ["DateTimeOffset"] = "default",
+        ["System.TimeSpan"] = "default",
+        ["TimeSpan"] = "default",
+        ["Type"] = "typeof(object)",
+        ["System.Type"] = "typeof(object)",
+    };
 
     /// <summary>
     /// Generates common using statements.
@@ -1040,7 +1051,8 @@ internal static class CodeGeneration
             Name: p.Name,
             Type: p.Type.ToDisplayString(),
             HasDefaultValue: p.HasExplicitDefaultValue,
-            DefaultValue: p.HasExplicitDefaultValue ? p.ExplicitDefaultValue?.ToString() ?? "default" : string.Empty
+            DefaultValue: p.HasExplicitDefaultValue ? p.ExplicitDefaultValue?.ToString() ?? "default" : string.Empty,
+            IsValueType: p.Type.IsValueType
         )).ToImmutableArray();
 
         // Capture method-level type parameters

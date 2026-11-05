@@ -14,6 +14,7 @@ using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
@@ -87,7 +88,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
 
             if (!correlationResult.IsSuccess)
             {
-                var errorMessage = correlationResult.CurrentMessage ?? "Unknown error";
+                var errorMessage = correlationResult.FailureReason().Message;
                 OnExecutionQueryFailed(errorMessage);
                 await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query executions", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
                 return;
@@ -128,7 +129,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
 
         if (!listResult.IsSuccess || listResult.Value == null)
         {
-            var errorMessage = listResult.CurrentMessage ?? "Unknown error";
+            var errorMessage = listResult.NoValueReason().Message;
             OnExecutionQueryFailed(errorMessage);
             await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query executions", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
             return;

@@ -75,6 +75,11 @@ public static class StatusBadgeMapper
             return new StatusBadge("Cancelled", StatusColors.Yellow, StatusVariants.Warning);
         }
 
+        if (string.Equals(status, "Interrupted", StringComparison.OrdinalIgnoreCase))
+        {
+            return new StatusBadge("Interrupted", StatusColors.Yellow, StatusVariants.Warning);
+        }
+
         if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(status, "Queued", StringComparison.OrdinalIgnoreCase))
         {

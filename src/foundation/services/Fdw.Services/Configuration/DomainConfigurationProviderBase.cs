@@ -19,6 +19,7 @@ using Fdw.Services.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using CmdBuilders = Fdw.Commands.Data.Extensions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Configuration;
 
@@ -103,6 +104,9 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     // How many of the rows an ambiguous name matched are listed in the refusal: enough to address each by id.
     private const int MaxAmbiguousIds = 10;
 
+    // The action a write reports when it made the member's domain row: the only time a member is new and so the only time it is placed.
+    private const string MintedAction = "minted";
+
     /// <summary>Gets the configuration connection this domain's rows live on.</summary>
     public string DataStoreName { get; private set; }
 
@@ -137,7 +141,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.ProviderNotErasable(
-                    _logger, name, implementationConfigurationProvider?.GetType().FullName ?? "(null)"));
+                    _logger, name, implementationConfigurationProvider?.GetType().FullName ?? LogPlaceholders.Null));
         }
 
         if (typed is IConfigurationWriteParticipant<TImplementationConfiguration> participant)
@@ -401,10 +405,17 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         Action<IGenericResult> fail,
         [EnumeratorCancellation] CancellationToken ct)
     {
+        var sets = await ReadSets(rows, levels, ct).ConfigureAwait(false);
+        if (sets.IsFailure)
+        {
+            fail(sets);
+            yield break;
+        }
+
         var composed = 0;
         foreach (var row in rows)
         {
-            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
+            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, ct).ConfigureAwait(false);
             if (loaded.IsSuccess)
             {
                 if (loaded.Value is null) continue;
@@ -477,7 +488,37 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         => row.Implementation is { } implementation && _implementations.TryGetValue(implementation, out var provider)
             ? GenericResult<IImplementationConfigurationProvider<TImplementationConfiguration>>.Success(provider)
             : GenericResult<IImplementationConfigurationProvider<TImplementationConfiguration>>.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? "(none)"));
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? LogPlaceholders.None));
+
+    // The implementations of a list of domain rows, read a set to the implementation provider the rows name and not a row at a time: a
+    // statement for each table at each level, whatever the number of rows (FDW-3906). A row whose implementation has no provider fails the
+    // read, as it fails a read of the row alone.
+    private async Task<IGenericResult<IReadOnlyDictionary<Guid, TImplementationConfiguration>>> ReadSets(
+        IReadOnlyList<TDomain> rows, int levels, CancellationToken ct)
+    {
+        var found = new Dictionary<Guid, TImplementationConfiguration>();
+        foreach (var group in rows.GroupBy(row => row.Implementation ?? string.Empty, StringComparer.Ordinal))
+        {
+            var provider = Provider(group.First());
+            if (provider.IsFailure)
+                return provider.ToNewResult<IReadOnlyDictionary<Guid, TImplementationConfiguration>>();
+
+            var set = await provider.Value!.GetSet(group.Select(row => row.Id), levels, ct).ConfigureAwait(false);
+            if (set.IsFailure)
+                return set.ToNewResult<IReadOnlyDictionary<Guid, TImplementationConfiguration>>();
+
+            foreach (var pair in set.Value!)
+                found[pair.Key] = pair.Value;
+        }
+
+        return GenericResult<IReadOnlyDictionary<Guid, TImplementationConfiguration>>.Success(found);
+    }
+
+    // What a single-row read answers for a row with no current implementation: success with nothing, which the list loops skip.
+    private static Task<IGenericResult<TImplementationConfiguration>> FromSet(
+        IReadOnlyDictionary<Guid, TImplementationConfiguration> set, TDomain row)
+        => Task.FromResult<IGenericResult<TImplementationConfiguration>>(
+            GenericResult<TImplementationConfiguration>.Success(set.GetValueOrDefault(row.Id)!));
 
     // Reads a domain row's implementation through the provider the row names, then stamps the row's
     // identity onto it.
@@ -565,9 +606,12 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             return GenericResult<IReadOnlyList<IImplementationConfiguration>>.Failure(
                 DefaultConfigurationProviderLog.DomainListReturnedNoResult(_logger, typeof(TImplementationConfiguration).Name));
 
+        var sets = await ReadSets([.. rows.Value], levels, ct).ConfigureAwait(false);
+        if (sets.IsFailure) return sets.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
+
         foreach (var row in rows.Value)
         {
-            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct), levels, null, ct, attachTrees: false).ConfigureAwait(false);
+            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, ct, attachTrees: false).ConfigureAwait(false);
             if (!loaded.IsSuccess) return loaded.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
             if (loaded.Value is not null) members.Add(loaded.Value);
         }
@@ -728,10 +772,13 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             _commands.List(DataStoreName, PathName), Target, ct).ConfigureAwait(false);
         if (!rows.IsSuccess) return rows.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
 
+        var sets = await ReadSets([.. rows.Value ?? []], levels, ct).ConfigureAwait(false);
+        if (sets.IsFailure) return sets.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
+
         var found = new List<TImplementationConfiguration>();
         foreach (var row in rows.Value ?? [])
         {
-            var loaded = await Compose(row, provider => provider.Get(row.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
+            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, ct).ConfigureAwait(false);
             if (!loaded.IsSuccess) return loaded.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
             if (loaded.Value is null) continue;
             found.Add(loaded.Value);
@@ -880,9 +927,29 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var saved = await writable.Value!.Save(implementationConfiguration, domainContainer.Value!, domainRow.Value.Keys, unit, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved;
 
+        var placed = await PlaceMinted(implementationConfiguration, domainRow.Value.Action, unit, ct).ConfigureAwait(false);
+        if (placed.IsFailure) return placed;
+
         DefaultConfigurationProviderLog.DomainRowSaved(
             _logger, typeof(TImplementationConfiguration).Name, name, domainId, domainRow.Value.Action);
         return saved;
+    }
+
+    // A member that was just made is placed in the unit that made it, when this provider declares its members are placed and this member still
+    // needs it (FDW-3692). A placement that fails fails the write, so the unit rolls back and nothing is made unplaced. A provider that does not
+    // declare it, a member that was only changed, and a member that has an owner already are not placed.
+    private async Task<IGenericResult> PlaceMinted<T>(T record, string action, ConfigurationWriteScope unit, CancellationToken ct)
+        where T : TImplementationConfiguration
+    {
+        if (this is not IPlacedConfigurationProvider<TImplementationConfiguration> placing
+            || !string.Equals(action, MintedAction, StringComparison.Ordinal)
+            || !placing.Needs(record))
+            return GenericResult.Success();
+
+        var placed = await placing.Placement.Place(new PlacementRequest(placing.PlacementKind, record.Id, record.Name), unit, ct).ConfigureAwait(false);
+        if (placed.IsSuccess)
+            DefaultConfigurationProviderLog.MemberPlaced(_logger, typeof(TImplementationConfiguration).Name, record.Name, placing.PlacementKind);
+        return placed;
     }
 
     // The provider that writes an implementation, which has to join the caller's unit of work.
@@ -899,7 +966,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         return provider is IConfigurationWriteParticipant<TImplementationConfiguration> writable
             ? GenericResult<IConfigurationWriteParticipant<TImplementationConfiguration>>.Success(writable)
             : GenericResult<IConfigurationWriteParticipant<TImplementationConfiguration>>.Failure(
-                DefaultConfigurationProviderLog.ProviderCannotJoinWrite(_logger, name, provider.GetType().FullName ?? "(null)"));
+                DefaultConfigurationProviderLog.ProviderCannotJoinWrite(_logger, name, provider.GetType().ToString()));
     }
 
     // What the kind of write requires of the member the record names: a Save requires nothing, an Update requires one, a Create requires none.
@@ -1003,7 +1070,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
         if (writable is not IConfigurationSupersedeParticipant<TImplementationConfiguration> superseding)
             return GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Failure(
-                DefaultConfigurationProviderLog.ProviderCannotSupersede(_logger, current.Name, writable.GetType().FullName ?? "(null)"));
+                DefaultConfigurationProviderLog.ProviderCannotSupersede(_logger, current.Name, writable.GetType().ToString()));
 
         // The implementation goes first, while the row it hangs from is still current: the security
         // predicate on its table reaches the domain row through its key.
@@ -1159,7 +1226,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (written.IsFailure) return written.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
 
         return written.Value?.Written is { } keys
-            ? GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Success((record.Id, keys, "minted"))
+            ? GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Success((record.Id, keys, MintedAction))
             : GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Failure(
                 DefaultConfigurationProviderLog.WriteReturnedNoRow(_logger, _commands.TableName));
     }
@@ -1196,14 +1263,14 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
         if (row.Implementation is not { } implementation || !_implementations.TryGetValue(implementation, out var provider))
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? "(none)"));
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? LogPlaceholders.None));
 
         // The implementation goes first: a domain row whose implementation outlived it is a row
         // that names something no longer there. Both retire in one unit, so neither can outlive the
         // other however the other fails.
         if (provider is not IConfigurationWriteParticipant<TImplementationConfiguration> writable)
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ProviderCannotJoinWrite(_logger, row.Name, provider.GetType().FullName ?? "(null)"));
+                DefaultConfigurationProviderLog.ProviderCannotJoinWrite(_logger, row.Name, provider.GetType().ToString()));
 
         var domainContainer = unit.Container(PathName, _commands.TableName);
         if (domainContainer.IsFailure) return domainContainer;
@@ -1302,7 +1369,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
                 DefaultConfigurationProviderLog.UntypedSaveTypeMismatch(
                     _logger,
                     typeof(TImplementationConfiguration).Name,
-                    implementationConfiguration?.GetType().Name ?? "(null)"));
+                    implementationConfiguration?.GetType().Name ?? LogPlaceholders.Null));
 
     async Task<IGenericResult> IDomainConfigurationProvider.Update(
         IImplementationConfiguration implementationConfiguration,
@@ -1313,7 +1380,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
                 DefaultConfigurationProviderLog.UntypedSaveTypeMismatch(
                     _logger,
                     typeof(TImplementationConfiguration).Name,
-                    implementationConfiguration?.GetType().Name ?? "(null)"));
+                    implementationConfiguration?.GetType().Name ?? LogPlaceholders.Null));
 
     private DataStoreTarget Target => new(DataStoreName, PathName, _commands.TableName);
 }

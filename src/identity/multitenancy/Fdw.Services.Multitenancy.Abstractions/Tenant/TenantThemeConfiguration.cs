@@ -6,32 +6,32 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 public sealed class TenantThemeConfiguration
 {
     /// <summary>Gets or sets the primary brand color (HSL: 'h s% l%').</summary>
-    public string PrimaryColor { get; set; } = "221 83% 53%";
+    public string PrimaryColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the secondary brand color (HSL).</summary>
-    public string SecondaryColor { get; set; } = "215 16% 47%";
+    public string SecondaryColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the accent brand color (HSL).</summary>
-    public string AccentColor { get; set; } = "262 83% 58%";
+    public string AccentColor { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the background surface color (HSL).</summary>
-    public string BackgroundColor { get; set; } = "222 47% 11%";
+    public string BackgroundColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the surface color (HSL).</summary>
-    public string SurfaceColor { get; set; } = "217 33% 17%";
+    public string SurfaceColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the overlay surface color (HSL).</summary>
-    public string OverlayColor { get; set; } = "215 28% 23%";
+    public string OverlayColor { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the success feedback color (HSL).</summary>
-    public string SuccessColor { get; set; } = "142 71% 45%";
+    public string SuccessColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the warning feedback color (HSL).</summary>
-    public string WarningColor { get; set; } = "38 92% 50%";
+    public string WarningColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the error feedback color (HSL).</summary>
-    public string ErrorColor { get; set; } = "0 84% 60%";
+    public string ErrorColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the info feedback color (HSL).</summary>
-    public string InfoColor { get; set; } = "199 89% 48%";
+    public string InfoColor { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the main typography color (HSL).</summary>
-    public string TextMainColor { get; set; } = "210 40% 98%";
+    public string TextMainColor { get; set; } = string.Empty;
     /// <summary>Gets or sets the muted typography color (HSL).</summary>
-    public string TextMutedColor { get; set; } = "215 20% 65%";
+    public string TextMutedColor { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the logo URL.</summary>
     public string? LogoUrl { get; set; }
@@ -40,7 +40,7 @@ public sealed class TenantThemeConfiguration
     /// <summary>Gets or sets the custom CSS URL.</summary>
     public string? CustomCssUrl { get; set; }
     /// <summary>Gets or sets whether dark mode is default.</summary>
-    public bool DarkModeDefault { get; set; } = true;
+    public bool DarkModeDefault { get; set; }
 
     /// <summary>
     /// Converts to ITenantTheme.

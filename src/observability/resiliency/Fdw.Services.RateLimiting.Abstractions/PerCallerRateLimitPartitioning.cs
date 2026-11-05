@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Security.Claims;
 using Fdw.Collections.Attributes;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.RateLimiting.Abstractions;
 
@@ -33,13 +34,12 @@ public sealed class PerCallerRateLimitPartitioning : RateLimitPartitioningBase
                 $"The {policy.Name} rate limit policy gives each caller its own allowance, and this request has no authenticated caller.");
         }
 
-        // The caller's id is one claim under two spellings, as the session endpoints read it: the handler that signed the caller
-        // in names it NameIdentifier, or sub when the token's claims were not mapped. This is not a choice between callers.
-        var id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
-        if (id is null || id.Trim().Length == 0)
+        // The caller's id is its sub claim, which every principal FDW signs in carries (FDW-3580).
+        var id = CallerClaims.UserId(user);
+        if (id is null)
         {
             throw new InvalidOperationException(
-                $"The {policy.Name} rate limit policy gives each caller its own allowance, and this request's caller carries no {nameof(ClaimTypes.NameIdentifier)} or sub claim.");
+                $"The {policy.Name} rate limit policy gives each caller its own allowance, and this request's caller carries no sub claim.");
         }
 
         return id;

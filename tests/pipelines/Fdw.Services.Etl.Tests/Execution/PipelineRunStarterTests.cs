@@ -345,11 +345,11 @@ public sealed class PipelineRunStarterTests : IDisposable
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public async Task APipelineNotFoundWithNoMessageIsRefusedSayingWhatThatMeans()
+    public async Task APipelineTheProviderAnswersWithNoValueIsRefusedSayingWhatThatMeans()
     {
         _pipelines
             .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Failure(new GenericMessage(string.Empty)));
+            .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(default!));
 
         var result = await Sut().Start(Start(name: "Gone"), TestContext.Current.CancellationToken);
 

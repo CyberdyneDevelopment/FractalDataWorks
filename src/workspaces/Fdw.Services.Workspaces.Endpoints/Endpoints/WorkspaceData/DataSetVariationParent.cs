@@ -65,6 +65,10 @@ internal static class DataSetVariationParent
     {
         if (main.IsFailure) return main.ToNewResult<DataSetVariationBase>();
 
+        // A variation is a data set too (FDW-3638), but the base is always the root data set: a view of a view names its parent view.
+        if (main.Value is IDataSetVariationImplementationConfiguration)
+            return DataSetVariationChain.Invalid<DataSetVariationBase>(logger, named, "it is itself a variation; name it as the parent view, not as the base data set");
+
         return main.Value is { } found
             ? GenericResult<DataSetVariationBase>.Success(new DataSetVariationBase(found, parent))
             : GenericResult<DataSetVariationBase>.Failure(

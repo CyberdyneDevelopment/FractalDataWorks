@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Conventions;
 
 namespace Fdw.Data.Abstractions;
 
@@ -8,6 +9,10 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 public abstract class FormatTypeBase : TypeOptionBase<FormatTypeBase>, IFormatType
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Format";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="FormatTypeBase"/> class.
     /// </summary>
@@ -40,7 +45,7 @@ public abstract class FormatTypeBase : TypeOptionBase<FormatTypeBase>, IFormatTy
         string family,
         string? separator = null,
         string? category = null)
-        : base(name, $"Formats:{name}", displayName, description, category ?? "Format")
+        : base(name, $"Formats:{name}", displayName, description, category ?? DefaultCategory)
     {
         MimeType = mimeType;
         IsBinary = isBinary;

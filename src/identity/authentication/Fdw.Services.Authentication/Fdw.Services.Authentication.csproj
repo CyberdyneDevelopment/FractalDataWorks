@@ -73,6 +73,9 @@
 
 
     <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
+
+
+    <ProjectReference Include="..\..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
   </ItemGroup>
 
   <!-- Why a FrameworkReference: the inbound-token validation domain registers ASP.NET authentication

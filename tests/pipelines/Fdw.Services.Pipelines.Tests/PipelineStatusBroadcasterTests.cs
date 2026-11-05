@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Fdw.Services.Pipelines.Hubs;
+using Fdw.ServiceTypes;
 using Fdw.Services.Pipelines.Notifications;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -15,9 +15,8 @@ namespace Fdw.Services.Pipelines.Tests;
 
 /// <summary>
 /// Covers <see cref="PipelineStatusBroadcaster"/> branches not already exercised by
-/// <see cref="PipelineStatusBroadcasterOrgFirehoseTests"/>: the options-resolution fallback in the
-/// constructor (zero/negative BroadcastHz and SampleBufferMaxBytes fall back to the documented
-/// defaults), the Hz-based coalescing window for per-task/per-edge broadcasts (first-call-always-sent,
+/// <see cref="PipelineStatusBroadcasterOrgFirehoseTests"/>: the coalescing rate the pipeline hub
+/// declares (FDW-3956), the Hz-based coalescing window for per-task/per-edge broadcasts (first-call-always-sent,
 /// rapid-repeat-is-coalesced, terminal-status-always-bypasses-coalescing), and the firehose targeting
 /// for the remaining broadcast verbs (<c>BroadcastProgress</c>/<c>BroadcastExecutionPaused</c>/
 /// <c>BroadcastExecutionResumed</c>).
@@ -26,7 +25,7 @@ namespace Fdw.Services.Pipelines.Tests;
 public sealed class PipelineStatusBroadcasterTests
 {
     private static (PipelineStatusBroadcaster Broadcaster, List<string> Groups, Mock<IPipelineStatusHubClient> Client)
-        CreateBroadcaster(PipelineStatusBroadcasterOptions? options = null)
+        CreateBroadcaster()
     {
         var targeted = new List<string>();
         var client = new Mock<IPipelineStatusHubClient>();
@@ -38,8 +37,7 @@ public sealed class PipelineStatusBroadcasterTests
         hubContext.SetupGet(h => h.Clients).Returns(clients.Object);
         var broadcaster = new PipelineStatusBroadcaster(
             hubContext.Object,
-            NullLogger<PipelineStatusBroadcaster>.Instance,
-            options is null ? null : Options.Create(options));
+            NullLogger<PipelineStatusBroadcaster>.Instance);
         return (broadcaster, targeted, client);
     }
 
@@ -48,69 +46,26 @@ public sealed class PipelineStatusBroadcasterTests
             .GetField("_broadcastHz", BindingFlags.NonPublic | BindingFlags.Instance)!
             .GetValue(broadcaster)!;
 
-    private static long GetSampleBufferMaxBytes(PipelineStatusBroadcaster broadcaster) =>
-        (long)typeof(PipelineStatusBroadcaster)
-            .GetField("_sampleBufferMaxBytes", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(broadcaster)!;
-
     // ------------------------------------------------------------------
-    // Constructor / options resolution
+    // Coalescing rate: the pipeline hub's declared value (FDW-3956)
     // ------------------------------------------------------------------
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Configuration")]
-    public void ConstructorWithNullOptionsResolvesDocumentedDefaults()
+    public void TheCoalescingRateIsThePipelineHubsDeclaredValue()
     {
-        var (broadcaster, _, _) = CreateBroadcaster(options: null);
+        var (broadcaster, _, _) = CreateBroadcaster();
 
-        GetBroadcastHz(broadcaster).ShouldBe(5);
-        GetSampleBufferMaxBytes(broadcaster).ShouldBe(10_000_000L);
-    }
-
-    [Theory]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Configuration")]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void ConstructorWithNonPositiveBroadcastHzFallsBackToDefaultOfFive(int configuredHz)
-    {
-        var (broadcaster, _, _) = CreateBroadcaster(new PipelineStatusBroadcasterOptions { BroadcastHz = configuredHz });
-
-        GetBroadcastHz(broadcaster).ShouldBe(5);
+        ServiceTypeDefaults.TryResolve(new PipelineHubOption(), PipelineHubOption.BroadcastHz, out var declared).ShouldBeTrue();
+        GetBroadcastHz(broadcaster).ShouldBe(declared);
     }
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Configuration")]
-    public void ConstructorWithPositiveBroadcastHzUsesConfiguredValue()
-    {
-        var (broadcaster, _, _) = CreateBroadcaster(new PipelineStatusBroadcasterOptions { BroadcastHz = 20 });
-
-        GetBroadcastHz(broadcaster).ShouldBe(20);
-    }
-
-    [Theory]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Configuration")]
-    [InlineData(0L)]
-    [InlineData(-1L)]
-    public void ConstructorWithNonPositiveSampleBufferFallsBackToDefaultOfTenMegabytes(long configuredBytes)
-    {
-        var (broadcaster, _, _) = CreateBroadcaster(new PipelineStatusBroadcasterOptions { SampleBufferMaxBytes = configuredBytes });
-
-        GetSampleBufferMaxBytes(broadcaster).ShouldBe(10_000_000L);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Configuration")]
-    public void ConstructorWithPositiveSampleBufferUsesConfiguredValue()
-    {
-        var (broadcaster, _, _) = CreateBroadcaster(new PipelineStatusBroadcasterOptions { SampleBufferMaxBytes = 42 });
-
-        GetSampleBufferMaxBytes(broadcaster).ShouldBe(42L);
-    }
+    public void ThePipelineHubDeclaresFiveBroadcastsASecond()
+        => new PipelineHubOption().DeclaredDefaults[PipelineHubOption.BroadcastHz].ShouldBe(5);
 
     // ------------------------------------------------------------------
     // BroadcastProgress firehose targeting

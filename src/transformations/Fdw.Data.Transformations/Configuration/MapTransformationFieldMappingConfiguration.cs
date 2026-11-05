@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Conventions;
 using Fdw.Data;
 
 namespace Fdw.Data.Transformations.Configuration;
@@ -36,7 +37,13 @@ public sealed partial class MapTransformationFieldMappingConfiguration : IGeneri
     public bool IsRequired { get; set; }
 
     /// <summary>Gets or sets whether the mapping runs.</summary>
-    public bool IsEnabled { get; set; } = true;
+    /// <remarks>
+    /// The caller's choice (FDW-3823): whoever builds a mapping states it, the column has no DEFAULT to stand in, and
+    /// <see cref="MapTransformationFieldMappingConfigurationValidator"/> refuses a mapping that leaves it out. Nullable so that
+    /// leaving it out is seen, not bound to false.
+    /// </remarks>
+    [CallerChoice]
+    public bool? IsEnabled { get; set; }
 
     /// <summary>Gets or sets the mapping's position.</summary>
     public int Ordinal { get; set; }

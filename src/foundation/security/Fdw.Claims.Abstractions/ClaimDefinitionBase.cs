@@ -21,7 +21,7 @@ public abstract class ClaimDefinitionBase : TypeOptionBase<ClaimDefinitionBase>,
     {
         IsArray = isArray;
         IsSessionBound = isSessionBound;
-        Destinations = destinations ?? System.Array.Empty<string>();
+        Destinations = destinations ?? [];
     }
 
     /// <inheritdoc />

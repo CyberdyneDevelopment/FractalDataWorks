@@ -110,10 +110,10 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     public bool IsPrimary { get; set; }
 
     /// <summary>Gets or sets the priority of this source (lower = higher priority).</summary>
-    public int Priority { get; set; } = 100;
+    public int Priority { get; set; }
 
     /// <summary>Gets or sets whether this source supports predicate pushdown optimization.</summary>
-    public bool SupportsPredicatePushdown { get; set; } = true;
+    public bool SupportsPredicatePushdown { get; set; }
 
     // ============================================================================
     // HTTP-specific

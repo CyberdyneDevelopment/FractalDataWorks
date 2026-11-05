@@ -22,7 +22,7 @@ public partial class NotificationRuleDomainConfiguration : DomainConfiguration
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether the rule is in force.</summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets the kind of notification service the rule sends through.</summary>
     public string NotificationServiceType { get; set; } = string.Empty;
@@ -31,5 +31,5 @@ public partial class NotificationRuleDomainConfiguration : DomainConfiguration
     public string NotificationServiceName { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the severity the rule notifies at.</summary>
-    public string Severity { get; set; } = "Info";
+    public string Severity { get; set; } = string.Empty;
 }

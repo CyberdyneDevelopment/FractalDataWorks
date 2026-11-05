@@ -63,7 +63,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
 
         if (!result.IsSuccess)
         {
-            ThrowError(result.CurrentMessage ?? "Failed to update user", 500);
+            ThrowError(result.FailureReason().Message, 500);
             return;
         }
 

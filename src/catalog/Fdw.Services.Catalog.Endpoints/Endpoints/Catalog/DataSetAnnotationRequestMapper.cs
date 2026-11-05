@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using Fdw.Services.Quality.Configuration;
 
 namespace Fdw.Services.Catalog.Endpoints;
@@ -13,7 +11,7 @@ internal static class DataSetAnnotationRequestMapper
 {
     /// <summary>Builds an annotation configuration from the parts a payload carries.</summary>
     internal static DataSetAnnotationImplementationConfiguration FromPayload(
-        string dataSetName, string? owner, string? steward, string? classification, IEnumerable<string>? tags)
+        string dataSetName, string? owner, string? steward, string? classification)
         => new()
         {
             Name = dataSetName,
@@ -21,6 +19,5 @@ internal static class DataSetAnnotationRequestMapper
             BusinessOwner = owner,
             TechnicalOwner = steward,
             DataClassification = classification,
-            Tags = tags?.Select(t => new DataSetAnnotationTagConfiguration { Tag = t, Name = t }).ToList() ?? []
         };
 }

@@ -8,6 +8,9 @@
          assembly load. An entry-point exe is the one place this reference belongs. Without it,
          every ByName lookup returns the NotFound sentinel and nothing can open a session. -->
     <ProjectReference Include="..\..\..\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <!-- Analyzer-only: emits PlatformServices (Configure/Register/Initialize over every discovered [PlatformServiceProvider]). -->
+    <ProjectReference Include="..\..\..\foundation\registration\Fdw.Services.Registration.SourceGenerators\Fdw.Services.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\foundation\registration\Fdw.Services.Registration\Fdw.Services.Registration.csproj" />
   </ItemGroup>
 
   <ItemGroup>

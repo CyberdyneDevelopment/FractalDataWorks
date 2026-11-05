@@ -46,4 +46,18 @@ public static class StorageContainerExtensions
 
         return null;
     }
+
+    /// <summary>
+    /// Returns the field a page of this container's rows follows when the query states no ordering: the field of the primary key the
+    /// container declares, whether as a key of a data container or as the surrogate key in its metadata (FDW-3454).
+    /// </summary>
+    /// <param name="container">The storage container.</param>
+    /// <returns>The declared key's field name, or <c>null</c> when the container declares none; a caller refuses the page then, because no order is assumed.</returns>
+    public static string? GetDeclaredOrderFieldName(this IStorageContainer container)
+    {
+        if (container is IDataContainer dataContainer && dataContainer.GetPrimaryKeyFieldName() is { } declaredKey)
+            return declaredKey;
+
+        return container.GetPrimaryKeyFieldName();
+    }
 }

@@ -7,6 +7,8 @@ using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Conventions;
+using Fdw.ServiceTypes;
 
 namespace Fdw.Data.DataSets.Abstractions;
 
@@ -14,8 +16,23 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// Abstract base class for dataset type definitions following the Fdw.Collections pattern.
 /// Provides common functionality and enforces the structure required for source generation.
 /// </summary>
-public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSetType
+public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSetType, IDeclaresDefaults
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Dataset";
+
+    // The values every data set kind shares (FDW-3956, Mike: "a default value set in the service type option or collection so that in the
+    // registration we can change it"). A kind adds or replaces its own with ServiceTypeDefaults.With; a host changes one with
+    // ServiceTypeDefaults.Override; a value the request states wins over both.
+    private static readonly IReadOnlyDictionary<string, object> SharedDefaults = new Dictionary<string, object>(StringComparer.Ordinal)
+    {
+        [DataSetDeclaredDefaults.Version] = "1.0",
+        [DataSetDeclaredDefaults.CachingEnabled] = true,
+        [DataSetDeclaredDefaults.CachingDurationMinutes] = 60,
+        [DataSetDeclaredDefaults.CachingKeyPattern] = "dataset:{datasetName}:{queryHash}",
+    };
+
     private readonly IReadOnlyCollection<IDataField> _fields;
     private readonly System.Collections.ObjectModel.ReadOnlyCollection<string> _keyFields;
 
@@ -35,10 +52,10 @@ public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSe
         Type recordType,
         IReadOnlyCollection<IDataField> fields,
         string? category = null)
-        : base(name, $"DataSets:{name}", $"{name} Data Set", description, category ?? "Dataset")
+        : base(name, $"DataSets:{name}", $"{name} Data Set", description, category ?? DefaultCategory)
     {
         RecordType = recordType;
-        _fields = fields ?? Array.Empty<IDataField>();
+        _fields = fields ?? [];
         _keyFields = _fields.Where(f => f.IsKey).Select(f => f.Name).ToList().AsReadOnly();
     }
 
@@ -55,7 +72,11 @@ public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSe
     public virtual string ConfigurationSection => $"DataSets:{Name}";
 
     /// <inheritdoc/>
-    public virtual string Version => "1.0";
+    /// <remarks>
+    /// Why a virtual member and not a constructor parameter: the generated NotFound sentinel calls the base constructor, and a virtual member
+    /// keeps this answer for it (FDW-2931).
+    /// </remarks>
+    public virtual IReadOnlyDictionary<string, object> DeclaredDefaults => SharedDefaults;
 
     /// <inheritdoc />
     /// <remarks>

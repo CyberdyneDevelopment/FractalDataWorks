@@ -63,6 +63,19 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             HasHeader = request.HasHeader,
             Separator = request.Separator,
             SheetName = request.SheetName,
+            ContinueOnError = request.ContinueOnError,
+            PropertyNameCaseInsensitive = request.PropertyNameCaseInsensitive,
+            SkipValidation = request.SkipValidation,
+            UseElementContent = request.UseElementContent,
+            IncludeAttributes = request.IncludeAttributes,
+            RootElementName = request.RootElementName,
+            RowElementName = request.RowElementName,
+            OmitXmlDeclaration = request.OmitXmlDeclaration,
+            ContainsQuotedFields = request.ContainsQuotedFields,
+            Trim = request.Trim,
+            QuoteChar = request.QuoteChar,
+            WriteByteOrderMark = request.WriteByteOrderMark,
+            NeutralizeFormulas = request.NeutralizeFormulas,
             WriteEndpoint = request.WriteEndpoint,
             WriteMethod = request.WriteMethod,
             WriteContentType = request.WriteContentType,
@@ -128,6 +141,24 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             request.ContainerName, request.Format, request.HasHeader, request.Separator, request.SheetName, Logger);
         if (refusal is not null) return refusal;
 
+        var choiceRefusal = DataStoreContainerBuilder.FormatChoicesRefusal(request.ContainerName, request.Format, new KeyValuePair<string, object?>[]
+            {
+                new(nameof(request.ContinueOnError), request.ContinueOnError),
+                new(nameof(request.PropertyNameCaseInsensitive), request.PropertyNameCaseInsensitive),
+                new(nameof(request.SkipValidation), request.SkipValidation),
+                new(nameof(request.UseElementContent), request.UseElementContent),
+                new(nameof(request.IncludeAttributes), request.IncludeAttributes),
+                new(nameof(request.RootElementName), request.RootElementName),
+                new(nameof(request.RowElementName), request.RowElementName),
+                new(nameof(request.OmitXmlDeclaration), request.OmitXmlDeclaration),
+                new(nameof(request.ContainsQuotedFields), request.ContainsQuotedFields),
+                new(nameof(request.Trim), request.Trim),
+                new(nameof(request.QuoteChar), request.QuoteChar),
+                new(nameof(request.WriteByteOrderMark), request.WriteByteOrderMark),
+                new(nameof(request.NeutralizeFormulas), request.NeutralizeFormulas),
+            }, Logger);
+        if (choiceRefusal is not null) return choiceRefusal;
+
         var target = DataStoreContainerWriteTarget.Refusal(
             request.ContainerName, request.WriteEndpoint, request.WriteMethod, request.WriteContentType, Logger);
         if (target is not null) return target;
@@ -158,6 +189,19 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             HasHeader = container.HasHeader,
             Separator = container.Separator,
             SheetName = container.SheetName,
+            ContinueOnError = container.ContinueOnError,
+            PropertyNameCaseInsensitive = container.PropertyNameCaseInsensitive,
+            SkipValidation = container.SkipValidation,
+            UseElementContent = container.UseElementContent,
+            IncludeAttributes = container.IncludeAttributes,
+            RootElementName = container.RootElementName,
+            RowElementName = container.RowElementName,
+            OmitXmlDeclaration = container.OmitXmlDeclaration,
+            ContainsQuotedFields = container.ContainsQuotedFields,
+            Trim = container.Trim,
+            QuoteChar = container.QuoteChar,
+            WriteByteOrderMark = container.WriteByteOrderMark,
+            NeutralizeFormulas = container.NeutralizeFormulas,
             WriteEndpoint = container.WriteEndpoint,
             WriteMethod = container.WriteMethod,
             WriteContentType = container.WriteContentType,

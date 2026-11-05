@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Fdw.Services.Data;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using Fdw.Data.Abstractions.Results;
@@ -94,14 +95,10 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
             return tree.ToNewResult<DataStoreDetailResponse>();
         }
 
-        if (request.Discover)
+        var discovered = await DiscoverWhenAsked(request, config, ct).ConfigureAwait(false);
+        if (discovered.IsFailure)
         {
-            var imported = await _schema.DiscoverInto(
-                config, DataStoreDiscoveryOptions.Default, refresh: false, ct).ConfigureAwait(false);
-            if (imported.IsFailure)
-            {
-                return imported.ToNewResult<DataStoreDetailResponse>();
-            }
+            return discovered.ToNewResult<DataStoreDetailResponse>();
         }
 
         config.Implementation = storeType.Value!;
@@ -201,6 +198,25 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
 
     // The first container of the tree that states a file option its format does not take, or is named with its
     // format's own extension in a store that addresses files; null when every container is one the store can read.
+    // A store created with Discover set discovers with the choices its request states (FDW-3823); one left out is refused, naming it.
+    private async Task<IGenericResult> DiscoverWhenAsked(CreateDataStoreRequest request, IDataStoreImplementationConfiguration config, CancellationToken ct)
+    {
+        if (!request.Discover)
+        {
+            return GenericResult.Success();
+        }
+
+        var options = DataStoreDiscoveryChoices.FromRequest(
+            request.ExcludedSchemas, request.IncludeOnlySchemas, request.DiscoverViews, request.DiscoverIndexes, request.DiscoverForeignKeys,
+            request.DiscoverDescriptions, request.Name, Logger);
+        if (options.IsFailure)
+        {
+            return options;
+        }
+
+        return await _schema.DiscoverInto(config, options.Value!, refresh: false, ct).ConfigureAwait(false);
+    }
+
     private IGenericResult? ContainerRefusal(IList<CreateDataStorePathRequest> paths, bool storeAddressesContainersAsFiles)
     {
         foreach (var container in paths.SelectMany(p => p.Containers))
@@ -210,6 +226,27 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
             if (options is not null)
             {
                 return options;
+            }
+
+            var choices = DataStoreContainerBuilder.FormatChoicesRefusal(container.Name, container.Format, new KeyValuePair<string, object?>[]
+                {
+                    new(nameof(container.ContinueOnError), container.ContinueOnError),
+                    new(nameof(container.PropertyNameCaseInsensitive), container.PropertyNameCaseInsensitive),
+                    new(nameof(container.SkipValidation), container.SkipValidation),
+                    new(nameof(container.UseElementContent), container.UseElementContent),
+                    new(nameof(container.IncludeAttributes), container.IncludeAttributes),
+                    new(nameof(container.RootElementName), container.RootElementName),
+                    new(nameof(container.RowElementName), container.RowElementName),
+                    new(nameof(container.OmitXmlDeclaration), container.OmitXmlDeclaration),
+                    new(nameof(container.ContainsQuotedFields), container.ContainsQuotedFields),
+                    new(nameof(container.Trim), container.Trim),
+                    new(nameof(container.QuoteChar), container.QuoteChar),
+                    new(nameof(container.WriteByteOrderMark), container.WriteByteOrderMark),
+                    new(nameof(container.NeutralizeFormulas), container.NeutralizeFormulas),
+                }, Logger);
+            if (choices is not null)
+            {
+                return choices;
             }
 
             var target = DataStoreContainerWriteTarget.Refusal(
@@ -258,6 +295,19 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
                     HasHeader = containerRequest.HasHeader,
                     Separator = containerRequest.Separator,
                     SheetName = containerRequest.SheetName,
+                    ContinueOnError = containerRequest.ContinueOnError,
+                    PropertyNameCaseInsensitive = containerRequest.PropertyNameCaseInsensitive,
+                    SkipValidation = containerRequest.SkipValidation,
+                    UseElementContent = containerRequest.UseElementContent,
+                    IncludeAttributes = containerRequest.IncludeAttributes,
+                    RootElementName = containerRequest.RootElementName,
+                    RowElementName = containerRequest.RowElementName,
+                    OmitXmlDeclaration = containerRequest.OmitXmlDeclaration,
+                    ContainsQuotedFields = containerRequest.ContainsQuotedFields,
+                    Trim = containerRequest.Trim,
+                    QuoteChar = containerRequest.QuoteChar,
+                    WriteByteOrderMark = containerRequest.WriteByteOrderMark,
+                    NeutralizeFormulas = containerRequest.NeutralizeFormulas,
                     WriteEndpoint = containerRequest.WriteEndpoint,
                     WriteMethod = containerRequest.WriteMethod,
                     WriteContentType = containerRequest.WriteContentType,

@@ -9,6 +9,7 @@ using Fdw.Services.Abstractions.Health.Monitoring.Logging;
 using Fdw.Services.HealthChecks.Monitoring;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Web.Analytics.Clients;
 
@@ -54,7 +55,7 @@ public sealed class HttpHealthMonitorFactory : IHttpHealthMonitorFactory
             return GenericResult<IHealthMonitorService>.Failure(
                 HealthMonitorLog.FactoryConfigurationCastFailed(
                     _logger, nameof(HttpHealthMonitorFactory),
-                    nameof(IHealthMonitorImplementationConfiguration), configuration?.GetType().Name ?? "null"));
+                    nameof(IHealthMonitorImplementationConfiguration), configuration?.GetType().Name ?? LogPlaceholders.NullName));
         }
 
         return GenericResult<IHealthMonitorService>.Success(

@@ -26,7 +26,7 @@ public class JsonRoundTripTests
 
         // Act — write
         using (var tw = new StringWriter(sb))
-        using (var writer = new JsonStreamRowWriter(tw))
+        using (var writer = new JsonStreamRowWriter(tw, new JsonRowWriterOptions() { SkipValidation = false, BufferSize = 16 * 1024 }))
         {
             await writer.WriteAll(rows, TestContext.Current.CancellationToken);
             writer.Flush();
@@ -34,7 +34,7 @@ public class JsonRoundTripTests
 
         // Act — read back (root array)
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString()));
-        using var reader = new JsonStreamRowSource(stream);
+        using var reader = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         var readBack = Drain(reader);
 
         // Assert

@@ -33,7 +33,7 @@ public partial class NotificationListMemberConfiguration
     public string? DisplayName { get; set; }
 
     /// <summary>Gets or sets whether this member is enabled.</summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets the ordinal position within the list.</summary>
     public int Ordinal { get; set; }

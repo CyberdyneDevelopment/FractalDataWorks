@@ -9,6 +9,7 @@ using Fdw.Services.Connections;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Configuration;
+using Fdw.Services.Tags;
 using Fdw.Web.RestEndpoints.Crud;
 using Fdw.Web.RestEndpoints.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +36,7 @@ public abstract class ListDataStoresEndpointBase
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
     private readonly ConnectionNames _connectionNames;
     private readonly IConfigurationGatewayProvider _configurationGateways;
+    private readonly ITagService? _tags;
 
     // The names of the stores the host declared, read once per page from the stores themselves.
     private HashSet<string>? _hostDeclared;
@@ -49,13 +51,16 @@ public abstract class ListDataStoresEndpointBase
     /// <param name="connectionProvider">Reads the connections the page's stores name, for their names.</param>
     /// <param name="authorization">Asks whether the caller may read connections, before the summary names one.</param>
     /// <param name="configurationGateways">Holds the stores the host declared, which are never listed.</param>
+    /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c> (FDW-3816).</param>
     protected ListDataStoresEndpointBase(
         ILogger<ListDataStoresEndpointBase> logger,
         DataStoreConfigurationProvider dataStoreProvider,
         ConnectionConfigurationProvider connectionProvider,
         IAuthorizationService authorization,
-        IConfigurationGatewayProvider configurationGateways) : base(logger)
+        IConfigurationGatewayProvider configurationGateways,
+        ITagService? tags = null) : base(logger)
     {
+        _tags = tags;
         _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
         _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
         _connectionNames = new ConnectionNames(connectionProvider, authorization, logger);
@@ -68,7 +73,17 @@ public abstract class ListDataStoresEndpointBase
     protected override async Task<IGenericResult<ConfigurationPage<DataStoreDomainConfiguration>>> LoadPage(
         PaginatedListRequest paging, CancellationToken ct)
     {
-        var page = await _dataStoreProvider.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct).ConfigureAwait(false);
+        var selection = await TagSelection.Read(TaggedWith, _tags, "DataStore", Logger, ct).ConfigureAwait(false);
+        if (selection.IsFailure || selection.Value is null)
+            return selection.ToNewResult<ConfigurationPage<DataStoreDomainConfiguration>>();
+
+        // ?tag= keeps the stores that carry every tag named (FDW-3816).
+        var page = await selection.Value.Read(
+            (skip, take, token) => _dataStoreProvider.Get(new DomainQuery(null, null, skip, take, false), token),
+            store => store.Id,
+            paging.Skip,
+            paging.Take,
+            ct).ConfigureAwait(false);
         if (!page.IsSuccess)
             return page;
 

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
+using Fdw.Conventions;
 
 namespace Fdw.SourceGenerators.Models;
 
@@ -44,7 +45,7 @@ public sealed class ParameterInfo : IEquatable<ParameterInfo>
     /// </summary>
     public void WriteToHash(SHA256 sha256)
     {
-        var bytes = Encoding.UTF8.GetBytes($"Param:{TypeName}:{Name}:{HasDefaultValue}:{DefaultValue ?? "null"}:{Namespace ?? "null"}");
+        var bytes = Encoding.UTF8.GetBytes($"Param:{TypeName}:{Name}:{HasDefaultValue}:{DefaultValue ?? HashPlaceholders.Null}:{Namespace ?? HashPlaceholders.Null}");
         sha256.TransformBlock(bytes, 0, bytes.Length, null, 0);
     }
 

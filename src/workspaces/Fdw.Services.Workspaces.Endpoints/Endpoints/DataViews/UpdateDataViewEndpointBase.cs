@@ -79,8 +79,7 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
 
         // After the checks, because the loaded view is the cached instance: a refusal must leave it as it was read.
         Apply(request, view);
-        var saved = await _variations.Update(
-            view, "DataSetVariation", DataViewDataSetVariationConfiguration.ImplementationName, view.Name, ct).ConfigureAwait(false);
+        var saved = await _variations.Update(view, view.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<DataViewResponse>();
 
         return GenericResult<DataViewResponse>.Success(DataViewResponseMapper.ToResponse(view, existing.ParentName));
@@ -94,12 +93,12 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
     /// The framework's answer is the person who saved the view. Who else may is policy, so it is a rule a developer replaces by overriding
     /// this: the reference API also lets a holder of the right at the view's scope or above change it, through <c>IScopeAuthority</c>.
     /// </remarks>
-    protected virtual Task<IGenericResult> MayChange(IDataViewDataSetVariationConfiguration view, CancellationToken cancellationToken)
+    protected virtual Task<IGenericResult> MayChange(IDataSetVariationImplementationConfiguration view, CancellationToken cancellationToken)
         => Task.FromResult(DataViewStore.OwnedByCaller(_authContext, view, Logger));
 
     /// <summary>The refusal a change that would leave the chart undrawable or the filter unresolvable is answered with, or null.</summary>
     private async Task<IGenericResult<DataViewResponse>?> Refusal(
-        UpdateDataViewRequest request, IDataViewDataSetVariationConfiguration view, CancellationToken ct)
+        UpdateDataViewRequest request, IDataSetVariationImplementationConfiguration view, CancellationToken ct)
     {
         var refusals = new DataViewRefusals(view.Name, Logger, "DataViewSpecInvalid");
         var main = await _dataSets.Get(view.BaseDataSetId, ct).ConfigureAwait(false);
@@ -119,19 +118,19 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
     }
 
     // The filter text the view will hold: the request's when it sent one (empty clears), else the view's own.
-    private static string? Filters(UpdateDataViewRequest request, IDataViewDataSetVariationConfiguration view)
-        => request.Filters is null ? view.Filters : (string.IsNullOrWhiteSpace(request.Filters) ? null : request.Filters);
+    private static string? Filters(UpdateDataViewRequest request, IDataSetVariationImplementationConfiguration view)
+        => request.Filters is null ? view.StoredFilters : (string.IsNullOrWhiteSpace(request.Filters) ? null : request.Filters);
 
     // A blank string clears the value to null, as it does for the filter; null leaves it alone.
     private static string? Cleared(string text) => string.IsNullOrWhiteSpace(text) ? null : text;
 
     // A null field is left alone: that is what PATCH means.
-    private static void Apply(UpdateDataViewRequest request, IDataViewDataSetVariationConfiguration view)
+    private static void Apply(UpdateDataViewRequest request, IDataSetVariationImplementationConfiguration view)
     {
         if (request.DisplayName is { } displayName) view.DisplayName = Cleared(displayName);
-        if (request.Description is { } description) view.Description = Cleared(description);
+        if (request.Description is { } description) view.Description = string.IsNullOrWhiteSpace(description) ? string.Empty : description;
         if (request.Encoding is { } encoding) view.Encoding = DataViewChart.Given(encoding);
         if (request.ChartType is { } chartType) view.ChartType = DataViewChart.Given(chartType);
-        view.Filters = Filters(request, view);
+        view.StoredFilters = Filters(request, view);
     }
 }

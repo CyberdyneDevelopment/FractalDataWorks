@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
 using Fdw.Services.Etl.Graphs;
@@ -23,16 +24,20 @@ public abstract class CreateGraphEndpointBase : CrudCreateEndpointBase<GraphPayl
 {
     private readonly PipelineServiceConfigurationProvider _provider;
     private readonly StageChainLookup _chains;
+    private readonly IDataSetConfigurationProvider _dataSets;
 
     /// <summary>Initializes a new instance of the <see cref="CreateGraphEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="provider">The pipeline domain's configuration provider.</param>
     /// <param name="transformations">Resolves the named transformations a field mapping's chain applies.</param>
+    /// <param name="dataSets">The data sets, read for the type of the columns a destination's value sources fill.</param>
     protected CreateGraphEndpointBase(
-        ILogger<CreateGraphEndpointBase> logger, PipelineServiceConfigurationProvider provider, ITransformationConfigurationProvider transformations) : base(logger)
+        ILogger<CreateGraphEndpointBase> logger, PipelineServiceConfigurationProvider provider, ITransformationConfigurationProvider transformations,
+        IDataSetConfigurationProvider dataSets) : base(logger)
     {
         _provider = provider;
         _chains = new StageChainLookup(transformations, logger);
+        _dataSets = dataSets;
     }
 
     /// <inheritdoc />
@@ -64,7 +69,7 @@ public abstract class CreateGraphEndpointBase : CrudCreateEndpointBase<GraphPayl
             return graph.ToNewResult<GraphPayload>();
         }
 
-        return await GraphSave.Save(_provider, graph.Value, Logger, ct).ConfigureAwait(false);
+        return await GraphSave.Save(_provider, graph.Value, _dataSets, GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -11,7 +11,7 @@ public sealed class UpdateDataSetPayload
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }
     /// <summary>Gets or sets the version.</summary>
-    public string Version { get; set; } = "1.0";
+    public string? Version { get; set; }
     /// <summary>Gets or sets the name of the DataSet category the data set sits under; left out, the current one stays, and an empty string takes the data set out of its category.</summary>
     public string? Category { get; set; }
     /// <summary>Gets or sets the service option type.</summary>

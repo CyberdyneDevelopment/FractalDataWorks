@@ -193,12 +193,12 @@ public sealed class PermissionHoldersTests
     {
         var roles = new List<IRoleImplementationConfiguration>
         {
-            new RoleImplementationConfiguration { Id = DeveloperA, Name = "Developer", TenantId = TenantA },
-            new RoleImplementationConfiguration { Id = ViewerA, Name = "Viewer", TenantId = TenantA },
-            new RoleImplementationConfiguration { Id = DeveloperB, Name = "Developer", TenantId = TenantB },
-            new RoleImplementationConfiguration { Id = AdminGlobal, Name = "Admin", TenantId = Global },
-            new RoleImplementationConfiguration { Id = WildcardRole, Name = "UiFeedbackAll", TenantId = TenantA },
-            new RoleImplementationConfiguration { Id = OtherWildcardRole, Name = "ProjectsAll", TenantId = TenantA },
+            new RoleImplementationConfiguration { IsTenantScoped = true, Id = DeveloperA, Name = "Developer", TenantId = TenantA },
+            new RoleImplementationConfiguration { IsTenantScoped = true, Id = ViewerA, Name = "Viewer", TenantId = TenantA },
+            new RoleImplementationConfiguration { IsTenantScoped = true, Id = DeveloperB, Name = "Developer", TenantId = TenantB },
+            new RoleImplementationConfiguration { IsTenantScoped = true, Id = AdminGlobal, Name = "Admin", TenantId = Global },
+            new RoleImplementationConfiguration { IsTenantScoped = true, Id = WildcardRole, Name = "UiFeedbackAll", TenantId = TenantA },
+            new RoleImplementationConfiguration { IsTenantScoped = true, Id = OtherWildcardRole, Name = "ProjectsAll", TenantId = TenantA },
         };
         var grants = new List<IRolePermissionImplementationConfiguration>
         {
@@ -211,10 +211,10 @@ public sealed class PermissionHoldersTests
         };
         var permissions = new List<IPermissionImplementationConfiguration>
         {
-            new PermissionImplementationConfiguration { Id = ReadPermissionId, Name = Permission },
-            new PermissionImplementationConfiguration { Id = OtherPermissionId, Name = "ui-feedback:write" },
-            new PermissionImplementationConfiguration { Id = WildcardPermissionId, Name = "ui-feedback:*" },
-            new PermissionImplementationConfiguration { Id = OtherWildcardPermissionId, Name = "projects:*" },
+            new PermissionImplementationConfiguration { Resource = "*", Scope = "tenant", Id = ReadPermissionId, Name = Permission },
+            new PermissionImplementationConfiguration { Resource = "*", Scope = "tenant", Id = OtherPermissionId, Name = "ui-feedback:write" },
+            new PermissionImplementationConfiguration { Resource = "*", Scope = "tenant", Id = WildcardPermissionId, Name = "ui-feedback:*" },
+            new PermissionImplementationConfiguration { Resource = "*", Scope = "tenant", Id = OtherWildcardPermissionId, Name = "projects:*" },
         };
 
         var tenants = new Mock<ITenantProvider>();

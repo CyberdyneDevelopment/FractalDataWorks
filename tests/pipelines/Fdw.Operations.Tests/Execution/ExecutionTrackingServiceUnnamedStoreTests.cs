@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Operations.Execution;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
@@ -73,5 +74,35 @@ public sealed class ExecutionTrackingServiceUnnamedStoreTests
 
         message.ShouldNotBeNull();
         message.ShouldContain("OperationalConnection");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Configuration")]
+    public async Task ClosingFailsLoudRatherThanWritingToAStoreNobodyNamed()
+    {
+        var closed = await WithNoStore().Close(Guid.NewGuid(), ExecutionStateTypes.Interrupted, "ServerStopped", "stopped", TestContext.Current.CancellationToken);
+
+        closed.IsFailure.ShouldBeTrue();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData("Running")]
+    [InlineData("Paused")]
+    public async Task AnExecutionIsNeverClosedInAStateThatDoesNotEndIt(string state)
+    {
+        // The gateway is Strict: the refusal comes before the item is read.
+        var tracker = new ExecutionTrackingService(
+            new StubGatewayProvider(new Mock<IDataGateway>(MockBehavior.Strict).Object),
+            NullLoggerFactory.Instance,
+            new Mock<IAuthenticationContextAccessor>(MockBehavior.Strict).Object,
+            dataStoreName: "OperationalStore");
+
+        var closed = await tracker.Close(Guid.NewGuid(), ExecutionStateTypes.ByName(state), "ServerStopped", "stopped", TestContext.Current.CancellationToken);
+
+        closed.IsFailure.ShouldBeTrue();
+        closed.CurrentMessage.ShouldNotBeNull().ShouldContain("not a terminal state");
     }
 }

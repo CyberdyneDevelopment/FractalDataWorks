@@ -85,8 +85,9 @@ public sealed class ValuesFromSchemaDocumentProcessor : IDocumentProcessor
                 {
                     var propInfo = item.GetType().GetProperty(
                         displayProperty, BindingFlags.Public | BindingFlags.Instance);
-                    var displayValue = propInfo?.GetValue(item)?.ToString();
-                    names.Add(displayValue ?? typeOption.Name);
+                    var displayValue = propInfo?.GetValue(item)?.ToString()
+                        ?? throw new InvalidOperationException($"Type option '{typeOption.Name}' states no value for display property '{displayProperty}'.");
+                    names.Add(displayValue);
                 }
                 else
                 {

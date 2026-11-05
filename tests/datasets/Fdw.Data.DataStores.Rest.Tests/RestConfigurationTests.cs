@@ -11,25 +11,6 @@ public sealed class RestConfigurationTests
     [Fact]
     [Trait("Priority", "P3")]
     [Trait("Category", "Configuration")]
-    public void DefaultsMatchDocumentedValues()
-    {
-        // Act
-        var configuration = new RestConfiguration();
-
-        // Assert
-        configuration.BaseUrl.ShouldBe(string.Empty);
-        configuration.OpenApiSpecUrl.ShouldBeNull();
-        configuration.AuthenticationType.ShouldBeNull();
-        configuration.ApiKey.ShouldBeNull();
-        configuration.BearerToken.ShouldBeNull();
-        configuration.TimeoutSeconds.ShouldBe(30);
-        configuration.EnableRetries.ShouldBeTrue();
-        configuration.MaxRetries.ShouldBe(3);
-    }
-
-    [Fact]
-    [Trait("Priority", "P3")]
-    [Trait("Category", "Configuration")]
     public void PropertiesAreSettable()
     {
         // Arrange
@@ -41,9 +22,6 @@ public sealed class RestConfigurationTests
         configuration.AuthenticationType = "Bearer";
         configuration.ApiKey = "key-123";
         configuration.BearerToken = "token-456";
-        configuration.TimeoutSeconds = 60;
-        configuration.EnableRetries = false;
-        configuration.MaxRetries = 5;
 
         // Assert
         configuration.BaseUrl.ShouldBe("https://api.example.com");
@@ -51,8 +29,5 @@ public sealed class RestConfigurationTests
         configuration.AuthenticationType.ShouldBe("Bearer");
         configuration.ApiKey.ShouldBe("key-123");
         configuration.BearerToken.ShouldBe("token-456");
-        configuration.TimeoutSeconds.ShouldBe(60);
-        configuration.EnableRetries.ShouldBeFalse();
-        configuration.MaxRetries.ShouldBe(5);
     }
 }

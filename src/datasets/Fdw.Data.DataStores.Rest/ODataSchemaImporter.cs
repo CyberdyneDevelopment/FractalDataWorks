@@ -15,6 +15,7 @@ using Fdw.Results;
 using Fdw.Services.Connections;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Data.DataStores.Rest;
 
@@ -27,6 +28,10 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
 public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfiguration>, ISchemaImporter<RestConfiguration>
 {
+    /// <summary>The name a data store is given when the service describes none of its own.</summary>
+    [PlatformDefault]
+    private const string DefaultServiceName = "OData Service";
+
     private readonly ILogger<ODataSchemaImporter> _logger;
 
     // OData EDMX namespaces
@@ -66,7 +71,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
     /// <returns></returns>
     public override async Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
-        SchemaImporterOptions? options = null,
+        SchemaImporterOptions options,
         CancellationToken cancellationToken = default)
     {
         try
@@ -94,7 +99,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
 
             var edmNamespace = namespaceResult.Value!;
             var serviceName = edmx.Descendants(edmNamespace + "EntityContainer")
-                .FirstOrDefault()?.Attribute("Name")?.Value ?? "OData Service";
+                .FirstOrDefault()?.Attribute("Name")?.Value ?? DefaultServiceName;
 
             var dataStore = new DataStoreImplementationConfiguration
             {
@@ -257,7 +262,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
             }
 
             // Extract the simple type name (remove namespace prefix)
-            var simpleTypeName = entityTypeName.Contains('.')
+            var simpleTypeName = entityTypeName.Contains('.', StringComparison.Ordinal)
                 ? entityTypeName.Substring(entityTypeName.LastIndexOf('.') + 1)
                 : entityTypeName;
 

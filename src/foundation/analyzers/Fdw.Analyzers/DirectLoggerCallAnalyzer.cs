@@ -82,7 +82,7 @@ public sealed class DirectLoggerCallAnalyzer : DiagnosticAnalyzer
         }
 
         // Get the symbol to verify it's ILogger
-        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
+        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
             return;
 

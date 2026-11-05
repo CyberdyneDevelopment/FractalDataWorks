@@ -20,21 +20,22 @@ public class DynamicStructMapperConfigurationTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void UseCompiledExpressionsDefaultsToTrue()
+    public void UseCompiledExpressionsIsUnstatedUntilSet()
     {
+        // FDW-3956: the Dynamic type declares it; the configuration carries no value of its own.
         var sut = new DynamicStructMapperConfiguration();
 
-        sut.UseCompiledExpressions.ShouldBeTrue();
+        sut.UseCompiledExpressions.ShouldBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void CacheCompiledDelegatesDefaultsToTrue()
+    public void CacheCompiledDelegatesIsUnstatedUntilSet()
     {
         var sut = new DynamicStructMapperConfiguration();
 
-        sut.CacheCompiledDelegates.ShouldBeTrue();
+        sut.CacheCompiledDelegates.ShouldBeNull();
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public class DynamicStructMapperConfigurationTests
             UseCompiledExpressions = false
         };
 
-        sut.UseCompiledExpressions.ShouldBeFalse();
+        sut.UseCompiledExpressions.ShouldBe(false);
     }
 
     [Fact]
@@ -60,6 +61,6 @@ public class DynamicStructMapperConfigurationTests
             CacheCompiledDelegates = false
         };
 
-        sut.CacheCompiledDelegates.ShouldBeFalse();
+        sut.CacheCompiledDelegates.ShouldBe(false);
     }
 }

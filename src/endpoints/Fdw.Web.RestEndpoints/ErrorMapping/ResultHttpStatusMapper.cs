@@ -86,7 +86,7 @@ public static class ResultHttpStatusMapper
         return (500, Build(
             500,
             "An unexpected error occurred",
-            code?.Code ?? "UNKNOWN_ERROR",
+            code?.Code ?? EndpointPlaceholders.UnknownErrorCode,
             referenceId,
             false,
             "Contact your administrator",

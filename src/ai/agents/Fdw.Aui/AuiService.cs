@@ -54,7 +54,7 @@ public sealed class AuiService
                 var result = await provider.GetAuiManifest(userId, route, ct).ConfigureAwait(false);
                 if (result.IsFailure)
                 {
-                    AuiLog.ProviderFailed(_logger, provider.GetType().Name, result.CurrentMessage ?? string.Empty);
+                    AuiLog.ProviderFailed(_logger, provider.GetType().Name, result.FailureReason().Message);
                     continue;
                 }
 

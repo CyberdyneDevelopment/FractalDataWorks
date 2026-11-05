@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Fdw.Services.Notifications.Abstractions;
+using Fdw.Operations.Abstractions.Thresholds;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -26,6 +27,8 @@ using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.EtlGateway;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Flow;
+using Fdw.Services.Etl.Thresholds;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Graphs.Commands;
 using Fdw.Services.Pipelines;
@@ -61,6 +64,12 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
+
+            // Why the host is refused here (FDW-3865): every run is judged against thresholds, so a host that runs pipelines without the evaluator is miswired.
+            if (!services.GetRequiredService<IServiceProviderIsService>().IsService(typeof(IThresholdEvaluator)))
+            {
+                return GenericResult<IHost>.Failure(RunThresholdLog.EvaluatorNotRegistered(loggerFactory?.CreateLogger<GraphPipelineType>() ?? NullLogger<GraphPipelineType>.Instance));
+            }
 
             // One domain, one implementation: the engine's provider registers under its own
             // name on the Pipeline domain provider. There is no intermediate kind row to
@@ -100,7 +109,9 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
                     sp.GetService<IRuleNotifier>(),
                     sp.GetService<ITransformationConfigurationProvider>(),
                     sp.GetService<IEffectiveSettingsProvider>(),
-                    sp.GetService<IExecutionTracker>()),
+                    sp.GetService<IExecutionTracker>(),
+                    sp.GetService<RunningFlows>(),
+                    sp.GetService<IThresholdEvaluator>()),
                 ServiceLifetime.Scoped));
             builder.Services.TryAdd(new ServiceDescriptor(
                 typeof(IGraphPipelineProvider),

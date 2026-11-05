@@ -186,14 +186,14 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
         else
         {
             // Try to find a test project
-            targetProject = solution.Projects.FirstOrDefault(p => p.Name.Contains("Test", StringComparison.OrdinalIgnoreCase))
-                ?? solution.Projects.FirstOrDefault();
+            // A project whose name says it holds tests. None is a refusal asking for TestProjectName, never the solution's first project.
+            targetProject = solution.Projects.FirstOrDefault(p => p.Name.Contains("Test", StringComparison.OrdinalIgnoreCase));
 
             if (targetProject is null)
             {
                 GenerateTestsTranslatorLog.NoProjectsFoundInSolution(Logger);
                 return GenericResult<MutationResult>.Failure(
-                RoslynResultCodes.ByName("NoProjectsFoundInSolution"));
+                RoslynResultCodes.ByName("ProjectNameRequired"));
             }
         }
 

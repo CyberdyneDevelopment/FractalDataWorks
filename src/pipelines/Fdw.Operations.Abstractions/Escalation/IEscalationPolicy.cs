@@ -39,6 +39,16 @@ public interface IEscalationPolicy
     int CooldownMinutes { get; }
 
     /// <summary>
+    /// Gets how many times a failed escalation notification is retried. The caller states it; there is no default (FDW-3823).
+    /// </summary>
+    int MaxRetries { get; }
+
+    /// <summary>
+    /// Gets the seconds between retries of a failed escalation notification. The caller states it; there is no default (FDW-3823).
+    /// </summary>
+    int RetryDelaySeconds { get; }
+
+    /// <summary>
     /// Gets the escalation levels.
     /// </summary>
     IReadOnlyList<IEscalationLevel> Levels { get; }

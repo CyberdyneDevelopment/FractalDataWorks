@@ -3,7 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text;
 using Fdw.Configuration;
+using System.IO;
 using Fdw.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
+using Fdw.Data.RowSources.Json;
 using Fdw.Results;
 using Fdw.Services.Connections.Http.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
@@ -18,7 +21,8 @@ namespace Fdw.Services.Connections.Http.Abstractions.Tests;
 /// Tests for <see cref="HttpProtocolBase"/> row-extraction path (C2).
 /// </summary>
 /// <remarks>
-/// Uses a thin test protocol that exposes the protected static helpers.
+/// Uses a thin test protocol that exposes the protected helpers and reads JSON through the Json row source type, as the net10
+/// protocols do through the format collection; the container states every choice the format reads (FDW-3823).
 /// GeoJSON FeatureCollection fixture exercises the full RecordSelector + FlattenNestedObjects path.
 /// </remarks>
 [ExcludeFromCodeCoverage]
@@ -62,11 +66,14 @@ public class HttpProtocolBaseRowExtractionTests
             meta["RecordSelector"] = recordSelector;
         meta["FlattenNestedObjects"] = flattenNestedObjects;
         meta["FlattenSeparator"] = flattenSeparator;
+        meta["ContinueOnError"] = false;
+        meta["PropertyNameCaseInsensitive"] = false;
 
         var mockFormat = new Mock<IFormatType>();
         mockFormat.Setup(f => f.Name).Returns("Json");
 
         var mockContainer = new Mock<IStorageContainer>();
+        mockContainer.Setup(c => c.Name).Returns("Quakes");
         mockContainer.Setup(c => c.Format).Returns(mockFormat.Object);
         mockContainer.Setup(c => c.Metadata).Returns(meta);
         return mockContainer.Object;
@@ -181,6 +188,33 @@ public class HttpProtocolBaseRowExtractionTests
         row0["geometry.coordinates.0"].ShouldBe(-122.0);
     }
 
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "RowExtraction")]
+    public void ExtractRowsFromContent_ContainerLeavesOutAChoice_ReturnsTheRefusal()
+    {
+        // Arrange: a container that states no ContinueOnError (FDW-3823: no format choice is defaulted)
+        var container = TestableHttpProtocol.JsonContainer("features", flattenNestedObjects: false, flattenSeparator: ".", leaveOut: "ContinueOnError");
+
+        // Act
+        var result = new TestableHttpProtocol().Extract(GeoJsonFeatureCollection, container);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("ContinueOnError");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "RowExtraction")]
+    public void ExtractRowsFromContent_ProtocolWithNoReaderForTheFormat_ReturnsFailure()
+    {
+        // The netstandard base knows no format; only a protocol that answers for one reads rows.
+        var result = new TestHttpProtocol().ExtractForTest(GeoJsonFeatureCollection, BuildContainer(recordSelector: "features"));
+
+        result.IsSuccess.ShouldBeFalse();
+    }
+
     // -----------------------------------------------------------------------
     // C2 IsRowCollectionType detection
     // -----------------------------------------------------------------------
@@ -271,7 +305,7 @@ public class HttpProtocolBaseRowExtractionTests
     public async System.Threading.Tasks.Task ProcessResponse_RowCollectionResultType_ExtractsRows()
     {
         // Arrange
-        var protocol = new TestHttpProtocol();
+        var protocol = new TestableHttpProtocol();
         var container = BuildContainer(recordSelector: "features", flattenNestedObjects: true);
         var response = new System.Net.Http.HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -339,30 +373,49 @@ internal sealed class TestableHttpProtocol : HttpProtocolBase
     {
     }
 
+    private static readonly JsonRowSourceType Json = new();
+
     public static IGenericResult<object?> ExtractRows(
         string content,
         string? recordSelector,
         bool flattenNestedObjects,
         string flattenSeparator)
         => new TestableHttpProtocol().ExtractRowsFromContent(
-            content, BuildJsonContainer(recordSelector, flattenNestedObjects, flattenSeparator));
+            content, JsonContainer(recordSelector, flattenNestedObjects, flattenSeparator));
+
+    public IGenericResult<object?> Extract(string content, IStorageContainer container) => ExtractRowsFromContent(content, container);
 
     public static bool CheckIsRowCollection(System.Type type) => IsRowCollectionType(type);
 
-    private static IStorageContainer BuildJsonContainer(
+    protected override bool HasRowReaderForFormat(IStorageContainer container) => true;
+
+    protected override IGenericResult<IRowSourceReader?> TryCreateRowReader(IStorageContainer container, Stream content)
+    {
+        var options = Json.CreateOptions(container);
+        return options.IsFailure
+            ? options.ToNewResult<IRowSourceReader?>()
+            : GenericResult<IRowSourceReader?>.Success(Json.CreateReader(content, options.Value!));
+    }
+
+    public static IStorageContainer JsonContainer(
         string? recordSelector,
         bool flattenNestedObjects,
-        string flattenSeparator)
+        string flattenSeparator,
+        string? leaveOut = null)
     {
         var meta = new System.Collections.Generic.Dictionary<string, object>(System.StringComparer.Ordinal);
         if (recordSelector is not null) meta["RecordSelector"] = recordSelector;
         meta["FlattenNestedObjects"] = flattenNestedObjects;
         meta["FlattenSeparator"] = flattenSeparator;
+        meta["ContinueOnError"] = false;
+        meta["PropertyNameCaseInsensitive"] = false;
+        if (leaveOut is not null) meta.Remove(leaveOut);
 
         var format = new Mock<IFormatType>();
         format.Setup(f => f.Name).Returns("Json");
 
         var container = new Mock<IStorageContainer>();
+        container.Setup(c => c.Name).Returns("Quakes");
         container.Setup(c => c.Format).Returns(format.Object);
         container.Setup(c => c.Metadata).Returns(meta);
         return container.Object;

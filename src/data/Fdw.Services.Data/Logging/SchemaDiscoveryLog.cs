@@ -194,4 +194,10 @@ public static partial class SchemaDiscoveryLog
     /// </summary>
     [MessageLogging(EventId = 11252, Level = LogLevel.Debug, Message = "Updated LastDiscoveredAt on DataStore '{dataStoreName}' to {timestamp}")]
     public static partial IGenericMessage LastDiscoveredAtUpdated(ILogger logger, string dataStoreName, System.DateTimeOffset timestamp);
+
+    /// <summary>
+    /// Logs that a discovery request leaves out one of its choices (FDW-3823): no choice is taken in its place.
+    /// </summary>
+    [MessageLogging(EventId = 71095, Level = LogLevel.Error, Message = "The discovery of '{owner}' states no '{choice}'; a discovery takes each of its choices from the request, and nothing stands in for one")]
+    public static partial IGenericMessage DiscoveryChoiceNotStated(ILogger logger, string owner, string choice);
 }

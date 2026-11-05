@@ -16,6 +16,6 @@ public class CatalogSearchRequest
     /// <summary>Gets or sets how many matches to skip, for the next page.</summary>
     public int? Skip { get; set; }
 
-    /// <summary>Gets or sets how many matches to return, at most <see cref="CatalogSearchLimits.MaxTake"/>.</summary>
+    /// <summary>Gets or sets how many matches to return, as <c>?take</c>: the DefaultPaginationSize setting when left out, at most MaxPaginationSize.</summary>
     public int? Take { get; set; }
 }

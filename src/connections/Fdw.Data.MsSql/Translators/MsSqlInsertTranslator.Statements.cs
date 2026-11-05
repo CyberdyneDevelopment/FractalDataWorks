@@ -48,11 +48,6 @@ public sealed partial class MsSqlInsertTranslator
             + $"{MaxParametersPerStatement}, which is {RowsPerRequest(container)} rows of this container");
     }
 
-    // The type that gives a null its SQL type (FDW-918): the entity property's, or the column's for a dictionary row, which
-    // declares none. A column the row lacks is a null with no type to give it, and a value needs none.
-    private static Type? NullBindingType(IField field, bool found, object? value, Type? declaredType)
-        => declaredType ?? (found && value is null ? field.FieldType.ClrType : null);
-
     internal static SqlCommand BuildBatchedInsertStatements(
         IStorageContainer container,
         IDatabasePath dbPath,
@@ -130,8 +125,7 @@ public sealed partial class MsSqlInsertTranslator
                     // pipeline load carries, binds its values as an entity row does. Bound through the shared binder, so a
                     // row binds the same however many rows travel with it: byte[] as binary, a collection as JSON, a null typed
                     // by its declared type (FDW-918).
-                    var found = RowValues.TryRead(entity, field.Name, out var value, out var declaredType);
-                    var bindingType = NullBindingType(field, found, value, declaredType);
+                    _ = RowValues.TryReadForBinding(entity, field.Name, field.FieldType.ClrType, out var value, out var bindingType);
                     bindings.Add(bindingType is null
                         ? target => AddParameter(target, paramName, value)
                         : target => AddParameter(target, paramName, value, bindingType));

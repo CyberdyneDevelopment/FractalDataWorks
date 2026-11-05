@@ -92,7 +92,7 @@ public abstract partial class RecordWriterTypes
 
     private static string Bare(string mediaType)
     {
-        var separator = mediaType.IndexOf(';');
+        var separator = mediaType.IndexOf(';', StringComparison.Ordinal);
         return (separator < 0 ? mediaType : mediaType.Substring(0, separator)).Trim();
     }
 
@@ -101,7 +101,7 @@ public abstract partial class RecordWriterTypes
     // let a typo outrank a well-formed one.
     private static double Quality(string entry)
     {
-        var separator = entry.IndexOf(';');
+        var separator = entry.IndexOf(';', StringComparison.Ordinal);
         if (separator < 0)
         {
             return 1.0;

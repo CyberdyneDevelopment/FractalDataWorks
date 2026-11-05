@@ -115,12 +115,12 @@ public sealed class SelectModel<T> : ISelectableComponentModel<T>
     {
         if (IsRequired && Value == null)
         {
-            return ValidationResult.Error($"{Label ?? Id} is required.");
+            return ValidationResult.Error($"{Id} is required.");
         }
 
         if (Value != null && !_options.Any(o => EqualityComparer<T>.Default.Equals(o.Value, Value)))
         {
-            return ValidationResult.Error($"{Label ?? Id} has an invalid selection.");
+            return ValidationResult.Error($"{Id} has an invalid selection.");
         }
 
         if (CustomValidator != null)

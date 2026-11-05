@@ -31,4 +31,9 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Identity.Client" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- A connection or storage adapter: it may use ADO.NET directly (FDW052, FDW-3579). -->
+    <AssemblyAttribute Include="Fdw.Conventions.DataAccessAdapterAttribute" />
+  </ItemGroup>
+
 </Project>

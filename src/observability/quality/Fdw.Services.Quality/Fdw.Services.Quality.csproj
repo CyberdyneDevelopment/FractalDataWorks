@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\..\foundation\services\Fdw.Services\Fdw.Services.csproj" />
     <ProjectReference Include="..\..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
+    <ProjectReference Include="..\..\..\pipelines\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

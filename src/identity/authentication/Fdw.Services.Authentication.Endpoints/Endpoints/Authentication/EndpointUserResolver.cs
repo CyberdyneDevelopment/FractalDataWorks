@@ -1,5 +1,6 @@
 using System;
 using System.Security.Claims;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Authentication.Endpoints;
 
@@ -16,7 +17,6 @@ internal static class EndpointUserResolver
     /// <returns><c>true</c> if a GUID subject was resolved; otherwise <c>false</c>.</returns>
     public static bool TryResolveUserId(ClaimsPrincipal user, out Guid userId)
     {
-        var subject = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
-        return Guid.TryParse(subject, out userId);
+        return CallerClaims.TryGetUserId(user, out userId);
     }
 }

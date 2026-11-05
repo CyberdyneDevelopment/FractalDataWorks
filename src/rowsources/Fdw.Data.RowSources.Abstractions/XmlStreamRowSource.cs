@@ -1,10 +1,10 @@
+using Fdw.Conventions;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Fdw.Conventions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
 
@@ -34,9 +34,9 @@ public sealed class XmlStreamRowSource : IRowSourceReader, IAsyncRowSourceReader
     /// </summary>
     /// <param name="stream">The input stream containing XML data.</param>
     /// <param name="options">XML processing options.</param>
-    public XmlStreamRowSource(Stream stream, XmlRowSourceOptions? options = null)
+    public XmlStreamRowSource(Stream stream, XmlRowSourceOptions options)
     {
-        _options = options ?? new XmlRowSourceOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         var settings = _options.CreateSecureSettings();
         _reader = XmlReader.Create(stream, settings);
         _fieldOrdinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -49,10 +49,10 @@ public sealed class XmlStreamRowSource : IRowSourceReader, IAsyncRowSourceReader
     /// </summary>
     /// <param name="reader">An existing XmlReader (caller must have applied security settings).</param>
     /// <param name="options">XML processing options.</param>
-    public XmlStreamRowSource(XmlReader reader, XmlRowSourceOptions? options = null)
+    public XmlStreamRowSource(XmlReader reader, XmlRowSourceOptions options)
     {
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
-        _options = options ?? new XmlRowSourceOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         _fieldOrdinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         _fieldNames = [];
         _currentRowValues = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);

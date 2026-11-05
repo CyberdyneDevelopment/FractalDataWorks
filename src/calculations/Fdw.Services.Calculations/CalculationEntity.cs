@@ -35,7 +35,7 @@ internal sealed class CalculationEntity : ICalculationEntity
     public CalculationOutputSpec Output { get; init; } = new();
 
     /// <inheritdoc/>
-    public bool IsEnabled { get; init; } = true;
+    public bool IsEnabled { get; init; }
 
     /// <inheritdoc/>
     public IGenericConfiguration? TypedConfiguration { get; init; }

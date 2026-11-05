@@ -10,4 +10,7 @@ public sealed class UpsertLoadStepKind : LoadStepKindBase
     public UpsertLoadStepKind() : base("Upsert", "The output rows are matched on the key columns: new keys are inserted and changed rows updated.", usesKeyColumns: true, usesCompareColumns: true, usesWriteColumns: true, allowsVersioning: true, allowsSoftDelete: true, usesSourceDataSet: false, usesRows: true, acceptsRejectedRecords: false)
     {
     }
+
+    /// <inheritdoc/>
+    public override bool RepeatsToSameResult => true;
 }

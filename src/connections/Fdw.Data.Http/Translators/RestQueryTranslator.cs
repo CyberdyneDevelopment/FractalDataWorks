@@ -57,7 +57,13 @@ public sealed class RestQueryTranslator : IDataCommandTranslator<HttpRequestMess
     {
         try
         {
-            var path = container.Path?.PathValue ?? container.Name;
+            // Why a failure and not the container's name: the path is the resource's address (FDW-3580).
+            if (container.Path?.PathValue is not { Length: > 0 } path)
+            {
+                return Task.FromResult(GenericResult<HttpRequestMessage>.Failure(
+                    DataHttpResultCodes.ByName("ContainerPathMissing"),
+                    ResultDetails.Create().With("ContainerName", container.Name)));
+            }
 
             var request = new HttpRequestMessage(HttpMethod.Get, path);
 

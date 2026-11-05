@@ -70,7 +70,7 @@ public partial class NotificationRecipientConfiguration
     /// <summary>
     /// Gets or sets whether this recipient is enabled.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the ordinal position for multiple recipients.

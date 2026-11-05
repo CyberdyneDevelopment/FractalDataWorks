@@ -10,19 +10,16 @@ public sealed class XmlRowSourceOptions : RowSourceOptions
 {
     /// <summary>
     /// Gets or sets the maximum characters from entities (prevents billion laughs attack).
-    /// Default is 10 million characters.
     /// </summary>
-    public long MaxCharactersFromEntities { get; set; } = 10_000_000;
+    public long MaxCharactersFromEntities { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum nesting depth.
-    /// Default is 32.
     /// </summary>
-    public int MaxDepth { get; set; } = 32;
+    public int MaxDepth { get; set; }
 
     /// <summary>
     /// Gets or sets the DTD processing mode.
-    /// Default is Prohibit (prevents XXE attacks).
     /// </summary>
     public DtdProcessing DtdProcessing { get; set; } = DtdProcessing.Prohibit;
 
@@ -51,15 +48,14 @@ public sealed class XmlRowSourceOptions : RowSourceOptions
 
     /// <summary>
     /// Gets or sets whether to treat element content as field values.
-    /// If false, attributes are used. Default is true.
+    /// If false, attributes are used.
     /// </summary>
-    public bool UseElementContent { get; set; } = true;
+    public required bool UseElementContent { get; set; }
 
     /// <summary>
     /// Gets or sets whether to include attributes as fields in addition to elements.
-    /// Default is true.
     /// </summary>
-    public bool IncludeAttributes { get; set; } = true;
+    public required bool IncludeAttributes { get; set; }
 
     /// <summary>
     /// Creates XmlReaderSettings with security protections applied.

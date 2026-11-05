@@ -59,7 +59,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
     [ConventionOverride(MaxMethodLines = 70)]
     public override async Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
-        SchemaImporterOptions? options = null,
+        SchemaImporterOptions options,
         CancellationToken cancellationToken = default)
     {
         try
@@ -84,7 +84,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                 if (!tablesResult.IsSuccess)
                     return GenericResult<DataStoreImplementationConfiguration>.Failure(
                         SqlServerDataStoreResultCodes.ByName("DiscoverTablesFailed"),
-                        ResultDetails.Create("error", tablesResult.CurrentMessage ?? "Unknown error"));
+                        ResultDetails.Create("error", tablesResult.FailureReason().Message));
 
                 var viewsResult = await DiscoverViews(connection, options, cancellationToken).ConfigureAwait(false);
                 if (!viewsResult.IsSuccess)

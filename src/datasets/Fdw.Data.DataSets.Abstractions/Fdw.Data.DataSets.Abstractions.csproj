@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\commands\Fdw.Commands.Abstractions\Fdw.Commands.Abstractions.csproj" />
     <ProjectReference Include="..\..\commands\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\foundation\abstractions\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

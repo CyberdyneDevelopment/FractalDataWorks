@@ -29,4 +29,10 @@ public sealed class EtlPipelineRunRequestRecord
 
     /// <summary>Gets or sets how many times the server has started the run again after a stop (FDW-3236); zero for a run not yet restarted.</summary>
     public int Restarts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Id of the Host row of the ETL host that accepted the run (FDW-4084): two hosts can share one operational store, and a host takes up only the rows that name it.
+    /// Null only on a row written before the column existed, which no host takes up.
+    /// </summary>
+    public Guid? HostId { get; set; }
 }

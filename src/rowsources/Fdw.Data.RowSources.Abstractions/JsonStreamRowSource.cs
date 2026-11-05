@@ -1,10 +1,10 @@
+using Fdw.Conventions;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Conventions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
 
@@ -35,10 +35,10 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
     /// </summary>
     /// <param name="stream">The input stream containing JSON data.</param>
     /// <param name="options">JSON processing options.</param>
-    public JsonStreamRowSource(Stream stream, JsonRowSourceOptions? options = null)
+    public JsonStreamRowSource(Stream stream, JsonRowSourceOptions options)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        _options = options ?? new JsonRowSourceOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         _fieldOrdinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         _fieldNames = [];
         _currentRowValues = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -115,7 +115,23 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
     }
 
     /// <inheritdoc />
-    public bool Read()
+    public bool Read() => ReadRow();
+
+    /// <inheritdoc />
+    public ValueTask<bool> Read(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return new ValueTask<bool>(ReadRow());
+    }
+
+    /// <summary>
+    /// Reads the next row, initialising the reader on first use.
+    /// </summary>
+    /// <remarks>
+    /// Why a private method both Read overloads call: the asynchronous overload calling the synchronous Read()
+    /// tripped MA0040, and handing it the token instead would have called itself (FDW-3578).
+    /// </remarks>
+    private bool ReadRow()
     {
         if (!_initialized)
         {
@@ -123,13 +139,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
         }
 
         return ReadNextRow();
-    }
-
-    /// <inheritdoc />
-    public ValueTask<bool> Read(CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return new ValueTask<bool>(Read());
     }
 
     /// <inheritdoc />

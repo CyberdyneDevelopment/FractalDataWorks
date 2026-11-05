@@ -8,6 +8,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Abstractions.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services;
 
@@ -85,7 +86,7 @@ public abstract class ServiceBase<TCommand, TConfiguration, TService> : IGeneric
         }
 
         return GenericResult<T>.Failure(
-            ServiceBaseLogger.CommandTypeMismatch(Logger, typeof(TCommand).Name, command?.GetType().Name ?? "null"));
+            ServiceBaseLogger.CommandTypeMismatch(Logger, typeof(TCommand).Name, command?.GetType().Name ?? LogPlaceholders.NullName));
     }
 
     /// <summary>
@@ -103,7 +104,7 @@ public abstract class ServiceBase<TCommand, TConfiguration, TService> : IGeneric
         }
 
         return GenericResult.Failure(
-            ServiceBaseLogger.CommandTypeMismatch(Logger, typeof(TCommand).Name, command?.GetType().Name ?? "null"));
+            ServiceBaseLogger.CommandTypeMismatch(Logger, typeof(TCommand).Name, command?.GetType().Name ?? LogPlaceholders.NullName));
     }
 
     /// <summary>

@@ -240,7 +240,9 @@ public static class DdlGenerator
             sb.AppendLine($"                        ReferencedSchema = \"{tcRef.Schema}\",");
             sb.AppendLine($"                        ReferencedTable = \"{tcRef.TableName}\",");
             sb.AppendLine($"                        ReferencedColumn = \"{referencedColumn}\",");
-            sb.AppendLine("                        OnDelete = new NoActionForeignKeyAction()");
+            // A lookup-table reference never cascades: both actions are stated, as the definition requires.
+            sb.AppendLine("                        OnDelete = new NoActionForeignKeyAction(),");
+            sb.AppendLine("                        OnUpdate = new NoActionForeignKeyAction()");
             sb.AppendLine("                    }");
             hasForeignKeys = true;
         }

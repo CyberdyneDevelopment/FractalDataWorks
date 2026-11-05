@@ -53,7 +53,7 @@ public class JsonStreamingWriteTests
     public void Rows_reach_the_target_before_the_document_is_finished()
     {
         var target = new RecordingTextWriter();
-        using var writer = new JsonStreamRowWriter(target);
+        using var writer = new JsonStreamRowWriter(target, new JsonRowWriterOptions() { SkipValidation = false, BufferSize = 16 * 1024 });
 
         writer.Write(Row(1));
         writer.Write(Row(2));
@@ -69,7 +69,7 @@ public class JsonStreamingWriteTests
     public void A_large_write_reaches_the_target_in_many_pieces_not_one()
     {
         var target = new RecordingTextWriter();
-        using (var writer = new JsonStreamRowWriter(target))
+        using (var writer = new JsonStreamRowWriter(target, new JsonRowWriterOptions() { SkipValidation = false, BufferSize = 16 * 1024 }))
         {
             for (var i = 0; i < 500; i++)
             {
@@ -88,7 +88,7 @@ public class JsonStreamingWriteTests
     public void Draining_each_row_still_produces_one_valid_json_array()
     {
         var target = new RecordingTextWriter();
-        using (var writer = new JsonStreamRowWriter(target))
+        using (var writer = new JsonStreamRowWriter(target, new JsonRowWriterOptions() { SkipValidation = false, BufferSize = 16 * 1024 }))
         {
             for (var i = 0; i < 25; i++)
             {
@@ -109,7 +109,7 @@ public class JsonStreamingWriteTests
     public void A_multi_byte_character_survives_the_per_row_drain()
     {
         var target = new RecordingTextWriter();
-        using (var writer = new JsonStreamRowWriter(target))
+        using (var writer = new JsonStreamRowWriter(target, new JsonRowWriterOptions() { SkipValidation = false, BufferSize = 16 * 1024 }))
         {
             writer.Write(new Dictionary<string, object?> { ["name"] = "\U0001F600 café 日本語" });
             writer.Flush();
@@ -124,7 +124,7 @@ public class JsonStreamingWriteTests
     public void An_empty_write_still_produces_an_empty_array()
     {
         var target = new RecordingTextWriter();
-        using (var writer = new JsonStreamRowWriter(target))
+        using (var writer = new JsonStreamRowWriter(target, new JsonRowWriterOptions() { SkipValidation = false, BufferSize = 16 * 1024 }))
         {
             writer.Flush();
         }

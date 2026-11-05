@@ -52,7 +52,7 @@ public static class McpRequestResponse
         if (timeout <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "A positive timeout is required.");
 
-        logger ??= NullLogger.Instance;
+        var log = logger ?? NullLogger.Instance;
         var correlationId = Guid.NewGuid();
         var resultPattern = McpTopics.ToolResult(serverName, toolName);
         var errorPattern = McpTopics.ToolError(serverName, toolName);
@@ -76,7 +76,7 @@ public static class McpRequestResponse
                 if (string.Equals(evt.Topic, errorPattern, StringComparison.Ordinal))
                 {
                     return GenericResult<McpEvent>.Failure(
-                        McpBusResultCodes.ByName("ToolReportedError"), logger,
+                        McpBusResultCodes.ByName("ToolReportedError"), log,
                         ResultDetails.Create("server", serverName, "tool", toolName,
                                 "error", System.Text.Encoding.UTF8.GetString(evt.Payload.Span))
                             .With("correlationId", correlationId));
@@ -91,7 +91,7 @@ public static class McpRequestResponse
             // carried in the details rather than discarded — it is the only record of where the wait
             // was when it was abandoned.
             return GenericResult<McpEvent>.Failure(
-                McpBusResultCodes.ByName("InvocationTimedOut"), logger,
+                McpBusResultCodes.ByName("InvocationTimedOut"), log,
                 ResultDetails.Create("server", serverName, "tool", toolName, "timeout", timeout)
                     .With("correlationId", correlationId)
                     .With("cancellation", ex.Message));
@@ -102,7 +102,7 @@ public static class McpRequestResponse
         }
 
         return GenericResult<McpEvent>.Failure(
-            McpBusResultCodes.ByName("SubscriptionClosedBeforeResponse"), logger,
+            McpBusResultCodes.ByName("SubscriptionClosedBeforeResponse"), log,
             ResultDetails.Create("server", serverName, "tool", toolName, "correlationId", correlationId));
     }
 }

@@ -12,7 +12,12 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Execution;
+using Fdw.Services.Etl.Graphs;
+using Fdw.Services.Hosts.Abstractions;
+using Fdw.Services.Hosts.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Etl.Tests.Execution;
 
@@ -25,11 +30,17 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
 {
     private static readonly Guid Tenant = Guid.Parse("cccccccc-0000-0000-0000-000000000003");
     private static readonly DateTimeOffset Created = new(2026, 10, 29, 20, 0, 0, TimeSpan.Zero);
+    private static readonly Guid ThisHost = Guid.Parse("dddddddd-0000-0000-0000-000000000001");
+    private static readonly Guid OtherHost = Guid.Parse("dddddddd-0000-0000-0000-000000000002");
+    private const string HostName = "reference-etl";
 
     private readonly string? _before = EtlPipelineTypes.OperationalConnection;
     private readonly Mock<IDataGateway> _gateway = new();
     private readonly Mock<IExecutionTracker> _tracker = new();
     private readonly List<(IDataCommand Command, DataStoreTarget Target)> _calls = [];
+    private readonly List<EtlPipelineRunRequestKey> _otherKeys = [];
+    private readonly Mock<IHostConfigurationProvider> _hosts = new();
+    private readonly Mock<ILogger<PipelineRunRequestStore>> _logger = new();
     private readonly PipelineRunRequestStore _store;
 
     public PipelineRunRequestStoreTests()
@@ -39,9 +50,19 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         gateways.Setup(provider => provider.ByName("Main")).Returns(_gateway.Object);
         var accessor = new Mock<IAuthenticationContextAccessor>();
         accessor.SetupProperty(a => a.Current);
-        var services = new ServiceCollection().AddSingleton(gateways.Object).AddSingleton(_tracker.Object).AddSingleton(accessor.Object).BuildServiceProvider();
-        _store = new PipelineRunRequestStore(services.GetRequiredService<IServiceScopeFactory>());
+        var environment = new Mock<IHostEnvironment>();
+        environment.SetupGet(e => e.ApplicationName).Returns(HostName);
+        HostRowIs(ThisHost);
+        _logger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        var services = new ServiceCollection().AddSingleton(gateways.Object).AddSingleton(_tracker.Object).AddSingleton(accessor.Object)
+            .AddSingleton(environment.Object).AddSingleton(_hosts.Object).BuildServiceProvider();
+        _store = new PipelineRunRequestStore(services.GetRequiredService<IServiceScopeFactory>(), _logger.Object);
     }
+
+    // The Host row the hosts provider answers for the host's application name.
+    private void HostRowIs(Guid id) => _hosts
+        .Setup(h => h.Get(HostName, It.IsAny<CancellationToken>()))
+        .ReturnsAsync(GenericResult<IHostImplementationConfiguration>.Success(new HostImplementationConfiguration { Id = id, Name = HostName }));
 
     public void Dispose() => EtlPipelineTypes.OperationalConnection = _before;
 
@@ -69,7 +90,9 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
             });
     }
 
-    private void RowsAre(params EtlPipelineRunRequestRecord[] rows) =>
+    // The rows of this host come back from the filtered read; the key read, across every host, also holds the rows other hosts keep (OtherHostHolds).
+    private void RowsAre(params EtlPipelineRunRequestRecord[] rows)
+    {
         _gateway
             .Setup(g => g.Execute<IEnumerable<EtlPipelineRunRequestRecord>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .Returns((IDataCommand command, DataStoreTarget target, CancellationToken token) =>
@@ -77,13 +100,25 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
                 _calls.Add((command, target));
                 return Task.FromResult<IGenericResult<IEnumerable<EtlPipelineRunRequestRecord>>>(GenericResult<IEnumerable<EtlPipelineRunRequestRecord>>.Success(rows));
             });
+        _gateway
+            .Setup(g => g.Execute<IEnumerable<EtlPipelineRunRequestKey>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Returns((IDataCommand command, DataStoreTarget target, CancellationToken token) =>
+            {
+                _calls.Add((command, target));
+                IEnumerable<EtlPipelineRunRequestKey> keys = [.. rows.Select(row => new EtlPipelineRunRequestKey { ExecutionId = row.ExecutionId, HostId = row.HostId }), .. _otherKeys];
+                return Task.FromResult<IGenericResult<IEnumerable<EtlPipelineRunRequestKey>>>(GenericResult<IEnumerable<EtlPipelineRunRequestKey>>.Success(keys));
+            });
+    }
+
+    private void OtherHostHolds(Guid executionId, Guid? host) => _otherKeys.Add(new EtlPipelineRunRequestKey { ExecutionId = executionId, HostId = host });
 
     private static EtlPipelineRunRequestRecord Row(PipelineExecutionRequest request, DateTimeOffset? heldUntil = null) => new()
     {
         ExecutionId = request.ExecutionId,
         TenantId = Tenant,
         Request = PipelineRunRequestJson.Write(request, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance).Value!,
-        HeldUntil = heldUntil
+        HeldUntil = heldUntil,
+        HostId = ThisHost
     };
 
     private void ItemIs(Guid id, IExecutionStateType state, int minutesOld)
@@ -337,12 +372,171 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
     public async Task StoredRequestsThatCannotBeReadAreAFailureAndNeverAnEmptyRecovery()
     {
         _gateway
+            .Setup(g => g.Execute<IEnumerable<EtlPipelineRunRequestKey>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IEnumerable<EtlPipelineRunRequestKey>>.Success([]));
+        _gateway
             .Setup(g => g.Execute<IEnumerable<EtlPipelineRunRequestRecord>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<EtlPipelineRunRequestRecord>>.Failure(new GenericMessage("the store is down")));
 
         var recovery = await _store.Recover(TestContext.Current.CancellationToken);
 
         recovery.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TheKeysOfTheStoredRequestsThatCannotBeReadAreAFailureAndNeverAnEmptyRecovery()
+    {
+        _gateway
+            .Setup(g => g.Execute<IEnumerable<EtlPipelineRunRequestKey>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IEnumerable<EtlPipelineRunRequestKey>>.Failure(new GenericMessage("the store is down")));
+
+        var recovery = await _store.Recover(TestContext.Current.CancellationToken);
+
+        recovery.IsFailure.ShouldBeTrue();
+    }
+
+    // FDW-4084: two ETL hosts share one operational store, and a host takes up only the runs whose request names it.
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ARequestIsStampedWithTheIdOfTheHostRowOfTheHostThatAcceptedTheRun()
+    {
+        WritesReturn(GenericResult<int>.Success(1));
+
+        var result = await _store.Record(Request(Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        _calls.Select(call => call.Command).OfType<InsertCommand<EtlPipelineRunRequestRecord>>().ShouldHaveSingleItem().Data.Single().HostId.ShouldBe(ThisHost);
+        _hosts.Verify(h => h.Get(HostName, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TheNewRunOfARunStartedAgainIsStampedWithTheSameHost()
+    {
+        var old = Request(Guid.NewGuid(), "running-one");
+        var newId = Guid.NewGuid();
+        CreatedItemIs(newId);
+        WritesReturn();
+
+        var again = await _store.StartAgain(new InterruptedRun(old, 0), TestContext.Current.CancellationToken);
+
+        again.IsSuccess.ShouldBeTrue(again.CurrentMessage);
+        _calls.Select(call => call.Command).OfType<InsertCommand<EtlPipelineRunRequestRecord>>().ShouldHaveSingleItem().Data.Single().HostId.ShouldBe(ThisHost);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AHostWhoseHostRowCannotBeUsedAcceptsNoRunStartsNoRunAgainAndRecoversNothing()
+    {
+        _hosts.Setup(h => h.Get(HostName, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IHostImplementationConfiguration>.Failure(new GenericMessage("no such host")));
+        WritesReturn(GenericResult<int>.Success(1));
+        RowsAre();
+        NoUnstartedRecordsWithoutRow();
+        var old = Request(Guid.NewGuid(), "running-one");
+        CreatedItemIs(Guid.NewGuid());
+
+        var recorded = await _store.Record(Request(Guid.NewGuid()), TestContext.Current.CancellationToken);
+        var again = await _store.StartAgain(new InterruptedRun(old, 0), TestContext.Current.CancellationToken);
+        var recovery = await _store.Recover(TestContext.Current.CancellationToken);
+
+        recorded.IsFailure.ShouldBeTrue();
+        again.IsFailure.ShouldBeTrue();
+        recovery.IsFailure.ShouldBeTrue();
+        _calls.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AHostRowWithNoIdIsNotAnIdentityForTheHost()
+    {
+        HostRowIs(Guid.Empty);
+        WritesReturn(GenericResult<int>.Success(1));
+
+        var recorded = await _store.Record(Request(Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        recorded.IsFailure.ShouldBeTrue();
+        _calls.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task RecoveryReadsOnlyTheRequestsThatNameThisHost()
+    {
+        RowsAre();
+        NoUnstartedRecordsWithoutRow();
+        WritesReturn();
+
+        var recovery = await _store.Recover(TestContext.Current.CancellationToken);
+
+        recovery.IsSuccess.ShouldBeTrue(recovery.CurrentMessage);
+        var read = _calls.Select(call => call.Command).OfType<QueryCommand<EtlPipelineRunRequestRecord>>().ShouldHaveSingleItem();
+        Conditions(read.Filter).ShouldBe([("HostId", "Equal", (object?)ThisHost)]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AQueuedRunAnotherHostHoldsIsNotCountedAsARunWithNoRequest()
+    {
+        var mine = Request(Guid.NewGuid());
+        var theirs = Guid.NewGuid();
+        RowsAre(Row(mine));
+        OtherHostHolds(theirs, OtherHost);
+        ItemIs(mine.ExecutionId, ExecutionStateTypes.Scheduled, 5);
+        IExecutionItem Listed(Guid id)
+        {
+            var item = new Mock<IExecutionItem>();
+            item.SetupGet(i => i.Id).Returns(id);
+            return item.Object;
+        }
+
+        _tracker
+            .Setup(t => t.ListExecutions(1, 100, ExecutionItemTypes.Job, ExecutionStateTypes.Scheduled, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IPagedResponse<IExecutionItem>>.Success(new PagedResponse<IExecutionItem>([Listed(mine.ExecutionId), Listed(theirs)], 1, 100, 2)));
+        _tracker
+            .Setup(t => t.ListExecutions(1, 100, ExecutionItemTypes.Job, ExecutionStateTypes.AwaitingApproval, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IPagedResponse<IExecutionItem>>.Success(new PagedResponse<IExecutionItem>([], 1, 100, 0)));
+        WritesReturn();
+
+        var recovery = await _store.Recover(TestContext.Current.CancellationToken);
+
+        recovery.IsSuccess.ShouldBeTrue(recovery.CurrentMessage);
+        recovery.Value!.Requests.ShouldHaveSingleItem();
+        recovery.Value.WithoutRequest.ShouldBe(0);
+        _tracker.Verify(t => t.GetItem(theirs, It.IsAny<CancellationToken>()), Times.Never);
+        _calls.Select(call => call.Command).OfType<DeleteCommand>().ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task RequestsThatNameNoHostAreCountedAndLoggedAsAnErrorAndNoHostTakesThemUp()
+    {
+        var legacy = Guid.NewGuid();
+        RowsAre();
+        OtherHostHolds(legacy, null);
+        OtherHostHolds(Guid.NewGuid(), null);
+        NoUnstartedRecordsWithoutRow();
+        WritesReturn();
+
+        var recovery = await _store.Recover(TestContext.Current.CancellationToken);
+
+        recovery.IsSuccess.ShouldBeTrue(recovery.CurrentMessage);
+        recovery.Value!.Requests.ShouldBeEmpty();
+        recovery.Value.Interrupted.ShouldBeEmpty();
+        _tracker.Verify(t => t.GetItem(legacy, It.IsAny<CancellationToken>()), Times.Never);
+        _logger.Verify(
+            l => l.Log(
+                LogLevel.Error, It.Is<EventId>(id => id.Id == 22722), It.IsAny<It.IsAnyType>(), null, It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     private void CreatedItemIs(Guid id)
@@ -358,6 +552,24 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         _tracker
             .Setup(t => t.Complete(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult.Success());
+        _tracker
+            .Setup(t => t.Close(It.IsAny<Guid>(), It.IsAny<IExecutionStateType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult.Success());
+        // A lost run has no stage or action records here; the run's own record is open (Running).
+        _tracker
+            .Setup(t => t.GetChildren(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<IExecutionItem>>.Success([]));
+        _tracker
+            .Setup(t => t.GetItem(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid itemId, CancellationToken _) => GenericResult<IExecutionItem>.Success(OpenItem(itemId)));
+    }
+
+    private static IExecutionItem OpenItem(Guid id)
+    {
+        var item = new Mock<IExecutionItem>();
+        item.SetupGet(i => i.Id).Returns(id);
+        item.SetupGet(i => i.State).Returns(ExecutionStateTypes.Running);
+        return item.Object;
     }
 
     [Fact]
@@ -386,6 +598,25 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
 
     [Fact]
     [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ARunTheHostMarkedInterruptedWhenItStoppedComesBackSoTheRetryOrLeaveRuleApplies()
+    {
+        var stopped = Request(Guid.NewGuid(), "stopped-one");
+        var row = Row(stopped);
+        RowsAre(row);
+        ItemIs(stopped.ExecutionId, ExecutionStateTypes.Interrupted, 20);
+        NoUnstartedRecordsWithoutRow();
+        WritesReturn();
+
+        var recovery = await _store.Recover(TestContext.Current.CancellationToken);
+
+        recovery.IsSuccess.ShouldBeTrue(recovery.CurrentMessage);
+        recovery.Value!.Interrupted.ShouldHaveSingleItem().Request.PipelineName.ShouldBe("stopped-one");
+        _calls.Count(call => call.Command is DeleteCommand).ShouldBe(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task StartingARunAgainStoresTheNewRunWithOneMoreRestartClosesTheOldRunNamingTheNewOneAndRemovesTheOldRequest()
     {
@@ -406,7 +637,13 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         stored.Restarts.ShouldBe(2);
         _calls.Select(call => call.Command).OfType<InsertCommand<EtlPipelineExecutionRecord>>().ShouldHaveSingleItem().Data.Single().Id.ShouldBe(newId);
         _tracker.Verify(
-            t => t.Complete(old.ExecutionId, false, "ServerStopped", It.Is<string?>(message => message!.Contains(newId.ToString())), It.IsAny<CancellationToken>()),
+            t => t.Close(old.ExecutionId, ExecutionStateTypes.Interrupted, "ServerStopped", It.Is<string?>(message => message!.Contains(newId.ToString())), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _tracker.Verify(
+            t => t.CreateItem(
+                It.IsAny<IExecutionItemType>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+                It.Is<IReadOnlyDictionary<string, object?>?>(parameters => parameters != null && Equals(parameters["ContinuesRun"], old.ExecutionId)),
+                It.IsAny<CancellationToken>()),
             Times.Once);
         var removal = _calls.Select(call => call.Command).OfType<DeleteCommand>().ShouldHaveSingleItem();
         Conditions(removal.Filter).ShouldBe([("ExecutionId", "Equal", (object?)old.ExecutionId)]);
@@ -429,6 +666,8 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         again.IsFailure.ShouldBeTrue();
         _tracker.Verify(t => t.Complete(newId, false, "RunRequestNotStored", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         _tracker.Verify(t => t.Complete(old.ExecutionId, It.IsAny<bool>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        _tracker.Verify(
+            t => t.Close(old.ExecutionId, It.IsAny<IExecutionStateType>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         _calls.Select(call => call.Command).OfType<DeleteCommand>().ShouldBeEmpty();
     }
 
@@ -462,9 +701,73 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         _tracker.Verify(
-            t => t.Complete(old.ExecutionId, false, "ServerStopped", "it was already started again 3 times", It.IsAny<CancellationToken>()), Times.Once);
+            t => t.Close(old.ExecutionId, ExecutionStateTypes.Interrupted, "ServerStopped", "it was already started again 3 times", It.IsAny<CancellationToken>()), Times.Once);
         _calls.Select(call => call.Command).OfType<InsertCommand<EtlPipelineRunRequestRecord>>().ShouldBeEmpty();
         Conditions(_calls.Select(call => call.Command).OfType<DeleteCommand>().ShouldHaveSingleItem().Filter)
             .ShouldBe([("ExecutionId", "Equal", (object?)old.ExecutionId)]);
+    }
+
+    private void StageWithEvents(Guid run, params (string Type, Dictionary<string, object?> Data)[] events)
+    {
+        ItemIs(run, ExecutionStateTypes.Running, 5);
+        var stage = new Mock<IExecutionItem>();
+        stage.SetupGet(i => i.Id).Returns(Guid.NewGuid());
+        stage.SetupGet(i => i.Name).Returns("Stage 1");
+        stage.SetupGet(i => i.CreatedAt).Returns(Created);
+        stage.SetupGet(i => i.State).Returns(ExecutionStateTypes.Running);
+        _tracker
+            .Setup(t => t.ListExecutions(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IExecutionItemType?>(), It.IsAny<IExecutionStateType?>(), It.IsAny<string?>(), run, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IPagedResponse<IExecutionItem>>.Success(new PagedResponse<IExecutionItem>([stage.Object], 1, 200, 1)));
+        _tracker
+            .Setup(t => t.GetEvents(stage.Object.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<IExecutionEvent>>.Success([.. events.Select(e =>
+            {
+                var recorded = new Mock<IExecutionEvent>();
+                recorded.SetupGet(r => r.EventType).Returns(e.Type);
+                recorded.SetupGet(r => r.Data).Returns(e.Data);
+                return recorded.Object;
+            })]));
+    }
+
+    private static Dictionary<string, object?> CommittedEvent(string destination, long rows, bool repeats) => new()
+    {
+        ["destination"] = destination,
+        ["rowsCommitted"] = rows,
+        ["targetEmptied"] = repeats,
+        ["wholeSet"] = false,
+        ["repeatsToSameResult"] = repeats,
+    };
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TheCommittedLoadsOfACutOffRunAreTheDestinationsThatCommittedRowsWithWhetherTheyRepeat()
+    {
+        var id = Guid.NewGuid();
+        StageWithEvents(
+            id,
+            (ExecutionFlowReporter.DestinationCommittedEvent, CommittedEvent("Players", 500, false)),
+            (ExecutionFlowReporter.DestinationCommittedEvent, CommittedEvent("Players", 1200, false)),
+            (ExecutionFlowReporter.DestinationCommittedEvent, CommittedEvent("Teams", 32, true)),
+            (ExecutionFlowReporter.DestinationCommittedEvent, CommittedEvent("Empty", 0, false)));
+
+        var result = await _store.CommittedLoads(new InterruptedRun(Request(id), 0), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldNotBeNull().OrderBy(load => load.Destination, StringComparer.Ordinal).ToList()
+            .ShouldBe([new CommittedLoad("Players", 1200, false), new CommittedLoad("Teams", 32, true)]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ARunWhoseRecordsCannotBeReadIsAFailureAndNeverAnEmptyAnswer()
+    {
+        var id = Guid.NewGuid();
+        _tracker.Setup(t => t.GetItem(id, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IExecutionItem>.Failure(new GenericMessage("gone")));
+
+        var result = await _store.CommittedLoads(new InterruptedRun(Request(id), 0), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
     }
 }

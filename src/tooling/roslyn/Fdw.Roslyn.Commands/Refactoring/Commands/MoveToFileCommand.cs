@@ -34,7 +34,7 @@ public sealed class MoveToFileCommand : RoslynCommandBase
     public int Column { get; set; }
 
     /// <summary>
-    /// Gets or sets the target file name (optional).
+    /// Gets or sets the target file name. Required: a missing one fails with TargetFileNameRequired.
     /// </summary>
     public string? TargetFileName { get; set; }
 }

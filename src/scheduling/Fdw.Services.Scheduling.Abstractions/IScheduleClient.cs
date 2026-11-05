@@ -26,6 +26,13 @@ public interface IScheduleClient
     Task<IGenericResult<IReadOnlyList<ScheduleInfoDto>>> List(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the configured schedules that carry every one of the named tags (FDW-3816).
+    /// </summary>
+    /// <param name="tags">The tag names, sent as <c>?tag=</c>; none lists every schedule.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    Task<IGenericResult<IReadOnlyList<ScheduleInfoDto>>> List(IReadOnlyList<string> tags, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a schedule by name.
     /// </summary>
     Task<IGenericResult<ScheduleInfoDto>> Get(string name, CancellationToken cancellationToken = default);

@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using Fdw.Collections;
+using Fdw.Commands.Data.Logging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data.SoftDeletes;
 
@@ -35,8 +38,14 @@ public abstract class SoftDeleteModeBase : TypeOptionBase<SoftDeleteModeBase>, I
     public virtual bool NeedsSourceSet => false;
 
     /// <inheritdoc />
-    public virtual string? Problem(SoftDeleteOptions options) => $"'{Name}' is not a soft-delete mode";
+    public virtual IGenericMessage? Problem(SoftDeleteOptions options) => Problem($"'{Name}' is not a soft-delete mode");
 
     /// <inheritdoc />
     public virtual IReadOnlyList<SoftDeleteMarker> Conditions(SoftDeleteOptions options) => [];
+
+    /// <summary>Answers <paramref name="reason"/> as the soft-delete options' problem message.</summary>
+    /// <param name="reason">What is wrong, in words.</param>
+    /// <returns>The message.</returns>
+    protected static IGenericMessage Problem(string reason)
+        => CommandOptionsLog.SoftDeleteOptionsInconsistent(NullLogger.Instance, reason);
 }

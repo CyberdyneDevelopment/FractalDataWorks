@@ -98,13 +98,11 @@ public class TypeOptionBaseTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_WithFullMetadataNullConfigKey_UsesDefaultKey()
+    public void Constructor_WithFullMetadataNullConfigKey_IsRefused()
     {
-        var option = new TestOption(5, "Custom", null!, null!, null!, null);
-
-        option.ConfigurationKey.ShouldBe("TypeOptions:Custom");
-        option.DisplayName.ShouldBe("Custom");
-        option.Description.ShouldBe("Type option: Custom");
+        // A type option states its configuration key; a missing one is refused rather than derived (FDW-3580).
+        Should.Throw<ArgumentNullException>(() => new TestOption(5, "Custom", null!, null!, null!, null))
+            .ParamName.ShouldBe("configurationKey");
     }
 
     [Fact]

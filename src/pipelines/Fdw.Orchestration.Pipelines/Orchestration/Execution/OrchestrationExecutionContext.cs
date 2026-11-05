@@ -5,6 +5,7 @@ using System.Threading;
 using Fdw.Orchestration.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Collections.Immutable;
 
 namespace Fdw.Orchestration.Execution;
 
@@ -42,7 +43,7 @@ public sealed class OrchestrationExecutionContext : IOrchestrationContext
         Services = services ?? throw new ArgumentNullException(nameof(services));
         Logger = logger ?? NullLogger<OrchestrationExecutionContext>.Instance;
         CancellationToken = cancellationToken;
-        Parameters = parameters ?? new Dictionary<string, object?>(StringComparer.Ordinal);
+        Parameters = parameters ?? ImmutableDictionary<string, object?>.Empty;
         StartTime = DateTimeOffset.UtcNow;
         _sharedState = new ConcurrentDictionary<string, object?>(StringComparer.Ordinal);
         _completedSteps = new ConcurrentDictionary<string, IOrchestrationStepResult>(StringComparer.Ordinal);

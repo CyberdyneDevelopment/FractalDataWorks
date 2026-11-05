@@ -83,4 +83,20 @@ public interface IImplementationConfigurationProvider<TConfiguration>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The implementation configurations, or a structured failure.</returns>
     Task<IGenericResult<IReadOnlyList<TConfiguration>>> Get(IEnumerable<Guid> domainIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads the implementations owned by a set of domain rows, each whole to the given levels, in a constant number of statements.</summary>
+    /// <param name="domainIds">The owning domain rows' durable ids.</param>
+    /// <param name="levels">How many levels of the cascade to load; see <c>ConfigurationLevels</c>.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// The implementations found, keyed by the durable id of the domain row that owns each. A domain row with no current implementation has no
+    /// entry; that is not a failure here, the caller decides what it means.
+    /// </returns>
+    /// <remarks>
+    /// Reading one id at a time costs a statement for the row and one for each child collection, for every row, so a list of a few thousand
+    /// rows takes minutes. A set is read with one statement for the implementation rows and one for each child table at each level, whatever
+    /// the number of rows (FDW-3906). The key of each result is the domain's, because an implementation row carries no id of its own.
+    /// </remarks>
+    Task<IGenericResult<IReadOnlyDictionary<Guid, TConfiguration>>> GetSet(
+        IEnumerable<Guid> domainIds, int levels, CancellationToken cancellationToken = default);
 }

@@ -55,4 +55,8 @@ public abstract class LoadStepKindBase : TypeOptionBase<LoadStepKindBase>, ILoad
 
     /// <inheritdoc/>
     public bool AcceptsRejectedRecords { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>False unless a kind states otherwise, so a kind that does not say is treated as one that adds its rows again and a cut-off run is not started again over it.</remarks>
+    public virtual bool RepeatsToSameResult => false;
 }

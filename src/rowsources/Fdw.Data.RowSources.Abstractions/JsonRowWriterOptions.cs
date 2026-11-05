@@ -12,13 +12,12 @@ public sealed class JsonRowWriterOptions : RowWriterOptions
 {
     /// <summary>
     /// Gets or sets whether the output JSON is indented (System.Text.Json <c>Indented</c>).
-    /// Default is false.
     /// </summary>
     public bool WriteIndented { get; set; }
 
     /// <summary>
     /// Gets or sets whether to skip validation of the written structure
-    /// (System.Text.Json <c>SkipValidation</c>). Default is false.
+    /// (System.Text.Json <c>SkipValidation</c>).
     /// </summary>
-    public bool SkipValidation { get; set; }
+    public required bool SkipValidation { get; set; }
 }

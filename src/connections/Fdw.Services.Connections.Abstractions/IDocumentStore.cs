@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,6 +24,12 @@ public interface IDocumentStore
 {
     /// <summary>Gets the scope of the store: its root is the store's own root, so a caller's paths are checked against the folder the store was narrowed to.</summary>
     DocumentScope Scope { get; }
+
+    /// <summary>
+    /// Gets the id of the assignment the store was resolved through (FDW-3396). Keep it with each file written through the store, and
+    /// read the file later through <see cref="IDocumentStores.Stored"/>, so the file still resolves after the organization's storage moves.
+    /// </summary>
+    Guid StoredUnder { get; }
 
     /// <summary>Gets what the underlying connection can do.</summary>
     IReadOnlyCollection<IDocumentCapability> Capabilities { get; }

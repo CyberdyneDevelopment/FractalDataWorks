@@ -17,12 +17,12 @@ public sealed class FixedWidthRowSourceOptions : RowSourceOptions
     public IList<FixedWidthField> Fields { get; set; } = new List<FixedWidthField>();
 
     /// <summary>
-    /// Gets or sets whether the first line is a header row to skip. Default is false.
+    /// Gets or sets whether the first line is a header row to skip.
     /// </summary>
-    public bool HasHeader { get; set; }
+    public required bool HasHeader { get; set; }
 
     /// <summary>
-    /// Gets or sets whether to trim padding characters from each sliced field value. Default is true.
+    /// Gets or sets whether to trim padding characters from each sliced field value.
     /// </summary>
-    public bool Trim { get; set; } = true;
+    public required bool Trim { get; set; }
 }

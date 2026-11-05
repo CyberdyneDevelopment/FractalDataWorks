@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Execution;
 
 /// <summary>
 /// MessageLogging for cancelling, pausing and resuming a pipeline run (FDW-2950).
-/// EventId ranges: 10994-10997 (a run was told, or ended as cancelled), 40994-40996 (the request does not fit the run's state, 409).
+/// EventId ranges: 10994-10999 (a run was told, ended as cancelled, ran out of time or states no time limit), 40994-40996 (the request does not fit the run's state, 409).
 /// </summary>
 [MessageLoggingTypeCode("PIPELINERUN")]
 public static partial class PipelineRunControlLog
@@ -27,6 +27,16 @@ public static partial class PipelineRunControlLog
     /// <summary>Logs a run that ended as cancelled because a person cancelled it.</summary>
     [MessageLogging(EventId = 10997, Level = LogLevel.Information, Message = "Pipeline run {executionId} of pipeline '{pipelineName}' ended as cancelled")]
     public static partial IGenericMessage RunCancelled(ILogger logger, Guid executionId, string pipelineName);
+
+    /// <summary>Logs a run stopped because its time limit passed (FDW-3805).</summary>
+    [MessageLogging(EventId = 10998, Level = LogLevel.Warning,
+        Message = "Pipeline run {executionId} of pipeline '{pipelineName}' exceeded the {timeoutSeconds} second timeout of {statedBy} and is being stopped")]
+    public static partial IGenericMessage RunTimedOut(ILogger logger, Guid executionId, string pipelineName, int timeoutSeconds, string statedBy);
+
+    /// <summary>Logs a scheduled run whose schedule states no timeout, so the run has no time limit (FDW-3805).</summary>
+    [MessageLogging(EventId = 10999, Level = LogLevel.Information,
+        Message = "Schedule '{scheduleName}' states no timeout: pipeline run {executionId} of '{pipelineName}' has no time limit")]
+    public static partial IGenericMessage RunHasNoTimeLimit(ILogger logger, string scheduleName, Guid executionId, string pipelineName);
 
     /// <summary>Logs a request for a run this host does not hold.</summary>
     [MessageLogging(EventId = 40994, Level = LogLevel.Warning,

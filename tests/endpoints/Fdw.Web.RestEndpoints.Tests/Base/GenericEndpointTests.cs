@@ -85,60 +85,6 @@ public class GenericEndpointTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void CreateErrorMessages_WithoutCurrentMessage_ReturnsDefaultMessage()
-    {
-        // Arrange
-        var endpoint = new TestGenericEndpoint((req, ct) => Task.FromResult<object>(new TestResponse()));
-        var result = GenericResult.Failure(new GenericMessage(string.Empty));
-
-        // Act
-        var messages = endpoint.CreateErrorMessages(result);
-
-        // Assert
-        messages.ShouldNotBeNull();
-        messages.Length.ShouldBe(1);
-        messages[0].ShouldBe("An error occurred");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void CreateErrorMessages_WithNullMessage_ReturnsDefaultMessage()
-    {
-        // Arrange
-        var endpoint = new TestGenericEndpoint((req, ct) => Task.FromResult<object>(new TestResponse()));
-        var result = GenericResult.Failure(new GenericMessage((string)null!));
-
-        // Act
-        var messages = endpoint.CreateErrorMessages(result);
-
-        // Assert
-        messages.ShouldNotBeNull();
-        messages.Length.ShouldBe(1);
-        messages[0].ShouldBe("An error occurred");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void CreateErrorMessages_WithEmptyMessage_ReturnsDefaultMessage()
-    {
-        // Arrange
-        var endpoint = new TestGenericEndpoint((req, ct) => Task.FromResult<object>(new TestResponse()));
-        var result = GenericResult.Failure(new GenericMessage(""));
-
-        // Act
-        var messages = endpoint.CreateErrorMessages(result);
-
-        // Assert
-        messages.ShouldNotBeNull();
-        messages.Length.ShouldBe(1);
-        messages[0].ShouldBe("An error occurred");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
     public void CreateErrorMessages_WithWhitespaceMessage_ReturnsMessage()
     {
         // Arrange

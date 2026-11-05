@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Authorization.Abstractions;
+using Fdw.Documents.Records.Abstractions.Capabilities;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Configuration;
 using Fdw.Services.Multitenancy.Abstractions;
@@ -18,6 +19,7 @@ namespace Fdw.Services.Connections.Tests;
 /// <summary>
 /// Tests for <see cref="ConnectionGrants"/> and <see cref="ConnectionAssignments"/> (FDW-1581): a tenant cannot assign a connection it was
 /// not granted, a base folder cannot climb out of the grant, a grant in use is kept, and a refusal writes nothing.
+/// An assignment is superseded, never written over or deleted (FDW-3396).
 /// </summary>
 public sealed class ConnectionGrantsAndAssignmentsTests
 {
@@ -33,7 +35,7 @@ public sealed class ConnectionGrantsAndAssignmentsTests
         public Mock<IOrganizationScope> Scope { get; } = new();
         public Mock<IConnectionGrantConfigurationProvider> Grants { get; } = new();
         public Mock<IConnectionAssignmentConfigurationProvider> Assignments { get; } = new();
-        public Mock<IDocumentConnectionProvider> Connections { get; } = new();
+        public Mock<IConnectionProvider> Connections { get; } = new();
         public Mock<ITenantProvider> Tenants { get; } = new();
         public List<ConnectionGrantImplementationConfiguration> Granted { get; } = [];
         public List<ConnectionAssignmentImplementationConfiguration> Assigned { get; } = [];
@@ -62,9 +64,19 @@ public sealed class ConnectionGrantsAndAssignmentsTests
                     Task.FromResult(GenericResult<IReadOnlyList<ConnectionAssignmentImplementationConfiguration>>.Success([.. Assigned.Where(predicate)])));
             Assignments.Setup(a => a.Save(It.IsAny<ConnectionAssignmentImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult.Success());
+            Assignments.Setup(a => a.Supersede(It.IsAny<ConnectionAssignmentImplementationConfiguration>(), It.IsAny<ConnectionAssignmentImplementationConfiguration>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(GenericResult.Success());
             Assignments.Setup(a => a.Delete(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
-            Connections.Setup(c => c.Get("rayburn-files", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDocumentConnection>.Success(Mock.Of<IDocumentConnection>()));
-            Connections.Setup(c => c.Get("elsewhere", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDocumentConnection>.Failure(Fail("not a document connection")));
+            Connections.Setup(c => c.Get("rayburn-files", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IGenericConnection>.Success(Mock.Of<IDocumentConnection>()));
+            Connections.Setup(c => c.Get("elsewhere", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IGenericConnection>.Failure(Fail("no such connection")));
+
+            // A DocumentRecord connection that writes revisions atomically, and one that does not (FDW-3673).
+            var records = new Mock<IDocumentRecordConnection>();
+            records.Setup(c => c.RecordCapabilities).Returns([DocumentRecordCapabilities.ByName("AtomicRevisionWrites")]);
+            Connections.Setup(c => c.Get("rayburn-records", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IGenericConnection>.Success(records.Object));
+            var unsafeRecords = new Mock<IDocumentRecordConnection>();
+            unsafeRecords.Setup(c => c.RecordCapabilities).Returns([]);
+            Connections.Setup(c => c.Get("loose-records", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IGenericConnection>.Success(unsafeRecords.Object));
             Tenants.Setup(t => t.GetTenant(Rayburn, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<ITenant>.Success(Mock.Of<ITenant>()));
             Tenants.Setup(t => t.GetTenant(Acme, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<ITenant>.Failure(Fail("no such tenant")));
         }
@@ -87,8 +99,11 @@ public sealed class ConnectionGrantsAndAssignmentsTests
         public void NothingGranted() =>
             Grants.Verify(g => g.Save(It.IsAny<ConnectionGrantImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 
-        public void NothingAssigned() =>
+        public void NothingAssigned()
+        {
             Assignments.Verify(a => a.Save(It.IsAny<ConnectionAssignmentImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            Assignments.Verify(a => a.Supersede(It.IsAny<ConnectionAssignmentImplementationConfiguration>(), It.IsAny<ConnectionAssignmentImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
     }
 
     [Fact]
@@ -124,6 +139,38 @@ public sealed class ConnectionGrantsAndAssignmentsTests
 
         result.IsSuccess.ShouldBeFalse();
         rig.NothingGranted();
+    }
+
+    [Theory]
+    [InlineData("rayburn-files", "Invoices", null)]
+    [InlineData("rayburn-files", "DocumentRecords", null)]
+    [InlineData("loose-records", "DocumentRecords", null)]
+    [InlineData("rayburn-records", "Documents", null)]
+    [InlineData("rayburn-records", "DocumentRecords", "records")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnUnknownPurposeAConnectionThatDoesNotFitItOrAFolderItTakesNoneOfIsRefused(string connection, string purpose, string? folder)
+    {
+        var rig = new Rig();
+
+        var result = await rig.GrantsService().Grant(Rayburn, connection, purpose, folder, false, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        rig.NothingGranted();
+    }
+
+    [Theory]
+    [InlineData("DocumentRecords")]
+    [InlineData("documentrecords")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ADocumentRecordConnectionThatWritesRevisionsAtomicallyIsGrantedForDocumentRecords(string purpose)
+    {
+        var rig = new Rig();
+
+        var result = await rig.GrantsService().Grant(Rayburn, "rayburn-records", purpose, null, false, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
     }
 
     [Fact]
@@ -173,7 +220,7 @@ public sealed class ConnectionGrantsAndAssignmentsTests
         result.Value.BaseFolder.ShouldBe("finance");
         rig.Assignments.Verify(a => a.Save(
             It.Is<ConnectionAssignmentImplementationConfiguration>(c => c.OrganizationId == Finance && c.GrantId == GrantId && c.BaseFolder == "finance"),
-            "ConnectionAssignment", "ConnectionAssignment", $"{Finance}:Documents", It.IsAny<CancellationToken>()), Times.Once);
+            "ConnectionAssignment", "ConnectionAssignment", It.Is<string>(name => name.StartsWith($"{Finance}:Documents:", StringComparison.Ordinal)), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -226,14 +273,59 @@ public sealed class ConnectionGrantsAndAssignmentsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public async Task ASecondAssignmentForThePurposeReplacesTheFirstUnderItsStoredName()
+    public async Task ASecondAssignmentForThePurposeSupersedesTheFirstWhichKeepsItsNameAndId()
     {
         var rig = new Rig().GrantHeld(Rayburn);
-        rig.Assigned.Add(new ConnectionAssignmentImplementationConfiguration { Name = $"{Finance}:documents", OrganizationId = Finance, Purpose = "documents", GrantId = GrantId, BaseFolder = "old" });
+        var first = new Guid("66666666-0000-0000-0000-000000000001");
+        rig.Assigned.Add(new ConnectionAssignmentImplementationConfiguration
+        {
+            Id = first, Name = $"{Finance}:documents", OrganizationId = Finance, Purpose = "documents", GrantId = GrantId, BaseFolder = "old",
+        });
 
+        var result = await rig.AssignmentsService().Assign(Finance, "Documents", GrantId, "finance", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        rig.Assignments.Verify(a => a.Supersede(
+            It.Is<ConnectionAssignmentImplementationConfiguration>(old => old.Id == first && old.Name == $"{Finance}:documents" && old.BaseFolder == "old" && old.SupersededAt != null),
+            It.Is<ConnectionAssignmentImplementationConfiguration>(next => next.Name.StartsWith($"{Finance}:Documents:", StringComparison.Ordinal)
+                && next.BaseFolder == "finance" && next.SupersededAt == null),
+            It.IsAny<CancellationToken>()), Times.Once);
+        rig.Assignments.Verify(a => a.Save(It.IsAny<ConnectionAssignmentImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AssigningTheGrantAndBaseFolderAlreadyInForceWritesNothing()
+    {
+        var rig = new Rig().GrantHeld(Rayburn);
+        rig.Assigned.Add(new ConnectionAssignmentImplementationConfiguration { Name = $"{Finance}:Documents", OrganizationId = Finance, Purpose = "Documents", GrantId = GrantId, BaseFolder = "finance" });
+
+        var result = await rig.AssignmentsService().Assign(Finance, "Documents", GrantId, "finance", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.BaseFolder.ShouldBe("finance");
+        rig.NothingAssigned();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task ASupersededAssignmentIsNotInForceSoTheNextAssignmentIsANewOne()
+    {
+        var rig = new Rig().GrantHeld(Rayburn);
+        rig.Assigned.Add(new ConnectionAssignmentImplementationConfiguration
+        {
+            Name = $"{Finance}:Documents", OrganizationId = Finance, Purpose = "Documents", GrantId = GrantId, BaseFolder = "finance", SupersededAt = DateTimeOffset.UnixEpoch,
+        });
+
+        var listed = await rig.AssignmentsService().List(Finance, TestContext.Current.CancellationToken);
         await rig.AssignmentsService().Assign(Finance, "Documents", GrantId, "finance", TestContext.Current.CancellationToken);
 
-        rig.Assignments.Verify(a => a.Save(It.IsAny<ConnectionAssignmentImplementationConfiguration>(), "ConnectionAssignment", "ConnectionAssignment", $"{Finance}:documents", It.IsAny<CancellationToken>()), Times.Once);
+        listed.Value.ShouldNotBeNull().ShouldBeEmpty();
+        rig.Assignments.Verify(a => a.Save(
+            It.Is<ConnectionAssignmentImplementationConfiguration>(c => c.SupersededAt == null),
+            "ConnectionAssignment", "ConnectionAssignment", It.Is<string>(name => name.StartsWith($"{Finance}:Documents:", StringComparison.Ordinal)), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -251,6 +343,27 @@ public sealed class ConnectionGrantsAndAssignmentsTests
         removed.IsSuccess.ShouldBeTrue();
         removed.Value!.BaseFolder.ShouldBe("finance");
         missing.IsSuccess.ShouldBeFalse();
+        rig.Assignments.Verify(a => a.Save(
+            It.Is<ConnectionAssignmentImplementationConfiguration>(c => c.BaseFolder == "finance" && c.SupersededAt != null),
+            "ConnectionAssignment", "ConnectionAssignment", $"{Finance}:Documents", It.IsAny<CancellationToken>()), Times.Once);
+        rig.Assignments.Verify(a => a.Delete(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AGrantUsedOnlyByASupersededAssignmentIsKeptSoItsFilesStillRead()
+    {
+        var rig = new Rig().GrantHeld(Rayburn);
+        rig.Assigned.Add(new ConnectionAssignmentImplementationConfiguration
+        {
+            OrganizationId = Finance, Purpose = "Documents", GrantId = GrantId, SupersededAt = DateTimeOffset.UnixEpoch,
+        });
+
+        var kept = await rig.GrantsService().Revoke(Rayburn, "rayburn-files", "Documents", TestContext.Current.CancellationToken);
+
+        kept.IsSuccess.ShouldBeFalse();
+        rig.Grants.Verify(g => g.Delete(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -269,5 +382,20 @@ public sealed class ConnectionGrantsAndAssignmentsTests
 
         rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Write, legal, It.IsAny<CancellationToken>()), Times.Exactly(2));
         rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Read, legal, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task ADocumentRecordsAssignmentTakesNoBaseFolder()
+    {
+        var rig = new Rig().GrantHeld(Rayburn, "DocumentRecords");
+
+        var withFolder = await rig.AssignmentsService().Assign(Finance, "DocumentRecords", GrantId, "finance", TestContext.Current.CancellationToken);
+        rig.NothingAssigned();
+        var withoutFolder = await rig.AssignmentsService().Assign(Finance, "DocumentRecords", GrantId, null, TestContext.Current.CancellationToken);
+
+        withFolder.IsSuccess.ShouldBeFalse();
+        withoutFolder.IsSuccess.ShouldBeTrue(withoutFolder.CurrentMessage);
     }
 }

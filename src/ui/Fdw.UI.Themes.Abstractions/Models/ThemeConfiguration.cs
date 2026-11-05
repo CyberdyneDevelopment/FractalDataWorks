@@ -10,7 +10,7 @@ public sealed class ThemeConfiguration
     /// <summary>
     /// Gets or sets the unique identifier of the theme.
     /// </summary>
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the tenant identifier. NULL for system-wide themes.
@@ -42,98 +42,98 @@ public sealed class ThemeConfiguration
     /// <summary>
     /// Gets or sets the primary theme color.
     /// </summary>
-    public string PrimaryColor { get; set; } = "#1976D2";
+    public string PrimaryColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the secondary theme color.
     /// </summary>
-    public string SecondaryColor { get; set; } = "#424242";
+    public string SecondaryColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the tertiary theme color.
     /// </summary>
-    public string TertiaryColor { get; set; } = "#7B1FA2";
+    public string TertiaryColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the background color.
     /// </summary>
-    public string BackgroundColor { get; set; } = "#FFFFFF";
+    public string BackgroundColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the surface color.
     /// </summary>
-    public string SurfaceColor { get; set; } = "#F5F5F5";
+    public string SurfaceColor { get; set; } = string.Empty;
 
     // Semantic Colors
 
     /// <summary>
     /// Gets or sets the error semantic color.
     /// </summary>
-    public string ErrorColor { get; set; } = "#D32F2F";
+    public string ErrorColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the warning semantic color.
     /// </summary>
-    public string WarningColor { get; set; } = "#FFA000";
+    public string WarningColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the success semantic color.
     /// </summary>
-    public string SuccessColor { get; set; } = "#388E3C";
+    public string SuccessColor { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the informational semantic color.
     /// </summary>
-    public string InfoColor { get; set; } = "#1976D2";
+    public string InfoColor { get; set; } = string.Empty;
 
     // Text Colors
 
     /// <summary>
     /// Gets or sets the primary text color.
     /// </summary>
-    public string TextPrimary { get; set; } = "#212121";
+    public string TextPrimary { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the secondary text color.
     /// </summary>
-    public string TextSecondary { get; set; } = "#757575";
+    public string TextSecondary { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the disabled text color.
     /// </summary>
-    public string TextDisabled { get; set; } = "#9E9E9E";
+    public string TextDisabled { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the text color used on primary-colored backgrounds.
     /// </summary>
-    public string TextOnPrimary { get; set; } = "#FFFFFF";
+    public string TextOnPrimary { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the text color used on secondary-colored backgrounds.
     /// </summary>
-    public string TextOnSecondary { get; set; } = "#FFFFFF";
+    public string TextOnSecondary { get; set; } = string.Empty;
 
     // Typography
 
     /// <summary>
     /// Gets or sets the font family.
     /// </summary>
-    public string FontFamily { get; set; } = "Roboto, sans-serif";
+    public string FontFamily { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the monospace font family.
     /// </summary>
-    public string FontFamilyMono { get; set; } = "JetBrains Mono, Consolas, monospace";
+    public string FontFamilyMono { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the base font size in pixels.
     /// </summary>
-    public int FontSizeBase { get; set; } = 14;
+    public int FontSizeBase { get; set; }
 
     /// <summary>
     /// Gets or sets the border radius in pixels.
     /// </summary>
-    public int BorderRadius { get; set; } = 4;
+    public int BorderRadius { get; set; }
 
     // Mode and Branding
 
@@ -160,7 +160,7 @@ public sealed class ThemeConfiguration
     /// <summary>
     /// Gets or sets the application name displayed in the UI.
     /// </summary>
-    public string AppName { get; set; } = "Fdw";
+    public string AppName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the URL of the favicon.
@@ -181,42 +181,5 @@ public sealed class ThemeConfiguration
         TextOnPrimary = TextOnPrimary, TextOnSecondary = TextOnSecondary,
         FontFamily = FontFamily, FontFamilyMono = FontFamilyMono, FontSizeBase = FontSizeBase, BorderRadius = BorderRadius,
         IsDarkMode = IsDarkMode, IsDefault = IsDefault, IsBuiltIn = IsBuiltIn, LogoUrl = LogoUrl, AppName = AppName, FaviconUrl = FaviconUrl
-    };
-
-    /// <summary>
-    /// Creates a default light theme configuration.
-    /// </summary>
-    /// <returns>A new <see cref="ThemeConfiguration"/> with default light theme settings.</returns>
-    public static ThemeConfiguration CreateDefaultLight() => new()
-    {
-        Name = "default-light", DisplayName = "Default Light", Description = "Standard light theme", IsDefault = true
-    };
-
-    /// <summary>
-    /// Creates a default dark theme configuration.
-    /// </summary>
-    /// <returns>A new <see cref="ThemeConfiguration"/> with default dark theme settings.</returns>
-    public static ThemeConfiguration CreateDefaultDark() => new()
-    {
-        Name = "default-dark", DisplayName = "Default Dark", Description = "Standard dark theme", IsDarkMode = true,
-        PrimaryColor = "#90CAF9", SecondaryColor = "#CE93D8", TertiaryColor = "#FFB74D",
-        BackgroundColor = "#121212", SurfaceColor = "#1E1E1E",
-        ErrorColor = "#EF5350", WarningColor = "#FFB74D", SuccessColor = "#66BB6A", InfoColor = "#42A5F5",
-        TextPrimary = "#E0E0E0", TextSecondary = "#9E9E9E", TextDisabled = "#616161",
-        TextOnPrimary = "#000000", TextOnSecondary = "#000000"
-    };
-
-    /// <summary>
-    /// Creates the Fdw brand theme with deep logic purple colors.
-    /// </summary>
-    /// <returns>A new <see cref="ThemeConfiguration"/> with Fdw brand theme settings.</returns>
-    public static ThemeConfiguration CreateFractalTheme() => new()
-    {
-        Name = "fractal", DisplayName = "Fractal", Description = "Deep Logic Purple - Fdw brand theme", IsDarkMode = true,
-        PrimaryColor = "#7209B7", SecondaryColor = "#3A0CA3", TertiaryColor = "#F72585",
-        BackgroundColor = "#0F1115", SurfaceColor = "#1A1D24",
-        ErrorColor = "#FF6B6B", WarningColor = "#FFE66D", SuccessColor = "#4ECDC4", InfoColor = "#4EA8DE",
-        TextPrimary = "#E2E8F0", TextSecondary = "#94A3B8", TextDisabled = "#64748B",
-        TextOnPrimary = "#FFFFFF", TextOnSecondary = "#FFFFFF"
     };
 }

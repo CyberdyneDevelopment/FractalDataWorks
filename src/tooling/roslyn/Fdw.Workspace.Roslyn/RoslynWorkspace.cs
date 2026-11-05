@@ -418,8 +418,10 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
                     if (!string.IsNullOrEmpty(targetDirectory))
                         Directory.CreateDirectory(targetDirectory!);
 
-                    var encoding = newText.Encoding ?? new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-                    await File.WriteAllTextAsync(newDocument.FilePath, newText.ToString(), encoding, cancellationToken).ConfigureAwait(false);
+                    // A text that names no encoding is written with the platform's own (File.WriteAllTextAsync: UTF-8, no BOM).
+                    await (newText.Encoding is { } encoding
+                        ? File.WriteAllTextAsync(newDocument.FilePath, newText.ToString(), encoding, cancellationToken)
+                        : File.WriteAllTextAsync(newDocument.FilePath, newText.ToString(), cancellationToken)).ConfigureAwait(false);
                     written.Add(newDocument.FilePath);
                 }
 #pragma warning disable FDW014 // Per-file errors are aggregated into the final GenericResult.Failure detail "Errors"
@@ -745,8 +747,8 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
         // Convert glob pattern to regex
         // Supports: * (any chars), ? (single char)
         var regexPattern = "^" + Regex.Escape(pattern)
-            .Replace("\\*", ".*")
-            .Replace("\\?", ".") + "$";
+            .Replace("\\*", ".*", StringComparison.Ordinal)
+            .Replace("\\?", ".", StringComparison.Ordinal) + "$";
 
         return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
     }

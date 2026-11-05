@@ -1,4 +1,5 @@
 using System;
+using Fdw.Conventions;
 using System.Collections.Generic;
 using System.Globalization;
 using Fdw.Collections;
@@ -93,7 +94,7 @@ where TSeverity : Enum
         Message = message;
         Code = code;
         Source = source;
-        OriginatedIn = source ?? "Unknown";
+        OriginatedIn = source ?? LogPlaceholders.NoSource;
         Timestamp = DateTime.UtcNow;
         Details = null;
         Data = null;
@@ -118,7 +119,7 @@ where TSeverity : Enum
         Message = message;
         Code = code;
         Source = source;
-        OriginatedIn = source ?? "Unknown";
+        OriginatedIn = source ?? LogPlaceholders.NoSource;
         Timestamp = DateTime.UtcNow;
         Details = details;
         Data = data;

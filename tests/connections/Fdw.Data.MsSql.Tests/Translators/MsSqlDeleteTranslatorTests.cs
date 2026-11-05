@@ -62,12 +62,30 @@ public sealed class MsSqlDeleteTranslatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateDeleteWithNoFilterDeletesEveryRow()
+    public async Task TranslateDeleteWithNoFilterAndNoAllRowsIsRefused()
     {
+        // FDW-3660: a delete with no filter, no soft delete and no AllRows never reaches the server as DELETE with no WHERE.
         var container = CreateContainer();
 
         var command = new Mock<IFilterableCommand>();
         command.Setup(c => c.Filter).Returns((IFilterExpression?)null);
+
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("AllRows()");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateDeleteWithAllRowsDeletesEveryRow()
+    {
+        var container = CreateContainer();
+
+        var command = new Mock<IDeleteScopeCommand>();
+        command.Setup(c => c.Filter).Returns((IFilterExpression?)null);
+        command.Setup(c => c.AllRows).Returns(true);
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
@@ -79,7 +97,24 @@ public sealed class MsSqlDeleteTranslatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateDeleteWithAnEmptyFilterDeletesEveryRow()
+    public async Task TranslateDeleteWithAFilterAndAllRowsIsRefused()
+    {
+        var container = CreateContainer();
+
+        var command = new Mock<IDeleteScopeCommand>();
+        command.Setup(c => c.Filter).Returns(new FilterExpression { Root = new FilterCondition { PropertyName = "Id", Operator = new EqualOperator(), Value = 1 } });
+        command.Setup(c => c.AllRows).Returns(true);
+
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("also asks for every row");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateDeleteWithAnEmptyFilterAndNoAllRowsIsRefused()
     {
         var container = CreateContainer();
         var filter = new FilterExpression { Root = null };
@@ -89,8 +124,8 @@ public sealed class MsSqlDeleteTranslatorTests
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeTrue();
-        result.Value!.CommandText.ShouldBe("DELETE FROM [dbo].[Customers]");
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("AllRows()");
     }
 
     [Fact]

@@ -65,7 +65,7 @@ public class ConnectionProviderTests
             .Setup(x => x.Create(
                 It.IsAny<IConnectionImplementationConfiguration>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IGenericConnection>.Failure());
+            .ReturnsAsync(GenericResult<IGenericConnection>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
         return provider;
     }
 

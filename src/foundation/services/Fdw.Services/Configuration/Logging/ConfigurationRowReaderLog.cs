@@ -17,6 +17,14 @@ public static partial class ConfigurationRowReaderLog
         Message = "Read {rowCount} row(s) of container {container}, skip {skip}, take {take}")]
     public static partial IGenericMessage PageRead(ILogger logger, string container, int skip, int take, int rowCount);
 
+    /// <summary>Logs every current row a condition selected, read in one statement.</summary>
+    [MessageLogging(EventId = 11950, Level = LogLevel.Trace, Message = "Read all {rowCount} current row(s) of container {container} a condition selects")]
+    public static partial IGenericMessage AllRead(ILogger logger, string container, int rowCount);
+
+    /// <summary>Logs a read of every row a condition selects that succeeded and returned no result.</summary>
+    [MessageLogging(EventId = 61062, Level = LogLevel.Error, Message = "Reading every row a condition selects in container {container} succeeded and returned no result")]
+    public static partial IGenericMessage AllReturnedNoResult(ILogger logger, string container);
+
     /// <summary>Logs a count of the rows a condition selects.</summary>
     [MessageLogging(EventId = 11061, Level = LogLevel.Trace, Message = "Counted {total} row(s) of container {container}")]
     public static partial IGenericMessage Counted(ILogger logger, string container, long total);

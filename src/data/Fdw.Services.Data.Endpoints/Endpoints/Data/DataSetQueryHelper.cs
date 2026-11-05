@@ -98,12 +98,43 @@ internal static class DataSetQueryHelper
             detail.DisplayName = view.DisplayName;
             detail.Description = view.Description;
             detail.ClassificationId = view.ClassificationId;
+            Describe(detail, view);
         }
 
         return detail;
     }
 
-    internal static DataSetDetailResponse MapToDetail(IDataSetImplementationConfiguration config) => new()
+    // What only a variation has: the kind, what it varies, who owns it and its stored filter. A data set of another kind has none of it.
+    private static void Describe(DataSetDetailResponse detail, IDataSetVariationImplementationConfiguration variation)
+    {
+        detail.VariationKind = variation.VariationKind;
+        detail.BaseDataSetId = variation.BaseDataSetId;
+        detail.ParentVariationId = variation.ParentVariationId;
+        detail.OwnerWorkspaceId = variation.OwnerWorkspaceId;
+        detail.OwnerUserId = variation.OwnerUserId;
+        detail.VariationFilters = variation.StoredFilters;
+    }
+
+    private static void Describe(DataSetSummaryResponse summary, IDataSetVariationImplementationConfiguration variation)
+    {
+        summary.VariationKind = variation.VariationKind;
+        summary.BaseDataSetId = variation.BaseDataSetId;
+        summary.ParentVariationId = variation.ParentVariationId;
+        summary.OwnerWorkspaceId = variation.OwnerWorkspaceId;
+        summary.OwnerUserId = variation.OwnerUserId;
+        summary.VariationFilters = variation.StoredFilters;
+    }
+
+    internal static DataSetDetailResponse MapToDetail(IDataSetImplementationConfiguration config)
+    {
+        var detail = DetailOf(config);
+        if (config is IDataSetVariationImplementationConfiguration variation)
+            Describe(detail, variation);
+
+        return detail;
+    }
+
+    private static DataSetDetailResponse DetailOf(IDataSetImplementationConfiguration config) => new()
     {
         Id = config.Id,
         Name = config.Name,
@@ -174,9 +205,19 @@ internal static class DataSetQueryHelper
         ModifiedOnBehalfOf = config.ModifyOnBehalfOf
     };
 
-    internal static DataSetSummaryResponse MapToSummary(IDataSetImplementationConfiguration config) => new()
+    internal static DataSetSummaryResponse MapToSummary(IDataSetImplementationConfiguration config)
+    {
+        var summary = SummaryOf(config);
+        if (config is IDataSetVariationImplementationConfiguration variation)
+            Describe(summary, variation);
+
+        return summary;
+    }
+
+    private static DataSetSummaryResponse SummaryOf(IDataSetImplementationConfiguration config) => new()
     {
         Id = config.Id,
+        Implementation = config.Implementation,
         Name = config.Name,
         DisplayName = config.DisplayName,
         Abbreviation = config.Abbreviation,
@@ -294,10 +335,41 @@ internal static class DataSetQueryHelper
         DataTypeValidator.Validate(fields.Select(f => f.DataType).Where(dataType => !string.IsNullOrEmpty(dataType)), logger);
 
     /// <summary>Maps composed field requests onto the cascade child collection.</summary>
-    internal static List<DataSetFieldConfiguration> MapFields(IList<CreateDataSetFieldRequest> fields) =>
-        fields.Select(f => new DataSetFieldConfiguration
+    /// <param name="fields">The composed field requests.</param>
+    /// <param name="existing">The fields already stored under this data set, so one the request does not say the nullability of keeps its own. Empty on create.</param>
+    /// <param name="values">Refuses a new field that does not state its nullability (FDW-3931).</param>
+    /// <returns>The fields, or <c>ValueRequired</c> naming a new field that does not state its nullability.</returns>
+    internal static IGenericResult<List<DataSetFieldConfiguration>> MapFields(
+        IList<CreateDataSetFieldRequest> fields, IEnumerable<DataSetFieldConfiguration> existing, DataSetRequestValues values)
+    {
+        var stored = existing
+            .Where(e => !string.IsNullOrEmpty(e.Name))
+            .GroupBy(e => e.Name, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+        var mapped = new List<DataSetFieldConfiguration>(fields.Count);
+        foreach (var field in fields)
+        {
+            var nullable = NullabilityOf(field, stored, values);
+            if (nullable.IsFailure) return nullable.ToNewResult<List<DataSetFieldConfiguration>>();
+            mapped.Add(MapField(field, nullable.Value));
+        }
+
+        return GenericResult<List<DataSetFieldConfiguration>>.Success(mapped);
+    }
+
+    // A field the request does not say the nullability of keeps the one it has; a new one must say it (FDW-3931).
+    private static IGenericResult<bool> NullabilityOf(
+        CreateDataSetFieldRequest field, Dictionary<string, DataSetFieldConfiguration> stored, DataSetRequestValues values) =>
+        field.IsNullable is null && stored.TryGetValue(field.Name, out var kept)
+            ? GenericResult<bool>.Success(kept.IsNullable)
+            : values.Required(field.IsNullable, "field", field.Name, "isNullable");
+
+    private static DataSetFieldConfiguration MapField(CreateDataSetFieldRequest f, bool isNullable) =>
+        new()
         {
             Name = f.Name,
+            IsNullable = isNullable,
             Description = f.Description,
             ClassificationId = f.ClassificationId,
             DatumTypeId = f.DatumTypeId,
@@ -312,7 +384,7 @@ internal static class DataSetQueryHelper
             IsJoinKey = f.IsJoinKey,
             CalculationName = f.CalculationName,
             Ordinal = f.Ordinal
-        }).ToList();
+        };
 
     /// <summary>Maps composed source requests onto the cascade child collection.</summary>
     /// <remarks>
@@ -325,22 +397,51 @@ internal static class DataSetQueryHelper
     /// <param name="sources">The composed source requests.</param>
     /// <param name="existing">
     /// The sources already persisted under this dataset, so a source that is being edited keeps the
-    /// identity it already has. Empty on create.
+    /// identity it already has, and the kind, priority and pushdown the request does not state. Empty on create.
     /// </param>
-    internal static List<DataSetSourceConfiguration> MapSources(
+    /// <param name="values">Refuses a new source that does not state its kind, priority or pushdown (FDW-3931).</param>
+    /// <returns>The sources, or <c>ValueRequired</c> naming a new source's missing value.</returns>
+    internal static IGenericResult<List<DataSetSourceConfiguration>> MapSources(
         IList<CreateDataSetSourceRequest> sources,
-        IEnumerable<DataSetSourceConfiguration> existing)
+        IEnumerable<DataSetSourceConfiguration> existing,
+        DataSetRequestValues values)
     {
         var prior = existing
             .Where(e => !string.IsNullOrEmpty(e.SourceName))
             .GroupBy(e => e.SourceName, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
-        return sources.Select(s => new DataSetSourceConfiguration
+        var mapped = new List<DataSetSourceConfiguration>(sources.Count);
+        foreach (var source in sources)
+        {
+            var built = MapSource(source, prior.TryGetValue(source.SourceName, out var stored) ? stored : null, values);
+            if (built.IsFailure) return built.ToNewResult<List<DataSetSourceConfiguration>>();
+            mapped.Add(built.Value!);
+        }
+
+        return GenericResult<List<DataSetSourceConfiguration>>.Success(mapped);
+    }
+
+    // A source the data set already has keeps the kind, priority and pushdown the request does not state; a new one must state them (FDW-3931).
+    private static IGenericResult<DataSetSourceConfiguration> MapSource(
+        CreateDataSetSourceRequest s, DataSetSourceConfiguration? stored, DataSetRequestValues values)
+    {
+        var kind = s.SourceKind is null && stored is not null ? GenericResult<string>.Success(stored.SourceKind) : values.RequiredText(s.SourceKind, "source", s.SourceName, "sourceKind");
+        if (kind.IsFailure) return kind.ToNewResult<DataSetSourceConfiguration>();
+
+        var priority = s.Priority is null && stored is not null ? GenericResult<int>.Success(stored.Priority) : values.Required(s.Priority, "source", s.SourceName, "priority");
+        if (priority.IsFailure) return priority.ToNewResult<DataSetSourceConfiguration>();
+
+        var pushdown = s.SupportsPredicatePushdown is null && stored is not null
+            ? GenericResult<bool>.Success(stored.SupportsPredicatePushdown)
+            : values.Required(s.SupportsPredicatePushdown, "source", s.SourceName, "supportsPredicatePushdown");
+        if (pushdown.IsFailure) return pushdown.ToNewResult<DataSetSourceConfiguration>();
+
+        return GenericResult<DataSetSourceConfiguration>.Success(new DataSetSourceConfiguration
         {
             // A source the dataset already has keeps its Id; a genuinely new one is left unset and the
             // save cascade mints it, which is the one place a configuration id is created.
-            Id = prior.TryGetValue(s.SourceName, out var priorSource) ? priorSource.Id : default,
+            Id = stored is null ? default : stored.Id,
             Name = s.SourceName,
             SourceName = s.SourceName,
             DataStoreName = s.DataStoreName,
@@ -349,18 +450,18 @@ internal static class DataSetQueryHelper
             PathValue = s.PathValue,
             ContainerName = s.ContainerName,
             ContainerId = s.ContainerId,
-            SupportsPredicatePushdown = s.SupportsPredicatePushdown,
-            Priority = s.Priority,
+            SupportsPredicatePushdown = pushdown.Value,
+            Priority = priority.Value,
             MapperTypeName = s.MapperTypeName,
-            SourceKind = s.SourceKind,
+            SourceKind = kind.Value!,
             SourceDataSetId = s.SourceDataSetId,
             IsPrimary = s.IsPrimary,
             HttpEndpoint = s.HttpEndpoint,
             HttpMethod = s.HttpMethod,
             FilePath = s.FilePath,
             FileFormat = s.FileFormat,
-            Mappings = MapFieldMappings(s, prior.TryGetValue(s.SourceName, out var stored) ? stored : null)
-        }).ToList();
+            Mappings = MapFieldMappings(s, kind.Value!, stored)
+        });
     }
 
     /// <summary>Maps one source request's field mappings onto the source's stored mapping list.</summary>
@@ -372,7 +473,7 @@ internal static class DataSetQueryHelper
     /// carry one. Callers must run <see cref="ValidateFieldMappings"/> first — this method never validates.
     /// </remarks>
     private static List<DataSetFieldMappingConfiguration> MapFieldMappings(
-        CreateDataSetSourceRequest source, DataSetSourceConfiguration? stored)
+        CreateDataSetSourceRequest source, string sourceKind, DataSetSourceConfiguration? stored)
     {
         if (source.FieldMappings is null)
             return stored is null ? [] : stored.Mappings;
@@ -383,7 +484,7 @@ internal static class DataSetQueryHelper
             Id = stored is null ? default : stored.MappingIdFor(m.DataSetFieldName),
             Name = m.DataSetFieldName,
             LogicalFieldName = m.DataSetFieldName,
-            SourceKind = source.SourceKind,
+            SourceKind = sourceKind,
             // An empty source field on the wire is the absence of one; the column spells that NULL.
             PhysicalFieldName = string.IsNullOrEmpty(m.SourceFieldName) ? null : m.SourceFieldName,
             Ordinal = m.Ordinal
@@ -403,16 +504,56 @@ internal static class DataSetQueryHelper
             Ordinal = i
         }).ToList();
 
-    /// <summary>Maps the caching request onto the (currently non-persisted) caching configuration.</summary>
-    internal static CachingConfiguration? MapCaching(DataSetCachingPayload? caching) =>
-        caching is null
-            ? null
-            : new CachingConfiguration
+    /// <summary>Checks that each filter states its operator and data type: a choice its caller makes, never assumed (FDW-3931).</summary>
+    /// <param name="filters">The filters the request carries.</param>
+    /// <param name="name">The data set's name, for the message.</param>
+    /// <param name="logger">The logger the refusal is reported through.</param>
+    /// <returns>Success, or <c>ValueRequired</c> naming the first filter that leaves one out.</returns>
+    internal static IGenericResult<bool> ValidateFilters(IEnumerable<DataSetFilterConditionPayload> filters, string name, ILogger logger)
+    {
+        foreach (var filter in filters)
+        {
+            var missing = string.IsNullOrWhiteSpace(filter.Operator) ? "operator" : string.IsNullOrWhiteSpace(filter.DataType) ? "dataType" : null;
+            if (missing is not null)
             {
-                Enabled = caching.Enabled,
-                DurationMinutes = caching.DurationMinutes,
-                KeyPattern = caching.KeyPattern ?? new CachingConfiguration().KeyPattern
-            };
+                return GenericResult<bool>.Failure(
+                    DataSetsResultCodes.ValueRequired, logger,
+                    ResultDetails.Create("name", name, "part", "filter", "partName", filter.FieldName).With("field", missing));
+            }
+        }
+
+        return GenericResult<bool>.Success(true);
+    }
+
+    /// <summary>
+    /// Maps the caching request onto the (currently non-persisted, FDW-3943) caching configuration. A value the block leaves out is the one
+    /// the data set kind declares, or a host's override of it (FDW-3956).
+    /// </summary>
+    /// <param name="caching">The caching block the request sends; null for none.</param>
+    /// <param name="implementation">The data set's kind, which declares the caching defaults.</param>
+    /// <param name="values">Resolves a value the block leaves out.</param>
+    /// <returns>The caching configuration, null when the request sends none, or the refusal naming a value the kind declares none of.</returns>
+    internal static IGenericResult<CachingConfiguration?> MapCaching(
+        DataSetCachingPayload? caching, string implementation, DataSetRequestValues values)
+    {
+        if (caching is null) return GenericResult<CachingConfiguration?>.Success(null);
+
+        var enabled = values.Declared(caching.Enabled, implementation, DataSetDeclaredDefaults.CachingEnabled, "caching.enabled");
+        if (enabled.IsFailure) return enabled.ToNewResult<CachingConfiguration?>();
+
+        var duration = values.Declared(caching.DurationMinutes, implementation, DataSetDeclaredDefaults.CachingDurationMinutes, "caching.durationMinutes");
+        if (duration.IsFailure) return duration.ToNewResult<CachingConfiguration?>();
+
+        var keyPattern = values.DeclaredText(caching.KeyPattern, implementation, DataSetDeclaredDefaults.CachingKeyPattern, "caching.keyPattern");
+        if (keyPattern.IsFailure) return keyPattern.ToNewResult<CachingConfiguration?>();
+
+        return GenericResult<CachingConfiguration?>.Success(new CachingConfiguration
+        {
+            Enabled = enabled.Value,
+            DurationMinutes = duration.Value,
+            KeyPattern = keyPattern.Value
+        });
+    }
 
     /// <summary>Maps composed aggregate requests onto the cascade child collection.</summary>
     /// <remarks>Callers must run <see cref="ValidateAggregates"/> first — this method never validates.</remarks>

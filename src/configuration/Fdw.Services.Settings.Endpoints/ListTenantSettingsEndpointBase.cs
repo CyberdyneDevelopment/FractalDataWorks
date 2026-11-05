@@ -45,7 +45,7 @@ public abstract class ListTenantSettingsEndpointBase : CrudListEndpointBase<Tena
             return allResult.ToNewResult<List<TenantSettingSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<TenantSettingImplementationConfiguration>)[])
+        var items = (allResult.Value ?? [])
             .Select(s => new TenantSettingSummaryDto
             {
                 Id = s.Id,

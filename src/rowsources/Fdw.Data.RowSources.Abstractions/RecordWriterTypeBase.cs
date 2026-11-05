@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Fdw.Collections;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Data.RowSources.Abstractions;
 
@@ -30,10 +32,22 @@ public abstract class RecordWriterTypeBase : TypeOptionBase<RecordWriterTypeBase
     public abstract string FileExtension { get; }
 
     /// <inheritdoc />
-    public abstract RowWriterOptions CreateOptions(IReadOnlyList<string> columns);
+    /// <remarks>Set by each format's constructor, the declaration of its own value (FDW-3823).</remarks>
+    public int BufferSize { get; set; }
 
     /// <inheritdoc />
-    public abstract IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options);
+    public abstract IGenericResult<RowWriterOptions> CreateOptions(IReadOnlyList<string> columns, IReadOnlyDictionary<string, object> stated, string owner);
+
+    /// <inheritdoc />
+    /// <remarks>The container's metadata states the choices and its fields are the columns; a format that needs more of the container
+    /// (fixed-width reads each field's offset and width) overrides it.</remarks>
+    public virtual IGenericResult<RowWriterOptions> CreateOptions(IStorageContainer container)
+        => container is null
+            ? throw new ArgumentNullException(nameof(container))
+            : CreateOptions(ContainerRowMetadata.FieldNames(container), container.Metadata, container.Name);
+
+    /// <inheritdoc />
+    public abstract IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions options);
 
     /// <inheritdoc />
     /// <remarks>False unless the format overrides it: the text formats (Json, Xml, Delimited, FixedWidth) are written as text.</remarks>
@@ -41,7 +55,7 @@ public abstract class RecordWriterTypeBase : TypeOptionBase<RecordWriterTypeBase
 
     /// <inheritdoc />
     /// <remarks>Refuses by default, naming the format: a text format asked for a byte writer is a caller's mistake, not a thing to paper over.</remarks>
-    public virtual IRecordWriter<DataRecord> CreateBinaryWriter(Stream target, RowWriterOptions? options)
+    public virtual IRecordWriter<DataRecord> CreateBinaryWriter(Stream target, RowWriterOptions options)
         => throw new NotSupportedException($"The {Format} format is written as text; it has no byte-stream writer.");
 
     /// <inheritdoc />

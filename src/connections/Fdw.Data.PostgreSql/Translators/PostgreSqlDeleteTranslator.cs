@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Abstractions.Logging;
 using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Fdw.Data.PostgreSql.Logging;
@@ -29,7 +30,8 @@ namespace Fdw.Data.PostgreSql;
 /// </list>
 /// </para>
 /// <para>
-/// A command with no filter has no condition, so it deletes every record: the container is emptied.
+/// A command with no filter deletes every record only when it says AllRows; without it the command is refused
+/// (<see cref="DeleteScope"/>, FDW-3660).
 /// </para>
 /// <para>
 /// A command that carries soft-delete options flags the rows instead (an UPDATE that sets the deleted-flag column).
@@ -90,6 +92,10 @@ public sealed class PostgreSqlDeleteTranslator : PostgreSqlDataCommandTranslator
                 return Task.FromResult(
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
+
+            // A delete states its rows: a filter, soft-delete options, or AllRows. One with none is never sent (FDW-3660).
+            if (DeleteScope.Problem(command) is { } problem)
+                return Task.FromResult(GenericResult<NpgsqlCommand>.Failure(DeleteScopeLog.Refused(NullLogger<PostgreSqlDeleteTranslator>.Instance, container.Name, problem)));
 
             if (command is ISoftDeletableCommand { SoftDelete: { } soft })
                 return Task.FromResult(GenericResult<NpgsqlCommand>.Success(BuildSoftDeleteStatement(dbPath, container, soft, command.Filter)));

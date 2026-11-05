@@ -1,3 +1,7 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Results;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Configuration;
 using Fdw.Services.Data.Abstractions;
@@ -25,4 +29,37 @@ public sealed class ConnectionAssignmentConfigurationProvider
         : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult> Supersede(
+        ConnectionAssignmentImplementationConfiguration superseded,
+        ConnectionAssignmentImplementationConfiguration replacement,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(superseded);
+        ArgumentNullException.ThrowIfNull(replacement);
+
+        var scope = await BeginWriteScope(cancellationToken).ConfigureAwait(false);
+        if (scope.IsFailure) return scope;
+
+        await using var unit = scope.Value!;
+
+        var retired = await Save(superseded, DomainName, DomainName, superseded.Name, unit, cancellationToken).ConfigureAwait(false);
+        if (retired.IsFailure)
+        {
+            await unit.Rollback(cancellationToken).ConfigureAwait(false);
+            return retired;
+        }
+
+        var saved = await Save(replacement, DomainName, DomainName, replacement.Name, unit, cancellationToken).ConfigureAwait(false);
+        if (saved.IsFailure)
+        {
+            await unit.Rollback(cancellationToken).ConfigureAwait(false);
+            return saved;
+        }
+
+        return await unit.Commit(cancellationToken).ConfigureAwait(false);
+    }
+
+    private const string DomainName = "ConnectionAssignment";
 }

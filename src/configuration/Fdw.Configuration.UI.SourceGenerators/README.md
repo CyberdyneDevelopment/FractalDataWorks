@@ -23,7 +23,7 @@ dotnet add package Fdw.Configuration.UI.SourceGenerators --prerelease
 
 ## Dependencies
 
-`Fdw.SourceGenerators`
+None: it is a Roslyn component and references no FDW package.
 
 ---
 

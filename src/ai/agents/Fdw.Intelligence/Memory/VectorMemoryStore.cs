@@ -9,6 +9,7 @@ using Fdw.Intelligence.Memory;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Collections.Immutable;
 
 namespace Fdw.Intelligence.Memory;
 
@@ -69,7 +70,7 @@ public sealed class VectorMemoryStore : IVectorMemoryStore
             Id = id,
             Content = content,
             Timestamp = DateTimeOffset.UtcNow,
-            Metadata = metadata ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            Metadata = metadata ?? ImmutableDictionary<string, string>.Empty
         };
 
         return Set(id, entry);

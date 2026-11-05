@@ -3,6 +3,7 @@ using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Identity;
 
@@ -28,6 +29,10 @@ public abstract class IdentityServiceTypeBase<TService, TConfiguration, TFactory
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IIdentityServiceFactory<TService, TConfiguration>
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "Identity";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="IdentityServiceTypeBase{TService, TConfiguration, TFactory}"/> class.
     /// </summary>
@@ -38,7 +43,7 @@ public abstract class IdentityServiceTypeBase<TService, TConfiguration, TFactory
         string name,
         string? category = null,
         string defaultContainerName = "")
-        : base(name, $"Identities:{name}", $"{name} Identity", $"Managed identity using {name}", category ?? "Identity",
+        : base(name, $"Identities:{name}", $"{name} Identity", $"Managed identity using {name}", category ?? DefaultCategory,
                defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)

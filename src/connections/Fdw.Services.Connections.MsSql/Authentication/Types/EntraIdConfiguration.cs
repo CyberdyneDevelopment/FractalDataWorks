@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Fdw.Collections.Attributes;
+using Fdw.Conventions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions.Authentication;
+using Fdw.Services.Connections.MsSql.Results;
 
 namespace Fdw.Services.Connections.MsSql.Authentication.Types;
 
@@ -24,23 +26,38 @@ public sealed class EntraIdConfiguration : MsSqlAuthenticationConfiguration
     {
     }
 
+    // Why a platform default: SqlClient names "Active Directory Default" as the Entra ID mode it takes when none is
+    // chosen, so a connection that names no AzureAdMode asks for exactly that mode (FDW-3580).
+    [PlatformDefault]
+    private const string SqlClientDefaultMode = "DEFAULT";
+
     /// <inheritdoc/>
-    public override IGenericResult Validate(IReadOnlyDictionary<string, string?> values) => GenericResult.Success();
+    /// <remarks>Refuses an AzureAdMode SqlClient does not take, so the connection is refused when it is saved.</remarks>
+    public override IGenericResult Validate(IReadOnlyDictionary<string, string?> values)
+        => BuildAuthFragment(values, resolvedPassword: null) is { IsSuccess: false } refused
+            ? refused
+            : GenericResult.Success();
 
     /// <inheritdoc/>
     public override IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword)
     {
         values.TryGetValue("AzureAdMode", out var azureAdMode);
-        var mode = azureAdMode?.ToUpperInvariant() ?? "DEFAULT";
 
-        return mode switch
+        return ModeOf(azureAdMode) switch
         {
             "SERVICEPRINCIPAL" or "SPN" => BuildServicePrincipal(values, resolvedPassword),
             "INTERACTIVE" => GenericResult<string>.Success("Authentication=Active Directory Interactive;"),
             "MANAGEDIDENTITY" or "MSI" => GenericResult<string>.Success("Authentication=Active Directory Managed Identity;"),
-            _ => GenericResult<string>.Success("Authentication=Active Directory Default;")
+            SqlClientDefaultMode => GenericResult<string>.Success("Authentication=Active Directory Default;"),
+            _ => GenericResult<string>.Failure(
+                MsSqlConnectionResultCodes.ByName("AzureAdModeUnknown"),
+                ResultDetails.Create("AzureAdMode", azureAdMode!, "AuthenticationType", Name))
         };
     }
+
+    // No mode, or an empty one, is SqlClient's own default mode, as UsesHostIdentity reads it.
+    private static string ModeOf(string? azureAdMode)
+        => string.IsNullOrEmpty(azureAdMode) ? SqlClientDefaultMode : azureAdMode.ToUpperInvariant();
 
     private static IGenericResult<string> BuildServicePrincipal(IReadOnlyDictionary<string, string?> values, string? resolvedPassword)
     {

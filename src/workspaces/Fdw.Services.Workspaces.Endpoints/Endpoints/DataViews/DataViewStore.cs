@@ -16,17 +16,17 @@ namespace Fdw.Services.Workspaces.Endpoints;
 internal static class DataViewStore
 {
     /// <summary>The data view under this name, or nothing when there is none.</summary>
-    /// <remarks>A variation a workspace owns is not a data view, so a name that reaches one answers nothing.</remarks>
+    /// <remarks>A variation a workspace owns is not a data view (its owner is a workspace), so a name that reaches one answers nothing.</remarks>
     /// <param name="variations">The variation provider.</param>
     /// <param name="name">The view's name.</param>
     /// <param name="ct">The cancellation token.</param>
-    internal static async Task<IGenericResult<IDataViewDataSetVariationConfiguration?>> Find(
+    internal static async Task<IGenericResult<IDataSetVariationImplementationConfiguration?>> Find(
         IDataSetVariationConfigurationProvider variations, string name, CancellationToken ct)
     {
         var found = await variations.Get(name, ct).ConfigureAwait(false);
-        return found.IsFailure
-            ? found.ToNewResult<IDataViewDataSetVariationConfiguration?>()
-            : GenericResult<IDataViewDataSetVariationConfiguration?>.Success(found.Value as IDataViewDataSetVariationConfiguration);
+        return found.IsFailure || found.Value is { VariationKind: VariationKinds.DataView }
+            ? found
+            : GenericResult<IDataSetVariationImplementationConfiguration?>.Success(null);
     }
 
     /// <summary>The name of the view this one is a view of, or null when it is a view of a data set.</summary>
@@ -102,7 +102,7 @@ internal static class DataViewStore
     /// <param name="view">The view a change or a delete is asked of.</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     internal static IGenericResult OwnedByCaller(
-        IAuthenticationContextAccessor authContext, IDataViewDataSetVariationConfiguration view, ILogger logger)
+        IAuthenticationContextAccessor authContext, IDataSetVariationImplementationConfiguration view, ILogger logger)
     {
         if (authContext.Current is not { } caller || !Guid.TryParse(caller.UserId, out var userId))
         {

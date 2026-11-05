@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.UI.Abstractions;
 using Fdw.UI.Abstractions.Pages;
 using Fdw.UI.Themes;
 using Spectre.Console;
@@ -107,7 +108,7 @@ public sealed class WizardPageRenderer
     {
         // Step header
         var panel = new Panel(new Markup(
-            $"[{theme.Colors.Foreground}]{step.Description ?? "Complete the fields below."}[/]"))
+            $"[{theme.Colors.Foreground}]{step.Description ?? UiPlaceholders.NoStepDescription}[/]"))
         {
             Header = new PanelHeader($"[{theme.Colors.Secondary} bold]Step {step.StepNumber}: {step.Title}[/]"),
             Border = theme.Borders.Panel,
@@ -136,7 +137,7 @@ public sealed class WizardPageRenderer
                 foreach (var component in section.AllComponents.Where(c => c.IsVisible))
                 {
                     var requiredMarker = component.IsRequired ? $"[{theme.Colors.Error}]*[/]" : "";
-                    var label = $"[{theme.Colors.Foreground}]{component.Label ?? component.Id}[/]{requiredMarker}:";
+                    var label = $"[{theme.Colors.Foreground}]{component.Label}[/]{requiredMarker}:";
 
                     var value = GetComponentDisplayValue(component, theme);
                     grid.AddRow(label, value);
@@ -183,7 +184,7 @@ public sealed class WizardPageRenderer
                 return $"[{theme.Colors.Muted}]********[/]";
             }
 
-            return $"[{theme.Colors.Foreground}]{Markup.Escape(value.ToString() ?? "")}[/]";
+            return $"[{theme.Colors.Foreground}]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
         }
 
         return $"[{theme.Colors.Muted}]-[/]";

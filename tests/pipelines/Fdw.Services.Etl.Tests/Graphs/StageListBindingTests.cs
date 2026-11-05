@@ -20,7 +20,7 @@ public sealed class StageListBindingTests
         Stages =
         [
             new PipelineTransformConfiguration
-            {
+            { IsEnabled = true,
                 Name = "once",
                 OperationType = "Distinct",
                 GroupByFields = [.. keys.Select((key, ordinal) => new PipelineTransformGroupByFieldConfiguration { Name = key, FieldName = key, Ordinal = ordinal })],
@@ -36,7 +36,7 @@ public sealed class StageListBindingTests
         Stages =
         [
             new PipelineTransformConfiguration
-            {
+            { IsEnabled = true,
                 Name = "ordered",
                 OperationType = "Sort",
                 SortFields = [.. fields.Select((field, ordinal) => new PipelineTransformSortFieldConfiguration { Name = field.Field, FieldName = field.Field, Direction = field.Direction, Ordinal = ordinal })],

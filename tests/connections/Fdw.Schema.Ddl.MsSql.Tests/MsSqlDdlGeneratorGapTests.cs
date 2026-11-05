@@ -1,3 +1,4 @@
+using Fdw.Configuration.Persistence.Schema;
 using System;
 using System.Collections.Generic;
 using Fdw.Schema.Ddl.Commands;
@@ -18,6 +19,11 @@ namespace Fdw.Schema.Ddl.MsSql.Tests;
 /// </summary>
 public sealed class MsSqlDdlGeneratorGapTests
 {
+    private static readonly DdlGenerationOptions Options = new()
+    {
+        SchemaName = "dbo", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false,
+    };
+
     private readonly MsSqlDdlGenerator _sut = new();
 
     [Fact]
@@ -34,7 +40,7 @@ public sealed class MsSqlDdlGeneratorGapTests
         // due to RestrictToCurrentCompilation
         try
         {
-            var result = _sut.GenerateCommands(schema.Object);
+            var result = _sut.GenerateCommands(schema.Object, Options);
             result.IsSuccess.ShouldBeFalse();
         }
         catch (NullReferenceException)
@@ -64,7 +70,7 @@ public sealed class MsSqlDdlGeneratorGapTests
         schema.Setup(s => s.NaturalKey).Returns((Fdw.Schema.Keys.IKeyDefinition<IPropertyDefinition>?)null);
         schema.Setup(s => s.Indexes).Returns(Array.Empty<Fdw.Schema.Indexes.IIndexDefinition<IPropertyDefinition>>());
 
-        var options = new DdlGenerationOptions { IncludeForeignKeys = true };
+        var options = new DdlGenerationOptions { IncludeForeignKeys = true, SchemaName = "dbo", IfNotExists = true, IncludeIndexes = true, IncludeDropStatements = false };
 
         // Act
         var result = _sut.GenerateCommands(schema.Object, options);
@@ -96,8 +102,8 @@ public sealed class MsSqlDdlGeneratorGapTests
                 ReferencedSchema = "dbo",
                 ReferencedTable = "Parent",
                 ReferencedColumn = "Id",
-                OnDelete = DdlForeignKeyActions.NoAction,
-                OnUpdate = DdlForeignKeyActions.SetNull
+                OnDelete = ForeignKeyActions.NoAction,
+                OnUpdate = ForeignKeyActions.SetNull
             }
         };
 
@@ -153,9 +159,9 @@ public sealed class MsSqlDdlGeneratorGapTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void GenerateSqlCreateTableWithNullPrimaryKeyNameUsesFallback()
+    public void GenerateSqlCreateTableWithNullPrimaryKeyNameIsRefused()
     {
-        // Arrange - PrimaryKeyName is null but PrimaryKeyColumns is set
+        // Arrange - PrimaryKeyName is null but PrimaryKeyColumns is set: the generator invents no name (FDW-3580)
         var columns = new[]
         {
             new DdlColumnDefinition { Name = "Id", SqlType = "INT", IsNullable = false }
@@ -173,10 +179,8 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Act
         var result = _sut.GenerateSql(cmd);
 
-        // Assert - should use PK_{TableName} as fallback
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CONSTRAINT PK_TestTable PRIMARY KEY (Id)");
+        // Assert - refused with PrimaryKeyNameMissing, no SQL produced
+        result.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]
@@ -247,7 +251,8 @@ public sealed class MsSqlDdlGeneratorGapTests
                 ReferencedSchema = "dbo",
                 ReferencedTable = "Parent",
                 ReferencedColumn = "Id",
-                OnDelete = DdlForeignKeyActions.Cascade
+                OnDelete = ForeignKeyActions.Cascade,
+                OnUpdate = ForeignKeyActions.NoAction
             },
             new DdlForeignKeyDefinition
             {
@@ -256,7 +261,8 @@ public sealed class MsSqlDdlGeneratorGapTests
                 ReferencedSchema = "ref",
                 ReferencedTable = "Category",
                 ReferencedColumn = "Id",
-                OnDelete = DdlForeignKeyActions.SetNull
+                OnDelete = ForeignKeyActions.SetNull,
+                OnUpdate = ForeignKeyActions.NoAction
             }
         };
 

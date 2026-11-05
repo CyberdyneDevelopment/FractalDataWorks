@@ -52,4 +52,28 @@ public static partial class RetryNotifyLog
         Guid executionId,
         int maxRetries,
         string reason);
+
+    /// <summary>
+    /// Logs when a RetryNotify policy leaves out a value its definer must state. Nothing assumes one (FDW-3931).
+    /// </summary>
+    [MessageLogging(
+        EventId = 21002,
+        Level = LogLevel.Error,
+        Message = "RetryNotify policy '{policyName}' does not state {field}; whoever defines the policy states every value")]
+    public static partial IGenericMessage PolicyValueNotStated(
+        ILogger logger,
+        string policyName,
+        string field);
+
+    /// <summary>
+    /// Logs when a RetryNotify policy names a backoff kind that is not Exponential, Fixed or Random. No kind is assumed for it (FDW-3931).
+    /// </summary>
+    [MessageLogging(
+        EventId = 21003,
+        Level = LogLevel.Error,
+        Message = "RetryNotify policy '{policyName}' names backoff kind '{backoffKind}'; the kinds are Exponential, Fixed and Random")]
+    public static partial IGenericMessage BackoffKindUnknown(
+        ILogger logger,
+        string policyName,
+        string backoffKind);
 }

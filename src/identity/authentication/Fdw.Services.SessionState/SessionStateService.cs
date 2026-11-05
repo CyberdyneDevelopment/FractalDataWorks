@@ -67,7 +67,7 @@ public sealed class SessionStateService : ISessionStateService
             if (!existingResult.IsSuccess)
             {
                 return GenericResult<bool>.Failure(
-                    SessionStateLog.SaveStateFailed(_logger, userId, key, existingResult.CurrentMessage ?? "Failed to query existing record"));
+                    SessionStateLog.SaveStateFailed(_logger, userId, key, existingResult.FailureReason().Message));
             }
 
             IGenericResult operationResult;
@@ -97,7 +97,7 @@ public sealed class SessionStateService : ISessionStateService
             {
                 return GenericResult<bool>.Failure(
                     SessionStateLog.SaveStateFailed(_logger, userId, key,
-                        operationResult.CurrentMessage ?? "Write command failed"));
+                        operationResult.FailureReason().Message));
             }
 
             SessionStateLog.StateSaved(_logger, userId, key);
@@ -129,7 +129,7 @@ public sealed class SessionStateService : ISessionStateService
             {
                 return GenericResult<T?>.Failure(
                     SessionStateLog.GetStateFailed(_logger, userId, key,
-                        recordResult.CurrentMessage ?? "Failed to query record"));
+                        recordResult.FailureReason().Message));
             }
 
             if (recordResult.Value is null)
@@ -176,7 +176,7 @@ public sealed class SessionStateService : ISessionStateService
             {
                 return GenericResult<bool>.Failure(
                     SessionStateLog.DeleteStateFailed(_logger, userId, key,
-                        result.CurrentMessage ?? "Delete command failed"));
+                        result.FailureReason().Message));
             }
 
             SessionStateLog.StateDeleted(_logger, userId, key);
@@ -207,7 +207,7 @@ public sealed class SessionStateService : ISessionStateService
             {
                 return GenericResult<IReadOnlyList<string>>.Failure(
                     SessionStateLog.GetAllKeysFailed(_logger, userId,
-                        result.CurrentMessage ?? "Query command failed"));
+                        result.FailureReason().Message));
             }
 
             var keys = result.Value!.Select(r => r.StateKey).ToList();
@@ -239,7 +239,7 @@ public sealed class SessionStateService : ISessionStateService
             {
                 return GenericResult<bool>.Failure(
                     SessionStateLog.ClearAllFailed(_logger, userId,
-                        result.CurrentMessage ?? "Delete command failed"));
+                        result.FailureReason().Message));
             }
 
             SessionStateLog.AllStateCleared(_logger, userId);

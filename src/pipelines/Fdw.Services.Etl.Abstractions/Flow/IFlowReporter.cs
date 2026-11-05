@@ -42,4 +42,13 @@ public interface IFlowReporter
     /// <param name="cancellationToken">Cancels the write.</param>
     /// <returns>A task that completes when the events are recorded.</returns>
     Task FlowFinished(Guid stage, FlowRunReport report, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records what a load destination has committed to its target (FDW-3785), while the flow runs: once when the target is emptied, and once after each batch that was committed.
+    /// </summary>
+    /// <param name="stage">The stage record of the stage the destination runs in.</param>
+    /// <param name="commit">What the destination has committed so far over the run.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>A task that completes when the figures are recorded.</returns>
+    Task DestinationCommitted(Guid stage, DestinationCommit commit, CancellationToken cancellationToken = default);
 }

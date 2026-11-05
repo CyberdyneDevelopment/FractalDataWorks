@@ -117,7 +117,7 @@ public sealed class GetSemanticModelTranslator
             FilePath = command.FilePath,
             DeclaredSymbols = declaredSymbols,
             ReferencedAssemblies = referencedAssemblies,
-            LanguageVersion = (semanticModel.Compilation as CSharpCompilation)?.LanguageVersion.ToString() ?? "Unknown"
+            LanguageVersion = (semanticModel.Compilation as CSharpCompilation)?.LanguageVersion.ToString() ?? RoslynReportPlaceholders.Unknown
         };
 
         var result = new QueryResult<SemanticModelData>(

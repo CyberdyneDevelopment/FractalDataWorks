@@ -26,6 +26,18 @@ public static partial class WorkspaceLineageLog
     public static partial IGenericMessage NeighbourhoodWalked(
         ILogger logger, string nodeId, string direction, int depth, int nodeCount, int edgeCount, bool truncated);
 
+    /// <summary>Logs the groups and lines a lineage groups answer holds.</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="groupBy">How the data sets were grouped: category or tag.</param>
+    /// <param name="limit">The category or tag the answer was limited to; empty for none.</param>
+    /// <param name="groupCount">How many groups came back.</param>
+    /// <param name="lineCount">How many lines came back.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    // Why Debug: one outcome per request, which an operator reads only when tracing a slow or oversized answer.
+    [MessageLogging(EventId = 11623, Level = LogLevel.Debug,
+        Message = "Lineage groups by {groupBy} (limited to '{limit}'): {groupCount} groups, {lineCount} lines")]
+    public static partial IGenericMessage GroupsBuilt(ILogger logger, string groupBy, string limit, int groupCount, int lineCount);
+
     /// <summary>Logs how many matches a lineage search found.</summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="text">The text searched for.</param>

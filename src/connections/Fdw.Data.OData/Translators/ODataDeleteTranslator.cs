@@ -54,9 +54,6 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
-        ODataDeleteTranslatorLog.Translating(
-            NullLogger<ODataDeleteTranslator>.Instance, container?.Name ?? "<null>");
-
         try
         {
             if (container == null)
@@ -66,6 +63,8 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("ContainerNull")));
             }
+
+            ODataDeleteTranslatorLog.Translating(NullLogger<ODataDeleteTranslator>.Instance, container.Name);
 
             // Get filter from metadata (REQUIRED for safety)
             if (command.Metadata == null || !command.Metadata.TryGetValue("Filter", out var filterObj))
@@ -115,7 +114,7 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
         catch (Exception ex)
         {
             ODataDeleteTranslatorLog.DeleteTranslationFailed(
-                NullLogger<ODataDeleteTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
+                NullLogger<ODataDeleteTranslator>.Instance, ex, container.Name, ex.Message);
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Failure(
                     ODataResultCodes.ByName("DeleteTranslationFailed"),

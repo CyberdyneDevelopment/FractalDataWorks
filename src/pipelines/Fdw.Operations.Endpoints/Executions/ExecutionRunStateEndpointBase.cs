@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.Extensions.Logging;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
@@ -135,8 +136,7 @@ public abstract class ExecutionRunStateEndpointBase : Endpoint<ExecutionStateReq
     // The person who asked, by name, from the token: never from the body, where anyone can write anyone.
     private async Task<IGenericResult<string>> Actor(Guid executionId, CancellationToken ct)
     {
-        if (!Guid.TryParse(HttpContext.User.FindFirstValue("sub"), out var userId)
-            && !Guid.TryParse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out userId))
+        if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             return GenericResult<string>.Failure(ExecutionRunStateLog.ActorUnknown(EndpointLogger, executionId, Verb));
         }

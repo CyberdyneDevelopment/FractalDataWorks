@@ -316,7 +316,7 @@ public sealed class MissingTypeOptionAnalyzer : DiagnosticAnalyzer
         var syntaxReferences = type.DeclaringSyntaxReferences;
         if (syntaxReferences.Length > 0)
         {
-            var syntaxNode = syntaxReferences[0].GetSyntax();
+            var syntaxNode = syntaxReferences[0].GetSyntax(context.CancellationToken);
             if (syntaxNode is ClassDeclarationSyntax classDeclaration)
             {
                 var diagnostic = Diagnostic.Create(

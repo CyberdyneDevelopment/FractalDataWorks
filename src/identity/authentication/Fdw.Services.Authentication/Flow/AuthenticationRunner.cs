@@ -16,6 +16,7 @@ using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Authentication.Flow;
 
@@ -216,7 +217,7 @@ public sealed class AuthenticationRunner
 
         context = context with { AchievedAcr = _acrPolicy.Evaluate(context.AchievedMethods) };
         RunnerLog.AssuranceEvaluated(_logger,
-            string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? "none");
+            string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? LogPlaceholders.NoLevel);
 
         return await Terminal(flow, context, cancellationToken).ConfigureAwait(false);
     }
@@ -306,7 +307,7 @@ public sealed class AuthenticationRunner
 
         if (context.Decision is not { Permitted: true })
             return GenericResult<FlowResult>.Failure(RunnerLog.NotPermitted(
-                _logger, flow.Name, context.Decision?.Reason ?? "no decision was reached"));
+                _logger, flow.Name, context.Decision?.Reason ?? LogPlaceholders.NoDecision));
 
         // A level nobody declared is a misconfigured flow, and says so; only a real shortfall reads as one.
         var meets = _acrPolicy.Meets(context.AchievedAcr, flow.MinimumAcr);
@@ -315,7 +316,7 @@ public sealed class AuthenticationRunner
 
         if (!meets.Value)
             return GenericResult<FlowResult>.Failure(RunnerLog.InsufficientAssurance(
-                _logger, flow.Name, context.AchievedAcr ?? "none", flow.MinimumAcr ?? "none"));
+                _logger, flow.Name, context.AchievedAcr ?? LogPlaceholders.NoLevel, flow.MinimumAcr ?? LogPlaceholders.NoLevel));
 
         RunnerLog.TerminalPassed(_logger, flow.Name, flow.Audience);
 
@@ -367,7 +368,7 @@ public sealed class AuthenticationRunner
             RunnerLog.SignInNotRecorded(_logger, flow.Name, context.Principal.Id.ToString("D"));
 
         RunnerLog.FlowCompleted(_logger, flow.Name,
-            string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? "none");
+            string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? LogPlaceholders.NoLevel);
 
         return GenericResult<FlowResult>.Success(new FlowResult.Completed(issued.Value!));
     }

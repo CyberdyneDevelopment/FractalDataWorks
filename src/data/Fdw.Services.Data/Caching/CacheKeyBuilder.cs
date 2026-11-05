@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
@@ -65,9 +65,12 @@ public static class CacheKeyBuilder
     }
 
     /// <summary>
-    /// Computes a deterministic cache key from the target address and command's semantic fields.
+    /// Computes a deterministic cache key from the target address and, for a query, the SHA-256 of its canonical text
+    /// (<see cref="CacheKeyText"/>): every member that can change what the query answers. Two queries share a key exactly when
+    /// they ask the same thing (FDW-3620).
     /// Does NOT include typeof(T) — the caller (DataGatewayService) appends that.
     /// </summary>
+    /// <exception cref="InvalidOperationException">The query holds a filter node, filter value or Metadata value with no exact text form; the gateways answer it as a failed key computation.</exception>
     public static string ComputeCacheKey(IDataCommand command, DataStoreTarget target)
     {
         var sb = new StringBuilder(128);
@@ -77,47 +80,8 @@ public static class CacheKeyBuilder
 
         if (command is IQueryCommand query)
         {
-            if (query.Filter?.Root != null)
-            {
-                sb.Append(":f=");
-                sb.Append(query.Filter.Root.GetHashCode().ToString("x8", CultureInfo.InvariantCulture));
-            }
-
-            if (query.Ordering != null)
-            {
-                sb.Append(":o=");
-                sb.Append(query.Ordering.GetHashCode().ToString("x8", CultureInfo.InvariantCulture));
-            }
-
-            if (query.Paging != null)
-            {
-                sb.Append(":p=");
-                sb.Append(query.Paging.Skip);
-                sb.Append(',');
-                sb.Append(query.Paging.Take);
-            }
-
-            // Two reads of one container with the same filter but different joins are different questions: a
-            // child read filtered on its owner's key and one filtered on the same key through the domain row
-            // must not share an entry.
-            if (query.Joins.Count > 0)
-            {
-                var joins = new HashCode();
-                foreach (var join in query.Joins)
-                {
-                    joins.Add(join.TargetContainerName, StringComparer.Ordinal);
-                    joins.Add(join.SourceContainerName, StringComparer.Ordinal);
-                    joins.Add(join.JoinType, StringComparer.Ordinal);
-                    foreach (var (left, right) in join.JoinConditions)
-                    {
-                        joins.Add(left, StringComparer.Ordinal);
-                        joins.Add(right, StringComparer.Ordinal);
-                    }
-                }
-
-                sb.Append(":j=");
-                sb.Append(joins.ToHashCode().ToString("x8", CultureInfo.InvariantCulture));
-            }
+            sb.Append(":q=");
+            sb.Append(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(CacheKeyText.For(query)))));
         }
 
         return sb.ToString();

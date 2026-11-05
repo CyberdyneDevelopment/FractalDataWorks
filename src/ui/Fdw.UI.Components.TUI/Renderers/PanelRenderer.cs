@@ -17,11 +17,11 @@ public static class PanelRenderer
     public static void RenderPanel(
         IAnsiConsole console,
         string content,
-        string? title = null,
-        TUIThemeConfiguration? theme = null)
+        string? title,
+        TUIThemeConfiguration theme)
     {
-        var border = theme?.Borders.Panel ?? BoxBorder.Rounded;
-        var borderColor = theme?.Colors.Primary ?? Color.Blue;
+        var border = theme.Borders.Panel;
+        var borderColor = theme.Colors.Primary;
 
         var panel = new Panel(new Markup(content))
             .Border(border)

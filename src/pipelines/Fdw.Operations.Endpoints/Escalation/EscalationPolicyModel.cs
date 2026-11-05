@@ -28,5 +28,11 @@ public class EscalationPolicyModel : IEscalationPolicy
     public int CooldownMinutes { get; set; }
 
     /// <inheritdoc/>
+    public int MaxRetries { get; set; }
+
+    /// <inheritdoc/>
+    public int RetryDelaySeconds { get; set; }
+
+    /// <inheritdoc/>
     public IReadOnlyList<IEscalationLevel> Levels { get; set; } = [];
 }

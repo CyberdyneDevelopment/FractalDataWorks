@@ -248,7 +248,7 @@ public sealed class ValidateTransformTypeTests
             OnFail = "Reject",
             Checks = [new FakeCheckSpec("Positive", "Points > 0"), new FakeCheckSpec("InEurope", "Region == EU")]
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -277,7 +277,7 @@ public sealed class ValidateTransformTypeTests
             OnFail = onFail,
             Checks = [new FakeCheckSpec(checkName, expression)]
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -301,7 +301,7 @@ public sealed class ValidateTransformTypeTests
             OnFail = "Reject",
             Checks = [new FakeCheckSpec("Positive", "Points > 0"), new FakeCheckSpec("positive", "Points < 99")]
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
 
         // Act and assert
         _sut.MapSpecToConfiguration(none, target, NullLogger.Instance).IsSuccess.ShouldBeFalse();
@@ -321,7 +321,7 @@ public sealed class ValidateTransformTypeTests
             OnFail = "Reject",
             Checks = [new FakeCheckSpec("Broken", "Points >")]
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -339,7 +339,7 @@ public sealed class ValidateTransformTypeTests
     {
         // Arrange: a spec type that has no Validate part cannot describe a Validate stage
         var spec = new PlainSpec { Name = "Clean", OperationType = "Validate" };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Clean", OperationType = "Validate" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -356,7 +356,7 @@ public sealed class ValidateTransformTypeTests
 
         public int ExecutionOrder { get; set; }
 
-        public bool IsEnabled { get; set; } = true;
+        public bool? IsEnabled { get; set; } = true;
 
         public IReadOnlyList<string> GroupByFields { get; set; } = [];
 

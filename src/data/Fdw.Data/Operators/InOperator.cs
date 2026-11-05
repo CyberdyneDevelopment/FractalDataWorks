@@ -35,7 +35,7 @@ public sealed class InOperator : FilterOperatorBase
             var values = enumerable.Cast<object>()
                 .Select(v => v switch
                 {
-                    string str => $"'{str.Replace("'", "''")}'",
+                    string str => $"'{str.Replace("'", "''", StringComparison.Ordinal)}'",
                     int or long or short or byte => v.ToString(),
                     decimal or double or float => v.ToString(),
                     _ => $"'{v}'"

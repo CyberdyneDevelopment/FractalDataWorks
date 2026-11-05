@@ -11,6 +11,7 @@ using Fdw.Services.Calculations;
 using Fdw.Services.Calculations.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Tags;
 using Fdw.Services.Workspaces;
 using Fdw.Services.Workspaces.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -40,6 +41,7 @@ public abstract class ListCalculationEntitiesEndpointBase : CrudPageEndpointBase
     private readonly ICalculationVersionConfigurationProvider _versions;
     private readonly IPlaceAncestry _ancestry;
     private readonly IScopeAuthority _authority;
+    private readonly ITagService? _tags;
     private readonly IAuthenticationContextAccessor _authContext;
     private IReadOnlyDictionary<Guid, int>? _versionCounts;
 
@@ -50,15 +52,18 @@ public abstract class ListCalculationEntitiesEndpointBase : CrudPageEndpointBase
     /// <param name="ancestry">Says which places are at or above a place.</param>
     /// <param name="authority">Says whether the caller holds a right at a place.</param>
     /// <param name="authContext">Says who is signed in and the place they act in.</param>
+    /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c> (FDW-3816).</param>
     protected ListCalculationEntitiesEndpointBase(
         ILogger<ListCalculationEntitiesEndpointBase> logger,
         ICalculationConfigurationProvider provider,
         ICalculationVersionConfigurationProvider versions,
         IPlaceAncestry ancestry,
         IScopeAuthority authority,
-        IAuthenticationContextAccessor authContext)
+        IAuthenticationContextAccessor authContext,
+        ITagService? tags = null)
         : base(logger)
     {
+        _tags = tags;
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));
         _versions = versions ?? throw new ArgumentNullException(nameof(versions));
         _ancestry = ancestry ?? throw new ArgumentNullException(nameof(ancestry));
@@ -79,7 +84,19 @@ public abstract class ListCalculationEntitiesEndpointBase : CrudPageEndpointBase
     protected override async Task<IGenericResult<ConfigurationPage<CalculationEntityDomainConfiguration>>> LoadPage(
         PaginatedListRequest paging, CancellationToken ct)
     {
-        var page = await _provider.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct).ConfigureAwait(false);
+        var selection = await TagSelection.Read(TaggedWith, _tags, "Calculation", Logger, ct).ConfigureAwait(false);
+        if (selection.IsFailure || selection.Value is null)
+        {
+            return selection.ToNewResult<ConfigurationPage<CalculationEntityDomainConfiguration>>();
+        }
+
+        // ?tag= keeps the calculations that carry every tag named (FDW-3816).
+        var page = await selection.Value.Read(
+            (skip, take, token) => _provider.Get(new DomainQuery(null, null, skip, take, false), token),
+            calculation => calculation.Id,
+            paging.Skip,
+            paging.Take,
+            ct).ConfigureAwait(false);
         if (page.IsFailure || page.Value is not { } read)
         {
             return page;

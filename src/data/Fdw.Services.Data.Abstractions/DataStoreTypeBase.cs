@@ -9,6 +9,7 @@ using Fdw.Services.Connections.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data.Abstractions;
 
@@ -22,6 +23,10 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     IDataStoreType<TConfiguration>
     where TConfiguration : class, IGenericConfiguration
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "DataStore";
+
     /// <summary>
     /// Gets the configuration type.
     /// </summary>
@@ -35,7 +40,7 @@ public abstract class DataStoreTypeBase<TConfiguration> :
         string displayName,
         string description,
         string? category = null)
-        : base(name, displayName, description, category ?? "DataStore")
+        : base(name, displayName, description, category ?? DefaultCategory)
     {
     }
 

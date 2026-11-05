@@ -18,9 +18,8 @@
     <ProjectReference Include="..\Fdw.Schema.Abstractions\Fdw.Schema.Abstractions.csproj" />
     <ProjectReference Include="..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
-    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\configuration\Fdw.Configuration.Abstractions\Fdw.Configuration.Abstractions.csproj" />
   </ItemGroup>
 
   <!-- Pack MSBuild targets and tasks into NuGet package -->
@@ -30,9 +29,6 @@
 
     <!-- Include task assembly in tools folder -->
     <!-- Note: Task assembly is built separately and copied during pack -->
-    <None Include="..\Fdw.Schema.Ddl.Tasks\bin\$(Configuration)\netstandard2.0\Fdw.Schema.Ddl.Tasks.dll"
-          Pack="true"
-          PackagePath="tools\"
-          Condition="Exists('..\Fdw.Schema.Ddl.Tasks\bin\$(Configuration)\netstandard2.0\Fdw.Schema.Ddl.Tasks.dll')" />
+    <None Include="..\Fdw.Schema.Ddl.Tasks\bin\$(Configuration)\netstandard2.0\Fdw.Schema.Ddl.Tasks.dll" Pack="true" PackagePath="tools\" Condition="Exists('..\Fdw.Schema.Ddl.Tasks\bin\$(Configuration)\netstandard2.0\Fdw.Schema.Ddl.Tasks.dll')" />
   </ItemGroup>
 </Project>

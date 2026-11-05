@@ -126,8 +126,7 @@ public sealed class GeneratePropertyTranslator : RoslynCommandTranslatorBase<Gen
         else
         {
             // Full property with backing field
-            var fieldName = command.BackingFieldName ??
-                $"_{char.ToLowerInvariant(command.PropertyName[0])}{command.PropertyName.Substring(1)}";
+            var fieldName = command.BackingFieldName ?? command.ConventionalBackingFieldName;
 
             var accessors = new List<AccessorDeclarationSyntax>();
 

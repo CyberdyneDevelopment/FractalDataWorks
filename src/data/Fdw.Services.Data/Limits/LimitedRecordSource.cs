@@ -60,7 +60,7 @@ internal sealed class LimitedRecordSource : IRecordSource<DataRecord>
     /// <inheritdoc />
     public IEnumerable<IGenericResult<DataRecord>> Read()
     {
-        foreach (var record in _inner.Read())
+        foreach (var record in ReadSynchronously(_inner))
         {
             if (_timeout is { IsCancellationRequested: true })
             {
@@ -71,6 +71,13 @@ internal sealed class LimitedRecordSource : IRecordSource<DataRecord>
             yield return record;
         }
     }
+
+    /// <summary>
+    /// The inner source's synchronous sequence. The only Read overload that takes a token is the async one, so the
+    /// synchronous path checks <c>_timeout</c> between records instead (FDW-3578).
+    /// </summary>
+    private static IEnumerable<IGenericResult<DataRecord>> ReadSynchronously(IRecordSource<DataRecord> source) =>
+        source.Read();
 
     /// <inheritdoc />
     public async IAsyncEnumerable<IGenericResult<DataRecord>> Read(

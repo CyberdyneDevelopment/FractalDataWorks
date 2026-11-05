@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -15,9 +13,14 @@ namespace Fdw.Services.Credentials;
 /// <summary>
 /// Default implementation of <see cref="ICredentialServiceProvider"/>.
 /// Wraps <see cref="DomainServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
-/// and adds credential-service-specific cache-by-name lookup and the typed
-/// <see cref="Get(CredentialServiceRequest, CancellationToken)"/> entry point.
+/// and adds the typed <see cref="Get(CredentialServiceRequest, CancellationToken)"/> entry point.
 /// </summary>
+/// <remarks>
+/// Every lookup, by name, by id or all, goes through the base, which holds no cache of its own: the
+/// configuration read is cached by the configuration gateway, and a built service lives as long as its
+/// implementation provider's registration says. A per-name cache here once kept failures for the life
+/// of the scope and ignored the caller's token (FDW-3609).
+/// </remarks>
 public sealed class CredentialServiceProvider
     : DomainServiceProviderBase<
           ICredentialService,
@@ -27,9 +30,6 @@ public sealed class CredentialServiceProvider
       ICredentialServiceProvider
 {
     private readonly ILogger<CredentialServiceProvider> _logger;
-
-    private readonly ConcurrentDictionary<string, Lazy<Task<IGenericResult<ICredentialService>>>> _cache
-        = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CredentialServiceProvider"/> class.
@@ -53,21 +53,4 @@ public sealed class CredentialServiceProvider
 
         return Get(request.Name!, cancellationToken);
     }
-
-    /// <inheritdoc />
-    public override Task<IGenericResult<ICredentialService>> Get(string name, CancellationToken cancellationToken = default)
-    {
-#pragma warning disable VSTHRD011, VSTHRD002
-        var lazy = _cache.GetOrAdd(name, static (key, provider) =>
-            new Lazy<Task<IGenericResult<ICredentialService>>>(
-                () => provider.GetFromBase(key, CancellationToken.None),
-                LazyThreadSafetyMode.ExecutionAndPublication),
-            this);
-#pragma warning restore VSTHRD011, VSTHRD002
-
-        return lazy.Value;
-    }
-
-    private Task<IGenericResult<ICredentialService>> GetFromBase(string name, CancellationToken ct)
-        => base.Get(name, ct);
 }

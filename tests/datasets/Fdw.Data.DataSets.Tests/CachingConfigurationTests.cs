@@ -9,15 +9,15 @@ public class CachingConfigurationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public void DefaultValues_AreSetCorrectly()
+    public void NothingIsAssumedInCode()
     {
-        // Arrange & Act
+        // Arrange & Act: caching's values leave code (FDW-3931); its declared defaults come with FDW-3823 plan revision 4.
         var config = new CachingConfiguration();
 
         // Assert
-        config.Enabled.ShouldBeTrue();
-        config.DurationMinutes.ShouldBe(60);
-        config.KeyPattern.ShouldBe("dataset:{datasetName}:{queryHash}");
+        config.Enabled.ShouldBeFalse();
+        config.DurationMinutes.ShouldBeNull();
+        config.KeyPattern.ShouldBeNull();
     }
 
     [Fact]

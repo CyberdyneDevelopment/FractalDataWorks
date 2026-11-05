@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -58,9 +58,7 @@ public abstract class MarkAllReadEndpointBase : EndpointWithoutRequest
     /// <inheritdoc/>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var userIdClaim = HttpContext.User.FindFirst("sub")?.Value
-            ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
             await Send.UnauthorizedAsync(ct).ConfigureAwait(false);

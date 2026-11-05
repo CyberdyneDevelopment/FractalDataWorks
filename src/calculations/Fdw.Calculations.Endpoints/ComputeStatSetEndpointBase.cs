@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Services.Data.Abstractions.Visualization;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Calculations.Endpoints;
 
@@ -55,7 +56,7 @@ public abstract class ComputeStatSetEndpointBase : Endpoint<StatSetRequest, Stat
 
         if (!result.IsSuccess)
         {
-            CalculationEndpointLog.ValidationFailed(EndpointLogger, result.CurrentMessage ?? "Failed to compute statistics");
+            CalculationEndpointLog.ValidationFailed(EndpointLogger, result.FailureReason().Message);
             await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }

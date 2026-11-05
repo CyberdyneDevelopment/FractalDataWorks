@@ -56,7 +56,7 @@ public sealed partial class TenantSettingImplementationConfiguration
     /// <summary>
     /// Gets or sets whether this setting override is active.
     /// </summary>
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
 
     /// <summary>Gets or sets whether the levels below this one are barred from setting their own value (FDW-1579).</summary>
     public bool IsLocked { get; set; }

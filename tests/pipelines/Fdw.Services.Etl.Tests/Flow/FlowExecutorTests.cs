@@ -290,6 +290,48 @@ public sealed class FlowExecutorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
+    public async Task ACancelIsNotBlamedOnTheComponentThatFailedBecauseOfIt()
+    {
+        // Why (FDW-3784): a component that answers a cancel with a failure did not fail the run; the run's report names no failed component.
+        var stopping = new ScriptedComponent("src", [], ["output"], async (_, ct) =>
+        {
+            // Why WhenAny: the cancel ends the wait without throwing, and the component answers it with a failure below.
+            await Task.WhenAny(Task.Delay(Timeout.Infinite, ct));
+
+            return GenericResult.Failure(new GenericMessage("stopped by the cancel"));
+        });
+        var (sink, _) = Sink("dst");
+        using var cancel = new CancellationTokenSource();
+        var run = _sut.Execute(Graph([stopping, sink], [Link("src", "dst")]), Options(), cancel.Token);
+
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        cancel.Cancel();
+        var outcome = await run;
+
+        outcome.Result.IsFailure.ShouldBeTrue();
+        outcome.Result.CurrentMessage.ShouldNotBeNull().ShouldContain("cancelled");
+        var report = outcome.Report.ShouldNotBeNull();
+        report.FailedComponent.ShouldBeNull();
+        report.Components.Single(component => component.Name == "src").Succeeded.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AComponentThatFailsWithoutACancelIsStillNamedAsTheFailedOne()
+    {
+        var failing = new ScriptedComponent("src", [], ["output"], (_, _) => Task.FromResult<IGenericResult>(GenericResult.Failure(new GenericMessage("no"))));
+        var (sink, _) = Sink("dst");
+
+        var outcome = await _sut.Execute(Graph([failing, sink], [Link("src", "dst")]), Options(), TestContext.Current.CancellationToken);
+
+        outcome.Result.IsFailure.ShouldBeTrue();
+        outcome.Report.ShouldNotBeNull().FailedComponent.ShouldBe("src");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
     public async Task ASlowDestinationHoldsASourceBackToTheLinksCapacity()
     {
         var produced = 0;

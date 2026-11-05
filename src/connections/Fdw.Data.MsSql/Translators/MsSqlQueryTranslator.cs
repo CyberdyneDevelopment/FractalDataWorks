@@ -170,8 +170,8 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         }
         else
         {
-            // No JOIN → the single-table path (bare column names).
-            sqlCommand = BuildSelectStatement(
+            // No JOIN → the single-table path (bare column names), which refuses a paged read with no order.
+            return BuildSelectStatement(
                 container,
                 dbPath,
                 dialect,
@@ -201,10 +201,10 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
     }
 
     /// <summary>
-    /// Builds a complete T-SQL SELECT statement.
+    /// Builds a complete T-SQL SELECT statement, or refuses a paged read that has no order to page by.
     /// </summary>
-    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // SQL SELECT builder with conditional clauses (projection, WHERE, ORDER BY fallback logic, paging)
-    private static SqlCommand BuildSelectStatement(
+    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // SQL SELECT builder with conditional clauses (projection, WHERE, ORDER BY, paging)
+    private static IGenericResult<SqlCommand> BuildSelectStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
         ISqlDialect dialect,
@@ -239,21 +239,16 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         }
         else if (paging != null)
         {
-            // OFFSET/FETCH requires ORDER BY - use first field or primary key
-            var fields = container.Schema.Fields;
-            var orderByField = "1";
-
-            if (fields.Count > 0)
+            // OFFSET/FETCH requires an ORDER BY. The order a page follows is the one the container declares for its rows, its
+            // primary key; a container that declares none is refused, because a page of rows in a guessed order is not a page (FDW-3454).
+            var declaredOrder = container.GetDeclaredOrderFieldName();
+            if (declaredOrder is null)
             {
-                var pkName = ((IDataContainer)container).GetPrimaryKeyFieldName();
-                orderByField = pkName ?? fields[0].Name;
-            }
-            else if (returnedFieldNames is { Count: > 0 })
-            {
-                orderByField = returnedFieldNames[0];
+                return GenericResult<SqlCommand>.Failure(
+                    MsSqlTranslatorLog.PagedQueryHasNoOrder(NullLogger<MsSqlQueryTranslator>.Instance, container.Name));
             }
 
-            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(orderByField)}";
+            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(declaredOrder)}";
         }
 
         // OFFSET/FETCH clause (paging)
@@ -262,7 +257,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             command.CommandText += $" {dialect.BuildPagingClause(paging)}";
         }
 
-        return command;
+        return GenericResult<SqlCommand>.Success(command);
     }
 
     /// <summary>The database path of a JOIN target, found by name among the containers of the primary container's data store.</summary>

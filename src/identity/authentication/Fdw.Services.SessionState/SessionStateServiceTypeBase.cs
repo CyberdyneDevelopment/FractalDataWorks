@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Services.SessionState;
 
@@ -15,6 +16,10 @@ public abstract class SessionStateServiceTypeBase<TService, TFactory> :
     where TService : IGenericService
     where TFactory : IServiceFactory<TService, IServiceConfiguration>
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "SessionState";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SessionStateServiceTypeBase{TService, TFactory}"/> class.
     /// </summary>
@@ -29,7 +34,7 @@ public abstract class SessionStateServiceTypeBase<TService, TFactory> :
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "SessionState")
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory)
     {
     }
 }

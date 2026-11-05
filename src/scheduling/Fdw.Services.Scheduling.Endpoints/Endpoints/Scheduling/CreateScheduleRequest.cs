@@ -46,8 +46,14 @@ public class CreateScheduleRequest : ResourceCreateRequest
     /// </summary>
     public string TimeZoneId { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets what the scheduler does with a cron fire time that passed while it was down (FDW-3788): the name of a <c>MissedFireRules</c> option, <c>Skip</c> or <c>FireOnce</c>.
+    /// Required: a request that leaves it out, or names a rule that does not exist, is refused naming the field. It applies to a Cron schedule only.
+    /// </summary>
+    public string MissedFireRule { get; set; } = string.Empty;
+
     /// <summary>Gets or sets whether the schedule is enabled.</summary>
-    public bool IsEnabled { get; set; }
+    public bool? IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the run parameter values the scheduler passes to the pipeline on each run (contract v2 item 9),

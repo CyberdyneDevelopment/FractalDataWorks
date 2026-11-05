@@ -150,8 +150,14 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
                 return;
             }
 
-            var correlationId = req.CorrelationId ?? Guid.NewGuid().ToString();
-            var triggerSource = req.TriggerSource ?? "API:TriggerEndpoint";
+            if (string.IsNullOrWhiteSpace(req.CorrelationId) || string.IsNullOrWhiteSpace(req.TriggerSource))
+            {
+                await RefuseMissingField(req, ct).ConfigureAwait(false);
+                return;
+            }
+
+            var correlationId = req.CorrelationId;
+            var triggerSource = req.TriggerSource;
 
             // Dry run: return 200 with preview info, no execution item created
             if (req.DryRun)
@@ -182,7 +188,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
 
             if (!createResult.IsSuccess)
             {
-                var errorMessage = createResult.CurrentMessage ?? "Unknown error";
+                var errorMessage = createResult.FailureReason().Message;
                 var failCode = OperationsResultCodes.ByName("TriggerValidationFailed");
                 OnTriggerFailed(req.Name, errorMessage);
                 await SendResultCodeResponse(failCode, 500,
@@ -202,7 +208,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
 
             if (!triggerResult.IsSuccess)
             {
-                OnTriggerFailed(req.Name, triggerResult.CurrentMessage ?? "Failed to transition state");
+                OnTriggerFailed(req.Name, triggerResult.FailureReason().Message);
                 // Still return the execution ID since it was created
             }
 
@@ -213,7 +219,7 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
                 var dispatchResult = await dispatcher.Dispatch(execution, ct).ConfigureAwait(false);
                 if (!dispatchResult.IsSuccess)
                 {
-                    OnTriggerFailed(req.Name, dispatchResult.CurrentMessage ?? "Dispatch failed");
+                    OnTriggerFailed(req.Name, dispatchResult.FailureReason().Message);
                 }
             }
 
@@ -227,13 +233,23 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
             await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
-                Code = msg.Code ?? "INTERNAL_ERROR",
+                Code = msg.Code ?? EndpointPlaceholders.InternalErrorCode,
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
                 Action = "Contact your administrator"
             }, statusCode: 500)).ConfigureAwait(false);
         }
+    }
+
+    // The caller states its own correlation id and trigger source; the endpoint makes up neither (FDW-3990).
+    private async Task RefuseMissingField(TRequest req, CancellationToken ct)
+    {
+        var field = string.IsNullOrWhiteSpace(req.CorrelationId) ? nameof(req.CorrelationId) : nameof(req.TriggerSource);
+        var reason = $"{field} is required";
+        OnTriggerFailed(req.Name, reason);
+        await SendResultCodeResponse(OperationsResultCodes.ByName("TriggerValidationFailed"), 400,
+            ResultDetails.Create("Reason", reason), ct).ConfigureAwait(false);
     }
 
     /// <summary>

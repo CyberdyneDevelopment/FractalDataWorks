@@ -183,6 +183,10 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
     /// <summary>Gets or sets the column that flags a deleted row (FDW-1636, the destination options of the old load step).</summary>
     public string? DeletedFlagColumn { get; set; }
 
+    /// <summary>Gets or sets the value a soft delete writes to <see cref="DeletedFlagColumn"/> (FDW-3823): true where the column flags a deleted
+    /// row, false where it flags a live one. A soft delete states it; nothing stands in for it.</summary>
+    public bool? DeletedFlagValue { get; set; }
+
     /// <summary>Gets or sets the column that takes the time a row was deleted (FDW-1636, the destination options of the old load step).</summary>
     public string? DeletedAtColumn { get; set; }
 

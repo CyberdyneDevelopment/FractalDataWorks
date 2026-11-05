@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -68,9 +67,7 @@ public abstract class CreateAccessRequestEndpointBase : Endpoint<CreateAccessReq
     /// <inheritdoc/>
     public override async Task HandleAsync(CreateAccessRequestEndpointRequest req, CancellationToken ct)
     {
-        var userIdClaim = HttpContext.User.FindFirst("sub")?.Value
-            ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
             await Send.UnauthorizedAsync(ct).ConfigureAwait(false);

@@ -65,7 +65,7 @@ public sealed partial class OrchestrationNodeImplementationConfiguration
     public int Ordinal { get; set; }
 
     /// <summary>Gets or sets whether this node is enabled for execution.</summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets the tenant identifier this node belongs to.</summary>
     public Guid? TenantId { get; set; }

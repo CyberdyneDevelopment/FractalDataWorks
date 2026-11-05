@@ -1,3 +1,5 @@
+using Fdw.Configuration.Persistence.Schema;
+
 namespace Fdw.Commands.Data.Ddl;
 
 /// <summary>
@@ -38,14 +40,14 @@ public sealed class ForeignKeyDefinition
     /// <summary>
     /// Gets or sets the action to take when the referenced row is deleted.
     /// </summary>
-    /// <value>The ON DELETE action (default: NoAction).</value>
-    public IForeignKeyAction OnDelete { get; init; } = ForeignKeyActions.NoAction;
+    /// <value>The ON DELETE action .</value>
+    public required IForeignKeyAction OnDelete { get; init; }
 
     /// <summary>
     /// Gets or sets the action to take when the referenced row is updated.
     /// </summary>
-    /// <value>The ON UPDATE action (default: NoAction).</value>
-    public IForeignKeyAction OnUpdate { get; init; } = ForeignKeyActions.NoAction;
+    /// <value>The ON UPDATE action .</value>
+    public required IForeignKeyAction OnUpdate { get; init; }
 
     /// <summary>
     /// Gets or sets the schema of the referenced table.

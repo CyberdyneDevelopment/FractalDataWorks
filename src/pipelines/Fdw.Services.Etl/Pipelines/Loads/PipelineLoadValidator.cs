@@ -138,6 +138,7 @@ public static class PipelineLoadValidator
         var hasMode = Has(row.SoftDeleteMode);
         var hasAny = hasMode
             || Has(row.DeletedFlagColumn)
+            || row.DeletedFlagValue is not null
             || Has(row.DeletedAtColumn)
             || Has(row.SoftDeleteMarkerColumn)
             || Has(row.SoftDeleteMarkerValue);
@@ -153,6 +154,8 @@ public static class PipelineLoadValidator
             return GenericResult.Failure(PipelineLoadLog.SoftDeleteModeUnknown(logger, owner, row.SoftDeleteMode!));
         if (!Has(row.DeletedFlagColumn))
             return GenericResult.Failure(PipelineLoadLog.SoftDeleteOptionsInconsistent(logger, owner, "a soft delete names its flag column"));
+        if (row.DeletedFlagValue is null)
+            return GenericResult.Failure(PipelineLoadLog.SoftDeleteOptionsInconsistent(logger, owner, "a soft delete states the value it sets its flag column to"));
 
         var marker = ValidatePair(
             owner, "a soft delete marker", nameof(row.SoftDeleteMarkerColumn), row.SoftDeleteMarkerColumn, nameof(row.SoftDeleteMarkerValue), row.SoftDeleteMarkerValue, logger);

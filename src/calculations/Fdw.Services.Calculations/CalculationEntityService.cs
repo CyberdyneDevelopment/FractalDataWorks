@@ -173,6 +173,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         string calculationEntityType,
         IReadOnlyList<CalculationInput> inputs,
         CalculationOutputSpec output,
+        bool isEnabled,
         IGenericConfiguration? typedConfiguration = null,
         CancellationToken cancellationToken = default)
     {
@@ -180,7 +181,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         {
             CalculationEntityLog.CreateCalculationStarted(_logger, name);
 
-            var build = BuildAggregate(Guid.Empty, name, description, calculationEntityType, inputs, output, true, typedConfiguration);
+            var build = BuildAggregate(Guid.Empty, name, description, calculationEntityType, inputs, output, isEnabled, typedConfiguration);
             if (!build.IsSuccess)
                 return build.ToNewResult<ICalculationEntity>();
 

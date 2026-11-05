@@ -58,7 +58,7 @@ public abstract class SchemaDefinitionBase<TProperty> : ISchemaDefinition<TPrope
         Description = description;
         SurrogateKey = surrogateKey;
         NaturalKey = naturalKey;
-        Indexes = indexes ?? Array.Empty<IIndexDefinition<TProperty>>();
+        Indexes = indexes ?? [];
         Children = children;
         PathExpression = pathExpression;
     }

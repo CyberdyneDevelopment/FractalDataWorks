@@ -17,6 +17,7 @@ using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Microsoft.Data.SqlClient;
 using static Fdw.Data.MsSql.Tests.RealMsSql.RealMsSqlSupport;
+using Fdw.Data.MsSql.Tests.TestSupport;
 
 namespace Fdw.Data.MsSql.Tests.RealMsSql;
 
@@ -53,6 +54,7 @@ internal static class RealMsSqlLoadSupport
             type.SetupGet(t => t.ClrType).Returns(column.ClrType);
             type.SetupGet(t => t.TypeName).Returns(column.ClrType.Name);
             var field = new Mock<IField>();
+            field.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
             field.SetupGet(f => f.Name).Returns(column.Name);
             field.SetupGet(f => f.FieldType).Returns(type.Object);
             field.SetupGet(f => f.IsNullable).Returns(true);

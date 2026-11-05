@@ -6,6 +6,7 @@ using FastEndpoints;
 using Fdw.Services.Agents.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Operations.Endpoints.AgentActions;
 
@@ -45,8 +46,8 @@ public abstract class ApproveAgentActionEndpointBase : Endpoint<AgentActionIdReq
     /// <summary>Approves a pending agent action using the authenticated user's identity.</summary>
     public override async Task HandleAsync(AgentActionIdRequest req, CancellationToken ct)
     {
-        var userIdClaim = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim))
+        var userIdClaim = CallerClaims.UserId(HttpContext.User);
+        if (userIdClaim is null)
         {
             OperationsEndpointLog.AgentActionUserClaimNotFound(_logger);
             await Send.UnauthorizedAsync(ct).ConfigureAwait(false);

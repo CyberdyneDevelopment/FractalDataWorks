@@ -172,7 +172,7 @@ public sealed class ServiceConnectionProvider : IServiceConnectionProvider, IDis
             return result.ToNewResult(typed);
 
         var expectedType = typeof(T).Name;
-        var actualType = result.Value?.GetType().Name ?? "null";
+        var actualType = result.Value?.GetType().Name ?? ConnectionPlaceholders.NoValue;
         return GenericResult<T>.Failure(
             ServicesResultCodes.ByName("ServiceCastFailed"),
             ResultDetails.Create("ExpectedType", expectedType, "ActualType", actualType));

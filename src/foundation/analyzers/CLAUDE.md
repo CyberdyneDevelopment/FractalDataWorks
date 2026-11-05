@@ -14,7 +14,6 @@ fractaldataworks:
 - `Fdw.Conventions.CodeFixes` (not a package)
 - `Fdw.Conventions.FileSplitter`: CLI tool that splits multi-type C# files into one file per type (fixes FDW005)
 - `Fdw.ServiceTypes.Analyzers` (not a package)
-- `Fdw.ServiceTypes.CodeFixes` (not a package)
 - `Fdw.SourceGenerators`
 
 ## Seams
@@ -24,7 +23,7 @@ This domain has no `.Abstractions` project; its projects above are its surface.
 ## Rules that matter here
 
 - Every project except tests and the analyzers themselves builds with these analyzers (Directory.Build.props). A change here changes every package's build.
-- No fallbacks: a missing value fails with a MessageLogging error and a failed result. The only `??` allowed is `logger ?? NullLogger<T>.Instance` in a constructor.
+- No fallbacks: a `??` never falls back to a value that could be a real one, and a missing value fails with a MessageLogging error and a failed result. Allowed: a null logger, `?? string.Empty`, `?? []`, `??=` on a field or local, a chain of failure results or messages, a `[PlaceholderText]` constant, a `[PlatformDefault]` member, and a member Mike approved with `[ApprovedFallback]`. Never a default message. FDW055 enforces it.
 - Log through MessageLogging (source-generated messages), never raw `ILogger` calls.
 - Return `IGenericResult` with a ResultCode; a failure never carries a plain string.
 - All data access goes through `IDataGateway.Execute()` with command objects. No `SqlConnection`, `SqlCommand` or connection string outside the connection projects.

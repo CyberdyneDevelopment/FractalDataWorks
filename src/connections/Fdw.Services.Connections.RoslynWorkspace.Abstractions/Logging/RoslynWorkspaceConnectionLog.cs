@@ -272,6 +272,18 @@ public static partial class RoslynWorkspaceConnectionLog
     public static partial IGenericMessage SymbolNameUnresolved(ILogger logger, string connectionName, string name);
 
     /// <summary>
+    /// Logs that the given name resolved to a symbol that has no declaration id, so it cannot be addressed by a later
+    /// call (FDW-3580).
+    /// </summary>
+    /// <param name="logger">The logger used to emit the log event.</param>
+    /// <param name="connectionName">The name of the RoslynWorkspace connection.</param>
+    /// <param name="name">The name that was asked for.</param>
+    /// <param name="symbol">The symbol it resolved to, as displayed.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 31002, Level = LogLevel.Error, Message = "RoslynWorkspace connection '{connectionName}': name '{name}' resolved to '{symbol}', which has no declaration id to address it by")]
+    public static partial IGenericMessage SymbolHasNoDeclarationId(ILogger logger, string connectionName, string name, string symbol);
+
+    /// <summary>
     /// Logs that the find-callers operation failed for the given symbol.
     /// </summary>
     /// <param name="logger">The logger used to emit the log event.</param>

@@ -12,7 +12,6 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 |---|---|---|
 | `DdlCommandTypes` | class | TypeCollection for DDL command types (schema operations). |
 | `FederationStrategies` | class | Collection of federation strategies for data operations. |
-| `ForeignKeyActions` | class | TypeCollection for foreign key referential action types. |
 | `JoinExecutors` | class | Collection of join executor strategies. |
 | `AlterTableOperationTypes` | class | — |
 

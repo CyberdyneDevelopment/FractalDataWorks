@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Tags;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Abstractions;
@@ -22,20 +23,40 @@ public abstract class ListConnectionsEndpointBase
     : CrudPageEndpointBase<IConnectionImplementationConfiguration, ConnectionSummaryDto>
 {
     private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly ITagService? _tags;
 
-    /// <inheritdoc />
-    protected ListConnectionsEndpointBase(ILogger<ListConnectionsEndpointBase> logger, ConnectionConfigurationProvider configProvider) : base(logger)
+    /// <summary>Initializes a new instance of the <see cref="ListConnectionsEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configProvider">Reads the connections.</param>
+    /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c> (FDW-3816).</param>
+    protected ListConnectionsEndpointBase(
+        ILogger<ListConnectionsEndpointBase> logger,
+        ConnectionConfigurationProvider configProvider,
+        ITagService? tags = null) : base(logger)
     {
         _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
+        _tags = tags;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "connections";
 
     /// <inheritdoc />
-    protected override Task<IGenericResult<ConfigurationPage<IConnectionImplementationConfiguration>>> LoadPage(
+    /// <remarks><c>?tag=</c> keeps the connections that carry every tag named (FDW-3816).</remarks>
+    protected override async Task<IGenericResult<ConfigurationPage<IConnectionImplementationConfiguration>>> LoadPage(
         PaginatedListRequest paging, CancellationToken ct)
-        => _configProvider.Get(paging.Skip, paging.Take, ConfigurationLevels.RecordOnly, ct);
+    {
+        var selection = await TagSelection.Read(TaggedWith, _tags, "Connection", Logger, ct).ConfigureAwait(false);
+        if (selection.IsFailure || selection.Value is null)
+            return selection.ToNewResult<ConfigurationPage<IConnectionImplementationConfiguration>>();
+
+        return await selection.Value.Read(
+            (skip, take, token) => _configProvider.Get(skip, take, ConfigurationLevels.RecordOnly, token),
+            connection => connection.Id,
+            paging.Skip,
+            paging.Take,
+            ct).ConfigureAwait(false);
+    }
 
     /// <summary>Leaves out connections with no name or implementation, and rows naming the domain as their implementation.</summary>
     /// <param name="item">The connection.</param>

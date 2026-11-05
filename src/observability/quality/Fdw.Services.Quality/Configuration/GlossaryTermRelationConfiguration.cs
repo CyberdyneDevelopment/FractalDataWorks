@@ -32,5 +32,5 @@ public sealed partial class GlossaryTermRelationConfiguration
     /// <summary>
     /// Gets or sets the relation type (Synonym, Antonym, Related).
     /// </summary>
-    public string RelationType { get; set; } = "Related";
+    public string RelationType { get; set; } = string.Empty;
 }

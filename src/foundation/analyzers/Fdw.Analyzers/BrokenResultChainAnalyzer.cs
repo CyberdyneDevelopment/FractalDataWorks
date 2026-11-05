@@ -71,7 +71,7 @@ public sealed class BrokenResultChainAnalyzer : DiagnosticAnalyzer
             return;
 
         // Verify the containing type is GenericResult or GenericResult<T> in the correct namespace
-        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
+        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
             return;
 
@@ -146,7 +146,7 @@ public sealed class BrokenResultChainAnalyzer : DiagnosticAnalyzer
             return false;
 
         // Get the type of the object being accessed (e.g., the type of 'result' in 'result.Messages')
-        var receiverTypeInfo = context.SemanticModel.GetTypeInfo(memberAccess.Expression);
+        var receiverTypeInfo = context.SemanticModel.GetTypeInfo(memberAccess.Expression, context.CancellationToken);
         var receiverType = receiverTypeInfo.Type;
 
         if (receiverType == null)

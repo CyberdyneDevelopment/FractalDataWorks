@@ -32,11 +32,14 @@ public sealed class DynamicStructMapperFactory
     /// <inheritdoc />
     public IGenericResult<DynamicStructMapper> Create(DynamicStructMapperConfiguration configuration)
     {
+        var resolved = Resolve(configuration);
+        if (resolved.IsFailure) return resolved.ToNewResult<DynamicStructMapper>();
+
         try
         {
             var mapper = new DynamicStructMapper(
                 _loggerFactory.CreateLogger<DynamicStructMapper>(),
-                configuration);
+                resolved.Value!);
 
             return GenericResult<DynamicStructMapper>.Success(mapper);
         }
@@ -58,7 +61,8 @@ public sealed class DynamicStructMapperFactory
                 : result.ToNewResult<IEtlRowMapper>();
         }
 
-        // Create with default configuration
+        // A configuration of another mapper type: its own name and pooling values are kept, and what it cannot state for this type is the
+        // type's declared value (FDW-3956).
         var defaultConfig = new DynamicStructMapperConfiguration
         {
             Name = configuration.Name,
@@ -70,5 +74,34 @@ public sealed class DynamicStructMapperFactory
         return defaultResult.IsSuccess
             ? GenericResult<IEtlRowMapper>.Success(defaultResult.Value!)
             : defaultResult.ToNewResult<IEtlRowMapper>();
+    }
+
+    // Each value the configuration leaves out takes the Dynamic type's declared value, or a host's override of it (FDW-3956).
+    private IGenericResult<DynamicStructMapperConfiguration> Resolve(DynamicStructMapperConfiguration configuration)
+    {
+        // Why the type itself and not EtlRowMapperTypes.ByName: the option restricts itself to its own compilation, so the collection may not
+        // hold it; its declared values and a host's override (kept by its type name) are the same either way.
+        var type = new DynamicStructMapperType();
+        var pooling = EtlRowMapperDefaults.Resolve(configuration.EnablePooling, type, nameof(configuration.EnablePooling), _logger);
+        if (pooling.IsFailure) return pooling.ToNewResult<DynamicStructMapperConfiguration>();
+
+        var poolSize = EtlRowMapperDefaults.Resolve(configuration.MaxPoolSize, type, nameof(configuration.MaxPoolSize), _logger);
+        if (poolSize.IsFailure) return poolSize.ToNewResult<DynamicStructMapperConfiguration>();
+
+        var compiled = EtlRowMapperDefaults.Resolve(configuration.UseCompiledExpressions, type, nameof(configuration.UseCompiledExpressions), _logger);
+        if (compiled.IsFailure) return compiled.ToNewResult<DynamicStructMapperConfiguration>();
+
+        var cached = EtlRowMapperDefaults.Resolve(configuration.CacheCompiledDelegates, type, nameof(configuration.CacheCompiledDelegates), _logger);
+        if (cached.IsFailure) return cached.ToNewResult<DynamicStructMapperConfiguration>();
+
+        return GenericResult<DynamicStructMapperConfiguration>.Success(new DynamicStructMapperConfiguration
+        {
+            Id = configuration.Id,
+            Name = configuration.Name,
+            EnablePooling = pooling.Value,
+            MaxPoolSize = poolSize.Value,
+            UseCompiledExpressions = compiled.Value,
+            CacheCompiledDelegates = cached.Value,
+        });
     }
 }

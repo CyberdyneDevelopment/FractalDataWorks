@@ -45,6 +45,11 @@ public class ScheduleInfoDto
     public string TimeZoneId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets what the scheduler does with a cron fire time that passed while it was down, as it was saved (FDW-3788).
+    /// </summary>
+    public string MissedFireRule { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the schedule is enabled.
     /// </summary>
     public bool IsEnabled { get; set; }

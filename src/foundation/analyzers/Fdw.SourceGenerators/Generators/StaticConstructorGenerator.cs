@@ -42,7 +42,7 @@ public sealed class StaticConstructorGenerator<TId>
         var includedValues = values.Where(v => v.Include && !v.IsAbstract && !v.IsStatic && !v.IsGenericType).ToList();
 
         // Get key type from definition (defaults to "int" if not specified)
-        var keyType = definition.KeyType ?? "int";
+        var keyType = definition.KeyType ?? CollectionKeyTypes.Default;
         var strategy = definition.CollectionStrategy;
 
         if (includedValues.Count > 0)
@@ -158,7 +158,7 @@ public sealed class StaticConstructorGenerator<TId>
         if (definition.LookupProperties != null && definition.LookupProperties.Length > 0)
         {
             // Get key type from definition (defaults to "int" if not specified)
-            var lookupKeyType = definition.KeyType ?? "int";
+            var lookupKeyType = definition.KeyType ?? CollectionKeyTypes.Default;
 
             var nonIdLookups = definition.LookupProperties
                 .Where(l => !string.Equals(l.PropertyName, "Id", StringComparison.Ordinal) ||

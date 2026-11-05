@@ -9,6 +9,7 @@ using Fdw.Configuration.Endpoints.Logging;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Configuration.Endpoints;
 
@@ -41,7 +42,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
     {
         _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
         _containerLookup = containerLookup;
-        _logger = logger;
+        _logger = logger ?? NullLogger<GetConfigurationInstanceEndpointBase>.Instance;
     }
 
     /// <inheritdoc/>
@@ -113,7 +114,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
                     continue;
                 }
 
-                return MapToDetail(result.Value.First(), container, req.Category);
+                return MapToDetail(result.Value.First(), container, req.Name, req.Category);
             }
             catch (Exception ex)
             {
@@ -125,20 +126,26 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
         return null;
     }
 
-    private static ConfigurationInstanceDetailResponse MapToDetail(
+    private ConfigurationInstanceDetailResponse MapToDetail(
         Dictionary<string, object?> record,
         IDataContainer container,
+        string requestedName,
         string category)
     {
-        var id = record.TryGetValue("Id", out var idValue) && idValue is Guid guidId
-            ? guidId : Guid.Empty;
-        var name = record.TryGetValue("Name", out var nameValue)
-            ? nameValue?.ToString() ?? string.Empty : string.Empty;
+        // Every stored instance has an Id, a Name and a CreatedAt. A row without one is broken data: it fails here,
+        // and is never returned with an invented value standing in for the missing column.
+        if (!record.TryGetValue("Id", out var idValue) || idValue is not Guid id)
+            throw RowIncomplete(container, requestedName, "Id");
+
+        if (!record.TryGetValue("Name", out var nameValue) || nameValue?.ToString() is not { } name)
+            throw RowIncomplete(container, requestedName, "Name");
+
+        if (!record.TryGetValue("CreatedAt", out var createdValue) || createdValue is not DateTime createdAt)
+            throw RowIncomplete(container, requestedName, "CreatedAt");
+
         var serviceType = record.TryGetValue("Type", out var typeValue)
-            ? typeValue?.ToString() ?? container.Name
-            : container.Name;
-        var createdAt = record.TryGetValue("CreatedAt", out var createdValue) && createdValue is DateTime created
-            ? created : DateTime.UtcNow;
+            ? typeValue?.ToString()
+            : null;
         var modifiedAt = record.TryGetValue("ModifiedAt", out var modifiedValue) && modifiedValue is DateTime modified
             ? (DateTime?)modified : null;
 
@@ -153,6 +160,9 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
             ModifiedAt = modifiedAt
         };
     }
+
+    private InvalidOperationException RowIncomplete(IDataContainer container, string requestedName, string column) =>
+        new(ConfigurationEndpointLog.InstanceRowIncomplete(_logger, requestedName, container.Name, column).Message);
 
     private static Dictionary<string, object?> ExtractValues(Dictionary<string, object?> record)
     {

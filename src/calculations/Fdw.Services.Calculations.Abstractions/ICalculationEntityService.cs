@@ -32,6 +32,7 @@ public interface ICalculationEntityService
         string calculationEntityType,
         IReadOnlyList<CalculationInput> inputs,
         CalculationOutputSpec output,
+        bool isEnabled,
         IGenericConfiguration? typedConfiguration = null,
         CancellationToken cancellationToken = default);
 

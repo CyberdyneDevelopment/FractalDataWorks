@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -82,7 +83,7 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
 
         var tenant = tenantResult.Value;
         var isAdmin = _systemRoleConfiguration.IsPlatformAdmin(User);
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = CallerClaims.UserId(User);
 
         if (!isAdmin && !string.IsNullOrEmpty(userId))
         {

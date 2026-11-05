@@ -98,6 +98,23 @@ public interface IExecutionTracker
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Ends an execution item in a terminal state other than Completed or Failed (FDW-3787): the state a host's stop or loss gives it
+    /// (Interrupted), or the one a person's cancel gives it (Cancelled). <see cref="Complete"/> can only end an item Completed or Failed.
+    /// </summary>
+    /// <param name="executionItemId">The execution item ID.</param>
+    /// <param name="finalState">The terminal state the item ends in; a state that is not terminal is refused.</param>
+    /// <param name="resultCode">The result code.</param>
+    /// <param name="resultMessage">The result message.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A result indicating success or failure.</returns>
+    Task<IGenericResult> Close(
+        Guid executionItemId,
+        IExecutionStateType finalState,
+        string? resultCode = null,
+        string? resultMessage = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets an execution item by ID.
     /// </summary>
     /// <param name="executionItemId">The execution item ID.</param>

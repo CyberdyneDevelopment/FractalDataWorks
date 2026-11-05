@@ -186,17 +186,17 @@ public sealed class CollectionModel<TItem> : IComponentModel
 
         if (IsRequired && _items.Count == 0)
         {
-            errors.Add($"{Label ?? Id} requires at least one item.");
+            errors.Add($"{Id} requires at least one item.");
         }
 
         if (MinItems.HasValue && _items.Count < MinItems.Value)
         {
-            errors.Add($"{Label ?? Id} requires at least {MinItems.Value} items.");
+            errors.Add($"{Id} requires at least {MinItems.Value} items.");
         }
 
         if (MaxItems.HasValue && _items.Count > MaxItems.Value)
         {
-            errors.Add($"{Label ?? Id} allows at most {MaxItems.Value} items.");
+            errors.Add($"{Id} allows at most {MaxItems.Value} items.");
         }
 
         // Validate individual items

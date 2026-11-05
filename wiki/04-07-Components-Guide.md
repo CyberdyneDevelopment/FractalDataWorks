@@ -641,9 +641,8 @@ Order? order = await orderReader.ReadAsync("456");
 | TC003 | Error | Base type in base class doesn't match the `[TypeCollection]` attribute |
 | TC004 | Error | Generic type argument mismatch between `[TypeOption]` and the base class |
 | TYPECOLL001 | Warning | A `[TypeLookup]` generates a method that conflicts with a collection member |
-| ENHENUM001 | Warning | Duplicate lookup values without `AllowMultiple` |
 
-(ServiceType collections share the same `TC*` analyzers; there is no separate `ST*` rule family.)
+(TC001–TC004 check `[TypeCollection]` collections only; there is no analyzer counterpart for ServiceType collections.)
 
 ---
 

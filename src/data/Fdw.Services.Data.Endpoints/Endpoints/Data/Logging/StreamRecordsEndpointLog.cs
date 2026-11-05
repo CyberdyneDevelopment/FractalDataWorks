@@ -27,6 +27,10 @@ public static partial class StreamRecordsEndpointLog
     [MessageLogging(EventId = 31200, Level = LogLevel.Warning, Message = "No registered record format serves Accept '{acceptHeader}' for '{resource}'")]
     public static partial IGenericMessage FormatNotAcceptable(ILogger logger, string resource, string acceptHeader);
 
+    /// <summary>Logs that a request named no record format, by query or Accept header (FDW-3823: the format is the caller's choice).</summary>
+    [MessageLogging(EventId = 31204, Level = LogLevel.Warning, Message = "Refused a stream of '{resource}': the request names no record format")]
+    public static partial IGenericMessage FormatNotStated(ILogger logger, string resource);
+
     /// <summary>Logs that the concurrent-stream limit refused a request.</summary>
     [MessageLogging(EventId = 31201, Level = LogLevel.Warning, Message = "Refused a stream of '{resource}': {activeStreams} of {maxStreams} concurrent streams already running")]
     public static partial IGenericMessage ConcurrencyLimitReached(ILogger logger, string resource, int activeStreams, int maxStreams);

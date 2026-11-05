@@ -2,6 +2,7 @@ using Fdw.Abstractions;
 using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Results;
+using Fdw.Conventions;
 
 namespace Fdw.Services;
 
@@ -37,7 +38,7 @@ public abstract class ServiceFactoryBase<TService, TConfiguration>
                 ResultDetails.Create(
                     "Factory", GetType().Name,
                     "ExpectedType", typeof(TConfiguration).Name,
-                    "ActualType", configuration?.GetType().Name ?? "(null)"));
+                    "ActualType", configuration?.GetType().Name ?? LogPlaceholders.Null));
 
     // The erased surface the non-generic contract declares. Same one rule, widened return.
     IGenericResult<IGenericService> IServiceFactory.Create(IGenericConfiguration configuration)

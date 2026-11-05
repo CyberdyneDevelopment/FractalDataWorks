@@ -23,9 +23,9 @@ public static class TextPromptHelper
     public static string Prompt(
         IAnsiConsole console,
         string promptText,
-        string? defaultValue = null,
-        PropertyMetadata? metadata = null,
-        TUIThemeConfiguration? theme = null)
+        string? defaultValue,
+        PropertyMetadata? metadata,
+        TUIThemeConfiguration theme)
     {
         var prompt = new TextPrompt<string>(promptText);
 
@@ -37,7 +37,7 @@ public static class TextPromptHelper
         if (metadata?.Required == true)
         {
             prompt.AllowEmpty = false;
-            prompt.ValidationErrorMessage($"[{theme?.Colors.Error ?? Color.Red}]{promptText} is required[/]");
+            prompt.ValidationErrorMessage($"[{theme.Colors.Error}]{promptText} is required[/]");
         }
 
         if (metadata?.ValidationRules.TryGetValue("maxLength", out var maxLengthObj) == true
@@ -47,7 +47,7 @@ public static class TextPromptHelper
             {
                 if (value.Length > maxLength)
                 {
-                    return ValidationResult.Error($"[{theme?.Colors.Error ?? Color.Red}]Maximum length is {maxLength}[/]");
+                    return ValidationResult.Error($"[{theme.Colors.Error}]Maximum length is {maxLength}[/]");
                 }
                 return ValidationResult.Success();
             });
@@ -64,7 +64,7 @@ public static class TextPromptHelper
             {
                 if (!regex.IsMatch(value))
                 {
-                    return ValidationResult.Error($"[{theme?.Colors.Error ?? Color.Red}]Invalid format[/]");
+                    return ValidationResult.Error($"[{theme.Colors.Error}]Invalid format[/]");
                 }
                 return ValidationResult.Success();
             });

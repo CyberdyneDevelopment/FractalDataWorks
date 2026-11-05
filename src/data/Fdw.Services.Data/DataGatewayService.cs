@@ -168,7 +168,7 @@ public sealed partial class DataGatewayService : IDataGateway
         {
             return GenericResult<IDataGatewayTransaction>.Failure(
                 DataGatewayLogger.ConnectionRetrievalFailed(_logger, connectionName,
-                    connectionResult.CurrentMessage ?? "Connection not found"));
+                    connectionResult.NoValueReason().Message));
         }
 
         if (connectionResult.Value is not ITransactionalDataConnection transactional)
@@ -182,7 +182,7 @@ public sealed partial class DataGatewayService : IDataGateway
         {
             return GenericResult<IDataGatewayTransaction>.Failure(
                 DataGatewayLogger.BeginTransactionFailed(_logger, connectionName,
-                    txnResult.CurrentMessage ?? "Transaction start failed"));
+                    txnResult.NoValueReason().Message));
         }
 
         IDataGatewayTransaction scope = new DataGatewayTransaction(
@@ -417,7 +417,7 @@ public sealed partial class DataGatewayService : IDataGateway
         var connectionResult = await _connectionProvider.Get(store.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
         {
-            var reason = connectionResult.CurrentMessage ?? "Unknown error";
+            var reason = connectionResult.NoValueReason().Message;
             return GenericResult<IDataConnection>.Failure(
                 DataGatewayLogger.DataStoreConnectionNotResolved(_logger, dataStore, store.ConnectionId.ToString(), reason));
         }
@@ -438,7 +438,7 @@ public sealed partial class DataGatewayService : IDataGateway
         if (result.IsSuccess)
             DataGatewayLogger.ContainerCommandCompleted(_logger, target.Container, stopwatch.Elapsed.TotalMilliseconds);
         else
-            DataGatewayLogger.ContainerCommandFailed(_logger, target.Container, result.CurrentMessage ?? "Unknown error");
+            DataGatewayLogger.ContainerCommandFailed(_logger, target.Container, result.FailureReason().Message);
 
         return result;
     }
@@ -588,7 +588,7 @@ public sealed partial class DataGatewayService : IDataGateway
         var connectionResult = await _connectionProvider.Get(store.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
             return GenericResult<IRecordSource<DataRecord>>.Failure(
-                DataGatewayLogger.DataStoreConnectionNotResolved(_logger, target.DataStore, store.ConnectionId.ToString(), connectionResult.CurrentMessage ?? "Unknown error"));
+                DataGatewayLogger.DataStoreConnectionNotResolved(_logger, target.DataStore, store.ConnectionId.ToString(), connectionResult.NoValueReason().Message));
 
         if (connectionResult.Value is not IRecordSourceConnection recordSourceConnection)
             return GenericResult<IRecordSource<DataRecord>>.Failure(
@@ -750,7 +750,7 @@ public sealed partial class DataGatewayService : IDataGateway
         if (!limitsResult.IsSuccess)
         {
             return GenericResult<ConnectionLimitLease>.Failure(
-                ConnectionLimitLog.LimitResolutionFailed(_logger, Guid.Empty, limitsResult.CurrentMessage ?? "unknown"));
+                ConnectionLimitLog.LimitResolutionFailed(_logger, Guid.Empty, limitsResult.FailureReason().Message));
         }
 
         var lease = new ConnectionLimitLease(limitsResult.Value!);
@@ -813,10 +813,19 @@ public sealed partial class DataGatewayService : IDataGateway
         return null;
     }
 
+    // A bucket whose burst is not stated holds one second of its rate: that is what the rate means, not a stand-in for a missing value.
+    private static double BurstSize(ConnectionLimitConfiguration limit, int maxPerSecond)
+    {
+        if (limit.EnforceBurstSize is { } stated)
+            return stated;
+
+        return maxPerSecond;
+    }
+
     private IGenericResult<T>? CheckRateLimit<T>(ConnectionLimitConfiguration limit, string connectionName)
     {
         int maxPerSecond = limit.EnforceMaxPerSecond!.Value;
-        double burst = limit.EnforceBurstSize ?? maxPerSecond;
+        double burst = BurstSize(limit, maxPerSecond);
         var bucket = _tokenBuckets.GetOrAdd(connectionName,
             _ => new TokenBucket(maxPerSecond, burst));
 
@@ -864,8 +873,7 @@ public sealed partial class DataGatewayService : IDataGateway
 
         if (command is IQueryCommand qc && qc.Paging is not null)
         {
-            int requested = qc.Paging.Take ?? int.MaxValue;
-            if (requested > maxRows)
+            if (qc.Paging.Take is { } requested && requested > maxRows)
                 return GenericResult<T>.Failure(
                     ConnectionLimitLog.MaxResultSizeExceeded(
                         _logger,

@@ -1,5 +1,6 @@
 using System;
 using Fdw.Abstractions;
+using Fdw.Services.Etl.Flow;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Configuration;
 using Fdw.Data.DataSets.Abstractions;
@@ -17,6 +18,7 @@ using Fdw.Services.EtlGateway;
 using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Settings;
 using Fdw.Data.Transformations.Configuration;
+using Fdw.Operations.Abstractions.Thresholds;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Etl.Graphs;
@@ -40,6 +42,8 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
     private readonly ITransformationConfigurationProvider? _transformations;
     private readonly IEffectiveSettingsProvider? _settings;
     private readonly IExecutionTracker? _tracker;
+    private readonly RunningFlows? _runningFlows;
+    private readonly IThresholdEvaluator? _thresholds;
 
     /// <summary>Initializes a new instance of the <see cref="GraphPipelineFactory"/> class.</summary>
     /// <param name="logger">The factory's logger.</param>
@@ -56,6 +60,8 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
     /// <param name="transformations">Reads the Built transformations a Compute tool applies (optional; a graph with a Compute tool refuses to run without it).</param>
     /// <param name="settings">The effective settings the transformations are compiled under (optional, as above).</param>
     /// <param name="tracker">Records how the steps of a tracked run went as child executions of the run (optional: an untracked host passes none and nothing is recorded).</param>
+    /// <param name="runningFlows">What the live view reads; each pipeline made lists its run there while it runs (optional: a host without the view passes none).</param>
+    /// <param name="thresholds">Passed to each pipeline made, to judge its components' figures against thresholds (a run refuses without it, and a host that runs pipelines refuses to start without it).</param>
     public GraphPipelineFactory(
         ILogger<GraphPipelineFactory> logger,
         ILoggerFactory loggerFactory,
@@ -70,7 +76,9 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
         IRuleNotifier? ruleNotifier = null,
         ITransformationConfigurationProvider? transformations = null,
         IEffectiveSettingsProvider? settings = null,
-        IExecutionTracker? tracker = null)
+        IExecutionTracker? tracker = null,
+        RunningFlows? runningFlows = null,
+        IThresholdEvaluator? thresholds = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -86,6 +94,8 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
         _transformations = transformations;
         _settings = settings;
         _tracker = tracker;
+        _runningFlows = runningFlows;
+        _thresholds = thresholds;
     }
 
     /// <inheritdoc />
@@ -110,7 +120,9 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
                 _ruleNotifier,
                 _transformations,
                 _settings,
-                _tracker);
+                _tracker,
+                _runningFlows,
+                _thresholds);
 
             EtlLog.PipelineConfigurationLoaded(_logger, configuration.Name, "Graph");
             return GenericResult<IEtlPipeline>.Success(pipeline);

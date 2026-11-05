@@ -342,8 +342,8 @@ under a non-unique lookup is a two-element list nobody inspects and every caller
 | `TC012` | Error | option name collides with a generated member |
 | `ST001`–`ST006` | as above | the service-type equivalents |
 
-Related analyzers: `FDW025` (static `Instance` property forbidden), `FDW026` (duplicate option Id),
-`FDW027` (missing parameterless constructor), `FDW028`/`FDW029` (abstract members on an option),
+Related analyzers: `FDW025` (static `Instance` property forbidden),
+`FDW027` (missing parameterless constructor on a `[TypeOption]` or `[Implementation]`),
 `STC001`/`STC002` (phase-func ownership on service types).
 
 ---

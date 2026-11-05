@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Linq;
 using Fdw.Commands.Data.Ddl;
+using Fdw.Configuration.Persistence.Schema;
 
 namespace Fdw.Commands.Data.Tests.Ddl;
 
@@ -204,13 +205,25 @@ public sealed class CreateTableCommandTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
+    public void WithForeignKeyRefusesAMissingReferentialAction()
+    {
+        // FDW-3610: no default action; a foreign key states both, NoAction included.
+        var command = new CreateTableCommand("Orders");
+
+        Should.Throw<ArgumentNullException>(() => command.WithForeignKey("CustomerId", "Customers", "Id", null!, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentNullException>(() => command.WithForeignKey("CustomerId", "Customers", "Id", ForeignKeyActions.NoAction, null!));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
     public void WithForeignKey_AddsForeignKeyConstraint()
     {
         // Arrange
         var command = new CreateTableCommand("Orders");
 
         // Act
-        command.WithForeignKey("CustomerId", "Customers", "Id");
+        command.WithForeignKey("CustomerId", "Customers", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction);
 
         // Assert
         command.ForeignKeys.Count.ShouldBe(1);
@@ -258,8 +271,8 @@ public sealed class CreateTableCommandTests
         var command = new CreateTableCommand("Orders");
 
         // Act & Assert
-        Should.Throw<ArgumentException>(() => command.WithForeignKey(null!, "Customers", "Id"));
-        Should.Throw<ArgumentException>(() => command.WithForeignKey("", "Customers", "Id"));
+        Should.Throw<ArgumentException>(() => command.WithForeignKey(null!, "Customers", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentException>(() => command.WithForeignKey("", "Customers", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
     }
 
     [Fact]
@@ -271,8 +284,8 @@ public sealed class CreateTableCommandTests
         var command = new CreateTableCommand("Orders");
 
         // Act & Assert
-        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", null!, "Id"));
-        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", "", "Id"));
+        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", null!, "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", "", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
     }
 
     [Fact]
@@ -284,8 +297,8 @@ public sealed class CreateTableCommandTests
         var command = new CreateTableCommand("Orders");
 
         // Act & Assert
-        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", "Customers", null!));
-        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", "Customers", ""));
+        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", "Customers", null!, ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentException>(() => command.WithForeignKey("CustomerId", "Customers", "", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
     }
 
     #endregion
@@ -381,7 +394,7 @@ public sealed class CreateTableCommandTests
         var result = command
             .WithColumn("Id", SqlDbType.Int, isPrimaryKey: true, isIdentity: true)
             .WithColumn("OrderDate", SqlDbType.DateTime2, isRequired: true)
-            .WithForeignKey("CustomerId", "Customers", "Id", onDelete: ForeignKeyActions.Cascade)
+            .WithForeignKey("CustomerId", "Customers", "Id", onDelete: ForeignKeyActions.Cascade, onUpdate: ForeignKeyActions.NoAction)
             .WithIndex("IX_Orders_OrderDate", new[] { "OrderDate" });
 
         // Assert
@@ -410,7 +423,7 @@ public sealed class CreateTableCommandTests
         .WithColumn("SmtpHost", SqlDbType.NVarChar, maxLength: 255, isRequired: true)
         .WithColumn("SmtpPort", SqlDbType.Int, isRequired: true, defaultValue: "587")
         .WithColumn("CreatedAt", SqlDbType.DateTime2, isRequired: true, defaultValue: "GETUTCDATE()")
-        .WithForeignKey("ConnectionTypeId", "ConnectionTypes", "Id", onDelete: ForeignKeyActions.Cascade)
+        .WithForeignKey("ConnectionTypeId", "ConnectionTypes", "Id", onDelete: ForeignKeyActions.Cascade, onUpdate: ForeignKeyActions.NoAction)
         .WithIndex("IX_EmailConfigurations_CreatedAt", new[] { "CreatedAt" });
 
         // Assert

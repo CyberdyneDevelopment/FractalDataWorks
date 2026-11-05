@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Workspaces.Results;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -62,9 +63,25 @@ public abstract class DeleteWorkspaceEndpointBase : CrudDeleteEndpointBase<Works
         // Deleting somebody else's project is the sharpest form of the thing workspaces:write used
         // to permit across the whole tenant, so it asks the same question the update does.
         var permitted = await _access.MayWrite(found.Value, ct).ConfigureAwait(false);
-        return permitted.IsFailure
-            ? permitted
+        if (permitted.IsFailure) return permitted;
+
+        var unprotected = await RefuseDefault(found.Value, ct).ConfigureAwait(false);
+        return unprotected.IsFailure
+            ? unprotected
             : await DeleteWithPermissions(found.Value, ct).ConfigureAwait(false);
+    }
+
+    // The default workspace of an organization is where its things are placed when they name no workspace (FDW-3668), so it stays.
+    private async Task<IGenericResult> RefuseDefault(IWorkspaceImplementationConfiguration workspace, CancellationToken ct)
+    {
+        var ownership = await WorkspaceOwnershipReader.Read(Resolve<IOrganizationProvider>(), workspace, Logger, ct).ConfigureAwait(false);
+        if (ownership.IsFailure) return ownership;
+
+        return ownership.Value is { DefaultFor: { } organization }
+            ? GenericResult.Failure(
+                WorkspacesResultCodes.ByName("DefaultWorkspaceProtected"), Logger,
+                ResultDetails.Create("name", workspace.Name, "organization", organization.Name))
+            : GenericResult.Success();
     }
 
     /// <summary>Deletes the workspace, then the variations it owns, then its own permissions and their grants.</summary>

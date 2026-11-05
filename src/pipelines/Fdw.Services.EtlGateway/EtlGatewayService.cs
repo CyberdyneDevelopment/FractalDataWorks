@@ -57,7 +57,7 @@ public sealed class EtlGatewayService : IEtlGateway
         var problem = command.FirstProblem();
         if (problem is not null)
         {
-            return GenericResult<T>.Failure(EtlGatewayLog.ScriptedCommandInvalid(_logger, dataStore, command.CommandType, problem));
+            return GenericResult<T>.Failure(EtlGatewayLog.ScriptedCommandInvalid(_logger, dataStore, command.CommandType, problem.Message));
         }
 
         // Why a role and not the system context: a script is arbitrary text, so it is run on behalf of a person or a run that
@@ -104,7 +104,7 @@ public sealed class EtlGatewayService : IEtlGateway
         var store = await _dataStores.Get(dataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (store.IsFailure || store.Value is null)
         {
-            return GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, store.CurrentMessage ?? "no data store has that name"));
+            return GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, store.NoValueReason().Message));
         }
 
         if (store.Value.ConnectionId == Guid.Empty)
@@ -115,11 +115,12 @@ public sealed class EtlGatewayService : IEtlGateway
         var connection = await _connections.Get(store.Value.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (connection.IsFailure || connection.Value is null)
         {
-            return GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, connection.CurrentMessage ?? "its connection could not be resolved"));
+            return GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, connection.NoValueReason().Message));
         }
 
-        var scripted = connection.Value as IScriptedDataConnection
-            ?? ScriptedConnectionTypes.All().Select(type => type.Adapt(connection.Value)).FirstOrDefault(adapted => adapted is not null);
+        var scripted = connection.Value as IScriptedDataConnection;
+        if (scripted is null)
+            scripted = ScriptedConnectionTypes.All().Select(type => type.Adapt(connection.Value)).FirstOrDefault(adapted => adapted is not null);
         return scripted is null
             ? GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.NotSupported(_logger, dataStore, nameof(IScriptedDataCommand)))
             : GenericResult<IScriptedDataConnection>.Success(scripted);

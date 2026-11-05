@@ -23,7 +23,7 @@ public partial class NotificationListConfiguration
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether this notification list is enabled.</summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets whether this is the current version of the record.</summary>
     public bool IsCurrent { get; set; } = true;

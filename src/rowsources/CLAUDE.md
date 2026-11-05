@@ -35,18 +35,14 @@ The public interfaces and abstract bases the domain's `.Abstractions` projects d
 - `IRecordSourceType` (Fdw.Data.RowSources.Abstractions)
 - `RowMappingContextBase` (Fdw.Data.RowSources.Abstractions)
 - `RecordWriterTypeBase` (Fdw.Data.RowSources.Abstractions)
-- `RestPaginationStyleBase` (Fdw.Data.RowSources.Abstractions)
-- `HttpRowSourceResultCodeBase` (Fdw.Data.RowSources.Abstractions)
 - `RowMapperTypeBase` (Fdw.Data.RowSources.Abstractions)
 - `IAsyncRowSourceReader` (Fdw.Data.RowSources.Abstractions)
-- `IRestPaginationStyle` (Fdw.Data.RowSources.Abstractions)
-- `HttpRowEnumeratorBase` (Fdw.Data.RowSources.Abstractions)
 - `IRowMapperType` (Fdw.Data.RowSources.Abstractions)
 - and 3 more in the `.Abstractions` projects above
 
 ## Rules that matter here
 
-- No fallbacks: a missing value fails with a MessageLogging error and a failed result. The only `??` allowed is `logger ?? NullLogger<T>.Instance` in a constructor.
+- No fallbacks: a `??` never falls back to a value that could be a real one, and a missing value fails with a MessageLogging error and a failed result. Allowed: a null logger, `?? string.Empty`, `?? []`, `??=` on a field or local, a chain of failure results or messages, a `[PlaceholderText]` constant, a `[PlatformDefault]` member, and a member Mike approved with `[ApprovedFallback]`. Never a default message. FDW055 enforces it.
 - Log through MessageLogging (source-generated messages), never raw `ILogger` calls.
 - Return `IGenericResult` with a ResultCode; a failure never carries a plain string.
 - All data access goes through `IDataGateway.Execute()` with command objects. No `SqlConnection`, `SqlCommand` or connection string outside the connection projects.
@@ -60,7 +56,6 @@ The public interfaces and abstract bases the domain's `.Abstractions` projects d
 Run a test project from the repository root:
 
 - `dotnet test public/tests/rowsources/Fdw.Data.RowSources.Abstractions.Tests/Fdw.Data.RowSources.Abstractions.Tests.csproj -c Release`
-- `dotnet test public/tests/rowsources/Fdw.Data.RowSources.Http.Abstractions.Tests/Fdw.Data.RowSources.Http.Abstractions.Tests.csproj -c Release`
 - `dotnet test public/tests/rowsources/Fdw.Data.RowSources.RoundTrip.Tests/Fdw.Data.RowSources.RoundTrip.Tests.csproj -c Release`
 - `dotnet test public/tests/rowsources/Fdw.Data.RowSources.Tests/Fdw.Data.RowSources.Tests.csproj -c Release`
 

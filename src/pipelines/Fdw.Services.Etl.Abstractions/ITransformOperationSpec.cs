@@ -18,8 +18,8 @@ public interface ITransformOperationSpec
     /// <summary>Gets the execution order of this transform within the pipeline.</summary>
     int ExecutionOrder { get; }
 
-    /// <summary>Gets whether the step runs. A step that does not say is enabled.</summary>
-    bool IsEnabled { get; }
+    /// <summary>Gets whether the step runs; null when the caller does not say, which the stage mapper refuses (FDW-3931).</summary>
+    bool? IsEnabled { get; }
 
     /// <summary>Gets the group-by field names (for Aggregate transforms).</summary>
     IReadOnlyList<string> GroupByFields { get; }

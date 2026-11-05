@@ -41,6 +41,11 @@ public class UpdateScheduleClientRequest
     public string? TimeZoneId { get; set; }
 
     /// <summary>
+    /// Gets or sets what the scheduler does with a cron fire time that passed while it was down (FDW-3788): <c>Skip</c> or <c>FireOnce</c>. Omitted leaves it unchanged.
+    /// </summary>
+    public string? MissedFireRule { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the schedule is enabled.
     /// </summary>
     public bool? IsEnabled { get; set; }

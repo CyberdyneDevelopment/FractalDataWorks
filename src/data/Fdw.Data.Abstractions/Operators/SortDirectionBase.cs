@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Conventions;
 
 namespace Fdw.Data.Abstractions;
 
@@ -8,6 +9,10 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 public abstract class SortDirectionBase : TypeOptionBase<SortDirectionBase>, ISortDirection
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Sort";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SortDirectionBase"/> class.
     /// </summary>
@@ -22,7 +27,7 @@ public abstract class SortDirectionBase : TypeOptionBase<SortDirectionBase>, ISo
         bool isAscending,
         string sqlKeyword,
         string? category = null)
-        : base(name, $"Data:Operators:Sort:{name}", $"{name} Sort Direction", description, category ?? "Sort")
+        : base(name, $"Data:Operators:Sort:{name}", $"{name} Sort Direction", description, category ?? DefaultCategory)
     {
         IsAscending = isAscending;
         SqlKeyword = sqlKeyword;

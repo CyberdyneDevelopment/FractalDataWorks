@@ -300,12 +300,10 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         var result = new List<IContainerKeyField>(keyCfg.KeyFields.Count);
         foreach (var kfCfg in keyCfg.KeyFields.OrderBy(kf => kf.Ordinal))
         {
-            if (kfCfg.Name is null)
-                continue;
-
-            if (!localFieldsByName.TryGetValue(kfCfg.Name, out var localField))
+            var fieldName = KeyFieldName(kfCfg, owner.Config);
+            if (fieldName is null || !localFieldsByName.TryGetValue(fieldName, out var localField))
             {
-                DataStoreLoaderLog.BuilderKeyFieldNotFound(_logger, kfCfg.Name, keyCfg.Name, owner.Config.Name);
+                DataStoreLoaderLog.BuilderKeyFieldNotFound(_logger, KeyFieldReference(kfCfg), keyCfg.Name, owner.Config.Name);
                 continue;
             }
 
@@ -314,6 +312,18 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
 
         return result;
     }
+
+    // The field a key field names, read the way its row states it. A stored row cites its field by DataContainerFieldId and
+    // carries no name; the schema JSON a host ships names the field and carries no id. Each row states one of the two, and
+    // that one is what is resolved: a stated id that matches no field of the container is not read as its Name (FDW-3454).
+    private static string? KeyFieldName(DataContainerKeyFieldConfiguration keyField, DataContainerConfiguration container)
+        => keyField.DataContainerFieldId != Guid.Empty
+            ? container.Fields.FirstOrDefault(field => field.Id == keyField.DataContainerFieldId)?.Name
+            : keyField.Name;
+
+    // What a key field states, for a log line: the id it cites, or the name it gives.
+    private static string KeyFieldReference(DataContainerKeyFieldConfiguration keyField)
+        => keyField.DataContainerFieldId != Guid.Empty ? keyField.DataContainerFieldId.ToString() : keyField.Name;
 
     private IDataField? ResolveReferencedField(
         DataContainerKeyConfiguration keyCfg,
@@ -338,7 +348,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
 
         var referencedFieldName = referencedKeyCfg.KeyFields
             .OrderBy(kf => kf.Ordinal)
-            .Select(kf => kf.Name)
+            .Select(kf => KeyFieldName(kf, referencedBuilt.Config))
             .FirstOrDefault(n => !string.IsNullOrEmpty(n));
 
         if (referencedFieldName is null)

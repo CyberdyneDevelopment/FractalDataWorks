@@ -53,7 +53,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
         {
             return GenericResult<IReadOnlyList<DataSetFieldDefinition>>.Failure(
                 DataSetSchemaLog.GetSchemaFailed(_logger, dataSetId,
-                    loaded.CurrentMessage ?? "Provider returned failure"));
+                    loaded.NoValueReason().Message));
         }
 
         IReadOnlyList<DataSetFieldDefinition> fields =
@@ -90,7 +90,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
         {
             return GenericResult.Failure(
                 DataSetSchemaLog.SaveSchemaFailed(_logger, dataSetId,
-                    loaded.CurrentMessage ?? "Provider returned failure"));
+                    loaded.NoValueReason().Message));
         }
 
         var dataSet = loaded.Value;
@@ -111,7 +111,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
         {
             return GenericResult.Failure(
                 DataSetSchemaLog.SaveSchemaFailed(_logger, dataSetId,
-                    result.CurrentMessage ?? "Provider returned failure"));
+                    result.FailureReason().Message));
         }
 
         DataSetSchemaLog.SaveSchemaSucceeded(_logger, dataSetId);
@@ -131,7 +131,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
         {
             return GenericResult.Failure(
                 DataSetSchemaLog.GetSchemaFailed(_logger, physicalDataSetId,
-                    physicalResult.CurrentMessage ?? "Failed to load physical schema"));
+                    physicalResult.FailureReason().Message));
         }
 
         var abstractResult = await GetSchema(abstractDataSetId, cancellationToken).ConfigureAwait(false);
@@ -140,7 +140,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
         {
             return GenericResult.Failure(
                 DataSetSchemaLog.GetSchemaFailed(_logger, abstractDataSetId,
-                    abstractResult.CurrentMessage ?? "Failed to load abstract schema"));
+                    abstractResult.FailureReason().Message));
         }
 
         var physicalFields = physicalResult.Value!;

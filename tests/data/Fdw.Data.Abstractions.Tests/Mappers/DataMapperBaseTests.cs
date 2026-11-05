@@ -149,9 +149,15 @@ public sealed class DataMapperBaseTests
     private sealed class TestDataMapper : DataMapperBase<TestDataTypeConverter, TestDataTypeConverter>
     {
         public TestDataMapper(TestDataTypeConverter source, TestDataTypeConverter target)
-            : base("Source_to_Target", "Source → Target", source, target)
+            : base("Source_to_Target", "Source → Target")
         {
+            SourceConverter = source;
+            TargetConverter = target;
         }
+
+        public override TestDataTypeConverter SourceConverter { get; }
+
+        public override TestDataTypeConverter TargetConverter { get; }
 
         public override object? Map(object? sourceValue)
         {

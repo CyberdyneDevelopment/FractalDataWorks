@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Collections;
+using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -19,6 +20,7 @@ public class DeleteCommandBuilder
     private string? _pathName;
     private readonly Stack<FilterGroupBuilder> _groupStack = new();
     private FilterGroupBuilder? _rootGroup;
+    private bool _allRows;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteCommandBuilder"/> class.
@@ -88,6 +90,17 @@ public class DeleteCommandBuilder
     }
 
     /// <summary>
+    /// Asks for every row of the container to be removed. A delete with no <c>Where</c> is refused unless this is called, and one
+    /// with a <c>Where</c> is refused when it is (FDW-3660), so emptying a container is always said, never a forgotten filter.
+    /// </summary>
+    /// <returns>The builder for method chaining.</returns>
+    public DeleteCommandBuilder AllRows()
+    {
+        _allRows = true;
+        return this;
+    }
+
+    /// <summary>
     /// Begin a new AND group: (condition1 AND condition2 AND ...)
     /// Must call EndGroup() to close.
     /// </summary>
@@ -152,13 +165,18 @@ public class DeleteCommandBuilder
     /// Builds and returns a <see cref="DataGatewayCall"/> containing the delete command
     /// and its <see cref="DataStoreTarget"/> address.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when DataStore or Path is not specified.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when DataStore or Path is not specified, a filter group is still open, or the
+    /// delete does not state its rows: no <c>Where</c> and no <see cref="AllRows"/>, or both.</exception>
     public DataGatewayCall Build()
     {
         if (string.IsNullOrWhiteSpace(_dataStoreName))
             throw new InvalidOperationException("DataStore must be specified. Call DataStore() before Build().");
         if (string.IsNullOrWhiteSpace(_pathName))
             throw new InvalidOperationException("Path must be specified. Call Path() before Build().");
+        // A condition written inside a group reaches the filter only when EndGroup() closes that group, so building with a group still
+        // open would drop its conditions: a Delete or Update would reach every row and a Query would return every row (FDW-3598).
+        if (_groupStack.Count > 0)
+            throw new InvalidOperationException($"{_groupStack.Count} filter group(s) still open. Call EndGroup() for each BeginAndGroup() or BeginOrGroup() before Build().");
 
         IFilterExpression? filter = null;
 
@@ -185,7 +203,10 @@ public class DeleteCommandBuilder
             }
         }
 
-        var command = new DeleteCommand { Filter = filter };
+        var command = new DeleteCommand { Filter = filter, AllRows = _allRows };
+        if (DeleteScope.Problem(command) is { } problem)
+            throw new InvalidOperationException($"A Delete on container '{_containerName}' is refused: {problem}.");
+
         return new DataGatewayCall(command, new DataStoreTarget(_dataStoreName, _pathName, _containerName));
     }
 

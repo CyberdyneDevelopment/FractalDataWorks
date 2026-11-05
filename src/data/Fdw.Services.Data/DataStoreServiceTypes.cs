@@ -55,6 +55,21 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
     static DataStoreServiceTypes()
     {
         var collectOptions = RegisterFunc;
+        var initializeOptions = InitializationFunc;
+
+        // The implementation providers are attached to their domain providers after Build, once the options have initialized, so a registration that fails stops the host with
+        // a failed result and does not throw out of a singleton factory or pass unseen (FDW-3966).
+        Initialization((host, loggerFactory) =>
+        {
+            var initialized = initializeOptions(host, loggerFactory);
+            if (initialized.IsFailure)
+            {
+                return initialized;
+            }
+
+            var attached = DataDomainRegistrations.Attach(host.Services);
+            return attached.IsFailure ? attached.ToNewResult<IHost>() : GenericResult<IHost>.Success(host);
+        });
 
         Registration((builder, loggerFactory) =>
         {
@@ -79,10 +94,8 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 var domain = new DataStoreConfigurationProvider(
                     sp.GetRequiredService<ILogger<DataStoreConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data", "DataStore");
-                var implementation = sp.GetRequiredService<IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>>();
-                foreach (var kind in DataStoreTypes.All())
-                    domain.Register(kind.Name, implementation);
+                    DataStoreTypes.ConfigurationConnection, "data", "DataStore",
+                    ConfigurationPlacementSource.From(sp));
                 return domain;
             });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(
@@ -105,53 +118,38 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<ILogger<FederatedDataSetConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data", "FederatedDataSetConfiguration"));
+            builder.Services.TryAddSingleton<VariationDataSetConfigurationProvider>(sp =>
+                new VariationDataSetConfigurationProvider(
+                    sp.GetRequiredService<ILogger<VariationDataSetConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection, "data", "VariationDataSetConfiguration"));
             builder.Services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
             {
                 var domain = new DataSetConfigurationProvider(
                     sp.GetRequiredService<ILogger<DataSetConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data", "DataSet");
-                domain.Register(SimpleDataSetConfiguration.ImplementationName,
-                    sp.GetRequiredService<SimpleDataSetConfigurationProvider>());
-                domain.Register(CompoundDataSetConfiguration.ImplementationName,
-                    sp.GetRequiredService<CompoundDataSetConfigurationProvider>());
-                domain.Register(FederatedDataSetConfiguration.ImplementationName,
-                    sp.GetRequiredService<FederatedDataSetConfigurationProvider>());
+                    DataStoreTypes.ConfigurationConnection, "data", "DataSet",
+                    ConfigurationPlacementSource.From(sp));
                 return domain;
             });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IDataSetConfigurationProvider>());
 
-            // A variation is a view of a data set, in its own domain so it never appears among the data sets
-            // (FDW-1022). Each kind is an implementation with its own table (FDW-1026): Scoped, a data set a
-            // workspace owns as its own view of a main one, and DataView, a saved chart owned by a user. The domain
-            // row says which kind a variation is.
-            builder.Services.TryAddSingleton<ScopedDataSetVariationConfigurationProvider>(sp =>
-                new ScopedDataSetVariationConfigurationProvider(
-                    sp.GetRequiredService<ILogger<ScopedDataSetVariationConfigurationProvider>>(),
+            // A variation is a view of a data set, and a data set of kind Variation (FDW-3638): it is stored in data.DataSet and read
+            // and written through the data set provider above, with the kinds before it. The variation provider narrows that to the
+            // variations, and reads the lists of them from the data.DataSetVariationList view.
+            builder.Services.TryAddSingleton<DataSetVariationListProvider>(sp =>
+                new DataSetVariationListProvider(
+                    sp.GetRequiredService<ILogger<DataSetVariationListProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data", "ScopedDataSetVariationConfiguration"));
-            builder.Services.TryAddSingleton<DataViewDataSetVariationConfigurationProvider>(sp =>
-                new DataViewDataSetVariationConfigurationProvider(
-                    sp.GetRequiredService<ILogger<DataViewDataSetVariationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data", "DataViewDataSetVariationConfiguration"));
+                    DataStoreTypes.ConfigurationConnection, "data", "DataSetVariationList"));
             builder.Services.TryAddSingleton<DataSetVariationConfigurationProvider>(sp =>
-            {
-                var domain = new DataSetVariationConfigurationProvider(
-                    sp.GetRequiredService<ILogger<DataSetVariationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data", "DataSetVariation");
-                domain.Register(ScopedDataSetVariationConfiguration.ImplementationName,
-                    sp.GetRequiredService<ScopedDataSetVariationConfigurationProvider>());
-                domain.Register(DataViewDataSetVariationConfiguration.ImplementationName,
-                    sp.GetRequiredService<DataViewDataSetVariationConfigurationProvider>());
-                return domain;
-            });
+                new DataSetVariationConfigurationProvider(
+                    sp.GetRequiredService<IDataSetConfigurationProvider>(),
+                    sp.GetRequiredService<DataSetVariationListProvider>(),
+                    sp.GetService<ILogger<DataSetVariationConfigurationProvider>>()));
             builder.Services.TryAddSingleton<IDataSetVariationConfigurationProvider>(
                 sp => sp.GetRequiredService<DataSetVariationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetVariationImplementationConfiguration>>(
-                sp => sp.GetRequiredService<IDataSetVariationConfigurationProvider>());
 
             // A name that is a data set or a variation of one, resolved in one place for every route that only reads (FDW-2390).
             builder.Services.TryAddSingleton<IDataSetResolver>(sp =>
@@ -192,12 +190,6 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<ILogger<CategoryConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "catalog", "Category");
-                domain.Register(DataSetCategoryConfiguration.ImplementationName,
-                    sp.GetRequiredService<DataSetCategoryConfigurationProvider>());
-                domain.Register(CustomCategoryConfiguration.ImplementationName,
-                    sp.GetRequiredService<CustomCategoryConfigurationProvider>());
-                domain.Register(GlossaryCategoryConfiguration.ImplementationName,
-                    sp.GetRequiredService<GlossaryCategoryConfigurationProvider>());
                 return domain;
             });
             builder.Services.TryAddSingleton<ICategoryConfigurationProvider>(
@@ -250,20 +242,6 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<ILogger<TransformationConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "transform", "Transformation");
-                domain.Register(FieldTransformationConfiguration.ImplementationName,
-                    sp.GetRequiredService<FieldTransformationConfigurationProvider>());
-                domain.Register(MapTransformationConfiguration.ImplementationName,
-                    sp.GetRequiredService<MapTransformationConfigurationProvider>());
-                domain.Register(FilterTransformationConfiguration.ImplementationName,
-                    sp.GetRequiredService<FilterTransformationConfigurationProvider>());
-                domain.Register(CalculateTransformationConfiguration.ImplementationName,
-                    sp.GetRequiredService<CalculateTransformationConfigurationProvider>());
-                domain.Register(BuiltTransformationConfiguration.ImplementationName,
-                    sp.GetRequiredService<BuiltTransformationConfigurationProvider>());
-                domain.Register(AggregateTransformationConfiguration.ImplementationName,
-                    sp.GetRequiredService<AggregateTransformationConfigurationProvider>());
-                domain.Register(LookupTransformationConfiguration.ImplementationName,
-                    sp.GetRequiredService<LookupTransformationConfigurationProvider>());
                 return domain;
             });
             builder.Services.TryAddSingleton<ITransformationConfigurationProvider>(

@@ -101,7 +101,7 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
             .Get(ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!allResult.IsSuccess)
         {
-            var reason = allResult.CurrentMessage ?? "Unknown error";
+            var reason = allResult.FailureReason().Message;
             return GenericResult<IHealthCheckResult>.Failure(
                 ConnectionsHealthLog.AllConnectionsLoadFailed(_logger, reason));
         }
@@ -156,10 +156,15 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         try
         {
             var getResult = await connectionProvider.Get(connection.Name, cancellationToken).ConfigureAwait(false);
-            if (!getResult.IsSuccess || getResult.Value is null)
+            if (!getResult.IsSuccess)
             {
-                ConnectionsHealthLog.ConnectionResolutionFailed(
-                    _logger, connection.Name, getResult.CurrentMessage ?? "Connection could not be resolved");
+                ConnectionsHealthLog.ConnectionResolutionFailed(_logger, connection.Name, getResult.FailureReason().Message);
+                return UnhealthyState;
+            }
+
+            if (getResult.Value is null)
+            {
+                ConnectionsHealthLog.ConnectionResolvedEmpty(_logger, connection.Name);
                 return UnhealthyState;
             }
 
@@ -172,7 +177,7 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
             var probeResult = await probe.Probe(cancellationToken).ConfigureAwait(false);
             if (!probeResult.IsSuccess)
             {
-                ConnectionsHealthLog.ProbeFailed(_logger, connection.Name, probeResult.CurrentMessage ?? "Probe failed");
+                ConnectionsHealthLog.ProbeFailed(_logger, connection.Name, probeResult.FailureReason().Message);
                 return UnhealthyState;
             }
 

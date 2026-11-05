@@ -502,7 +502,7 @@ public sealed class LookupTransformTypeTests
                 JoinType = "Left",
             }
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -539,7 +539,7 @@ public sealed class LookupTransformTypeTests
             l.LookupDataStorePath = "ref/v1";
             l.LookupContainerName = "devices";
         });
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
 
@@ -556,7 +556,7 @@ public sealed class LookupTransformTypeTests
     public void ALookupNamingNeitherADataSetNorAContainerIsRefused()
     {
         var spec = LookupSpec(_ => { });
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance).IsSuccess.ShouldBeFalse();
     }
@@ -573,7 +573,7 @@ public sealed class LookupTransformTypeTests
             l.LookupDataStorePath = "ref/v1";
             l.LookupContainerName = "devices";
         });
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance).IsSuccess.ShouldBeFalse();
     }
@@ -588,7 +588,7 @@ public sealed class LookupTransformTypeTests
             l.LookupDataStoreName = "Warehouse";
             l.LookupContainerName = "devices";
         });
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance).IsSuccess.ShouldBeFalse();
     }
@@ -600,7 +600,7 @@ public sealed class LookupTransformTypeTests
     {
         // Arrange
         var spec = new FakeTransformOperationSpec { Name = "Lookup1", OperationType = "Lookup" };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -628,7 +628,7 @@ public sealed class LookupTransformTypeTests
                 JoinType = "Left",
             }
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -657,7 +657,7 @@ public sealed class LookupTransformTypeTests
                 JoinType = "FullOuter",
             }
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);

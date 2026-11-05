@@ -193,7 +193,7 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         var filterResult = ctx.Pushdown.TranslateToPhysical(queryCommand.Filter, fieldMappings);
         if (!filterResult.IsSuccess)
             return (true, null, GenericResult<T>.Failure(
-                DataGatewayLogger.FilterTranslationFailed(ctx.Logger, primarySource.SourceName, filterResult.CurrentMessage ?? "Unknown error")));
+                DataGatewayLogger.FilterTranslationFailed(ctx.Logger, primarySource.SourceName, filterResult.FailureReason().Message)));
 
         return (false, filterResult.Value, null);
     }
@@ -224,8 +224,7 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, primarySource.SourceName));
 
-        var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
-        if (connectionId == Guid.Empty)
+        if (containerResult.Value.Parent?.Store?.ConnectionId is not { } connectionId || connectionId == Guid.Empty)
             return GenericResult<T>.Failure(
                 DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.DataStoreName,
                     "the container's DataStore carries no ConnectionId"));
@@ -233,7 +232,7 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
             return GenericResult<T>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.DataStoreName, connectionResult.NoValueReason().Message));
 
         // Execute the pushed-down compound query through the single connection.
         var result = await connectionResult.Value.Execute<T>(sourceQuery, containerResult.Value, ct).ConfigureAwait(false);

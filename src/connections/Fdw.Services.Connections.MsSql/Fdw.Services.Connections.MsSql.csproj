@@ -36,6 +36,7 @@
     <ProjectReference Include="..\..\data\Fdw.Data.DataNodes\Fdw.Data.DataNodes.csproj" />
     <ProjectReference Include="..\Fdw.Data.MsSql\Fdw.Data.MsSql.csproj" />
     <ProjectReference Include="..\Fdw.Types.MsSql\Fdw.Types.MsSql.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -66,5 +67,10 @@
     <Folder Include="Messages\" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <!-- A connection or storage adapter: it may use ADO.NET directly (FDW052, FDW-3579). -->
+    <AssemblyAttribute Include="Fdw.Conventions.DataAccessAdapterAttribute" />
+  </ItemGroup>
 
 </Project>

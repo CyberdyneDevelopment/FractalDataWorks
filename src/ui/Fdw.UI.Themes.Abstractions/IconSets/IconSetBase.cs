@@ -49,4 +49,7 @@ public abstract class IconSetBase : TypeOptionBase<IconSetBase>, IIconSet
 
     /// <inheritdoc />
     public abstract string LoadingIcon { get; }
+
+    /// <inheritdoc />
+    public abstract string NodeIcon(string nodeType);
 }

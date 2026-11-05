@@ -109,7 +109,7 @@ public sealed class SqlWorkspace : ISqlWorkspace, IDisposable
     public async Task<IGenericResult<IReadOnlyList<string>>> ApplyChanges(CancellationToken cancellationToken = default)
     {
         var written = new List<string>();
-        var failures = new List<IGenericResult>();
+        var failures = new List<string>();
         foreach (var path in _scripts.Keys.ToList())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -125,13 +125,12 @@ public sealed class SqlWorkspace : ISqlWorkspace, IDisposable
             }
             else
             {
-                failures.Add(fileResult);
+                failures.Add(fileResult.FailureReason().Message);
             }
         }
         if (failures.Count > 0)
         {
-            var aggregated = string.Join(" || ",
-                failures.Select(f => f.CurrentMessage ?? f.Details?.ToString() ?? "Unknown error"));
+            var aggregated = string.Join(" || ", failures);
             return GenericResult<IReadOnlyList<string>>.Failure(
                 SqlWorkspaceResultCodes.ApplyChangesFailed,
                 ResultDetails.Create("WrittenCount", written.Count)
@@ -189,7 +188,7 @@ public sealed class SqlWorkspace : ISqlWorkspace, IDisposable
 
         var projectDir = Path.GetDirectoryName(Path.GetFullPath(sqlprojPath))!;
         var doc = await Task.Run(() => XDocument.Load(sqlprojPath), cancellationToken).ConfigureAwait(false);
-        var ns = doc.Root?.GetDefaultNamespace() ?? XNamespace.None;
+        var ns = (doc.Root ?? throw new InvalidOperationException($"{sqlprojPath} loaded with no root element.")).GetDefaultNamespace();
 
         var scriptPaths = new List<string>();
         foreach (var build in doc.Descendants(ns + "Build"))
@@ -207,7 +206,7 @@ public sealed class SqlWorkspace : ISqlWorkspace, IDisposable
 
         var model = new TSqlModel(SqlServerVersion.Sql160, new TSqlModelOptions());
         var scripts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var parseFailures = new List<IGenericResult>();
+        var parseFailures = new List<string>();
         foreach (var path in scriptPaths.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -215,14 +214,13 @@ public sealed class SqlWorkspace : ISqlWorkspace, IDisposable
             scripts[path] = text;
             var addResult = AddScriptToModel(model, text, path);
             if (!addResult.IsSuccess)
-                parseFailures.Add(addResult);
+                parseFailures.Add(addResult.FailureReason().Message);
         }
 
         var ws = new SqlWorkspace(Path.GetFullPath(sqlprojPath), model, scripts, logger);
         if (parseFailures.Count > 0)
         {
-            var summary = string.Join(" || ",
-                parseFailures.Select(f => f.CurrentMessage ?? f.Details?.ToString() ?? "Unknown parse error"));
+            var summary = string.Join(" || ", parseFailures);
             return GenericResult<ISqlWorkspace>.Success(ws,
                 $"Loaded {scripts.Count} script(s); {parseFailures.Count} failed parse: {summary}");
         }

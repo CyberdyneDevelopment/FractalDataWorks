@@ -12,6 +12,9 @@ namespace Fdw.Services.Settings;
 /// </summary>
 public static class InstanceCommandTimeout
 {
+    private static readonly TimeoutMessages Messages = new(
+        CommandTimeoutLog.NotPositive, CommandTimeoutLog.NoSettings, CommandTimeoutLog.ReadThroughItself, CommandTimeoutLog.NotStated);
+
     /// <summary>Resolves the command timeout.</summary>
     /// <param name="stated">The command timeout the connection or secret manager states, or <see langword="null"/> when it states none.</param>
     /// <param name="settings">The host's settings, read when the owner states none; <see langword="null"/> in a host that registers no settings.</param>
@@ -20,37 +23,5 @@ public static class InstanceCommandTimeout
     /// <param name="logger">The logger.</param>
     /// <returns>The command timeout in seconds, positive; a failure naming the owner, and the setting when it is the one missing.</returns>
     public static IGenericResult<int> Resolve(int? stated, Lazy<IEffectiveSettingsProvider>? settings, string ownerKind, string ownerName, ILogger logger)
-    {
-        ArgumentNullException.ThrowIfNull(ownerKind);
-        ArgumentNullException.ThrowIfNull(ownerName);
-        ArgumentNullException.ThrowIfNull(logger);
-
-        if (stated is { } own)
-        {
-            return own > 0
-                ? GenericResult<int>.Success(own)
-                : GenericResult<int>.Failure(CommandTimeoutLog.NotPositive(logger, ownerKind, ownerName, own));
-        }
-
-        if (settings is null)
-        {
-            return GenericResult<int>.Failure(CommandTimeoutLog.NoSettings(logger, ownerKind, ownerName, SettingDefinitions.DefaultCommandTimeoutSeconds));
-        }
-
-        IEffectiveSettingsProvider provider;
-        try
-        {
-            provider = settings.Value;
-        }
-        catch (InvalidOperationException)
-        {
-            // Why: the settings are read through connections, so a connection that states no timeout while the connection the settings are read
-            // through is being built asks for the provider it is itself a part of. That is a defect of its configuration, and it says so.
-            return GenericResult<int>.Failure(CommandTimeoutLog.ReadThroughItself(logger, ownerKind, ownerName, SettingDefinitions.DefaultCommandTimeoutSeconds));
-        }
-
-        return provider.TryGetEffectiveValue<int>(SettingDefinitions.DefaultCommandTimeoutSeconds, out var instance) && instance > 0
-            ? GenericResult<int>.Success(instance)
-            : GenericResult<int>.Failure(CommandTimeoutLog.NotStated(logger, ownerKind, ownerName, SettingDefinitions.DefaultCommandTimeoutSeconds));
-    }
+        => InstanceTimeout.Resolve(stated, settings, SettingDefinitions.DefaultCommandTimeoutSeconds, ownerKind, ownerName, logger, Messages);
 }

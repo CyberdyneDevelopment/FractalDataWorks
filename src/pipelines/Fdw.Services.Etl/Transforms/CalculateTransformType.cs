@@ -137,7 +137,7 @@ public sealed class CalculateTransformType : TransformTypeBase
             var transformResult = await Transform(input, config, context, cancellationToken).ConfigureAwait(false);
             if (!transformResult.IsSuccess)
             {
-                context.ReportError(transformResult.CurrentMessage ?? "Calculation failed", input);
+                context.ReportError(transformResult.FailureReason().Message, input);
                 continue;
             }
 
@@ -234,7 +234,7 @@ public sealed class CalculateTransformType : TransformTypeBase
             }
             else if (record.TryGetValue(trimmed, out var value))
             {
-                result += value?.ToString() ?? "";
+                result += value?.ToString() ?? string.Empty;
             }
         }
         return result;

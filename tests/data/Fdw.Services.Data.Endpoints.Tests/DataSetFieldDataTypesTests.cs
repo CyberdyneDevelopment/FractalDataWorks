@@ -56,8 +56,11 @@ public class DataSetFieldDataTypesTests
     [Fact]
     public void MappedFieldsCarryTheStatedNameUnchanged()
     {
-        var mapped = DataSetQueryHelper.MapFields([new CreateDataSetFieldRequest { Name = "Units", DataType = "Int32", IsFilterable = true }]);
+        var mapped = DataSetQueryHelper.MapFields(
+            [new CreateDataSetFieldRequest { Name = "Units", DataType = "Int32", IsFilterable = true, IsNullable = true }],
+            [],
+            new DataSetRequestValues("Stock", NullLogger.Instance));
 
-        mapped.Single().TypeName.ShouldBe("Int32");
+        mapped.Value!.Single().TypeName.ShouldBe("Int32");
     }
 }

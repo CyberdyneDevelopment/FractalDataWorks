@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.UI.Abstractions;
 using Fdw.UI.Abstractions.Components;
 using Fdw.UI.Abstractions.Pages;
 using Fdw.UI.Abstractions.Rendering;
@@ -233,7 +234,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         var labelColor = model.IsRequired ? theme.Colors.Primary : theme.Colors.Foreground;
         var requiredMarker = model.IsRequired ? $"[{theme.Colors.Error}]*[/]" : "";
 
-        console.MarkupLine($"[{labelColor}]{model.Label ?? model.Id}[/]{requiredMarker}");
+        console.MarkupLine($"[{labelColor}]{model.Label}[/]{requiredMarker}");
 
         if (!string.IsNullOrEmpty(model.HelpText))
         {
@@ -242,7 +243,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
         if (string.Equals(context.Mode.Name, "Display", System.StringComparison.Ordinal) || model.IsReadOnly)
         {
-            console.MarkupLine($"  [{theme.Colors.Foreground}]{model.Value ?? "(empty)"}[/]");
+            console.MarkupLine($"  [{theme.Colors.Foreground}]{model.Value ?? UiPlaceholders.EmptyValue}[/]");
         }
     }
 
@@ -252,7 +253,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         var theme = context.Theme;
 
         var icon = model.Value == true ? theme.Icons.CheckedIndicator : theme.Icons.UncheckedIndicator;
-        console.MarkupLine($"[{theme.Colors.Foreground}]{icon} {model.Label ?? model.Id}[/]");
+        console.MarkupLine($"[{theme.Colors.Foreground}]{icon} {model.Label}[/]");
 
         if (!string.IsNullOrEmpty(model.HelpText))
         {
@@ -268,7 +269,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         var labelColor = model.IsRequired ? theme.Colors.Primary : theme.Colors.Foreground;
         var requiredMarker = model.IsRequired ? $"[{theme.Colors.Error}]*[/]" : "";
 
-        console.MarkupLine($"[{labelColor}]{model.Label ?? model.Id}[/]{requiredMarker}");
+        console.MarkupLine($"[{labelColor}]{model.Label}[/]{requiredMarker}");
 
         if (!string.IsNullOrEmpty(model.HelpText))
         {
@@ -277,7 +278,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
         if (string.Equals(context.Mode.Name, "Display", System.StringComparison.Ordinal) || model.IsReadOnly)
         {
-            var displayValue = model.ValueAsObject?.ToString() ?? "(empty)";
+            var displayValue = model.ValueAsObject?.ToString() ?? UiPlaceholders.EmptyValue;
             console.MarkupLine($"  [{theme.Colors.Foreground}]{displayValue}[/]");
         }
     }
@@ -290,7 +291,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         var labelColor = model.IsRequired ? theme.Colors.Primary : theme.Colors.Foreground;
         var requiredMarker = model.IsRequired ? $"[{theme.Colors.Error}]*[/]" : "";
 
-        console.MarkupLine($"[{labelColor}]{model.Label ?? model.Id}[/]{requiredMarker}");
+        console.MarkupLine($"[{labelColor}]{model.Label}[/]{requiredMarker}");
 
         if (!string.IsNullOrEmpty(model.HelpText))
         {
@@ -299,7 +300,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
         if (string.Equals(context.Mode.Name, "Display", System.StringComparison.Ordinal) || model.IsReadOnly)
         {
-            var displayValue = model.Value?.ToString(model.Format, CultureInfo.InvariantCulture) ?? "(empty)";
+            var displayValue = model.Value?.ToString(model.Format, CultureInfo.InvariantCulture) ?? UiPlaceholders.EmptyValue;
             console.MarkupLine($"  [{theme.Colors.Foreground}]{displayValue}[/]");
         }
     }
@@ -312,7 +313,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         var labelColor = model.IsRequired ? theme.Colors.Primary : theme.Colors.Foreground;
         var requiredMarker = model.IsRequired ? $"[{theme.Colors.Error}]*[/]" : "";
 
-        console.MarkupLine($"[{labelColor}]{model.Label ?? model.Id}[/]{requiredMarker}");
+        console.MarkupLine($"[{labelColor}]{model.Label}[/]{requiredMarker}");
 
         if (!string.IsNullOrEmpty(model.HelpText))
         {
@@ -322,7 +323,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         if (string.Equals(context.Mode.Name, "Display", System.StringComparison.Ordinal) || model.IsReadOnly)
         {
             var selectedValue = (model as IInputComponentModel)?.ValueAsObject;
-            var displayText = GetSelectDisplayText(model, selectedValue) ?? "(none)";
+            var displayText = GetSelectDisplayText(model, selectedValue) ?? UiPlaceholders.NoSelection;
             console.MarkupLine($"  [{theme.Colors.Foreground}]{displayText}[/]");
         }
     }
@@ -338,7 +339,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
             ? $" [dim]({model.TypeCollectionName})[/]"
             : "";
 
-        console.MarkupLine($"[{labelColor}]{model.Label ?? model.Id}[/]{requiredMarker}{typeCollectionHint}");
+        console.MarkupLine($"[{labelColor}]{model.Label}[/]{requiredMarker}{typeCollectionHint}");
 
         if (!string.IsNullOrEmpty(model.HelpText))
         {
@@ -350,7 +351,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
             var selectedOption = model.Value.HasValue
                 ? model.Options.FirstOrDefault(o => o.Value == model.Value.Value)
                 : null;
-            var displayText = selectedOption?.DisplayText ?? model.EmptyOptionText;
+            var displayText = selectedOption is null ? model.EmptyOptionText : selectedOption.DisplayText;
             console.MarkupLine($"  [{theme.Colors.Foreground}]{displayText}[/]");
         }
     }
@@ -363,7 +364,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         var labelColor = model.IsRequired ? theme.Colors.Primary : theme.Colors.Foreground;
         var requiredMarker = model.IsRequired ? $"[{theme.Colors.Error}]*[/]" : "";
 
-        console.MarkupLine($"[{labelColor}]{model.Label ?? model.Id}[/]{requiredMarker}");
+        console.MarkupLine($"[{labelColor}]{model.Label}[/]{requiredMarker}");
 
         if (!string.IsNullOrEmpty(model.HelpText))
         {
@@ -422,7 +423,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
         if (model is CheckboxModel checkModel && typeof(T) == typeof(bool))
         {
-            var result = console.Confirm($"[{theme.Colors.Primary}]{checkModel.Label ?? checkModel.Id}[/]", checkModel.Value ?? false);
+            var result = console.Confirm($"[{theme.Colors.Primary}]{checkModel.Label}[/]", checkModel.Value is true);
             return (T)(object)result;
         }
 
@@ -453,7 +454,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
     private static string PromptTextInput(TextInputModel model, IAnsiConsole console, IMenuTheme theme)
     {
-        var prompt = new TextPrompt<string>($"[{theme.Colors.Primary}]{model.Label ?? model.Id}:[/]");
+        var prompt = new TextPrompt<string>($"[{theme.Colors.Primary}]{model.Label}:[/]");
         prompt.AllowEmpty = !model.IsRequired;
 
         if (!string.IsNullOrEmpty(model.DefaultValue))
@@ -503,7 +504,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
     private static DateTime PromptDatePicker(DatePickerModel model, IAnsiConsole console, IMenuTheme theme)
     {
         var format = model.IncludeTime ? $"{model.Format} {model.TimeFormat}" : model.Format;
-        var promptText = $"[{theme.Colors.Primary}]{model.Label ?? model.Id} ({format}):[/]";
+        var promptText = $"[{theme.Colors.Primary}]{model.Label} ({format}):[/]";
 
         var prompt = new TextPrompt<string>(promptText);
         prompt.AllowEmpty = !model.IsRequired;
@@ -549,11 +550,11 @@ public sealed class SpectreUIRenderer : IUIRenderer
         if (options.Count == 0)
         {
             console.MarkupLine($"[{theme.Colors.Warning}]No options available[/]");
-            return model.DefaultValue ?? 0;
+            return model.DefaultValue ?? throw new InvalidOperationException($"Select '{model.Label}' has no enabled options and states no default value.");
         }
 
         var prompt = new SelectionPrompt<SelectOption<int>>()
-            .Title($"[{theme.Colors.Primary}]{model.Label ?? model.Id}:[/]")
+            .Title($"[{theme.Colors.Primary}]{model.Label}:[/]")
             .AddChoices(options)
             .UseConverter(opt => opt.DisplayText)
             .HighlightStyle(new Style(theme.Colors.Selected));
@@ -593,8 +594,8 @@ public sealed class SpectreUIRenderer : IUIRenderer
             if (valueProp != null && displayProp != null)
             {
                 var value = (T)valueProp.GetValue(opt)!;
-                var display = displayProp.GetValue(opt)?.ToString() ?? value?.ToString() ?? "";
-                var isDisabled = disabledProp?.GetValue(opt) as bool? ?? false;
+                var display = displayProp.GetValue(opt)?.ToString() ?? string.Empty;
+                var isDisabled = disabledProp?.GetValue(opt) is true;
 
                 if (!isDisabled)
                 {
@@ -610,7 +611,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
         }
 
         var prompt = new SelectionPrompt<(T Value, string Display, bool IsDisabled)>()
-            .Title($"[{theme.Colors.Primary}]{model.Label ?? model.Id}:[/]")
+            .Title($"[{theme.Colors.Primary}]{model.Label}:[/]")
             .AddChoices(optionList)
             .UseConverter(opt => opt.Display)
             .HighlightStyle(new Style(theme.Colors.Selected));
@@ -621,7 +622,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
     private static T PromptNumeric<T>(IInputComponentModel<T> model, IAnsiConsole console, IMenuTheme theme)
     {
-        var promptText = $"[{theme.Colors.Primary}]{model.Label ?? model.Id}:[/]";
+        var promptText = $"[{theme.Colors.Primary}]{model.Label}:[/]";
         var prompt = new TextPrompt<T>(promptText);
 
         // Get default value if available
@@ -663,7 +664,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
         var title = page.Mode.GetTitlePrefix(page.Title);
 
-        var panel = new Panel(new Markup($"[{theme.Colors.Foreground}]{page.Description ?? ""}[/]"))
+        var panel = new Panel(new Markup($"[{theme.Colors.Foreground}]{page.Description ?? string.Empty}[/]"))
         {
             Header = new PanelHeader($"[{theme.Colors.Primary} bold]{title}[/]"),
             Border = theme.Borders.Panel,
@@ -681,7 +682,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
 
         if (section.IsCollapsible && !section.IsExpanded)
         {
-            console.MarkupLine($"[{theme.Colors.Muted}]{theme.Icons.UnselectedIndicator} {section.Title ?? section.Id} (collapsed)[/]");
+            console.MarkupLine($"[{theme.Colors.Muted}]{theme.Icons.UnselectedIndicator} {section.Title} (collapsed)[/]");
             return;
         }
 

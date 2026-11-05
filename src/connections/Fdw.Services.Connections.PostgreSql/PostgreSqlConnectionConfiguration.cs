@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Data;
+using Fdw.Conventions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.PostgreSql.Authentication;
 
@@ -91,7 +92,10 @@ public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConf
     /// <summary>
     /// Gets or sets the PostgreSQL server hostname or IP address.
     /// </summary>
-    public string Host { get; set; } = "localhost";
+    /// <remarks>
+    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
+    /// </remarks>
+    public string Host { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the database name.
@@ -99,18 +103,17 @@ public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConf
     public string Database { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the PostgreSQL port. Default is 5432.
+    /// Gets or sets the PostgreSQL port.
     /// </summary>
-    public int Port { get; set; } = 5432;
+    public int Port { get; set; }
 
     /// <summary>
     /// Gets or sets the SSL mode for the connection.
     /// </summary>
     /// <remarks>
     /// Supported values: Disable, Allow, Prefer, Require, VerifyCA, VerifyFull.
-    /// Default is "Prefer".
     /// </remarks>
-    public string SslMode { get; set; } = "Prefer";
+    public string SslMode { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the command timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3284).
@@ -125,19 +128,26 @@ public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConf
     public int MaxSerialInsert { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection timeout in seconds.
+    /// Gets or sets the connection timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3580).
     /// </summary>
-    public int ConnectionTimeout { get; set; } = 15;
+    /// <remarks>
+    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultConnectionTimeoutSeconds,
+    /// and is not built when that is not set either, as the command timeout is read (FDW-3284).
+    /// </remarks>
+    public int? ConnectionTimeout { get; set; }
 
     /// <summary>
     /// Gets or sets the default schema to use for operations.
     /// </summary>
-    public string DefaultSchema { get; set; } = "public";
+    /// <remarks>
+    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
+    /// </remarks>
+    public string DefaultSchema { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the maximum pool size.
     /// </summary>
-    public int MaxPoolSize { get; set; } = 100;
+    public int MaxPoolSize { get; set; }
 
     /// <summary>
     /// Gets or sets the minimum pool size.

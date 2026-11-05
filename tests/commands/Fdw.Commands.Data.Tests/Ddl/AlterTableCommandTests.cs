@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Linq;
 using Fdw.Commands.Data.Ddl;
+using Fdw.Configuration.Persistence.Schema;
 
 namespace Fdw.Commands.Data.Tests.Ddl;
 
@@ -326,13 +327,25 @@ public sealed class AlterTableCommandTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
+    public void AddForeignKeyRefusesAMissingReferentialAction()
+    {
+        // FDW-3610: no default action; a foreign key states both, NoAction included.
+        var command = new AlterTableCommand("Orders");
+
+        Should.Throw<ArgumentNullException>(() => command.AddForeignKey("CustomerId", "Customers", "Id", null!, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentNullException>(() => command.AddForeignKey("CustomerId", "Customers", "Id", ForeignKeyActions.NoAction, null!));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
     public void AddForeignKey_AddsOperationToList()
     {
         // Arrange
         var command = new AlterTableCommand("Orders");
 
         // Act
-        command.AddForeignKey("CustomerId", "Customers", "Id");
+        command.AddForeignKey("CustomerId", "Customers", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction);
 
         // Assert
         command.Operations.Count.ShouldBe(1);
@@ -380,8 +393,8 @@ public sealed class AlterTableCommandTests
         var command = new AlterTableCommand("Orders");
 
         // Act & Assert
-        Should.Throw<ArgumentException>(() => command.AddForeignKey(null!, "Customers", "Id"));
-        Should.Throw<ArgumentException>(() => command.AddForeignKey("", "Customers", "Id"));
+        Should.Throw<ArgumentException>(() => command.AddForeignKey(null!, "Customers", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentException>(() => command.AddForeignKey("", "Customers", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
     }
 
     [Fact]
@@ -393,8 +406,8 @@ public sealed class AlterTableCommandTests
         var command = new AlterTableCommand("Orders");
 
         // Act & Assert
-        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", null!, "Id"));
-        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", "", "Id"));
+        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", null!, "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", "", "Id", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
     }
 
     [Fact]
@@ -406,8 +419,8 @@ public sealed class AlterTableCommandTests
         var command = new AlterTableCommand("Orders");
 
         // Act & Assert
-        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", "Customers", null!));
-        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", "Customers", ""));
+        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", "Customers", null!, ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
+        Should.Throw<ArgumentException>(() => command.AddForeignKey("CustomerId", "Customers", "", ForeignKeyActions.NoAction, ForeignKeyActions.NoAction));
     }
 
     #endregion
@@ -503,7 +516,7 @@ public sealed class AlterTableCommandTests
         .ModifyColumn("SmtpHost", SqlDbType.NVarChar, maxLength: 500)
         .RenameColumn("OldName", "NewName")
         .DropColumn("ObsoleteColumn")
-        .AddForeignKey("ConnectionTypeId", "ConnectionTypes", "Id", onDelete: ForeignKeyActions.Cascade)
+        .AddForeignKey("ConnectionTypeId", "ConnectionTypes", "Id", onDelete: ForeignKeyActions.Cascade, onUpdate: ForeignKeyActions.NoAction)
         .DropConstraint("FK_Old_Constraint");
 
         // Assert

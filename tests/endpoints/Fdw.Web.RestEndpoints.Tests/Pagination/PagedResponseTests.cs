@@ -203,21 +203,6 @@ public class PagedResponseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void Count_ReturnsZero_WhenDataIsNull()
-    {
-        // Arrange
-        var response = new PagedResponse<string> { Data = null! };
-
-        // Act
-        var count = response.Count;
-
-        // Assert
-        count.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
     public void Create_WithParameters_SetsAllPropertiesCorrectly()
     {
         // Arrange

@@ -15,7 +15,7 @@ public sealed class ThemeHelperScalarTests
     public void ToScalarCssVariablesReturnsCorrectVariableNames()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToScalarCssVariables();
@@ -90,7 +90,7 @@ public sealed class ThemeHelperScalarTests
     public void ToScalarCssBlockDarkModeTargetsDarkModeSelector()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToScalarCssBlock(darkMode: true);
@@ -106,7 +106,7 @@ public sealed class ThemeHelperScalarTests
     public void ToScalarCssBlockLightModeTargetsLightModeSelector()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToScalarCssBlock(darkMode: false);
@@ -122,7 +122,7 @@ public sealed class ThemeHelperScalarTests
     public void ToScalarCssBlockNullDarkModeEmitsBothSelectors()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToScalarCssBlock(darkMode: null);
@@ -138,7 +138,7 @@ public sealed class ThemeHelperScalarTests
     public void ToScalarCssBlockContainsScalarVariables()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToScalarCssBlock(darkMode: true);
@@ -156,7 +156,7 @@ public sealed class ThemeHelperScalarTests
     public void ToScalarCssBlockNullEmitsBothBlocksWithSameVariables()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToScalarCssBlock(darkMode: null);
@@ -175,7 +175,7 @@ public sealed class ThemeHelperScalarTests
     public void ToScalarCssBlockIsSuitableForAddHeadContentInjection()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToScalarCssBlock(darkMode: true);

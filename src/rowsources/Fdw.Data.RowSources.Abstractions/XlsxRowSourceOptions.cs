@@ -16,7 +16,7 @@ public sealed class XlsxRowSourceOptions : RowSourceOptions
     /// Gets or sets a value indicating whether the first non-empty row is a header and is skipped. The names come from
     /// <see cref="Columns"/> either way.
     /// </summary>
-    public bool HasHeader { get; set; }
+    public required bool HasHeader { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the worksheet to read, compared ignoring case. Null is allowed only for a workbook with

@@ -27,8 +27,8 @@ public partial class OrganizationDomainConfiguration : DomainConfiguration
     public bool IsActive { get; set; }
 
     /// <summary>
-    /// Gets or sets the durable id of the workspace this organization names as its default: its own, or a shared base one.
-    /// Null is a stated state: the organization names no default workspace, and nothing falls back to another one (FDW-1060).
+    /// Gets or sets the durable id of this organization's own default workspace (FDW-3668). Every organization has one, created
+    /// with it; no other organization names the same workspace.
     /// </summary>
-    public Guid? DefaultWorkspaceId { get; set; }
+    public Guid DefaultWorkspaceId { get; set; }
 }

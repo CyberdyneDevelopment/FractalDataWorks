@@ -6,6 +6,12 @@ A TypeCollection and its options — an extensible enum. Members are discovered 
 
 A module initializer collects every `[TypeOption]` in every referenced assembly and dedupes them into the collection at load. Adding a member is a package reference plus a declaration — the collection itself is never edited.
 
+## Commands the protocol does not map
+
+The protocol maps Query, Insert, Update and Delete to requests. A command that expands into simpler ones (Upsert, BulkUpsert, BulkUpdate, and ConfigurationSave and ConfigurationRetire, which assemble their own result) has no translator here: `HttpTranslatorNotFound` reports it missing and `ConnectionBase` sends the requests it expands into, one after another.
+
+An HTTP connection cannot open a transaction, so nothing rolls those requests back. When one fails, the requests before it stay done: an Upsert is a delete and an insert for each row, and a failed insert leaves its row deleted. The connection logs warning 11006 (`ConnectionLogger.ExpansionRunsWithoutTransaction`, naming the connection and the command) each time it runs an expansion this way. Connections that can open a transaction (MsSql, PostgreSql, Sqlite, FileSystem) run the same steps in one and roll it back on a failed step (FDW-3601). A pipeline load already refuses an Upsert to an HTTP record writer.
+
 ## Collections
 
 | Type | Kind | Purpose |

@@ -20,7 +20,7 @@ public sealed class CreateMessageRequest
     public string MessageType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the severity level. Defaults to Info.</summary>
-    public string Severity { get; set; } = "Info";
+    public string Severity { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the message subject.</summary>
     public string Subject { get; set; } = string.Empty;

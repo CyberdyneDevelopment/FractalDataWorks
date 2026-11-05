@@ -236,7 +236,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
         classBuilder.WithUsings(namespaces.ToArray());
 
         // Get key type from definition (defaults to "int" if not specified)
-        var keyType = _definition!.KeyType ?? "int";
+        var keyType = _definition!.KeyType ?? CollectionKeyTypes.Default;
 
         // Generate fields using FieldGenerator
         var allField = FieldGenerator<TId>.GenerateAllField(keyType, _returnType!, _definition!.CollectionStrategy);

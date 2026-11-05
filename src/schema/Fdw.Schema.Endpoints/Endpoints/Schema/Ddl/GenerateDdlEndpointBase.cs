@@ -94,7 +94,7 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
 
             if (!containersResult.IsSuccess || containersResult.Value == null)
             {
-                var message = containersResult.CurrentMessage ?? "Schema discovery failed";
+                var message = containersResult.NoValueReason().Message;
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.Name, "generate-ddl");
                 AddError(message);
                 await Send.ErrorsAsync(containersResult.IsSuccess ? 404 : 500, ct).ConfigureAwait(false);

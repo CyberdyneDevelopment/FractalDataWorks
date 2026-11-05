@@ -21,7 +21,7 @@ public sealed class LatestByTransformTypeTests
 
     private static PipelineTransformConfiguration CreateConfig(string[] keys, string? orderField, string? keepRule)
     {
-        var config = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Latest", OperationType = "LatestBy" };
+        var config = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Latest", OperationType = "LatestBy" };
         config.GroupByFields = keys
             .Select((key, ordinal) => new PipelineTransformGroupByFieldConfiguration { Id = Guid.NewGuid(), Name = key, FieldName = key, Ordinal = ordinal })
             .ToList();

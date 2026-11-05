@@ -1,5 +1,6 @@
 using Fdw.UI.Abstractions.Components;
 using Fdw.UI.Abstractions.Pages;
+using Fdw.Conventions;
 
 namespace Fdw.UI.Components.Pages;
 
@@ -68,11 +69,15 @@ public sealed class WizardStep : IWizardStep
     public static WizardStep Select(string id, string title, string? description = null) =>
         new() { Id = id, Title = title, Description = description, Icon = "☐" };
 
+    /// <summary>The description a review step shows when its caller states none, declared by the step type.</summary>
+    [PlatformDefault]
+    public const string ReviewDescription = "Review your selections before completing";
+
     /// <summary>
     /// Creates a review/summary step.
     /// </summary>
     public static WizardStep Review(string id, string title = "Review", string? description = null) =>
-        new() { Id = id, Title = title, Description = description ?? "Review your selections before completing", Icon = "✓" };
+        new() { Id = id, Title = title, Description = description ?? ReviewDescription, Icon = "✓" };
 
     /// <summary>
     /// Creates an optional step.

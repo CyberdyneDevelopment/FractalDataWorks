@@ -14,7 +14,7 @@ using Xunit;
 namespace Fdw.Services.Data.Tests;
 
 /// <summary>
-/// FDW-2390: a name resolves to a data set, or to a variation of one such as a saved view, and one name never means two things.
+/// FDW-2390, FDW-3638: a name resolves to a data set, which is a variation of another when it is of kind Variation, and one name never means two things.
 /// </summary>
 public sealed class DataSetResolverTests
 {
@@ -105,7 +105,7 @@ public sealed class DataSetResolverTests
     [Fact]
     public async Task A_chain_deeper_than_the_limit_is_refused_and_not_cut_short()
     {
-        var chain = new List<DataViewDataSetVariationConfiguration> { View("v0", Players.Id, parent: null, filters: "F0") };
+        var chain = new List<VariationDataSetConfiguration> { View("v0", Players.Id, parent: null, filters: "F0") };
         for (var i = 1; i <= DataSetResolver.MaxChainDepth; i++)
             chain.Add(View($"v{i}", Players.Id, parent: chain[i - 1].Id, filters: $"F{i}"));
         var resolver = Build(dataSets: [Players], variations: [.. chain]);
@@ -138,14 +138,15 @@ public sealed class DataSetResolverTests
     }
 
     [Fact]
-    public async Task A_name_held_by_a_data_set_and_a_view_is_refused_and_not_resolved_by_picking_one()
+    public async Task A_view_is_a_data_set_so_one_read_answers_for_its_name()
     {
-        var clash = View("AfcPlayers", Players.Id, parent: null);
-        var resolver = Build(dataSets: [Players], variations: [clash]);
+        var view = View("weekly-totals", Players.Id, parent: null);
+        var resolver = Build(dataSets: [Players], variations: [view]);
 
-        var result = await resolver.Resolve("AfcPlayers", TestContext.Current.CancellationToken);
+        var result = await resolver.Resolve("weekly-totals", TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeFalse();
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.Variation.ShouldBeSameAs(view);
     }
 
     [Fact]
@@ -174,30 +175,32 @@ public sealed class DataSetResolverTests
         result.CurrentMessage.ShouldBe("data sets unavailable");
     }
 
-    private static DataViewDataSetVariationConfiguration View(string name, Guid dataSetId, Guid? parent, string? filters = null)
-        => new() { Id = Guid.NewGuid(), Name = name, VariationName = name, Implementation = DataViewDataSetVariationConfiguration.ImplementationName, BaseDataSetId = dataSetId, ParentVariationId = parent, Filters = filters };
+    private static VariationDataSetConfiguration View(string name, Guid dataSetId, Guid? parent, string? filters = null)
+        => new() { Id = Guid.NewGuid(), Name = name, VariationName = name, Implementation = VariationDataSetConfiguration.ImplementationName, OwnerUserId = Guid.NewGuid(), BaseDataSetId = dataSetId, ParentVariationId = parent, StoredFilters = filters };
 
     private static DataSetResolver Build(IDataSetImplementationConfiguration[] dataSets, IDataSetVariationImplementationConfiguration[] variations)
     {
+        // A variation is a data set of kind Variation, so the data set provider holds it beside the others.
+        IDataSetImplementationConfiguration[] everyDataSet = [.. dataSets, .. variations];
         var sets = new Mock<IDataSetConfigurationProvider>();
         sets.Setup(p => p.Get(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns((string name, int _, CancellationToken _) =>
                 Task.FromResult<IGenericResult<IDataSetImplementationConfiguration>>(
-                    GenericResult<IDataSetImplementationConfiguration>.Success(Array.Find(dataSets, d => d.Name == name)!)));
+                    GenericResult<IDataSetImplementationConfiguration>.Success(Array.Find(everyDataSet, d => d.Name == name)!)));
         sets.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns((Guid id, int _, CancellationToken _) =>
                 Task.FromResult<IGenericResult<IDataSetImplementationConfiguration>>(
-                    GenericResult<IDataSetImplementationConfiguration>.Success(Array.Find(dataSets, d => d.Id == id)!)));
+                    GenericResult<IDataSetImplementationConfiguration>.Success(Array.Find(everyDataSet, d => d.Id == id)!)));
 
         var views = new Mock<IDataSetVariationConfigurationProvider>();
         views.Setup(p => p.Get(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns((string name, int _, CancellationToken _) =>
-                Task.FromResult<IGenericResult<IDataSetVariationImplementationConfiguration>>(
-                    GenericResult<IDataSetVariationImplementationConfiguration>.Success(Array.Find(variations, v => v.Name == name)!)));
+                Task.FromResult<IGenericResult<IDataSetVariationImplementationConfiguration?>>(
+                    GenericResult<IDataSetVariationImplementationConfiguration?>.Success(Array.Find(variations, v => v.Name == name))));
         views.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns((Guid id, int _, CancellationToken _) =>
-                Task.FromResult<IGenericResult<IDataSetVariationImplementationConfiguration>>(
-                    GenericResult<IDataSetVariationImplementationConfiguration>.Success(Array.Find(variations, v => v.Id == id)!)));
+                Task.FromResult<IGenericResult<IDataSetVariationImplementationConfiguration?>>(
+                    GenericResult<IDataSetVariationImplementationConfiguration?>.Success(Array.Find(variations, v => v.Id == id))));
 
         return new DataSetResolver(sets.Object, views.Object, NullLogger<DataSetResolver>.Instance);
     }

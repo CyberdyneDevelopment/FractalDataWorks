@@ -7,6 +7,7 @@ using Fdw.Data.MsSql.Logging;
 using Fdw.Services.Connections.Sql;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Data.MsSql.Translators;
 
@@ -33,6 +34,10 @@ namespace Fdw.Data.MsSql.Translators;
 /// </remarks>
 public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorBase<SqlCommand>
 {
+    /// <summary>What the database is given for a parameter whose value is null: ADO.NET's own null.</summary>
+    [PlatformDefault]
+    private static readonly object DatabaseNull = System.DBNull.Value;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlDataCommandTranslatorBase"/> class.
     /// </summary>
@@ -74,7 +79,7 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
             materialized = JsonSerializer.Serialize(enumerable);
         }
 
-        var param = new SqlParameter($"@{name}", materialized ?? (object)System.DBNull.Value);
+        var param = new SqlParameter($"@{name}", materialized ?? DatabaseNull);
         command.Parameters.Add(param);
     }
 
@@ -118,7 +123,7 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
     {
         var param = new SqlParameter($"@{name}", dbType)
         {
-            Value = value ?? (object)System.DBNull.Value
+            Value = value ?? DatabaseNull
         };
         command.Parameters.Add(param);
     }

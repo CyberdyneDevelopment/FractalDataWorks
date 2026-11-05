@@ -52,7 +52,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
     [Trait("Category", "DataIntegrity")]
     public void FilterMatchesFlagsTheFilteredRowsAndSkipsRowsAlreadyFlagged()
     {
-        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { DeletedAtColumn = "ModifyDate" };
+        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { DeletedAtColumn = "ModifyDate", FlagValue = true };
 
         var (sql, parameters) = Build(options, Standard().Object, "\"Id\" = @p0");
 
@@ -80,7 +80,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
     [Trait("Category", "DataIntegrity")]
     public void NoDeletedAtColumnStampsNothing()
     {
-        var (sql, _) = Build(new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches), Standard().Object);
+        var (sql, _) = Build(new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { FlagValue = true }, Standard().Object);
 
         sql.ShouldBe("UPDATE \"authz\".\"Role\" SET \"IsDeleted\" = @fdw_sd_flag "
             + "WHERE (\"IsDeleted\" IS NULL OR \"IsDeleted\" <> @fdw_sd_flag)");
@@ -91,7 +91,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
     [Trait("Category", "DataIntegrity")]
     public void MarkerMatchesAddsTheMarkerTestAndItsParameter()
     {
-        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.MarkerMatches) { Marker = new SoftDeleteMarker("Name", "gone") };
+        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.MarkerMatches) { Marker = new SoftDeleteMarker("Name", "gone"), FlagValue = true };
 
         var (sql, parameters) = Build(options, Standard().Object);
 
@@ -107,6 +107,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
         var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.AbsentFromSource)
         {
             AbsentFromSource = new AbsentKeySet(["Id"], new List<IReadOnlyDictionary<string, object?>>()),
+            FlagValue = true,
         };
 
         var thrown = Should.Throw<InvalidOperationException>(() => Build(options, Standard().Object));
@@ -120,7 +121,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
     public void AColumnTheContainerDoesNotDeclareIsRefused()
     {
         var thrown = Should.Throw<InvalidOperationException>(
-            () => Build(new SoftDeleteOptions("NoSuchFlag", SoftDeleteModes.FilterMatches), Standard().Object));
+            () => Build(new SoftDeleteOptions("NoSuchFlag", SoftDeleteModes.FilterMatches) { FlagValue = true }, Standard().Object));
 
         thrown.Message.ShouldContain("NoSuchFlag");
     }
@@ -133,7 +134,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
         var container = Container(("IsDeleted", false, false), ("ModifyDate", false, true));
 
         var thrown = Should.Throw<InvalidOperationException>(
-            () => Build(new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { DeletedAtColumn = "ModifyDate" }, container.Object));
+            () => Build(new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { DeletedAtColumn = "ModifyDate", FlagValue = true }, container.Object));
 
         thrown.Message.ShouldContain("computed");
     }
@@ -146,7 +147,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
         var container = Container(("IsDeleted", true, false));
 
         var thrown = Should.Throw<InvalidOperationException>(
-            () => Build(new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches), container.Object));
+            () => Build(new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { FlagValue = true }, container.Object));
 
         thrown.Message.ShouldContain("identity");
     }
@@ -156,7 +157,7 @@ public sealed class SqlTranslatorBaseSoftDeleteTests
     [Trait("Category", "DataIntegrity")]
     public void AnUpdateThatCarriesSoftDeleteOptionsIsRefused()
     {
-        var update = new UpdateCommand<object>(new object()) { SoftDelete = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) };
+        var update = new UpdateCommand<object>(new object()) { SoftDelete = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { FlagValue = true } };
 
         Should.Throw<InvalidOperationException>(() => SqlTranslatorProxy.ExposeRefuseSoftDeleteOnUpdate(update, Standard().Object));
     }

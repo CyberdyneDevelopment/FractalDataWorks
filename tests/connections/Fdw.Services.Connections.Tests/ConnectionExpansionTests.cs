@@ -499,6 +499,70 @@ public sealed class ConnectionExpansionTests
         handed.ShouldBeEmpty();
     }
 
+    // FDW-3601: an upsert a kind cannot run natively is a delete by key and an insert. Run apart, a failed insert left the row deleted.
+    private static Mock<IExpandableDataCommand> UpsertLike()
+        => ExpandableOf("Upsert", new ExpandedCommand(Single("Delete"), CountsAsAffected: false), new ExpandedCommand(Single("Insert")));
+
+    [Fact]
+    public async Task ARowCountExpansionOnAConnectionWithTransactionsRunsItsStepsInOneAndCommits()
+    {
+        var connection = new TransactionalExpandingConnection(failing: null);
+
+        var result = await connection.Execute<int>(UpsertLike().Object, _container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(1);
+        connection.Scope.Ran.ShouldBe(["Delete", "Insert"]);
+        connection.Ran.ShouldBeEmpty();
+        connection.Scope.Committed.ShouldBeTrue();
+        connection.Scope.RolledBack.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task WhenTheSecondStepOfARowCountExpansionFailsTheTransactionIsRolledBackAndNothingIsCommitted()
+    {
+        var connection = new TransactionalExpandingConnection(failing: "Insert");
+
+        var result = await connection.Execute<int>(UpsertLike().Object, _container.Object, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("boom");
+        connection.Scope.Ran.ShouldBe(["Delete", "Insert"]);
+        connection.Scope.RolledBack.ShouldBeTrue();
+        connection.Scope.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ARowCountExpansionOnAConnectionAlreadyInAUnitOfWorkRunsOnThatConnectionAndOpensNoTransaction()
+    {
+        var connection = new TransactionalExpandingConnection(failing: null, inUnitOfWork: true);
+        var command = Expandable("Upsert", Single("Close"), Single("Close"));
+
+        var result = await connection.Execute<int>(command.Object, _container.Object, TestContext.Current.CancellationToken);
+
+        result.Value.ShouldBe(2);
+        connection.Ran.ShouldBe(["Close", "Close"]);
+        connection.Scope.Ran.ShouldBeEmpty();
+        connection.Scope.Committed.ShouldBeFalse();
+        connection.Scope.RolledBack.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ARowCountExpansionOnAConnectionWithoutTransactionsRunsInOrderAndWarnsNamingTheConnectionAndCommand()
+    {
+        var logger = new RecordingLogger();
+        var connection = new ExpandingConnection(["Delete", "Insert"], failing: null, logger);
+
+        var result = await connection.Execute<int>(UpsertLike().Object, _container.Object, TestContext.Current.CancellationToken);
+
+        result.Value.ShouldBe(1);
+        connection.Ran.ShouldBe(["Delete", "Insert"]);
+        var warning = logger.Entries.Where(entry => entry.Level == LogLevel.Warning).ShouldHaveSingleItem();
+        warning.EventId.ShouldBe(11006);
+        warning.Text.ShouldContain("'expanding'");
+        warning.Text.ShouldContain("'Upsert'");
+    }
+
     [Fact]
     public async Task AnAssembledCommandOnAConnectionWithoutTransactionsRunsItsStepsInOrder()
     {
@@ -532,8 +596,8 @@ public sealed class ConnectionExpansionTests
         private readonly string[] _handled;
         private readonly string? _failing;
 
-        public ExpandingConnection(string[] handled, string? failing)
-            : base(NullLogger<ExpandingConnection>.Instance, new ConnectionBaseTests.TestConnectionConfiguration { Name = "expanding" })
+        public ExpandingConnection(string[] handled, string? failing, ILogger<ExpandingConnection>? logger = null)
+            : base(logger ?? NullLogger<ExpandingConnection>.Instance, new ConnectionBaseTests.TestConnectionConfiguration { Name = "expanding" })
         {
             _handled = handled;
             _failing = failing;
@@ -574,7 +638,7 @@ public sealed class ConnectionExpansionTests
         }
     }
 
-    /// <summary>A connection that can open a transaction; every command it is given is run inside the transaction scope, never natively.</summary>
+    /// <summary>A connection that can open a transaction; every command it is given is run inside the transaction scope, never natively. In a unit of work only Close has a translator.</summary>
     private sealed class TransactionalExpandingConnection
         : ConnectionBase<ConnectionBaseTests.TestNativeCommand, ConnectionBaseTests.TestConnectionConfiguration, TransactionalExpandingConnection>,
           ITransactionalDataConnection
@@ -620,6 +684,21 @@ public sealed class ConnectionExpansionTests
         protected override Task<IGenericResult> Execute(
             ConnectionBaseTests.TestNativeCommand command, IStorageContainer container, CancellationToken cancellationToken)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
+    }
+
+    /// <summary>A logger that keeps every entry written to it.</summary>
+    private sealed class RecordingLogger : ILogger<ExpandingConnection>
+    {
+        public List<(LogLevel Level, int EventId, string Text)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Entries.Add((logLevel, eventId.Id, formatter(state, exception)));
     }
 
     /// <summary>A transaction scope that records what ran in it and how it ended, and fails the one command type it is told to.</summary>

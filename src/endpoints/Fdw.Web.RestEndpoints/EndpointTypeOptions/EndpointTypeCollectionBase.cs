@@ -468,5 +468,5 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     }
 
     private static IEnumerable<IEndpointTypeOption> Selected(IEnumerable<IEndpointTypeOption>? members)
-        => (members ?? Enumerable.Empty<IEndpointTypeOption>()).Where(m => !m.SkipRegistration);
+        => (members ?? []).Where(m => !m.SkipRegistration);
 }

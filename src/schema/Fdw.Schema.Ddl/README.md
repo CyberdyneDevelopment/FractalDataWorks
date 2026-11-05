@@ -12,16 +12,14 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 |---|---|---|
 | `DdlResultCodes` | class | Result codes for DDL generation operations. |
 | `DdlCommandTypes` | class | — |
-| `DdlForeignKeyActions` | class | — |
 
-## Options (17 declared)
+## Options (12 declared)
 
 | Type | Kind | Purpose |
 |---|---|---|
 | `CommandGenerationFailedCode` | class | DDL command generation failed. |
 | `NoCommandsGeneratedCode` | class | No DDL commands were generated from the schema. |
 | `AlterTableDdlCommandType` | class | — |
-| `CascadeDdlForeignKeyAction` | class | — |
 | `CreateIndexDdlCommandType` | class | — |
 | `CreateSchemaDdlCommandType` | class | — |
 | `CreateTableDdlCommandType` | class | — |
@@ -31,10 +29,6 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | `DropTableDdlCommandType` | class | — |
 | `DropViewDdlCommandType` | class | — |
 | `InsertDataDdlCommandType` | class | — |
-| `NoActionDdlForeignKeyAction` | class | — |
-| `RestrictDdlForeignKeyAction` | class | — |
-| `SetDefaultDdlForeignKeyAction` | class | — |
-| `SetNullDdlForeignKeyAction` | class | — |
 
 ## Installation
 

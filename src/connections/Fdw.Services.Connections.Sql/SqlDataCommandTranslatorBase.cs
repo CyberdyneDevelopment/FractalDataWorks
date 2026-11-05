@@ -237,7 +237,7 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
 
     private static string QualifyColumn(string propertyName, ISqlDialect dialect, string? primaryQualifier)
     {
-        var dot = propertyName.IndexOf('.');
+        var dot = propertyName.IndexOf('.', StringComparison.Ordinal);
         if (dot >= 0)
         {
             var table = propertyName.Substring(0, dot);

@@ -24,8 +24,8 @@ public abstract class PutWaitThresholdLevelEndpointBase : WaitThresholdLevelEndp
         Policies("pipelines:write");
         Summary(s =>
         {
-            s.Summary = "State the thresholds on waiting runs an owner states";
-            s.Description = "Replaces the mode (Inherit, Own or None) and the thresholds the server, a pipeline or a schedule states, together. Own carries at least one threshold; Inherit and None carry none; the server takes Own or None.";
+            s.Summary = "State the level of thresholds on waiting runs an owner states";
+            s.Description = "Replaces the mode (Inherit, Own or None) the server, a pipeline or a schedule states: Own applies the thresholds attached to the owner, None applies none, Inherit takes the level above; the server takes Own or None.";
         });
     }
 

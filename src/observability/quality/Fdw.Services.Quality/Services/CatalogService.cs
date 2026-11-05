@@ -151,7 +151,6 @@ public sealed class CatalogService : ICatalogService
         annotation.DataSetName = dataSetName;
         _inMemoryAnnotations[dataSetName] = annotation;
 
-        var owner = annotation.BusinessOwner ?? annotation.TechnicalOwner ?? "Unknown";
         CatalogLog.AnnotationUpdated(_logger, dataSetName);
         return Task.FromResult(GenericResult<DataSetAnnotationImplementationConfiguration>.Success(annotation));
     }

@@ -186,7 +186,7 @@ public sealed class BuiltFilterCalculationsTests
     {
         var yesterday = Yesterday();
         var stage = new PipelineTransformConfiguration
-        {
+        { IsEnabled = true,
             Id = Guid.NewGuid(),
             Name = "Stamp",
             OperationType = "Compute",

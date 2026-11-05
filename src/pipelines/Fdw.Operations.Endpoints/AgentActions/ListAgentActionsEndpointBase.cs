@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Conventions;
 using Fdw.Services.Agents.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -45,7 +46,7 @@ public abstract class ListAgentActionsEndpointBase : Endpoint<ListAgentActionsRe
     /// <summary>Lists agent actions, optionally filtered by status.</summary>
     public override async Task HandleAsync(ListAgentActionsRequest req, CancellationToken ct)
     {
-        var statusFilter = req.Status ?? "all";
+        var statusFilter = req.Status ?? LogPlaceholders.NoFilter;
         OperationsEndpointLog.ListingAgentActions(_logger, statusFilter);
 
         try

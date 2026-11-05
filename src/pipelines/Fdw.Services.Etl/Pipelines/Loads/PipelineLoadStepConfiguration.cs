@@ -114,6 +114,11 @@ public sealed class PipelineLoadStepConfiguration
     public string? DeletedFlagColumn { get; set; }
 
     /// <summary>
+    /// Gets or sets the value a soft delete writes to <see cref="DeletedFlagColumn"/> (FDW-3823). Required with a soft delete.
+    /// </summary>
+    public bool? DeletedFlagValue { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional column a soft delete stamps with the time of the delete.
     /// </summary>
     public string? DeletedAtColumn { get; set; }

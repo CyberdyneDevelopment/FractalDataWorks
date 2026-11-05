@@ -10,25 +10,6 @@ public sealed class RestConfigurationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DefaultConstructorInitializesDefaultValues()
-    {
-        // Arrange & Act
-        var sut = new RestConfiguration();
-
-        // Assert
-        sut.BaseUrl.ShouldBe(string.Empty);
-        sut.OpenApiSpecUrl.ShouldBeNull();
-        sut.AuthenticationType.ShouldBeNull();
-        sut.ApiKey.ShouldBeNull();
-        sut.BearerToken.ShouldBeNull();
-        sut.TimeoutSeconds.ShouldBe(30);
-        sut.EnableRetries.ShouldBeTrue();
-        sut.MaxRetries.ShouldBe(3);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void BaseUrlCanBeSet()
     {
         // Arrange
@@ -119,51 +100,6 @@ public sealed class RestConfigurationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void TimeoutSecondsCanBeOverridden()
-    {
-        // Arrange
-        var sut = new RestConfiguration();
-
-        // Act
-        sut.TimeoutSeconds = 60;
-
-        // Assert
-        sut.TimeoutSeconds.ShouldBe(60);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void EnableRetriesCanBeDisabled()
-    {
-        // Arrange
-        var sut = new RestConfiguration();
-
-        // Act
-        sut.EnableRetries = false;
-
-        // Assert
-        sut.EnableRetries.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void MaxRetriesCanBeOverridden()
-    {
-        // Arrange
-        var sut = new RestConfiguration();
-
-        // Act
-        sut.MaxRetries = 5;
-
-        // Assert
-        sut.MaxRetries.ShouldBe(5);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void FullConfigurationCanBeBuiltWithAllProperties()
     {
         // Arrange & Act
@@ -173,9 +109,6 @@ public sealed class RestConfigurationTests
             OpenApiSpecUrl = "https://api.example.com/openapi.json",
             AuthenticationType = "Bearer",
             BearerToken = "test-token",
-            TimeoutSeconds = 45,
-            EnableRetries = true,
-            MaxRetries = 5
         };
 
         // Assert
@@ -183,46 +116,6 @@ public sealed class RestConfigurationTests
         sut.OpenApiSpecUrl.ShouldBe("https://api.example.com/openapi.json");
         sut.AuthenticationType.ShouldBe("Bearer");
         sut.BearerToken.ShouldBe("test-token");
-        sut.TimeoutSeconds.ShouldBe(45);
-        sut.EnableRetries.ShouldBeTrue();
-        sut.MaxRetries.ShouldBe(5);
-    }
-
-    [Theory]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    [InlineData(1)]
-    [InlineData(10)]
-    [InlineData(100)]
-    [InlineData(300)]
-    public void TimeoutSecondsAcceptsVariousPositiveValues(int timeout)
-    {
-        // Arrange
-        var sut = new RestConfiguration();
-
-        // Act
-        sut.TimeoutSeconds = timeout;
-
-        // Assert
-        sut.TimeoutSeconds.ShouldBe(timeout);
-    }
-
-    [Theory]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(10)]
-    public void MaxRetriesAcceptsVariousNonNegativeValues(int maxRetries)
-    {
-        // Arrange
-        var sut = new RestConfiguration();
-
-        // Act
-        sut.MaxRetries = maxRetries;
-
-        // Assert
-        sut.MaxRetries.ShouldBe(maxRetries);
     }
 
     [Fact]
@@ -236,6 +129,5 @@ public sealed class RestConfigurationTests
 
         // Assert
         config1.BaseUrl.ShouldNotBe(config2.BaseUrl);
-        config1.TimeoutSeconds.ShouldBe(config2.TimeoutSeconds);
     }
 }

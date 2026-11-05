@@ -70,7 +70,8 @@ internal sealed class OrderValueComparer : IComparer<object?>
             return comparable.CompareTo(right);
         }
 
-        Problem ??= (left.GetType().Name, right.GetType().Name);
+        if (Problem is null)
+            Problem = (left.GetType().Name, right.GetType().Name);
         return 0;
     }
 }

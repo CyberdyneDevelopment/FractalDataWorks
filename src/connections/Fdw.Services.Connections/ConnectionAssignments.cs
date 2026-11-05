@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,9 +19,16 @@ namespace Fdw.Services.Connections;
 /// The connections assigned to organizations, kept as managed configuration (FDW-1581).
 /// </summary>
 /// <remarks>
-/// An assignment is saved under the name <c>{OrganizationId}:{Purpose}</c>. The organization must be one the caller may administer
-/// (<see cref="IOrganizationScope"/>), the grant must be one the organization's own tenant holds, and the base folder is placed inside
-/// the grant's folder when the store is resolved, so it cannot leave it.
+/// <para>
+/// The organization must be one the caller may administer (<see cref="IOrganizationScope"/>), the grant must be one the organization's
+/// own tenant holds, and the base folder is placed inside the grant's folder when the store is resolved, so it cannot leave it.
+/// </para>
+/// <para>
+/// An assignment is never written over or deleted (FDW-3396). Assigning another grant or base folder marks the assignment in force
+/// superseded and adds a new one under a name of its own, <c>{OrganizationId}:{Purpose}:{instant}</c>; unassigning marks it superseded.
+/// A superseded assignment takes no new files, and still reads the files stored under it through <see cref="IDocumentStores.Stored"/>.
+/// Assignments made before FDW-3396 keep their name, <c>{OrganizationId}:{Purpose}</c>.
+/// </para>
 /// </remarks>
 public sealed class ConnectionAssignments : IConnectionAssignments
 {
@@ -58,6 +66,12 @@ public sealed class ConnectionAssignments : IConnectionAssignments
             return tenant.ToNewResult<ConnectionAssignmentView>();
         }
 
+        // A purpose that takes no folder, such as DocumentRecords, is refused a base folder rather than given one it ignores (FDW-3673).
+        if (PurposeLookup.Named(purpose) is { TakesFolder: false } && !string.IsNullOrWhiteSpace(baseFolder))
+        {
+            return GenericResult<ConnectionAssignmentView>.Failure(ConnectionGrantsLog.FolderNotTaken(_logger, "assignment", purpose, baseFolder));
+        }
+
         var parsedFolder = DocumentPath.Parse(baseFolder);
         if (parsedFolder.IsFailure)
         {
@@ -76,28 +90,34 @@ public sealed class ConnectionAssignments : IConnectionAssignments
             return existing.ToNewResult<ConnectionAssignmentView>();
         }
 
-        // Why an existing assignment keeps its stored name: the purpose is compared without regard to case, and a second spelling would
-        // otherwise be a second row under the unique name.
-        var name = existing.Value is { } current ? current.Name : NameOf(organizationId, purpose);
         var parsedBase = parsedFolder.Value.Value;
-        var saved = await _assignments.Save(
-            new ConnectionAssignmentImplementationConfiguration
-            {
-                Name = name,
-                OrganizationId = organizationId,
-                Purpose = purpose,
-                GrantId = grantId,
-                BaseFolder = parsedBase.Length == 0 ? null : parsedBase,
-            },
-            AssignmentDomain, AssignmentDomain, name, cancellationToken).ConfigureAwait(false);
+        var storedBase = parsedBase.Length == 0 ? null : parsedBase;
+        var view = new ConnectionAssignmentView(organizationId, purpose, grantId, grant.Value.ConnectionName, grant.Value.FolderPath, storedBase);
+        if (existing.Value is { } same && same.GrantId == grantId && string.Equals(same.BaseFolder, storedBase, StringComparison.Ordinal))
+        {
+            ConnectionGrantsLog.AssignmentKept(_logger, grantId, organizationId, purpose);
+            return GenericResult<ConnectionAssignmentView>.Success(view);
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var replacement = new ConnectionAssignmentImplementationConfiguration
+        {
+            Name = NameOf(organizationId, purpose, now),
+            OrganizationId = organizationId,
+            Purpose = purpose,
+            GrantId = grantId,
+            BaseFolder = storedBase,
+        };
+        var saved = existing.Value is { } current
+            ? await _assignments.Supersede(SupersededCopy(current, now), replacement, cancellationToken).ConfigureAwait(false)
+            : await _assignments.Save(replacement, AssignmentDomain, AssignmentDomain, replacement.Name, cancellationToken).ConfigureAwait(false);
         if (saved.IsFailure)
         {
-            return GenericResult<ConnectionAssignmentView>.Failure(ConnectionGrantsLog.WriteFailed(_logger, $"The assignment '{name}'", saved.CurrentMessage));
+            return GenericResult<ConnectionAssignmentView>.Failure(ConnectionGrantsLog.WriteFailed(_logger, $"The assignment '{replacement.Name}'", saved.CurrentMessage));
         }
 
         ConnectionGrantsLog.Assigned(_logger, grantId, organizationId, purpose, parsedBase);
-        return GenericResult<ConnectionAssignmentView>.Success(
-            new ConnectionAssignmentView(organizationId, purpose, grantId, grant.Value.ConnectionName, grant.Value.FolderPath, parsedBase.Length == 0 ? null : parsedBase));
+        return GenericResult<ConnectionAssignmentView>.Success(view);
     }
 
     /// <inheritdoc />
@@ -117,7 +137,8 @@ public sealed class ConnectionAssignments : IConnectionAssignments
                 : GenericResult<ConnectionAssignmentView>.Failure(ConnectionGrantsLog.AssignmentNotFound(_logger, organizationId, purpose));
         }
 
-        var removed = await _assignments.Delete(assignment.Name, cancellationToken).ConfigureAwait(false);
+        var removed = await _assignments.Save(
+            SupersededCopy(assignment, DateTimeOffset.UtcNow), AssignmentDomain, AssignmentDomain, assignment.Name, cancellationToken).ConfigureAwait(false);
         if (removed.IsFailure)
         {
             return GenericResult<ConnectionAssignmentView>.Failure(ConnectionGrantsLog.WriteFailed(_logger, "The assignment", removed.CurrentMessage));
@@ -144,7 +165,7 @@ public sealed class ConnectionAssignments : IConnectionAssignments
         }
 
         var views = new List<ConnectionAssignmentView>();
-        foreach (var assignment in all.Value.Where(row => row.OrganizationId == organizationId && row.IsCurrent && !row.IsDeleted))
+        foreach (var assignment in all.Value.Where(row => row.OrganizationId == organizationId && InForce(row)))
         {
             views.Add(await ViewOf(assignment, cancellationToken).ConfigureAwait(false));
         }
@@ -152,7 +173,25 @@ public sealed class ConnectionAssignments : IConnectionAssignments
         return GenericResult<IReadOnlyList<ConnectionAssignmentView>>.Success(views);
     }
 
-    private static string NameOf(Guid organizationId, string purpose) => $"{organizationId}:{purpose}";
+    // The name of a new assignment: the instant it was made keeps it apart from the assignments it supersedes, which keep their names.
+    private static string NameOf(Guid organizationId, string purpose, DateTimeOffset assignedAt)
+        => string.Concat(organizationId.ToString("D", CultureInfo.InvariantCulture), ":", purpose, ":", assignedAt.UtcDateTime.ToString("yyyyMMddHHmmssfffffff", CultureInfo.InvariantCulture));
+
+    // The assignment that takes new files: the live version of the row, not deleted and not superseded.
+    private static bool InForce(IConnectionAssignmentImplementationConfiguration row) => row.IsCurrent && !row.IsDeleted && row.SupersededAt is null;
+
+    // The assignment as it is, marked superseded at an instant; its name, and so its Id, stay, so files stored under it keep resolving.
+    private static ConnectionAssignmentImplementationConfiguration SupersededCopy(IConnectionAssignmentImplementationConfiguration assignment, DateTimeOffset supersededAt)
+        => new()
+        {
+            Id = assignment.Id,
+            Name = assignment.Name,
+            OrganizationId = assignment.OrganizationId,
+            Purpose = assignment.Purpose,
+            GrantId = assignment.GrantId,
+            BaseFolder = assignment.BaseFolder,
+            SupersededAt = supersededAt,
+        };
 
     // The checks every assignment makes first: a purpose, a grant that exists, is the organization's tenant's and is for the purpose. The result carries the grant.
     private async Task<IGenericResult<IConnectionGrantImplementationConfiguration>> CheckGrant(
@@ -179,7 +218,7 @@ public sealed class ConnectionAssignments : IConnectionAssignments
             : GenericResult<IConnectionGrantImplementationConfiguration>.Failure(ConnectionGrantsLog.PurposeDiffers(_logger, grantId, grant.Value.Purpose, purpose));
     }
 
-    // The live assignment of an organization for a purpose; Success with a null value when there is none.
+    // The assignment in force of an organization for a purpose; Success with a null value when there is none.
     private async Task<IGenericResult<IConnectionAssignmentImplementationConfiguration?>> Find(Guid organizationId, string purpose, CancellationToken cancellationToken)
     {
         var all = await _assignments.Get(cancellationToken).ConfigureAwait(false);
@@ -190,7 +229,7 @@ public sealed class ConnectionAssignments : IConnectionAssignments
         }
 
         return GenericResult<IConnectionAssignmentImplementationConfiguration?>.Success(
-            all.Value.FirstOrDefault(row => row.OrganizationId == organizationId && row.IsCurrent && !row.IsDeleted
+            all.Value.FirstOrDefault(row => row.OrganizationId == organizationId && InForce(row)
                 && string.Equals(row.Purpose, purpose, StringComparison.OrdinalIgnoreCase)));
     }
 

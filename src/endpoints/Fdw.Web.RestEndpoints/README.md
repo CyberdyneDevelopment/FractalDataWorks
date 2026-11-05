@@ -16,23 +16,6 @@ This package declares 1 interface(s), 1 service/provider type(s), 12 configurati
 |---|---|---|
 | `RowIdETagProvider` | class | ETag provider that computes ETags from the most recent RowId in a container. Uses the DataGateway to… |
 
-## Configuration (12)
-
-| Type | Kind | Purpose |
-|---|---|---|
-| `ApiKeyConfiguration` | class | API key authentication configuration. |
-| `ApiKeySecurityConfiguration` | class | API key-specific security configuration. |
-| `AuthenticationConfiguration` | class | Authentication configuration for the web framework. |
-| `CertificateSecurityConfiguration` | class | Certificate-based security configuration. |
-| `CorsConfiguration` | class | CORS configuration for cross-origin requests. |
-| `CorsSecurityConfiguration` | class | CORS security configuration. |
-| `JwtConfiguration` | class | JWT authentication configuration. |
-| `JwtSecurityConfiguration` | class | JWT-specific security configuration. |
-| `OAuth2SecurityConfiguration` | class | OAuth2-specific security configuration. |
-| `SecurityConfiguration` | class | Security configuration for the Fdw Web Framework. Provides centralized security settings and validation. |
-| `SwaggerConfiguration` | class | Swagger/OpenAPI documentation configuration. |
-| `WebConfiguration` | class | Main web configuration implementation for the Fdw Web Framework. Provides concrete configuration with… |
-
 ## Records (8)
 
 | Type | Kind | Purpose |

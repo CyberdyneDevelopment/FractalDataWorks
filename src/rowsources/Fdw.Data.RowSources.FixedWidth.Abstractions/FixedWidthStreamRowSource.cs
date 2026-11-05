@@ -35,10 +35,10 @@ public sealed class FixedWidthStreamRowSource : IRowSourceReader
     /// <param name="content">The input stream containing fixed-width data.</param>
     /// <param name="options">Fixed-width processing options (field definitions are required).</param>
     /// <exception cref="ArgumentException">Thrown when no field definitions are supplied.</exception>
-    public FixedWidthStreamRowSource(Stream content, FixedWidthRowSourceOptions? options = null)
+    public FixedWidthStreamRowSource(Stream content, FixedWidthRowSourceOptions options)
     {
         if (content is null) throw new ArgumentNullException(nameof(content));
-        _options = options ?? new FixedWidthRowSourceOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         if (_options.Fields.Count == 0)
         {
             throw new ArgumentException(

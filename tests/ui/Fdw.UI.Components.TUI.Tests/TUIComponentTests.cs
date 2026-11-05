@@ -68,7 +68,7 @@ public sealed class TUIComponentTests
     {
         // Arrange
         var console = CreateOffscreenConsole();
-        var component = new TestTUIComponent();
+        var component = new TestTUIComponent { Theme = new TUIThemeConfiguration() };
         IEnumerable<TestTypeOption> options = Enumerable.Empty<TestTypeOption>();
 
         // Act - compile-time type safety: method accepts IEnumerable<TOption>
@@ -85,7 +85,7 @@ public sealed class TUIComponentTests
     {
         // Arrange
         var console = CreateOffscreenConsole();
-        var component = new TestTUIComponent();
+        var component = new TestTUIComponent { Theme = new TUIThemeConfiguration() };
 
         // Act
         var result = component.InvokePromptTypeCollectionId(
@@ -102,7 +102,7 @@ public sealed class TUIComponentTests
     {
         // Arrange
         var console = CreateOffscreenConsole();
-        var component = new TestTUIComponent();
+        var component = new TestTUIComponent { Theme = new TUIThemeConfiguration() };
         var options = Enumerable.Empty<TestTypeOption>();
 
         // Act
@@ -115,36 +115,16 @@ public sealed class TUIComponentTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Ui")]
-    public void PromptTypeCollectionIdUsesNullThemeFromComponent()
-    {
-        // Arrange - null theme exercises the default Color fallbacks in TypeCollectionPromptHelper
-        var console = CreateOffscreenConsole();
-        var component = new TestTUIComponent
-        {
-            Theme = null
-        };
-
-        // Act - no exception means null theme is handled gracefully
-        var result = component.InvokePromptTypeCollectionId(
-            console, "Select:", Enumerable.Empty<TestTypeOption>());
-
-        // Assert
-        result.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Ui")]
     public void GetDisplayTextReturnsNullPlaceholderWhenValueIsNull()
     {
         // Arrange
-        var component = new TestTUIComponent { Value = null };
+        var component = new TestTUIComponent { Theme = new TUIThemeConfiguration(), Value = null };
 
         // Act
         var text = component.GetDisplayText();
 
         // Assert
-        text.ShouldBe("[dim]null[/]");
+        text.ShouldBe(UiPlaceholders.NullValueMarkup);
     }
 
     [Fact]
@@ -153,7 +133,7 @@ public sealed class TUIComponentTests
     public void GetDisplayTextReturnsValueToStringWhenValueIsSet()
     {
         // Arrange
-        var component = new TestTUIComponent { Value = "hello-world" };
+        var component = new TestTUIComponent { Theme = new TUIThemeConfiguration(), Value = "hello-world" };
 
         // Act
         var text = component.GetDisplayText();

@@ -37,17 +37,12 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
             throw new ArgumentNullException(nameof(principal));
         }
 
-        IsAuthenticated = principal.Identity?.IsAuthenticated ?? false;
+        IsAuthenticated = principal.Identity is { IsAuthenticated: true };
 
-        UserId = principal.FindFirst(ClaimDefinitions.sub.Name)?.Value
-              ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
-              ?? principal.FindFirst("name")?.Value
-              ?? string.Empty;
+        UserId = CallerClaims.UserId(principal) ?? string.Empty;
 
-        // Extract Username from "name", falling back to the standard Name claim then UserId.
-        Username = principal.FindFirst("name")?.Value
-                ?? principal.FindFirst(ClaimTypes.Name)?.Value
-                ?? UserId;
+        // FDW's principals carry no username claim: their name claim type is sub, so Identity.Name is the sub (FDW-3580).
+        Username = principal.Identity?.Name ?? string.Empty;
 
         Roles = CollectDistinct(principal, ClaimDefinitions.roles.Name, ClaimTypes.Role);
 

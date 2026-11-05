@@ -12,38 +12,28 @@ using Moq;
 namespace Fdw.Services.Etl.Tests.Thresholds;
 
 /// <summary>
-/// Tests for removing the level of thresholds on waiting runs of a pipeline or schedule that is being deleted (FDW-3271): the owner's rule rows, threshold rows and level row are
-/// retired one by one; a pipeline that a threshold of another owner counts is refused, naming the threshold and its owner, with nothing removed; an owner with no rows costs no write.
+/// Tests for retiring the level an owner states when the owner is deleted (FDW-3161, FDW-3975): the owner's level is retired and no other owner's, an owner with no level
+/// writes nothing, and a level that cannot be read or retired fails naming the owner.
 /// </summary>
 public sealed class WaitThresholdOwnerReleaseTests
 {
     private readonly List<WaitThresholdLevelRecord> _levels = [];
-    private readonly List<WaitThresholdRecord> _thresholds = [];
-    private readonly List<WaitThresholdRuleRecord> _rules = [];
-    private readonly List<string> _retired = [];
+    private readonly List<(IDataCommand Command, string Container)> _retired = [];
     private bool _levelsUnreadable;
-    private string? _failingRetireOf;
-
-    private static void Rows<T>(Mock<IConfigurationGateway> gateway, List<T> rows, bool unreadable = false)
-        where T : class
-    {
-        gateway.Setup(g => g.Execute<IEnumerable<T>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(unreadable
-                ? GenericResult<IEnumerable<T>>.Failure(new GenericMessage("the table is not there"))
-                : GenericResult<IEnumerable<T>>.Success(rows));
-    }
+    private bool _retireFails;
 
     private WaitThresholdOwnerRelease Sut()
     {
         var gateway = new Mock<IConfigurationGateway>();
-        Rows(gateway, _levels, _levelsUnreadable);
-        Rows(gateway, _thresholds);
-        Rows(gateway, _rules);
+        gateway.Setup(g => g.Execute<IEnumerable<WaitThresholdLevelRecord>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_levelsUnreadable
+                ? GenericResult<IEnumerable<WaitThresholdLevelRecord>>.Failure(new GenericMessage("the table is not there"))
+                : GenericResult<IEnumerable<WaitThresholdLevelRecord>>.Success(_levels));
         gateway.Setup(g => g.Execute<ConfigurationWriteResult>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IDataCommand command, DataStoreTarget target, CancellationToken _) =>
             {
-                _retired.Add(target.Container);
-                return command is ConfigurationRetireCommand && _failingRetireOf == target.Container
+                _retired.Add((command, target.Container));
+                return _retireFails
                     ? GenericResult<ConfigurationWriteResult>.Failure(new GenericMessage("the table is not there"))
                     : GenericResult<ConfigurationWriteResult>.Success(new ConfigurationWriteResult([], null));
             });
@@ -52,136 +42,54 @@ public sealed class WaitThresholdOwnerReleaseTests
         return new WaitThresholdOwnerRelease(gateways.Object);
     }
 
-    private WaitThresholdRecord Threshold(string ownerKind, string? ownerName, string name, string? counted = null)
-    {
-        var row = new WaitThresholdRecord { Id = Guid.NewGuid(), OwnerKind = ownerKind, OwnerName = ownerName, Name = name, CountedPipeline = counted, Comparison = "Equal", Severity = "Info" };
-        _thresholds.Add(row);
-        return row;
-    }
-
     private void Level(string ownerKind, string? ownerName) =>
         _levels.Add(new WaitThresholdLevelRecord { Id = Guid.NewGuid(), OwnerKind = ownerKind, OwnerName = ownerName, Mode = "Own" });
 
-    private void Rule(WaitThresholdRecord threshold, string name, int ordinal) =>
-        _rules.Add(new WaitThresholdRuleRecord { Id = Guid.NewGuid(), WaitThresholdId = threshold.Id, RuleName = name, Ordinal = ordinal });
-
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public async Task APipelineWithALevelHasItsRulesThresholdsAndLevelRetiredOneByOneRulesFirst()
+    public async Task APipelinesLevelIsRetiredAndNoOtherOwnersIs()
     {
         Level("Pipeline", "AfcPlayersLoad");
-        var first = Threshold("Pipeline", "afcplayersload", "Backlog");
-        var second = Threshold("Pipeline", "AfcPlayersLoad", "Stuck", counted: "AfcPlayersLoad");
-        Rule(first, "Ops email", 0);
-        Rule(first, "Ops chat", 1);
-        Rule(second, "Ops email", 0);
-
-        var released = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
-
-        released.IsSuccess.ShouldBeTrue(released.CurrentMessage);
-        _retired.ShouldBe(["WaitThresholdRule", "WaitThresholdRule", "WaitThresholdRule", "WaitThreshold", "WaitThreshold", "WaitThresholdLevel"]);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task APipelineThatAThresholdOfAnotherOwnerCountsIsRefusedNamingTheThresholdAndItsOwnerAndNothingIsRemoved()
-    {
-        Level("Pipeline", "AfcPlayersLoad");
-        Threshold("Pipeline", "AfcPlayersLoad", "Own backlog");
-        Threshold("Server", null, "AfcPlayersLoad backlog", counted: "afcplayersload");
-
-        var released = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
-
-        released.IsFailure.ShouldBeTrue();
-        released.CurrentMessage.ShouldNotBeNull().ShouldContain("AfcPlayersLoad backlog");
-        released.CurrentMessage.ShouldContain("Server");
-        _retired.ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task ThePipelinesOwnThresholdThatCountsItselfDoesNotRefuseTheDelete()
-    {
-        Threshold("Pipeline", "AfcPlayersLoad", "Itself", counted: "AfcPlayersLoad");
-
-        var released = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
-
-        released.IsSuccess.ShouldBeTrue(released.CurrentMessage);
-        _retired.ShouldBe(["WaitThreshold"]);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task AThresholdOfASchedulePointingAtThePipelineNamesTheScheduleAsItsOwner()
-    {
-        Threshold("Schedule", "Nightly", "Pile-up", counted: "AfcPlayersLoad");
-
-        var released = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
-
-        released.IsFailure.ShouldBeTrue();
-        released.CurrentMessage.ShouldNotBeNull().ShouldContain("Schedule 'Nightly'");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task AScheduleHasItsLevelAndThresholdsRetiredAndIsNotRefusedByAPipelineOfTheSameNameThatIsCounted()
-    {
-        Level("Schedule", "AfcPlayersLoad");
-        Threshold("Schedule", "AfcPlayersLoad", "Late");
-        Threshold("Server", null, "Counts the pipeline of that name", counted: "AfcPlayersLoad");
-
-        var released = await Sut().ReleaseSchedule("AfcPlayersLoad", TestContext.Current.CancellationToken);
-
-        released.IsSuccess.ShouldBeTrue(released.CurrentMessage);
-        _retired.ShouldBe(["WaitThreshold", "WaitThresholdLevel"]);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public async Task AnOwnerThatStatesNothingCostsNoWriteAndTheRowsOfOtherOwnersAreLeftAlone()
-    {
         Level("Pipeline", "Other");
-        Threshold("Pipeline", "Other", "Not mine");
+        Level("Server", null);
 
-        var released = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
+        var released = await Sut().ReleasePipeline("afcplayersload", TestContext.Current.CancellationToken);
 
         released.IsSuccess.ShouldBeTrue(released.CurrentMessage);
-        _retired.ShouldBeEmpty();
+        _retired.Count.ShouldBe(1);
+        _retired[0].Container.ShouldBe("WaitThresholdLevel");
+        _retired[0].Command.ShouldBeOfType<ConfigurationRetireCommand>();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public async Task RowsThatCannotBeReadFailTheReleaseAndRemoveNothing()
+    public async Task AScheduleWithNoLevelWritesNothing()
     {
-        _levelsUnreadable = true;
-
-        var released = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
-
-        released.IsFailure.ShouldBeTrue();
-        _retired.ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task ARetireThatFailsFailsTheReleaseNamingTheOwnerAndStopsThere()
-    {
-        Level("Schedule", "Nightly");
-        Threshold("Schedule", "Nightly", "Late");
-        _failingRetireOf = "WaitThreshold";
+        Level("Pipeline", "AfcPlayersLoad");
 
         var released = await Sut().ReleaseSchedule("Nightly", TestContext.Current.CancellationToken);
 
-        released.IsFailure.ShouldBeTrue();
-        released.CurrentMessage.ShouldNotBeNull().ShouldContain("Schedule:Nightly");
-        _retired.Last().ShouldBe("WaitThreshold");
-        _retired.ShouldNotContain("WaitThresholdLevel");
+        released.IsSuccess.ShouldBeTrue(released.CurrentMessage);
+        _retired.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ALevelThatCannotBeReadOrRetiredFailsAndARetireFailureNamesTheOwner()
+    {
+        _levelsUnreadable = true;
+        var unreadable = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
+
+        _levelsUnreadable = false;
+        Level("Pipeline", "AfcPlayersLoad");
+        _retireFails = true;
+        var failed = await Sut().ReleasePipeline("AfcPlayersLoad", TestContext.Current.CancellationToken);
+
+        unreadable.IsFailure.ShouldBeTrue();
+        failed.IsFailure.ShouldBeTrue();
+        failed.CurrentMessage.ShouldNotBeNull().ShouldContain("AfcPlayersLoad");
     }
 }

@@ -21,7 +21,7 @@ public sealed class SortTransformTypeTests
 
     private static PipelineTransformConfiguration CreateConfig(params (string Field, string Direction)[] fields)
     {
-        var config = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Order", OperationType = "Sort" };
+        var config = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Order", OperationType = "Sort" };
         config.SortFields = fields
             .Select((f, ordinal) => new PipelineTransformSortFieldConfiguration
             {

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Operations.Abstractions.TypeCollections.Execution;
 using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Flow;
 using static Fdw.Services.Etl.Tests.Flow.FlowTestKit;
 
@@ -46,6 +47,12 @@ public sealed class FlowReportingTests
             Calls.Add($"flow {report.Components.Count}");
             return Task.CompletedTask;
         }
+
+        public Task DestinationCommitted(Guid stage, DestinationCommit commit, CancellationToken cancellationToken = default)
+        {
+            Calls.Add($"committed {commit.Destination} {commit.RowsCommitted}{(commit.TargetEmptied ? " emptied" : string.Empty)}");
+            return Task.CompletedTask;
+        }
     }
 
     // Records each record's name, id and parent, so a test can say which record another is under.
@@ -78,6 +85,8 @@ public sealed class FlowReportingTests
         public Task StepFinished(Guid stage, IGenericResult outcome, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task StepCancelled(Guid stage, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task DestinationCommitted(Guid stage, DestinationCommit commit, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public Task FlowFinished(Guid stage, FlowRunReport report, CancellationToken cancellationToken = default)
         {
@@ -190,6 +199,61 @@ public sealed class FlowReportingTests
 
         ran.IsFailure.ShouldBeTrue();
         reporter.Calls.ShouldBe(["start No stage under run", "flow 3", "finish failed"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AFlowTheCallerCancelsClosesItsStageCancelledAndNotFailed()
+    {
+        // Why (FDW-3784): a cancelled run's stage did not fail; it is closed Cancelled, after the events of its components are written.
+        var reporter = new RecordingReporter();
+        var waiting = new ScriptedComponent("src", [], ["output"], async (_, ct) =>
+        {
+            // Why WhenAny: the cancel ends the wait without throwing, and the component answers it with a failure below.
+            await Task.WhenAny(Task.Delay(Timeout.Infinite, ct));
+
+            return GenericResult.Failure(new Fdw.Messages.GenericMessage("stopped by the cancel"));
+        });
+        var (sink, _) = Sink("dst");
+        var graph = Graph([waiting, sink], [Link("src", "dst")]);
+        using var cancel = new CancellationTokenSource();
+        var run = new FlowPipeline("run", [new FlowStageStep("flow", graph)]).Run(Context(reporter), cancel.Token);
+
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        cancel.Cancel();
+        var ran = await run;
+
+        ran.IsFailure.ShouldBeTrue();
+        reporter.Calls.ShouldBe(["start No stage under run", "flow 2", "cancelled"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AFlowStoppedWithTheHostWritesWhatItDidAndLeavesItsStageRecordOpen()
+    {
+        // Why (FDW-3880): the host closes every record still open under a run it stopped Interrupted; a flow that closed its stage Cancelled would leave the run Interrupted with a
+        // Cancelled stage under it.
+        var reporter = new RecordingReporter();
+        var waiting = new ScriptedComponent("src", [], ["output"], async (_, ct) =>
+        {
+            await Task.WhenAny(Task.Delay(Timeout.Infinite, ct));
+            return GenericResult.Failure(new Fdw.Messages.GenericMessage("stopped"));
+        });
+        var (sink, _) = Sink("dst");
+        var graph = Graph([waiting, sink], [Link("src", "dst")]);
+        var gate = new PipelineRunPauseGate(() => true);
+        var context = new FlowStepContext(new FlowVariables(), new FlowExecutor(), new FlowRunOptions { LinkCapacity = 2 }, null, null, reporter, null, gate);
+        using var cancel = new CancellationTokenSource();
+        var run = new FlowPipeline("run", [new FlowStageStep("flow", graph)]).Run(context, cancel.Token);
+
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        cancel.Cancel();
+        var ran = await run;
+
+        ran.IsFailure.ShouldBeTrue();
+        reporter.Calls.ShouldBe(["start No stage under run", "flow 2"]);
     }
 
     [Fact]

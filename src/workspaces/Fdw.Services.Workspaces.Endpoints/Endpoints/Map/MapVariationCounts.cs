@@ -18,10 +18,9 @@ internal static class MapVariationCounts
             .ToDictionary(
                 byDataSet => byDataSet.Key,
                 byDataSet => (IReadOnlyList<WorkspaceMapVariationCountDto>)byDataSet
-                    .GroupBy(variation => variation.Implementation, StringComparer.Ordinal)
+                    .GroupBy(variation => variation.VariationKind, StringComparer.Ordinal)
                     .OrderBy(byKind => byKind.Key, StringComparer.Ordinal)
-                    // Implementation is nullable on every domain row, but data.DataSetVariation.Implementation is NOT NULL:
-                    // a variation always carries its kind.
-                    .Select(byKind => new WorkspaceMapVariationCountDto { Kind = byKind.Key!, Count = byKind.Count() })
+                    // The kind comes from the owner, which data.VariationDataSetConfiguration requires of every row.
+                    .Select(byKind => new WorkspaceMapVariationCountDto { Kind = byKind.Key, Count = byKind.Count() })
                     .ToList());
 }

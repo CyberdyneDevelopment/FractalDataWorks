@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Fdw.Services.Tags.Abstractions</RootNamespace>
+    <AssemblyName>Fdw.Services.Tags.Abstractions</AssemblyName>
+    <Nullable>enable</Nullable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <!--
+    Why this package is dependency-light: every domain that can be tagged attaches its own [TypeOption] to TaggableKinds, so those packages
+    reference this one. It holds the kinds and nothing that reads or writes a row.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\foundation\abstractions\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

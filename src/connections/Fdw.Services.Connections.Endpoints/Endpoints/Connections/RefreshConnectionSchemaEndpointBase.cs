@@ -9,7 +9,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// <summary>
 /// Forces re-discovery of schema for a connection, persists the results, and returns the updated metadata.
 /// </summary>
-public abstract class RefreshConnectionSchemaEndpointBase : Endpoint<ConnectionNameRequest, SchemaInformationDto>
+public abstract class RefreshConnectionSchemaEndpointBase : Endpoint<ConnectionSchemaRequest, SchemaInformationDto>
 {
     private readonly ISchemaInformationService _schemaService;
 
@@ -46,9 +46,20 @@ public abstract class RefreshConnectionSchemaEndpointBase : Endpoint<ConnectionN
     }
 
     /// <inheritdoc />
-    public override async Task HandleAsync(ConnectionNameRequest req, CancellationToken ct)
+    public override async Task HandleAsync(ConnectionSchemaRequest req, CancellationToken ct)
     {
-        var result = await _schemaService.RefreshSchema(req.Name, ct).ConfigureAwait(false);
+        // The discovery's choices come from the request (FDW-3823); one left out is refused, naming it, before anything is read.
+        var options = DataStoreDiscoveryChoices.FromRequest(
+            req.ExcludedSchemas, req.IncludeOnlySchemas, req.DiscoverViews, req.DiscoverIndexes, req.DiscoverForeignKeys, req.DiscoverDescriptions,
+            req.Name, Logger);
+        if (options.IsFailure)
+        {
+            AddError(options.CurrentMessage ?? string.Empty);
+            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var result = await _schemaService.RefreshSchema(req.Name, options.Value!, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess || result.Value == null)
         {

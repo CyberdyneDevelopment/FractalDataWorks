@@ -91,7 +91,13 @@ public sealed class ExtractInterfaceTranslator : RoslynCommandTranslatorBase<Ext
         }
 
         var typeName = typeSymbol.Name;
-        var interfaceName = command.InterfaceName ?? $"I{typeName}";
+        // Why required: an interface name made up from the type name is a computed fallback (FDW-3580); the caller names it.
+        if (string.IsNullOrWhiteSpace(command.InterfaceName))
+        {
+            return GenericResult<MutationResult>.Failure(RoslynResultCodes.ByName("InterfaceNameRequired"));
+        }
+
+        var interfaceName = command.InterfaceName;
 
         // Build interface members from public members
         var interfaceMembers = new List<MemberDeclarationSyntax>();

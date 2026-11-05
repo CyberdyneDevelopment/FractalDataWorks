@@ -83,12 +83,17 @@ public sealed class Pbkdf2PasswordHashAlgorithm : PasswordHashAlgorithmBase
             return false;
         }
 
+        // Why: the derive below asks for as many bytes as the stored hash has, so an empty stored
+        // hash would compare two empty arrays and pass. This algorithm only ever stores 32 bytes.
+        if (expectedHash.Length != HashSizeBytes)
+            return false;
+
         var actualHash = KeyDerivation.Pbkdf2(
             password: plaintext,
             salt: saltBytes,
             prf: Prf,
             iterationCount: IterationCount,
-            numBytesRequested: expectedHash.Length);
+            numBytesRequested: HashSizeBytes);
 
         return FixedTimeEquals(actualHash, expectedHash);
     }

@@ -69,7 +69,7 @@ public class DataSetTypeBaseTests
         sut.Fields.ShouldBe(fields);
         sut.Category.ShouldBe("Dataset");
         sut.ConfigurationSection.ShouldBe("DataSets:TestDataSet");
-        sut.Version.ShouldBe("1.0");
+        sut.DeclaredDefaults[DataSetDeclaredDefaults.Version].ShouldBe("1.0");
     }
 
     [Fact]

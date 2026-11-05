@@ -32,14 +32,14 @@ public class EtlRowMapperConfiguration : IGenericConfiguration
 
     /// <summary>
     /// Gets or sets a value indicating whether connection pooling is enabled for this mapper.
-    /// Defaults to <c>true</c>.
+    /// Left unstated, the mapper type's declared value applies (FDW-3956).
     /// </summary>
-    public bool EnablePooling { get; set; } = true;
+    public bool? EnablePooling { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum number of pooled mapper instances.
-    /// Defaults to 1000.
+    /// Left unstated, the mapper type's declared value applies (FDW-3956).
     /// </summary>
-    public int MaxPoolSize { get; set; } = 1000;
+    public int? MaxPoolSize { get; set; }
 
 }

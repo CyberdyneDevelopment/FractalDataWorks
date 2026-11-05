@@ -42,32 +42,35 @@ public static class ValueBindings
     }
 
     /// <summary>
-    /// Gives each binding the value it puts in the rows of a load that takes rows (Insert, Update). A kind that needs
-    /// the database to number or stamp the rows set-based cannot be given to rows, and is refused.
+    /// Gives each binding the producer of the value it puts in the rows of a load that takes rows (Insert, Update). A kind that needs
+    /// the database to number or stamp the rows set-based cannot be given to rows, and is refused. So is a kind that only an insert may
+    /// give, when the load replaces rows that exist.
     /// </summary>
     /// <param name="bindings">The bindings.</param>
     /// <param name="owner">What they belong to, for refusal messages.</param>
     /// <param name="loadKind">The kind of load, for refusal messages.</param>
+    /// <param name="replacesRows">Whether the load changes rows that already exist, so an insert-only kind is refused.</param>
     /// <param name="now">The moment the load began, the same for every row.</param>
     /// <param name="logger">The logger the refusals are written to.</param>
-    /// <returns>Column and value pairs, or the first refusal.</returns>
-    public static IGenericResult<IReadOnlyList<KeyValuePair<string, object?>>> RowValues(
+    /// <returns>Column and value producer pairs, or the first refusal.</returns>
+    public static IGenericResult<IReadOnlyList<KeyValuePair<string, Func<object?>>>> RowValues(
         IReadOnlyList<ColumnValueBinding> bindings,
         string owner,
         string loadKind,
+        bool replacesRows,
         DateTimeOffset now,
         ILogger logger)
     {
-        var values = new List<KeyValuePair<string, object?>>(bindings.Count);
+        var values = new List<KeyValuePair<string, Func<object?>>>(bindings.Count);
         foreach (var binding in bindings)
         {
             var factory = ValueSourceFactories.ByName(binding.Source.Kind);
-            if (ReferenceEquals(factory, ValueSourceFactories.NotFound) || !factory.SuppliesRowValue)
-                return GenericResult<IReadOnlyList<KeyValuePair<string, object?>>>.Failure(
+            if (ReferenceEquals(factory, ValueSourceFactories.NotFound) || !factory.SuppliesRowValue || (replacesRows && factory.InsertOnly))
+                return GenericResult<IReadOnlyList<KeyValuePair<string, Func<object?>>>>.Failure(
                     PipelineRunLog.ValueSourceNotForLoad(logger, owner, binding.Column, binding.Source.Kind, loadKind));
-            values.Add(new KeyValuePair<string, object?>(binding.Column, factory.RowValue(binding.Source, now)));
+            values.Add(new KeyValuePair<string, Func<object?>>(binding.Column, factory.RowValueProducer(binding.Source, now)));
         }
 
-        return GenericResult<IReadOnlyList<KeyValuePair<string, object?>>>.Success(values);
+        return GenericResult<IReadOnlyList<KeyValuePair<string, Func<object?>>>>.Success(values);
     }
 }

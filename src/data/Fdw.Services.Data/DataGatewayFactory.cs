@@ -12,6 +12,7 @@ using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Transformations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data;
 
@@ -102,7 +103,7 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
             ? GenericResult<IGenericService>.Success(Build(typed))
             : GenericResult<IGenericService>.Failure(
                 DataGatewayProviderLog.ConfigurationTypeMismatch(
-                    _logger, configuration?.GetType().Name ?? "(null)"));
+                    _logger, configuration?.GetType().Name ?? LogPlaceholders.Null));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService

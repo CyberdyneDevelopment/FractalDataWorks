@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\foundation\security\Fdw.Security.Encryption\Fdw.Security.Encryption.csproj" />
+    <ProjectReference Include="..\..\..\..\src\secrets\secretmanagers\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+  </ItemGroup>
+</Project>

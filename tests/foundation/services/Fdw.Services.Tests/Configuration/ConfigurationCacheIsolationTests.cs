@@ -58,7 +58,7 @@ public sealed class ConfigurationCacheIsolationTests
             "ConfigurationDb", "data", "DataStoreConfiguration");
 
         // Act -- an implementation provider reads by the owning domain row's durable id, not by name.
-        var domain = new DataStoreConfigurationProvider(NullLogger<DataStoreConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStore");
+        var domain = new DataStoreConfigurationProvider(NullLogger<DataStoreConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStore", new UnavailablePlacement());
         domain.Register("MsSql", provider);
         var implementationId = store.Id;
         var first = await domain.Get("AuthDb", TestContext.Current.CancellationToken);

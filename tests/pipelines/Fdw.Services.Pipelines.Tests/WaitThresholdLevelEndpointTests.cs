@@ -49,14 +49,7 @@ public class WaitThresholdLevelEndpointTests
         ctx.Request.RouteValues["name"] = name;
     };
 
-    private static readonly WaitThresholdLevelPayload Own = new()
-    {
-        Mode = "Own",
-        Thresholds = [new WaitThresholdPayload
-        {
-            Name = "Queue full", Comparison = "GreaterThanOrEqual", Number = 100, Severity = "Error", NotificationRules = ["Ops email"], StopsNewRuns = true, IsEnabled = true,
-        }],
-    };
+    private static readonly WaitThresholdLevelPayload Own = new() { Mode = "Own" };
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -122,7 +115,7 @@ public class WaitThresholdLevelEndpointTests
     {
         var store = new Mock<IWaitThresholdStore>();
         store.Setup(s => s.Write("Schedule", "Nightly", Own, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<WaitThresholdLevelPayload>.Failure(WaitThresholdLog.Refused(NullLogger.Instance, "thresholds[0].number", "it is negative")));
+            .ReturnsAsync(GenericResult<WaitThresholdLevelPayload>.Failure(WaitThresholdLog.Refused(NullLogger.Instance, "mode", "it is not an option")));
         var endpoint = Factory.Create<PutSchedule>(Named("Nightly"), store.Object);
 
         await endpoint.HandleAsync(Own, CancellationToken.None);

@@ -127,6 +127,44 @@ public sealed class ConfigurationRowReader
         return GenericResult<IReadOnlyList<ConfigurationRow>>.Success(read);
     }
 
+    /// <summary>Reads every current row a condition selects, in one statement.</summary>
+    /// <param name="condition">Which rows, or nothing for every row.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The rows, in the order the store answers them, or the failure of the read.</returns>
+    /// <remarks>
+    /// For the rows that hang from a set of owners already read: the condition names the owners (<c>IN</c> their keys), so the answer is
+    /// the set's own and not a window over the container. The caller keeps the set under <see cref="ParentChain.MaxKeys"/>.
+    /// </remarks>
+    public async Task<IGenericResult<IReadOnlyList<ConfigurationRow>>> All(IFilterNode? condition, CancellationToken cancellationToken = default)
+    {
+        var gateway = _gateways.Get(_dataStoreName);
+        if (gateway.IsFailure)
+        {
+            return gateway.ToNewResult<IReadOnlyList<ConfigurationRow>>();
+        }
+
+        var command = new QueryCommand<Dictionary<string, object?>>
+        {
+            Filter = Filter(condition, current: true),
+            Metadata = CacheMetadata(),
+        };
+
+        var rows = await gateway.Value!.Execute<IEnumerable<Dictionary<string, object?>>>(command, Target, cancellationToken).ConfigureAwait(false);
+        if (rows.IsFailure)
+        {
+            return rows.ToNewResult<IReadOnlyList<ConfigurationRow>>();
+        }
+
+        if (rows.Value is null)
+        {
+            return GenericResult<IReadOnlyList<ConfigurationRow>>.Failure(ConfigurationRowReaderLog.AllReturnedNoResult(_logger, _containerName));
+        }
+
+        var read = rows.Value.Select(row => new ConfigurationRow(row)).ToList();
+        ConfigurationRowReaderLog.AllRead(_logger, _containerName, read.Count);
+        return GenericResult<IReadOnlyList<ConfigurationRow>>.Success(read);
+    }
+
     /// <summary>Counts the current rows a condition selects.</summary>
     /// <param name="condition">Which rows, or nothing for every row.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

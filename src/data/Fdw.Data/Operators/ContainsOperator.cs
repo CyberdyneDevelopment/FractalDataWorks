@@ -29,7 +29,7 @@ public sealed class ContainsOperator : FilterOperatorBase
     {
         return value switch
         {
-            string str => $"'{str.Replace("'", "''")}'",
+            string str => $"'{str.Replace("'", "''", StringComparison.Ordinal)}'",
             _ => $"'{value}'"
         };
     }

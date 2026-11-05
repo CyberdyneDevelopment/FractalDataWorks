@@ -48,12 +48,16 @@ internal static class FlowSequence
         try
         {
             var result = await Run(body, context.WithReportParent(record), cancellationToken).ConfigureAwait(false);
-            await reporter.StepFinished(record, result, cancellationToken).ConfigureAwait(false);
+            await Finished(reporter, record, result, HostStopped(context), cancellationToken).ConfigureAwait(false);
             return result;
         }
         catch (OperationCanceledException)
         {
-            await reporter.StepCancelled(record, CancellationToken.None).ConfigureAwait(false);
+            if (!HostStopped(context))
+            {
+                await reporter.StepCancelled(record, CancellationToken.None).ConfigureAwait(false);
+            }
+
             throw;
         }
     }
@@ -76,13 +80,28 @@ internal static class FlowSequence
         try
         {
             var result = await step.Run(context.WithReportParent(stage), cancellationToken).ConfigureAwait(false);
-            await reporter.StepFinished(stage, result, cancellationToken).ConfigureAwait(false);
+            await Finished(reporter, stage, result, HostStopped(context), cancellationToken).ConfigureAwait(false);
             return result;
         }
         catch (OperationCanceledException)
         {
-            await reporter.StepCancelled(stage, CancellationToken.None).ConfigureAwait(false);
+            if (!HostStopped(context))
+            {
+                await reporter.StepCancelled(stage, CancellationToken.None).ConfigureAwait(false);
+            }
+
             throw;
         }
     }
+
+    // Why a failure under a cancel is reported as a cancel (FDW-3784): a step that answers its caller's cancel with a failed result, and not by throwing, was
+    // cancelled and did not fail; its record says so, and says it without the cancelled token, which would refuse the write.
+    // A host stop leaves the record open (FDW-3880): the host closes everything still open under the run Interrupted.
+    private static Task Finished(IFlowReporter reporter, Guid record, IGenericResult result, bool hostStopped, CancellationToken cancellationToken) =>
+        cancellationToken.IsCancellationRequested && result.IsFailure
+            ? hostStopped ? Task.CompletedTask : reporter.StepCancelled(record, CancellationToken.None)
+            : reporter.StepFinished(record, result, cancellationToken);
+
+    // Whether the run's token ended because the host is stopping and no person cancelled the run (FDW-3880).
+    private static bool HostStopped(FlowStepContext context) => context.PauseGate?.StoppedWithHost == true;
 }

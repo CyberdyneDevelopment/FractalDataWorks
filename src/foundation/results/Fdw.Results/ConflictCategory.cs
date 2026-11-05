@@ -15,7 +15,7 @@ public sealed class ConflictCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="ConflictCategory"/> class.
     /// </summary>
     public ConflictCategory()
-        : base(id: 4, name: "Conflict", isFailure: true, isRetryable: false, httpStatus: 409, clientMessage: "The request conflicted with the current state of the resource", clientAction: "Refresh and try again")
+        : base(id: 4, name: "Conflict", isFailure: true, isRetryable: false, countsTowardFailureThresholds: true, httpStatus: 409, clientMessage: "The request conflicted with the current state of the resource", clientAction: "Refresh and try again")
     {
     }
 }

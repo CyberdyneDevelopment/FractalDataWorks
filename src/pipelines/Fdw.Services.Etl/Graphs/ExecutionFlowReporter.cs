@@ -42,6 +42,12 @@ public sealed class ExecutionFlowReporter : IFlowReporter
     /// <summary>The event type of the rows one error output carried (FDW-1720).</summary>
     public const string RejectedRowsEvent = "rows.rejected";
 
+    /// <summary>The type of the event that records what a stage of a flow moved as a whole (FDW-3381): rows read, rows written, rows rejected and bytes moved. The run time of a stage is on its record.</summary>
+    public const string TotalsEvent = "flow.totals";
+
+    /// <summary>The type of the event that records what a load destination has committed to its target so far (FDW-3785): the rows, whether the target was emptied, whether the load holds its rows to the end.</summary>
+    public const string DestinationCommittedEvent = "destination.committed";
+
     private readonly IExecutionTracker _tracker;
     private readonly Guid _runId;
     private readonly Guid? _tenantId;
@@ -102,10 +108,11 @@ public sealed class ExecutionFlowReporter : IFlowReporter
     /// <inheritdoc />
     public async Task StepCancelled(Guid stage, CancellationToken cancellationToken = default)
     {
-        var completed = await _tracker.Complete(stage, false, "Cancelled", "The run was cancelled", cancellationToken).ConfigureAwait(false);
-        if (completed.IsFailure)
+        // Why Close and not Complete: Complete(false, ...) leaves a record Failed, and a cancelled step did not fail (FDW-3784).
+        var closed = await _tracker.Close(stage, ExecutionStateTypes.Cancelled, "Cancelled", "The run was cancelled", cancellationToken).ConfigureAwait(false);
+        if (closed.IsFailure)
         {
-            GraphLog.ReportNotWritten(_logger, stage.ToString(), completed.CurrentMessage);
+            GraphLog.ReportNotWritten(_logger, stage.ToString(), closed.CurrentMessage);
         }
     }
 
@@ -115,9 +122,7 @@ public sealed class ExecutionFlowReporter : IFlowReporter
         ArgumentNullException.ThrowIfNull(report);
         foreach (var component in report.Components.OrderBy(c => c.StartedAt).ThenBy(c => c.Name, StringComparer.Ordinal))
         {
-            var rowsOut = report.Links
-                .Where(l => string.Equals(l.Link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
-                .Sum(l => l.Rows);
+            var figures = FlowFigures.Of(report, component.Name);
             var data = new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 ["component"] = component.Name,
@@ -125,7 +130,13 @@ public sealed class ExecutionFlowReporter : IFlowReporter
                 ["endedAt"] = component.EndedAt.ToString("o", System.Globalization.CultureInfo.InvariantCulture),
                 ["succeeded"] = component.Succeeded,
                 ["failed"] = string.Equals(component.Name, report.FailedComponent, StringComparison.OrdinalIgnoreCase),
-                ["rowsOut"] = rowsOut,
+
+                // Why a component that neither succeeded nor failed is cancelled: the run was stopped (by the caller, or by another component's failure) while it ran or waited.
+                ["cancelled"] = !component.Succeeded && !string.Equals(component.Name, report.FailedComponent, StringComparison.OrdinalIgnoreCase),
+                ["rowsIn"] = figures.RowsIn,
+                ["rowsOut"] = figures.RowsOut,
+                ["bytesOut"] = figures.BytesOut,
+                ["rejected"] = figures.Rejected,
             };
 
             // Why the stage only when there is one: a component with none has no number, and "absent" is what the record says (FDW-2060).
@@ -148,8 +159,29 @@ public sealed class ExecutionFlowReporter : IFlowReporter
                 ["toInput"] = count.Link.ToInput,
                 ["rows"] = count.Rows,
                 ["batches"] = count.Batches,
+                ["bytes"] = count.Bytes,
             }, cancellationToken).ConfigureAwait(false);
         }
+
+        await Record(stage, TotalsEvent, "What the stage moved", FlowFigures.Totals(report), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// One event for each report, written as it happens and not at the end of the stage: a run that is stopped or lost never reaches the end, and the committed rows are the figure
+    /// that run most needs. The figure is the total so far, so the latest event is the whole answer.
+    /// </remarks>
+    public Task DestinationCommitted(Guid stage, DestinationCommit commit, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(commit);
+        return Record(stage, DestinationCommittedEvent, $"Destination '{commit.Destination}' has committed {commit.RowsCommitted} row(s)", new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["destination"] = commit.Destination,
+            ["rowsCommitted"] = commit.RowsCommitted,
+            ["targetEmptied"] = commit.TargetEmptied,
+            ["wholeSet"] = commit.WholeSet,
+            ["repeatsToSameResult"] = commit.RepeatsToSameResult,
+        }, cancellationToken);
     }
 
     // Why one event for each error output: it says how many rows left through the output and the reasons they gave, so a person sees what was

@@ -1,3 +1,4 @@
+using Fdw.Data.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -7,6 +8,7 @@ using Fdw.Data.RowSources;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Data.RowSources.Delimited.Abstractions;
 using Fdw.Data.RowSources.Delimited.Xlsx;
+using Fdw.Results;
 
 namespace Fdw.Data.RowSources.Delimited;
 
@@ -23,6 +25,8 @@ public sealed class XlsxRowWriterType : RecordWriterTypeBase
     /// <summary>Initializes a new instance of the <see cref="XlsxRowWriterType"/> class.</summary>
     public XlsxRowWriterType() : base("Xlsx")
     {
+        BufferSize = 16 * 1024;
+        RowsPerSheet = XlsxRowWriterOptions.MaxRowsPerSheet;
     }
 
     /// <inheritdoc />
@@ -37,15 +41,30 @@ public sealed class XlsxRowWriterType : RecordWriterTypeBase
     /// <inheritdoc />
     public override bool WritesBinary => true;
 
-    /// <inheritdoc />
-    public override RowWriterOptions CreateOptions(IReadOnlyList<string> columns)
-        => new XlsxRowWriterOptions { Columns = [.. columns] };
+    /// <summary>Gets or sets the rows a worksheet holds, the header row included, before the rows continue on a further worksheet. Declared here
+    /// as this format's own value (FDW-3823), at most <see cref="XlsxRowWriterOptions.MaxRowsPerSheet"/>; a host may change it at registration.</summary>
+    public int RowsPerSheet { get; set; }
 
     /// <inheritdoc />
-    public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)
+    /// <remarks>Why the columns come from the caller in a stable order (FDW-1298): a workbook's header row and its cells follow them,
+    /// and the writer refuses an empty list.</remarks>
+    public override IGenericResult<RowWriterOptions> CreateOptions(IReadOnlyList<string> columns, IReadOnlyDictionary<string, object> stated, string owner)
+    {
+        var choices = new RowFormatChoices(stated, owner, Format);
+        return choices.Result<RowWriterOptions>(new XlsxRowWriterOptions
+        {
+            Columns = [.. columns],
+            SheetName = choices.Text("SheetName"),
+            BufferSize = BufferSize,
+            RowsPerSheet = RowsPerSheet,
+        });
+    }
+
+    /// <inheritdoc />
+    public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions options)
         => throw new NotSupportedException("The Xlsx format is a zip of XML parts, not text; it is written to a byte stream with CreateBinaryWriter.");
 
     /// <inheritdoc />
-    public override IRecordWriter<DataRecord> CreateBinaryWriter(Stream target, RowWriterOptions? options)
-        => new XlsxRowWriter(target, options as XlsxRowWriterOptions);
+    public override IRecordWriter<DataRecord> CreateBinaryWriter(Stream target, RowWriterOptions options)
+        => new XlsxRowWriter(target, options as XlsxRowWriterOptions ?? throw new ArgumentException("The Xlsx format writes with XlsxRowWriterOptions.", nameof(options)));
 }

@@ -17,6 +17,7 @@ public abstract class ResultCategoryBase : TypeOptionBase<int, ResultCategoryBas
     {
         IsFailure = true;
         IsRetryable = false;
+        CountsTowardFailureThresholds = true;
         HttpStatus = 500;
         ClientMessage = "An unexpected error occurred";
         ClientAction = "Contact your administrator";
@@ -25,11 +26,12 @@ public abstract class ResultCategoryBase : TypeOptionBase<int, ResultCategoryBas
     /// <summary>
     /// Initializes a new instance of the <see cref="ResultCategoryBase"/> class.
     /// </summary>
-    protected ResultCategoryBase(int id, string name, bool isFailure, bool isRetryable, int httpStatus, string clientMessage, string? clientAction)
+    protected ResultCategoryBase(int id, string name, bool isFailure, bool isRetryable, bool countsTowardFailureThresholds, int httpStatus, string clientMessage, string? clientAction)
         : base(id, name)
     {
         IsFailure = isFailure;
         IsRetryable = isRetryable;
+        CountsTowardFailureThresholds = countsTowardFailureThresholds;
         HttpStatus = httpStatus;
         ClientMessage = clientMessage;
         ClientAction = clientAction;
@@ -43,6 +45,9 @@ public abstract class ResultCategoryBase : TypeOptionBase<int, ResultCategoryBas
 
     /// <inheritdoc />
     public bool IsRetryable { get; }
+
+    /// <inheritdoc/>
+    public bool CountsTowardFailureThresholds { get; }
 
     /// <inheritdoc />
     public int HttpStatus { get; }

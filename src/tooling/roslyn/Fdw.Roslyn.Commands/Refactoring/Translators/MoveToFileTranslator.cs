@@ -94,7 +94,13 @@ public sealed class MoveToFileTranslator : RoslynCommandTranslatorBase<MoveToFil
         var typeName = typeSymbol.Name;
         var fqn = SymbolFqn.Of(typeSymbol);
         var directory = Path.GetDirectoryName(command.FilePath) ?? string.Empty;
-        var newFileName = command.TargetFileName ?? $"{typeName}.cs";
+        // Why required: a file name made up from the type name is a computed fallback (FDW-3580); the caller names the file.
+        if (string.IsNullOrWhiteSpace(command.TargetFileName))
+        {
+            return GenericResult<MutationResult>.Failure(RoslynResultCodes.ByName("TargetFileNameRequired"));
+        }
+
+        var newFileName = command.TargetFileName;
         var newFilePath = Path.Combine(directory, newFileName);
 
         // Check if this is the only type in the file

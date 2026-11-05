@@ -24,6 +24,18 @@ public sealed class CreateTenantRequest
     /// </summary>
     public string? ConnectionName { get; set; }
 
+    /// <summary>Gets or sets whether a user can list or switch into the tenant. Required: the caller chooses, there is no default (FDW-3823).</summary>
+    [Required]
+    public bool? IsSelectable { get; set; }
+
+    /// <summary>Gets or sets the name of the tenant's first organization. Required: the founder names it, there is no default (FDW-3838).</summary>
+    [Required, StringLength(200, MinimumLength = 1)]
+    public string OrganizationName { get; set; } = "";
+
+    /// <summary>Gets or sets the slug of the tenant's first organization. Required: the founder names it, there is no default (FDW-3838).</summary>
+    [Required, StringLength(100, MinimumLength = 1)]
+    public string OrganizationSlug { get; set; } = "";
+
     /// <summary>
     /// Gets or sets the prefix applied to permission policy names for the tenant (for example "acme"); null for none.
     /// </summary>

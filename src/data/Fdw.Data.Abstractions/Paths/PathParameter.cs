@@ -35,7 +35,7 @@ public sealed class PathParameter
         IsRequired = isRequired;
         DefaultValue = defaultValue;
         Description = description;
-        ValidationRules = validationRules?.ToList() ?? new List<string>();
+        ValidationRules = validationRules?.ToList() ?? [];
     }
 
     /// <summary>

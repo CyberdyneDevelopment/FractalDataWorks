@@ -131,7 +131,7 @@ public sealed class DetectCodeSmellsTranslator
             {
                 var containingMethod = catchClause.Ancestors()
                     .OfType<MethodDeclarationSyntax>()
-                    .FirstOrDefault()?.Identifier.Text ?? "unknown";
+                    .FirstOrDefault()?.Identifier.Text ?? RoslynReportPlaceholders.UnknownLowerCase;
 
                 smells.Add(CreateSmell("EmptyCatchBlock", containingMethod, catchClause.GetLocation(),
                     "Empty catch block swallows exceptions", "High"));
@@ -155,7 +155,7 @@ public sealed class DetectCodeSmellsTranslator
                     {
                         var containingMethod = literal.Ancestors()
                             .OfType<MethodDeclarationSyntax>()
-                            .FirstOrDefault()?.Identifier.Text ?? "unknown";
+                            .FirstOrDefault()?.Identifier.Text ?? RoslynReportPlaceholders.UnknownLowerCase;
 
                         smells.Add(CreateSmell("MagicNumber", containingMethod, literal.GetLocation(),
                             $"Magic number {intVal} should be a named constant", "Low"));

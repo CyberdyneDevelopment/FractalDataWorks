@@ -50,7 +50,11 @@ internal sealed class KeyValuesComparer : IEqualityComparer<object?[]>
         var hash = new HashCode();
         foreach (var value in obj)
         {
-            hash.Add(value is string text ? StringComparer.OrdinalIgnoreCase.GetHashCode(text) : value?.GetHashCode() ?? 0);
+            // Why Add(value): HashCode hashes a null as the framework does, with no stand-in value (FDW-3580).
+            if (value is string text)
+                hash.Add(StringComparer.OrdinalIgnoreCase.GetHashCode(text));
+            else
+                hash.Add(value);
         }
 
         return hash.ToHashCode();

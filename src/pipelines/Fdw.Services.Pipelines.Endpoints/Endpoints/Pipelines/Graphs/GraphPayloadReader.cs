@@ -128,6 +128,9 @@ public static class GraphPayloadReader
             DelayedStartSeconds = payload.DelayedStartSeconds,
             DelayedStartTimeOfDay = payload.DelayedStartTimeOfDay,
             DelayedStartTimeZoneId = payload.DelayedStartTimeZoneId,
+            IsTemplate = payload.IsTemplate,
+            TemplateName = payload.TemplateName,
+            TemplateVersion = payload.TemplateVersion,
         };
 
         foreach (var variable in payload.Variables)
@@ -502,10 +505,14 @@ public static class GraphPayloadReader
     private static IGenericResult ReadToolStage(
         PipelineComponentConfiguration component, StageToolComponentTypeBase tool, Dictionary<string, JsonElement> members, IReadOnlyDictionary<string, Guid> transformationIds)
     {
+        // Why isEnabled is stated here: a tool on the canvas runs, and the way to stop it is to take it off. That is what a tool is in
+        // the graph model, not a default standing in for a choice: a graph has no disabled tool, so the console has no switch to send
+        // (FDW-3931; fdw-collections-guard on FDW-3823). A stage outside a graph states its own isEnabled or is refused.
         var stated = new JsonObject
         {
             ["name"] = component.Name,
             ["operationType"] = tool.StageKind,
+            ["isEnabled"] = true,
         };
         foreach (var (name, value) in members)
         {

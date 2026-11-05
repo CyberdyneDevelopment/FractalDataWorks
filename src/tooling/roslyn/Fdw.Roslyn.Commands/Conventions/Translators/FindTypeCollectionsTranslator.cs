@@ -45,7 +45,7 @@ public sealed class FindTypeCollectionsTranslator
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) continue;
 
-            foreach (var document in project.Documents)
+            foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
             {
                 if (command.IsGeneratedDocument(document)) continue;
 
@@ -71,7 +71,7 @@ public sealed class FindTypeCollectionsTranslator
                             Name = symbol.Name,
                             FullName = symbol.ToDisplayString(),
                             Project = project.Name,
-                            FilePath = document.FilePath ?? document.Name,
+                            FilePath = documentPath,
                             IsAbstract = symbol.IsAbstract,
                             IsPartial = classDecl.Modifiers.Any(m => string.Equals(m.Text, "partial", StringComparison.Ordinal))
                         });

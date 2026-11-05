@@ -63,14 +63,26 @@ public static class DataSetVariationChain
     /// The stored filter texts of the views that have one; empty when none does, which is true of the chain and not a
     /// missing value. <c>DataSetVariationInvalid</c> when the chain is broken or too long.
     /// </returns>
-    public static async Task<IGenericResult<IReadOnlyList<string>>> StoredFilters(
+    public static Task<IGenericResult<IReadOnlyList<string>>> StoredFilters(
         IDataSetVariationConfigurationProvider variations, DataSetVariationDomainConfiguration view, ILogger logger, CancellationToken ct)
+        => StoredFilters(variations, view.ParentVariationId, view.VariationName, view.StoredFilters, logger, ct);
+
+    /// <summary>The stored filter of every view in a chain, parent first, the view's own last, for a view given by its parts.</summary>
+    /// <param name="variations">The variation provider.</param>
+    /// <param name="parentId">The logical id of the view's parent, or null when its parent is the data set.</param>
+    /// <param name="viewName">The view's name, for a refusal.</param>
+    /// <param name="ownFilter">The view's own stored filter text, or null when it has none.</param>
+    /// <param name="logger">The logger a refusal is written to.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>As the overload that takes the view's list record.</returns>
+    public static async Task<IGenericResult<IReadOnlyList<string>>> StoredFilters(
+        IDataSetVariationConfigurationProvider variations, Guid? parentId, string viewName, string? ownFilter, ILogger logger, CancellationToken ct)
     {
-        var ancestors = await Ancestors(variations, view.ParentVariationId, view.VariationName, logger, ct).ConfigureAwait(false);
+        var ancestors = await Ancestors(variations, parentId, viewName, logger, ct).ConfigureAwait(false);
         if (ancestors.IsFailure) return ancestors.ToNewResult<IReadOnlyList<string>>();
 
         return GenericResult<IReadOnlyList<string>>.Success(
-            ancestors.Value!.Select(a => a.Filters).Append(view.Filters)
+            ancestors.Value!.Select(a => a.StoredFilters).Append(ownFilter)
                 .Where(text => !string.IsNullOrWhiteSpace(text))
                 .Select(text => text!)
                 .ToList());

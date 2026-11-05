@@ -18,7 +18,7 @@ using Fdw.Services.Data.Transformations;
 namespace Fdw.Services.Data;
 
 /// <summary>
-/// Shared row-level execution helpers for dataset type strategies (Simple, Compound).
+/// Shared row-level execution helpers for dataset type strategies (Simple, Compound, Federated).
 /// Centralizes physical→logical field rename, calculated field application, and dictionary-to-type
 /// conversion so no strategy duplicates them.
 /// </summary>
@@ -68,9 +68,7 @@ internal static class DataSetExecutionHelpers
         if (sourceResult.Value is not System.Collections.IEnumerable enumerable)
             return sourceResult;
 
-        var physicalToLogical = new Dictionary<string, string>(fieldMappings.Count, StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in fieldMappings)
-            physicalToLogical[kvp.Value] = kvp.Key;
+        var physicalToLogical = PhysicalToLogical(fieldMappings);
 
         DataGatewayLogger.ApplyingFieldRename(ctx.Logger, physicalToLogical.Count, sourceName);
 
@@ -92,6 +90,56 @@ internal static class DataSetExecutionHelpers
         }
 
         return ConvertDictionariesToType<T>(ctx, renamedRows);
+    }
+
+    /// <summary>
+    /// A source's field mappings turned round: physical name to logical name (FDW-3629). The one place both renames read them, the row
+    /// rename (<see cref="ApplyFieldRename{T}"/>) and the record rename (<see cref="RenameToLogical"/>), so they cannot drift apart.
+    /// </summary>
+    /// <param name="fieldMappings">The source's mappings, logical name to physical name.</param>
+    /// <returns>The mappings keyed by physical name, compared without regard to case.</returns>
+    internal static Dictionary<string, string> PhysicalToLogical(IReadOnlyDictionary<string, string> fieldMappings)
+    {
+        var physicalToLogical = new Dictionary<string, string>(fieldMappings.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in fieldMappings)
+            physicalToLogical[kvp.Value] = kvp.Key;
+        return physicalToLogical;
+    }
+
+    /// <summary>
+    /// Gives records read from a source the data set's logical names (FDW-3629): the schema is rebuilt once with each mapped field under its
+    /// logical name, and the records are pointed at it. Unmapped fields keep their names, as <see cref="ApplyFieldRename{T}"/> does.
+    /// </summary>
+    /// <param name="ctx">The execution context, for its logger.</param>
+    /// <param name="schema">The schema the source's records carry, in the store's names.</param>
+    /// <param name="records">The source's records.</param>
+    /// <param name="fieldMappings">The source's mappings, logical name to physical name.</param>
+    /// <param name="sourceName">The source, for the log.</param>
+    /// <returns>The schema in logical names and the records pointed at it.</returns>
+    internal static (RecordSchema Schema, List<DataRecord> Records) RenameToLogical(
+        DataSetExecutionContext ctx,
+        RecordSchema schema,
+        IReadOnlyList<DataRecord> records,
+        IReadOnlyDictionary<string, string> fieldMappings,
+        string sourceName)
+    {
+        var physicalToLogical = PhysicalToLogical(fieldMappings);
+        DataGatewayLogger.ApplyingFieldRename(ctx.Logger, physicalToLogical.Count, sourceName);
+
+        var fields = new List<Fdw.Data.Abstractions.IDataField>(schema.FieldCount);
+        foreach (var field in schema.Fields)
+        {
+            fields.Add(physicalToLogical.TryGetValue(field.Name, out var logical) ? new RenamedDataField(field, logical) : field);
+        }
+
+        var logicalSchema = new RecordSchema(fields);
+        var renamed = new List<DataRecord>(records.Count);
+        foreach (var record in records)
+        {
+            renamed.Add(new DataRecord(logicalSchema, record.Values.ToArray()));
+        }
+
+        return (logicalSchema, renamed);
     }
 
     /// <summary>
@@ -327,7 +375,7 @@ internal static class DataSetExecutionHelpers
     {
         var fields = dict.Select((kvp, index) => new SchemaField(
             kvp.Key,
-            kvp.Value?.GetType() ?? typeof(object),
+            kvp.Value?.GetType() ?? UntypedValue.ClrType,
             index)).ToList();
 
         return DataSchema.FromFields(fields);
@@ -373,7 +421,7 @@ internal static class DataSetExecutionHelpers
             if (!itemResult.IsSuccess)
                 return GenericResult<T>.Failure(
                     DataServiceResultCodes.ByName("PocoMappingFailed"),
-                    ResultDetails.Create("TypeName", itemType.Name, "Reason", itemResult.CurrentMessage ?? "Unknown error"));
+                    ResultDetails.Create("TypeName", itemType.Name, "Reason", itemResult.FailureReason().Message));
             list.Add(itemResult.Value!);
         }
 

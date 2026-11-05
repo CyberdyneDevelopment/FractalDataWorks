@@ -77,7 +77,7 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
             if (result.IsSuccess)
                 ResiliencyLog.AttemptSucceeded(_logger, ctx.ExecutionId, ctx.AttemptNumber);
             else
-                ResiliencyLog.AttemptFailed(_logger, ctx.ExecutionId, ctx.AttemptNumber, result.CurrentMessage ?? "unknown");
+                ResiliencyLog.AttemptFailed(_logger, ctx.ExecutionId, ctx.AttemptNumber, result.FailureReason().Message);
 
             return result;
         }

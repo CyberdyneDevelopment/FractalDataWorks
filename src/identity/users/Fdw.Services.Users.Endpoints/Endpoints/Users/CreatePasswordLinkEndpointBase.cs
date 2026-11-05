@@ -240,7 +240,9 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
                     channel,
                     [user.Email],
                     "Set your password",
-                    string.Create(CultureInfo.InvariantCulture, $"An administrator created a link for you to set your password:{Environment.NewLine}{Environment.NewLine}{response.Link}{Environment.NewLine}{Environment.NewLine}It works once, until {response.ExpiresAt:u}. If you did not expect it, ignore this message.")),
+                    string.Create(CultureInfo.InvariantCulture, $"An administrator created a link for you to set your password:{Environment.NewLine}{Environment.NewLine}{response.Link}{Environment.NewLine}{Environment.NewLine}It works once, until {response.ExpiresAt:u}. If you did not expect it, ignore this message."),
+                    // A password link is ordinary account mail: the endpoint states its priority, nothing defaults it.
+                    NotificationPriorities.Normal),
                 ct)
             .ConfigureAwait(false);
         if (sent.IsFailure)

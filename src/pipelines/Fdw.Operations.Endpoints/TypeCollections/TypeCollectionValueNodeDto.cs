@@ -26,4 +26,7 @@ public sealed class TypeCollectionValueNodeDto
     /// setting; null when the graph's links name it or the kind fixes the name.
     /// </summary>
     public string? NamedBySetting { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the node carries no rows and only completion (FDW-3640): the <c>after</c> input and the <c>done</c> output every component has.</summary>
+    public bool IsCompletion { get; set; }
 }

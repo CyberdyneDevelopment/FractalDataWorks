@@ -27,14 +27,12 @@ public static class CollectionPromptHelper
     /// <returns>The updated collection</returns>
     public static async Task<List<T>> PromptCollection<T, TComponent>(
         IAnsiConsole console,
-        List<T>? items,
+        List<T> items,
         Func<T, int, TComponent> createComponent,
         Func<T> createNewItem,
-        TUIThemeConfiguration? theme = null)
+        TUIThemeConfiguration theme)
         where TComponent : TUIComponent<TComponent, T>
     {
-        items ??= [];
-
         while (true)
         {
             console.Clear();
@@ -79,24 +77,24 @@ public static class CollectionPromptHelper
         }
     }
 
-    [ConventionOverride(MaxCyclomaticComplexity = 15)]  // UI rendering logic — theme fallbacks and table styling
+    [ConventionOverride(MaxCyclomaticComplexity = 15)]  // UI rendering logic — table styling
     private static void RenderCollectionTable<T, TComponent>(
         IAnsiConsole console,
         List<T> items,
         Func<T, int, TComponent> createComponent,
-        TUIThemeConfiguration? theme)
+        TUIThemeConfiguration theme)
         where TComponent : TUIComponent<TComponent, T>
     {
         if (items.Count == 0)
         {
-            console.MarkupLine($"[{theme?.Colors.Info ?? Color.Grey}]No items in collection[/]");
+            console.MarkupLine($"[{theme.Colors.Info}]No items in collection[/]");
             return;
         }
 
-        var border = theme?.Borders.Table ?? TableBorder.Rounded;
+        var border = theme.Borders.Table;
         var table = new Table()
             .Border(border)
-            .BorderColor(theme?.Colors.Primary ?? Color.Blue)
+            .BorderColor(theme.Colors.Primary)
             .AddColumn("[bold]#[/]")
             .AddColumn("[bold]Item[/]");
 
@@ -104,7 +102,7 @@ public static class CollectionPromptHelper
         {
             var component = createComponent(items[i], i);
             table.AddRow(
-                $"[{theme?.Colors.Primary ?? Color.Blue}]{i + 1}[/]",
+                $"[{theme.Colors.Primary}]{i + 1}[/]",
                 component.GetDisplayText());
         }
 

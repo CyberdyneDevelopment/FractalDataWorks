@@ -29,11 +29,14 @@ public static class DevSessionServiceCollectionExtensions
     /// bus keeps it.
     /// </para>
     /// </remarks>
-    public static IServiceCollection AddDevSessions(this IServiceCollection services)
+    /// <param name="services">The service collection.</param>
+    /// <param name="configureBus">Sets the MCP event bus options; the caller states the ring capacity (FDW-3823).</param>
+    public static IServiceCollection AddDevSessions(this IServiceCollection services, Action<McpEventBusOptions> configureBus)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configureBus);
 
-        services.AddMcpEventBus();
+        services.AddMcpEventBus(configureBus);
 
         services.TryAddSingleton<IGitRunner, GitProcessRunner>();
         services.TryAddSingleton<IWorktreeEngine, GitWorktreeEngine>();

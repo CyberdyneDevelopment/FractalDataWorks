@@ -29,7 +29,10 @@ public class XmlRoundTripTests
         using (var writer = new XmlStreamRowWriter(tw, new XmlRowWriterOptions
         {
             RootElementName = "Rows",
-            RowElementName = "Row"
+            RowElementName = "Row",
+            Indent = false,
+            OmitXmlDeclaration = true,
+            BufferSize = 16 * 1024,
         }))
         {
             await writer.WriteAll(rows, TestContext.Current.CancellationToken);
@@ -42,7 +45,11 @@ public class XmlRoundTripTests
         {
             RowElementName = "Row",
             UseElementContent = true,
-            IncludeAttributes = false
+            IncludeAttributes = false,
+            ContinueOnError = true,
+            BufferSize = 16 * 1024,
+            MaxDepth = 32,
+            MaxCharactersFromEntities = 10_000_000,
         });
 
         var readBack = Drain(reader);

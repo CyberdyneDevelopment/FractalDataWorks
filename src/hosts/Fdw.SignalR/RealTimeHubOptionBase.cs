@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Fdw.Collections;
+using Fdw.ServiceTypes;
 
 namespace Fdw.SignalR;
 
@@ -16,7 +18,7 @@ namespace Fdw.SignalR;
 /// <see cref="RealTimeHubs"/> via <c>[TypeOption]</c>. They supply the route and the broadcaster
 /// registration; the route and authorization policy are declared (never defaulted) on construction.
 /// </remarks>
-public abstract class RealTimeHubOptionBase : TypeOptionBase<RealTimeHubOptionBase>, IRealTimeHub
+public abstract class RealTimeHubOptionBase : TypeOptionBase<RealTimeHubOptionBase>, IRealTimeHub, IDeclaresDefaults
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RealTimeHubOptionBase"/> class.
@@ -39,6 +41,18 @@ public abstract class RealTimeHubOptionBase : TypeOptionBase<RealTimeHubOptionBa
         HubType = hubType ?? throw new ArgumentNullException(nameof(hubType));
         AuthorizationPolicy = authorizationPolicy;
     }
+
+    private static readonly IReadOnlyDictionary<string, object> NoDeclaredDefaults = new Dictionary<string, object>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the tuning defaults this hub declares, by name (FDW-3956): what the hub's broadcaster takes for a value nothing else states. A host
+    /// changes one with <c>ServiceTypeDefaults.Override</c>.
+    /// </summary>
+    /// <remarks>
+    /// Why a virtual member and not a constructor parameter: the generated NotFound sentinel calls the base constructor, and a virtual member
+    /// keeps this empty answer for it (FDW-2931).
+    /// </remarks>
+    public virtual IReadOnlyDictionary<string, object> DeclaredDefaults => NoDeclaredDefaults;
 
     /// <inheritdoc/>
     public string Route { get; }

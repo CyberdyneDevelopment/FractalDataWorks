@@ -53,7 +53,7 @@ public sealed class MoveTypeToProjectTranslator
                 ResultDetails.Create().With("Selector", command.Namespace));
 
         var sourceProject = sources[0].Project;
-        var targetName = command.TargetProject ?? command.Namespace;
+        var targetName = command.TargetProject ?? command.ConventionalTargetProject;
         var targetProject = solution.Projects.FirstOrDefault(p =>
             string.Equals(p.Name, targetName, StringComparison.Ordinal));
 
@@ -454,7 +454,7 @@ public sealed class MoveTypeToProjectTranslator
             if (newPath is null) continue;
 
             var text = await source.Document.GetTextAsync(cancellationToken).ConfigureAwait(false);
-            var folders = NamespaceLayout.RelativeFolders(command.Namespace, targetProject.Name) ?? Array.Empty<string>();
+            var folders = NamespaceLayout.RelativeFolders(command.Namespace, targetProject.Name) ?? [];
 
             outcome.Solution = outcome.Solution.RemoveDocument(source.Document.Id);
 

@@ -112,4 +112,34 @@ public sealed class DataStoreContainerFileOptionsTests
 
         sheet.Code!.FormatClientMessage(sheet.Details)!.ShouldNotContain("\\");
     }
+
+    private static bool ChoiceRefused(string? format, string choice, object? value)
+        => DataStoreContainerBuilder.FormatChoicesRefusal(
+            "People", format, [new System.Collections.Generic.KeyValuePair<string, object?>(choice, value)], NullLogger.Instance) is not null;
+
+    [Theory]
+    [InlineData("Json", "PropertyNameCaseInsensitive", false)]
+    [InlineData("Json", "SkipValidation", false)]
+    [InlineData("Xml", "RootElementName", false)]
+    [InlineData("Xml", "IncludeAttributes", false)]
+    [InlineData("Csv", "QuoteChar", false)]
+    [InlineData("Delimited", "Trim", false)]
+    [InlineData("FixedWidth", "Trim", false)]
+    [InlineData("Json", "QuoteChar", true)]
+    [InlineData("Csv", "RootElementName", true)]
+    [InlineData("Xml", "PropertyNameCaseInsensitive", true)]
+    [InlineData(null, "SkipValidation", true)]
+    public void AFormatChoiceIsOnlyForTheFormatsThatReadIt(string? format, string choice, bool refused)
+        => ChoiceRefused(format, choice, choice is "QuoteChar" or "RootElementName" ? "x" : true).ShouldBe(refused);
+
+    [Theory]
+    [InlineData("Json")]
+    [InlineData("Csv")]
+    [InlineData(null)]
+    public void AFormatChoiceNotStatedIsNeverRefused(string? format)
+        => ChoiceRefused(format, "RootElementName", null).ShouldBeFalse();
+
+    [Fact]
+    public void ContinueOnErrorIsForEveryFormat()
+        => ChoiceRefused("Json", "ContinueOnError", true).ShouldBeFalse();
 }

@@ -244,9 +244,9 @@ public class GeneratorPipelineBuilder
 
         if (_generators.Count > 0)
         {
-            return _cancellationToken == CancellationToken.None
-                ? MultiGeneratorTestHelper.RunGenerators(compilation, _generators.ToArray())
-                : MultiGeneratorTestHelper.RunGenerators(compilation, _cancellationToken, _generators.ToArray());
+            // One call: the overload without a token passes CancellationToken.None, which is what an unset
+            // _cancellationToken already is (FDW-3578).
+            return MultiGeneratorTestHelper.RunGenerators(compilation, _cancellationToken, _generators.ToArray());
         }
 
         return new MultiGeneratorTestHelper.MultiGeneratorResult
@@ -254,7 +254,7 @@ public class GeneratorPipelineBuilder
             InputCompilation = compilation,
             OutputCompilation = compilation,
             GeneratorResults = new Dictionary<string, GeneratorRunResult>(StringComparer.Ordinal),
-            AllDiagnostics = [.. compilation.GetDiagnostics()]
+            AllDiagnostics = [.. compilation.GetDiagnostics(_cancellationToken)]
         };
     }
 

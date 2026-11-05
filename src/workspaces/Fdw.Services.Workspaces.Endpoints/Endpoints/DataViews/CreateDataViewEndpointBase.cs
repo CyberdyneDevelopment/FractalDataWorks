@@ -116,20 +116,18 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
         var refused = await Refusal(request, based.Value.Main, refusals, ct).ConfigureAwait(false);
         if (refused is not null) return refused;
 
-        var view = new DataViewDataSetVariationConfiguration
+        var view = new VariationDataSetConfiguration
         {
-            // The implementation the domain provider is registered under; a new record names it or the save refuses it.
-            Implementation = DataViewDataSetVariationConfiguration.ImplementationName,
             Name = request.Name,
             VariationName = request.Name,
             DisplayName = request.DisplayName,
-            Description = request.Description,
+            Description = request.Description ?? string.Empty,
             OwnerUserId = ownerUserId,
             // The ROOT data set whatever the parent is, so every view of a data set lists with it and a view of a view runs it.
             BaseDataSetId = based.Value.Main.Id,
             ParentVariationId = based.Value.ParentId,
             Encoding = DataViewChart.Given(request.Encoding),
-            Filters = request.Filters,
+            StoredFilters = request.Filters,
             ChartType = DataViewChart.Given(request.ChartType),
             // Why stamped here rather than left to the column DEFAULT: the insert writes every mapped column,
             // including ones nobody set, so the unset CLR default (0001-01-01) overwrites DEFAULT
@@ -138,8 +136,7 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
             CreateDate = DateTimeOffset.UtcNow,
         };
 
-        var saved = await _variations.Save(
-            view, "DataSetVariation", DataViewDataSetVariationConfiguration.ImplementationName, view.Name, ct).ConfigureAwait(false);
+        var saved = await _variations.Save(view, view.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<DataViewResponse>();
 
         var parentName = await DataViewStore.ParentName(_variations, view, Logger, ct).ConfigureAwait(false);
@@ -160,6 +157,10 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
         {
             var named = await _dataSets.Get(request.SubjectDataSetId, ct).ConfigureAwait(false);
             if (named.IsFailure) return named.ToNewResult<(IDataSetImplementationConfiguration, Guid?)>();
+            // A variation is a data set too (FDW-3638), but the subject is always the root data set: a view of a view names its parent view.
+            if (named.Value is IDataSetVariationImplementationConfiguration)
+                return refusals.Invalid<(IDataSetImplementationConfiguration, Guid?)>($"{request.SubjectDataSetId} is itself a variation; name it as parentName, not as the subject data set");
+
             return named.Value is { } dataSet
                 ? GenericResult<(IDataSetImplementationConfiguration, Guid?)>.Success((dataSet, null))
                 : refusals.Invalid<(IDataSetImplementationConfiguration, Guid?)>($"the subject data set {request.SubjectDataSetId} does not exist");

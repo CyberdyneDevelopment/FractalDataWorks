@@ -10,6 +10,9 @@ using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Catalog.Clients.Models;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Tags;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -17,12 +20,19 @@ namespace Fdw.Services.Catalog.Endpoints;
 public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationIdRequest, DataSetAnnotationPayload>
 {
     private readonly IDataSetAnnotationConfigurationProvider _provider;
+    private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly ITagService _tags;
 
     /// <summary>Initializes a new instance of the <see cref="ResolveDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected ResolveDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
+    /// <param name="dataSets">Finds the data set the annotation names, whose tags the answer shows.</param>
+    /// <param name="tags">Reads the data set's tags.</param>
+    protected ResolveDataSetAnnotationEndpointBase(
+        IDataSetAnnotationConfigurationProvider provider, IDataSetConfigurationProvider dataSets, ITagService tags)
     {
         _provider = provider;
+        _dataSets = dataSets;
+        _tags = tags;
     }
 
     /// <summary>Gets the authorization policy required for write operations.</summary>
@@ -78,7 +88,16 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
             return;
         }
 
-        await Send.OkAsync(MapToDto(annotation), ct).ConfigureAwait(false);
+        var names = await DataSetAnnotationTags.Read(_tags, _dataSets, annotation.DataSetName, Logger, ct).ConfigureAwait(false);
+        if (names.IsFailure || names.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(names, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var dto = MapToDto(annotation);
+        dto.Tags = names.Value;
+        await Send.OkAsync(dto, ct).ConfigureAwait(false);
     }
 
     private IGenericMessage? Refuse(IDataSetAnnotationImplementationConfiguration annotation, string annotationId)
@@ -93,12 +112,7 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
 
     private Guid? CallerId()
     {
-        if (Guid.TryParse(HttpContext.User.FindFirstValue("sub"), out var subject))
-        {
-            return subject;
-        }
-
-        return Guid.TryParse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var identifier) ? identifier : null;
+        return CallerClaims.TryGetUserId(HttpContext.User, out var callerId) ? callerId : null;
     }
 
     /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>

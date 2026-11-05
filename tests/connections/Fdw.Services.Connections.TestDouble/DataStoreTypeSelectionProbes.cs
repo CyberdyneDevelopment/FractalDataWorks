@@ -14,6 +14,9 @@ public static class DataStoreTypeSelectionProbes
 {
     public const string ProbeStoreName = "ProbeFiles";
     public const string AbsentStoreName = "ProbeAbsent";
+
+    /// <summary>The probe store type's name in other case: a kind that names it is not offered the registered type (names compare ordinally).</summary>
+    public const string MiscasedStoreName = "probefiles";
 }
 
 [ExcludeFromCodeCoverage]
@@ -43,7 +46,8 @@ public sealed class ProbeTransportConnectionType : ConnectionTypeBase<IGenericCo
         System.Collections.Generic.IReadOnlyDictionary<string, string> secretKeyByField)
         => Fdw.Results.GenericResult.Success();
 
-    protected override IReadOnlyList<string> DataStoreTypeNames => [DataStoreTypeSelectionProbes.AbsentStoreName, DataStoreTypeSelectionProbes.ProbeStoreName];
+    protected override IReadOnlyList<string> DataStoreTypeNames =>
+        [DataStoreTypeSelectionProbes.AbsentStoreName, DataStoreTypeSelectionProbes.ProbeStoreName, DataStoreTypeSelectionProbes.MiscasedStoreName];
 }
 
 [ExcludeFromCodeCoverage]

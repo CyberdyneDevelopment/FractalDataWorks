@@ -32,7 +32,7 @@ public class TypeCollectionRejectShapesTests
     [Fact]
     public void TheRejectPhaseListsTheColumnsItReserves()
     {
-        TypeCollectionResolver.ToSummary(new RejectLoadPhase()).ReservedColumns.ShouldNotBeNull().ShouldBe(new[] { "RejectReason", "RejectStage" });
+        TypeCollectionResolver.ToSummary(new RejectLoadPhase()).ReservedColumns.ShouldNotBeNull().ShouldBe(new[] { "RejectReason", "RejectComponent" });
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class TypeCollectionRejectShapesTests
         var phase = JsonSerializer.Serialize(TypeCollectionResolver.ToSummary(new RejectLoadPhase()), Web);
 
         kind.ShouldContain("\"acceptsRejectedRecords\":true");
-        phase.ShouldContain("\"reservedColumns\":[\"RejectReason\",\"RejectStage\"]");
+        phase.ShouldContain("\"reservedColumns\":[\"RejectReason\",\"RejectComponent\"]");
     }
 
     private sealed class PlainOption : ITypeOption

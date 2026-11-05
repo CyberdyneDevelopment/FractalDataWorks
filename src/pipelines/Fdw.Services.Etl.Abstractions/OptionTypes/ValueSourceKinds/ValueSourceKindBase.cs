@@ -16,13 +16,15 @@ public abstract class ValueSourceKindBase : TypeOptionBase<ValueSourceKindBase>,
     /// <param name="requiresSequenceName">Whether the kind names a sequence (with an optional schema and database).</param>
     /// <param name="requiresSequenceOrder">Whether the kind needs ordering columns so a batch is numbered in a stated order.</param>
     /// <param name="requiresConstant">Whether the kind carries a constant value and the type that reads it.</param>
-    protected ValueSourceKindBase(string name, bool mapsSourceColumn, bool requiresSourceField, bool requiresSequenceName, bool requiresSequenceOrder, bool requiresConstant) : base(name, "ValueSourceKinds")
+    /// <param name="requiresGuidColumn">Whether the column the kind fills must hold a Guid.</param>
+    protected ValueSourceKindBase(string name, bool mapsSourceColumn, bool requiresSourceField, bool requiresSequenceName, bool requiresSequenceOrder, bool requiresConstant, bool requiresGuidColumn = false) : base(name, "ValueSourceKinds")
     {
         MapsSourceColumn = mapsSourceColumn;
         RequiresSourceField = requiresSourceField;
         RequiresSequenceName = requiresSequenceName;
         RequiresSequenceOrder = requiresSequenceOrder;
         RequiresConstant = requiresConstant;
+        RequiresGuidColumn = requiresGuidColumn;
     }
 
     /// <inheritdoc/>
@@ -40,4 +42,7 @@ public abstract class ValueSourceKindBase : TypeOptionBase<ValueSourceKindBase>,
 
     /// <inheritdoc/>
     public bool RequiresConstant { get; }
+
+    /// <inheritdoc/>
+    public bool RequiresGuidColumn { get; }
 }

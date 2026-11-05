@@ -32,7 +32,7 @@ internal static class TypeOptionDiscovery
             return ImmutableArray<TypeOptionModel>.Empty;
 
         // Always scan current assembly
-        var visitor = new TypeOptionVisitor(optionAttrType, lookupAttrType, results);
+        var visitor = new TypeOptionVisitor(compilation, optionAttrType, lookupAttrType, results);
         visitor.Visit(compilation.Assembly.GlobalNamespace);
 
         // Scan referenced assemblies unless restricted
@@ -82,15 +82,18 @@ internal static class TypeOptionDiscovery
 
     private sealed class TypeOptionVisitor : SymbolVisitor
     {
+        private readonly Compilation _compilation;
         private readonly INamedTypeSymbol _optionAttrType;
         private readonly INamedTypeSymbol? _lookupAttrType;
         private readonly List<TypeOptionModel> _results;
 
         public TypeOptionVisitor(
+            Compilation compilation,
             INamedTypeSymbol optionAttrType,
             INamedTypeSymbol? lookupAttrType,
             List<TypeOptionModel> results)
         {
+            _compilation = compilation;
             _optionAttrType = optionAttrType;
             _lookupAttrType = lookupAttrType;
             _results = results;
@@ -127,7 +130,7 @@ internal static class TypeOptionDiscovery
                 return null;
 
             var collectionType = attribute.ConstructorArguments[0].Value as ITypeSymbol;
-            var optionName = attribute.ConstructorArguments[1].Value?.ToString() ?? "";
+            var optionName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
 
             if (collectionType == null || string.IsNullOrEmpty(optionName))
                 return null;
@@ -148,6 +151,7 @@ internal static class TypeOptionDiscovery
             var generatedId = GenerateIdFromTypeName(typeSymbol.ToDisplayString());
             var constructors = ExtractConstructors(typeSymbol);
             var lookupProperties = DiscoverLookupProperties(typeSymbol, _lookupAttrType);
+            var declaredId = DeclaredIdReader.Read(typeSymbol, _compilation);
 
             return new TypeOptionModel(
                 TypeName: typeSymbol.Name,
@@ -158,7 +162,9 @@ internal static class TypeOptionDiscovery
                 GeneratedId: generatedId,
                 Category: category,
                 Constructors: constructors,
-                LookupProperties: lookupProperties
+                LookupProperties: lookupProperties,
+                DeclaredId: declaredId.Id,
+                DeclaredIdProblem: declaredId.Problem
             );
         }
 
@@ -174,7 +180,8 @@ internal static class TypeOptionDiscovery
                             Name: p.Name,
                             Type: p.Type.ToDisplayString(),
                             HasDefaultValue: p.HasExplicitDefaultValue,
-                            DefaultValue: FormatDefaultValue(p)
+                            DefaultValue: FormatDefaultValue(p),
+                            IsValueType: p.Type.IsValueType
                         ))
                         .ToImmutableArray()
                 ))
@@ -229,7 +236,7 @@ internal static class TypeOptionDiscovery
                     {
                         if (attr.ConstructorArguments.Length > 0)
                         {
-                            var methodName = attr.ConstructorArguments[0].Value?.ToString() ?? "";
+                            var methodName = attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
 
                             var isUnique = attr.ConstructorArguments.Length <= 2
                                 || attr.ConstructorArguments[2].Value is not bool u || u;

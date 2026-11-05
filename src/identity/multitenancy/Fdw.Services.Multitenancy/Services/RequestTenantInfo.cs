@@ -1,5 +1,4 @@
 using System;
-using System.Security.Claims;
 using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
@@ -68,10 +67,8 @@ public sealed class RequestTenantInfo : IRequestTenantInfo
             if (user == null)
                 return null;
 
-            return user.Identity?.Name
-                ?? user.FindFirst(ClaimTypes.Name)?.Value
-                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? user.FindFirst("sub")?.Value;
+            // FDW's principals name the caller by sub, which is also their Identity.Name (FDW-3580).
+            return CallerClaims.UserId(user);
         }
     }
 }

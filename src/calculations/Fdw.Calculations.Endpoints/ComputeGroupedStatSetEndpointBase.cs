@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Services.Data.Abstractions.Visualization;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Calculations.Endpoints;
 
@@ -55,7 +56,7 @@ public abstract class ComputeGroupedStatSetEndpointBase : Endpoint<GroupedStatSe
 
         if (!result.IsSuccess)
         {
-            CalculationEndpointLog.ValidationFailed(EndpointLogger, result.CurrentMessage ?? "Failed to compute grouped statistics");
+            CalculationEndpointLog.ValidationFailed(EndpointLogger, result.FailureReason().Message);
             await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }

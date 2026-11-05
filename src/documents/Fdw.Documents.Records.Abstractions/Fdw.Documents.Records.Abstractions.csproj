@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Fdw.Documents.Records.Abstractions</RootNamespace>
+    <PackageId>Fdw.Documents.Records.Abstractions</PackageId>
+    <Title>Fdw Documents Records Abstractions</Title>
+    <Description>The document record layer an application implements over its own storage: the document, stored media, record tree, attribute values, state history, requirements, reminders and the per-organization revision, the seams that read and write them, and the public id rule. Abstractions only: the application owns the tables and the implementation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Documents.Abstractions\Fdw.Documents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\..\foundation\results\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

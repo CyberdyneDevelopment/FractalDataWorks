@@ -14,7 +14,6 @@ using Fdw.Services.Etl.Projects.Validation;
 using Fdw.Services.Etl.Projects.Writers;
 using Fdw.Services.Pipelines;
 using FluentValidation;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -52,14 +51,6 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
             "Default Orchestration",
             "Project/Stage/Step orchestration: policy, validation, node provider and execution")
     {
-        Configuration(builder =>
-        {
-            builder.Services.Configure<ServerPolicyDefaultsOptions>(
-                builder.Configuration.GetSection("ProjectServerDefaults"));
-
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
-
         Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IOrchestrationNodeImplementationConfigurationProvider, OrchestrationNodeImplementationConfigurationProvider>(sp => new OrchestrationNodeImplementationConfigurationProvider(sp.GetRequiredService<ILogger<OrchestrationNodeImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "OrchestrationNodeConfiguration"));
@@ -73,10 +64,22 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
             });
             builder.Services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
 
+            // The server's policy defaults: configuration in the host's server config, one ServerPolicyDefault domain row
+            // naming its implementation row, read through this provider by whatever needs them (FDW-3580).
+            builder.Services.TryAddSingleton<IServerPolicyDefaultImplementationConfigurationProvider>(sp => new ServerPolicyDefaultImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ServerPolicyDefaultImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ServerConnection.Name, "pipe", "ServerPolicyDefaultConfiguration"));
+            builder.Services.TryAddSingleton<ServerPolicyDefaultConfigurationProvider>(sp =>
+            {
+                var domain = new ServerPolicyDefaultConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ServerPolicyDefaultConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ServerConnection.Name, "pipe", "ServerPolicyDefault");
+                domain.Register("ServerPolicyDefault", sp.GetRequiredService<IServerPolicyDefaultImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IServerPolicyDefaultConfigurationProvider>(sp => sp.GetRequiredService<ServerPolicyDefaultConfigurationProvider>());
+
             var services = builder.Services;
 
             // Policy implementations.
-            services.TryAddSingleton<IServerPolicyDefaults, ServerPolicyDefaults>();
             services.TryAddSingleton<IPolicyElevationValidator, PolicyElevationValidator>();
             services.TryAddSingleton<IEffectivePolicyResolver, EffectivePolicyResolver>();
 
@@ -85,11 +88,11 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
             // Validators.
             services.TryAddTransient<IValidator<OrchestrationNodeImplementationConfiguration>>(sp =>
                 new OrchestrationNodeConfigurationValidator(
-                    sp.GetRequiredService<IServerPolicyDefaults>()));
+                    sp.GetRequiredService<IServerPolicyDefaultConfigurationProvider>()));
 
             services.TryAddTransient<IValidator<ProjectConfiguration>>(sp =>
                 new ProjectConfigurationValidator(
-                    sp.GetRequiredService<IServerPolicyDefaults>()));
+                    sp.GetRequiredService<IServerPolicyDefaultConfigurationProvider>()));
 
             // Writer.
             services.TryAddSingleton<OrchestrationNodeConfigurationWriter>();
@@ -114,7 +117,7 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
         {
             var services = host.Services;
 
-            _ = services.GetRequiredService<IServerPolicyDefaults>();
+            _ = services.GetRequiredService<IServerPolicyDefaultConfigurationProvider>();
             _ = services.GetRequiredService<IPolicyElevationValidator>();
             _ = services.GetRequiredService<IEffectivePolicyResolver>();
             _ = services.GetRequiredService<IOrchestrationNodeConfigurationProvider>();

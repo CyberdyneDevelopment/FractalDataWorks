@@ -34,4 +34,33 @@ public class PipelineDataSetsTests
     {
         PipelineDataSets.Reads(new GraphPipelineConfiguration { Name = "Load" }).ShouldBeEmpty();
     }
+
+    [Fact]
+    public void AGraphPipelineNamesTheContainersItReadsAndWritesDirectlyByStorePathAndName()
+    {
+        var graph = new GraphPipelineConfiguration
+        {
+            Name = "Copy",
+            Components =
+            [
+                new PipelineComponentConfiguration { Name = "a", ComponentType = "ContainerSource", ContainerName = "Raw", DataStoreName = "Lake", PathName = "landing" },
+                new PipelineComponentConfiguration { Name = "b", ComponentType = "ContainerDestination", ContainerName = "Clean", DataStoreName = "Warehouse" },
+            ],
+        };
+
+        PipelineContainers.Reads(graph).ShouldBe([new PipelineContainerRef("Lake", "landing", "Raw")]);
+        PipelineContainers.Writes(graph).ShouldBe([new PipelineContainerRef("Warehouse", null, "Clean")]);
+    }
+
+    [Fact]
+    public void AContainerNamedWithoutADataStoreIsNotNamed()
+    {
+        var graph = new GraphPipelineConfiguration
+        {
+            Name = "Copy",
+            Components = [new PipelineComponentConfiguration { Name = "a", ComponentType = "ContainerSource", ContainerName = "Raw" }],
+        };
+
+        PipelineContainers.Reads(graph).ShouldBeEmpty();
+    }
 }

@@ -54,7 +54,7 @@ public sealed partial class ScheduleImplementationConfiguration : IScheduleImple
     public string? Description { get; set; }
 
     /// <inheritdoc/>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <inheritdoc/>
     public DateTimeOffset? NextRunTime { get; set; }
@@ -84,13 +84,16 @@ public sealed partial class ScheduleImplementationConfiguration : IScheduleImple
     public string TimeZoneId { get; set; } = string.Empty;
 
     /// <inheritdoc/>
+    public string MissedFireRule { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
     public int MaxRetries { get; set; }
 
     /// <inheritdoc/>
     public int RetryDelaySeconds { get; set; }
 
     /// <inheritdoc/>
-    public int TimeoutSeconds { get; set; }
+    public int? TimeoutSeconds { get; set; }
 
     /// <summary>
     /// Gets or sets the run parameters the schedule passes to its pipeline on every run, by name (FDW-1108).

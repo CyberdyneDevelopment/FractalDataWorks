@@ -112,7 +112,7 @@ public sealed class LogViewerPageModel : ILogViewerPageModel
         {
             query = query.Where(e =>
                 e.Message.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                (e.Exception?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false));
+                (e.Exception is { } exception && exception.Contains(SearchText, StringComparison.OrdinalIgnoreCase)));
         }
 
         return query;

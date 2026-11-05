@@ -1,14 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Messages;
+using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Results;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Thresholds;
 using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Thresholds;
-using Fdw.Services.Notifications.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using static Fdw.Services.Etl.Tests.Thresholds.WaitThresholdKit;
@@ -16,184 +14,126 @@ using static Fdw.Services.Etl.Tests.Thresholds.WaitThresholdKit;
 namespace Fdw.Services.Etl.Tests.Thresholds;
 
 /// <summary>
-/// Tests for the monitor of thresholds on waiting runs (FDW-3161): the notification rules of a threshold are sent once when it begins to fire and again only after
-/// it has cleared; a run that arrives is stopped only by a firing threshold that stops new runs and applies to its schedule and pipeline; and a configuration
-/// that cannot be read, or a pipeline it does not know, fails with nothing assumed.
+/// Tests for the monitor of thresholds on waiting runs (FDW-3161, FDW-3975): a run that arrives is taken or refused by the owner the levels choose and the gate; a level
+/// configuration that cannot be read, or a pipeline or schedule it does not know, fails with nothing assumed; and the waiting runs it is told of reach the threshold evaluator.
 /// </summary>
 public sealed class WaitThresholdMonitorTests
 {
+    private static readonly Guid Tenant = Guid.Parse("11111111-1111-4111-8111-111111111111");
+
     private sealed class Source(IGenericResult<WaitThresholdConfiguration> result) : IWaitThresholdSource
     {
         public Task<IGenericResult<WaitThresholdConfiguration>> Read(CancellationToken cancellationToken = default) => Task.FromResult(result);
     }
 
-    private readonly Mock<IRuleNotifier> _notifier = new();
-    private readonly List<RuleNotification> _sent = [];
+    private sealed class Evaluator(IReadOnlyList<ThresholdMatch> held) : IThresholdEvaluator
+    {
+        public List<(ThresholdSubject Subject, IReadOnlyDictionary<string, object?> Values)> Reports { get; } = [];
+
+        public List<ThresholdSubject> Asked { get; } = [];
+
+        public Task<IGenericResult<ThresholdReport>> Report(ThresholdSubject subject, IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default)
+        {
+            Reports.Add((subject, values));
+            return Task.FromResult<IGenericResult<ThresholdReport>>(GenericResult<ThresholdReport>.Success(new ThresholdReport(0, [], [])));
+        }
+
+        public Task<IGenericResult<ThresholdReport>> Judge(
+            ThresholdSubject subject, IReadOnlyList<IThresholdDefinition> thresholds, IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The monitor never judges a held set.");
+
+        public IReadOnlyList<ThresholdMatch> Holds(
+            ThresholdSubject subject, IReadOnlyList<IThresholdDefinition> thresholds, IReadOnlyDictionary<string, object?> values, string escalation)
+        {
+            Asked.Add(subject);
+            return held;
+        }
+    }
+
+    private readonly Evaluator _evaluator = new([new ThresholdMatch("Queue full", 1, "HoldNewRuns", "Rule 1 matched")]);
 
     private WaitThresholdMonitor Monitor(IGenericResult<WaitThresholdConfiguration> configuration)
     {
-        _notifier
-            .Setup(n => n.Notify(It.IsAny<RuleNotification>(), It.IsAny<CancellationToken>()))
-            .Callback((RuleNotification notification, CancellationToken _) => _sent.Add(notification))
-            .ReturnsAsync(GenericResult.Success());
-        var accessor = new Mock<IAuthenticationContextAccessor>();
-        accessor.SetupProperty(a => a.Current);
-        var scopes = new ServiceCollection().AddSingleton(accessor.Object).AddSingleton(_notifier.Object).BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
-        return new WaitThresholdMonitor(new Source(configuration), scopes, new WaitThresholdJudge(), NullLogger<WaitThresholdMonitor>.Instance);
+        var thresholds = new Mock<IThresholdSource>();
+        thresholds.Setup(s => s.For(It.IsAny<ThresholdSubject>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<IThresholdDefinition>>.Success([]));
+        return new WaitThresholdMonitor(
+            new Source(configuration), new WaitHoldGate(thresholds.Object, _evaluator), new WaitThresholdReporter(_evaluator),
+            NullLogger<WaitThresholdMonitor>.Instance);
     }
 
     private static IGenericResult<WaitThresholdConfiguration> Configuration(WaitThresholdLayer server, params (string Pipeline, WaitThresholdLayer Layer)[] pipelines) =>
         GenericResult<WaitThresholdConfiguration>.Success(new WaitThresholdConfiguration(
             server,
             pipelines.ToDictionary(p => p.Pipeline, p => p.Layer, StringComparer.OrdinalIgnoreCase),
-            new Dictionary<string, WaitThresholdLayer>(StringComparer.OrdinalIgnoreCase)));
+            new Dictionary<string, WaitThresholdLayer>(StringComparer.OrdinalIgnoreCase) { ["Nightly"] = Layer("Schedule:Nightly", "Inherit") }));
+
+    private static readonly Guid PipelineId = Guid.Parse("22222222-2222-4222-8222-222222222222");
 
     private static PipelineRunQueueSnapshot Waiting(string pipeline, int count) => new(
         [],
-        [.. Enumerable.Range(0, count).Select(_ => new PipelineRunQueueEntry(new PipelineRunIdentity(Guid.NewGuid(), Guid.NewGuid(), pipeline, null), DateTimeOffset.UnixEpoch, null, null))]);
+        [.. Enumerable.Range(0, count).Select(_ => new PipelineRunQueueEntry(new PipelineRunIdentity(Guid.NewGuid(), PipelineId, pipeline, Tenant), DateTimeOffset.UnixEpoch, null, null))]);
 
     private static PipelineExecutionRequest Request(string pipeline, string? schedule = null) => new()
     {
-        ExecutionId = Guid.NewGuid(), PipelineId = Guid.NewGuid(), PipelineName = pipeline, TriggerSource = "Api", ScheduleName = schedule, RunRoles = ["DataWriter"],
+        ExecutionId = Guid.NewGuid(), PipelineId = Guid.NewGuid(), PipelineName = pipeline, TriggerSource = "Api", ScheduleName = schedule, TenantId = Tenant, RunRoles = ["DataWriter"],
     };
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public async Task AThresholdThatBeginsToFireSendsEachOfItsNotificationRulesOnceWhileTheQueueStaysOverTheNumber()
+    public async Task AHoldingRuleOfTheOwnerTheLevelsChooseRefusesTheRunAndTheQueueTheMonitorWasToldOfIsWhatItCounts()
     {
-        var queueLong = Threshold("Queue getting long", 3, rules: ["Ops email", "Ops Teams"]);
-        var monitor = Monitor(Configuration(Layer("Server", "Own", queueLong), ("P", Layer("Pipeline:P", "Inherit"))));
-
-        await monitor.Evaluate(Waiting("P", 3), TestContext.Current.CancellationToken);
-        await monitor.Evaluate(Waiting("P", 4), TestContext.Current.CancellationToken);
-        await monitor.Evaluate(Waiting("P", 9), TestContext.Current.CancellationToken);
-
-        _sent.Select(n => n.RuleName).ShouldBe(["Ops email", "Ops Teams"]);
-        _sent[0].Subject.ShouldContain("Queue getting long");
-        _sent[0].Metadata["WaitingRuns"].ShouldBe(3);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public async Task AThresholdThatClearedSendsItsRulesAgainWhenItFiresAgain()
-    {
-        var queueLong = Threshold("Queue getting long", 3, rules: ["Ops email"]);
-        var monitor = Monitor(Configuration(Layer("Server", "Own", queueLong), ("P", Layer("Pipeline:P", "Inherit"))));
-
-        await monitor.Evaluate(Waiting("P", 3), TestContext.Current.CancellationToken);
-        await monitor.Evaluate(Waiting("P", 0), TestContext.Current.CancellationToken);
-        await monitor.Evaluate(Waiting("P", 5), TestContext.Current.CancellationToken);
-
-        _sent.Count.ShouldBe(2);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public async Task ARunIsStoppedOnlyWhileAThresholdThatStopsNewRunsFiresAndNamesItInTheReason()
-    {
-        var full = Threshold("Queue full", 3, stops: true, rules: ["Ops email"]);
-        var monitor = Monitor(Configuration(Layer("Server", "Own", full), ("P", Layer("Pipeline:P", "Inherit"))));
-
-        var before = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
+        var monitor = Monitor(Configuration(Layer("Server", "Own"), ("P", Layer("Pipeline:P", "Inherit"))));
         monitor.WaitingChanged(Waiting("P", 3));
-        var during = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
-        monitor.WaitingChanged(Waiting("P", 0));
-        var after = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
 
-        before.Value!.IsStopped.ShouldBeFalse();
-        during.Value!.IsStopped.ShouldBeTrue();
-        during.Value.Threshold.ShouldBe("Queue full");
-        during.Value.Reason.ShouldContain("Queue full");
-        after.Value!.IsStopped.ShouldBeFalse();
+        var check = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
+
+        check.Value!.IsStopped.ShouldBeTrue();
+        check.Value.Threshold.ShouldBe("Queue full");
+        _evaluator.Asked.Single().ShouldBe(new ThresholdSubject("Server", "Server", Tenant, Tenant, null));
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public async Task AFiringThresholdThatOnlyNotifiesNeverStopsARun()
+    public async Task APipelineWhoseLevelAppliesNoThresholdsIsTakenWithoutAskingTheEvaluator()
     {
-        var lengthy = Threshold("Queue getting long", 3, rules: ["Ops email"]);
-        var monitor = Monitor(Configuration(Layer("Server", "Own", lengthy), ("P", Layer("Pipeline:P", "Inherit"))));
-        monitor.WaitingChanged(Waiting("P", 5));
+        var monitor = Monitor(Configuration(Layer("Server", "Own"), ("P", Layer("Pipeline:P", "None"))));
 
         var check = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
 
         check.Value!.IsStopped.ShouldBeFalse();
+        _evaluator.Asked.ShouldBeEmpty();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public async Task APipelineThatStatesNoneIsNotStoppedByTheServersThreshold()
+    public async Task AConfigurationThatCannotBeReadOrAPipelineOrScheduleItDoesNotKnowFailsWithNothingAssumed()
     {
-        var full = Threshold("Queue full", 3, stops: true, rules: ["Ops email"]);
-        var monitor = Monitor(Configuration(Layer("Server", "Own", full), ("Quiet", Layer("Pipeline:Quiet", "None")), ("P", Layer("Pipeline:P", "Inherit"))));
-        monitor.WaitingChanged(Waiting("P", 5));
+        var unreadable = await Monitor(GenericResult<WaitThresholdConfiguration>.Failure(new GenericMessage("the server states no level"))).Check(Request("P"), TestContext.Current.CancellationToken);
+        var monitor = Monitor(Configuration(Layer("Server", "Own"), ("P", Layer("Pipeline:P", "Inherit"))));
+        var pipeline = await monitor.Check(Request("Unknown"), TestContext.Current.CancellationToken);
+        var schedule = await monitor.Check(Request("P", "Gone"), TestContext.Current.CancellationToken);
 
-        var quiet = await monitor.Check(Request("Quiet"), TestContext.Current.CancellationToken);
-        var other = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
-
-        quiet.Value!.IsStopped.ShouldBeFalse();
-        other.Value!.IsStopped.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task APipelineTheConfigurationDoesNotKnowFailsNamingItAndIsNeverAssumedToBeOpen()
-    {
-        var monitor = Monitor(Configuration(Layer("Server", "None")));
-
-        var check = await monitor.Check(Request("Unknown"), TestContext.Current.CancellationToken);
-
-        check.IsFailure.ShouldBeTrue();
-        check.CurrentMessage.ShouldNotBeNull().ShouldContain("Unknown");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task AConfigurationThatCannotBeReadFailsTheCheckAndSendsNothingWhenWaitingRunsAreJudged()
-    {
-        var monitor = Monitor(GenericResult<WaitThresholdConfiguration>.Failure(new GenericMessage("the server states no thresholds row")));
-
-        var check = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
-        await monitor.Evaluate(Waiting("P", 50), TestContext.Current.CancellationToken);
-
-        check.IsFailure.ShouldBeTrue();
-        _sent.ShouldBeEmpty();
+        unreadable.IsFailure.ShouldBeTrue();
+        unreadable.CurrentMessage.ShouldNotBeNull().ShouldContain("no level");
+        pipeline.IsFailure.ShouldBeTrue();
+        pipeline.CurrentMessage.ShouldNotBeNull().ShouldContain("Unknown");
+        schedule.IsFailure.ShouldBeTrue();
+        schedule.CurrentMessage.ShouldNotBeNull().ShouldContain("Gone");
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public async Task ARuleThatCannotBeSentDoesNotStopTheOthersFromBeingSent()
+    public async Task TheWaitingRunsTheMonitorEvaluatesAreReportedToTheThresholdEvaluator()
     {
-        var queueLong = Threshold("Queue getting long", 1, rules: ["Broken", "Ops email"]);
-        var monitor = Monitor(Configuration(Layer("Server", "Own", queueLong), ("P", Layer("Pipeline:P", "Inherit"))));
-        _notifier
-            .Setup(n => n.Notify(It.Is<RuleNotification>(notification => notification.RuleName == "Broken"), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult.Failure(new GenericMessage("no such rule")));
+        var monitor = Monitor(Configuration(Layer("Server", "Own")));
 
         await monitor.Evaluate(Waiting("P", 2), TestContext.Current.CancellationToken);
 
-        _sent.Select(n => n.RuleName).ShouldBe(["Ops email"]);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public async Task AStoppingThresholdSavedWhileItsConditionAlreadyHoldsStopsTheVeryNextRunWithNoChangeJudgedBetween()
-    {
-        var monitor = Monitor(Configuration(Layer("Server", "None"), ("P", Layer("Pipeline:P", "Own", Threshold("Full", 3, stops: true, owner: "Pipeline:P", pipeline: "P")))));
-        monitor.WaitingChanged(Waiting("P", 3));
-
-        var next = await monitor.Check(Request("P"), TestContext.Current.CancellationToken);
-
-        next.Value!.IsStopped.ShouldBeTrue();
-        next.Value.Threshold.ShouldBe("Full");
+        _evaluator.Reports.Select(report => report.Subject.Kind).Order().ShouldBe(["Pipeline", "Server"]);
+        _evaluator.Reports.Single(report => report.Subject.Kind == "Server").Values["waitingRuns"].ShouldBe(2L);
     }
 }

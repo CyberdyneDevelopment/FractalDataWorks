@@ -52,8 +52,8 @@ public sealed class ContainerTypeMetadata
         SupportsSchemaInference = supportsSchemaInference;
         FileExtension = fileExtension;
         MimeType = mimeType;
-        CompatibleConnections = compatibleConnections?.ToList() ?? new List<string>();
-        Limitations = limitations?.ToList() ?? new List<string>();
+        CompatibleConnections = compatibleConnections?.ToList() ?? [];
+        Limitations = limitations?.ToList() ?? [];
         AdditionalMetadata = additionalMetadata != null
             ? new Dictionary<string, object>(additionalMetadata, StringComparer.Ordinal)
             : new Dictionary<string, object>(StringComparer.Ordinal);

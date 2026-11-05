@@ -196,8 +196,8 @@ internal static class TypeCollectionResolver
             Levels = typeOption is IWaitThresholdMode mode ? mode.Levels : null,
             AcceptsRejectedRecords = typeOption is IAcceptsRejectedRecordsShape rejects ? rejects.AcceptsRejectedRecords : null,
             ReservedColumns = typeOption is IReservedColumnsShape reserved ? reserved.ReservedColumns : null,
-            Inputs = typeOption is IFlowComponentShape component ? Nodes(component.Inputs) : null,
-            Outputs = typeOption is IFlowComponentShape shaped ? Nodes(shaped.Outputs) : null,
+            Inputs = typeOption is IFlowComponentShape component ? Nodes(WithCompletion(typeOption, component.Inputs, CompletionNodes.AfterInput)) : null,
+            Outputs = typeOption is IFlowComponentShape shaped ? Nodes(WithCompletion(typeOption, shaped.Outputs, CompletionNodes.DoneOutput)) : null,
             Color = typeOption is IColorShape coloured ? coloured.Color : null,
             Rank = typeOption is IRankShape ranked ? ranked.Rank : null,
             NeedsAcknowledgement = typeOption is IAcknowledgementShape acknowledged ? acknowledged.NeedsAcknowledgement : null,
@@ -206,6 +206,10 @@ internal static class TypeCollectionResolver
             SummarySeparator = typeOption is IComponentType joined ? joined.SummarySeparator : null
         };
     }
+
+    // Every component kind has the completion nodes besides the row nodes it declares (FDW-3640); another shape that lists nodes does not.
+    private static IReadOnlyList<FlowNodeSpec> WithCompletion(ITypeOption typeOption, IReadOnlyList<FlowNodeSpec> nodes, FlowNodeSpec completion) =>
+        typeOption is IComponentType ? [.. nodes, completion] : nodes;
 
     private static List<TypeCollectionValueNodeDto> Nodes(IReadOnlyList<FlowNodeSpec> nodes) =>
         nodes.Select(node => new TypeCollectionValueNodeDto
@@ -216,7 +220,8 @@ internal static class TypeCollectionResolver
             Max = node.Max,
             IsError = node.IsError,
             HelpText = node.HelpText,
-            NamedBySetting = node.NamedBySetting
+            NamedBySetting = node.NamedBySetting,
+            IsCompletion = node.IsCompletion
         }).ToList();
 
     /// <summary>

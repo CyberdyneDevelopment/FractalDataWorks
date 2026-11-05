@@ -40,8 +40,10 @@ internal static class LoadSoftDeletes
         if (!absentMode && !markerAllowed)
             return Refused(input, mode.Name, loadKind, "this kind of load takes a source set to compare against, and a mode that does not use it would ignore it");
 
+        // The validator has refused a soft delete that does not state its flag value (FDW-3823).
         var options = new SoftDeleteOptions(row.DeletedFlagColumn!, mode)
         {
+            FlagValue = row.DeletedFlagValue!.Value,
             DeletedAtColumn = row.DeletedAtColumn,
             Marker = mode.RequiresMarker ? new SoftDeleteMarker(row.SoftDeleteMarkerColumn!, row.SoftDeleteMarkerValue!) : null,
             AbsentFromSource = absentMode ? absent : null,
@@ -49,7 +51,7 @@ internal static class LoadSoftDeletes
         var problem = options.FirstProblem();
         return problem is null
             ? GenericResult<SoftDeleteOptions>.Success(options)
-            : GenericResult<SoftDeleteOptions>.Failure(PipelineRunLog.LoadOptionsRefused(input.Logger, input.Owner, loadKind, problem));
+            : GenericResult<SoftDeleteOptions>.Failure(PipelineRunLog.LoadOptionsRefused(input.Logger, input.Owner, loadKind, problem.Message));
     }
 
     private static IGenericResult<SoftDeleteOptions> Refused(LoadCommandInput input, string mode, string loadKind, string reason)

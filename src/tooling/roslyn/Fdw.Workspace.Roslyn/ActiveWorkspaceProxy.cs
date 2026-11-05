@@ -62,10 +62,10 @@ public sealed class ActiveWorkspaceProxy : IRoslynWorkspace
     public Solution? Baseline => GetWorkspace().Baseline;
 
     /// <inheritdoc/>
-    public int SnapshotCount => _workspaceManager.ActiveWorkspace?.SnapshotCount ?? 0;
+    public int SnapshotCount => GetWorkspace().SnapshotCount;
 
     /// <inheritdoc/>
-    public bool HasChanges => _workspaceManager.ActiveWorkspace?.HasChanges ?? false;
+    public bool HasChanges => GetWorkspace().HasChanges;
 
     /// <inheritdoc/>
     public void UpdateSolution(Solution solution) => GetWorkspace().UpdateSolution(solution);
@@ -86,23 +86,22 @@ public sealed class ActiveWorkspaceProxy : IRoslynWorkspace
 
     /// <inheritdoc/>
     public IEnumerable<SnapshotInfo> ListSnapshots() =>
-        _workspaceManager.ActiveWorkspace?.ListSnapshots() ?? [];
+        GetWorkspace().ListSnapshots();
 
     /// <inheritdoc/>
     public bool RemoveSnapshot(string snapshotId) =>
-        _workspaceManager.ActiveWorkspace?.RemoveSnapshot(snapshotId) ?? false;
+        GetWorkspace().RemoveSnapshot(snapshotId);
 
     /// <inheritdoc/>
-    public void ClearSnapshots() => _workspaceManager.ActiveWorkspace?.ClearSnapshots();
+    public void ClearSnapshots() => GetWorkspace().ClearSnapshots();
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, string> GetChangesFromBaseline() =>
-        _workspaceManager.ActiveWorkspace?.GetChangesFromBaseline()
-        ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        GetWorkspace().GetChangesFromBaseline();
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, string>? GetChangesFromSnapshot(string snapshotId) =>
-        _workspaceManager.ActiveWorkspace?.GetChangesFromSnapshot(snapshotId);
+        GetWorkspace().GetChangesFromSnapshot(snapshotId);
 
     /// <inheritdoc/>
     public void ApplyDocumentChanges(IReadOnlyDictionary<string, string> documentChanges) =>
@@ -120,23 +119,23 @@ public sealed class ActiveWorkspaceProxy : IRoslynWorkspace
 
     /// <inheritdoc/>
     public IReadOnlyList<ProjectInfo> GetAllProjects() =>
-        _workspaceManager.ActiveWorkspace?.GetAllProjects() ?? [];
+        GetWorkspace().GetAllProjects();
 
     /// <inheritdoc/>
     public IReadOnlyList<ProjectInfo> GetLoadedProjects() =>
-        _workspaceManager.ActiveWorkspace?.GetLoadedProjects() ?? [];
+        GetWorkspace().GetLoadedProjects();
 
     /// <inheritdoc/>
     public IReadOnlyList<ProjectInfo> GetExcludedProjects() =>
-        _workspaceManager.ActiveWorkspace?.GetExcludedProjects() ?? [];
+        GetWorkspace().GetExcludedProjects();
 
     /// <inheritdoc/>
     public IReadOnlyList<string> ExcludePatterns =>
-        _workspaceManager.ActiveWorkspace?.ExcludePatterns ?? [];
+        GetWorkspace().ExcludePatterns;
 
     /// <inheritdoc/>
     public IReadOnlyList<string> LoadDiagnostics =>
-        _workspaceManager.ActiveWorkspace?.LoadDiagnostics ?? [];
+        GetWorkspace().LoadDiagnostics;
 
     /// <inheritdoc/>
     public Task<IGenericResult<ProjectInfo>> LoadProject(
@@ -150,9 +149,9 @@ public sealed class ActiveWorkspaceProxy : IRoslynWorkspace
 
     /// <inheritdoc/>
     public bool HasPendingChanges(string projectName) =>
-        _workspaceManager.ActiveWorkspace?.HasPendingChanges(projectName) ?? false;
+        GetWorkspace().HasPendingChanges(projectName);
 
     /// <inheritdoc/>
     public void SetExcludePatterns(IReadOnlyList<string> patterns) =>
-        _workspaceManager.ActiveWorkspace?.SetExcludePatterns(patterns);
+        GetWorkspace().SetExcludePatterns(patterns);
 }

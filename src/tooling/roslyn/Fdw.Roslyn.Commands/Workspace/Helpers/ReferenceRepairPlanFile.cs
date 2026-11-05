@@ -68,7 +68,7 @@ public static class ReferenceRepairPlanFile
             var trimmed = line.Trim();
             if (trimmed.Length == 0 || trimmed[0] == '#') continue;
 
-            var separator = trimmed.IndexOf(FieldSeparator);
+            var separator = trimmed.IndexOf(FieldSeparator, StringComparison.Ordinal);
             var id = (separator < 0 ? trimmed : trimmed.Substring(0, separator)).Trim();
 
             if (id.Length > 0) approved.Add(id);

@@ -37,7 +37,7 @@ public sealed class FindMessageLoggingTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        FindMessageLoggingTranslatorLog.Scanning(Logger, command.ProjectFilter ?? "(all)");
+        FindMessageLoggingTranslatorLog.Scanning(Logger, command.ProjectFilter ?? RoslynReportPlaceholders.All);
 
         var loggingMethods = new List<LoggingMethodInfo>();
         var eventIdRanges = new Dictionary<string, List<int>>(StringComparer.Ordinal);
@@ -51,7 +51,7 @@ public sealed class FindMessageLoggingTranslator
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) continue;
 
-            foreach (var document in project.Documents)
+            foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
             {
                 if (command.IsGeneratedDocument(document)) continue;
 
@@ -72,7 +72,7 @@ public sealed class FindMessageLoggingTranslator
                     if (semanticModel.GetDeclaredSymbol(methodDecl, cancellationToken) is not IMethodSymbol methodSymbol)
                         continue;
 
-                    var containingType = methodSymbol.ContainingType?.Name ?? "Unknown";
+                    var containingType = methodSymbol.ContainingType?.Name ?? RoslynReportPlaceholders.Unknown;
 
                     // Extract attribute arguments
                     var eventIdArg = messageLoggingAttr.ArgumentList?.Arguments
@@ -82,7 +82,8 @@ public sealed class FindMessageLoggingTranslator
                     var messageArg = messageLoggingAttr.ArgumentList?.Arguments
                         .FirstOrDefault(a => string.Equals(a.NameEquals?.Name.ToString(), "Message", StringComparison.Ordinal));
 
-                    var eventIdStr = eventIdArg?.Expression.ToString() ?? "0";
+                    // An attribute that names no EventId has the attribute's own value, 0 (FDW-3580).
+                    var eventIdStr = eventIdArg is { } named ? named.Expression.ToString() : "0";
                     if (int.TryParse(eventIdStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var eventId))
                     {
                         if (!eventIdRanges.TryGetValue(project.Name, out var ids))
@@ -98,11 +99,11 @@ public sealed class FindMessageLoggingTranslator
                         MethodName = methodSymbol.Name,
                         ContainingType = containingType,
                         Project = project.Name,
-                        FilePath = document.FilePath ?? document.Name,
+                        FilePath = documentPath,
                         Line = methodDecl.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
                         EventId = eventIdStr,
-                        Level = levelArg?.Expression.ToString() ?? "Unknown",
-                        Message = messageArg?.Expression.ToString() ?? "Unknown"
+                        Level = levelArg?.Expression.ToString() ?? RoslynReportPlaceholders.Unknown,
+                        Message = messageArg?.Expression.ToString() ?? RoslynReportPlaceholders.Unknown
                     });
                 }
             }
@@ -127,7 +128,7 @@ public sealed class FindMessageLoggingTranslator
         var data = new MessageLoggingData
         {
             Count = loggingMethods.Count,
-            ProjectFilter = command.ProjectFilter ?? "(all)",
+            ProjectFilter = command.ProjectFilter ?? RoslynReportPlaceholders.All,
             EventIdRanges = rangesSummary,
             Methods = loggingMethods
         };

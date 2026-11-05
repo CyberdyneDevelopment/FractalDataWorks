@@ -16,6 +16,7 @@ using Fdw.Services.Abstractions;
 using Moq;
 using Shouldly;
 using Fdw.Services.Data;
+using Fdw.Services.Authorization;
 
 namespace Fdw.Services.Authorization.Tests;
 
@@ -96,7 +97,8 @@ public sealed class UserPermissionsTests
                 AllRoles, AllPermissions, grants,
                 [new UserRoleImplementationConfiguration { UserId = User1IdStr, RoleId = ViewerRoleId, TenantId = tenant }]),
             new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
-            NullLogger<UserPermissions>.Instance);
+            NullLogger<UserPermissions>.Instance,
+            NullOrgAccessProvider.Instance);
 
         var inA = await For(TenantId).Get(User1IdStr, TenantId, orgId: null, TestContext.Current.CancellationToken);
         var inB = await For(tenantB).Get(User1IdStr, tenantB, orgId: null, TestContext.Current.CancellationToken);
@@ -130,7 +132,7 @@ public sealed class UserPermissionsTests
             UserPermissionGrantsFake.Of(AllRoles, AllPermissions, AllRolePermissions, userAssignments),
             new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<UserPermissions>.Instance,
-            orgAccessProvider);
+            orgAccessProvider is { } given ? given : NullOrgAccessProvider.Instance);
     }
 
     /// <summary>
@@ -363,7 +365,8 @@ public sealed class UserPermissionsTests
         var sut = new UserPermissions(
             UserPermissionGrantsFake.Unreadable("DB unavailable"),
             new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
-            NullLogger<UserPermissions>.Instance);
+            NullLogger<UserPermissions>.Instance,
+            NullOrgAccessProvider.Instance);
 
         // Act
         var result = await sut.Get("00000000-0000-0000-0000-000000000006", TenantId, orgId: null, TestContext.Current.CancellationToken);

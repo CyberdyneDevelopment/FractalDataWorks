@@ -80,7 +80,7 @@ public class TypeInstanceCollectionGenerator : IIncrementalGenerator
 
         var restrictToCurrentCompilation = attribute.NamedArguments
             .FirstOrDefault(kvp => string.Equals(kvp.Key, "RestrictToCurrentCompilation", StringComparison.Ordinal))
-            .Value.Value as bool? ?? false;
+            .Value.Value is true;
 
         var baseConstructorParams = ExtractBaseConstructorParameters(baseType, classSymbol);
 
@@ -125,26 +125,7 @@ public class TypeInstanceCollectionGenerator : IIncrementalGenerator
             resolvedBaseType = baseType as INamedTypeSymbol;
         }
 
-        if (resolvedBaseType == null)
-            return ImmutableArray<ParameterModel>.Empty;
-
-        // Find the protected constructor with fewest parameters (prefer parameterless for Empty sentinel)
-        var ctor = resolvedBaseType.InstanceConstructors
-            .Where(c => c.DeclaredAccessibility == Accessibility.Protected)
-            .OrderBy(c => c.Parameters.Length)
-            .FirstOrDefault();
-
-        if (ctor == null)
-            return ImmutableArray<ParameterModel>.Empty;
-
-        return ctor.Parameters
-            .Select(p => new ParameterModel(
-                Name: p.Name,
-                Type: p.Type.ToDisplayString(),
-                HasDefaultValue: p.HasExplicitDefaultValue,
-                DefaultValue: string.Empty
-            ))
-            .ToImmutableArray();
+        return CodeGeneration.ExtractSentinelConstructorParameters(resolvedBaseType);
     }
 
     private static void Execute(
@@ -168,6 +149,9 @@ public class TypeInstanceCollectionGenerator : IIncrementalGenerator
 
             // Validate (but don't error on empty - that's expected for abstractions packages)
             ValidateOptions(context, collection, options);
+
+            if (CodeGeneration.GeneratesNotFound(options.Select(o => o.OptionName)))
+                CodeGeneration.ReportSentinelHostileParameters(context, collection.ClassName, collection.BaseConstructorParameters);
 
             // Look up the type symbols to extract abstract members
             var baseTypeSymbol = compilation.GetTypeByMetadataName(collection.BaseTypeName)
@@ -231,6 +215,9 @@ public class TypeInstanceCollectionGenerator : IIncrementalGenerator
                 duplicate.Key,
                 types));
         }
+
+        // Check for duplicate declared Ids (TC008) and say which cannot be read (TC013)
+        DeclaredIdValidation.Report(context, collection.ClassName, options);
     }
 
     [ConventionOverride(MaxMethodLines = 127)]  // Code generation template for TypeInstanceCollection — sequential string building
@@ -385,8 +372,7 @@ public class TypeInstanceCollectionGenerator : IIncrementalGenerator
         }
 
         // NotFound sentinel (singleton) - skip if a TypeOption named "NotFound" already exists
-        var hasNotFoundOption = options.Any(o => string.Equals(o.OptionName, "NotFound", StringComparison.Ordinal));
-        if (!hasNotFoundOption)
+        if (CodeGeneration.GeneratesNotFound(options.Select(o => o.OptionName)))
         {
             sb.AppendLine($"        private static readonly {collection.InterfaceTypeName} _notFound = new NotFound{collection.ClassName}();");
             sb.AppendLine($"        /// <summary>Gets a sentinel instance returned when lookups fail.</summary>");

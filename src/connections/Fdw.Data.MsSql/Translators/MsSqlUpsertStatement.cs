@@ -7,6 +7,9 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql.ValueSources;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Fdw.Commands.Data.Logging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql.Translators;
 
@@ -32,7 +35,7 @@ internal sealed class MsSqlUpsertStatement
     }
 
     /// <summary>Describes the first thing wrong with <paramref name="options"/> for <paramref name="container"/>, or returns <see langword="null"/>.</summary>
-    internal static string? Problem(UpsertOptions options, IStorageContainer container, ISqlDialect dialect)
+    internal static IGenericMessage? Problem(UpsertOptions options, IStorageContainer container, ISqlDialect dialect)
     {
         var general = options.FirstProblem();
         if (general is not null)
@@ -40,10 +43,14 @@ internal sealed class MsSqlUpsertStatement
 
         var unknown = MsSqlLoadColumns.UnknownOrUnsafe(container, ReferencedColumns(options));
         if (unknown is not null)
-            return unknown;
+            return Inconsistent(unknown);
 
         return StructureProblem(options, container) ?? ValueSourceProblem(options, dialect);
     }
+
+    // The options' own problems and this container's are the same kind of refusal: the options cannot be used here.
+    private static IGenericMessage Inconsistent(string reason)
+        => CommandOptionsLog.UpsertOptionsInconsistent(NullLogger.Instance, reason);
 
     private static List<string> ReferencedColumns(UpsertOptions options)
     {
@@ -65,22 +72,22 @@ internal sealed class MsSqlUpsertStatement
         return columns;
     }
 
-    private static string? StructureProblem(UpsertOptions options, IStorageContainer container)
+    private static IGenericMessage? StructureProblem(UpsertOptions options, IStorageContainer container)
     {
         var key = options.CompareColumns.FirstOrDefault(c => options.KeyColumns.Contains(c, StringComparer.OrdinalIgnoreCase));
         if (key is not null)
-            return $"compare column '{key}' is also a key column";
+            return Inconsistent($"compare column '{key}' is also a key column");
 
         var unmovable = options.CompareColumns.Concat(options.KeyColumns)
             .FirstOrDefault(c => MsSqlLoadColumns.IsComputed(container, c));
         if (unmovable is not null)
-            return $"column '{unmovable}' is computed and cannot be a key or compare column";
+            return Inconsistent($"column '{unmovable}' is computed and cannot be a key or compare column");
 
         var identityCompare = options.CompareColumns.FirstOrDefault(c => MsSqlLoadColumns.IsIdentity(container, c));
-        return identityCompare is null ? null : $"compare column '{identityCompare}' is an identity column";
+        return identityCompare is null ? null : Inconsistent($"compare column '{identityCompare}' is an identity column");
     }
 
-    private static string? ValueSourceProblem(UpsertOptions options, ISqlDialect dialect)
+    private static IGenericMessage? ValueSourceProblem(UpsertOptions options, ISqlDialect dialect)
     {
         var context = new MsSqlValueSourceContext(new SqlCommand(), dialect, "s");
         var bindings = new List<ColumnValueBinding>();
@@ -90,10 +97,10 @@ internal sealed class MsSqlUpsertStatement
         foreach (var binding in bindings)
         {
             if (Render(binding.Source, context) is null)
-                return $"the value source for column '{binding.Column}' cannot be rendered";
+                return Inconsistent($"the value source for column '{binding.Column}' cannot be rendered");
             if (binding.Source is NextSequenceValueSource sequence
                 && sequence.OrderBy.Any(o => !options.WriteColumns.Contains(o, StringComparer.OrdinalIgnoreCase)))
-                return $"the sequence for column '{binding.Column}' orders by a column that is not a write column";
+                return Inconsistent($"the sequence for column '{binding.Column}' orders by a column that is not a write column");
         }
 
         return null;

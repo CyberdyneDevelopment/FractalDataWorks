@@ -102,7 +102,7 @@ public interface IHttpProtocol : ITypeOption<int, HttpProtocolBase>
     /// format: a connection holds an <see cref="IHttpProtocol"/> and must be able to ask for a
     /// streaming read without testing the concrete protocol type first.
     /// </remarks>
-    IRecordSource<DataRecord>? TryOpenRecordSource(
+    IGenericResult<IRecordSource<DataRecord>?> TryOpenRecordSource(
         IStorageContainer container,
         Stream content,
         IReadOnlyList<IDataField> fields,

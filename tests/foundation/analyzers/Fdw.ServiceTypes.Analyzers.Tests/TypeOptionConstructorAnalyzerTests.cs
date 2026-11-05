@@ -54,7 +54,7 @@ public class TypeOptionConstructorAnalyzerTests
 
         var expected = VerifyCS.Diagnostic("FDW027")
             .WithLocation(0)
-            .WithArguments("ActiveStatus");
+            .WithArguments("TypeOption", "ActiveStatus");
 
         await VerifyCS.VerifyAnalyzerAsync(test, expected);
     }
@@ -149,7 +149,7 @@ public class TypeOptionConstructorAnalyzerTests
 
         var expected = VerifyCS.Diagnostic("FDW027")
             .WithLocation(0)
-            .WithArguments("ActiveStatus");
+            .WithArguments("TypeOption", "ActiveStatus");
 
         await VerifyCS.VerifyAnalyzerAsync(test, expected);
     }
@@ -226,6 +226,149 @@ public class TypeOptionConstructorAnalyzerTests
                     }
 
                     public T Value { get; }
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(test);
+    }
+
+    private const string ImplementationAttributeDeclaration = """
+        using System;
+
+        namespace Fdw.Collections
+        {
+            [AttributeUsage(AttributeTargets.Class)]
+            public sealed class ImplementationAttribute : Attribute
+            {
+                public ImplementationAttribute(Type collectionType, string name) { }
+            }
+
+            [AttributeUsage(AttributeTargets.Class)]
+            public sealed class ServiceTypeCollectionAttribute : Attribute
+            {
+                public ServiceTypeCollectionAttribute(Type baseType, Type interfaceType, Type collectionType) { }
+
+                public bool RestrictToCurrentCompilation { get; set; }
+            }
+        }
+
+        """;
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "SourceGen")]
+    public async Task ImplementationWithoutParameterlessConstructorReportsDiagnostic()
+    {
+        var test = ImplementationAttributeDeclaration + """
+            namespace TestNamespace
+            {
+                using Fdw.Collections;
+
+                public abstract class WidgetTypeBase { }
+
+                [ServiceTypeCollection(typeof(WidgetTypeBase), typeof(WidgetTypeBase), typeof(WidgetTypes))]
+                public partial class WidgetTypes { }
+
+                [Implementation(typeof(WidgetTypes), "Gear")]
+                public sealed class {|#0:GearType|} : WidgetTypeBase
+                {
+                    public GearType(string name) { }
+                }
+            }
+            """;
+
+        var expected = VerifyCS.Diagnostic("FDW027")
+            .WithLocation(0)
+            .WithArguments("Implementation", "GearType");
+
+        await VerifyCS.VerifyAnalyzerAsync(test, expected);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public async Task ImplementationWithPublicParameterlessConstructorNoDiagnostic()
+    {
+        var test = ImplementationAttributeDeclaration + """
+            namespace TestNamespace
+            {
+                using Fdw.Collections;
+
+                public abstract class WidgetTypeBase { }
+
+                [ServiceTypeCollection(typeof(WidgetTypeBase), typeof(WidgetTypeBase), typeof(WidgetTypes))]
+                public partial class WidgetTypes { }
+
+                [Implementation(typeof(WidgetTypes), "Gear")]
+                public sealed class GearType : WidgetTypeBase
+                {
+                    public GearType() { }
+
+                    public GearType(string name) { }
+                }
+
+                [Implementation(typeof(WidgetTypes), "Cog")]
+                public sealed class CogType : WidgetTypeBase
+                {
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public async Task ImplementationInRestrictedCollectionNoDiagnostic()
+    {
+        var test = ImplementationAttributeDeclaration + """
+            namespace TestNamespace
+            {
+                using Fdw.Collections;
+
+                public abstract class WidgetTypeBase { }
+
+                [ServiceTypeCollection(typeof(WidgetTypeBase), typeof(WidgetTypeBase), typeof(WidgetTypes), RestrictToCurrentCompilation = true)]
+                public partial class WidgetTypes { }
+
+                [Implementation(typeof(WidgetTypes), "Gear")]
+                public sealed class GearType : WidgetTypeBase
+                {
+                    public GearType(object logger = null) { }
+                }
+            }
+            """;
+
+        await VerifyCS.VerifyAnalyzerAsync(test);
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "SourceGen")]
+    public async Task AbstractOrGenericImplementationNoDiagnostic()
+    {
+        var test = ImplementationAttributeDeclaration + """
+            namespace TestNamespace
+            {
+                using Fdw.Collections;
+
+                public abstract class WidgetTypeBase { }
+
+                [ServiceTypeCollection(typeof(WidgetTypeBase), typeof(WidgetTypeBase), typeof(WidgetTypes))]
+                public partial class WidgetTypes { }
+
+                [Implementation(typeof(WidgetTypes), "Abstract")]
+                public abstract class AbstractGearType : WidgetTypeBase
+                {
+                    protected AbstractGearType(string name) { }
+                }
+
+                [Implementation(typeof(WidgetTypes), "Generic")]
+                public sealed class GenericGearType<T> : WidgetTypeBase
+                {
+                    public GenericGearType(T value) { }
                 }
             }
             """;

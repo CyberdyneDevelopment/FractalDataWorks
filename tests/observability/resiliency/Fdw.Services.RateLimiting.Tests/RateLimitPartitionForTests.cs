@@ -35,7 +35,7 @@ public sealed class RateLimitPartitionForTests
     private HttpContext CallerAt(string id, string address) => new DefaultHttpContext
     {
         RequestServices = _services,
-        User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, id) }, "test")),
+        User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimDefinitions.sub.Name, id) }, "test")),
         Connection = { RemoteIpAddress = IPAddress.Parse(address) },
     };
 
@@ -45,7 +45,7 @@ public sealed class RateLimitPartitionForTests
         User = new ClaimsPrincipal(new ClaimsIdentity(
             new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, id),
+                new Claim(ClaimDefinitions.sub.Name, id),
                 new Claim(ClaimDefinitions.tenantId.Name, company.ToString()),
             },
             "test")),
@@ -231,7 +231,7 @@ public sealed class RateLimitPartitionForTests
             User = new ClaimsPrincipal(new ClaimsIdentity(
                 new[]
                 {
-                    new Claim(ClaimTypes.NameIdentifier, "any"),
+                    new Claim(ClaimDefinitions.sub.Name, "any"),
                     new Claim(ClaimDefinitions.tenantId.Name, "not-a-company"),
                 },
                 "test")),

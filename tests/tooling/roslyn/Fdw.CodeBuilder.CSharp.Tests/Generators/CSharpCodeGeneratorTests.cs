@@ -189,9 +189,9 @@ public class CSharpCodeGeneratorTests
         var result = generator.GenerateCompilationUnit(builders);
 
         // Assert
-        var firstIndex = result.IndexOf("First");
-        var secondIndex = result.IndexOf("Second");
-        var thirdIndex = result.IndexOf("Third");
+        var firstIndex = result.IndexOf("First", System.StringComparison.Ordinal);
+        var secondIndex = result.IndexOf("Second", System.StringComparison.Ordinal);
+        var thirdIndex = result.IndexOf("Third", System.StringComparison.Ordinal);
 
         firstIndex.ShouldBeLessThan(secondIndex);
         secondIndex.ShouldBeLessThan(thirdIndex);

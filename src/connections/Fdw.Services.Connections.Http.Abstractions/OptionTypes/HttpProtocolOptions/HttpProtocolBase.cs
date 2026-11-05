@@ -11,7 +11,6 @@ using Fdw.Collections;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
-using Fdw.Data.RowSources.Json.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Http.Abstractions.Results;
 using Microsoft.Extensions.Logging;
@@ -116,8 +115,12 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
             // Get request components via virtual methods
             var method = GetHttpMethod(command, container, context);
             var path = GetRequestPath(command, container, context);
+            if (!path.IsSuccess)
+            {
+                return path.ToNewResult<HttpRequestMessage>();
+            }
 
-            var request = new HttpRequestMessage(method, path);
+            var request = new HttpRequestMessage(method, path.Value!);
 
             // Build body if needed
             var bodyResult = await BuildRequestBody(command, container, context, cancellationToken).ConfigureAwait(false);
@@ -211,13 +214,21 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
     /// <param name="command">The data command being translated.</param>
     /// <param name="container">The storage container.</param>
     /// <param name="context">The protocol context.</param>
-    /// <returns>The request path (relative or absolute URL).</returns>
-    protected virtual string GetRequestPath(
+    /// <returns>The request path (relative or absolute URL), or ContainerPathMissing when the container declares none.</returns>
+    /// <remarks>
+    /// Why a failure and not the container's name: an Http container is addressed by its path, and a container stored
+    /// without one is a configuration defect. Its name is a label, never a resource address (FDW-3580).
+    /// </remarks>
+    protected virtual IGenericResult<string> GetRequestPath(
         IDataCommand command,
         IStorageContainer container,
         HttpProtocolContext context)
     {
-        return container.Path?.PathValue ?? container.Name;
+        return container.Path?.PathValue is { Length: > 0 } path
+            ? GenericResult<string>.Success(path)
+            : GenericResult<string>.Failure(
+                HttpResultCodes.ByName("ContainerPathMissing"),
+                ResultDetails.Create().With("ContainerName", container.Name));
     }
 
     /// <summary>
@@ -333,66 +344,36 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
     #region Row Extraction Helpers
 
     /// <summary>
-    /// Returns true when a row source reader is available for the container's format. The default
-    /// implementation only knows its bundled JSON reader (this base lives in a netstandard2.0
-    /// assembly that cannot reference the net10 <c>RecordSourceTypes</c> TypeCollection); the net10
-    /// <c>RestProtocolBase</c> override answers for every registered format.
+    /// Returns true when a row source reader is available for the container's format. This base lives in a netstandard2.0
+    /// assembly that cannot reach the net10 <c>RecordSourceTypes</c> collection, so it knows no format; the net10 protocol
+    /// bases (REST, GraphQL, SOAP) answer through <c>FormatRowReaders</c> for every registered format.
     /// </summary>
     /// <param name="container">The container whose <see cref="IStorageContainer.Format"/> is checked.</param>
     /// <returns>True when <see cref="TryCreateRowReader"/> can produce a reader for this format.</returns>
-    protected virtual bool HasRowReaderForFormat(IStorageContainer container)
-        => container.Format is not null
-           && string.Equals(container.Format.Name, "Json", StringComparison.Ordinal);
+    protected virtual bool HasRowReaderForFormat(IStorageContainer container) => false;
 
     /// <summary>
-    /// Creates a row source reader for the container's format over the supplied content stream, or
-    /// returns null when no reader is available for that format.
+    /// Creates a row source reader for the container's format over the supplied content stream.
     /// </summary>
-    /// <param name="container">The container carrying the format + row-extraction metadata.</param>
+    /// <param name="container">The container carrying the format and the format's choices in its metadata.</param>
     /// <param name="content">The response content stream.</param>
-    /// <returns>A reader positioned before the first row, or null when the format is unsupported here.</returns>
-    /// <remarks>
-    /// Default: builds a <see cref="JsonStreamRowSource"/> when the format is JSON, reading
-    /// <c>RecordSelector</c>/<c>FlattenNestedObjects</c>/<c>FlattenSeparator</c> from the container
-    /// metadata. The net10 <c>RestProtocolBase</c> override resolves any registered format via the
-    /// <c>RecordSourceTypes</c> TypeCollection so the dispatch is fully format-driven.
-    /// </remarks>
-    protected virtual IRowSourceReader? TryCreateRowReader(IStorageContainer container, Stream content)
-    {
-        if (container.Format is null
-            || !string.Equals(container.Format.Name, "Json", StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        var meta = container.Metadata;
-        var recordSelector = meta.TryGetValue("RecordSelector", out var selectorObj)
-            ? selectorObj as string
-            : null;
-        var flattenNestedObjects = meta.TryGetValue("FlattenNestedObjects", out var flattenObj)
-            && flattenObj is bool boolVal
-            && boolVal;
-        var flattenSeparator = meta.TryGetValue("FlattenSeparator", out var sepObj) && sepObj is string sep
-            ? sep
-            : ".";
-
-        return new JsonStreamRowSource(content, new JsonRowSourceOptions
-        {
-            RowArrayPath = recordSelector,
-            FlattenNestedObjects = flattenNestedObjects,
-            FlattenSeparator = string.IsNullOrEmpty(flattenSeparator) ? "." : flattenSeparator
-        });
-    }
+    /// <returns>
+    /// A reader positioned before the first row; null when this protocol has no reader for the format; or the failure naming a
+    /// format choice the container leaves out (FDW-3823: no choice is defaulted).
+    /// </returns>
+    protected virtual IGenericResult<IRowSourceReader?> TryCreateRowReader(IStorageContainer container, Stream content)
+        => GenericResult<IRowSourceReader?>.Success(null);
 
     /// <summary>
     /// Opens a streaming record source over response content, using the same format resolution and
     /// row-extraction metadata as <see cref="TryCreateRowReader"/>.
     /// </summary>
-    /// <param name="container">The container carrying the format + row-extraction metadata.</param>
+    /// <param name="container">The container carrying the format and the format's choices.</param>
     /// <param name="content">The response content stream. The returned source reads from it lazily.</param>
     /// <param name="fields">The container's fields, used to build the record schema once.</param>
     /// <param name="logger">Optional logger threaded to the created source.</param>
-    /// <returns>A record source over the content, or null when no reader exists for the format.</returns>
+    /// <returns>A record source over the content; null when no reader exists for the format; or the failure naming a choice the
+    /// container leaves out.</returns>
     /// <remarks>
     /// The caller owns the returned source AND the stream it reads from: the read is lazy, so neither
     /// can be disposed when this method returns. Format dispatch is deliberately shared with the
@@ -400,14 +381,19 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
     /// container must not be able to disagree about what the rows are.
     /// </remarks>
     /// <inheritdoc />
-    public IRecordSource<DataRecord>? TryOpenRecordSource(
+    public IGenericResult<IRecordSource<DataRecord>?> TryOpenRecordSource(
         IStorageContainer container,
         Stream content,
         IReadOnlyList<IDataField> fields,
         ILogger? logger = null)
     {
         var reader = TryCreateRowReader(container, content);
-        return reader is null ? null : new CursorRecordSource(reader, fields, logger);
+        if (reader.IsFailure)
+        {
+            return reader.ToNewResult<IRecordSource<DataRecord>?>();
+        }
+
+        return GenericResult<IRecordSource<DataRecord>?>.Success(reader.Value is null ? null : new CursorRecordSource(reader.Value, fields, logger));
     }
 
     /// <summary>
@@ -416,10 +402,11 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
     /// <see cref="TryCreateRowReader"/>.
     /// </summary>
     /// <param name="content">Raw response body.</param>
-    /// <param name="container">The storage container whose format + Metadata drive the reader.</param>
+    /// <param name="container">The storage container whose format and metadata drive the reader.</param>
     /// <returns>
     /// A success result containing the extracted rows, or a failure with
-    /// <c>ResponseRowExtractionFailed</c> if parsing fails or no reader is available for the format.
+    /// <c>ResponseRowExtractionFailed</c> if parsing fails or no reader is available for the format, or the
+    /// failure naming a format choice the container leaves out.
     /// </returns>
     protected IGenericResult<object?> ExtractRowsFromContent(
         string content,
@@ -430,7 +417,13 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
             var bytes = Encoding.UTF8.GetBytes(content);
             using var stream = new MemoryStream(bytes);
 
-            using var src = TryCreateRowReader(container, stream);
+            var created = TryCreateRowReader(container, stream);
+            if (created.IsFailure)
+            {
+                return created.ToNewResult<object?>();
+            }
+
+            using var src = created.Value;
             if (src is null)
             {
                 return GenericResult<object?>.Failure(

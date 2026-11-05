@@ -5,7 +5,7 @@ namespace Fdw.Services.Etl.Tests;
 
 /// <summary>
 /// Tests for <see cref="TransformContext.Reject"/> (FDW-1142): a rejected record is reported as an error like any other and
-/// kept with the stage that rejected it and why, for the pipeline's reject steps to write.
+/// kept with the component that rejected it and why, for the pipeline's reject steps to write.
 /// </summary>
 public sealed class TransformContextRejectTests
 {
@@ -15,19 +15,19 @@ public sealed class TransformContextRejectTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void ARejectedRecordIsReportedAsAnErrorAndKeptWithItsStageAndReason()
+    public void ARejectedRecordIsReportedAsAnErrorAndKeptWithItsComponentAndReason()
     {
         // Arrange
         var context = Context();
         var record = new Dictionary<string, object?> { ["Id"] = 7 };
 
         // Act
-        context.Reject("Clean", "Record rejected by check 'Positive' of stage 'Clean'", record);
+        context.Reject("Clean", "Record rejected by check 'Positive' of component 'Clean'", record);
 
         // Assert
         context.Errors.ShouldHaveSingleItem().Message.ShouldContain("Positive");
         var rejected = context.Rejections.ShouldHaveSingleItem();
-        rejected.Stage.ShouldBe("Clean");
+        rejected.Component.ShouldBe("Clean");
         rejected.Reason.ShouldContain("Positive");
         rejected.Record.ShouldBeSameAs(record);
     }

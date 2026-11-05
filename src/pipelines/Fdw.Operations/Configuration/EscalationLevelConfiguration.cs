@@ -167,5 +167,5 @@ public sealed partial class EscalationLevelConfiguration : IGenericConfiguration
     /// </para>
     /// Typically escalates with level: Level 1 = Warning, Level 2 = Error, Level 3 = Critical.
     /// </remarks>
-    public string Severity { get; set; } = "Warning";
+    public string Severity { get; set; } = string.Empty;
 }

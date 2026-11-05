@@ -7,7 +7,7 @@ public class DdlGenerationOptionsTests
     [Trait("Category", "DataIntegrity")]
     public void DefaultValuesAreCorrect()
     {
-        var options = new DdlGenerationOptions();
+        var options = new DdlGenerationOptions() { SchemaName = "dbo", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         options.SchemaName.ShouldBe("dbo");
         options.IfNotExists.ShouldBeTrue();

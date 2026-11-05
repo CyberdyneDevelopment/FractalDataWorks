@@ -26,6 +26,7 @@ public sealed class OrganizationFoundingTests
     private static readonly Guid Administrator = new("22222222-0000-0000-0000-000000000001");
     private static readonly Guid Finance = new("44444444-0000-0000-0000-000000000001");
     private static readonly Guid Legal = new("44444444-0000-0000-0000-000000000009");
+    private static readonly Guid LegalWorkspace = new("66666666-0000-0000-0000-000000000009");
     private static readonly NewOrganization NewLegal = new(Tenant, "Legal", "legal");
 
     private static IGenericResult Failed(string reason) => GenericResult.Failure(new GenericMessage(reason));
@@ -33,6 +34,7 @@ public sealed class OrganizationFoundingTests
     private sealed class Rig
     {
         public Mock<IOrganizationWriter> Writer { get; } = new();
+        public Mock<IDefaultWorkspaceFounding> DefaultWorkspaces { get; } = new();
         public Mock<IOrganizationProvider> Provider { get; } = new();
         public Mock<IOrganizationBootstrap> Bootstrap { get; } = new();
         public Mock<IUserConfigurationProvider> Users { get; } = new();
@@ -46,6 +48,13 @@ public sealed class OrganizationFoundingTests
                 .ReturnsAsync(GenericResult<bool>.Success(true));
             Provider.Setup(p => p.Get(Finance, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(new OrganizationConfiguration { Id = Finance, TenantId = Tenant }));
+            Provider.Setup(p => p.Get(Legal, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(
+                    new OrganizationConfiguration { Id = Legal, TenantId = Tenant, Name = "Legal", Slug = "legal", DefaultWorkspaceId = LegalWorkspace }));
+            Tenants.Setup(t => t.GetTenant(Tenant, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(GenericResult<ITenant>.Success(Mock.Of<ITenant>(t => t.Slug == "afc")));
+            DefaultWorkspaces.Setup(w => w.Found(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(LegalWorkspace));
+            DefaultWorkspaces.Setup(w => w.Remove(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
             Writer.Setup(w => w.Create(It.IsAny<NewOrganization>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Legal));
             Writer.Setup(w => w.Delete(Legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
             Bootstrap.Setup(b => b.CopyRoles(Tenant, Finance, Legal, It.IsAny<CancellationToken>()))
@@ -56,13 +65,14 @@ public sealed class OrganizationFoundingTests
         }
 
         public OrganizationFounding Founding()
-            => new(Writer.Object, Provider.Object, Bootstrap.Object, Users.Object, Tenants.Object, NullLogger<OrganizationFounding>.Instance);
+            => new(Writer.Object, DefaultWorkspaces.Object, Provider.Object, Bootstrap.Object, Users.Object, Tenants.Object, NullLogger<OrganizationFounding>.Instance);
 
         public void NothingMade() => Writer.Verify(w => w.Create(It.IsAny<NewOrganization>(), It.IsAny<CancellationToken>()), Times.Never);
 
         public void MadeThenRemoved()
         {
             Bootstrap.Verify(b => b.Clear(Tenant, Legal, It.IsAny<CancellationToken>()), Times.Once);
+            DefaultWorkspaces.Verify(w => w.Remove(It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == LegalWorkspace), It.IsAny<CancellationToken>()), Times.Once);
             Writer.Verify(w => w.Delete(Legal, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
@@ -81,6 +91,40 @@ public sealed class OrganizationFoundingTests
         rig.Bootstrap.Verify(b => b.CopyRoles(Tenant, Finance, Legal, It.IsAny<CancellationToken>()), Times.Once);
         rig.Bootstrap.Verify(b => b.GiveRole(Tenant, Legal, Administrator, "Administrator", It.IsAny<CancellationToken>()), Times.Once);
         rig.Writer.Verify(w => w.Delete(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnOrganizationIsMadeWithItsOwnDefaultWorkspaceOwnedByItsFirstAdministrator()
+    {
+        var rig = new Rig();
+
+        var result = await rig.Founding().Found(NewLegal, Finance, Administrator, "Administrator", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        rig.DefaultWorkspaces.Verify(w => w.Found(
+            It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == LegalWorkspace && n.TenantId == Tenant && n.TenantSlug == "afc"
+                && n.OrganizationId == Legal && n.OrganizationSlug == "legal" && !n.OrganizationIsDefault && n.OwnerUserId == Administrator),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ADefaultWorkspaceThatCannotBeMadeRemovesTheOrganizationAndCopiesNoRoles()
+    {
+        var rig = new Rig();
+        rig.DefaultWorkspaces.Setup(w => w.Found(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<Guid>.Failure(new GenericMessage("workspace refused")));
+
+        var result = await rig.Founding().Found(NewLegal, Finance, Administrator, "Administrator", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("workspace refused");
+        rig.Writer.Verify(w => w.Delete(Legal, It.IsAny<CancellationToken>()), Times.Once);
+        rig.Bootstrap.Verify(b => b.CopyRoles(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        rig.DefaultWorkspaces.Verify(w => w.Remove(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

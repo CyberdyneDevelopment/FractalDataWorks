@@ -106,7 +106,8 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
         var category = await DataSetCategoryLinks.Requested(_categories, request.Category, Logger, ct).ConfigureAwait(false);
         if (category.IsFailure) return category.ToNewResult<DataSetDetailResponse>();
 
-        var built = DataSetConfigurationFactory.Create(request, category.Value.Id, Logger);
+        // A value the caller chooses is refused when left out, never assumed (FDW-3931).
+        var built = DataSetConfigurationFactory.Create(request, category.Value.Id, new DataSetRequestValues(request.Name, Logger), Logger);
         if (built.IsFailure) return built.ToNewResult<DataSetDetailResponse>();
 
         var config = built.Value!;

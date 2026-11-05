@@ -88,11 +88,14 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
 
             var dialect = dbPath.Dialect;
 
-            var sqlCommand = command.Joins is { Count: > 0 }
-                ? BuildJoinedSelectStatement(container, dbPath, dialect, command.Joins, command.Filter, command.Projection, returnedFieldNames)
-                : BuildSelectStatement(container, dbPath, dialect, command.Filter, command.Projection, command.Ordering, command.Paging, returnedFieldNames);
+            if (command.Joins is { Count: > 0 })
+            {
+                return Task.FromResult(GenericResult<SqliteCommand>.Success(
+                    BuildJoinedSelectStatement(container, dbPath, dialect, command.Joins, command.Filter, command.Projection, returnedFieldNames)));
+            }
 
-            return Task.FromResult(GenericResult<SqliteCommand>.Success(sqlCommand));
+            return Task.FromResult(
+                BuildSelectStatement(container, dbPath, dialect, command.Filter, command.Projection, command.Ordering, command.Paging, returnedFieldNames));
         }
         catch (Exception ex)
         {
@@ -104,8 +107,9 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
         }
     }
 
+    // A paged read orders its rows by the primary key the container declares; a container that declares none is refused (FDW-3454).
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
-    private static SqliteCommand BuildSelectStatement(
+    private static IGenericResult<SqliteCommand> BuildSelectStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
         ISqlDialect dialect,
@@ -137,26 +141,20 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
         }
         else if (paging != null)
         {
-            var fields = container.Schema.Fields;
-            var orderByField = "1";
-
-            if (fields.Count > 0)
+            var declaredOrder = container.GetDeclaredOrderFieldName();
+            if (declaredOrder is null)
             {
-                var pkName = ((IDataContainer)container).GetPrimaryKeyFieldName();
-                orderByField = pkName ?? fields[0].Name;
-            }
-            else if (returnedFieldNames is { Count: > 0 })
-            {
-                orderByField = returnedFieldNames[0];
+                return GenericResult<SqliteCommand>.Failure(
+                    SqliteConnectionLog.PagedQueryHasNoOrder(NullLogger<SqliteQueryTranslator>.Instance, container.Name));
             }
 
-            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(orderByField)}";
+            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(declaredOrder)}";
         }
 
         if (paging != null)
             command.CommandText += $" {dialect.BuildPagingClause(paging)}";
 
-        return command;
+        return GenericResult<SqliteCommand>.Success(command);
     }
 
     [ConventionOverride(MaxCyclomaticComplexity = 20)]

@@ -46,7 +46,7 @@ internal static class LikePattern
 
         foreach (var character in text)
         {
-            if (character == escape || dialect.LikeMetaCharacters.Contains(character))
+            if (character == escape || dialect.LikeMetaCharacters.Contains(character, StringComparison.Ordinal))
                 pattern.Append(escape);
 
             pattern.Append(character);

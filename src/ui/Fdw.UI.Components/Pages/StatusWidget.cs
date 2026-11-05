@@ -1,5 +1,6 @@
 using System;
 using Fdw.UI.Abstractions.Pages;
+using Fdw.Conventions;
 
 namespace Fdw.UI.Components.Pages;
 
@@ -29,11 +30,15 @@ public sealed class StatusWidget : IStatusWidget
     /// <inheritdoc />
     public string? NavigationTarget { get; set; }
 
+    /// <summary>The status message a healthy widget shows when its caller states none, declared by the widget type.</summary>
+    [PlatformDefault]
+    public const string HealthyMessage = "Operational";
+
     /// <summary>
     /// Creates a healthy status widget.
     /// </summary>
     public static StatusWidget Healthy(string id, string label, string? message = null) =>
-        new() { Id = id, Label = label, Status = ServiceStatuses.Healthy, StatusMessage = message ?? "Operational", LastChecked = DateTime.UtcNow };
+        new() { Id = id, Label = label, Status = ServiceStatuses.Healthy, StatusMessage = message ?? HealthyMessage, LastChecked = DateTime.UtcNow };
 
     /// <summary>
     /// Creates an unhealthy status widget.

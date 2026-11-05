@@ -16,6 +16,7 @@ using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
@@ -101,11 +102,11 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
 
     Task<IGenericResult<T>> IGenericService.Execute<T>(IGenericCommand command, CancellationToken cancellationToken)
         => Task.FromResult(GenericResult<T>.Failure(
-            ExternalIdentityProvisionerLog.CommandNotDispatchable(_logger, command?.CommandType ?? "(null)")));
+            ExternalIdentityProvisionerLog.CommandNotDispatchable(_logger, command?.CommandType ?? LogPlaceholders.Null)));
 
     Task<IGenericResult> IGenericService.Execute(IGenericCommand command, CancellationToken cancellationToken)
         => Task.FromResult<IGenericResult>(GenericResult.Failure(
-            ExternalIdentityProvisionerLog.CommandNotDispatchable(_logger, command?.CommandType ?? "(null)")));
+            ExternalIdentityProvisionerLog.CommandNotDispatchable(_logger, command?.CommandType ?? LogPlaceholders.Null)));
 
     // ── IExternalIdentityProvisioner ────────────────────────────────────────────────
 

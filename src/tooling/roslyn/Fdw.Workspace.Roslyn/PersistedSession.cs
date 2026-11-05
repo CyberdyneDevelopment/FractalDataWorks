@@ -116,11 +116,12 @@ public sealed class PersistedSession
         ConversationId = state.ConversationId,
         CreatedAt = state.CreatedAt,
         LastModifiedAt = state.LastModifiedAt,
-        Baseline = state.BaselineCommitHash is not null
+        // A baseline is set with its commit and its time together (RoslynSessionManager), so one carries both or is none.
+        Baseline = state is { BaselineCommitHash: { } baselineCommit, BaselineTimestamp: { } baselineAt }
             ? new SessionBaseline
             {
-                CommitHash = state.BaselineCommitHash,
-                Timestamp = state.BaselineTimestamp ?? state.CreatedAt
+                CommitHash = baselineCommit,
+                Timestamp = baselineAt
             }
             : null,
         DocumentChanges = new Dictionary<string, string>(state.DocumentChanges, StringComparer.Ordinal),

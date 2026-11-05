@@ -1,5 +1,7 @@
 using System.IO;
 using Fdw.Collections;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Data.RowSources.Abstractions;
@@ -39,7 +41,28 @@ public abstract class RecordSourceTypeBase : TypeOptionBase<RecordSourceTypeBase
     public virtual bool ReadsBinary => false;
 
     /// <inheritdoc />
-    public abstract IRowSourceReader CreateReader(Stream content, RowSourceOptions? options);
+    public abstract IRowSourceReader CreateReader(Stream content, RowSourceOptions options);
+
+    /// <inheritdoc />
+    /// <remarks>Set by each format's constructor, the declaration of its own value (FDW-3823); zero for a format that reads no stream.</remarks>
+    public int BufferSize { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>The base options, for a format with no options of its own; a format that has some overrides it.</remarks>
+    public virtual IGenericResult<RowSourceOptions> CreateOptions(IStorageContainer container)
+    {
+        var choices = Choices(container);
+        return choices.Result(new RowSourceOptions { ContinueOnError = choices.Flag(ContinueOnErrorKey), BufferSize = BufferSize });
+    }
+
+    /// <summary>The metadata key a container states whether its reader goes on after a row it cannot read with.</summary>
+    protected const string ContinueOnErrorKey = "ContinueOnError";
+
+    /// <summary>Opens a reader over the choices <paramref name="container"/> states.</summary>
+    /// <param name="container">The container.</param>
+    /// <returns>The reader, naming the container and this format in a failure.</returns>
+    protected RowFormatChoices Choices(IStorageContainer container)
+        => container is null ? throw new System.ArgumentNullException(nameof(container)) : new RowFormatChoices(container.Metadata, container.Name, Format);
 
     /// <inheritdoc />
     public abstract IRecordSource<DataRecord> Create(RecordSourceContext context);

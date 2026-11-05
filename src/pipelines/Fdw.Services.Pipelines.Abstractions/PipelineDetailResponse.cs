@@ -42,6 +42,15 @@ public class PipelineDetailResponse
     /// <summary>Gets or sets the time zone the time of day is read in (FDW-3129).</summary>
     public string? DelayedStartTimeZoneId { get; set; }
 
+    /// <summary>Gets or sets whether the pipeline is a template: it is never triggered or scheduled (FDW-3379).</summary>
+    public bool IsTemplate { get; set; }
+
+    /// <summary>Gets or sets the name of the template the pipeline was made from; null when it was not made from one (FDW-3379).</summary>
+    public string? TemplateName { get; set; }
+
+    /// <summary>Gets or sets the version of that template the pipeline was made from, the time the template was last changed; null when it was not made from one (FDW-3379).</summary>
+    public DateTimeOffset? TemplateVersion { get; set; }
+
     /// <summary>Gets or sets the creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; }
 

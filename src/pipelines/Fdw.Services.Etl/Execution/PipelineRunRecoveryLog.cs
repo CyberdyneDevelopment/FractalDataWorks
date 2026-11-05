@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Execution;
 
 /// <summary>
 /// MessageLogging for keeping the requests of accepted pipeline runs and taking them up again after a restart (FDW-3216).
-/// EventId range: 22116-22136.
+/// EventId range: 22116-22136, 22710-22719 (FDW-3787, FDW-3786) and 22721-22722 (FDW-4084).
 /// </summary>
 [MessageLoggingTypeCode("PIPELINERUN")]
 public static partial class PipelineRunRecoveryLog
@@ -46,6 +46,46 @@ public static partial class PipelineRunRecoveryLog
     [MessageLogging(EventId = 22122, Level = LogLevel.Information,
         Message = "The stored request of pipeline run {executionId} is removed: the run is {state}, not unstarted")]
     public static partial IGenericMessage StaleRequestRemoved(ILogger logger, Guid executionId, string state);
+
+    /// <summary>Logs the records under a stopped or lost run that were closed, with the state they were closed in (FDW-3787).</summary>
+    [MessageLogging(EventId = 22710, Level = LogLevel.Information,
+        Message = "Closed {closedCount} open record(s) of pipeline run {executionId} and the run itself as {state}")]
+    public static partial IGenericMessage OpenRecordsClosed(ILogger logger, Guid executionId, int closedCount, string state);
+
+    /// <summary>Logs that the stop-grace setting is missing or not positive, so the host does not start (FDW-3786).</summary>
+    [MessageLogging(EventId = 22711, Level = LogLevel.Error,
+        Message = "The setting {settingName} is not set to a positive number of seconds, so the host cannot say how long it lets running pipelines finish when it stops; the host does not start")]
+    public static partial IGenericMessage StopGraceSettingMissing(ILogger logger, string settingName);
+
+    /// <summary>Logs the start of a stop: how many runs are in flight and how long they are given (FDW-3786).</summary>
+    [MessageLogging(EventId = 22712, Level = LogLevel.Information,
+        Message = "The host is stopping: no new runs are taken, and {runningCount} run(s) in flight have {graceSeconds} second(s) to finish")]
+    public static partial IGenericMessage StopDrainStarted(ILogger logger, int runningCount, double graceSeconds);
+
+    /// <summary>Logs the end of a stop: how many runs finished in the time and how many were stopped and marked Interrupted (FDW-3786).</summary>
+    [MessageLogging(EventId = 22713, Level = LogLevel.Information,
+        Message = "The host stopped its pipeline runs: {finishedCount} finished in the time given, {stoppedCount} were stopped and marked Interrupted")]
+    public static partial IGenericMessage StopDrainFinished(ILogger logger, int finishedCount, int stoppedCount);
+
+    /// <summary>Logs a run marked Interrupted because the host stopped it after the time it was given (FDW-3786).</summary>
+    [MessageLogging(EventId = 22714, Level = LogLevel.Warning,
+        Message = "Pipeline run {executionId} of '{pipeline}' was stopped with the host and marked Interrupted; its request is kept so the next start applies the setting {settingName}")]
+    public static partial IGenericMessage RunInterruptedByStop(ILogger logger, Guid executionId, string pipeline, string settingName);
+
+    /// <summary>Logs a cancelled run whose records could not be read, so it is closed with the reason alone and no figures (FDW-3784).</summary>
+    [MessageLogging(EventId = 22715, Level = LogLevel.Warning,
+        Message = "Pipeline run {executionId} was cancelled and its records could not be read, so it is closed without the rows it moved: {reason}")]
+    public static partial IGenericMessage CancelledRunNotRead(ILogger logger, Guid executionId, string? reason);
+
+    /// <summary>Logs a failed run whose failure kind could not be recorded on it (FDW-3862).</summary>
+    [MessageLogging(EventId = 22717, Level = LogLevel.Warning,
+        Message = "The kind of failure that ended pipeline run {executionId} could not be recorded on it: {reason}")]
+    public static partial IGenericMessage FailureKindNotRecorded(ILogger logger, Guid executionId, string? reason);
+
+    /// <summary>Logs a cut-off run whose destinations' committed rows could not be read, so it cannot be known whether starting it again would load rows twice (FDW-3840).</summary>
+    [MessageLogging(EventId = 22716, Level = LogLevel.Error,
+        Message = "The rows the destinations of pipeline run {executionId} had committed could not be read: {reason}")]
+    public static partial IGenericMessage CommittedLoadsNotRead(ILogger logger, Guid executionId, string? reason);
 
     /// <summary>Logs a record of a run that cannot be taken up and could not be closed.</summary>
     [MessageLogging(EventId = 22123, Level = LogLevel.Error,
@@ -94,7 +134,7 @@ public static partial class PipelineRunRecoveryLog
 
     /// <summary>Logs a run that was running when the host stopped, closed and started again as a new run.</summary>
     [MessageLogging(EventId = 22131, Level = LogLevel.Information,
-        Message = "Pipeline run {executionId} of '{pipeline}' was running when the host stopped; it is closed as failed and started again as run {newExecutionId}, restart {restart} of {limit}")]
+        Message = "Pipeline run {executionId} of '{pipeline}' was running when the host stopped; it is closed as Interrupted and started again as run {newExecutionId}, restart {restart} of {limit}")]
     public static partial IGenericMessage RunStartedAgain(ILogger logger, Guid executionId, string pipeline, Guid newExecutionId, int restart, int limit);
 
     /// <summary>Logs a run that was running when the host stopped and is not started again.</summary>
@@ -111,6 +151,16 @@ public static partial class PipelineRunRecoveryLog
     [MessageLogging(EventId = 22134, Level = LogLevel.Error,
         Message = "Pipeline run {executionId} was running when the host stopped and could not be started again: {reason}")]
     public static partial IGenericMessage StartAgainFailed(ILogger logger, Guid executionId, string? reason);
+
+    /// <summary>Logs that this host's Host row could not be read, so the host cannot say whose runs are its own (FDW-4084).</summary>
+    [MessageLogging(EventId = 22721, Level = LogLevel.Error,
+        Message = "The Host row named '{hostName}' could not be used, so this host has no identity to stamp a run's request with or to find its own runs by; no run is accepted or taken up: {reason}")]
+    public static partial IGenericMessage HostRowUnavailable(ILogger logger, string hostName, string? reason);
+
+    /// <summary>Logs stored requests that name no host, which no host takes up (FDW-4084).</summary>
+    [MessageLogging(EventId = 22722, Level = LogLevel.Error,
+        Message = "{requests} stored pipeline run request(s) name no host (written before the HostId column existed), so no host takes them up and their runs stay as they are; give them a host as scripts/migrations/FDW-4084.md says")]
+    public static partial IGenericMessage RequestsWithoutHost(ILogger logger, int requests);
 
     /// <summary>Logs a stored request that could not be removed.</summary>
     [MessageLogging(EventId = 22129, Level = LogLevel.Warning,

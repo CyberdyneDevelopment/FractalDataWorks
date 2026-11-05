@@ -149,8 +149,8 @@ public static class MigrationGuideMarkdownFormatter
         {
             builder.AppendLine(
                 $"| {symbolMove.NewFullyQualifiedName} " +
-                $"| {symbolMove.OldAssembly ?? MigrationGuideReader.NotRecorded} " +
-                $"| {symbolMove.NewAssembly ?? MigrationGuideReader.NotRecorded} " +
+                $"| {symbolMove.OldAssembly ?? MigrationGuidePlaceholders.NotRecorded} " +
+                $"| {symbolMove.NewAssembly ?? MigrationGuidePlaceholders.NotRecorded} " +
                 $"| {symbolMove.SymbolKind} |");
         }
 
@@ -169,7 +169,7 @@ public static class MigrationGuideMarkdownFormatter
         builder.AppendLine("|---|---|---|---|");
         foreach (var hop in hops)
         {
-            builder.AppendLine($"| {hop.NewFullyQualifiedName} | {hop.OldAssembly} | {hop.NewAssembly} | {hop.RelativePosition ?? Workspace.Helpers.MigrationGuideReader.NotRecorded} |");
+            builder.AppendLine($"| {hop.NewFullyQualifiedName} | {hop.OldAssembly} | {hop.NewAssembly} | {hop.RelativePosition ?? Workspace.Helpers.MigrationGuidePlaceholders.NotRecorded} |");
         }
     }
 

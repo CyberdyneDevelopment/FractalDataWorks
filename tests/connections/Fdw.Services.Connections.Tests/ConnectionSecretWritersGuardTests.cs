@@ -38,8 +38,8 @@ public partial class ConnectionSecretWritersGuardTests
 
     private static IEnumerable<string> SourceFiles() =>
         Directory.EnumerateFiles(SourceRoot(), "*.cs", SearchOption.AllDirectories)
-            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
-                           && !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"));
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                           && !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
 
     private static bool IsCode(string line) => !Regex.IsMatch(line, @"^\s*//", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 

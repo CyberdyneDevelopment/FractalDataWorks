@@ -59,7 +59,7 @@ public sealed class PlainStringFailureAnalyzer : DiagnosticAnalyzer
             return;
 
         // Get the symbol to verify it's GenericResult or GenericResult<T>
-        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation);
+        var symbolInfo = context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken);
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
             return;
 
@@ -110,7 +110,7 @@ public sealed class PlainStringFailureAnalyzer : DiagnosticAnalyzer
         }
 
         // Check if the argument type is string (but not IGenericMessage or IResultCode)
-        var argType = context.SemanticModel.GetTypeInfo(firstArg).Type;
+        var argType = context.SemanticModel.GetTypeInfo(firstArg, context.CancellationToken).Type;
         if (argType?.SpecialType == SpecialType.System_String)
         {
             var diagnostic = Diagnostic.Create(

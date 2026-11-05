@@ -28,14 +28,14 @@ public sealed class RecordSourceContext
     /// <param name="fields">The container's field children — the flyweight schema for produced records.</param>
     /// <param name="options">
     /// Format-specific options (the concrete subclass of <see cref="RowSourceOptions"/> for the selected
-    /// format). Null requests the format's defaults.
+    /// format), built by the format's <c>CreateOptions</c>. Required.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="content"/> or <paramref name="fields"/> is null.</exception>
-    public RecordSourceContext(Stream content, IReadOnlyList<IDataField> fields, RowSourceOptions? options = null)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="content"/> or <paramref name="fields"/> or <paramref name="options"/> is null.</exception>
+    public RecordSourceContext(Stream content, IReadOnlyList<IDataField> fields, RowSourceOptions options)
     {
         Content = content ?? throw new ArgumentNullException(nameof(content));
         Fields = fields ?? throw new ArgumentNullException(nameof(fields));
-        Options = options;
+        Options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     /// <summary>
@@ -50,7 +50,7 @@ public sealed class RecordSourceContext
     public IReadOnlyList<IDataField> Fields { get; }
 
     /// <summary>
-    /// Gets the format-specific options, or null to request the format's defaults.
+    /// Gets the format-specific options.
     /// </summary>
-    public RowSourceOptions? Options { get; }
+    public RowSourceOptions Options { get; }
 }

@@ -278,6 +278,6 @@ public class ITransformContextTests
             }
         }
 
-        public void Reject(string stage, string reason, IDictionary<string, object?> record) => ReportError(reason, record);
+        public void Reject(string component, string reason, IDictionary<string, object?> record) => ReportError(reason, record);
     }
 }

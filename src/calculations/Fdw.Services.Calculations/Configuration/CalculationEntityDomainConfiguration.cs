@@ -23,5 +23,5 @@ public partial class CalculationEntityDomainConfiguration : DomainConfiguration
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether the calculation is enabled.</summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 }

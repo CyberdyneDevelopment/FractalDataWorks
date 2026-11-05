@@ -5,6 +5,11 @@ namespace Fdw.Services.Multitenancy.Abstractions.Tests;
 
 public class TenantTypeBaseTests
 {
+    // A tenant states its theme, options and roles (TenantTypeBase refuses null, FDW-3982); these are the tests' choices.
+    private static readonly TenantTheme StatedTheme = new() { PrimaryColor = "1 1% 1%", SecondaryColor = "2 2% 2%", DarkModeDefault = true };
+    private static readonly TenantOptions StatedOptions = new();
+    private static readonly string[] StatedRoles = ["Admin", "User"];
+
     [ExcludeFromCodeCoverage]
     private sealed class TestTenant : TenantTypeBase
     {
@@ -21,11 +26,21 @@ public class TenantTypeBaseTests
             ITenantTheme? theme = null,
             ITenantOptions? options = null,
             IEnumerable<string>? availableRoles = null)
-            : base(id, name, slug, orgPrefix, connectionName, theme, options, availableRoles)
+            : base(id, name, slug, theme ?? StatedTheme, isSelectable: true, orgPrefix: orgPrefix, connectionName: connectionName, options: options ?? StatedOptions, availableRoles: availableRoles ?? StatedRoles)
         {
         }
 
         public void SetIsActive(bool value) => IsActive = value;
+    }
+
+    /// <summary>Passes its arguments to the base unchanged, to show what the base does with a null.</summary>
+    [ExcludeFromCodeCoverage]
+    private sealed class RawTenant : TenantTypeBase
+    {
+        public RawTenant(ITenantOptions? options, IEnumerable<string>? availableRoles)
+            : base(Guid.NewGuid(), "Test", "test", StatedTheme, isSelectable: true, options: options, availableRoles: availableRoles)
+        {
+        }
     }
 
     [Fact]
@@ -270,18 +285,6 @@ public class TenantTypeBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void ConstructorWithExplicitValuesUsesDefaultThemeWhenNull()
-    {
-        // Act
-        var result = new TestTenant(Guid.NewGuid(), "Test", "test");
-
-        // Assert
-        result.Theme.ShouldBe(TenantTheme.Default);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
     public void ConstructorWithExplicitValuesSetsCustomTheme()
     {
         // Arrange
@@ -297,13 +300,9 @@ public class TenantTypeBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void ConstructorWithExplicitValuesUsesDefaultOptionsWhenNull()
+    public void ConstructorWithExplicitValuesRefusesNullOptions()
     {
-        // Act
-        var result = new TestTenant(Guid.NewGuid(), "Test", "test");
-
-        // Assert
-        result.Options.ShouldBe(TenantOptions.Default);
+        Should.Throw<ArgumentNullException>(() => new RawTenant(null, StatedRoles)).ParamName.ShouldBe("options");
     }
 
     [Fact]
@@ -324,15 +323,9 @@ public class TenantTypeBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void ConstructorWithExplicitValuesUsesDefaultRolesWhenNull()
+    public void ConstructorWithExplicitValuesRefusesNullRoles()
     {
-        // Act
-        var result = new TestTenant(Guid.NewGuid(), "Test", "test");
-
-        // Assert
-        result.AvailableRoles.Count().ShouldBe(2);
-        result.AvailableRoles.ShouldContain("Admin");
-        result.AvailableRoles.ShouldContain("User");
+        Should.Throw<ArgumentNullException>(() => new RawTenant(StatedOptions, null)).ParamName.ShouldBe("availableRoles");
     }
 
     [Fact]

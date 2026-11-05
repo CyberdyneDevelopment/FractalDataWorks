@@ -65,12 +65,12 @@ public sealed partial class QualityRuleImplementationConfiguration
     /// <summary>
     /// Gets or sets the severity level (from QualitySeverityTypes TypeCollection).
     /// </summary>
-    public string Severity { get; set; } = "Error";
+    public string Severity { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether this rule is enabled.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the optional description of this rule.

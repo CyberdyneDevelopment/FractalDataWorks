@@ -24,16 +24,44 @@ public class TypeCollectionComponentShapeTests
     {
         var summary = TypeCollectionResolver.ToSummary(new MergeJoinComponentType());
 
-        summary.Inputs.ShouldNotBeNull().Select(n => n.Name).ShouldBe(["left", "right"]);
-        summary.Outputs.ShouldNotBeNull().Select(n => n.Name).ShouldBe(["output"]);
-        summary.Inputs.ShouldAllBe(n => !n.IsNamedByUser && n.Min == 1 && n.Max == 1);
+        summary.Inputs.ShouldNotBeNull().Where(n => !n.IsCompletion).Select(n => n.Name).ShouldBe(["left", "right"]);
+        summary.Outputs.ShouldNotBeNull().Where(n => !n.IsCompletion).Select(n => n.Name).ShouldBe(["output"]);
+        summary.Inputs.Where(n => !n.IsCompletion).ShouldAllBe(n => !n.IsNamedByUser && n.Min == 1 && n.Max == 1);
     }
 
     [Fact]
     public void ASourceListsNoInputsAndADestinationNoOutputs()
     {
-        TypeCollectionResolver.ToSummary(new DataSetSourceComponentType()).Inputs.ShouldNotBeNull().ShouldBeEmpty();
-        TypeCollectionResolver.ToSummary(new DataSetDestinationComponentType()).Outputs.ShouldNotBeNull().ShouldBeEmpty();
+        TypeCollectionResolver.ToSummary(new DataSetSourceComponentType()).Inputs.ShouldNotBeNull().Where(n => !n.IsCompletion).ShouldBeEmpty();
+        TypeCollectionResolver.ToSummary(new DataSetDestinationComponentType()).Outputs.ShouldNotBeNull().Where(n => !n.IsCompletion).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void EveryComponentKindListsTheAfterInputAndTheDoneOutputAsCompletionNodes()
+    {
+        foreach (var kind in ComponentTypes.All())
+        {
+            var summary = TypeCollectionResolver.ToSummary(kind);
+
+            var after = summary.Inputs.ShouldNotBeNull().Single(n => n.IsCompletion);
+            after.Name.ShouldBe(CompletionNodes.After, kind.Name);
+            after.IsNamedByUser.ShouldBeTrue(kind.Name);
+            after.Min.ShouldBe(0, kind.Name);
+            after.Max.ShouldBeNull(kind.Name);
+            var done = summary.Outputs.ShouldNotBeNull().Single(n => n.IsCompletion);
+            done.Name.ShouldBe(CompletionNodes.Done, kind.Name);
+            done.IsNamedByUser.ShouldBeFalse(kind.Name);
+        }
+    }
+
+    [Fact]
+    public void ARowNodeIsNeverMarkedAsACompletionNode()
+    {
+        foreach (var kind in ComponentTypes.All())
+        {
+            kind.Inputs.Concat(kind.Outputs).ShouldAllBe(n => !n.IsCompletion, kind.Name);
+            kind.Outputs.ShouldNotContain(n => CompletionNodes.IsDone(n.Name), kind.Name);
+        }
     }
 
     [Fact]
@@ -62,6 +90,7 @@ public class TypeCollectionComponentShapeTests
 
         json.ShouldContain("\"inputs\":[");
         json.ShouldContain("\"name\":\"reference\"");
+        json.ShouldContain("\"isCompletion\":true");
         json.ShouldContain("\"isError\":false");
     }
 

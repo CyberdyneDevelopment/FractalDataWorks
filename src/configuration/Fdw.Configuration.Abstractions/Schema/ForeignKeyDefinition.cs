@@ -33,10 +33,10 @@ public sealed class ForeignKeyDefinition
     /// <summary>
     /// Gets or sets the ON DELETE action.
     /// </summary>
-    public IForeignKeyAction OnDelete { get; set; } = new NoActionForeignKeyAction();
+    public required IForeignKeyAction OnDelete { get; set; }
 
     /// <summary>
     /// Gets or sets the ON UPDATE action.
     /// </summary>
-    public IForeignKeyAction OnUpdate { get; set; } = new NoActionForeignKeyAction();
+    public required IForeignKeyAction OnUpdate { get; set; }
 }

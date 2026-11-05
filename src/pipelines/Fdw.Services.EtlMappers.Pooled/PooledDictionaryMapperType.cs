@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Fdw.Collections.Attributes;
+using Fdw.ServiceTypes;
 using Fdw.Services.EtlMappers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,6 +29,17 @@ public sealed class PooledDictionaryMapperType
     {
 
     }
+
+    /// <inheritdoc />
+    private IReadOnlyDictionary<string, object>? _declaredDefaults;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The values a configuration of this mapper takes for a field it leaves out (FDW-3956, Mike: "a default value set in the service type
+    /// option or collection so that in the registration we can change it"). A host changes one with <c>ServiceTypeDefaults.Override</c>.
+    /// </remarks>
+    public override IReadOnlyDictionary<string, object> DeclaredDefaults
+        => _declaredDefaults ??= ServiceTypeDefaults.With(base.DeclaredDefaults, (nameof(PooledDictionaryMapperConfiguration.EnablePooling), true), (nameof(PooledDictionaryMapperConfiguration.MaxPoolSize), 1000), (nameof(PooledDictionaryMapperConfiguration.MaxDictionarySize), 100));
 
     /// <inheritdoc />
     public override int EstimatedAllocationsPerRow => 0;

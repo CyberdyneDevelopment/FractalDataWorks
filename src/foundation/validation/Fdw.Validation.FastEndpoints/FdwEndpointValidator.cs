@@ -1,7 +1,10 @@
 using System;
+using System.Linq;
 using System.Linq.Expressions;
 using FastEndpoints;
 using FluentValidation;
+using Fdw.Validation.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Validation.FastEndpoints;
 
@@ -69,4 +72,39 @@ public abstract class FdwEndpointValidator<T> : Validator<T> where T : notnull
             .NotEmpty()
             .MinimumLength(minLength);
     }
+
+    /// <summary>
+    /// Takes the rules of a configuration from the validator that configuration class declared (FDW-3884), so a rule about it has one
+    /// source: the request answers 400 for exactly what the save check would refuse.
+    /// </summary>
+    /// <typeparam name="TConfiguration">The configuration class the request describes.</typeparam>
+    /// <param name="describe">Builds the configuration the request describes, from the request's own members.</param>
+    /// <remarks>
+    /// The validator is found the way the save check finds it (<see cref="ConfigurationValidatorResolver.Find"/>), so a class that declares
+    /// none is a failure here too, never a pass. Only a failure on a member the request carries is reported: a request that has no Name is
+    /// not refused for a Name it cannot state. Each failure is reported under the member's own name.
+    /// </remarks>
+    protected void RulesOf<TConfiguration>(Func<T, TConfiguration> describe)
+        where TConfiguration : notnull
+    {
+        RuleFor(request => request).Custom((request, context) =>
+        {
+            var found = ConfigurationValidatorResolver.Find(typeof(TConfiguration), NullLogger.Instance);
+            if (found.IsFailure)
+            {
+                context.AddFailure(typeof(TConfiguration).Name, found.CurrentMessage ?? string.Empty);
+                return;
+            }
+
+            if (found.Value!.Validator is not { } validator)
+                return;
+
+            var validated = validator.Validate(new FluentValidation.ValidationContext<object>(describe(request)));
+            foreach (var failure in validated.Errors.Where(failure => CarriedByRequest(failure.PropertyName)))
+                context.AddFailure(failure.PropertyName, failure.ErrorMessage);
+        });
+    }
+
+    private static bool CarriedByRequest(string propertyName) =>
+        typeof(T).GetProperty(propertyName.Split('.', '[')[0]) is not null;
 }

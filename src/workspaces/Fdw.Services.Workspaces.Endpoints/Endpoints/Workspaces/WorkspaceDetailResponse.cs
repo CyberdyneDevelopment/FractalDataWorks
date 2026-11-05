@@ -21,9 +21,9 @@ public class WorkspaceDetailResponse
     public WorkspaceOrganizationReference? DefaultForOrganization { get; set; }
 
     /// <summary>
-    /// Gets or sets the organization of the workspace's tenant this workspace belongs to, or <see langword="null"/> when it sits directly under its tenant.
+    /// Gets or sets the organization of the workspace's tenant this workspace belongs to.
     /// </summary>
-    public Guid? OrganizationId { get; set; }
+    public Guid OrganizationId { get; set; }
 
     /// <summary>Gets or sets the unique workspace name.</summary>
     public string Name { get; set; } = string.Empty;

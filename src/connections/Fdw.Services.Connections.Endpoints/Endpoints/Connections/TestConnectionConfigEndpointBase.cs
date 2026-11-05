@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Connections.Results;
 
@@ -81,7 +83,14 @@ public abstract class TestConnectionConfigEndpointBase : Endpoint<CreateConnecti
         if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
             return GenericResult.Failure(ConnectionEndpointLog.ConnectionTypeNotFound(EndpointLogger, request.ServiceType));
 
-        var bound = connectionType.EndpointBehavior.Bind(ConnectionRequestBody.ForCreate(request), EndpointLogger);
+        // What the request leaves out takes the caller's tenant's setting, as a create does (FDW-3580).
+        var body = ConnectionCreateDefaults.Fill(
+            ConnectionRequestBody.ForCreate(request), connectionType.EndpointBehavior, connectionType, Resolve<Lazy<IEffectiveSettingsProvider>>(),
+            new ClaimsPrincipalAuthenticationContext(User).ActiveTenantId, request.Name, EndpointLogger);
+        if (body.IsFailure)
+            return body;
+
+        var bound = connectionType.EndpointBehavior.Bind(body.Value, EndpointLogger);
         if (bound.IsFailure)
             return bound;
 

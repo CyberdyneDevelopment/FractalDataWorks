@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using Fdw.Configuration.Persistence.Schema;
 
 namespace Fdw.Commands.Data.Ddl;
 
@@ -30,7 +31,7 @@ namespace Fdw.Commands.Data.Ddl;
 /// .WithColumn("SmtpHost", SqlDbType.NVarChar, maxLength: 255, isRequired: true)
 /// .WithColumn("SmtpPort", SqlDbType.Int, isRequired: true, defaultValue: "587")
 /// .WithColumn("CreatedAt", SqlDbType.DateTime2, isRequired: true, defaultValue: "GETUTCDATE()")
-/// .WithForeignKey("ConnectionTypeId", "ConnectionTypes", "Id", onDelete: new CascadeForeignKeyAction())
+/// .WithForeignKey("ConnectionTypeId", "ConnectionTypes", "Id", onDelete: ForeignKeyActions.Cascade, onUpdate: ForeignKeyActions.NoAction)
 /// .WithIndex("IX_EmailConfigurations_CreatedAt", new[] { "CreatedAt" });
 ///
 /// var result = await dataGateway.Execute(command);
@@ -157,8 +158,8 @@ public sealed class CreateTableCommand : DdlCommand
     /// <param name="columnName">The column name in the current table.</param>
     /// <param name="referencedTable">The referenced (parent) table name.</param>
     /// <param name="referencedColumn">The referenced column name in the parent table.</param>
-    /// <param name="onDelete">The action to take when the referenced row is deleted (default: NoAction).</param>
-    /// <param name="onUpdate">The action to take when the referenced row is updated (default: NoAction).</param>
+    /// <param name="onDelete">The action to take when the referenced row is deleted; stated by the caller, NoAction included.</param>
+    /// <param name="onUpdate">The action to take when the referenced row is updated; stated by the caller, NoAction included.</param>
     /// <param name="referencedSchema">The schema of the referenced table.</param>
     /// <param name="constraintName">The name of the foreign key constraint (null to auto-generate).</param>
     /// <returns>This command instance for fluent chaining.</returns>
@@ -166,8 +167,8 @@ public sealed class CreateTableCommand : DdlCommand
         string columnName,
         string referencedTable,
         string referencedColumn,
-        IForeignKeyAction? onDelete = null,
-        IForeignKeyAction? onUpdate = null,
+        IForeignKeyAction onDelete,
+        IForeignKeyAction onUpdate,
         string? referencedSchema = null,
         string? constraintName = null)
     {
@@ -180,14 +181,18 @@ public sealed class CreateTableCommand : DdlCommand
         if (string.IsNullOrWhiteSpace(referencedColumn))
             throw new ArgumentException("Referenced column name cannot be null or whitespace.", nameof(referencedColumn));
 
+        // No default action (FDW-3610): a foreign key states both, NoAction included.
+        ArgumentNullException.ThrowIfNull(onDelete);
+        ArgumentNullException.ThrowIfNull(onUpdate);
+
         _foreignKeys.Add(new ForeignKeyDefinition
         {
             Name = constraintName,
             ColumnName = columnName,
             ReferencedTable = referencedTable,
             ReferencedColumn = referencedColumn,
-            OnDelete = onDelete ?? ForeignKeyActions.NoAction,
-            OnUpdate = onUpdate ?? ForeignKeyActions.NoAction,
+            OnDelete = onDelete,
+            OnUpdate = onUpdate,
             ReferencedSchema = referencedSchema
         });
 
@@ -226,7 +231,7 @@ public sealed class CreateTableCommand : DdlCommand
             ColumnNames = columnNames,
             IsUnique = isUnique,
             IsClustered = isClustered,
-            IncludeColumns = includeColumns ?? Array.Empty<string>(),
+            IncludeColumns = includeColumns ?? [],
             FilterCondition = filterCondition,
             FillFactor = fillFactor
         });

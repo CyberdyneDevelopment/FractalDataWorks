@@ -24,7 +24,7 @@ public sealed class NotificationRequest : INotificationRequest
         IReadOnlyList<string> recipients,
         string subject,
         string message,
-        INotificationPriority? priority = null,
+        INotificationPriority priority,
         IReadOnlyDictionary<string, object?>? metadata = null,
         string? correlationId = null)
     {
@@ -34,7 +34,7 @@ public sealed class NotificationRequest : INotificationRequest
         Recipients = recipients;
         Subject = subject;
         Message = message;
-        Priority = priority ?? NotificationPriorities.Normal;
+        Priority = priority ?? throw new ArgumentNullException(nameof(priority));
         Metadata = metadata;
         CorrelationId = correlationId;
         CreatedAt = DateTimeOffset.UtcNow;

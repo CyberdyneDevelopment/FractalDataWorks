@@ -78,7 +78,7 @@ public abstract class DataTypeOptionBase
         bool isDeprecated = false,
         string? nativeName = null,
         string? format = null)
-        : base(name, $"TypeOptions:{name}", displayName ?? name, description, category: null)
+        : base(name, $"TypeOptions:{name}", displayName is null ? name : displayName, description, category: null)
     {
         AbstractType = abstractType;
         IsNumeric = isNumeric;
@@ -96,7 +96,7 @@ public abstract class DataTypeOptionBase
         IsBinary = isBinary;
         SupportsStreaming = supportsStreaming;
         IsDeprecated = isDeprecated;
-        NativeName = nativeName ?? name;
+        NativeName = nativeName is null ? name : nativeName;
         Format = format;
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Security.Claims;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -17,9 +18,7 @@ internal static class PreferenceEndpointIdentity
     /// <returns><see langword="true"/> when a GUID was resolved; otherwise <see langword="false"/>.</returns>
     public static bool TryGetUserId(ClaimsPrincipal user, out Guid userId)
     {
-        var sub = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-               ?? user.FindFirst("sub")?.Value;
-        return Guid.TryParse(sub, out userId);
+        return CallerClaims.TryGetUserId(user, out userId);
     }
 
     /// <summary>

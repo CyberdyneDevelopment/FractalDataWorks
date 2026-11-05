@@ -19,12 +19,12 @@ public sealed record ResolvedDataSet(
     /// <summary>The kind of a name that is a data set and not a variation of one.</summary>
     public const string DataSetKind = "DataSet";
 
-    /// <summary>Gets what the name is: <see cref="DataSetKind"/>, else the kind of variation (the name of its implementation, <c>DataView</c> for a saved view).</summary>
-    public string Kind => Variation?.Implementation ?? DataSetKind;
+    /// <summary>Gets what the name is: <see cref="DataSetKind"/>, else the kind of variation (<see cref="VariationKinds.Scoped"/>, or <see cref="VariationKinds.DataView"/> for a saved view).</summary>
+    public string Kind => Variation is { } variation ? variation.VariationKind : DataSetKind;
 
     /// <summary>Gets the name that was resolved.</summary>
-    public string Name => Variation?.Name ?? DataSet.Name;
+    public string Name => Variation is null ? DataSet.Name : Variation.Name;
 
     /// <summary>Gets the logical id of the thing the name names.</summary>
-    public Guid Id => Variation?.Id ?? DataSet.Id;
+    public Guid Id => Variation is null ? DataSet.Id : Variation.Id;
 }

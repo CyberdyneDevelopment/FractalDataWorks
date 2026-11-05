@@ -27,6 +27,7 @@ public sealed class MsSqlSoftDeleteTranslatorTests
         {
             DeletedAtColumn = "DeletedAt",
             Marker = new SoftDeleteMarker("Status", "gone"),
+            FlagValue = true,
         };
 
         var result = await Run(options);
@@ -44,7 +45,7 @@ public sealed class MsSqlSoftDeleteTranslatorTests
     [Fact]
     public async Task FilterMatchesFlagsWithoutAMarkerOrAStagedSet()
     {
-        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { DeletedAtColumn = "DeletedAt" };
+        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { DeletedAtColumn = "DeletedAt", FlagValue = true };
 
         var result = await Run(options);
 
@@ -79,6 +80,7 @@ public sealed class MsSqlSoftDeleteTranslatorTests
         var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.AbsentFromSource)
         {
             AbsentFromSource = new AbsentKeySet(["Code"], keys),
+            FlagValue = true,
         };
 
         var result = await Run(options);
@@ -97,6 +99,7 @@ public sealed class MsSqlSoftDeleteTranslatorTests
         {
             Marker = new SoftDeleteMarker("Status", "gone"),
             AbsentFromSource = new AbsentKeySet(["Code"], new List<IReadOnlyDictionary<string, object?>>()),
+            FlagValue = true,
         };
 
         var result = await Run(options);
@@ -111,6 +114,7 @@ public sealed class MsSqlSoftDeleteTranslatorTests
         var options = new SoftDeleteOptions("NoSuchFlag", SoftDeleteModes.MarkerMatches)
         {
             Marker = new SoftDeleteMarker("Status", "gone"),
+            FlagValue = true,
         };
 
         var result = await Run(options);
@@ -120,14 +124,28 @@ public sealed class MsSqlSoftDeleteTranslatorTests
     }
 
     [Fact]
-    public async Task DeleteWithoutSoftDeleteOrFilterDeletesEveryRow()
+    public async Task DeleteWithoutSoftDeleteOrFilterIsRefusedUnlessItAsksForEveryRow()
     {
         var container = TestContainers.Table("Customers", Columns);
 
-        var result = await _sut.Translate(new DeleteCommand(), container.Object, TestContext.Current.CancellationToken);
+        var refused = await _sut.Translate(new DeleteCommand(), container.Object, TestContext.Current.CancellationToken);
+        var result = await _sut.Translate(new DeleteCommand { AllRows = true }, container.Object, TestContext.Current.CancellationToken);
 
+        refused.IsSuccess.ShouldBeFalse();
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldStartWith("DELETE FROM");
         result.Value.CommandText.ShouldNotContain("WHERE");
+    }
+
+    [Fact]
+    public async Task ASoftDeleteWithNoFilterIsNotRefused()
+    {
+        // FDW-3660 refuses a delete that states no rows; a soft delete's own options bound the rows it flags.
+        var container = TestContainers.Table("Customers", Columns);
+        var command = new DeleteCommand { SoftDelete = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { FlagValue = true } };
+
+        var result = await _sut.Translate(command, container.Object, TestContext.Current.CancellationToken);
+
+        result.CurrentMessage?.ShouldNotContain("AllRows()");
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -95,7 +96,7 @@ public sealed class RemoveGlobalUsingsTranslator
         var afterRemoval = await RemoveDirectives(solution, targets, cancellationToken).ConfigureAwait(false);
 
         var removedCounts = await DiagnosticDiff.Counts(
-            afterRemoval.GetProject(project.Id)!, cancellationToken).ConfigureAwait(false) ?? new Dictionary<string, int>(StringComparer.Ordinal);
+            afterRemoval.GetProject(project.Id)!, cancellationToken).ConfigureAwait(false) ?? ImmutableDictionary<string, int>.Empty;
 
         var appeared = DiagnosticDiff.Appeared(baseline, removedCounts);
         var resolved = DiagnosticDiff.Appeared(removedCounts, baseline);
@@ -112,7 +113,7 @@ public sealed class RemoveGlobalUsingsTranslator
             afterRemoval, project.Id, targets, appeared, command, repaired, cancellationToken).ConfigureAwait(false);
 
         var finalCounts = await DiagnosticDiff.Counts(
-            withRepairs.GetProject(project.Id)!, cancellationToken).ConfigureAwait(false) ?? new Dictionary<string, int>(StringComparer.Ordinal);
+            withRepairs.GetProject(project.Id)!, cancellationToken).ConfigureAwait(false) ?? ImmutableDictionary<string, int>.Empty;
 
         var surviving = DiagnosticDiff.Appeared(baseline, finalCounts);
         if (surviving.Count > 0 && !command.AcceptUnverified)

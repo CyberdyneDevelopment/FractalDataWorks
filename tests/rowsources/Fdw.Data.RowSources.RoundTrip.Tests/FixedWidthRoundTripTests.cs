@@ -34,7 +34,7 @@ public class FixedWidthRoundTripTests
 
         // Act — write
         using (var tw = new StringWriter(sb))
-        using (var writer = new FixedWidthStreamRowWriter(tw, new FixedWidthRowWriterOptions { Fields = Fields() }))
+        using (var writer = new FixedWidthStreamRowWriter(tw, new FixedWidthRowWriterOptions { Fields = Fields(), WriteHeader = false, BufferSize = 16 * 1024 }))
         {
             await writer.WriteAll(rows, TestContext.Current.CancellationToken);
             writer.Flush();
@@ -45,7 +45,10 @@ public class FixedWidthRoundTripTests
         using var reader = new FixedWidthStreamRowSource(stream, new FixedWidthRowSourceOptions
         {
             Fields = Fields(),
-            Trim = true
+            Trim = true,
+            ContinueOnError = true,
+            HasHeader = false,
+            BufferSize = 16 * 1024,
         });
 
         var readBack = Drain(reader);
@@ -65,7 +68,7 @@ public class FixedWidthRoundTripTests
     {
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("data"));
         Should.Throw<System.ArgumentException>(() =>
-            new FixedWidthStreamRowSource(stream, new FixedWidthRowSourceOptions()));
+            new FixedWidthStreamRowSource(stream, new FixedWidthRowSourceOptions() { ContinueOnError = true, HasHeader = false, Trim = true, BufferSize = 16 * 1024 }));
     }
 
     [Fact]
@@ -74,7 +77,7 @@ public class FixedWidthRoundTripTests
     {
         using var tw = new StringWriter();
         Should.Throw<System.ArgumentException>(() =>
-            new FixedWidthStreamRowWriter(tw, new FixedWidthRowWriterOptions()));
+            new FixedWidthStreamRowWriter(tw, new FixedWidthRowWriterOptions() { WriteHeader = false, BufferSize = 16 * 1024 }));
     }
 
     private static List<Dictionary<string, object?>> Drain(FixedWidthStreamRowSource reader)

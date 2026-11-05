@@ -13,11 +13,11 @@ public sealed class DataSetFilterConditionPayload
     /// Valid values: Equals, NotEquals, Contains, StartsWith, EndsWith,
     /// GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual, IsNull, IsNotNull.
     /// </summary>
-    public string Operator { get; set; } = "Equals";
+    public string Operator { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the comparison value. Null for IsNull/IsNotNull operators.</summary>
     public string? Value { get; set; }
 
     /// <summary>Gets or sets the data type of the field, used to select appropriate operators in the UI.</summary>
-    public string DataType { get; set; } = "String";
+    public string DataType { get; set; } = string.Empty;
 }

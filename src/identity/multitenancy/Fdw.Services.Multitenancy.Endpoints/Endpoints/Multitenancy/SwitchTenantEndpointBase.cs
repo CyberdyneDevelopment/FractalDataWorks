@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Multitenancy.Clients.Models;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -53,7 +54,7 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
     public override async Task HandleAsync(SwitchTenantRequest req, CancellationToken ct)
     {
         
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = CallerClaims.UserId(User);
         if (string.IsNullOrEmpty(userId))
         {
             await Send.ForbiddenAsync(ct).ConfigureAwait(false);

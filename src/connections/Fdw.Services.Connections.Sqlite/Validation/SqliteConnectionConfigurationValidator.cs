@@ -26,6 +26,10 @@ public sealed class SqliteConnectionConfigurationValidator : FdwConfigurationVal
             .NotEmpty()
             .WithMessage("Cache is required (e.g., Default, Shared, Private)");
 
+        RuleFor(x => x.AuthenticationType)
+            .NotEmpty()
+            .WithMessage("AuthenticationType is required (None or EncryptionKey)");
+
         RuleFor(x => x.DefaultTimeout)
             .GreaterThan(0)
             .When(x => x.DefaultTimeout.HasValue)

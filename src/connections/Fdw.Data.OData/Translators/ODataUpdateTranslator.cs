@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,9 +58,6 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
-        ODataUpdateTranslatorLog.Translating(
-            NullLogger<ODataUpdateTranslator>.Instance, container?.Name ?? "<null>");
-
         try
         {
             if (container == null)
@@ -69,6 +67,8 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("ContainerNull")));
             }
+
+            ODataUpdateTranslatorLog.Translating(NullLogger<ODataUpdateTranslator>.Instance, container.Name);
 
             // Get entity data from metadata
             if (command.Metadata == null || !command.Metadata.TryGetValue("Data", out var dataObj) || dataObj == null)
@@ -117,7 +117,7 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
         catch (Exception ex)
         {
             ODataUpdateTranslatorLog.UpdateTranslationFailed(
-                NullLogger<ODataUpdateTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
+                NullLogger<ODataUpdateTranslator>.Instance, ex, container.Name, ex.Message);
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Failure(
                     ODataResultCodes.ByName("UpdateTranslationFailed"),
@@ -157,9 +157,8 @@ public sealed class ODataUpdateTranslator : ODataCommandTranslatorBase
             }
         }
 
-        // Try common ID property names
-        var idProperty = dataType.GetProperty("Id") ?? dataType.GetProperty("ID");
-        return idProperty?.GetValue(data);
+        // The common ID property name, in any casing, as FindIdValue matches it.
+        return dataType.GetProperty("Id", BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.GetValue(data);
     }
 
     /// <summary>

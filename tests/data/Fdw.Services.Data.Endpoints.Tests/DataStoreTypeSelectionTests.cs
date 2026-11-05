@@ -26,6 +26,16 @@ public sealed class DataStoreTypeSelectionTests
     }
 
     [Fact]
+    public void AKindIsNotOfferedARegisteredTypeThroughANameThatDiffersOnlyInCase()
+    {
+        // FDW-3454: names compare with an explicit ordinal comparer; the probe kind also declares the registered type's name in other case.
+        var offered = ConnectionTypes.ByName("ProbeTransport").SupportedDataStoreTypes;
+
+        offered.ShouldNotContain(DataStoreTypeSelectionProbes.MiscasedStoreName);
+        offered.ShouldContain(ProbeStoreName);
+    }
+
+    [Fact]
     public void AKindWithNoDeclarationAndNoDataStoreTypeOfItsOwnNameOffersNothing()
     {
         ConnectionTypes.ByName("ProbeNoStores").SupportedDataStoreTypes.ShouldBeEmpty();

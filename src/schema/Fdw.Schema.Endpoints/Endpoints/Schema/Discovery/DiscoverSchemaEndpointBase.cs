@@ -83,7 +83,7 @@ public abstract class DiscoverSchemaEndpointBase : Endpoint<DiscoverSchemaReques
 
             if (!result.IsSuccess || result.Value == null)
             {
-                var message = result.CurrentMessage ?? "Schema discovery failed";
+                var message = result.NoValueReason().Message;
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.ConnectionName, "discover");
                 AddError(message);
                 await Send.ErrorsAsync(result.IsSuccess ? 404 : 400, ct).ConfigureAwait(false);

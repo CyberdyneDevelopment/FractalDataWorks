@@ -18,6 +18,7 @@ public sealed class RoleSettingConfigurationValidatorTests
         // Arrange
         var config = new RoleSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.NewGuid(),
             RoleName = "Admin",
             SettingName = "MaxRows",
@@ -39,6 +40,7 @@ public sealed class RoleSettingConfigurationValidatorTests
         // Arrange
         var config = new RoleSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.Empty,
             RoleName = "Admin",
             SettingName = "MaxRows",
@@ -60,6 +62,7 @@ public sealed class RoleSettingConfigurationValidatorTests
         // Arrange
         var config = new RoleSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.NewGuid(),
             RoleName = string.Empty,
             SettingName = "MaxRows",
@@ -81,6 +84,7 @@ public sealed class RoleSettingConfigurationValidatorTests
         // Arrange
         var config = new RoleSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.NewGuid(),
             RoleName = "Admin",
             SettingName = string.Empty,
@@ -102,6 +106,7 @@ public sealed class RoleSettingConfigurationValidatorTests
         // Arrange
         var config = new RoleSettingImplementationConfiguration
         {
+            IsActive = true,
             TenantId = Guid.NewGuid(),
             RoleName = "Admin",
             SettingName = "MaxRows",

@@ -55,7 +55,7 @@ public abstract class DeleteDataViewEndpointBase : CrudDeleteEndpointBase<DataVi
     /// The framework's answer is the person who saved the view. Who else may is policy, so it is a rule a developer replaces by overriding
     /// this: the reference API also lets a holder of the right at the view's scope or above delete it, through <c>IScopeAuthority</c>.
     /// </remarks>
-    protected virtual Task<IGenericResult> MayChange(IDataViewDataSetVariationConfiguration view, CancellationToken cancellationToken)
+    protected virtual Task<IGenericResult> MayChange(IDataSetVariationImplementationConfiguration view, CancellationToken cancellationToken)
         => Task.FromResult(DataViewStore.OwnedByCaller(_authContext, view, Logger));
 
     /// <inheritdoc />

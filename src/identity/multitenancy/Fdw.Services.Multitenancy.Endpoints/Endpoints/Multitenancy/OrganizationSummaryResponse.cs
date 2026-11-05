@@ -23,6 +23,6 @@ public class OrganizationSummaryResponse
     /// <summary>Gets or sets whether the organization is active.</summary>
     public bool IsActive { get; set; }
 
-    /// <summary>Gets or sets the durable id of the workspace the organization names as its default, or null when it names none.</summary>
-    public Guid? DefaultWorkspaceId { get; set; }
+    /// <summary>Gets or sets the durable id of the organization's own default workspace.</summary>
+    public Guid DefaultWorkspaceId { get; set; }
 }

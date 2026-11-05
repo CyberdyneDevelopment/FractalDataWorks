@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
@@ -34,7 +35,15 @@ public sealed class SimpleDataSetTypeTests
 {
     private static readonly Guid ConnectionId = Guid.Parse("11111111-2222-3333-4444-555555555555");
 
-    private static (DataSetExecutionContext Context, Func<IDataCommand?> Received) BuildContext()
+    // The data set's fields: a key field a page follows, and one that is not (FDW-3454).
+    private static DataSetFieldConfiguration[] KeyedFields() =>
+    [
+        new DataSetFieldConfiguration { Name = "Id", Ordinal = 0, IsKey = true },
+        new DataSetFieldConfiguration { Name = "Name", Ordinal = 1 },
+        new DataSetFieldConfiguration { Name = "Abbreviation", Ordinal = 2, IsKey = true },
+    ];
+
+    private static (DataSetExecutionContext Context, Func<IDataCommand?> Received) BuildContext(params DataSetFieldConfiguration[] fields)
     {
         var container = new Mock<IDataContainer> { DefaultValue = DefaultValue.Mock };
         container.Setup(c => c.Parent.Store.ConnectionId).Returns(ConnectionId);
@@ -65,6 +74,7 @@ public sealed class SimpleDataSetTypeTests
         {
             Name = "Teams",
             Implementation = "Simple",
+            Fields = fields,
             Sources =
             [
                 new DataSetSourceConfiguration
@@ -93,7 +103,7 @@ public sealed class SimpleDataSetTypeTests
     [Trait("Category", "DataSets.FDW877")]
     public async Task ReadAsRowsCarriesTheCallersFilterAndPagingToTheSource()
     {
-        var (context, received) = BuildContext();
+        var (context, received) = BuildContext(KeyedFields());
         var query = new QueryCommand<IDataRow>
         {
             Filter = new FilterExpression
@@ -117,6 +127,57 @@ public sealed class SimpleDataSetTypeTests
         sent.Filter.ShouldNotBeNull("the caller's filter must reach the source");
         sent.Paging.ShouldNotBeNull("the caller's paging must reach the source");
         sent.Paging.Take.ShouldBe(4);
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW3454")]
+    public async Task APageWithNoStatedOrderingFollowsTheDataSetsKeyFieldsInTheirDeclaredOrder()
+    {
+        var (context, received) = BuildContext(KeyedFields());
+
+        var result = await new SimpleDataSetType().Execute<IEnumerable<IDataRow>>(
+            context, new QueryCommand<IDataRow> { Paging = new PagingExpression { Skip = 0, Take = 4 } }, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var sent = received().ShouldBeAssignableTo<IQueryCommand>();
+        sent.ShouldNotBeNull();
+        var ordered = sent.Ordering.ShouldNotBeNull().OrderedFields;
+        // The key fields in their declared order, never the source's first column.
+        ordered.Select(field => field.PropertyName).ToList().ShouldBe(new[] { "Id", "Abbreviation" });
+        ordered.ShouldAllBe(field => field.Direction.IsAscending);
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW3454")]
+    public async Task APageWithAStatedOrderingKeepsItAndAddsNoKeyOrder()
+    {
+        var (context, received) = BuildContext(KeyedFields());
+        var stated = new OrderingExpression { OrderedFields = [new OrderedField { PropertyName = "Name", Direction = SortDirections.Descending }] };
+
+        var result = await new SimpleDataSetType().Execute<IEnumerable<IDataRow>>(
+            context, new QueryCommand<IDataRow> { Ordering = stated, Paging = new PagingExpression { Skip = 0, Take = 4 } }, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var sent = received().ShouldBeAssignableTo<IQueryCommand>();
+        sent.ShouldNotBeNull();
+        sent.Ordering.ShouldNotBeNull().OrderedFields.Select(field => field.PropertyName).ToList().ShouldBe(new[] { "Name" });
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW3454")]
+    public async Task APageOfADataSetThatDeclaresNoKeyFieldIsRefusedNamingItAndNeverReachesTheSource()
+    {
+        var (context, received) = BuildContext(new DataSetFieldConfiguration { Name = "Name", Ordinal = 0 });
+
+        var result = await new SimpleDataSetType().Execute<IEnumerable<IDataRow>>(
+            context, new QueryCommand<IDataRow> { Paging = new PagingExpression { Skip = 0, Take = 4 } }, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldEndWith("-20004");
+        var message = result.CurrentMessage.ShouldNotBeNull();
+        message.ShouldContain("Teams");
+        message.ShouldContain("key fields");
+        received().ShouldBeNull("a refused read is not sent to the source");
     }
 
     [Fact]

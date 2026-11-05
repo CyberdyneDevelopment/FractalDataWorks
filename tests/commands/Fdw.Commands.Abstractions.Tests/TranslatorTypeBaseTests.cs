@@ -161,9 +161,18 @@ public sealed class TranslatorTypeBaseTests
             IDataFormat targetFormat,
             TranslationCapabilities capabilities,
             int priority = 50)
-            : base(name, description, sourceFormat, targetFormat, capabilities, priority)
+            : base(name, description, priority)
         {
+            SourceFormat = sourceFormat;
+            TargetFormat = targetFormat;
+            Capabilities = capabilities;
         }
+
+        public override IDataFormat SourceFormat { get; }
+
+        public override IDataFormat TargetFormat { get; }
+
+        public override TranslationCapabilities Capabilities { get; }
 
         public override IGenericResult<IGenericCommandTranslator> CreateTranslator(IServiceProvider services)
             => GenericResult<IGenericCommandTranslator>.Failure(new GenericMessage("Not implemented"));

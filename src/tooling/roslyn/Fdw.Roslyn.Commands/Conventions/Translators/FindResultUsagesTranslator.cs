@@ -36,7 +36,7 @@ public sealed class FindResultUsagesTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        FindResultUsagesTranslatorLog.Scanning(Logger, command.ProjectFilter ?? "(all)");
+        FindResultUsagesTranslatorLog.Scanning(Logger, command.ProjectFilter ?? RoslynReportPlaceholders.All);
 
         var resultUsages = new List<ResultUsageInfo>();
 
@@ -49,7 +49,7 @@ public sealed class FindResultUsagesTranslator
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) continue;
 
-            foreach (var document in project.Documents)
+            foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
             {
                 if (command.IsGeneratedDocument(document)) continue;
 
@@ -70,7 +70,7 @@ public sealed class FindResultUsagesTranslator
                     if (semanticModel.GetDeclaredSymbol(methodDecl, cancellationToken) is not IMethodSymbol methodSymbol)
                         continue;
 
-                    var containingType = methodSymbol.ContainingType?.Name ?? "Unknown";
+                    var containingType = methodSymbol.ContainingType?.Name ?? RoslynReportPlaceholders.Unknown;
 
                     // Analyze return statements
                     var returnStatements = methodDecl.DescendantNodes().OfType<ReturnStatementSyntax>().ToList();
@@ -85,7 +85,7 @@ public sealed class FindResultUsagesTranslator
                         ContainingType = containingType,
                         ReturnType = returnType,
                         Project = project.Name,
-                        FilePath = document.FilePath ?? document.Name,
+                        FilePath = documentPath,
                         Line = methodDecl.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
                         SuccessReturns = successCount,
                         FailureReturns = failureCount,
@@ -98,7 +98,7 @@ public sealed class FindResultUsagesTranslator
         var data = new ResultUsagesData
         {
             Count = resultUsages.Count,
-            ProjectFilter = command.ProjectFilter ?? "(all)",
+            ProjectFilter = command.ProjectFilter ?? RoslynReportPlaceholders.All,
             Usages = resultUsages
         };
 

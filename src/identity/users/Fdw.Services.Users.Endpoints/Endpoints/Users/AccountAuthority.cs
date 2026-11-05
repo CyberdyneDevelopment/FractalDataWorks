@@ -54,8 +54,7 @@ public static class AccountAuthority
         ArgumentNullException.ThrowIfNull(caller);
         ArgumentNullException.ThrowIfNull(account);
 
-        var callerId = caller.FindFirstValue(ClaimTypes.NameIdentifier) ?? caller.FindFirstValue("sub");
-        return Guid.TryParse(callerId, out var callerGuid) && callerGuid == account.Id;
+        return CallerClaims.TryGetUserId(caller, out var callerGuid) && callerGuid == account.Id;
     }
 
     /// <summary>

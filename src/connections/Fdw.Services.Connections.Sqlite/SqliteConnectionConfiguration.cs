@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Data;
+using Fdw.Conventions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Sqlite.Authentication;
 
@@ -83,13 +84,13 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     /// Gets or sets the SQLite open mode.
     /// Valid values: ReadWriteCreate, ReadWrite, ReadOnly, Memory.
     /// </summary>
-    public string Mode { get; set; } = "ReadWriteCreate";
+    public string Mode { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the SQLite cache mode.
     /// Valid values: Default, Shared, Private.
     /// </summary>
-    public string Cache { get; set; } = "Default";
+    public string Cache { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a value indicating whether to enforce SQLite foreign key constraints.
@@ -114,8 +115,12 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     /// "None" or "EncryptionKey"). The factory resolves the typed method via
     /// <c>SqliteAuthenticationTypes.ByName(AuthenticationType)</c> and delegates secret resolution to it.
     /// </summary>
+    /// <remarks>
+    /// FDW chooses no method for it: the connection states one ("None" included), and the validator refuses an empty one,
+    /// as the host-identity check already did (FDW-3580).
+    /// </remarks>
     [ValuesFrom(typeof(SqliteAuthenticationTypes))]
-    public string? AuthenticationType { get; set; } = "None";
+    public string AuthenticationType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the authentication KVP for the selected method (e.g. SecretManagerName/SecretKeyName

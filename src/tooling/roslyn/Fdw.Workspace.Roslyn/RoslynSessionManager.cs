@@ -10,6 +10,7 @@ using Fdw.Results;
 using Fdw.Workspace.Roslyn.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Workspace.Roslyn;
 
@@ -34,6 +35,7 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
     /// <summary>
     /// Default sleep timeout of 5 minutes.
     /// </summary>
+    [PlatformDefault]
     public static readonly TimeSpan DefaultSleepTimeout = TimeSpan.FromMinutes(5);
 
     /// <summary>
@@ -155,7 +157,7 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
             {
                 Id = sessionId,
                 SolutionPath = fullPath,
-                Description = description ?? $"Session {sessionId:N}",
+                Description = description ?? string.Empty,
                 ConversationId = conversationId,
                 CreatedAt = now,
                 LastModifiedAt = now,
@@ -177,7 +179,7 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
             var persistResult = await SaveSession(sessionId, cancellationToken).ConfigureAwait(false);
             if (!persistResult.IsSuccess)
             {
-                RoslynWorkspaceLog.SessionSaveFailed(_logger, sessionId, persistResult.CurrentMessage ?? string.Empty);
+                RoslynWorkspaceLog.SessionSaveFailed(_logger, sessionId, persistResult.FailureReason().Message);
             }
 
             if (setAsActive)
@@ -521,7 +523,7 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
             var closeResult = await CloseSession(sessionId, save: false, cancellationToken).ConfigureAwait(false);
             if (closeResult.IsFailure)
             {
-                RoslynWorkspaceLog.SessionCloseFailed(_logger, sessionId, closeResult.CurrentMessage ?? string.Empty);
+                RoslynWorkspaceLog.SessionCloseFailed(_logger, sessionId, closeResult.FailureReason().Message);
             }
         }
 
@@ -602,8 +604,8 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
         {
             // Get all sessions for this project
             var projectSessions = _sessions.Values
-                .Where(s => Path.GetDirectoryName(s.SolutionPath)?
-                    .StartsWith(projectPath, StringComparison.OrdinalIgnoreCase) ?? false)
+                .Where(s => Path.GetDirectoryName(s.SolutionPath) is { } directory &&
+                    directory.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             var index = new ProjectSessionIndex
@@ -620,7 +622,7 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
             var saveResult = await _projectIndexStore.SaveIndex(projectPath, index, cancellationToken).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
-                RoslynWorkspaceLog.ProjectIndexSaveFailed(_logger, projectPath, saveResult.CurrentMessage ?? string.Empty);
+                RoslynWorkspaceLog.ProjectIndexSaveFailed(_logger, projectPath, saveResult.FailureReason().Message);
             }
         }
         catch (Exception ex)
@@ -664,6 +666,18 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
         if (string.IsNullOrEmpty(conversationId))
             return null;
 
+        return FindLiveSession(conversationId);
+    }
+
+    /// <summary>
+    /// The in-memory session for a conversation, or null when none is live.
+    /// </summary>
+    /// <remarks>
+    /// Why a private method both lookups call: the asynchronous overload calling the synchronous one tripped MA0040,
+    /// and handing it the token instead would have called itself (FDW-3578).
+    /// </remarks>
+    private SessionInfo? FindLiveSession(string conversationId)
+    {
         var state = _sessions.Values
             .FirstOrDefault(s => string.Equals(s.ConversationId, conversationId, StringComparison.Ordinal));
 
@@ -682,7 +696,7 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
 
         // In-memory first: a live session is authoritative over whatever was last written to disk,
         // and the common case (same process, repeat call) never touches the filesystem.
-        var live = FindSessionByConversationId(conversationId);
+        var live = FindLiveSession(conversationId);
         if (live is not null)
             return live;
 
@@ -706,7 +720,7 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
         state.IsSleeping = false;
         state.LastAccessedAt = DateTimeOffset.UtcNow;
 
-        var projectCount = workspace.CurrentSolution?.Projects.Count() ?? 0;
+        var projectCount = workspace.CurrentSolution.Projects.Count();
         RoslynWorkspaceLog.SessionAwakened(_logger, state.Id, projectCount);
     }
 

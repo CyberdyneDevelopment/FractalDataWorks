@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Conventions;
 
 namespace Fdw.Data.DataSets.Abstractions;
 
@@ -13,6 +14,10 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </summary>
 public abstract class DataSetSourceMapperTypeBase : TypeOptionBase<DataSetSourceMapperTypeBase>, IDataSetSourceMapperType
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Mapper";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSetSourceMapperTypeBase"/> class.
     /// </summary>
@@ -25,7 +30,7 @@ public abstract class DataSetSourceMapperTypeBase : TypeOptionBase<DataSetSource
         string displayName,
         string description,
         string? category = null)
-        : base(name, $"Mappers:{name}", displayName, description, category ?? "Mapper")
+        : base(name, $"Mappers:{name}", displayName, description, category ?? DefaultCategory)
     {
     }
 

@@ -125,7 +125,7 @@ public class Test1 : TestBase
         Assert.NotNull(generated);
 
         // Should have ByCategory method generated
-        Assert.Contains("ByCategory", generated);
+        Assert.Contains("ByCategory", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public partial class CustomName : TypeCollectionBase<TestBase, TestBase>
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "CustomName.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("partial class CustomName", generated);
+        Assert.Contains("partial class CustomName", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class LocalOption : TestBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("LocalOption", generated);
+        Assert.Contains("LocalOption", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]

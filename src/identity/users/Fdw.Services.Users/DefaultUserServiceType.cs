@@ -101,6 +101,9 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddScoped<ITenantFounding>(sp =>
                 new TenantFounding(
                     sp.GetRequiredService<ITenantWriter>(),
+                    sp.GetRequiredService<IOrganizationWriter>(),
+                    sp.GetRequiredService<IOrganizationProvider>(),
+                    sp.GetRequiredService<IDefaultWorkspaceFounding>(),
                     sp.GetRequiredService<IUserConfigurationProvider>(),
                     sp.GetRequiredService<IUserTenantConfigurationProvider>(),
                     sp.GetRequiredService<IGrantRule>(),
@@ -110,6 +113,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddScoped<IOrganizationFounding>(sp =>
                 new OrganizationFounding(
                     sp.GetRequiredService<IOrganizationWriter>(),
+                    sp.GetRequiredService<IDefaultWorkspaceFounding>(),
                     sp.GetRequiredService<IOrganizationProvider>(),
                     sp.GetRequiredService<IOrganizationBootstrap>(),
                     sp.GetRequiredService<IUserConfigurationProvider>(),

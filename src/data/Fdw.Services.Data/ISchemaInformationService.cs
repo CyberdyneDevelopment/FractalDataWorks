@@ -40,6 +40,7 @@ public interface ISchemaInformationService
     /// Returns the stored DataStore when the connection has one; discovers and persists it when not.
     /// </summary>
     /// <param name="connectionName">The name of the connection to get schema for.</param>
+    /// <param name="options">Which schemas and object kinds a discovery includes, as the caller states them (FDW-3823).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     /// A success result containing <see cref="SchemaInformation"/>, or a failure result if the
@@ -47,12 +48,14 @@ public interface ISchemaInformationService
     /// </returns>
     Task<IGenericResult<SchemaInformation>> GetSchema(
         string connectionName,
+        DataStoreDiscoveryOptions options,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Forces re-discovery of schema for the named connection, persists the results, and returns updated metadata.
     /// </summary>
     /// <param name="connectionName">The name of the connection to re-discover.</param>
+    /// <param name="options">Which schemas and object kinds the discovery includes, as the caller states them (FDW-3823).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     /// A success result containing <see cref="SchemaInformation"/>, or a failure result if the
@@ -60,6 +63,7 @@ public interface ISchemaInformationService
     /// </returns>
     Task<IGenericResult<SchemaInformation>> RefreshSchema(
         string connectionName,
+        DataStoreDiscoveryOptions options,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -32,11 +32,14 @@ public sealed class PooledDictionaryMapperFactory
     /// <inheritdoc />
     public IGenericResult<PooledDictionaryMapper> Create(PooledDictionaryMapperConfiguration configuration)
     {
+        var resolved = Resolve(configuration);
+        if (resolved.IsFailure) return resolved.ToNewResult<PooledDictionaryMapper>();
+
         try
         {
             var mapper = new PooledDictionaryMapper(
                 _loggerFactory.CreateLogger<PooledDictionaryMapper>(),
-                configuration);
+                resolved.Value!);
 
             return GenericResult<PooledDictionaryMapper>.Success(mapper);
         }
@@ -58,7 +61,8 @@ public sealed class PooledDictionaryMapperFactory
                 : result.ToNewResult<IEtlRowMapper>();
         }
 
-        // Create with default configuration
+        // A configuration of another mapper type: its own name and pooling values are kept, and what it cannot state for this type is the
+        // type's declared value (FDW-3956).
         var defaultConfig = new PooledDictionaryMapperConfiguration
         {
             Name = configuration.Name,
@@ -70,5 +74,30 @@ public sealed class PooledDictionaryMapperFactory
         return defaultResult.IsSuccess
             ? GenericResult<IEtlRowMapper>.Success(defaultResult.Value!)
             : defaultResult.ToNewResult<IEtlRowMapper>();
+    }
+
+    // Each value the configuration leaves out takes the Pooled type's declared value, or a host's override of it (FDW-3956).
+    private IGenericResult<PooledDictionaryMapperConfiguration> Resolve(PooledDictionaryMapperConfiguration configuration)
+    {
+        // Why the type itself and not EtlRowMapperTypes.ByName: the option restricts itself to its own compilation, so the collection may not
+        // hold it; its declared values and a host's override (kept by its type name) are the same either way.
+        var type = new PooledDictionaryMapperType();
+        var pooling = EtlRowMapperDefaults.Resolve(configuration.EnablePooling, type, nameof(configuration.EnablePooling), _logger);
+        if (pooling.IsFailure) return pooling.ToNewResult<PooledDictionaryMapperConfiguration>();
+
+        var poolSize = EtlRowMapperDefaults.Resolve(configuration.MaxPoolSize, type, nameof(configuration.MaxPoolSize), _logger);
+        if (poolSize.IsFailure) return poolSize.ToNewResult<PooledDictionaryMapperConfiguration>();
+
+        var dictionarySize = EtlRowMapperDefaults.Resolve(configuration.MaxDictionarySize, type, nameof(configuration.MaxDictionarySize), _logger);
+        if (dictionarySize.IsFailure) return dictionarySize.ToNewResult<PooledDictionaryMapperConfiguration>();
+
+        return GenericResult<PooledDictionaryMapperConfiguration>.Success(new PooledDictionaryMapperConfiguration
+        {
+            Id = configuration.Id,
+            Name = configuration.Name,
+            EnablePooling = pooling.Value,
+            MaxPoolSize = poolSize.Value,
+            MaxDictionarySize = dictionarySize.Value,
+        });
     }
 }

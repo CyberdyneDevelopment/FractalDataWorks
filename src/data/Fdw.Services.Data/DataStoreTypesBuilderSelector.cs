@@ -4,6 +4,7 @@ using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data;
 
@@ -32,7 +33,7 @@ public sealed class DataStoreTypesBuilderSelector : IDataStoreBuilderSelector
             return GenericResult<IDataStoreBuilder>.Failure(
                 DataStoreProviderLog.NoDataStoreTypeFoundAtStartup(
                     logger ?? NullLogger.Instance,
-                    configuration.Implementation ?? "(null)",
+                    configuration.Implementation ?? LogPlaceholders.Null,
                     configuration.Name));
         }
 

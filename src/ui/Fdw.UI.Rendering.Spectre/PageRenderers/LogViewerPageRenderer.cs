@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Fdw.UI.Abstractions;
 using Fdw.UI.Abstractions.Pages;
 using Fdw.UI.Themes;
 using Spectre.Console;
@@ -75,8 +76,8 @@ public sealed class LogViewerPageRenderer
         // Time range
         if (page.StartTime.HasValue || page.EndTime.HasValue)
         {
-            var start = page.StartTime?.ToString("g", CultureInfo.CurrentCulture) ?? "...";
-            var end = page.EndTime?.ToString("g", CultureInfo.CurrentCulture) ?? "now";
+            var start = page.StartTime?.ToString("g", CultureInfo.CurrentCulture) ?? UiPlaceholders.OpenRangeStart;
+            var end = page.EndTime?.ToString("g", CultureInfo.CurrentCulture) ?? UiPlaceholders.OpenRangeEnd;
             filters.Add($"Time: [{theme.Colors.Muted}]{start} → {end}[/]");
         }
 
@@ -109,7 +110,7 @@ public sealed class LogViewerPageRenderer
             }
 
             var timestamp = entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-            var source = entry.Source ?? "";
+            var source = entry.Source ?? string.Empty;
             if (source.Length > sourceWidth)
             {
                 source = string.Concat(source.AsSpan(0, sourceWidth - 3), "...");

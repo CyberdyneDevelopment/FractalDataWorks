@@ -113,7 +113,7 @@ internal static class XlsxStyles
 
     private static string Visible(string code)
     {
-        var end = code.IndexOf(';');
+        var end = code.IndexOf(';', StringComparison.Ordinal);
         var section = end < 0 ? code : code[..end];
         var visible = new StringBuilder(section.Length);
         var index = 0;

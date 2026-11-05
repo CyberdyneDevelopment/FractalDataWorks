@@ -98,8 +98,12 @@ public sealed class EmptyGroupTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ADeleteWithAnEmptyTopLevelGroupCarriesNoFilter()
-        => BuiltDelete(b => b.BeginAndGroup().EndGroup()).Filter.ShouldBeNull();
+    public void ADeleteWithOnlyAnEmptyGroupIsRefusedUnlessItAsksForEveryRow()
+    {
+        // An empty group is no condition, so the delete names no rows: it is refused unless it says AllRows() (FDW-3660).
+        Should.Throw<System.InvalidOperationException>(() => BuiltDelete(b => b.BeginAndGroup().EndGroup()));
+        BuiltDelete(b => b.BeginAndGroup().EndGroup().AllRows()).Filter.ShouldBeNull();
+    }
 
     [Fact]
     [Trait("Priority", "P1")]

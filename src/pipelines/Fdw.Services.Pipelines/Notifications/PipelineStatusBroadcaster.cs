@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using Fdw.ServiceTypes;
 using Fdw.SignalR;
 using Fdw.Services.Pipelines.Hubs;
 using Fdw.Services.Pipelines.Logging;
@@ -14,7 +14,7 @@ namespace Fdw.Services.Pipelines.Notifications;
 
 /// <summary>
 /// Default implementation of <see cref="IPipelineStatusBroadcaster"/> using SignalR.
-/// Task and edge updates are coalesced at <c>BroadcastHz</c> (default 5 Hz) to prevent
+/// Task and edge updates are coalesced at the pipeline hub's declared <c>BroadcastHz</c> (FDW-3956) to prevent
 /// flooding connected clients during high-throughput executions.
 /// </summary>
 public sealed class PipelineStatusBroadcaster
@@ -22,24 +22,31 @@ public sealed class PipelineStatusBroadcaster
 {
     private readonly ILogger<PipelineStatusBroadcaster> _logger;
     private readonly int _broadcastHz;
-    private readonly long _sampleBufferMaxBytes;
 
     private readonly ConcurrentDictionary<string, long> _lastBroadcastTick = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of <see cref="PipelineStatusBroadcaster"/>.
     /// </summary>
+    /// <remarks>
+    /// The coalescing rate is the pipeline hub's declared <see cref="PipelineHubOption.BroadcastHz"/>, or a host's override of it (FDW-3956);
+    /// nothing in this class assumes one. A rate that is missing or not positive stops the broadcaster from being built, naming the key.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The hub declares no positive rate and no host overrides it.</exception>
     public PipelineStatusBroadcaster(
         IHubContext<PipelineStatusHub, IPipelineStatusHubClient> hubContext,
-        ILogger<PipelineStatusBroadcaster>? logger = null,
-        IOptions<PipelineStatusBroadcasterOptions>? options = null)
+        ILogger<PipelineStatusBroadcaster>? logger = null)
         : base(hubContext, logger ?? NullLogger<PipelineStatusBroadcaster>.Instance)
     {
         _logger = logger ?? NullLogger<PipelineStatusBroadcaster>.Instance;
-        var resolved = options?.Value ?? new PipelineStatusBroadcasterOptions();
-        _broadcastHz = resolved.BroadcastHz > 0 ? resolved.BroadcastHz : 5;
-        _sampleBufferMaxBytes = resolved.SampleBufferMaxBytes > 0 ? resolved.SampleBufferMaxBytes : 10_000_000;
-        SignalRBroadcasterLog.BroadcasterConfigured(_logger, _broadcastHz, _sampleBufferMaxBytes);
+        if (!ServiceTypeDefaults.TryResolve(new PipelineHubOption(), PipelineHubOption.BroadcastHz, out var declared) || declared is not int hz || hz <= 0)
+        {
+            throw new InvalidOperationException(
+                SignalRBroadcasterLog.BroadcastRateNotDeclared(_logger, PipelineHubOption.BroadcastHz, declared?.ToString() ?? string.Empty).Message);
+        }
+
+        _broadcastHz = hz;
+        SignalRBroadcasterLog.BroadcasterConfigured(_logger, _broadcastHz);
     }
 
     /// <inheritdoc/>
@@ -114,6 +121,13 @@ public sealed class PipelineStatusBroadcaster
         SignalRBroadcasterLog.NoOrgFirehose(_logger, executionId);
         return new[] { $"pipeline:{pipelineName}", $"execution:{executionId}" };
     }
+
+    /// <inheritdoc/>
+    public Task BroadcastComponents(PipelineComponentsUpdate update, Guid? orgId = null)
+        => BroadcastToGroups(
+            update,
+            (client, evt) => client.OnComponentsChanged(evt),
+            FirehoseGroups(orgId, update.PipelineName, update.ExecutionId));
 
     /// <inheritdoc/>
     public Task BroadcastTaskStatus(
@@ -235,6 +249,7 @@ public sealed class PipelineStatusBroadcaster
     private static bool IsTerminalStatus(string status)
         => string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase)
         || string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase);
+        || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(status, "Interrupted", StringComparison.OrdinalIgnoreCase);
 }
 

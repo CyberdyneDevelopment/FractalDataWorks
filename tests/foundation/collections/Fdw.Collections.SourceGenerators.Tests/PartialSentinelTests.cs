@@ -56,9 +56,9 @@ public class Dog : AnimalBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Animals.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("partial class NotFoundAnimals", generated);
-        Assert.Contains("Sounds", generated);
-        Assert.Contains("CanFly", generated);
+        Assert.Contains("partial class NotFoundAnimals", generated, System.StringComparison.Ordinal);
+        Assert.Contains("Sounds", generated, System.StringComparison.Ordinal);
+        Assert.Contains("CanFly", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -104,10 +104,10 @@ public class InactiveStatus : StatusBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Statuses.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("partial class Statuses", generated);
-        Assert.Contains("Active", generated);
-        Assert.Contains("Inactive", generated);
-        Assert.Contains("NotFound", generated);
+        Assert.Contains("partial class Statuses", generated, System.StringComparison.Ordinal);
+        Assert.Contains("Active", generated, System.StringComparison.Ordinal);
+        Assert.Contains("Inactive", generated, System.StringComparison.Ordinal);
+        Assert.Contains("NotFound", generated, System.StringComparison.Ordinal);
     }
 
     #endregion
@@ -165,13 +165,13 @@ public class TimeoutHandler : HandlerBase
         Assert.NotNull(generated);
 
         // Generator should still emit stubs for ErrorNumbers and IsRetryable
-        Assert.Contains("ErrorNumbers", generated);
-        Assert.Contains("IsRetryable", generated);
+        Assert.Contains("ErrorNumbers", generated, System.StringComparison.Ordinal);
+        Assert.Contains("IsRetryable", generated, System.StringComparison.Ordinal);
 
         // Generator should NOT emit a stub for CreateMessage (user declared it)
         var sentinelSection = GetSentinelSection(generated, "NotFoundHandlers");
         Assert.NotNull(sentinelSection);
-        Assert.DoesNotContain("CreateMessage", sentinelSection);
+        Assert.DoesNotContain("CreateMessage", sentinelSection, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -224,14 +224,14 @@ public class HighItem : ItemBase
         Assert.NotNull(generated);
 
         // The sentinel class should still be generated (partial)
-        Assert.Contains("partial class NotFoundItems", generated);
+        Assert.Contains("partial class NotFoundItems", generated, System.StringComparison.Ordinal);
 
         // But the generated code should NOT contain stubs for Label or Priority
         // since the user already declared them
         var sentinelSection = GetSentinelSection(generated, "NotFoundItems");
         Assert.NotNull(sentinelSection);
-        Assert.DoesNotContain("Label", sentinelSection);
-        Assert.DoesNotContain("Priority", sentinelSection);
+        Assert.DoesNotContain("Label", sentinelSection, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("Priority", sentinelSection, System.StringComparison.Ordinal);
     }
 
     #endregion
@@ -275,8 +275,8 @@ public class OneSimple : SimpleBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Simples.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("private partial class NotFoundSimples", generated);
-        Assert.DoesNotContain("private sealed class NotFoundSimples", generated);
+        Assert.Contains("private partial class NotFoundSimples", generated, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("private sealed class NotFoundSimples", generated, System.StringComparison.Ordinal);
     }
 
     #endregion

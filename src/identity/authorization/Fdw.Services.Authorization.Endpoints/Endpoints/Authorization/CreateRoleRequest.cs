@@ -26,7 +26,7 @@ public class CreateRoleRequest
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets whether this role is tenant-scoped.
+    /// Gets or sets whether this role is tenant-scoped; required: the caller chooses, there is no default (FDW-3823).
     /// </summary>
-    public bool IsTenantScoped { get; set; }
+    public bool? IsTenantScoped { get; set; }
 }

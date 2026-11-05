@@ -108,9 +108,9 @@ public sealed record WebMcpToolPlan(
     /// </remarks>
     private static string BoundProperty(WebMcpToolDescriptor tool, string parameter)
         => tool.RequestType?.GetProperty(parameter, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.Name
-           ?? throw new InvalidOperationException(
-               $"Tool '{tool.Name}' routes '{tool.Route}', whose parameter '{parameter}' binds to no property of "
-               + $"{tool.RequestType?.FullName ?? "a tool with no request type"}. The URL cannot be built.");
+           ?? throw new InvalidOperationException(tool.RequestType is { } requestType
+               ? $"Tool '{tool.Name}' routes '{tool.Route}', whose parameter '{parameter}' binds to no property of {requestType}. The URL cannot be built."
+               : $"Tool '{tool.Name}' routes '{tool.Route}' with parameter '{parameter}', but the tool has no request type to bind it to. The URL cannot be built.");
 
     private static List<WebMcpRoutePart> SplitRoute(
         string route,
@@ -165,7 +165,7 @@ public sealed record WebMcpToolPlan(
                     logger,
                     toolName,
                     property.Name,
-                    property.PropertyType.FullName ?? property.PropertyType.Name);
+                    property.PropertyType.ToString());
                 continue;
             }
 

@@ -39,12 +39,17 @@ public sealed class PostgreSqlConnectionConfigurationValidator : FdwConfiguratio
 
         RuleFor(x => x.ConnectionTimeout)
             .GreaterThan(0)
-            .WithMessage("ConnectionTimeout must be greater than 0");
+            .When(x => x.ConnectionTimeout is not null)
+            .WithMessage("ConnectionTimeout must be greater than 0 when it is stated; leave it out to take the instance's DefaultConnectionTimeoutSeconds");
 
         RuleFor(x => x.DefaultSchema)
             .NotEmpty()
             .WithMessage("DefaultSchema is required")
             .IsSafeString(128);
+
+        RuleFor(x => x.SslMode)
+            .NotEmpty()
+            .WithMessage("SslMode is required (Disable, Allow, Prefer, Require, VerifyCA or VerifyFull)");
 
         RuleFor(x => x.MaxPoolSize)
             .GreaterThanOrEqualTo(1)

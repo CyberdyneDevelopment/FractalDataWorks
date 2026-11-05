@@ -273,7 +273,7 @@ public class TrimTestPoco
         // Should have properly formatted property assignments (not ending with trailing comma)
         // Check that the last property doesn't have a trailing comma before the closing brace
         var lines = generated.Split('\n');
-        var propertyLines = lines.Where(l => l.Contains("Prop") && l.Contains(" = ")).ToList();
+        var propertyLines = lines.Where(l => l.Contains("Prop", System.StringComparison.Ordinal) && l.Contains(" = ", System.StringComparison.Ordinal)).ToList();
         propertyLines.ShouldNotBeEmpty();
     }
 

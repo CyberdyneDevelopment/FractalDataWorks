@@ -37,9 +37,6 @@ public interface IDataSetAnnotationImplementationConfiguration : IImplementation
     /// <summary>Gets or sets the user id of the person who resolved the annotation; empty while it is not resolved.</summary>
     Guid? ResolvedBy { get; set; }
 
-    /// <summary>Gets or sets the DataSetAnnotation Tags.</summary>
-    IList<DataSetAnnotationTagConfiguration> Tags { get; set; }
-
     /// <summary>Gets or sets the DataSetAnnotation FieldDescriptions.</summary>
     IList<DataSetAnnotationFieldDescriptionConfiguration> FieldDescriptions { get; set; }
 

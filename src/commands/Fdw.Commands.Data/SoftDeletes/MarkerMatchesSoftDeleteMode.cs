@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Messages;
 
 namespace Fdw.Commands.Data.SoftDeletes;
 
@@ -18,12 +19,12 @@ public sealed class MarkerMatchesSoftDeleteMode : SoftDeleteModeBase
     }
 
     /// <inheritdoc />
-    public override string? Problem(SoftDeleteOptions options)
+    public override IGenericMessage? Problem(SoftDeleteOptions options)
     {
         if (options.AbsentFromSource is not null)
-            return "a marker-matches soft delete takes no source set";
+            return Problem("a marker-matches soft delete takes no source set");
         return options.Marker is null || string.IsNullOrWhiteSpace(options.Marker.Column) || options.Marker.Value is null
-            ? "a marker-matches soft delete names a marker column and a marker value"
+            ? Problem("a marker-matches soft delete names a marker column and a marker value")
             : null;
     }
 

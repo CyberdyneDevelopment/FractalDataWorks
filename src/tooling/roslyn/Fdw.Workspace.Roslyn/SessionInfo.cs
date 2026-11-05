@@ -52,19 +52,19 @@ public sealed record SessionInfo
     public string? ConversationId { get; init; }
 
     /// <summary>
-    /// Gets the number of projects loaded in the session's solution.
+    /// Gets the number of projects loaded in the session's solution. Null while the session sleeps: its workspace is not loaded, so the count is not known.
     /// </summary>
-    public int ProjectCount { get; init; }
+    public int? ProjectCount { get; init; }
 
     /// <summary>
-    /// Gets the total number of projects in the solution (including excluded).
+    /// Gets the total number of projects in the solution (including excluded). Null while the session sleeps: its workspace is not loaded, so the count is not known.
     /// </summary>
-    public int TotalProjectCount { get; init; }
+    public int? TotalProjectCount { get; init; }
 
     /// <summary>
-    /// Gets the number of projects excluded from loading.
+    /// Gets the number of projects excluded from loading. Null while the session sleeps: its workspace is not loaded, so the count is not known.
     /// </summary>
-    public int ExcludedProjectCount { get; init; }
+    public int? ExcludedProjectCount { get; init; }
 
     /// <summary>
     /// Gets the number of snapshots taken in this session.

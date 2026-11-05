@@ -30,6 +30,18 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     }
 
     /// <inheritdoc />
+    public Task<IGenericResult<IReadOnlyList<PipelineSummaryResponse>>> List(IReadOnlyList<string> tags, CancellationToken cancellationToken = default)
+    {
+        return GetList<PipelineSummaryResponse>(WithRepeatedQuery("pipelines", "tag", tags), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult<IReadOnlyList<PipelineSummaryResponse>>> ListTemplates(CancellationToken cancellationToken = default)
+    {
+        return GetList<PipelineSummaryResponse>("pipelines/templates", cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<IGenericResult<PipelineDetailResponse>> Get(string name, CancellationToken cancellationToken = default)
     {
         return Post<GetPipelineClientRequest, PipelineDetailResponse>(
@@ -53,6 +65,12 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     public Task<IGenericResult<GraphPayload>> CreateGraph(GraphPayload graph, CancellationToken cancellationToken = default)
     {
         return Post<GraphPayload, GraphPayload>("pipelines/graph", graph, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult<GraphPayload>> CreateGraphFromTemplate(GraphFromTemplatePayload request, CancellationToken cancellationToken = default)
+    {
+        return Post<GraphFromTemplatePayload, GraphPayload>("pipelines/from-template", request, cancellationToken);
     }
 
     /// <inheritdoc />

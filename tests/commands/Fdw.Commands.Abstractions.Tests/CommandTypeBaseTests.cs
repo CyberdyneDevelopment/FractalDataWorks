@@ -176,9 +176,12 @@ public sealed class CommandTypeBaseTests
             bool supportsBatching = false,
             bool supportsPipelining = false,
             int maxBatchSize = 1)
-            : base(name, description, category, supportedTranslators, supportsBatching, supportsPipelining, maxBatchSize)
+            : base(name, description, supportedTranslators, supportsBatching, supportsPipelining, maxBatchSize)
         {
+            CommandCategory = category;
         }
+
+        public override IGenericCommandCategory CommandCategory { get; }
     }
 
     [ExcludeFromCodeCoverage]

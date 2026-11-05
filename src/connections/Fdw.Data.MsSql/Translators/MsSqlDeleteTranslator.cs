@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Abstractions.Logging;
 using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
@@ -29,7 +30,8 @@ namespace Fdw.Data.MsSql;
 /// </list>
 /// </para>
 /// <para>
-/// A command with no filter and no soft delete has no condition, so it deletes every record: the container is emptied.
+/// A command with no filter and no soft delete deletes every record only when it says AllRows; without it the command is refused
+/// (<see cref="DeleteScope"/>, FDW-3660).
 /// </para>
 /// </remarks>
 [TypeOption(typeof(MsSqlDataCommandTranslators), "Delete", RestrictToCurrentCompilation = true)]
@@ -90,6 +92,10 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
+            // A delete states its rows: a filter, soft-delete options, or AllRows. One with none is never sent (FDW-3660).
+            if (DeleteScope.Problem(command) is { } problem)
+                return Task.FromResult(GenericResult<SqlCommand>.Failure(DeleteScopeLog.Refused(NullLogger<MsSqlDeleteTranslator>.Instance, container.Name, problem)));
+
             // A soft delete flags rows instead of removing them (FDW-1107).
             var soft = MsSqlSoftDeleteSql.For(command, container, dbPath.Dialect, allowAbsentSet: true);
             if (soft.Applies || soft.Problem is not null)
@@ -97,7 +103,7 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
                 return Task.FromResult(SoftDelete(command, dbPath, soft));
             }
 
-            // A command with no filter has no condition, so it deletes every row
+            // A command with no filter reaches here only with AllRows, so it deletes every row
             return Task.FromResult(GenericResult<SqlCommand>.Success(
                 command.Filter is { Root: not null } filter
                     ? BuildDeleteStatement(dbPath, filter)

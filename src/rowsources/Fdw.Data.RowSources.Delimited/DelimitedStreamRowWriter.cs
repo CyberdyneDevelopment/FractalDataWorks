@@ -37,10 +37,10 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     /// <param name="target">The destination text writer.</param>
     /// <param name="options">Delimited writer options (column names are required).</param>
     /// <exception cref="ArgumentException">Thrown when no column names are supplied.</exception>
-    public DelimitedStreamRowWriter(TextWriter target, DelimitedRowWriterOptions? options = null)
+    public DelimitedStreamRowWriter(TextWriter target, DelimitedRowWriterOptions options)
     {
         _target = target ?? throw new ArgumentNullException(nameof(target));
-        _options = options ?? new DelimitedRowWriterOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         if (_options.Columns.Count == 0)
         {
             throw new ArgumentException(
@@ -158,7 +158,7 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
 
     // Only text is guarded: a number or a date is never a formula, and a negative number must keep its sign.
     private string Guarded(object raw, string text)
-        => _options.NeutralizeFormulas && raw is string && text.Length > 0 && FormulaStarts.Contains(text[0])
+        => _options.NeutralizeFormulas && raw is string && text.Length > 0 && FormulaStarts.Contains(text[0], StringComparison.Ordinal)
             ? "'" + text
             : text;
 
@@ -169,12 +169,12 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     {
         var quote = _options.QuoteChar;
         var needsQuote = value.Contains(_options.Separator, StringComparison.Ordinal)
-            || value.Contains(quote)
-            || value.Contains('\n')
-            || value.Contains('\r');
+            || value.Contains(quote, StringComparison.Ordinal)
+            || value.Contains('\n', StringComparison.Ordinal)
+            || value.Contains('\r', StringComparison.Ordinal);
         if (!needsQuote) return value;
 
-        var doubled = value.Replace(quote.ToString(), string.Concat(quote, quote));
+        var doubled = value.Replace(quote.ToString(), string.Concat(quote, quote), StringComparison.Ordinal);
         return string.Concat(quote, doubled, quote);
     }
 

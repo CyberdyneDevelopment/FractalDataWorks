@@ -102,11 +102,11 @@ internal sealed class VsCodeShellMiddleware
             using var stream = new StreamReader(context.Request.Body);
             var body = await stream.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
             editor = JsonSerializer.Deserialize<EditorContext>(body, JsonOptions)
-                ?? new EditorContext(null, null, null, null, null, null);
+                ?? EditorContext.None;
         }
         else
         {
-            editor = new EditorContext(null, null, null, null, null, null);
+            editor = EditorContext.None;
         }
 
         var result = await handler.Invoke(editor, cancellationToken).ConfigureAwait(false);

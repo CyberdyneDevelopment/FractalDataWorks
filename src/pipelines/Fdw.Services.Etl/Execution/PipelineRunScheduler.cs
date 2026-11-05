@@ -225,7 +225,7 @@ public sealed class PipelineRunScheduler
 
     // Called with the gate held. The runs of one pipeline that are running or waiting, which is what its limit counts.
     private int InFlightOf(PipelineRunCap cap) =>
-        _running.Count(place => place.Claim.Cap?.Key == cap.Key) + _waiting.Count(place => place.Claim.Cap?.Key == cap.Key);
+        _running.Count(place => string.Equals(place.Claim.Cap?.Key, cap.Key, StringComparison.Ordinal)) + _waiting.Count(place => string.Equals(place.Claim.Cap?.Key, cap.Key, StringComparison.Ordinal));
 
     private void Enlist(PipelineRunPlace place)
     {
@@ -373,7 +373,7 @@ public sealed class PipelineRunScheduler
             return new PipelineRunBlock(RunWaitReasons.TenantLimit, claim.TenantLimit, null, null);
         }
 
-        if (claim.Cap is { } cap && _running.Count(place => place.Claim.Cap?.Key == cap.Key) >= cap.Limit)
+        if (claim.Cap is { } cap && _running.Count(place => string.Equals(place.Claim.Cap?.Key, cap.Key, StringComparison.Ordinal)) >= cap.Limit)
         {
             return new PipelineRunBlock(RunWaitReasons.PipelineLimit, cap.Limit, null, null);
         }
@@ -398,7 +398,7 @@ public sealed class PipelineRunScheduler
         new(place.Claim.Run, place.QueuedAt, place.StartedAt, waiting);
 
     private static bool SamePipeline(PipelineRunPlace earlier, PipelineRunClaim claim) =>
-        claim.Cap is { } cap && earlier.Claim.Cap?.Key == cap.Key;
+        claim.Cap is { } cap && string.Equals(earlier.Claim.Cap?.Key, cap.Key, StringComparison.Ordinal);
 
     private async Task Reenter(PipelineRunPlace place)
     {

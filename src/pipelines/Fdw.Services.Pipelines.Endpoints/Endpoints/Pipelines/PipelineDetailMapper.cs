@@ -47,6 +47,9 @@ public static class PipelineDetailMapper
             DelayedStartSeconds = (pipeline as IParallelRunPipelineConfiguration)?.DelayedStartSeconds,
             DelayedStartTimeOfDay = (pipeline as IParallelRunPipelineConfiguration)?.DelayedStartTimeOfDay,
             DelayedStartTimeZoneId = (pipeline as IParallelRunPipelineConfiguration)?.DelayedStartTimeZoneId,
+            IsTemplate = pipeline is ITemplatePipelineConfiguration { IsTemplate: true },
+            TemplateName = (pipeline as ITemplatePipelineConfiguration)?.TemplateName,
+            TemplateVersion = (pipeline as ITemplatePipelineConfiguration)?.TemplateVersion,
             CreatedAt = pipeline.CreateDate,
             UpdatedAt = pipeline.ModifyDate,
         };

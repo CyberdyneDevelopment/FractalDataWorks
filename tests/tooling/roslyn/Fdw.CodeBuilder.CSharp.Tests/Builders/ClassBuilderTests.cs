@@ -454,10 +454,10 @@ public class ClassBuilderTests
             .Build();
 
         // Assert
-        var fieldIndex = result.IndexOf("_field");
-        var constructorIndex = result.IndexOf("MyClass()");
-        var propertyIndex = result.IndexOf("Property");
-        var methodIndex = result.IndexOf("Method()");
+        var fieldIndex = result.IndexOf("_field", System.StringComparison.Ordinal);
+        var constructorIndex = result.IndexOf("MyClass()", System.StringComparison.Ordinal);
+        var propertyIndex = result.IndexOf("Property", System.StringComparison.Ordinal);
+        var methodIndex = result.IndexOf("Method()", System.StringComparison.Ordinal);
 
         fieldIndex.ShouldBeLessThan(constructorIndex);
         constructorIndex.ShouldBeLessThan(propertyIndex);

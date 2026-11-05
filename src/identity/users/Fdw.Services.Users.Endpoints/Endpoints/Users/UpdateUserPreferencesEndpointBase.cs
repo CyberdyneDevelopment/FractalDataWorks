@@ -6,6 +6,7 @@ using Fdw.Services.Users;
 using Fdw.Services.Users.Models;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -74,7 +75,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
             var loadResult = await _preferenceProvider.Get(PreferenceEndpointIdentity.RowName(userId), ct).ConfigureAwait(false);
             if (!loadResult.IsSuccess)
             {
-                AddError(loadResult.CurrentMessage ?? "Failed to load existing preferences.");
+                AddError(loadResult.FailureReason().Message);
                 await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
                 return;
             }
@@ -103,7 +104,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
                 .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
             {
-                AddError(saveResult.CurrentMessage ?? "Failed to save preferences.");
+                AddError(saveResult.FailureReason().Message);
                 await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
                 return;
             }

@@ -14,12 +14,14 @@ public static class McpEventBusServiceCollectionExtensions
     /// Registers <see cref="IMcpEventBus"/> as a singleton <see cref="InMemoryMcpEventBus"/>,
     /// and the optional file-log sink as a hosted service.
     /// </summary>
-    public static IServiceCollection AddMcpEventBus(this IServiceCollection services, Action<McpEventBusOptions>? configure = null)
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Sets the bus options; the caller states the ring capacity, there is no default (FDW-3823).</param>
+    public static IServiceCollection AddMcpEventBus(this IServiceCollection services, Action<McpEventBusOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
 
-        if (configure is not null) services.Configure(configure);
-        else services.AddOptions<McpEventBusOptions>();
+        services.Configure(configure);
 
         services.TryAddSingleton<IMcpEventBus>(sp =>
         {

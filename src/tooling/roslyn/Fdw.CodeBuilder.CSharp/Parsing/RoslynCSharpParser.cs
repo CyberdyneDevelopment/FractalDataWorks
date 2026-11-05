@@ -45,7 +45,7 @@ public sealed class RoslynCSharpParser : ICodeParser
                     filePath ?? string.Empty,
                     cancellationToken: cancellationToken);
 
-                var roslynTree = new RoslynSyntaxTree(syntaxTree, sourceCode, Language, filePath);
+                var roslynTree = new RoslynSyntaxTree(syntaxTree, sourceCode, Language);
                 return GenericResult<ISyntaxTree>.Success(roslynTree);
             }, cancellationToken).ConfigureAwait(false);
         }

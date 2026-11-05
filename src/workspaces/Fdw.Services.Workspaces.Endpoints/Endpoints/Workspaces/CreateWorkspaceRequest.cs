@@ -47,6 +47,6 @@ public class CreateWorkspaceRequest
     /// <summary>Gets or sets the project-wide seed for generated stand-in values.</summary>
     public string? StandInSeed { get; set; }
 
-    /// <summary>Gets or sets the organization of the caller's tenant to put the workspace in; null for a workspace directly under its tenant.</summary>
+    /// <summary>Gets or sets the organization of the caller's tenant to put the workspace in; left out, the workspace goes in the tenant's default organization (FDW-3668).</summary>
     public Guid? OrganizationId { get; set; }
 }

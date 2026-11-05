@@ -110,7 +110,7 @@ internal static class FlowRowMapper
         FlowFieldMap map, object? value, IDictionary<string, object?> row, CancellationToken cancellationToken)
     {
         var conversion = map.Conversion!;
-        var label = map.Source ?? map.Target;
+        var label = map.Source is { } source ? source : map.Target;
         object? current = value ?? conversion.DefaultValue;
         if (current is null)
         {

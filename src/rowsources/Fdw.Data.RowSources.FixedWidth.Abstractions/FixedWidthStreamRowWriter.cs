@@ -36,10 +36,10 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     /// <param name="target">The destination text writer.</param>
     /// <param name="options">Fixed-width writer options (field definitions are required).</param>
     /// <exception cref="ArgumentException">Thrown when no field definitions are supplied.</exception>
-    public FixedWidthStreamRowWriter(TextWriter target, FixedWidthRowWriterOptions? options = null)
+    public FixedWidthStreamRowWriter(TextWriter target, FixedWidthRowWriterOptions options)
     {
         _target = target ?? throw new ArgumentNullException(nameof(target));
-        _options = options ?? new FixedWidthRowWriterOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         if (_options.Fields.Count == 0)
         {
             throw new ArgumentException(

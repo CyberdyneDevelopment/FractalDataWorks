@@ -68,7 +68,7 @@ public sealed class NotificationSettingsTests
 
         applied.IsFailure.ShouldBeTrue();
         applied.Messages.ShouldContain(message => message.Code == "NOTIFICATION-21031");
-        configuration.DefaultSeverity.ShouldBe("Info");
+        configuration.DefaultSeverity.ShouldBeEmpty();
     }
 
     [Fact]

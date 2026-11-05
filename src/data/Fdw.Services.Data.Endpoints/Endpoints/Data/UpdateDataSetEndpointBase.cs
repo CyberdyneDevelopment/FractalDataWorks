@@ -11,6 +11,7 @@ using Fdw.Results;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -76,6 +77,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
     /// Loads the current configuration, merges the updates, and saves.
     /// Override for custom behavior.
     /// </summary>
+    [ApprovedFallback("an update that omits a field keeps the stored value")]
     protected virtual async Task<IGenericResult<DataSetDetailResponse>> SaveUpdatedDataSet(UpdateDataSetRequest request, CancellationToken ct)
     {
         DataSetEndpointLog.UpdatingDataSet(Logger, request.Name);
@@ -88,25 +90,10 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
 
         var existing = loadResult.Value;
 
-        var mergedImplementation = request.Implementation ?? existing.Implementation;
-        if (string.IsNullOrWhiteSpace(mergedImplementation)
-            || ReferenceEquals(DataSetTypes.ByName(mergedImplementation), DataSetTypes.NotFound))
-        {
-            return GenericResult<DataSetDetailResponse>.Failure(
-                DataSetsResultCodes.ImplementationInvalid, Logger,
-                ImplementationInvalidCode.Describe(request.Name, mergedImplementation));
-        }
+        var merged = ValidateMerge(request, existing);
+        if (merged.IsFailure) return merged.ToNewResult<DataSetDetailResponse>();
 
-        var kindValidation = ValidateKind(request, existing, mergedImplementation);
-        if (kindValidation.IsFailure) return kindValidation.ToNewResult<DataSetDetailResponse>();
-
-        var mergedFederationStrategy = request.FederationStrategy ?? existing.FederationStrategyOrNone();
-        var federationValidation = DataSetQueryHelper.ValidateFederationStrategy(
-            mergedImplementation, mergedFederationStrategy, request.Name, Logger);
-        if (federationValidation.IsFailure) return federationValidation.ToNewResult<DataSetDetailResponse>();
-
-        var childrenValidation = ValidateRequestedChildren(request);
-        if (childrenValidation.IsFailure) return childrenValidation.ToNewResult<DataSetDetailResponse>();
+        var mergedFederationStrategy = merged.Value;
 
         var category = await RequestedCategory(request, existing, ct).ConfigureAwait(false);
         if (category.IsFailure) return category.ToNewResult<DataSetDetailResponse>();
@@ -114,11 +101,12 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         // Merge updates
         ApplyRequestedValues(existing, request);
         existing.CategoryId = category.Value;
-        existing.Version = request.Version;
+        existing.Version = request.Version ?? existing.Version;
         existing.RecordTypeName = request.RecordTypeName;
         if (existing is IFederatedDataSetConfiguration federated)
             federated.FederationStrategy = mergedFederationStrategy;
-        ApplyRequestedChildren(existing, request);
+        var children = ApplyRequestedChildren(existing, request, new DataSetRequestValues(request.Name, Logger));
+        if (children.IsFailure) return children.ToNewResult<DataSetDetailResponse>();
 
         var saveResult = await _dataSetProvider.Update(existing, "DataSet", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
@@ -130,6 +118,34 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         DataSetEndpointLog.DataSetUpdated(Logger, request.Name);
         var detail = await Detail(existing, ct).ConfigureAwait(false);
         return detail.IsFailure || detail.Value is null ? detail.ToNewResult<DataSetDetailResponse>() : GenericResult<DataSetDetailResponse>.Success(detail.Value);
+    }
+
+    // The request merged over the stored data set, refused when its implementation, kind, federation strategy or children are not valid;
+    // the merged federation strategy, which may be none. Split from SaveUpdatedDataSet for FDW007 (complexity limit 15).
+    [ApprovedFallback("an update that omits a field keeps the stored value")]
+    private IGenericResult<string?> ValidateMerge(UpdateDataSetRequest request, IDataSetImplementationConfiguration existing)
+    {
+        var mergedImplementation = request.Implementation ?? existing.Implementation;
+        if (string.IsNullOrWhiteSpace(mergedImplementation)
+            || ReferenceEquals(DataSetTypes.ByName(mergedImplementation), DataSetTypes.NotFound))
+        {
+            return GenericResult<string?>.Failure(
+                DataSetsResultCodes.ImplementationInvalid, Logger,
+                ImplementationInvalidCode.Describe(request.Name, mergedImplementation));
+        }
+
+        var kindValidation = ValidateKind(request, existing, mergedImplementation);
+        if (kindValidation.IsFailure) return kindValidation.ToNewResult<string?>();
+
+        var mergedFederationStrategy = request.FederationStrategy ?? existing.FederationStrategyOrNone();
+        var federationValidation = DataSetQueryHelper.ValidateFederationStrategy(
+            mergedImplementation, mergedFederationStrategy, request.Name, Logger);
+        if (federationValidation.IsFailure) return federationValidation.ToNewResult<string?>();
+
+        var childrenValidation = ValidateRequestedChildren(request);
+        return childrenValidation.IsFailure
+            ? childrenValidation.ToNewResult<string?>()
+            : GenericResult<string?>.Success(mergedFederationStrategy);
     }
 
     // A category left out leaves the stored one; an empty name takes the data set out of its category; a name must be a category of the
@@ -193,25 +209,42 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
             if (aggregates.IsFailure) return aggregates;
         }
 
+        if (request.Filters is not null)
+        {
+            var filters = DataSetQueryHelper.ValidateFilters(request.Filters, request.Name, Logger);
+            if (filters.IsFailure) return filters;
+        }
+
         return request.Sources is null
             ? GenericResult<bool>.Success(true)
             : DataSetQueryHelper.ValidateFieldMappings(request.Sources, request.Name, Logger);
     }
 
-    // The values the request carries; a value left out leaves the stored one unchanged.
+    // Sets each value the request sends; a field the request does not send is not touched.
     private static void ApplyRequestedValues(IDataSetImplementationConfiguration existing, UpdateDataSetRequest request)
     {
-        existing.Description = request.Description ?? existing.Description;
+        if (request.Description is { } description)
+        {
+            existing.Description = description;
+        }
+
         if (request.ClassificationId is { } classificationId)
         {
             existing.ClassificationId = classificationId;
         }
 
-        existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;
+        if (request.SourceDataSetName is { } sourceDataSetName)
+        {
+            existing.SourceDataSetName = sourceDataSetName;
+        }
     }
 
-    private static void ApplyRequestedChildren(IDataSetImplementationConfiguration existing, UpdateDataSetRequest request)
+    private static IGenericResult ApplyRequestedChildren(
+        IDataSetImplementationConfiguration existing, UpdateDataSetRequest request, DataSetRequestValues values)
     {
+            var replaced = ReplaceFieldsAndSources(existing, request, values);
+            if (replaced.IsFailure) return replaced;
+
             if (request.KeyFields is not null)
             {
                 existing.KeyFields = request.KeyFields
@@ -238,16 +271,6 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
                     .ToList();
             }
 
-            if (request.Fields is not null)
-            {
-                existing.Fields = DataSetQueryHelper.MapFields(request.Fields);
-            }
-
-            if (request.Sources is not null)
-            {
-                existing.Sources = DataSetQueryHelper.MapSources(request.Sources, existing.Sources);
-            }
-
             if (request.Joins is not null && existing is IJoinedDataSetConfiguration joined)
             {
                 joined.Joins = DataSetQueryHelper.MapJoins(request.Joins);
@@ -255,13 +278,39 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
 
             if (request.Caching is not null)
             {
-                existing.Caching = DataSetQueryHelper.MapCaching(request.Caching);
+                var caching = DataSetQueryHelper.MapCaching(request.Caching, existing.Implementation, values);
+                if (caching.IsFailure) return caching;
+                existing.Caching = caching.Value;
             }
 
             if (request.Aggregates is not null && existing is ISimpleDataSetConfiguration simple)
             {
                 simple.Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates);
             }
+
+            return GenericResult.Success();
+    }
+
+    // The fields and sources the request replaces. One the data set already has keeps what the request does not state; a new one must
+    // state the values its caller chooses, or the update is refused (FDW-3931).
+    private static IGenericResult ReplaceFieldsAndSources(
+        IDataSetImplementationConfiguration existing, UpdateDataSetRequest request, DataSetRequestValues values)
+    {
+        if (request.Fields is not null)
+        {
+            var fields = DataSetQueryHelper.MapFields(request.Fields, existing.Fields, values);
+            if (fields.IsFailure) return fields;
+            existing.Fields = fields.Value!;
+        }
+
+        if (request.Sources is not null)
+        {
+            var sources = DataSetQueryHelper.MapSources(request.Sources, existing.Sources, values);
+            if (sources.IsFailure) return sources;
+            existing.Sources = sources.Value!;
+        }
+
+        return GenericResult.Success();
     }
 
 }

@@ -360,7 +360,7 @@ public sealed class LookupTransformType : TransformTypeBase
         ITransformContext context,
         IDictionary<string, object?> input)
     {
-        var lookupList = lookupsInGroup as IReadOnlyList<PipelineTransformLookupConfiguration> ?? lookupsInGroup.ToList();
+        var lookupList = lookupsInGroup is IReadOnlyList<PipelineTransformLookupConfiguration> list ? list : lookupsInGroup.ToList();
         var sample = lookupList[0];
 
         if (!input.TryGetValue(sample.SourceKeyField, out var keyValue) || keyValue == null)
@@ -368,7 +368,7 @@ public sealed class LookupTransformType : TransformTypeBase
             return;
         }
 
-        var keyString = keyValue.ToString() ?? "";
+        var keyString = keyValue.ToString() ?? string.Empty;
         IReadOnlyDictionary<string, object?>? matchedRecord = null;
         var found = RecordCacheOf(context).TryGetValue(cacheKey, out var recordCache) &&
             recordCache.TryGetValue(keyString, out matchedRecord);

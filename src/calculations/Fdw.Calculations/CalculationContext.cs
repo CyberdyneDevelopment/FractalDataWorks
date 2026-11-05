@@ -9,6 +9,8 @@ using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
+using System.Collections.Immutable;
 
 namespace Fdw.Calculations;
 
@@ -19,6 +21,10 @@ namespace Fdw.Calculations;
 [ExcludeFromCodeCoverage]
 public sealed class CalculationContext : ICalculationContext
 {
+    /// <summary>The parameters of a calculation that is given none: an empty bag read without regard to case.</summary>
+    [PlatformDefault]
+    private static readonly IReadOnlyDictionary<string, object?> NoParameters = ImmutableDictionary<string, object?>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase);
+
     private readonly Dictionary<string, object?> _sharedState;
 
     /// <summary>
@@ -39,7 +45,7 @@ public sealed class CalculationContext : ICalculationContext
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         ExecutionId = Guid.NewGuid();
         StartTime = DateTimeOffset.UtcNow;
-        Parameters = parameters ?? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        Parameters = parameters ?? NoParameters;
         Services = services ?? EmptyServiceProvider.Instance;
         Logger = logger ?? NullLogger<CalculationContext>.Instance;
         CancellationToken = cancellationToken;
@@ -185,6 +191,7 @@ public sealed class CalculationContext : ICalculationContext
     private sealed class EmptyServiceProvider : IServiceProvider
     {
         /// <summary>Gets the singleton instance.</summary>
+        [PlatformDefault]
         public static readonly EmptyServiceProvider Instance = new();
 
         /// <inheritdoc/>

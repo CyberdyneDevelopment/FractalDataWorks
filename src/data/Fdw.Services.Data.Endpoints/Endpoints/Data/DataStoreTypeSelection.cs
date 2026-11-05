@@ -4,6 +4,7 @@ using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -40,6 +41,6 @@ public static class DataStoreTypeSelection
         return named is not null
             ? GenericResult<string>.Success(named)
             : GenericResult<string>.Failure(DataStoreEndpointLog.StoreTypeNotAvailable(
-                logger, request.Name, request.StoreType ?? "(default)", connectionImplementation, string.Join(", ", offered)));
+                logger, request.Name, request.StoreType ?? LogPlaceholders.None, connectionImplementation, string.Join(", ", offered)));
     }
 }

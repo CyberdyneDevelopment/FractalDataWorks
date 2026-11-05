@@ -37,7 +37,7 @@ public abstract class DataCommandBase : IDatabaseConnectionCommand
         CommandId = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
         CommandType = commandType ?? throw new ArgumentNullException(nameof(commandType));
-        Category = category ?? "Data";
+        Category = category ?? throw new ArgumentNullException(nameof(category));
         Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         DataCommandBaseLog.CommandCreated(NullLogger<DataCommandBase>.Instance, CommandId, CommandType, Category);

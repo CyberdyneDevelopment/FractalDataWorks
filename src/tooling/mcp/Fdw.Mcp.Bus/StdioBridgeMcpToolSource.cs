@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Mcp.Bus.Abstractions;
 using Fdw.Mcp.Bus.Results;
 using Fdw.Results;
+using Fdw.Conventions;
 
 namespace Fdw.Mcp.Bus;
 
@@ -54,7 +55,7 @@ public sealed class StdioBridgeMcpToolSource : IMcpToolSource
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
         ServerName = serverName;
         _command = command;
-        _arguments = arguments ?? Array.Empty<string>();
+        _arguments = arguments ?? [];
         _logger = logger ?? NullLogger<StdioBridgeMcpToolSource>.Instance;
     }
 
@@ -140,7 +141,7 @@ public sealed class StdioBridgeMcpToolSource : IMcpToolSource
                 // bus error event and carry on pumping. Only genuine faults reach the catch below.
                 if (!response.IsSuccess)
                 {
-                    await bus.PublishToolError(ServerName, toolName, response.CurrentMessage ?? response.Code!.Name,
+                    await bus.PublishToolError(ServerName, toolName, response.FailureReason().Message,
                         evt.CorrelationId, evt.EventId, ct).ConfigureAwait(false);
                     continue;
                 }
@@ -182,7 +183,8 @@ public sealed class StdioBridgeMcpToolSource : IMcpToolSource
 
                 if (doc.RootElement.TryGetProperty("error", out var error))
                 {
-                    var message = error.TryGetProperty("message", out var m) ? (m.GetString() ?? "tool error") : "tool error";
+                    // The error object's message is the remote tool's own text; when it sends none, the detail says so with a placeholder.
+                    var message = error.TryGetProperty("message", out var m) && m.GetString() is { } text ? text : LogPlaceholders.Null;
                     pending.Completion.TrySetResult(GenericResult<JsonElement>.Failure(
                         McpBusResultCodes.ByName("ToolReportedError"), _logger,
                         ResultDetails.Create("server", ServerName, "tool", pending.ToolName, "error", message)

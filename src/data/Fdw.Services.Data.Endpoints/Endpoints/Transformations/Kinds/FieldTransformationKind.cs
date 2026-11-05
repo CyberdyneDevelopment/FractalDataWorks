@@ -6,6 +6,7 @@ using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -54,6 +55,7 @@ public sealed class FieldTransformationKind : TransformationKindBase
     }
 
     /// <inheritdoc />
+    [ApprovedFallback("an update that omits a field keeps the stored value")]
     public override IGenericResult<ITransformationImplementationConfiguration> PrepareUpdate(
         UpdateTransformationRequest request, ITransformationImplementationConfiguration existing, TransformationKindContext context)
     {

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Messages;
 
 namespace Fdw.Commands.Data.SoftDeletes;
 
@@ -17,10 +18,10 @@ public sealed class FilterMatchesSoftDeleteMode : SoftDeleteModeBase
     }
 
     /// <inheritdoc />
-    public override string? Problem(SoftDeleteOptions options)
+    public override IGenericMessage? Problem(SoftDeleteOptions options)
     {
         if (options.Marker is not null)
-            return "a filter-matches soft delete takes no marker";
-        return options.AbsentFromSource is not null ? "a filter-matches soft delete takes no source set" : null;
+            return Problem("a filter-matches soft delete takes no marker");
+        return options.AbsentFromSource is not null ? Problem("a filter-matches soft delete takes no source set") : null;
     }
 }

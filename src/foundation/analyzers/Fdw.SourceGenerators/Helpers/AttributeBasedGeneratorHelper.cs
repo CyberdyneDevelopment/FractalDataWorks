@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Fdw.Conventions;
 
 namespace Fdw.SourceGenerators.Helpers;
 
@@ -14,6 +15,11 @@ namespace Fdw.SourceGenerators.Helpers;
 /// </summary>
 public static class AttributeBasedGeneratorHelper
 {
+    /// <summary>The syntax filter a provider uses when the caller gives none: class and record declarations.</summary>
+    [PlatformDefault]
+    public static readonly Func<SyntaxNode, CancellationToken, bool> DefaultPredicate =
+        static (node, _) => node is ClassDeclarationSyntax or RecordDeclarationSyntax;
+
     /// <summary>
     /// Creates an optimized provider for discovering types with a specific attribute.
     /// Uses ForAttributeWithMetadataName for 99x faster discovery than manual scanning.
@@ -27,12 +33,12 @@ public static class AttributeBasedGeneratorHelper
         string attributeFullName,
         Func<SyntaxNode, CancellationToken, bool>? predicate = null)
     {
-        predicate ??= static (node, _) => node is ClassDeclarationSyntax or RecordDeclarationSyntax;
+        var filter = predicate ?? DefaultPredicate;
 
         return context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 fullyQualifiedMetadataName: attributeFullName,
-                predicate: predicate,
+                predicate: filter,
                 transform: static (context, token) =>
                 {
                     token.ThrowIfCancellationRequested();

@@ -10,7 +10,8 @@ public sealed class DataSetFieldConfigurationBuilderTests
     private static DataSetFieldConfigurationBuilder CreateValidBuilder() =>
         new DataSetFieldConfigurationBuilder()
             .WithName("CustomerId")
-            .WithType<int>();
+            .WithType<int>()
+            .AsOptional();
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -69,6 +70,7 @@ public sealed class DataSetFieldConfigurationBuilderTests
         var result = new DataSetFieldConfigurationBuilder()
             .WithName("Name")
             .WithType<string>()
+            .AsOptional()
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -83,6 +85,7 @@ public sealed class DataSetFieldConfigurationBuilderTests
         var result = new DataSetFieldConfigurationBuilder()
             .WithName("Name")
             .WithType(typeof(decimal))
+            .AsOptional()
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -106,6 +109,7 @@ public sealed class DataSetFieldConfigurationBuilderTests
         var result = new DataSetFieldConfigurationBuilder()
             .WithName("Name")
             .WithTypeName("String")
+            .AsOptional()
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -136,6 +140,7 @@ public sealed class DataSetFieldConfigurationBuilderTests
         var result = new DataSetFieldConfigurationBuilder()
             .WithName("Seen")
             .WithDataType(Fdw.Data.Abstractions.DataTypes.DateTimeOffset)
+            .AsOptional()
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -352,6 +357,7 @@ public sealed class DataSetFieldConfigurationBuilderTests
         var result = builder
             .WithName("OrderId")
             .WithType<Guid>()
+            .AsOptional()
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -383,5 +389,31 @@ public sealed class DataSetFieldConfigurationBuilderTests
         field.IsIndexed.ShouldBeTrue();
         field.MaxLength.ShouldBe(18);
         field.DefaultValue.ShouldBe("0");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void BuildFailsWhenNullabilityIsNeverStated()
+    {
+        // FDW-3931: a field states whether it may hold no value; nothing assumes it may.
+        var result = new DataSetFieldConfigurationBuilder()
+            .WithName("CustomerId")
+            .WithType<int>()
+            .Build();
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code!.Code.ShouldBe("BUILDER-21029");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void RequiredKeyAndOptionalStateNullability()
+    {
+        new DataSetFieldConfigurationBuilder().WithName("A").WithType<int>().AsRequired().Build().Value!.IsNullable.ShouldBeFalse();
+        new DataSetFieldConfigurationBuilder().WithName("B").WithType<int>().AsKey().Build().Value!.IsNullable.ShouldBeFalse();
+        new DataSetFieldConfigurationBuilder().WithName("C").WithType<int>().AsOptional().Build().Value!.IsNullable.ShouldBeTrue();
+        new DataSetFieldConfigurationBuilder().WithName("D").WithType<int>().AsKey().AsOptional().Build().Value!.IsNullable.ShouldBeFalse();
     }
 }

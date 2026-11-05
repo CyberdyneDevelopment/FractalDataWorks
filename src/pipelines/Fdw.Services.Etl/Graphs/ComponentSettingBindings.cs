@@ -65,6 +65,7 @@ public static class ComponentSettingBindings
         new("insertOnlyRuleValue", "Text", c => c.InsertOnlyRuleValue, (c, v) => c.InsertOnlyRuleValue = (string?)v),
         new("softDeleteMode", "Text", c => c.SoftDeleteMode, (c, v) => c.SoftDeleteMode = (string?)v),
         new("deletedFlagColumn", "Text", c => c.DeletedFlagColumn, (c, v) => c.DeletedFlagColumn = (string?)v),
+        new("deletedFlagValue", "Boolean", c => c.DeletedFlagValue, (c, v) => c.DeletedFlagValue = (bool?)v),
         new("deletedAtColumn", "Text", c => c.DeletedAtColumn, (c, v) => c.DeletedAtColumn = (string?)v),
         new("softDeleteMarkerColumn", "Text", c => c.SoftDeleteMarkerColumn, (c, v) => c.SoftDeleteMarkerColumn = (string?)v),
         new("softDeleteMarkerValue", "Text", c => c.SoftDeleteMarkerValue, (c, v) => c.SoftDeleteMarkerValue = (string?)v),

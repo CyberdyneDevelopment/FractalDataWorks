@@ -15,7 +15,7 @@ public sealed class AuthCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="AuthCategory"/> class.
     /// </summary>
     public AuthCategory()
-        : base(id: 5, name: "Auth", isFailure: true, isRetryable: false, httpStatus: 401, clientMessage: "Authentication failed or is required", clientAction: "Sign in and try again")
+        : base(id: 5, name: "Auth", isFailure: true, isRetryable: false, countsTowardFailureThresholds: true, httpStatus: 401, clientMessage: "Authentication failed or is required", clientAction: "Sign in and try again")
     {
     }
 }

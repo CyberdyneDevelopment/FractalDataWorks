@@ -203,6 +203,16 @@ public static partial class FlowLog
         Message = "Flow step '{step}' failed applying the transformation '{transformation}': {reason}")]
     public static partial IGenericMessage CalculateFailed(ILogger logger, string step, string transformation, string? reason);
 
+    /// <summary>Logs that the live view began to follow a pipeline run (FDW-3382).</summary>
+    [MessageLogging(EventId = 20941, Level = LogLevel.Information,
+        Message = "The live view follows pipeline run {executionId}")]
+    public static partial IGenericMessage LiveRunOpened(ILogger logger, Guid executionId);
+
+    /// <summary>Logs that the live view stopped following a pipeline run (FDW-3382).</summary>
+    [MessageLogging(EventId = 20942, Level = LogLevel.Information,
+        Message = "The live view no longer follows pipeline run {executionId}")]
+    public static partial IGenericMessage LiveRunClosed(ILogger logger, Guid executionId);
+
     /// <summary>Logs a SQL script that names a token the run has no value for.</summary>
     [MessageLogging(EventId = 21000, Level = LogLevel.Error,
         Message = "'{owner}' names $({name}) in its script, which this run has no value for; the script did not run")]

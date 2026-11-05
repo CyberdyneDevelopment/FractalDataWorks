@@ -121,18 +121,6 @@ public static partial class OrchestrationNodeConfigurationLog
         string nodeName,
         string error);
 
-    /// <summary>
-    /// The ProjectServerDefaults appsettings section is missing or empty in a non-Development environment.
-    /// </summary>
-    /// <param name="logger">The logger that records the event.</param>
-    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(
-        EventId = 61000,
-        Level = LogLevel.Critical,
-        Message = "ProjectServerDefaults appsettings section is missing or empty. Server policy defaults cannot be resolved.")]
-    public static partial IGenericMessage ServerPolicyDefaultsMissing(
-        ILogger logger);
-
     /// <summary>A cross-tenant configuration reference was rejected because AllowCrossTenant is false.</summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="configurationType">The configuration type whose cross-tenant reference was rejected.</param>

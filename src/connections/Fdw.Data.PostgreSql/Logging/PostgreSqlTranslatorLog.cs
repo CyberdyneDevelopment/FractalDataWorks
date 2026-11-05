@@ -23,4 +23,17 @@ public static partial class PostgreSqlTranslatorLog
         string translatorName,
         string expectedType,
         string actualType);
+
+    /// <summary>
+    /// Logs a query that pages its rows with no ordering when its container declares no primary key to order by (FDW-3454).
+    /// </summary>
+    [MessageLogging(
+        EventId = 21020,
+        Level = LogLevel.Error,
+        Message = "Query on container '{containerName}' pages its rows with no ordering, and the container declares no primary key to order them by; state an ordering",
+        ClientMessage = "The query on '{containerName}' pages its rows with no ordering, and '{containerName}' declares no primary key to order them by; state an ordering",
+        TypeCode = new[] { 'P', 'G', 'S' })]
+    public static partial IGenericMessage PagedQueryHasNoOrder(
+        ILogger logger,
+        string containerName);
 }

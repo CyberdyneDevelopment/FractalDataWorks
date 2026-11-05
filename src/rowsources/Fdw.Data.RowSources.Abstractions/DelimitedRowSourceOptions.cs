@@ -17,25 +17,22 @@ public sealed class DelimitedRowSourceOptions : RowSourceOptions
     public IList<string> Columns { get; set; } = new List<string>();
 
     /// <summary>
-    /// Gets or sets the column separator string (RecordParser <c>Separator</c>). Default is ",".
+    /// Gets or sets the column separator string (RecordParser <c>Separator</c>).
     /// </summary>
-    public string Separator { get; set; } = ",";
+    public required string Separator { get; set; }
 
     /// <summary>
     /// Gets or sets whether the first line is a header row to skip (RecordParser <c>HasHeader</c>).
-    /// Default is false.
     /// </summary>
-    public bool HasHeader { get; set; }
+    public required bool HasHeader { get; set; }
 
     /// <summary>
     /// Gets or sets whether fields may be quoted (RecordParser <c>ContainsQuotedFields</c>).
-    /// Default is true.
     /// </summary>
-    public bool ContainsQuotedFields { get; set; } = true;
+    public required bool ContainsQuotedFields { get; set; }
 
     /// <summary>
     /// Gets or sets whether to trim whitespace from each field (RecordParser <c>Trim</c>).
-    /// Default is false.
     /// </summary>
-    public bool Trim { get; set; }
+    public required bool Trim { get; set; }
 }

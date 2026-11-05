@@ -22,6 +22,7 @@ using Microsoft.Extensions.Logging;
 using Fdw.Services.Users.Clients.Models;
 using Fdw.Services.Users.Configuration;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Messages;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -117,7 +118,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
 
         if (!result.IsSuccess)
         {
-            await SendRefusal(result, ct).ConfigureAwait(false);
+            await SendRefusal(result, result.FailureReason(), ct).ConfigureAwait(false);
             return;
         }
 
@@ -153,7 +154,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     // and answers 400. A step that failed after the account row exists is the platform's,
     // and the caller needs the account's id and what landed to finish it -- that is a 500
     // carrying both, never a 400 that reads as "nothing happened".
-    private async Task SendRefusal(IGenericResult<UserCreated> result, CancellationToken ct)
+    private async Task SendRefusal(IGenericResult<UserCreated> result, IGenericMessage reason, CancellationToken ct)
     {
         var details = result.Details?.Data;
         var partial = details is not null && details.ContainsKey("userId");
@@ -167,7 +168,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         await Send.ResultAsync(TypedResults.Json(new
         {
             errorCode = partial ? "UserPartiallyCreated" : "CreateUserFailed",
-            messages = new[] { result.CurrentMessage ?? "Failed to create user" },
+            messages = new[] { reason.Message },
             userId = partial ? details!["userId"] : null,
             created = partial ? details!["created"] : null,
             failed = partial ? details!["failed"] : null
@@ -232,7 +233,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             Email = user.Email,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
-            CreatedBy = HttpContext.User.Identity?.Name ?? "system",
+            CreatedBy = HttpContext.User.Identity?.Name,
         };
 
     /// <summary>
@@ -313,7 +314,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             .Save(tenantLink, UserTenantDomain, UserTenantImplementation, $"{request.Username}:{tenantId}", ct)
             .ConfigureAwait(false);
         if (!grantResult.IsSuccess)
-            return Partial(grantResult, outcome, "membership");
+            return Partial(grantResult.FailureReason(), outcome, "membership");
 
         outcome.Created.Add("membership");
 
@@ -322,7 +323,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         {
             var assignResult = await AssignRole(userId, roleName, tenantId, ct).ConfigureAwait(false);
             if (!assignResult.IsSuccess)
-                return Partial(assignResult, outcome, "roles");
+                return Partial(assignResult.FailureReason(), outcome, "roles");
         }
 
         outcome.Created.Add("roles");
@@ -447,14 +448,14 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             var storeResult = await _credentialService
                 .Store(outcome.UserId, "Password", methods.Password.InitialPassword, ct).ConfigureAwait(false);
             if (!storeResult.IsSuccess)
-                return Partial(storeResult, outcome, "password");
+                return Partial(storeResult.FailureReason(), outcome, "password");
 
             // Why the flag after the store: Store clears it, and a password an administrator chose
             // is not one the account's owner has chosen yet.
             var forceResult = await _credentialService
                 .ForcePasswordChange(outcome.UserId, ct).ConfigureAwait(false);
             if (!forceResult.IsSuccess)
-                return Partial(forceResult, outcome, "password");
+                return Partial(forceResult.FailureReason(), outcome, "password");
 
             outcome.Created.Add("password");
         }
@@ -463,7 +464,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         {
             var bindResult = await BindExternalIdentity(outcome.UserId, methods.External, ct).ConfigureAwait(false);
             if (!bindResult.IsSuccess)
-                return Partial(bindResult, outcome, "external");
+                return Partial(bindResult.FailureReason(), outcome, "external");
 
             outcome.Created.Add("external");
         }
@@ -472,7 +473,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         {
             var keyResult = await MintApiKey(outcome.UserId, username, methods.ApiKey, ct).ConfigureAwait(false);
             if (!keyResult.IsSuccess || keyResult.Value is null)
-                return Partial(keyResult, outcome, "apiKey");
+                return Partial(keyResult.NoValueReason(), outcome, "apiKey");
 
             outcome.ApiKey = keyResult.Value;
             outcome.Created.Add("apiKey");
@@ -489,13 +490,13 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     /// transaction to roll back. Saying which step failed, and naming what already landed, is what
     /// lets the caller finish through the per-method routes rather than create the account twice.
     /// </remarks>
-    private static GenericResult<UserCreated> Partial(IGenericResult failed, UserCreated outcome, string step)
+    private static GenericResult<UserCreated> Partial(IGenericMessage reason, UserCreated outcome, string step)
         => (GenericResult<UserCreated>)GenericResult<UserCreated>.Failure(
             UserResultCodes.ByName("UserPartiallyCreated"),
             ResultDetails.Create(
                 "userId", outcome.UserId,
                 "created", string.Join(",", outcome.Created),
-                "failed", step + ": " + (failed.CurrentMessage ?? "no reason given")));
+                "failed", step + ": " + reason.Message));
 
     /// <summary>
     /// Binds an external identity to the account before its first sign-in, so that sign-in resolves

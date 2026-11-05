@@ -13,7 +13,7 @@ public class MutationResult : ISqlCommandResult
     public MutationResult(string summary, IReadOnlyList<string> changedScripts)
     {
         Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-        ChangedScripts = changedScripts ?? Array.Empty<string>();
+        ChangedScripts = changedScripts ?? [];
     }
 
     /// <inheritdoc/>

@@ -133,7 +133,7 @@ public sealed class DataSetBuilder : IDataSetBuilder
     /// </summary>
     private static IDataSetCompositionType ResolveComposition(IDataSetImplementationConfiguration config)
     {
-        var sourceCount = config.Sources?.Count ?? 0;
+        var sourceCount = config.Sources.Count;
         if (sourceCount <= 1 || DataSetImplementationConfigurationExtensions.JoinsOrNone(config).Count == 0)
         {
             if (sourceCount > 1)

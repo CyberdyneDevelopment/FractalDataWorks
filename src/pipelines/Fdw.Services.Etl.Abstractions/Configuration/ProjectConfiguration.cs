@@ -29,7 +29,7 @@ public sealed partial class ProjectConfiguration : IGenericConfiguration
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether this project is enabled for execution.</summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets the tenant identifier this project belongs to.</summary>
     public Guid? TenantId { get; set; }

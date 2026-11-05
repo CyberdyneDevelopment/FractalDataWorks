@@ -20,7 +20,7 @@ public class CreateConnectionRequest : ResourceCreateRequest
     public string Server { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the server port number.</summary>
-    public int Port { get; set; } = 1433;
+    public int? Port { get; set; }
 
     /// <summary>Gets or sets the database name.</summary>
     [Required]
@@ -37,10 +37,10 @@ public class CreateConnectionRequest : ResourceCreateRequest
     public IDictionary<string, string?> Authentication { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Gets or sets whether to trust the server certificate.</summary>
-    public bool TrustServerCertificate { get; set; }
+    public bool? TrustServerCertificate { get; set; }
 
     /// <summary>Gets or sets whether the connection uses encryption.</summary>
-    public bool Encrypt { get; set; } = true;
+    public bool? Encrypt { get; set; }
 
     /// <summary>Base URL for HTTP connections (e.g., "https://api.open-meteo.com/v1/").</summary>
     public string? BaseUrl { get; set; }
@@ -65,14 +65,14 @@ public class CreateConnectionRequest : ResourceCreateRequest
     public IDictionary<string, string?>? Security { get; set; }
 
     /// <summary>Whether to use mutual TLS (client certificate).</summary>
-    public bool UseMtls { get; set; }
+    public bool? UseMtls { get; set; }
 
 
     /// <summary>Gets or sets whether the automated Connections domain health check probes this connection.</summary>
-    public bool HealthCheckEnabled { get; set; }
+    public bool? HealthCheckEnabled { get; set; }
 
     /// <summary>Gets or sets whether this connection should be probed once at host startup.</summary>
-    public bool HealthCheckOnStartup { get; set; }
+    public bool? HealthCheckOnStartup { get; set; }
 
     /// <summary>Gets or sets the interval, in seconds, between periodic health checks. Null means no periodic interval.</summary>
     public int? HealthCheckIntervalSeconds { get; set; }

@@ -179,17 +179,52 @@ public sealed class DeleteCommandBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void BuildDeleteWithNoFilterHasNullFilter()
+    public void BuildDeleteWithNoWhereAndNoAllRowsIsRefused()
+    {
+        // FDW-3660: emptying a container is said with AllRows(), never left to a forgotten Where.
+        var builder = Delete.From("Customers")
+            .DataStore("CRM")
+            .Path("sales");
+
+        Should.Throw<InvalidOperationException>(() => builder.Build()).Message.ShouldContain("AllRows()");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void BuildDeleteWithAllRowsHasNoFilterAndAsksForEveryRow()
     {
         var call = Delete.From("Customers")
             .DataStore("CRM")
             .Path("sales")
+            .AllRows()
             .Build();
 
         var cmd = (DeleteCommand)call.Command;
 
         cmd.Filter.ShouldBeNull();
+        cmd.AllRows.ShouldBeTrue();
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void BuildDeleteWithAWhereAndAllRowsIsRefused()
+    {
+        var builder = Delete.From("Customers")
+            .DataStore("CRM")
+            .Path("sales")
+            .Where("Id", 42)
+            .AllRows();
+
+        Should.Throw<InvalidOperationException>(() => builder.Build()).Message.ShouldContain("also asks for every row");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void BuildDeleteWithAWhereDoesNotAskForEveryRow()
+        => ((DeleteCommand)Delete.From("Customers").DataStore("CRM").Path("sales").Where("Id", 42).Build().Command).AllRows.ShouldBeFalse();
 
     /// <summary>FDW-1307 — a condition written after an OR group is ANDed with the group, not added to it as one more alternative.</summary>
     [Fact]

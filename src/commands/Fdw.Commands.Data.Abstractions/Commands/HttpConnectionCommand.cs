@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Net.Http;
 using Fdw.Commands.Data.Abstractions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -49,9 +50,9 @@ public sealed class HttpConnectionCommand : IConnectionCommand
 
         Method = method ?? throw new ArgumentNullException(nameof(method));
         RelativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
-        QueryParameters = queryParameters ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        QueryParameters = queryParameters ?? ImmutableDictionary<string, string>.Empty;
         Body = body;
-        Headers = headers ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        Headers = headers ?? ImmutableDictionary<string, string>.Empty;
         CommandId = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
 

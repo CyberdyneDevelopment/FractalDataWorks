@@ -152,8 +152,8 @@ public sealed class RoslynWorkspaceFactory : IRoslynWorkspaceFactory
         // Convert glob pattern to regex
         // Supports: * (any chars), ? (single char)
         var regexPattern = "^" + Regex.Escape(pattern)
-            .Replace("\\*", ".*")
-            .Replace("\\?", ".") + "$";
+            .Replace("\\*", ".*", StringComparison.Ordinal)
+            .Replace("\\?", ".", StringComparison.Ordinal) + "$";
 
         return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
     }

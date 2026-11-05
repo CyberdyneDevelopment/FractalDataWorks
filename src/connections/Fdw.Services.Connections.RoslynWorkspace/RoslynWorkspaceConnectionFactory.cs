@@ -48,8 +48,8 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
             return GenericResult<IGenericConnection>.Failure(
                 RoslynWorkspaceConnectionLog.FactoryValidationFailed(
                     _logger,
-                    configuration?.GetType().Name ?? "null",
-                    $"Expected RoslynWorkspaceConnectionConfiguration but got {configuration?.GetType().Name ?? "null"}"));
+                    configuration?.GetType().Name ?? RoslynWorkspacePlaceholders.NoConfiguration,
+                    $"Expected RoslynWorkspaceConnectionConfiguration but got {configuration?.GetType().Name ?? RoslynWorkspacePlaceholders.NoConfiguration}"));
 
         return GenericResult<IGenericConnection>.Failure(
             RoslynWorkspaceConnectionLog.FactoryValidationFailed(
@@ -118,8 +118,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
 
         var mode = (RoslynWorkspaceModeBase)modeOption;
 
-        IReadOnlyList<string> excludePatterns = configuration.ExcludePatterns?.ToList()
-            ?? (IReadOnlyList<string>)new List<string>();
+        IReadOnlyList<string> excludePatterns = configuration.ExcludePatterns?.ToList() ?? [];
 
         if (mode.Name.Equals("Live", System.StringComparison.Ordinal))
         {
@@ -159,7 +158,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
 
         return GenericResult<T>.Failure(
             RoslynWorkspaceConnectionLog.FactoryValidationFailed(
-                _logger, configuration?.GetType().Name ?? "null",
+                _logger, configuration?.GetType().Name ?? RoslynWorkspacePlaceholders.NoConfiguration,
                 $"Connection is not assignable to {typeof(T).Name}"));
     }
 

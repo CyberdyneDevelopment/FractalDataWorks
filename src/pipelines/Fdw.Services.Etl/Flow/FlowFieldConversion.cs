@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Services.Etl.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl.Flow;
 
@@ -32,6 +33,7 @@ public sealed class FlowFieldConversion
     public string? TargetType { get; }
 
     /// <summary>Gets what a null value takes; null when a null value stays null.</summary>
+    [PlatformDefault]
     public string? DefaultValue { get; }
 
     /// <summary>Gets whether a value that is still null is refused.</summary>

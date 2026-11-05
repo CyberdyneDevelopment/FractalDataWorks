@@ -439,6 +439,22 @@ public sealed class ResultCodeBaseTests
         logLevel.ShouldBe(LogLevel.Error);
     }
 
+    [Theory]
+    [InlineData("Trace", 0, LogLevel.Trace)]
+    [InlineData("Debug", 1, LogLevel.Debug)]
+    [InlineData("Notice", 3, LogLevel.Warning)]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public void LogLevelFollowsTheLogLevelTheSeverityStatesNotItsName(string name, int logLevelValue, LogLevel expected)
+    {
+        // FDW-3463: a switch on the severity's name read Trace, Debug and any severity it did not list as Error; every severity
+        // states the log level it stands for.
+        var severity = new TestResultSeverity(50, name, true, logLevelValue, true, "gray");
+        var resultCode = new TestResultCode(1, "Test", "CODE", 100, severity, "Domain", "Message", false);
+
+        resultCode.LogLevel.ShouldBe(expected);
+    }
+
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]

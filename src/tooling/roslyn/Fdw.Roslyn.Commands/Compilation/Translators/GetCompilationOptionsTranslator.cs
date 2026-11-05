@@ -70,10 +70,10 @@ public sealed class GetCompilationOptionsTranslator
             Platform = options.Platform.ToString(),
             OptimizationLevel = options.OptimizationLevel.ToString(),
             CheckOverflow = options.CheckOverflow,
-            AllowUnsafe = csharpOptions?.AllowUnsafe ?? false,
-            NullableContextOptions = csharpOptions?.NullableContextOptions.ToString() ?? "Unknown",
-            LanguageVersion = parseOptions?.LanguageVersion.ToString() ?? "Unknown",
-            PreprocessorSymbols = parseOptions?.PreprocessorSymbolNames.ToList() ?? new List<string>(),
+            AllowUnsafe = csharpOptions is { AllowUnsafe: true },
+            NullableContextOptions = csharpOptions?.NullableContextOptions.ToString() ?? RoslynReportPlaceholders.Unknown,
+            LanguageVersion = parseOptions?.LanguageVersion.ToString() ?? RoslynReportPlaceholders.Unknown,
+            PreprocessorSymbols = parseOptions?.PreprocessorSymbolNames.ToList() ?? [],
             ReferencedAssemblies = compilation.ReferencedAssemblyNames.Select(a => a.Name).ToList()
         };
 

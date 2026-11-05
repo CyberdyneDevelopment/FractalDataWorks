@@ -51,12 +51,24 @@ internal sealed class FlowStageRecords : IFlowStageObserver
     /// <returns>The record's identifier; none when the stage has not started or its record could not be written.</returns>
     public Guid? RecordOf(int stage) => _records.TryGetValue(stage, out var record) ? record : null;
 
+    /// <summary>Records what a load destination has committed, under the record of the stage it runs in (FDW-3785).</summary>
+    /// <param name="stage">The destination's stage number.</param>
+    /// <param name="commit">What it has committed so far.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>A task that completes when it is recorded; at once when the stage has no record.</returns>
+    public Task Committed(int stage, DestinationCommit commit, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(commit);
+        return RecordOf(stage) is { } record ? _reporter.DestinationCommitted(record, commit, cancellationToken) : Task.CompletedTask;
+    }
+
     /// <summary>Writes the events of each started stage's components and finishes its record.</summary>
     /// <param name="report">What the level's flow did, for all its stages.</param>
     /// <param name="outcome">How the level's flow ended.</param>
+    /// <param name="stop">Why the flow was stopped: a stage with a component that did not succeed is closed Cancelled for a cancel, not Failed (FDW-3784), and is left open for a host stop (FDW-3880).</param>
     /// <param name="cancellationToken">Cancels the writes.</param>
     /// <returns>A task that completes when every record is finished.</returns>
-    public async Task Finish(FlowRunReport report, IGenericResult outcome, CancellationToken cancellationToken)
+    public async Task Finish(FlowRunReport report, IGenericResult outcome, FlowStopKind stop, CancellationToken cancellationToken)
     {
         foreach (var (stage, record) in _records.OrderBy(pair => pair.Key))
         {
@@ -67,12 +79,24 @@ internal sealed class FlowStageRecords : IFlowStageObserver
                 report.Elapsed,
                 components,
                 report.FailedComponent is { } failed && names.Contains(failed) ? failed : null,
-                report.Rejections is { } rejections ? [.. rejections.Where(rejection => names.Contains(rejection.Component))] : null);
+                report.Rejections is { } rejections ? [.. rejections.Where(rejection => names.Contains(rejection.Component))] : null,
+                [.. report.Links.Where(link => !string.IsNullOrEmpty(link.Link.ToComponent) && names.Contains(link.Link.ToComponent) && !names.Contains(link.Link.FromComponent))]);
             await _reporter.FlowFinished(record, part, cancellationToken).ConfigureAwait(false);
 
-            // Why failed only where a component of the stage did not succeed: a stage that finished before the failure is complete.
-            await _reporter.StepFinished(record, outcome.IsFailure && components.Any(component => !component.Succeeded) ? outcome : GenericResult.Success(), cancellationToken)
-                .ConfigureAwait(false);
+            // Why failed or cancelled only where a component of the stage did not succeed: a stage that finished before the failure or the cancel is complete.
+            var unfinished = outcome.IsFailure && components.Any(component => !component.Succeeded);
+            if (unfinished && stop == FlowStopKind.HostStopped)
+            {
+                continue;
+            }
+
+            if (unfinished && stop == FlowStopKind.Cancelled)
+            {
+                await _reporter.StepCancelled(record, cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            await _reporter.StepFinished(record, unfinished ? outcome : GenericResult.Success(), cancellationToken).ConfigureAwait(false);
         }
     }
 }

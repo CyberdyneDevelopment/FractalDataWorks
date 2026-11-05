@@ -11,6 +11,7 @@ internal sealed class FlowLinkState
 {
     private long _rows;
     private long _batches;
+    private long _bytes;
 
     /// <summary>Initializes a new instance of the <see cref="FlowLinkState"/> class.</summary>
     /// <param name="link">The link; for a dropped output its target names are empty.</param>
@@ -31,13 +32,15 @@ internal sealed class FlowLinkState
     public ChannelWriter<FlowBatch>? Writer => Input?.Writer;
 
     /// <summary>Gets what moved over the link.</summary>
-    public FlowLinkCount Count => new(Link, Interlocked.Read(ref _rows), Interlocked.Read(ref _batches));
+    public FlowLinkCount Count => new(Link, Interlocked.Read(ref _rows), Interlocked.Read(ref _batches), Interlocked.Read(ref _bytes));
 
     /// <summary>Counts a batch written to the link.</summary>
     /// <param name="rows">The number of rows in it.</param>
-    public void Add(int rows)
+    /// <param name="bytes">The estimated size of its rows.</param>
+    public void Add(int rows, long bytes)
     {
         Interlocked.Add(ref _rows, rows);
         Interlocked.Increment(ref _batches);
+        Interlocked.Add(ref _bytes, bytes);
     }
 }

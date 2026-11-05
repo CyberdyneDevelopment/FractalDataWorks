@@ -65,7 +65,7 @@ public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
     /// <summary>
     /// Gets or sets a value indicating whether the field allows null values.
     /// </summary>
-    public bool IsNullable { get; set; } = true;
+    public bool IsNullable { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this field is required (non-nullable).
@@ -211,6 +211,7 @@ public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
             ClassificationId = ClassificationId,
             DatumTypeId = DatumTypeId,
             IsKey = IsKey,
+            IsNullable = IsNullable,
             IsRequired = IsRequired,
             IsIndexed = IsIndexed,
             IsFilterable = IsFilterable,

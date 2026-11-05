@@ -264,12 +264,12 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         foreach (var field in updateFields)
         {
             if (ModifyAuditColumns.Any(a => string.Equals(a.Column, field.Name, StringComparison.OrdinalIgnoreCase))
-                || !RowValues.TryRead(data, field.Name, out var value, out var declaredType))
+                || !RowValues.TryReadForBinding(data, field.Name, field.FieldType.ClrType, out var value, out var bindingType))
             {
                 continue;
             }
 
-            settable.Add((field.Name, value, declaredType ?? (value is null ? field.FieldType.ClrType : null)));
+            settable.Add((field.Name, value, bindingType));
         }
 
         return settable;

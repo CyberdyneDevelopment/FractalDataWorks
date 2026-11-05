@@ -55,21 +55,21 @@ public sealed class GetProjectInfoTranslator : RoslynCommandTranslatorBase<GetPr
         var compilationOptions = project.CompilationOptions as CSharpCompilationOptions;
 
         var projectReferences = project.ProjectReferences
-            .Select(r => solution.GetProject(r.ProjectId)?.Name ?? "Unknown")
+            .Select(r => solution.GetProject(r.ProjectId)?.Name ?? RoslynReportPlaceholders.Unknown)
             .ToList();
 
         var metadataReferences = project.MetadataReferences
-            .Select(r => Path.GetFileName(r.Display ?? "Unknown"))
+            .Select(r => Path.GetFileName(r.Display ?? RoslynReportPlaceholders.Unknown))
             .ToList();
 
         var result = new ProjectInfoResult(
             name: project.Name,
             filePath: project.FilePath ?? string.Empty,
             language: project.Language,
-            outputKind: project.CompilationOptions?.OutputKind.ToString() ?? "Unknown",
-            languageVersion: parseOptions?.LanguageVersion.ToString() ?? "Unknown",
-            nullableContextOptions: compilationOptions?.NullableContextOptions.ToString() ?? "Unknown",
-            allowUnsafe: compilationOptions?.AllowUnsafe ?? false,
+            outputKind: project.CompilationOptions?.OutputKind.ToString() ?? RoslynReportPlaceholders.Unknown,
+            languageVersion: parseOptions?.LanguageVersion.ToString() ?? RoslynReportPlaceholders.Unknown,
+            nullableContextOptions: compilationOptions?.NullableContextOptions.ToString() ?? RoslynReportPlaceholders.Unknown,
+            allowUnsafe: compilationOptions is { AllowUnsafe: true },
             documentCount: project.Documents.Count(),
             additionalDocumentCount: project.AdditionalDocuments.Count(),
             projectReferences: projectReferences,

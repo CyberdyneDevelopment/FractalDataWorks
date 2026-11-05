@@ -4,7 +4,7 @@ namespace Fdw.Mcp.Bus;
 public sealed class McpEventBusOptions
 {
     /// <summary>Max number of events held in the live ring (and available for in-window replay).</summary>
-    public int RingCapacity { get; set; } = 10_000;
+    public required int RingCapacity { get; set; }
 
     /// <summary>
     /// Optional path to a directory where the file-event-log sink will append events as JSON Lines.

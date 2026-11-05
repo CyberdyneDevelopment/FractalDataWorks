@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\data\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\data\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\..\foundation\abstractions\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

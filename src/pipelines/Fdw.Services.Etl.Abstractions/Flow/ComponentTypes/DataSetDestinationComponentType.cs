@@ -34,6 +34,7 @@ public sealed class DataSetDestinationComponentType : ComponentTypeBase
             new StageMember("insertOnlyRuleValue", "Text", false, "Versioning: the value of the insert-only rule column."),
             new StageMember("softDeleteMode", "SoftDeleteModes", false, "Soft delete: how a row that is gone from the source is recorded; the load kind says whether it allows a soft delete."),
             new StageMember("deletedFlagColumn", "Text", false, "Soft delete: the column that flags a deleted row."),
+            new StageMember("deletedFlagValue", "Boolean", false, "Soft delete: the value written to the flag column; required with a soft delete."),
             new StageMember("deletedAtColumn", "Text", false, "Soft delete: the column that takes the time a row was deleted."),
             new StageMember("softDeleteMarkerColumn", "Text", false, "Soft delete: the column a marker mode tests; stated with its value."),
             new StageMember("softDeleteMarkerValue", "Text", false, "Soft delete: the value of the marker column."),

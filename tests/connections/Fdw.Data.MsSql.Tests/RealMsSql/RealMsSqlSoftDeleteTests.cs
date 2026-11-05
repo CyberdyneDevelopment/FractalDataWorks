@@ -39,6 +39,7 @@ public sealed class RealMsSqlSoftDeleteTests(RealMsSqlFixture fixture) : IClassF
             {
                 DeletedAtColumn = "DeletedAt",
                 Marker = new SoftDeleteMarker("Status", "closed"),
+                FlagValue = true,
             },
         };
 
@@ -69,6 +70,7 @@ public sealed class RealMsSqlSoftDeleteTests(RealMsSqlFixture fixture) : IClassF
             {
                 DeletedAtColumn = "DeletedAt",
                 AbsentFromSource = new AbsentKeySet(["Code"], present),
+                FlagValue = true,
             },
         };
 
@@ -88,7 +90,7 @@ public sealed class RealMsSqlSoftDeleteTests(RealMsSqlFixture fixture) : IClassF
         var container = Container(fixture, table, Columns);
         var command = new DeleteCommand
         {
-            SoftDelete = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.MarkerMatches) { Marker = new SoftDeleteMarker("Status", "closed") },
+            SoftDelete = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.MarkerMatches) { Marker = new SoftDeleteMarker("Status", "closed"), FlagValue = true },
         };
 
         await Run(fixture, command, container.Object);

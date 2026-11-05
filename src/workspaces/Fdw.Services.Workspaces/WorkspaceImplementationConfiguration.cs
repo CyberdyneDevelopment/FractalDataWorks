@@ -83,7 +83,7 @@ public partial class WorkspaceImplementationConfiguration
     public string? StandInSeed { get; set; }
 
     /// <inheritdoc/>
-    public Guid? OrganizationId { get; set; }
+    public Guid OrganizationId { get; set; }
 
     /// <summary>Gets or sets the optional tenant scope.</summary>
     public Guid? TenantId { get; set; }

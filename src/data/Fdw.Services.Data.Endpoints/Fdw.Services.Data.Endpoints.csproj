@@ -66,6 +66,7 @@
     <ProjectReference Include="..\..\rowsources\Fdw.Data.RowSources.Abstractions\Fdw.Data.RowSources.Abstractions.csproj" />
     <ProjectReference Include="..\..\endpoints\Fdw.Web.Http.Abstractions\Fdw.Web.Http.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\tags\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
   </ItemGroup>
 
 </Project>

@@ -5,6 +5,7 @@ using Fdw.Data.Builders;
 using Fdw.Data.DataContainers.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.ServiceTypes;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -18,8 +19,8 @@ public sealed class DataSetConfigurationBuilderTests
         return new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "Int32", isKey: true)
-            .AddField("Name", "String");
+            .AddField("Id", "Int32", isKey: true, isRequired: false)
+            .AddField("Name", "String", isKey: false, isRequired: false);
     }
 
     private sealed class TestRecord
@@ -48,7 +49,7 @@ public sealed class DataSetConfigurationBuilderTests
     {
         var result = new DataSetConfigurationBuilder()
             .WithRecordType<TestRecord>()
-            .AddField("Id", "Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -62,7 +63,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("  ")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -75,7 +76,7 @@ public sealed class DataSetConfigurationBuilderTests
     {
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
-            .AddField("Id", "Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -103,7 +104,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Name", "String")
+            .AddField("Name", "String", isKey: false, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -117,8 +118,8 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "Int32", isKey: true)
-            .AddField("Id", "String")
+            .AddField("Id", "Int32", isKey: true, isRequired: false)
+            .AddField("Id", "String", isKey: false, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -132,7 +133,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "Int32")
+            .AddField("Id", "Int32", isKey: false, isRequired: false)
             .AddKeyField("NonExistent")
             .Build();
 
@@ -182,14 +183,23 @@ public sealed class DataSetConfigurationBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void WithVersionNullDefaultsTo10()
+    public void WithVersionRefusesNull()
     {
-        var result = CreateValidBuilder()
-            .WithVersion(null!)
-            .Build();
+        Should.Throw<ArgumentNullException>(() => CreateValidBuilder().WithVersion(null!));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnUnstatedVersionIsTheKindsDeclaredVersion()
+    {
+        // FDW-3956: the version is declared on the data set kind, not assumed in the builder.
+        var result = CreateValidBuilder().Build();
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Version.ShouldBe("1.0");
+        ServiceTypeDefaults.TryResolve(DataSetTypes.ByName(SimpleDataSetConfiguration.ImplementationName), DataSetDeclaredDefaults.Version, out var declared)
+            .ShouldBeTrue();
+        result.Value!.Version.ShouldBe(declared);
     }
 
     [Fact]
@@ -237,7 +247,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType(typeof(TestRecord))
-            .AddField("Id", "Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -261,7 +271,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordTypeName("MyApp.Customer")
-            .AddField("Id", "Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -327,7 +337,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddFieldWithBuilderFuncAddsField()
     {
         var result = CreateValidBuilder()
-            .AddField(b => b.WithName("Email").WithType<string>().Build())
+            .AddField(b => b.WithName("Email").WithType<string>().AsOptional().Build())
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -384,7 +394,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void WithCalculatedFieldAddsField()
     {
         var result = CreateValidBuilder()
-            .WithCalculatedField("FullName", typeof(string), row => "test")
+            .WithCalculatedField("FullName", typeof(string), row => "test", isNullable: true)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -397,7 +407,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void WithCalculatedFieldGenericAddsField()
     {
         var result = CreateValidBuilder()
-            .WithCalculatedField<string>("FullName", row => "test", "Computed full name")
+            .WithCalculatedField<string>("FullName", row => "test", isNullable: true, "Computed full name")
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -410,7 +420,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddKeyFieldAddsToKeyFields()
     {
         var result = CreateValidBuilder()
-            .AddField("CompanyId", "Int32")
+            .AddField("CompanyId", "Int32", isKey: false, isRequired: false)
             .AddKeyField("CompanyId")
             .Build();
 
@@ -452,8 +462,8 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Composite")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "Int32")
-            .AddField("CompanyId", "Int32")
+            .AddField("Id", "Int32", isKey: false, isRequired: false)
+            .AddField("CompanyId", "Int32", isKey: false, isRequired: false)
             .AddKeyFields(new[] { "Id", "CompanyId" })
             .Build();
 
@@ -479,7 +489,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddSourceAddsSourceConfiguration()
     {
         var result = CreateValidBuilder()
-            .AddSource("Primary", "MsSql")
+            .AddSource("Primary", "MsSql", priority: 100, supportsPredicatePushdown: true)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -492,8 +502,8 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddSourceReplacesExistingWithSameName()
     {
         var result = CreateValidBuilder()
-            .AddSource("Primary", "MsSql", priority: 100)
-            .AddSource("Primary", "PostgreSql", priority: 50)
+            .AddSource("Primary", "MsSql", priority: 100, supportsPredicatePushdown: true)
+            .AddSource("Primary", "PostgreSql", priority: 50, supportsPredicatePushdown: true)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -506,7 +516,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddSourceIgnoresEmptySourceName()
     {
         var result = CreateValidBuilder()
-            .AddSource("", "MsSql")
+            .AddSource("", "MsSql", priority: 100, supportsPredicatePushdown: true)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -565,7 +575,7 @@ public sealed class DataSetConfigurationBuilderTests
     {
         var builder = CreateValidBuilder()
             .WithDescription("test")
-            .AddSource("Primary", "MsSql");
+            .AddSource("Primary", "MsSql", priority: 100, supportsPredicatePushdown: true);
 
         builder.Reset();
 
@@ -584,7 +594,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = builder
             .WithName("Orders")
             .WithRecordType<TestRecord>()
-            .AddField("OrderId", "Guid", isKey: true)
+            .AddField("OrderId", "Guid", isKey: true, isRequired: false)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();

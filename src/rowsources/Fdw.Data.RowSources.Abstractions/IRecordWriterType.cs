@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
 using Fdw.Collections;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Data.RowSources.Abstractions;
 
@@ -47,17 +49,29 @@ public interface IRecordWriterType : ITypeOption<int, RecordWriterTypeBase>
     string FileExtension { get; }
 
     /// <summary>
-    /// Builds this format's own writer options for the supplied ordered column names.
+    /// Builds this format's own writer options for the supplied ordered column names, each choice from <paramref name="stated"/>.
     /// </summary>
     /// <param name="columns">The ordered column names the writer emits.</param>
-    /// <returns>Options of the concrete type this format's writer expects.</returns>
+    /// <param name="stated">The choices by key, as a request states them (a separator, a header, an element name).</param>
+    /// <param name="owner">What states them, named in a failure.</param>
+    /// <returns>Options of the concrete type this format's writer expects, or the failure naming the first choice left out.</returns>
     /// <remarks>
     /// Why the format builds them rather than the caller: <see cref="CreateWriter"/> casts the options
-    /// to its own concrete type, so base-class options arrive as null and the writer falls back to its
-    /// defaults — which, for a format that requires a column list, means failing on a caller that did
-    /// supply one. Only the format knows which type its writer will accept.
+    /// to its own concrete type, so base-class options arrive as null and the writer refuses them.
+    /// Only the format knows which type its writer will accept. No choice is defaulted (FDW-3823).
     /// </remarks>
-    RowWriterOptions CreateOptions(IReadOnlyList<string> columns);
+    IGenericResult<RowWriterOptions> CreateOptions(IReadOnlyList<string> columns, IReadOnlyDictionary<string, object> stated, string owner);
+
+    /// <summary>
+    /// Builds this format's own writer options for a container: each choice from what the container's metadata states, with the
+    /// container's fields as the columns.
+    /// </summary>
+    /// <param name="container">The container whose metadata and fields state the format's choices.</param>
+    /// <returns>Options of the concrete type this format's writer expects, or the failure naming the first choice the container leaves out.</returns>
+    IGenericResult<RowWriterOptions> CreateOptions(IStorageContainer container);
+
+    /// <summary>Gets the buffer size, in bytes, this format's writer streams with. Declared by the format; a host may change it at registration.</summary>
+    int BufferSize { get; set; }
 
     /// <summary>
     /// Builds a record writer from the container's configuration (target + field schema + format options).
@@ -76,14 +90,14 @@ public interface IRecordWriterType : ITypeOption<int, RecordWriterTypeBase>
     /// <param name="target">The destination text writer.</param>
     /// <param name="options">
     /// Format-specific options (the concrete subclass of <see cref="RowWriterOptions"/> for this
-    /// format). Null requests the format's defaults.
+    /// format), built by <see cref="CreateOptions(IStorageContainer)"/>. Required: a writer takes no value of its own.
     /// </param>
     /// <returns>A record writer ready to accept records.</returns>
     /// <remarks>
     /// Why retained alongside <see cref="Create(RecordWriterContext)"/>: existing consumers build a writer
     /// from a target + options. The new overload is the config-driven surface layered over the same writers.
     /// </remarks>
-    IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options);
+    IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions options);
 
     /// <summary>
     /// Gets a value indicating whether this format is written as bytes, not text (an Excel workbook is a zip).
@@ -99,8 +113,8 @@ public interface IRecordWriterType : ITypeOption<int, RecordWriterTypeBase>
     /// </summary>
     /// <param name="target">The destination stream. It is written synchronously, so a response body is wrapped in a
     /// <see cref="DrainingStream"/> and drained between records. The writer finishes the file when it is disposed.</param>
-    /// <param name="options">Format-specific options; null requests the format's defaults.</param>
+    /// <param name="options">Format-specific options, built by <see cref="CreateOptions(IStorageContainer)"/>.</param>
     /// <returns>A record writer ready to accept records.</returns>
     /// <exception cref="System.NotSupportedException">The format is a text format: <see cref="WritesBinary"/> is false.</exception>
-    IRecordWriter<DataRecord> CreateBinaryWriter(Stream target, RowWriterOptions? options);
+    IRecordWriter<DataRecord> CreateBinaryWriter(Stream target, RowWriterOptions options);
 }

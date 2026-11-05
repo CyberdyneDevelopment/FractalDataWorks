@@ -50,4 +50,25 @@ public sealed class UnicodeIconSet : IconSetBase
 
     /// <inheritdoc />
     public override string LoadingIcon => "\u231b";  // ⌛
+
+    /// <inheritdoc />
+    public override string NodeIcon(string nodeType)
+    {
+        return nodeType.ToLowerInvariant() switch
+        {
+            "dataset" => "📊",
+            "field" => "📄",
+            "mapping" => "🔗",
+            "source" => "💾",
+            "join" => "⊕",
+            "pipeline" => "⚙",
+            "stage" => "▶",
+            "workflow" => "🔄",
+            "step" => "•",
+            "folder" => "📁",
+            "file" => "📄",
+            "connection" => "🔌",
+            _ => "○"
+        };
+    }
 }

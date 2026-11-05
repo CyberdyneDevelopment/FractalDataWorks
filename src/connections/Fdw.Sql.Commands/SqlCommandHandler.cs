@@ -38,7 +38,7 @@ public sealed class SqlCommandHandler : ISqlCommandHandler
         var lookup = _translators.GetTranslator(command.GetType());
         if (!lookup.IsSuccess)
             return GenericResult<ISqlCommandResult>.Failure(SqlResultCodes.TranslatorNotFound,
-                ResultDetails.Create("Message", lookup.CurrentMessage ?? "Unknown translator"));
+                ResultDetails.Create("Message", lookup.FailureReason().Message));
 
         // CreateSnapshot: handler also calls _workspace.CreateSnapshot() and
         // patches the result's SnapshotId. Mirrors the Roslyn handler pattern.

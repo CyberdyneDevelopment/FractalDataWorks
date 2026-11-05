@@ -156,7 +156,7 @@ public abstract class CreateDataSetVariationEndpointBase
         if (permitted.IsFailure) return permitted.ToNewResult<DataSetVariationResponse>();
 
         DataSetVariationLog.CreatingVariation(Logger, request.Name, workspace.Value.Name, main.Name);
-        var variation = new ScopedDataSetVariationConfiguration
+        var variation = new VariationDataSetConfiguration
         {
             Name = $"{workspace.Value.Name}/{request.Name}",
             VariationName = request.Name,
@@ -166,12 +166,12 @@ public abstract class CreateDataSetVariationEndpointBase
             // The root data set whatever the parent is, so every view of a data set lists with it and a view of a view runs it.
             BaseDataSetId = main.Id,
             ParentVariationId = based.Value.Parent?.Id,
-            Filters = request.Filters,
+            StoredFilters = request.Filters,
             // Stamped here for the reason the other creates stamp it: the insert writes every mapped column, so an
             // unset date would overwrite the column default (FDW-793).
             CreatedAt = DateTimeOffset.UtcNow,
         };
-        var saved = await _variations.Save(variation, "DataSetVariation", ScopedDataSetVariationConfiguration.ImplementationName, variation.Name, ct).ConfigureAwait(false);
+        var saved = await _variations.Save(variation, variation.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<DataSetVariationResponse>();
 
         DataSetVariationLog.CreatedVariation(Logger, request.Name, workspace.Value.Name, main.Name);
@@ -183,7 +183,7 @@ public abstract class CreateDataSetVariationEndpointBase
             WorkspaceName = workspace.Value.Name,
             BaseDataSetName = main.Name,
             ParentName = based.Value.Parent?.VariationName,
-            Filters = variation.Filters,
+            Filters = variation.StoredFilters,
             ClassificationId = variation.ClassificationId,
         });
     }

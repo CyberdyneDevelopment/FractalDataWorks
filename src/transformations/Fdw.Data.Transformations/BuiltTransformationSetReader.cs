@@ -232,7 +232,7 @@ public static class BuiltTransformationSetReader
             return GenericResult<CalculationNode?>.Success(null);
         }
 
-        var tree = BuiltFormulaTrees.Read(built.Name, string.Join('/', new[] { output, column ?? role.ToLowerInvariant() }), pieces, limits.MaxDepth);
+        var tree = BuiltFormulaTrees.Read(built.Name, string.Join('/', new[] { output, column is { } named ? named : role.ToLowerInvariant() }), pieces, limits.MaxDepth);
         return tree.IsFailure ? tree.ToNewResult<CalculationNode?>() : GenericResult<CalculationNode?>.Success(tree.Value);
     }
 

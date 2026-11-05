@@ -221,7 +221,8 @@ public static class RecordQueryEvaluator
             Func<IReadOnlyDictionary<string, object?>, object?> key =
                 row => row.TryGetValue(name, out var value) ? value : null;
 
-            bool ascending = field.Direction?.IsAscending ?? true;
+            // A sort with no direction is ascending, as ORDER BY is (FDW-3580).
+                bool ascending = field.Direction is null || field.Direction.IsAscending;
             sorted = sorted is null
                 ? (ascending
                     ? rows.OrderBy(key, RowValueComparer.Instance)

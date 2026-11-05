@@ -64,6 +64,7 @@
     <ProjectReference Include="..\..\catalog\Fdw.Services.Catalog.Clients.Models\Fdw.Services.Catalog.Clients.Models.csproj" />
     <ProjectReference Include="..\..\data\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\..\notifications\Fdw.Services.Notifications.Abstractions\Fdw.Services.Notifications.Abstractions.csproj" />
+    <ProjectReference Include="..\..\tags\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
   </ItemGroup>
 
 </Project>

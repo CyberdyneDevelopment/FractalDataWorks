@@ -6,6 +6,7 @@ using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl;
 
@@ -116,15 +117,15 @@ public sealed class TransformContext : ITransformContext
     }
 
     /// <summary>
-    /// Gets the records the stages rejected during transform execution, in the order they were rejected.
+    /// Gets the records the components rejected during transform execution, in the order they were rejected.
     /// </summary>
     public IReadOnlyList<RejectedRecord> Rejections => _rejections;
 
     /// <inheritdoc />
-    public void Reject(string stage, string reason, IDictionary<string, object?> record)
+    public void Reject(string component, string reason, IDictionary<string, object?> record)
     {
         ReportError(reason, record);
-        _rejections.Add(new RejectedRecord(stage, reason, record));
+        _rejections.Add(new RejectedRecord(component, reason, record));
     }
 
     /// <summary>
@@ -133,6 +134,7 @@ public sealed class TransformContext : ITransformContext
     private sealed class EmptyServiceProvider : IServiceProvider
     {
         /// <summary>Gets the singleton instance.</summary>
+        [PlatformDefault]
         public static readonly EmptyServiceProvider Instance = new();
 
         /// <inheritdoc/>

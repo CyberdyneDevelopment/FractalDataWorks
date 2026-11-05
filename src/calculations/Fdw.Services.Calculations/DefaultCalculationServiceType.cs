@@ -59,7 +59,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             builder.Services.AddDistributedMemoryCache();
 
-            builder.Services.AddSingleton<ICalculationConfigurationProvider, CalculationConfigurationProvider>(sp => new CalculationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationEntity"));
+            builder.Services.AddSingleton<ICalculationConfigurationProvider, CalculationConfigurationProvider>(sp => new CalculationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationEntity", ConfigurationPlacementSource.From(sp)));
 
             builder.Services.AddSingleton<ICalculationVersionImplementationConfigurationProvider, CalculationVersionImplementationConfigurationProvider>(sp => new CalculationVersionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationVersionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationVersionConfiguration"));
             builder.Services.TryAddSingleton<CalculationVersionConfigurationProvider>(sp =>

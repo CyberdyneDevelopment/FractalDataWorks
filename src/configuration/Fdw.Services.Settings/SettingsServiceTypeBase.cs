@@ -16,9 +16,8 @@ public abstract class SettingsServiceTypeBase : ServiceTypeBase<IGenericService,
         string name,
         string sectionName,
         string displayName,
-        string description,
-        string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "Settings")
+        string description)
+        : base(name, sectionName, displayName, description, "Settings")
     {
     }
 }

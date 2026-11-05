@@ -28,8 +28,8 @@ public class CreateDataSetRequest
     /// </summary>
     public string? Category { get; set; }
 
-    /// <summary>Gets or sets the data set version.</summary>
-    public string Version { get; set; } = "1.0";
+    /// <summary>Gets or sets the data set version. Left out, the kind's declared version applies (FDW-3956).</summary>
+    public string? Version { get; set; }
 
     /// <summary>Gets or sets the record type name.</summary>
     public string RecordTypeName { get; set; } = string.Empty;

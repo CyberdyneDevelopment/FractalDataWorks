@@ -24,20 +24,18 @@ public static class ResiliencyPipelineExtensions
     /// </summary>
     /// <param name="policy">The resiliency policy configuration.</param>
     /// <param name="logger">Optional logger for pipeline events.</param>
-    /// <param name="operationName">Optional operation name for logging context. Defaults to policy name.</param>
+    /// <param name="operationName">The operation name the log lines carry. Defaults to policy name.</param>
     /// <returns>A configured ResiliencePipeline instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown when policy is null.</exception>
     public static ResiliencePipeline Create(
         this IResiliencyPolicy policy,
-        ILogger? logger = null,
-        string? operationName = null)
+        string operationName,
+        ILogger? logger = null)
     {
         if (policy == null)
         {
             throw new ArgumentNullException(nameof(policy));
         }
-
-        operationName ??= policy.Name;
 
         if (logger != null)
         {
@@ -65,20 +63,18 @@ public static class ResiliencyPipelineExtensions
     /// <typeparam name="TResult">The result type for the pipeline.</typeparam>
     /// <param name="policy">The resiliency policy configuration.</param>
     /// <param name="logger">Optional logger for pipeline events.</param>
-    /// <param name="operationName">Optional operation name for logging context. Defaults to policy name.</param>
+    /// <param name="operationName">The operation name the log lines carry. Defaults to policy name.</param>
     /// <returns>A configured ResiliencePipeline{TResult} instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown when policy is null.</exception>
     public static ResiliencePipeline<TResult> CreatePipeline<TResult>(
         this IResiliencyPolicy policy,
-        ILogger? logger = null,
-        string? operationName = null)
+        string operationName,
+        ILogger? logger = null)
     {
         if (policy == null)
         {
             throw new ArgumentNullException(nameof(policy));
         }
-
-        operationName ??= policy.Name;
 
         if (logger != null)
         {
@@ -107,14 +103,14 @@ public static class ResiliencyPipelineExtensions
     /// <param name="policy">The resiliency policy configuration.</param>
     /// <param name="operation">The operation to execute.</param>
     /// <param name="logger">Optional logger for pipeline events.</param>
-    /// <param name="operationName">Optional operation name for logging context.</param>
+    /// <param name="operationName">The operation name the log lines carry.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result containing the operation output or error information.</returns>
     public static async Task<IGenericResult<TResult>> Execute<TResult>(
         this IResiliencyPolicy policy,
         Func<CancellationToken, Task<TResult>> operation,
+        string operationName,
         ILogger? logger = null,
-        string? operationName = null,
         CancellationToken cancellationToken = default)
     {
         if (policy == null)
@@ -127,11 +123,9 @@ public static class ResiliencyPipelineExtensions
             throw new ArgumentNullException(nameof(operation));
         }
 
-        operationName ??= policy.Name;
-
         try
         {
-            var pipeline = policy.CreatePipeline<TResult>(logger, operationName);
+            var pipeline = policy.CreatePipeline<TResult>(operationName, logger);
             var result = await pipeline.ExecuteAsync(
                 async ct => await operation(ct).ConfigureAwait(false),
                 cancellationToken).ConfigureAwait(false);
@@ -171,14 +165,14 @@ public static class ResiliencyPipelineExtensions
     /// <param name="policy">The resiliency policy configuration.</param>
     /// <param name="operation">The operation to execute.</param>
     /// <param name="logger">Optional logger for pipeline events.</param>
-    /// <param name="operationName">Optional operation name for logging context.</param>
+    /// <param name="operationName">The operation name the log lines carry.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result indicating success or error information.</returns>
     public static async Task<IGenericResult> Execute(
         this IResiliencyPolicy policy,
         Func<CancellationToken, Task> operation,
+        string operationName,
         ILogger? logger = null,
-        string? operationName = null,
         CancellationToken cancellationToken = default)
     {
         if (policy == null)
@@ -191,12 +185,11 @@ public static class ResiliencyPipelineExtensions
             throw new ArgumentNullException(nameof(operation));
         }
 
-        operationName ??= policy.Name;
         var effectiveLogger = logger ?? NullLogger.Instance;
 
         try
         {
-            var pipeline = policy.Create(logger, operationName);
+            var pipeline = policy.Create(operationName, logger);
             await pipeline.ExecuteAsync(
                 async ct =>
                 {

@@ -1157,4 +1157,15 @@ public static partial class EtlLog
         Guid executionId,
         string pipelineName,
         string? reason);
+
+    /// <summary>Logs a save of a pipeline that holds script text by a caller who may not write scripts.</summary>
+    [MessageLogging(
+        EventId = 20998,
+        Level = LogLevel.Warning,
+        Message = "Pipeline '{pipelineName}' holds script text in {components}, and saving a script needs the {permission} permission, which the data engineer role has")]
+    public static partial IGenericMessage GraphScriptsNotPermitted(
+        ILogger logger,
+        string pipelineName,
+        string components,
+        string permission);
 }

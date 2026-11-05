@@ -2,6 +2,7 @@ using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl;
 
@@ -26,6 +27,10 @@ public abstract class EtlPipelineTypeBase<TPipeline, TFactory, TConfiguration> :
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IEtlPipelineFactory<TPipeline, TConfiguration>
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Pipeline";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="EtlPipelineTypeBase{TPipeline,TFactory,TConfiguration}"/> class.
     /// </summary>
@@ -42,7 +47,7 @@ public abstract class EtlPipelineTypeBase<TPipeline, TFactory, TConfiguration> :
         string description,
         string? category = null,
         string defaultContainerName = "")
-        : base(name, sectionName, displayName, description, category ?? "Pipeline",
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory,
                defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "pipe",
                defaultContainerName: defaultContainerName)

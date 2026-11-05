@@ -5,9 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Execution;
+using Fdw.Services.Etl.Flow;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Pipelines.Endpoints;
+using Fdw.Services.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -28,19 +31,34 @@ public class PipelineRunQueueEndpointTests
     private static readonly Guid TenantB = new("bbbbbbbb-0000-0000-0000-000000000002");
     private static readonly PipelineRunLimitValues Limits = new(8, 8);
 
-    private sealed class Queue(PipelineRunScheduler scheduler, ITenantContext tenant) : ListPipelineRunQueueEndpointBase(NullLogger.Instance, scheduler, tenant);
+    private sealed class Queue(PipelineRunScheduler scheduler, RunningFlows running, ITenantContext tenant) : ListPipelineRunQueueEndpointBase(NullLogger.Instance, scheduler, running, tenant);
 
     private static PipelineRunIdentity Run(string pipeline, Guid? tenant) => new(Guid.NewGuid(), Guid.NewGuid(), pipeline, tenant);
 
     private static PipelineRunClaim Claim(PipelineRunIdentity run, params string[] tables) => PipelineRunClaim.Writing(run, tables, Limits, null);
 
-    private static Action<DefaultHttpContext> Caller(bool platformAdmin) => ctx =>
+    private sealed class Settings(int? seconds) : IEffectiveSettingsProvider
+    {
+        public T GetEffectiveValue<T>(string settingName, Guid? tenantId = null, string? roleName = null) => throw new NotSupportedException();
+
+        public bool TryGetEffectiveValue<T>(string settingName, out T value, Guid? tenantId = null, string? roleName = null)
+        {
+            value = seconds is { } set && settingName == SettingDefinitions.LiveViewRefreshSeconds ? (T)(object)set : default!;
+            return seconds is not null && settingName == SettingDefinitions.LiveViewRefreshSeconds;
+        }
+    }
+
+    private static Action<DefaultHttpContext> Caller(bool platformAdmin, int? refreshSeconds = 2) => ctx =>
     {
         ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "caller")], "test"));
         var roles = new Mock<ISystemRoleConfiguration>();
         roles.Setup(r => r.IsPlatformAdmin(It.IsAny<ClaimsPrincipal>())).Returns(platformAdmin);
         roles.SetupGet(r => r.AdminRoleName).Returns("Admin");
-        ctx.AddTestServices(s => s.AddSingleton(roles.Object));
+        ctx.AddTestServices(s =>
+        {
+            s.AddSingleton(roles.Object);
+            s.AddSingleton<IEffectiveSettingsProvider>(new Settings(refreshSeconds));
+        });
     };
 
     private static ITenantContext Tenant(Guid? id)
@@ -71,7 +89,7 @@ public class PipelineRunQueueEndpointTests
     public async Task APlatformAdministratorReadsEveryTenantsRunsWithWhatHoldsEachBack()
     {
         var (scheduler, a, bWaitsForA, bRunning, _) = await Queued();
-        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: true), scheduler, Tenant(null));
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: true), scheduler, new RunningFlows(), Tenant(null));
 
         await endpoint.HandleAsync(CancellationToken.None);
 
@@ -90,7 +108,7 @@ public class PipelineRunQueueEndpointTests
     public async Task ATenantReadsItsOwnRunsOnlyAndIsNotToldWhichRunOfAnotherTenantHoldsOneBack()
     {
         var (scheduler, _, bWaitsForA, bRunning, bWaitsForB) = await Queued();
-        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: false), scheduler, Tenant(TenantB));
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: false), scheduler, new RunningFlows(), Tenant(TenantB));
 
         await endpoint.HandleAsync(CancellationToken.None);
 
@@ -108,10 +126,75 @@ public class PipelineRunQueueEndpointTests
 
     [Fact]
     [Trait("Priority", "P0")]
+    public async Task ARunInFlightThatTheHostFollowsListsItsComponentsAndTheOthersListNone()
+    {
+        var (scheduler, a, bWaitsForA, bRunning, _) = await Queued();
+        var flows = new RunningFlows();
+        using var live = flows.Begin(a.ExecutionId);
+        using var graph = live.Open([new FlowLiveComponent("src", 1, true), new FlowLiveComponent("dst", 2, false)], () => []);
+        graph.ComponentStarted("src");
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: true), scheduler, flows, Tenant(null));
+
+        await endpoint.HandleAsync(CancellationToken.None);
+
+        var followed = endpoint.Response.Running.Single(r => r.ExecutionId == a.ExecutionId);
+        followed.Components.ShouldNotBeNull();
+        followed.Components!.Select(c => c.Name).ShouldBe(["src", "dst"], ignoreOrder: true);
+        var src = followed.Components.Single(c => c.Name == "src");
+        src.Stage.ShouldBe(1);
+        src.StartedAt.ShouldNotBeNull();
+        src.EndedAt.ShouldBeNull();
+        var dst = followed.Components.Single(c => c.Name == "dst");
+        dst.StartedAt.ShouldBeNull();
+        dst.Rows.ShouldBeNull();
+        endpoint.Response.Running.Single(r => r.ExecutionId == bRunning.ExecutionId).Components.ShouldBeNull();
+        endpoint.Response.Waiting.Single(r => r.ExecutionId == bWaitsForA.ExecutionId).Components.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task TheAnswerCarriesTheRefreshIntervalTheSettingGivesTheCaller()
+    {
+        var (scheduler, _, _, _, _) = await Queued();
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: true, refreshSeconds: 5), scheduler, new RunningFlows(), Tenant(null));
+
+        await endpoint.HandleAsync(CancellationToken.None);
+
+        endpoint.Response.RefreshSeconds.ShouldBe(5);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task ASettingThatIsNotSetAnswersNoIntervalAndAssumesNone()
+    {
+        var (scheduler, _, _, _, _) = await Queued();
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: true, refreshSeconds: null), scheduler, new RunningFlows(), Tenant(null));
+
+        await endpoint.HandleAsync(CancellationToken.None);
+
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(200);
+        endpoint.Response.RefreshSeconds.ShouldBeNull();
+        endpoint.Response.Running.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task AnIntervalThatIsNotPositiveIsNotAnswered()
+    {
+        var (scheduler, _, _, _, _) = await Queued();
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: true, refreshSeconds: 0), scheduler, new RunningFlows(), Tenant(null));
+
+        await endpoint.HandleAsync(CancellationToken.None);
+
+        endpoint.Response.RefreshSeconds.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     public async Task AnotherTenantSeesNothingOfATenantsRuns()
     {
         var (scheduler, _, _, _, _) = await Queued();
-        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: false), scheduler, Tenant(Guid.NewGuid()));
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: false), scheduler, new RunningFlows(), Tenant(Guid.NewGuid()));
 
         await endpoint.HandleAsync(CancellationToken.None);
 
@@ -125,7 +208,7 @@ public class PipelineRunQueueEndpointTests
     public async Task ARequestWithNoTenantFromSomeoneWhoDoesNotAdministerThePlatformIsRefused()
     {
         var (scheduler, _, _, _, _) = await Queued();
-        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: false), scheduler, Tenant(null));
+        var endpoint = Factory.Create<Queue>(Caller(platformAdmin: false), scheduler, new RunningFlows(), Tenant(null));
 
         await endpoint.HandleAsync(CancellationToken.None);
 

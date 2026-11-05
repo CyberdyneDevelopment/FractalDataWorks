@@ -34,7 +34,7 @@ public sealed class ExtractInterfaceCommand : RoslynCommandBase
     public int Column { get; set; }
 
     /// <summary>
-    /// Gets or sets the name for the interface (optional).
+    /// Gets or sets the name for the interface. Required: a missing one fails with InterfaceNameRequired.
     /// </summary>
     public string? InterfaceName { get; set; }
 }

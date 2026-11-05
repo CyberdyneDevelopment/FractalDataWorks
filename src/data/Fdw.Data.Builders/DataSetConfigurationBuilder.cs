@@ -4,6 +4,7 @@ using System.Linq;
 using Fdw.Data.DataContainers.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.ServiceTypes;
 using Fdw.Data.Builders.Results;
 
 namespace Fdw.Data.Builders;
@@ -32,7 +33,8 @@ public sealed class DataSetConfigurationBuilder
     private Guid _dataSetId = Guid.NewGuid();
     private string? _dataSetName;
     private string? _description;
-    private string _version = "1.0";
+    // The version WithVersion states; left unstated, Build takes the Simple kind's declared version (FDW-3956).
+    private string? _version;
     private Guid? _categoryId;
     private string? _recordTypeName;
     private readonly List<DataSetFieldConfiguration> _fields = new();
@@ -85,11 +87,11 @@ public sealed class DataSetConfigurationBuilder
     /// <summary>
     /// Sets the schema version.
     /// </summary>
-    /// <param name="version">The schema version string (default: "1.0").</param>
+    /// <param name="version">The schema version string. Left unstated, the Simple kind's declared version applies.</param>
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetConfigurationBuilder WithVersion(string version)
     {
-        _version = version ?? "1.0";
+        _version = version ?? throw new ArgumentNullException(nameof(version));
         return this;
     }
 
@@ -111,7 +113,7 @@ public sealed class DataSetConfigurationBuilder
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetConfigurationBuilder WithRecordType<TRecord>()
     {
-        _recordTypeName = typeof(TRecord).AssemblyQualifiedName ?? typeof(TRecord).FullName ?? typeof(TRecord).Name;
+        _recordTypeName = typeof(TRecord).AssemblyQualifiedName ?? throw new InvalidOperationException($"{typeof(TRecord)} has no assembly-qualified name, so it cannot be named as a record type.");
         return this;
     }
 
@@ -126,7 +128,7 @@ public sealed class DataSetConfigurationBuilder
         {
             throw new ArgumentNullException(nameof(recordType));
         }
-        _recordTypeName = recordType.AssemblyQualifiedName ?? recordType.FullName ?? recordType.Name;
+        _recordTypeName = recordType.AssemblyQualifiedName ?? throw new ArgumentException($"{recordType} has no assembly-qualified name, so it cannot be named as a record type.", nameof(recordType));
         return this;
     }
 
@@ -184,16 +186,17 @@ public sealed class DataSetConfigurationBuilder
     /// <param name="name">The field name.</param>
     /// <param name="typeName">The field's data type: the name of a <c>DataTypes</c> option, such as <c>Int32</c>.</param>
     /// <param name="isKey">Whether this field is part of the primary key.</param>
-    /// <param name="isRequired">Whether this field is required.</param>
+    /// <param name="isRequired">Whether this field is required. A required or key field may not hold no value; any other may.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddField(string name, string typeName, bool isKey = false, bool isRequired = false)
+    public DataSetConfigurationBuilder AddField(string name, string typeName, bool isKey, bool isRequired)
     {
         var field = new DataSetFieldConfiguration
         {
             Name = name,
             TypeName = typeName,
             IsKey = isKey,
-            IsRequired = isRequired || isKey
+            IsRequired = isRequired || isKey,
+            IsNullable = !(isRequired || isKey)
         };
         return AddField(field);
     }
@@ -221,6 +224,7 @@ public sealed class DataSetConfigurationBuilder
     /// <param name="name">The calculated field name.</param>
     /// <param name="type">The .NET type of the calculated value; the field takes the one <c>DataTypes</c> option that reads it.</param>
     /// <param name="calculator">Function that computes the value from a data row.</param>
+    /// <param name="isNullable">Whether the calculated value may be no value.</param>
     /// <param name="description">Optional description of the calculation.</param>
     /// <returns>This builder instance for method chaining.</returns>
     /// <exception cref="ArgumentException">No option, or more than one, reads <paramref name="type"/>.</exception>
@@ -228,6 +232,7 @@ public sealed class DataSetConfigurationBuilder
         string name,
         Type type,
         Func<IDataRow, object> calculator,
+        bool isNullable,
         string? description = null)
     {
         var field = new DataSetFieldConfiguration
@@ -237,6 +242,7 @@ public sealed class DataSetConfigurationBuilder
             Description = description,
             IsKey = false,
             IsRequired = false,
+            IsNullable = isNullable,
             Calculator = calculator
         };
 
@@ -249,17 +255,20 @@ public sealed class DataSetConfigurationBuilder
     /// <typeparam name="T">The type of the calculated value.</typeparam>
     /// <param name="name">The calculated field name.</param>
     /// <param name="calculator">Function that computes the value from a data row.</param>
+    /// <param name="isNullable">Whether the calculated value may be no value.</param>
     /// <param name="description">Optional description of the calculation.</param>
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetConfigurationBuilder WithCalculatedField<T>(
         string name,
         Func<IDataRow, T> calculator,
+        bool isNullable,
         string? description = null)
     {
         return WithCalculatedField(
             name,
             typeof(T),
             row => calculator(row)!,
+            isNullable,
             description);
     }
 
@@ -320,8 +329,9 @@ public sealed class DataSetConfigurationBuilder
     /// <param name="sourceName">The source name/identifier (e.g., "Primary", "Fallback").</param>
     /// <param name="connectionType">The connection type (e.g., "MsSql", "Http", "File").</param>
     /// <param name="priority">The priority (lower = higher priority).</param>
+    /// <param name="supportsPredicatePushdown">Whether the source takes filters pushed down to it.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddSource(string sourceName, string connectionType, int priority = 100)
+    public DataSetConfigurationBuilder AddSource(string sourceName, string connectionType, int priority, bool supportsPredicatePushdown)
     {
         if (string.IsNullOrWhiteSpace(sourceName))
         {
@@ -333,7 +343,8 @@ public sealed class DataSetConfigurationBuilder
             Id = Guid.NewGuid(),
             SourceName = sourceName,
             ConnectionType = connectionType,
-            Priority = priority
+            Priority = priority,
+            SupportsPredicatePushdown = supportsPredicatePushdown
         };
         return AddSource(source);
     }
@@ -387,7 +398,7 @@ public sealed class DataSetConfigurationBuilder
             Implementation = SimpleDataSetConfiguration.ImplementationName,
             Name = dataSetName,
             Description = _description ?? string.Empty,
-            Version = _version,
+            Version = VersionToBuild()!,
             CategoryId = _categoryId,
             RecordTypeName = recordTypeName,
             Fields = new List<DataSetFieldConfiguration>(_fields),
@@ -419,6 +430,13 @@ public sealed class DataSetConfigurationBuilder
         if (string.IsNullOrWhiteSpace(_recordTypeName))
         {
             return GenericResult<SimpleDataSetConfiguration>.Failure(BuilderResultCodes.ByName("RecordTypeNameRequired"));
+        }
+
+        if (VersionToBuild() is null)
+        {
+            return GenericResult<SimpleDataSetConfiguration>.Failure(
+                BuilderResultCodes.ByName("DatasetVersionRequired"),
+                ResultDetails.Create().With("DatasetName", _dataSetName));
         }
 
         if (_fields.Count == 0)
@@ -472,7 +490,7 @@ public sealed class DataSetConfigurationBuilder
         _dataSetId = Guid.NewGuid();
         _dataSetName = null;
         _description = null;
-        _version = "1.0";
+        _version = null;
         _categoryId = null;
         _recordTypeName = null;
         _fields.Clear();
@@ -481,4 +499,13 @@ public sealed class DataSetConfigurationBuilder
         _caching = null;
         return this;
     }
+
+    // The stated version, else the one the Simple kind declares (or a host's override of it); null when neither is there.
+    private string? VersionToBuild() =>
+        !string.IsNullOrWhiteSpace(_version)
+            ? _version
+            : ServiceTypeDefaults.TryResolve(DataSetTypes.ByName(SimpleDataSetConfiguration.ImplementationName), DataSetDeclaredDefaults.Version, out var declared)
+              && declared is string { Length: > 0 } text
+                ? text
+                : null;
 }

@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Quality;
 
@@ -9,6 +10,10 @@ namespace Fdw.Services.Quality;
 /// </summary>
 public abstract class QualityServiceTypeBase : ServiceTypeBase<IGenericService, IQualityServiceFactory, IServiceConfiguration>, IQualityServiceType
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "Quality";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="QualityServiceTypeBase"/> class.
     /// </summary>
@@ -23,7 +28,7 @@ public abstract class QualityServiceTypeBase : ServiceTypeBase<IGenericService, 
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "Quality")
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory)
     {
     }
 }

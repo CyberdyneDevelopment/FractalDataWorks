@@ -104,17 +104,17 @@ public sealed class AccessRequestServiceTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task RequestAccessWhenMessageServiceFailsWithoutMessagesReturnsAccessRequestFailedCode()
+    public async Task RequestAccessWhenMessageServiceFailsPassesTheStoreFailureOn()
     {
         var fixture = CreateService();
         fixture.MessageService
             .Setup(m => m.CreateMessage(It.IsAny<CreateMessageRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<MessagePayload>.Failure(Array.Empty<IGenericMessage>()));
+            .ReturnsAsync(GenericResult<MessagePayload>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
 
         var result = await fixture.Service.RequestAccess(MakeRequest(), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91000");
+        result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
     }
 
     [Fact]
@@ -137,18 +137,18 @@ public sealed class AccessRequestServiceTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task RequestAccessWhenInsertFailsWithoutMessagesReturnsAccessRequestFailedCode()
+    public async Task RequestAccessWhenInsertFailsPassesTheStoreFailureOn()
     {
         var fixture = CreateService();
         fixture.MessageService
             .Setup(m => m.CreateMessage(It.IsAny<CreateMessageRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<MessagePayload>.Success(MakeMessageDto(Guid.NewGuid())));
-        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(Array.Empty<IGenericMessage>()));
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
 
         var result = await fixture.Service.RequestAccess(MakeRequest(), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91000");
+        result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
     }
 
     [Fact]
@@ -232,15 +232,15 @@ public sealed class AccessRequestServiceTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task ApproveWhenUpdateFailsWithoutMessagesReturnsAccessRequestFailedCode()
+    public async Task ApproveWhenUpdateFailsPassesTheStoreFailureOn()
     {
         var fixture = CreateService();
-        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(Array.Empty<IGenericMessage>()));
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
 
         var result = await fixture.Service.Approve(Guid.NewGuid(), Guid.NewGuid(), "ok", TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91000");
+        result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
     }
 
     [Fact]
@@ -305,15 +305,15 @@ public sealed class AccessRequestServiceTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task DenyWhenUpdateFailsWithoutMessagesReturnsAccessRequestFailedCode()
+    public async Task DenyWhenUpdateFailsPassesTheStoreFailureOn()
     {
         var fixture = CreateService();
-        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(Array.Empty<IGenericMessage>()));
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
 
         var result = await fixture.Service.Deny(Guid.NewGuid(), Guid.NewGuid(), "no", TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91000");
+        result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
     }
 
     [Fact]
@@ -373,17 +373,17 @@ public sealed class AccessRequestServiceTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task GetPendingWhenQueryFailsWithoutMessagesReturnsAccessRequestFailedCode()
+    public async Task GetPendingWhenQueryFailsPassesTheStoreFailureOn()
     {
         var fixture = CreateService();
         fixture.Gateway
             .Setup(g => g.Execute<IEnumerable<AccessRequestPayload>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<AccessRequestPayload>>.Failure(Array.Empty<IGenericMessage>()));
+            .ReturnsAsync(GenericResult<IEnumerable<AccessRequestPayload>>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
 
         var result = await fixture.Service.GetPending(null, TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91000");
+        result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
     }
 
     [Fact]

@@ -13,3 +13,4 @@ FDW015 | Usage | Warning | BrokenResultChainAnalyzer - Result chain broken, use 
 FDW016 | Usage | Warning | UncheckedResultValueAccessAnalyzer - IGenericResult<T>.Value accessed without success check
 FDW022 | Usage | Warning | SwallowedExceptionAnalyzer - Caught exception is neither observed nor rethrown
 FDW023 | Usage | Info | SwallowedExceptionAnalyzer - Broad System.Exception catch with no specific catch clauses
+FDW057 | Usage | Error | UncheckedFailureReasonAnalyzer - FailureReason() read where the result may have succeeded

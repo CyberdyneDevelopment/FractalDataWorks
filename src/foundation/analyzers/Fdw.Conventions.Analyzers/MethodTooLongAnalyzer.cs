@@ -133,6 +133,7 @@ public sealed class MethodTooLongAnalyzer : DiagnosticAnalyzer
         var diagnostic = Diagnostic.Create(
             Rule,
             location,
+            ConventionOverrideHelper.MeasuredValueProperties(lineCount),
             methodName,
             lineCount,
             threshold);

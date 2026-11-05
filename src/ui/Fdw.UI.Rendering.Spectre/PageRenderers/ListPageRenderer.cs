@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.UI.Abstractions;
 using Fdw.UI.Abstractions.Pages;
 using Fdw.UI.Abstractions.Rendering;
 using Fdw.UI.Themes;
@@ -282,14 +283,14 @@ public sealed class ListPageRenderer
         // Handle pagination (internal)
         if (selected.Id is "prev_page" or "next_page")
         {
-            var paginationAction = page.ListActions.FirstOrDefault(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal))
-                ?? new PageActionStub { Id = selected.Id, Label = selected.Label };
+            IReadOnlyList<IPageActionType> paginationCandidates = [.. page.ListActions, new PageActionStub { Id = selected.Id, Label = selected.Label }];
+            var paginationAction = paginationCandidates.First(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal));
             return ListPageResult.Continue(paginationAction);
         }
 
         // Find the action
-        var action = page.ListActions.FirstOrDefault(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal))
-            ?? page.RowActions.FirstOrDefault(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal));
+        var action = page.ListActions.Concat(page.RowActions)
+            .FirstOrDefault(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal));
 
         if (action == null)
         {
@@ -341,15 +342,15 @@ public sealed class ListPageRenderer
     {
         if (value == null)
         {
-            return "-";
+            return UiPlaceholders.NoValue;
         }
 
         if (!string.IsNullOrEmpty(formatString) && value is IFormattable formattable)
         {
-            return formattable.ToString(formatString, null) ?? "-";
+            return formattable.ToString(formatString, null) ?? UiPlaceholders.NoValue;
         }
 
-        return value.ToString() ?? "-";
+        return value.ToString() ?? UiPlaceholders.NoValue;
     }
 
     private static string GetRowStatusColor(IRowStatus status, IMenuTheme theme)
@@ -370,10 +371,10 @@ public sealed class ListPageRenderer
         var firstCol = columns.FirstOrDefault(c => c.IsVisible);
         if (firstCol != null && row.Values.TryGetValue(firstCol.Id, out var value))
         {
-            return value?.ToString() ?? row.Id.ToString() ?? "Unknown";
+            return value?.ToString() ?? UiPlaceholders.NoValue;
         }
 
-        return row.Id.ToString() ?? "Unknown";
+        return UiPlaceholders.NoValue;
     }
 
     /// <summary>

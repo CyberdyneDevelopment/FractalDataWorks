@@ -41,10 +41,12 @@ public sealed class PipelineRunRequestJsonTests
         PipelineName = "monthly-sales",
         TriggerSource = "Schedule",
         ScheduleName = "Nightly",
+        ScheduleId = Guid.Parse("dddddddd-0000-0000-0000-000000000004"),
         TenantId = Guid.Parse("cccccccc-0000-0000-0000-000000000003"),
         RunRoles = ["DataWriter", "DataReader"],
         Parameters = values,
         TestRowsPerSource = 25,
+        TimeoutSeconds = 900,
         HeldUntil = heldUntil
     };
 
@@ -55,6 +57,20 @@ public sealed class PipelineRunRequestJsonTests
         var read = PipelineRunRequestJson.Read(request.ExecutionId, text.Value!, heldUntil, NullLogger.Instance);
         read.IsSuccess.ShouldBeTrue(read.CurrentMessage);
         return read.Value!;
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void TheTimeoutAScheduleStatesComesBackWithTheRequestAndNoTimeoutComesBackAsNone()
+    {
+        RoundTrip(Request(null)).TimeoutSeconds.ShouldBe(900);
+
+        var none = new PipelineExecutionRequest
+        {
+            ExecutionId = Guid.NewGuid(), PipelineId = Guid.NewGuid(), PipelineName = "p", TriggerSource = "Schedule", TenantId = Guid.NewGuid(), RunRoles = ["DataWriter"]
+        };
+        RoundTrip(none).TimeoutSeconds.ShouldBeNull();
     }
 
     [Fact]
@@ -107,6 +123,7 @@ public sealed class PipelineRunRequestJsonTests
         back.PipelineName.ShouldBe("monthly-sales");
         back.TriggerSource.ShouldBe("Schedule");
         back.ScheduleName.ShouldBe("Nightly");
+        back.ScheduleId.ShouldBe(Guid.Parse("dddddddd-0000-0000-0000-000000000004"));
         back.TenantId.ShouldBe(original.TenantId);
         back.RunRoles.ShouldBe(["DataWriter", "DataReader"]);
         back.TestRowsPerSource.ShouldBe(25);
@@ -159,5 +176,20 @@ public sealed class PipelineRunRequestJsonTests
         var read = PipelineRunRequestJson.Read(Guid.NewGuid(), text, null, NullLogger.Instance);
 
         read.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void ARequestKeptBeforeTheScheduleIdExistedComesBackWithTheNameAndNoId()
+    {
+        const string before = "{\"ExecutionId\":\"aaaaaaaa-0000-0000-0000-000000000001\",\"PipelineId\":\"bbbbbbbb-0000-0000-0000-000000000002\",\"PipelineName\":\"monthly-sales\","
+            + "\"TriggerSource\":\"Schedule\",\"ScheduleName\":\"Nightly\",\"TenantId\":null,\"RunRoles\":[\"DataWriter\"],\"TestRowsPerSource\":null,\"Values\":null,\"TimeoutSeconds\":null}";
+
+        var read = PipelineRunRequestJson.Read(Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001"), before, null, NullLogger.Instance);
+
+        read.IsSuccess.ShouldBeTrue(read.CurrentMessage);
+        read.Value!.ScheduleName.ShouldBe("Nightly");
+        read.Value.ScheduleId.ShouldBeNull();
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Collections.Attributes;
+using Fdw.Conventions;
 
 namespace Fdw.Calculations.Abstractions.CalculationTypeOptions;
 
@@ -17,6 +18,10 @@ namespace Fdw.Calculations.Abstractions.CalculationTypeOptions;
 [TypeOption(typeof(CalculationTypes), "Percentile", RestrictToCurrentCompilation = true)]
 public sealed class PercentileCalculationType : CalculationTypeBase
 {
+    /// <summary>The percentile taken when the calculation states none: the median.</summary>
+    [PlatformDefault]
+    private const double MedianPercentile = 0.5;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PercentileCalculationType"/> class.
     /// </summary>
@@ -33,7 +38,7 @@ public sealed class PercentileCalculationType : CalculationTypeBase
                 return 0m;
 
             values.Sort();
-            var p = (double)(parameter ?? 0.5);
+            var p = (double)(parameter ?? MedianPercentile);
             var index = p * (values.Count - 1);
             var lower = (int)index;
             var upper = lower + 1;
@@ -46,7 +51,7 @@ public sealed class PercentileCalculationType : CalculationTypeBase
         },
         toSql: (col, parameter) =>
         {
-            var p = parameter ?? 0.5;
+            var p = parameter ?? MedianPercentile;
             return $"PERCENTILE_CONT({p}) WITHIN GROUP (ORDER BY {col})";
         })
     { }

@@ -86,7 +86,8 @@ public class DataflowLayersTests
         {
             Id = Guid.NewGuid(),
             Name = name,
-            Implementation = implementation,
+            Implementation = "Variation",
+            VariationKind = implementation,
             VariationName = name,
             BaseDataSetId = baseDataSetId,
             OwnerWorkspaceId = Guid.NewGuid()

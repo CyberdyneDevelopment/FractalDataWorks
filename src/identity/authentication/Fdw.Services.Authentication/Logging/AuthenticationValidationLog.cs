@@ -192,6 +192,14 @@ public static partial class AuthenticationValidationLog
         Message = "Token for authentication service '{serviceName}' was rejected: {reason}")]
     public static partial IGenericMessage TokenRejected(ILogger logger, string serviceName, string reason);
 
+    /// <summary>Logs a token the validator rejected without the exception that says which check failed.</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="serviceName">The authentication service that validated the token.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 71132, Level = LogLevel.Warning,
+        Message = "Token for authentication service '{serviceName}' was rejected, and the token validator gave no exception to say which check failed")]
+    public static partial IGenericMessage TokenRejectedWithoutReason(ILogger logger, string serviceName);
+
     [MessageLogging(EventId = 71118, Level = LogLevel.Debug,
         Message = "Token for authentication service '{serviceName}' accepted for principal '{subject}'")]
     public static partial IGenericMessage TokenAccepted(ILogger logger, string serviceName, string subject);

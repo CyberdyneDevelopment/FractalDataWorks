@@ -27,7 +27,7 @@ public sealed class EndsWithOperator : FilterOperatorBase
     /// <inheritdoc/>
     public override string FormatODataValue(object? value)
     {
-        return $"'{value?.ToString()?.Replace("'", "''")}'";
+        return $"'{value?.ToString()?.Replace("'", "''", StringComparison.Ordinal)}'";
     }
 
     /// <inheritdoc />

@@ -26,6 +26,9 @@ public sealed class DocumentStoresTests
     private static readonly Guid Legal = new("44444444-0000-0000-0000-000000000002");
     private static readonly Guid Rayburn = new("11111111-0000-0000-0000-000000000003");
     private static readonly Guid GrantId = new("55555555-0000-0000-0000-000000000001");
+    private static readonly Guid ArchiveGrantId = new("55555555-0000-0000-0000-000000000002");
+    private static readonly Guid OldAssignment = new("66666666-0000-0000-0000-000000000001");
+    private static readonly Guid NewAssignment = new("66666666-0000-0000-0000-000000000002");
 
     private sealed class Rig
     {
@@ -46,6 +49,11 @@ public sealed class DocumentStoresTests
                     Task.FromResult(Granted.FirstOrDefault(grant => grant.Id == id) is { } found
                         ? GenericResult<IConnectionGrantImplementationConfiguration>.Success(found)
                         : GenericResult<IConnectionGrantImplementationConfiguration>.Failure(new GenericMessage("not found"))));
+            Assignments.Setup(a => a.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .Returns((Guid id, CancellationToken _) =>
+                    Task.FromResult(Assigned.FirstOrDefault(assignment => assignment.Id == id) is { } found
+                        ? GenericResult<IConnectionAssignmentImplementationConfiguration>.Success(found)
+                        : GenericResult<IConnectionAssignmentImplementationConfiguration>.Failure(new GenericMessage("not found"))));
             Connections.Setup(c => c.Get("rayburn-files", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDocumentConnection>.Success(Connection.Object));
         }
 
@@ -55,10 +63,34 @@ public sealed class DocumentStoresTests
             return this;
         }
 
-        public Rig Grant(string? folder, string connection = "rayburn-files")
+        public Rig Assign(Guid id, Guid organization, Guid grant, string? baseFolder, DateTimeOffset? supersededAt)
         {
-            Granted.Add(new ConnectionGrantImplementationConfiguration { Id = GrantId, GranteeTenantId = Rayburn, ConnectionName = connection, Purpose = "Documents", FolderPath = folder });
+            Assigned.Add(new ConnectionAssignmentImplementationConfiguration
+            {
+                Id = id, OrganizationId = organization, Purpose = "Documents", GrantId = grant, BaseFolder = baseFolder, SupersededAt = supersededAt,
+            });
             return this;
+        }
+
+        public Rig Grant(string? folder, string connection = "rayburn-files", Guid? id = null)
+        {
+            Granted.Add(new ConnectionGrantImplementationConfiguration { Id = id ?? GrantId, GranteeTenantId = Rayburn, ConnectionName = connection, Purpose = "Documents", FolderPath = folder });
+            return this;
+        }
+
+        // Finance stored files under the rayburn grant, then was moved to the archive grant: the old assignment is superseded.
+        public Rig Moved() =>
+            Grant("rayburn").Grant("archive", id: ArchiveGrantId)
+                .Assign(OldAssignment, Finance, GrantId, "finance", DateTimeOffset.UnixEpoch)
+                .Assign(NewAssignment, Finance, ArchiveGrantId, "finance", null);
+
+        public Func<DeleteCommand?> CaptureDeletes()
+        {
+            DeleteCommand? sent = null;
+            Connection.Setup(c => c.Execute(It.IsAny<IDocumentCommand<bool>>(), It.IsAny<CancellationToken>()))
+                .Callback((IDocumentCommand<bool> command, CancellationToken _) => sent = command as DeleteCommand)
+                .ReturnsAsync(GenericResult<bool>.Success(true));
+            return () => sent;
         }
 
         public DocumentStores Stores() =>
@@ -155,5 +187,76 @@ public sealed class DocumentStoresTests
 
         closed.IsSuccess.ShouldBeFalse();
         blank.IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AFileStoredBeforeTheOrganizationMovedStillReadsThroughTheAssignmentItWasStoredUnder()
+    {
+        var rig = new Rig().Moved();
+        var sent = rig.CaptureDeletes();
+        var file = DocumentPath.Parse("contracts/a.pdf").Value;
+
+        var stored = await rig.Stores().Stored(Finance, OldAssignment, TestContext.Current.CancellationToken);
+        await stored.Value!.Execute(new DeleteCommand(file), TestContext.Current.CancellationToken);
+
+        stored.Value.StoredUnder.ShouldBe(OldAssignment);
+        sent().ShouldNotBeNull().Path.Value.ShouldBe("rayburn/finance/contracts/a.pdf");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task NewFilesGoToTheAssignmentInForceAndTheStoreNamesIt()
+    {
+        var rig = new Rig().Moved();
+        var sent = rig.CaptureDeletes();
+
+        var current = await rig.Stores().For(Finance, "Documents", TestContext.Current.CancellationToken);
+        await current.Value!.Execute(new DeleteCommand(DocumentPath.Parse("contracts/b.pdf").Value), TestContext.Current.CancellationToken);
+
+        current.Value.StoredUnder.ShouldBe(NewAssignment);
+        sent().ShouldNotBeNull().Path.Value.ShouldBe("archive/finance/contracts/b.pdf");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnotherOrganizationsAssignmentIsRefusedAndNoConnectionIsOpened()
+    {
+        var rig = new Rig().Moved();
+
+        var result = await rig.Stores().Stored(Legal, OldAssignment, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        rig.Connections.Verify(c => c.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnAssignmentThatDoesNotExistIsRefusedNeverReplacedByTheCurrentStore()
+    {
+        var rig = new Rig().Moved();
+
+        var result = await rig.Stores().Stored(Finance, Guid.Parse("66666666-0000-0000-0000-0000000000ff"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        rig.Connections.Verify(c => c.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AnUnassignedOrganizationHasNoStoreForNewFilesButStillReadsItsOldOnes()
+    {
+        var rig = new Rig().Grant("rayburn").Assign(OldAssignment, Finance, GrantId, "finance", DateTimeOffset.UnixEpoch);
+
+        var current = await rig.Stores().For(Finance, "Documents", TestContext.Current.CancellationToken);
+        var stored = await rig.Stores().Stored(Finance, OldAssignment, TestContext.Current.CancellationToken);
+
+        current.IsSuccess.ShouldBeFalse();
+        stored.IsSuccess.ShouldBeTrue();
     }
 }

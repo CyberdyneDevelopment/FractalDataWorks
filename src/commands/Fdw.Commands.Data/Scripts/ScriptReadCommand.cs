@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Messages;
 
 namespace Fdw.Commands.Data;
 
@@ -26,6 +27,6 @@ public sealed class ScriptReadCommand : ScriptedDataCommandBase<IReadOnlyList<ID
     public int? Take { get; }
 
     /// <inheritdoc />
-    public override string? FirstProblem() =>
-        Take < 1 ? $"the script may read at most {Take} rows, which is not at least one" : base.FirstProblem();
+    public override IGenericMessage? FirstProblem() =>
+        Take < 1 ? Problem($"the script may read at most {Take} rows, which is not at least one") : base.FirstProblem();
 }

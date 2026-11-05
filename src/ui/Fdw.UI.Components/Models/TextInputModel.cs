@@ -94,17 +94,17 @@ public sealed class TextInputModel : IInputComponentModel<string>
     {
         if (IsRequired && string.IsNullOrWhiteSpace(Value))
         {
-            return ValidationResult.Error($"{Label ?? Id} is required.");
+            return ValidationResult.Error($"{Id} is required.");
         }
 
         if (MinLength.HasValue && Value?.Length < MinLength.Value)
         {
-            return ValidationResult.Error($"{Label ?? Id} must be at least {MinLength.Value} characters.");
+            return ValidationResult.Error($"{Id} must be at least {MinLength.Value} characters.");
         }
 
         if (MaxLength.HasValue && Value?.Length > MaxLength.Value)
         {
-            return ValidationResult.Error($"{Label ?? Id} must not exceed {MaxLength.Value} characters.");
+            return ValidationResult.Error($"{Id} must not exceed {MaxLength.Value} characters.");
         }
 
         if (!string.IsNullOrEmpty(Pattern) && !string.IsNullOrEmpty(Value))
@@ -113,12 +113,12 @@ public sealed class TextInputModel : IInputComponentModel<string>
             {
                 if (!System.Text.RegularExpressions.Regex.IsMatch(Value, Pattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
                 {
-                    return ValidationResult.Error($"{Label ?? Id} does not match the required pattern.");
+                    return ValidationResult.Error($"{Id} does not match the required pattern.");
                 }
             }
             catch (ArgumentException ex)
             {
-                return ValidationResult.Error($"Invalid validation pattern for {Label ?? Id}: {ex.Message}");
+                return ValidationResult.Error($"Invalid validation pattern for {Id}: {ex.Message}");
             }
         }
 

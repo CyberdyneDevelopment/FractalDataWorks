@@ -29,6 +29,7 @@
          referencing that one back would be circular. Confirmed Fdw.Services.Authentication.Abstractions
          has no reference to Fdw.Services.ExternalIdentityProviders(.Abstractions) before adding this. -->
     <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

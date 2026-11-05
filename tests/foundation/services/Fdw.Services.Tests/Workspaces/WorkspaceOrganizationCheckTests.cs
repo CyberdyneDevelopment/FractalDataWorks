@@ -117,16 +117,6 @@ public sealed class WorkspaceOrganizationCheckTests
         WorkspaceResponseMapper.ToDetail(workspace, ownership).OrganizationId.ShouldBe(organizationId);
     }
 
-    [Fact]
-    public void AWorkspaceDirectlyUnderItsTenantAnswersNoOrganization()
-    {
-        var workspace = new WorkspaceImplementationConfiguration { Id = Guid.NewGuid(), Name = "Quakes" };
-        var ownership = new WorkspaceOwnership(Tenant, null);
-
-        WorkspaceResponseMapper.ToSummary(workspace, ownership).OrganizationId.ShouldBeNull();
-        WorkspaceResponseMapper.ToDetail(workspace, ownership).OrganizationId.ShouldBeNull();
-    }
-
     private static Task<IGenericResult> Check(IOrganizationProvider organizations, Guid organizationId, Guid? tenantId)
         => WorkspaceOrganizationCheck.Check(organizations, "Quakes", organizationId, tenantId, NullLogger.Instance, TestContext.Current.CancellationToken);
 

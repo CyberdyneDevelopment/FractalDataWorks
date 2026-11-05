@@ -38,7 +38,7 @@ public sealed class ScriptCommandTests
     [InlineData("   ")]
     public void AScriptWithNoTextIsRefused(string text)
     {
-        new ScriptRunCommand(text, None).FirstProblem().ShouldNotBeNull().ShouldContain("no text");
+        new ScriptRunCommand(text, None).FirstProblem().ShouldNotBeNull().Message.ShouldContain("no text");
     }
 
     [Theory]
@@ -52,7 +52,7 @@ public sealed class ScriptCommandTests
     {
         var command = new ScriptRunCommand("SELECT 1", [new ScriptParameter(name, 1)]);
 
-        command.FirstProblem().ShouldNotBeNull().ShouldContain("not a parameter name");
+        command.FirstProblem().ShouldNotBeNull().Message.ShouldContain("not a parameter name");
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class ScriptCommandTests
     {
         var command = new ScriptRunCommand("SELECT 1", [new ScriptParameter("Year", 1), new ScriptParameter("YEAR", 2)]);
 
-        command.FirstProblem().ShouldNotBeNull().ShouldContain("twice");
+        command.FirstProblem().ShouldNotBeNull().Message.ShouldContain("twice");
     }
 
     [Theory]
@@ -72,6 +72,6 @@ public sealed class ScriptCommandTests
     [InlineData(-5)]
     public void AReadThatMayReadNoRowsIsRefused(int take)
     {
-        new ScriptReadCommand("SELECT 1", None, take).FirstProblem().ShouldNotBeNull().ShouldContain("at least one");
+        new ScriptReadCommand("SELECT 1", None, take).FirstProblem().ShouldNotBeNull().Message.ShouldContain("at least one");
     }
 }

@@ -153,7 +153,7 @@ public sealed class DataSetSchemaServiceTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public async Task GetSchemaFallsBackToDefaultTextWhenProviderCurrentMessageIsNull()
+    public async Task GetSchemaReportsAnUnstatedFailureWhenTheProviderResultCarriesNoMessage()
     {
         // Arrange
         var dataSetId = Guid.NewGuid();
@@ -167,7 +167,7 @@ public sealed class DataSetSchemaServiceTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
-        result.CurrentMessage.ShouldContain("Provider returned failure");
+        result.CurrentMessage.ShouldContain("built without a message");
     }
 
     // ------------------------------------------------------------------
@@ -247,7 +247,7 @@ public sealed class DataSetSchemaServiceTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public async Task SaveSchemaFallsBackToDefaultTextWhenProviderCurrentMessageIsNull()
+    public async Task SaveSchemaReportsAnUnstatedFailureWhenTheProviderResultCarriesNoMessage()
     {
         // Arrange
         var dataSetId = Guid.NewGuid();
@@ -262,7 +262,7 @@ public sealed class DataSetSchemaServiceTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
-        result.CurrentMessage.ShouldContain("Provider returned failure");
+        result.CurrentMessage.ShouldContain("built without a message");
     }
 
     // ------------------------------------------------------------------

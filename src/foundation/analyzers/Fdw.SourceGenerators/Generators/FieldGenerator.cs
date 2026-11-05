@@ -90,7 +90,7 @@ public sealed class FieldGenerator<TId>
             return fields;
 
         // Get key type from definition (defaults to "int" if not specified)
-        var keyType = definition.KeyType ?? "int";
+        var keyType = definition.KeyType ?? CollectionKeyTypes.Default;
 
         var nonIdLookups = definition.LookupProperties
             .Where(l => !string.Equals(l.PropertyName, "Id", StringComparison.Ordinal) ||

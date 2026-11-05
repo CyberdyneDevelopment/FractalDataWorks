@@ -16,7 +16,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         source.GetFieldName(-1).ShouldBe(string.Empty);
     }
@@ -28,7 +28,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         source.GetFieldName(999).ShouldBe(string.Empty);
     }
@@ -40,7 +40,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         source.GetFieldOrdinal(null!).ShouldBe(-1);
     }
@@ -52,7 +52,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         source.GetFieldOrdinal("").ShouldBe(-1);
     }
@@ -64,7 +64,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.Read(TestContext.Current.CancellationToken);
 
         source.IsNull(-1).ShouldBeTrue();
@@ -77,7 +77,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.Read(TestContext.Current.CancellationToken);
 
         source.IsNull(999).ShouldBeTrue();
@@ -90,7 +90,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.Read(TestContext.Current.CancellationToken);
 
         source.GetValue(-1).ShouldBeNull();
@@ -103,7 +103,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.Read(TestContext.Current.CancellationToken);
 
         source.GetValue(999).ShouldBeNull();
@@ -116,7 +116,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"value": null}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.Read(TestContext.Current.CancellationToken);
 
         var mockConverter = new Mock<IDataTypeConverter>();
@@ -131,7 +131,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"value": "test"}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.Read(TestContext.Current.CancellationToken);
 
         var mockConverter = new Mock<IDataTypeConverter>();
@@ -147,7 +147,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}, {"id": 2}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         (await source.Read(TestContext.Current.CancellationToken)).ShouldBeTrue();
         source.HasCurrentRow.ShouldBeTrue();
@@ -166,7 +166,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.Read(TestContext.Current.CancellationToken);
 
         // Reset is a no-op but should not throw
@@ -181,7 +181,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var source = new JsonStreamRowSource(stream);
+        var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         source.Dispose();
         source.Dispose();
     }
@@ -193,7 +193,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var source = new JsonStreamRowSource(stream);
+        var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
         await source.DisposeAsync();
     }
 
@@ -204,7 +204,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"tags": [1, 2, 3]}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var options = new JsonRowSourceOptions { FlattenNestedObjects = false };
+        var options = new JsonRowSourceOptions { FlattenNestedObjects = false, ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true };
         using var source = new JsonStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -223,7 +223,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
         // Arrange: geometry.coordinates => ["-122.0", "37.0", "8.0"] (doubles)
         var json = """[{"geometry": {"coordinates": [-122.0, 37.0, 8.0]}}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var options = new JsonRowSourceOptions { FlattenNestedObjects = true };
+        var options = new JsonRowSourceOptions { FlattenNestedObjects = true, ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true };
         using var source = new JsonStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -248,7 +248,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
         // Arrange: top-level array property (not the RowArrayPath array)
         var json = """[{"tags": ["a", "b", "c"]}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var options = new JsonRowSourceOptions { FlattenNestedObjects = true };
+        var options = new JsonRowSourceOptions { FlattenNestedObjects = true, ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true };
         using var source = new JsonStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -266,7 +266,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
         // Arrange: array of objects — each element becomes {field}.{i}.{prop}
         var json = """[{"items": [{"id": 1, "name": "first"}, {"id": 2, "name": "second"}]}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var options = new JsonRowSourceOptions { FlattenNestedObjects = true };
+        var options = new JsonRowSourceOptions { FlattenNestedObjects = true, ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true };
         using var source = new JsonStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -287,7 +287,13 @@ public sealed class JsonStreamRowSourceAdditionalTests
         var options = new JsonRowSourceOptions
         {
             FlattenNestedObjects = true,
-            FlattenSeparator = "_"
+            FlattenSeparator = "_",
+            ContinueOnError = true,
+            PropertyNameCaseInsensitive = true,
+            BufferSize = 16 * 1024,
+            MaxDepth = 64,
+            MaxStringLength = 128 * 1024 * 1024,
+            AllowTrailingCommas = true,
         };
         using var source = new JsonStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
@@ -304,7 +310,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
         // Array of primitives instead of objects
         var json = """[1, 2, 3]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         // Non-object elements return false from ReadNextRow
         (await source.Read(TestContext.Current.CancellationToken)).ShouldBeFalse();
@@ -317,7 +323,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """{"key": "value"}""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         (await source.Read(TestContext.Current.CancellationToken)).ShouldBeFalse();
     }
@@ -329,7 +335,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var options = new JsonRowSourceOptions { RowArrayPath = "$" };
+        var options = new JsonRowSourceOptions { RowArrayPath = "$", ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true };
         using var source = new JsonStreamRowSource(stream, options);
 
         (await source.Read(TestContext.Current.CancellationToken)).ShouldBeTrue();
@@ -343,7 +349,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """{"data": [{"id": 1}]}""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var options = new JsonRowSourceOptions { RowArrayPath = "nonexistent.path" };
+        var options = new JsonRowSourceOptions { RowArrayPath = "nonexistent.path", ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true };
         using var source = new JsonStreamRowSource(stream, options);
 
         (await source.Read(TestContext.Current.CancellationToken)).ShouldBeFalse();
@@ -356,7 +362,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"id": 1}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         source.FieldCount.ShouldBe(0);
     }
@@ -368,7 +374,7 @@ public sealed class JsonStreamRowSourceAdditionalTests
     {
         var json = """[{"a": 1}, {"a": 2, "b": 3}]""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        using var source = new JsonStreamRowSource(stream);
+        using var source = new JsonStreamRowSource(stream, new JsonRowSourceOptions() { ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true });
 
         await source.Read(TestContext.Current.CancellationToken);
         source.FieldCount.ShouldBe(1);
@@ -387,7 +393,14 @@ public sealed class JsonStreamRowSourceAdditionalTests
         var options = new JsonRowSourceOptions
         {
             AllowComments = true,
-            AllowTrailingCommas = true
+            AllowTrailingCommas = true,
+            ContinueOnError = true,
+            PropertyNameCaseInsensitive = true,
+            FlattenNestedObjects = false,
+            FlattenSeparator = ".",
+            BufferSize = 16 * 1024,
+            MaxDepth = 64,
+            MaxStringLength = 128 * 1024 * 1024,
         };
         using var source = new JsonStreamRowSource(stream, options);
 

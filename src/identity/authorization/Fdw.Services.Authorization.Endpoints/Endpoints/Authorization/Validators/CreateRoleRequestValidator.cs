@@ -1,32 +1,34 @@
 using FluentValidation;
+using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Authorization.Validation;
 using Fdw.Validation.FastEndpoints;
 
 namespace Fdw.Services.Authorization.Endpoints.Validators;
 
 /// <summary>
-/// Validator for <see cref="CreateRoleRequest"/>.
+/// The rules a create-role request must meet in any host. A host derives from this class (so the endpoint scan finds a concrete
+/// validator) and adds only what the host alone knows (FDW-3572).
 /// </summary>
+/// <remarks>
+/// The rules are the role configuration validator's (<see cref="RoleConfigurationValidator"/>), taken through <c>RulesOf</c>.
+/// </remarks>
 public abstract class CreateRoleRequestValidator : FdwEndpointValidator<CreateRoleRequest>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CreateRoleRequestValidator"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CreateRoleRequestValidator"/> class.</summary>
     protected CreateRoleRequestValidator()
     {
-        ValidateName(x => x.Name, maxLength: 100);
-
-        When(x => x.DisplayName is not null, () =>
+        // Why nothing else here: every rule about the role's name, display name and description is the role configuration validator's, so the
+        // request answers 400 for exactly what the save check would refuse (FDW-3884). A rule only a request states would be written here.
+        RulesOf(request => new RoleImplementationConfiguration
         {
-            RuleFor(x => x.DisplayName!)
-                .MaximumLength(200)
-                .WithMessage("DisplayName must not exceed 200 characters");
+            Name = request.Name,
+            DisplayName = request.DisplayName,
+            Description = request.Description,
         });
 
-        When(x => x.Description is not null, () =>
-        {
-            RuleFor(x => x.Description!)
-                .MaximumLength(500)
-                .WithMessage("Description must not exceed 500 characters");
-        });
+        // The request-only rule: whether the role is tenant scoped is the caller's choice and has no default (FDW-3823).
+        RuleFor(x => x.IsTenantScoped)
+            .NotNull()
+            .WithMessage("IsTenantScoped is required");
     }
 }

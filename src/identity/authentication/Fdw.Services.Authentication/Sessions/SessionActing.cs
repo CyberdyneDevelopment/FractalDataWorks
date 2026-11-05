@@ -14,6 +14,7 @@ using Fdw.Services.Authorization.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Authentication.Sessions;
 
@@ -78,7 +79,7 @@ public sealed class SessionActing : ISessionActing
         if (role.Value.IsTenantScoped && role.Value.TenantId != current.Value!.TenantId)
         {
             SessionLog.ActingRoleOtherTenant(
-                _logger, roleName, role.Value.TenantId?.ToString() ?? "(none)", current.Value.TenantId.ToString());
+                _logger, roleName, role.Value.TenantId?.ToString() ?? LogPlaceholders.None, current.Value.TenantId.ToString());
             return GenericResult.Failure(SessionLog.ActingRoleUnknown(_logger, roleName));
         }
 

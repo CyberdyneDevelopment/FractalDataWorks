@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -101,7 +100,7 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
                     var orchMsg = EndpointLogger.EndpointError(Logger, new InvalidOperationException(orchestrationResult.Status.ToString()), GetType().Name);
                     await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
                     {
-                        Code = orchMsg.Code ?? "INTERNAL_ERROR",
+                        Code = orchMsg.Code ?? EndpointPlaceholders.InternalErrorCode,
                         Message = orchMsg.Message,
                         ReferenceId = HttpContext.TraceIdentifier,
                         IsRetryable = false,
@@ -119,7 +118,7 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
             EndpointLogger.EndpointError(Logger, ex, GetType().Name);
             await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
-                Code = "INTERNAL_ERROR",
+                Code = EndpointPlaceholders.InternalErrorCode,
                 Message = "An unexpected error occurred",
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
@@ -146,14 +145,9 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
     /// </summary>
     protected virtual string[] CreateErrorMessages(IGenericResult result)
     {
-        var messages = new List<string>();
-
-        if (result.Messages.Count > 0)
-            messages.AddRange(result.Messages.Select(m => m.Message));
-        else if (!string.IsNullOrEmpty(result.CurrentMessage))
-            messages.Add(result.CurrentMessage);
-
-        return messages.Count > 0 ? messages.ToArray() : ["An error occurred"];
+        // A failed result always carries a message (GenericResult refuses one without), so its messages are the
+        // error text; there is no default message (FDW-3580).
+        return [.. result.Messages.Select(m => m.Message)];
     }
 
 }

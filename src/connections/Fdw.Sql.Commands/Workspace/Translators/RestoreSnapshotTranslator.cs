@@ -30,7 +30,7 @@ public sealed class RestoreSnapshotTranslator : SqlCommandTranslatorBase<Restore
         if (!restored.IsSuccess)
             return Task.FromResult<IGenericResult<MutationResult>>(
                 GenericResult<MutationResult>.Failure(
-                    RestoreSnapshotTranslatorLog.RestoreFailed(logger, command.SnapshotId, restored.CurrentMessage ?? "Snapshot not found")));
+                    RestoreSnapshotTranslatorLog.RestoreFailed(logger, command.SnapshotId, restored.FailureReason().Message)));
 
         RestoreSnapshotTranslatorLog.SnapshotRestored(logger, command.SnapshotId);
         return Task.FromResult<IGenericResult<MutationResult>>(

@@ -36,7 +36,7 @@ public sealed class AnalyzeExceptionUsageTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        AnalyzeExceptionUsageTranslatorLog.Analyzing(Logger, command.ProjectFilter ?? "(all)");
+        AnalyzeExceptionUsageTranslatorLog.Analyzing(Logger, command.ProjectFilter ?? RoslynReportPlaceholders.All);
 
         var throwStatements = new List<ThrowStatementInfo>();
         var tryCatchBlocks = new List<TryCatchBlockInfo>();
@@ -50,7 +50,7 @@ public sealed class AnalyzeExceptionUsageTranslator
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) continue;
 
-            foreach (var document in project.Documents)
+            foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
             {
                 var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
                 if (syntaxRoot is null) continue;
@@ -62,8 +62,8 @@ public sealed class AnalyzeExceptionUsageTranslator
                 foreach (var throwStmt in throws)
                 {
                     var containingMethod = throwStmt.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-                    var methodName = containingMethod?.Identifier.Text ?? "(unknown)";
-                    var containingType = containingMethod?.Ancestors().OfType<TypeDeclarationSyntax>().FirstOrDefault()?.Identifier.Text ?? "(unknown)";
+                    var methodName = containingMethod?.Identifier.Text ?? RoslynReportPlaceholders.UnknownInParentheses;
+                    var containingType = containingMethod?.Ancestors().OfType<TypeDeclarationSyntax>().FirstOrDefault()?.Identifier.Text ?? RoslynReportPlaceholders.UnknownInParentheses;
 
                     var exceptionType = "Unknown";
                     if (throwStmt.Expression is ObjectCreationExpressionSyntax creation)
@@ -80,7 +80,7 @@ public sealed class AnalyzeExceptionUsageTranslator
                         MethodName = methodName,
                         ContainingType = containingType,
                         Project = project.Name,
-                        FilePath = document.FilePath ?? document.Name,
+                        FilePath = documentPath,
                         Line = throwStmt.GetLocation().GetLineSpan().StartLinePosition.Line + 1,
                         IsResultCandidate = string.Equals(category, "BusinessLogic", StringComparison.Ordinal)
                     });
@@ -91,11 +91,11 @@ public sealed class AnalyzeExceptionUsageTranslator
                 foreach (var tryCatch in tryCatches)
                 {
                     var containingMethod = tryCatch.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-                    var methodName = containingMethod?.Identifier.Text ?? "(unknown)";
-                    var containingType = containingMethod?.Ancestors().OfType<TypeDeclarationSyntax>().FirstOrDefault()?.Identifier.Text ?? "(unknown)";
+                    var methodName = containingMethod?.Identifier.Text ?? RoslynReportPlaceholders.UnknownInParentheses;
+                    var containingType = containingMethod?.Ancestors().OfType<TypeDeclarationSyntax>().FirstOrDefault()?.Identifier.Text ?? RoslynReportPlaceholders.UnknownInParentheses;
 
                     var catchTypes = tryCatch.Catches
-                        .Select(c => c.Declaration?.Type?.ToString() ?? "Exception")
+                        .Select(c => c.Declaration is { } declaration ? declaration.Type.ToString() : nameof(Exception)) // a catch with no declaration catches Exception
                         .ToList();
 
                     tryCatchBlocks.Add(new TryCatchBlockInfo
@@ -106,7 +106,7 @@ public sealed class AnalyzeExceptionUsageTranslator
                         MethodName = methodName,
                         ContainingType = containingType,
                         Project = project.Name,
-                        FilePath = document.FilePath ?? document.Name,
+                        FilePath = documentPath,
                         Line = tryCatch.GetLocation().GetLineSpan().StartLinePosition.Line + 1
                     });
                 }
@@ -120,7 +120,7 @@ public sealed class AnalyzeExceptionUsageTranslator
             ThrowCount = throwStatements.Count,
             TryCatchCount = tryCatchBlocks.Count,
             ResultPatternCandidates = resultCandidates,
-            ProjectFilter = command.ProjectFilter ?? "(all)",
+            ProjectFilter = command.ProjectFilter ?? RoslynReportPlaceholders.All,
             ThrowStatements = throwStatements,
             TryCatchBlocks = tryCatchBlocks
         };

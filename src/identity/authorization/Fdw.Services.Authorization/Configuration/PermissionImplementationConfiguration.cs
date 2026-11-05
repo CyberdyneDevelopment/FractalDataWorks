@@ -59,9 +59,9 @@ public partial class PermissionImplementationConfiguration
 
     /// <summary>
     /// Gets or sets the specific resource within the domain (e.g., "mssql", "postgresql", "*").
-    /// Use "*" to apply to all resources within the domain.
+    /// Use "*" to apply to all resources within the domain. A permission states it; the validator refuses an empty one (FDW-3823).
     /// </summary>
-    public string Resource { get; set; } = "*";
+    public string Resource { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the action this permission grants (e.g., "read", "write", "execute").
@@ -73,7 +73,7 @@ public partial class PermissionImplementationConfiguration
     /// Gets or sets the permission scope. Valid values: "tenant" (requires tenant context),
     /// "system" (system-wide administration), "global" (applies in all contexts).
     /// </summary>
-    public string Scope { get; set; } = "tenant";
+    public string Scope { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the display name for this permission.

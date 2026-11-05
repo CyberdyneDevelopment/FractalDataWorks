@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Configuration.Logging;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Configuration;
 
@@ -67,14 +68,14 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
     }
 
     /// <summary>Runs one configuration write -- a save or a retire -- and returns the key values it reports.</summary>
-    internal async Task<IGenericResult<ConfigurationWriteResult>> Write(IDataCommand command, DataStoreTarget target, CancellationToken ct)
+    public async Task<IGenericResult<ConfigurationWriteResult>> Write(IDataCommand command, DataStoreTarget target, CancellationToken ct)
     {
         _written.Add(target);
         return await _transaction.Execute<ConfigurationWriteResult>(command, target, ct).ConfigureAwait(false);
     }
 
     /// <summary>The loaded container <paramref name="containerName"/> on <paramref name="pathName"/> of this unit's store.</summary>
-    internal IGenericResult<IDataContainer> Container(string pathName, string containerName)
+    public IGenericResult<IDataContainer> Container(string pathName, string containerName)
     {
         var store = _gateway.DataStores.FirstOrDefault(s => string.Equals(s.Name, _dataStoreName, StringComparison.Ordinal));
         if (store is null)
@@ -98,7 +99,7 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
     /// taken from the parent row's key values: each key field gets the value of the field it references.
     /// </summary>
     /// <remarks>The key is the child's owner key to the parent; see <see cref="OwnerBinding"/>.</remarks>
-    internal IGenericResult<IReadOnlyDictionary<string, object?>> ForeignKeyValues(
+    public IGenericResult<IReadOnlyDictionary<string, object?>> ForeignKeyValues(
         IDataContainer parent, string childContainer, IReadOnlyDictionary<string, object?> parentKeyValues)
     {
         var binding = OwnerBinding(_logger, parent, childContainer);
@@ -111,7 +112,7 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
             if (keyField.ReferencedField is not { } referenced || !parentKeyValues.TryGetValue(referenced.Name, out var value))
                 return GenericResult<IReadOnlyDictionary<string, object?>>.Failure(
                     DefaultConfigurationProviderLog.ReferencedValueMissing(
-                        _logger, key.KeyName, childContainer, parent.Name, keyField.ReferencedField?.Name ?? "(unresolved)"));
+                        _logger, key.KeyName, childContainer, parent.Name, keyField.ReferencedField?.Name ?? LogPlaceholders.Unresolved));
             values[keyField.LocalField.Name] = value;
         }
 
@@ -167,7 +168,7 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
     /// second connection, which blocks on the locks this unit is holding and waits until the command
     /// times out. Nothing is recorded for invalidation: a read changes nothing.
     /// </remarks>
-    internal Task<IGenericResult<T>> Read<T>(IDataCommand command, DataStoreTarget target, CancellationToken ct)
+    public Task<IGenericResult<T>> Read<T>(IDataCommand command, DataStoreTarget target, CancellationToken ct)
         => _transaction.Execute<T>(command, target, ct);
 
     /// <summary>Runs one write whose row type is only known at runtime inside the unit of work.</summary>
@@ -205,7 +206,7 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
     {
         var rolledBack = await _transaction.Rollback(ct).ConfigureAwait(false);
         if (rolledBack.IsFailure)
-            DefaultConfigurationProviderLog.WriteScopeRollbackFailed(_logger, rolledBack.CurrentMessage ?? string.Empty);
+            DefaultConfigurationProviderLog.WriteScopeRollbackFailed(_logger, rolledBack.FailureReason().Message);
     }
 
     /// <summary>Disposes the transaction, which rolls it back if it was never committed.</summary>

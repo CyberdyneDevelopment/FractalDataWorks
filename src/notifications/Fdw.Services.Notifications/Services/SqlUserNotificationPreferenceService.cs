@@ -12,6 +12,7 @@ using Fdw.Services.Notifications.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using CmdBuilders = Fdw.Commands.Data.Extensions;
+using Fdw.Messages;
 
 namespace Fdw.Services.Notifications.Services;
 
@@ -69,7 +70,7 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
                 return GenericResult<IReadOnlyList<NotificationPreference>>.Failure(
                     UserNotificationPreferenceLog.QueryFailed(
                         _logger,
-                        new InvalidOperationException(current.CurrentMessage ?? "Query failed"),
+                        new InvalidOperationException(current.FailureReason().Message),
                         userId));
             }
 
@@ -104,11 +105,11 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
                 return GenericResult<IReadOnlyList<NotificationPreference>>.Failure(
                     UserNotificationPreferenceLog.QueryFailed(
                         _logger,
-                        new InvalidOperationException(existingResult.CurrentMessage ?? "Query failed"),
+                        new InvalidOperationException(existingResult.FailureReason().Message),
                         userId));
             }
 
-            var existing = (existingResult.Value ?? Enumerable.Empty<UserNotificationPreferenceConfiguration>())
+            var existing = (existingResult.Value ?? [])
                 .ToDictionary(r => Key(r.NotificationType, r.Channel), StringComparer.OrdinalIgnoreCase);
 
             var now = DateTimeOffset.UtcNow;
@@ -133,7 +134,7 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
                     var updateResult = await Gateway.Execute<int>(updateCommand, cancellationToken).ConfigureAwait(false);
                     if (!updateResult.IsSuccess)
                     {
-                        return Fail(updateResult, preference, userId);
+                        return Fail(updateResult.FailureReason(), preference, userId);
                     }
                 }
                 else
@@ -157,7 +158,7 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
                     var insertResult = await Gateway.Execute<int>(insertCommand, cancellationToken).ConfigureAwait(false);
                     if (!insertResult.IsSuccess)
                     {
-                        return Fail(insertResult, preference, userId);
+                        return Fail(insertResult.FailureReason(), preference, userId);
                     }
                 }
             }
@@ -191,14 +192,14 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
     }
 
     private IGenericResult<IReadOnlyList<NotificationPreference>> Fail(
-        IGenericResult writeResult,
+        IGenericMessage reason,
         NotificationPreference preference,
         Guid userId)
     {
         return GenericResult<IReadOnlyList<NotificationPreference>>.Failure(
             UserNotificationPreferenceLog.SaveFailed(
                 _logger,
-                new InvalidOperationException(writeResult.CurrentMessage ?? "Write failed"),
+                new InvalidOperationException(reason.Message),
                 preference.NotificationType,
                 preference.Channel,
                 userId));
@@ -207,7 +208,7 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
     private static List<NotificationPreference> Project(
         IEnumerable<UserNotificationPreferenceConfiguration>? rows)
     {
-        return (rows ?? Enumerable.Empty<UserNotificationPreferenceConfiguration>())
+        return (rows ?? [])
             .Select(r => new NotificationPreference
             {
                 NotificationType = r.NotificationType,

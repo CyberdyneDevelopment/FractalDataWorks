@@ -15,7 +15,7 @@ public sealed class ValidationCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="ValidationCategory"/> class.
     /// </summary>
     public ValidationCategory()
-        : base(id: 2, name: "Validation", isFailure: true, isRetryable: false, httpStatus: 400, clientMessage: "The request was invalid", clientAction: "Check your input and try again")
+        : base(id: 2, name: "Validation", isFailure: true, isRetryable: false, countsTowardFailureThresholds: true, httpStatus: 400, clientMessage: "The request was invalid", clientAction: "Check your input and try again")
     {
     }
 }

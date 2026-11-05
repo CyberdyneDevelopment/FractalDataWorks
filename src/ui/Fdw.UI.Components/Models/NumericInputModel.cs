@@ -96,19 +96,19 @@ public sealed class NumericInputModel<T> : IInputComponentModel<T>
     {
         if (IsRequired && !Value.HasValue)
         {
-            return ValidationResult.Error($"{Label ?? Id} is required.");
+            return ValidationResult.Error($"{Id} is required.");
         }
 
         if (Value.HasValue)
         {
             if (MinValue.HasValue && Value.Value.CompareTo(MinValue.Value) < 0)
             {
-                return ValidationResult.Error($"{Label ?? Id} must be at least {MinValue}.");
+                return ValidationResult.Error($"{Id} must be at least {MinValue}.");
             }
 
             if (MaxValue.HasValue && Value.Value.CompareTo(MaxValue.Value) > 0)
             {
-                return ValidationResult.Error($"{Label ?? Id} must not exceed {MaxValue}.");
+                return ValidationResult.Error($"{Id} must not exceed {MaxValue}.");
             }
         }
 

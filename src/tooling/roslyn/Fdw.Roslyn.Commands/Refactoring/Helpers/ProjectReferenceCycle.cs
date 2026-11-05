@@ -48,8 +48,8 @@ public static class ProjectReferenceCycle
     {
         if (!WouldCreateCycle(solution, fromProjectId, toProjectId)) return null;
 
-        var from = solution.GetProject(fromProjectId)?.Name ?? "(unknown)";
-        var to = solution.GetProject(toProjectId)?.Name ?? "(unknown)";
+        var from = solution.GetProject(fromProjectId)?.Name ?? RoslynReportPlaceholders.UnknownInParentheses;
+        var to = solution.GetProject(toProjectId)?.Name ?? RoslynReportPlaceholders.UnknownInParentheses;
 
         var path = new List<ProjectId>();
         if (fromProjectId != toProjectId) FindPath(solution, toProjectId, fromProjectId, new HashSet<ProjectId>(), path);

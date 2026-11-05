@@ -43,8 +43,9 @@ public sealed class RangeValidationRuleType : ValidationRuleTypeBase
         parameters.TryGetValue("Min", out var minObj);
         parameters.TryGetValue("Max", out var maxObj);
 
-        var min = Convert.ToDouble(minObj ?? double.MinValue, System.Globalization.CultureInfo.InvariantCulture);
-        var max = Convert.ToDouble(maxObj ?? double.MaxValue, System.Globalization.CultureInfo.InvariantCulture);
+        // A bound the rule states none of is open: nothing is outside it.
+        double? min = minObj is null ? null : Convert.ToDouble(minObj, System.Globalization.CultureInfo.InvariantCulture);
+        double? max = maxObj is null ? null : Convert.ToDouble(maxObj, System.Globalization.CultureInfo.InvariantCulture);
 
         foreach (var field in fields)
         {
@@ -54,7 +55,7 @@ public sealed class RangeValidationRuleType : ValidationRuleTypeBase
                 if (double.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var numValue))
                 {
                     if (numValue < min || numValue > max)
-                        errors[field] = $"Field '{field}' value {numValue} is outside range [{min}, {max}]";
+                        errors[field] = $"Field '{field}' value {numValue} is outside range [{(min is null ? "open" : min.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))}, {(max is null ? "open" : max.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))}]";
                 }
                 else
                 {

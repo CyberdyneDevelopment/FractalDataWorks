@@ -30,7 +30,11 @@ namespace Fdw.Commands.Abstractions;
 public abstract class CommandTypeBase : TypeOptionBase<CommandTypeBase>, IGenericCommandType
 {
     /// <inheritdoc/>
-    public IGenericCommandCategory CommandCategory { get; }
+    /// <remarks>
+    /// Why abstract and not a constructor parameter: the collection's generated NotFound sentinel calls the base
+    /// constructor and could only pass null for it (TC009, FDW-3467). An abstract member is stubbed instead.
+    /// </remarks>
+    public abstract IGenericCommandCategory CommandCategory { get; }
 
     /// <inheritdoc/>
     public IReadOnlyCollection<ITranslatorType> SupportedTranslators { get; }
@@ -62,7 +66,6 @@ public abstract class CommandTypeBase : TypeOptionBase<CommandTypeBase>, IGeneri
     /// </summary>
     /// <param name="name">The name of this command type.</param>
     /// <param name="description">The description of this command type.</param>
-    /// <param name="category">The command category.</param>
     /// <param name="supportedTranslators">The supported translator types.</param>
     /// <param name="supportsBatching">Whether batching is supported (default false).</param>
     /// <param name="supportsPipelining">Whether pipelining is supported (default false).</param>
@@ -70,14 +73,12 @@ public abstract class CommandTypeBase : TypeOptionBase<CommandTypeBase>, IGeneri
     protected CommandTypeBase(
         string name,
         string description,
-        IGenericCommandCategory category,
         IReadOnlyCollection<ITranslatorType> supportedTranslators,
         bool supportsBatching = false,
         bool supportsPipelining = false,
         int maxBatchSize = 1)
         : base(name, description)
     {
-        CommandCategory = category;
         SupportedTranslators = supportedTranslators;
         SupportsBatching = supportsBatching;
         SupportsPipelining = supportsPipelining;

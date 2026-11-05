@@ -43,7 +43,7 @@ public sealed class UserRoleAssignmentTests
     }
 
     private static UserRoleAssignment Assignment(Mock<IUserRoleConfigurationProvider> provider, RoleImplementationConfiguration? role = null) =>
-        new(Roles("Admin", role ?? new RoleImplementationConfiguration { Id = Role, Name = "Admin" }).Object, provider.Object,
+        new(Roles("Admin", role ?? new RoleImplementationConfiguration { IsTenantScoped = true, Id = Role, Name = "Admin" }).Object, provider.Object,
             NullLogger<UserRoleAssignment>.Instance);
 
     [Fact]

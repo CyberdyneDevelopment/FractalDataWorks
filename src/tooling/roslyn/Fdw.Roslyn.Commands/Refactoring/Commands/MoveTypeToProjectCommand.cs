@@ -1,5 +1,6 @@
 using System;
 using Fdw.Collections.Attributes;
+using Fdw.Conventions;
 using Fdw.Roslyn.Commands.Abstractions;
 using static Fdw.Roslyn.Commands.Abstractions.RoslynCommands;
 
@@ -33,6 +34,13 @@ public sealed class MoveTypeToProjectCommand : RoslynCommandBase, IReasonedComma
     /// Gets or sets the destination project. Omit to use the project named exactly <see cref="Namespace"/>.
     /// </summary>
     public string? TargetProject { get; set; }
+
+    /// <summary>
+    /// Gets the destination project under FDW's project naming convention: the project named exactly
+    /// <see cref="Namespace"/>. Used when <see cref="TargetProject"/> is not given.
+    /// </summary>
+    [PlatformDefault]
+    public string ConventionalTargetProject => Namespace;
 
     /// <summary>
     /// Gets or sets a value indicating whether to preview only. Defaults to <see langword="true"/>.

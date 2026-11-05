@@ -165,17 +165,34 @@ public static partial class ProjectConfigurationLog
         string error);
 
     /// <summary>
-    /// The ProjectServerDefaults appsettings section is missing or empty in a non-Development environment.
-    /// This is a Critical failure — the server has no policy baseline.
+    /// The ServerPolicyDefault domain does not hold exactly one current row, so the server has no policy baseline and
+    /// the host does not start (FDW-3580).
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
+    /// <param name="count">The number of current rows found.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(
         EventId = 61001,
         Level = LogLevel.Critical,
-        Message = "ProjectServerDefaults appsettings section is missing or empty. Server policy defaults cannot be resolved. Ensure appsettings contains a 'ProjectServerDefaults' section.")]
+        Message = "The ServerPolicyDefault domain holds {count} current row(s); exactly one is required. The server has no policy baseline, so the host does not start.")]
     public static partial IGenericMessage ServerPolicyDefaultsMissing(
-        ILogger logger);
+        ILogger logger,
+        int count);
+
+    /// <summary>
+    /// The ServerPolicyDefault domain could not be read, so the server has no policy baseline and the host does not
+    /// start (FDW-3580).
+    /// </summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="reason">Why the read failed.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(
+        EventId = 61002,
+        Level = LogLevel.Critical,
+        Message = "The ServerPolicyDefault domain could not be read: {reason}. The server has no policy baseline, so the host does not start.")]
+    public static partial IGenericMessage ServerPolicyDefaultsUnreadable(
+        ILogger logger,
+        string reason);
 
     /// <summary>A resilience policy name set on a configuration does not resolve in the registry.</summary>
     /// <param name="logger">The logger that records the event.</param>

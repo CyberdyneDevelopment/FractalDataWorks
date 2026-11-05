@@ -48,5 +48,5 @@ public class StreamingRequest
     /// <summary>
     /// Gets a value indicating whether the response should be compressed.
     /// </summary>
-    public bool ShouldCompress => BatchSize > 100 || (MaxItems ?? 0) > 1000;
+    public bool ShouldCompress => BatchSize > 100 || MaxItems > 1000;
 }

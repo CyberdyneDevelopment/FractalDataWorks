@@ -15,7 +15,7 @@ public sealed class TransientCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="TransientCategory"/> class.
     /// </summary>
     public TransientCategory()
-        : base(id: 8, name: "Transient", isFailure: true, isRetryable: true, httpStatus: 503, clientMessage: "The service is temporarily unavailable", clientAction: "Retry in a few moments")
+        : base(id: 8, name: "Transient", isFailure: true, isRetryable: true, countsTowardFailureThresholds: true, httpStatus: 503, clientMessage: "The service is temporarily unavailable", clientAction: "Retry in a few moments")
     {
     }
 }

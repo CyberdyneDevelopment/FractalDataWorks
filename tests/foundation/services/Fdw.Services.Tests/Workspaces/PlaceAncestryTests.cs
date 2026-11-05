@@ -17,8 +17,8 @@ using Xunit;
 namespace Fdw.Services.Tests.Workspaces;
 
 /// <summary>
-/// FDW-2538: the places above a place are found through the configuration that holds them. A workspace names its organization, or its tenant when it
-/// names none; an organization names its tenant; the tenant is the top. A place that does not exist, a kind that is not known and a read that fails are
+/// FDW-2538: the places above a place are found through the configuration that holds them. A workspace names its organization (always, FDW-3668); an
+/// organization names its tenant; the tenant is the top. A place that does not exist, a kind that is not known and a read that fails are
 /// failures, never an empty answer.
 /// </summary>
 [Collection(nameof(ServicesTestCollection))]
@@ -57,7 +57,7 @@ public class PlaceAncestryTests
                 ? GenericResult<OrganizationConfiguration>.Success(new OrganizationConfiguration { Id = Finance, TenantId = Tenant, IsDeleted = deletedOrganization })
                 : GenericResult<OrganizationConfiguration>.Success(default!));
         var held = new Mock<IWorkspaceImplementationConfiguration>();
-        held.SetupGet(w => w.OrganizationId).Returns(workspaceOrganization);
+        held.SetupGet(w => w.OrganizationId).Returns(workspaceOrganization.GetValueOrDefault());
         held.SetupGet(w => w.TenantId).Returns(workspaceTenant);
         fixture.Workspaces.Setup(w => w.Get(Workspace, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(workspace
@@ -79,20 +79,6 @@ public class PlaceAncestryTests
             new PlaceStep(PlaceKinds.Workspace, Workspace, 0),
             new PlaceStep(PlaceKinds.Organization, Finance, 1),
             new PlaceStep(PlaceKinds.Tenant, Tenant, 2),
-        });
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Api")]
-    public async Task AWorkspaceThatNamesNoOrganizationListsItselfAndItsTenant()
-    {
-        var steps = await Holding(workspaceTenant: Tenant).Ancestry.Get(PlaceKinds.Workspace, Workspace);
-
-        steps.Value!.ToArray().ShouldBe(new[]
-        {
-            new PlaceStep(PlaceKinds.Workspace, Workspace, 0),
-            new PlaceStep(PlaceKinds.Tenant, Tenant, 1),
         });
     }
 
@@ -153,9 +139,9 @@ public class PlaceAncestryTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Api")]
-    public async Task AWorkspaceThatNamesNeitherAnOrganizationNorATenantSitsNowhereAndIsAFailure()
+    public async Task AWorkspaceThatNamesNoOrganizationSitsNowhereAndIsAFailure()
     {
-        var steps = await Holding().Ancestry.Get(PlaceKinds.Workspace, Workspace);
+        var steps = await Holding(workspaceTenant: Tenant).Ancestry.Get(PlaceKinds.Workspace, Workspace);
 
         steps.IsFailure.ShouldBeTrue();
     }

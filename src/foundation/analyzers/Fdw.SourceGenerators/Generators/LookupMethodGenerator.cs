@@ -39,7 +39,7 @@ public sealed class LookupMethodGenerator
             return Array.Empty<IMethodBuilder>();
 
         // Get key type from definition (defaults to "int" if not specified)
-        var keyType = definition.KeyType ?? "int";
+        var keyType = definition.KeyType ?? CollectionKeyTypes.Default;
 
         var methods = definition.LookupProperties
             .Select(lookup => GenerateLookupMethod(lookup, returnType, definition.TargetFramework, keyType))
@@ -54,8 +54,8 @@ public sealed class LookupMethodGenerator
         string? targetFramework,
         string keyType)
     {
-        // Use the custom lookup method name from the attribute if specified, otherwise use property name
-        var methodName = lookup.LookupMethodName ?? lookup.PropertyName;
+        // LookupMethodName is never null (it is initialized to string.Empty), so it is the name as given.
+        var methodName = lookup.LookupMethodName;
 
         // Parameter name should be based on the property name, not the method name
         // For [TypeLookup("ById")] on property "Id", parameter should be "id" not "byid"

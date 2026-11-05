@@ -44,7 +44,7 @@ public class SimpleType : TestBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("Simple", generated);
+        Assert.Contains("Simple", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class ComplexType : TestBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("Complex", generated);
+        Assert.Contains("Complex", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -215,8 +215,8 @@ public class LongType : TestBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("Short", generated);
-        Assert.Contains("Long", generated);
+        Assert.Contains("Short", generated, System.StringComparison.Ordinal);
+        Assert.Contains("Long", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]

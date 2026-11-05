@@ -187,8 +187,8 @@ public sealed class OrgAwareAuthorizationTests
         var globalRole = new RoleImplementationConfiguration { Id = GlobalRoleId, Name = "GlobalAdmin", IsTenantScoped = false, TenantId = SharedTenantId };
         var tenantRole = new RoleImplementationConfiguration { Id = TenantRoleId, Name = "TenantUser", IsTenantScoped = true, TenantId = TenantId };
 
-        var globalPerm = new PermissionImplementationConfiguration { Id = GlobalPermId, Name = "global:admin" };
-        var tenantPerm = new PermissionImplementationConfiguration { Id = TenantPermId, Name = "tenant:read" };
+        var globalPerm = new PermissionImplementationConfiguration { Resource = "*", Scope = "tenant", Id = GlobalPermId, Name = "global:admin" };
+        var tenantPerm = new PermissionImplementationConfiguration { Resource = "*", Scope = "tenant", Id = TenantPermId, Name = "tenant:read" };
 
         var rolePermissions = new List<RolePermissionImplementationConfiguration>
         {

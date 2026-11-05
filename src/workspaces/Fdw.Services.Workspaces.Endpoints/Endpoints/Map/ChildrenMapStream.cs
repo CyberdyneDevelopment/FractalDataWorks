@@ -133,7 +133,7 @@ internal sealed class ChildrenMapStream : MapStream
         var children = new List<MapChild>();
         if (_dataStore is not null)
             children.AddRange(StoreContainers(_dataStore).Select(found => new MapChild(
-                MapNodes.Container(found.Container, _dataStore.Id, found.Path),
+                MapNodes.Container(found.Container, _dataStore.Id, _dataStore.Name, found.Path),
                 MapEdges.Between(MapRelations.PartOf, MapNodeIds.Container(found.Container.Id), _parentNodeId))));
 
         if (_dataSet is null) return children;
@@ -181,7 +181,7 @@ internal sealed class ChildrenMapStream : MapStream
             }
 
             yield return new MapChild(
-                MapNodes.Container(found.Container, store.Id, found.Path),
+                MapNodes.Container(found.Container, store.Id, store.Name, found.Path),
                 MapEdges.Between(MapRelations.StoredIn, _parentNodeId, MapNodeIds.Container(found.Container.Id)));
         }
     }

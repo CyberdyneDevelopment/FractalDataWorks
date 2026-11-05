@@ -16,7 +16,7 @@ public sealed class ForbiddenCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="ForbiddenCategory"/> class.
     /// </summary>
     public ForbiddenCategory()
-        : base(id: 10, name: "Forbidden", isFailure: true, isRetryable: false, httpStatus: 403, clientMessage: "You don't have permission to perform this action", clientAction: "Request access")
+        : base(id: 10, name: "Forbidden", isFailure: true, isRetryable: false, countsTowardFailureThresholds: true, httpStatus: 403, clientMessage: "You don't have permission to perform this action", clientAction: "Request access")
     {
     }
 }

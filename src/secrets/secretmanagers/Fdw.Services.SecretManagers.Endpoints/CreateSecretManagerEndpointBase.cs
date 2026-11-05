@@ -6,6 +6,7 @@ using Fdw.Configuration;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
@@ -85,7 +86,10 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
             }
 
             var domainConfigurationId = Guid.NewGuid();
-            var bodyResult = SecretManagerSettings.Read(req.SecretManagerType, req.Configuration, null, _logger);
+            // A value the request leaves out takes its setting for the caller's tenant (FDW-3823), never a type's initializer.
+            var bodyResult = SecretManagerSettings.ReadNew(
+                req.SecretManagerType, req.Configuration, req.Name, Resolve<Lazy<IEffectiveSettingsProvider>>(),
+                new ClaimsPrincipalAuthenticationContext(User).ActiveTenantId, _logger);
             if (bodyResult.IsFailure || bodyResult.Value is null)
             {
                 await Send.ResultAsync(ResultHttpStatusMapper.Answer(bodyResult, HttpContext)).ConfigureAwait(false);

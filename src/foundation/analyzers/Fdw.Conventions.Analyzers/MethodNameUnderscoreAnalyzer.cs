@@ -81,7 +81,7 @@ public sealed class MethodNameUnderscoreAnalyzer : DiagnosticAnalyzer
             return;
 
         // Need semantic model for override/interface checks
-        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclaration);
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclaration, context.CancellationToken);
         if (methodSymbol == null)
             return;
 

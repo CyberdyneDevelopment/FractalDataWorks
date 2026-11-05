@@ -256,7 +256,7 @@ public class OrchestrationResult : IOrchestrationResult
             result.AddStepResult(stepResult);
         }
 
-        result.ErrorMessage = reason ?? "Execution was cancelled";
+        result.ErrorMessage = reason ?? string.Empty;
         result.EndTime = DateTimeOffset.UtcNow;
         result.Metrics = result.ComputeMetrics();
 

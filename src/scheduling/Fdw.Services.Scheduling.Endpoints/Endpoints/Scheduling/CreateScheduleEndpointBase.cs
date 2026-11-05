@@ -8,6 +8,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Services.Scheduling.Abstractions.Models;
+using Fdw.Services.Settings;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -28,15 +29,22 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
 {
     private readonly ScheduleConfigurationProvider _provider;
     private readonly RunRoleAuthority _runRoles;
+    private readonly Lazy<IEffectiveSettingsProvider> _settings;
 
     /// <inheritdoc />
+    /// <param name="logger">The logger.</param>
+    /// <param name="provider">The schedule configuration provider.</param>
+    /// <param name="grants">The role grants the run roles are checked against.</param>
+    /// <param name="settings">The settings that hold the defaults of what a create request leaves out (FDW-3580).</param>
     protected CreateScheduleEndpointBase(
         ILogger<CreateScheduleEndpointBase<TConfig>> logger,
         ScheduleConfigurationProvider provider,
-        IRoleGrants grants) : base(logger)
+        IRoleGrants grants,
+        Lazy<IEffectiveSettingsProvider> settings) : base(logger)
     {
         _provider = provider;
         _runRoles = new RunRoleAuthority(grants);
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -63,8 +71,8 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
         }
 
         // The roles every fire acts with are the creator's choice (FDW-1161), and only roles the creator holds.
-        var roles = await _runRoles.Authorize(
-            new ClaimsPrincipalAuthenticationContext(User), request.PipelineName, request.RunRoles, Logger, ct).ConfigureAwait(false);
+        var caller = new ClaimsPrincipalAuthenticationContext(User);
+        var roles = await _runRoles.Authorize(caller, request.PipelineName, request.RunRoles, Logger, ct).ConfigureAwait(false);
         if (roles.IsFailure)
         {
             return roles.ToNewResult<ScheduleDetailDto>();
@@ -72,6 +80,11 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
 
         var scheduleId = Guid.CreateVersion7();
         var config = CreateConfiguration(request, scheduleId, roles.Value!);
+        var defaults = ApplyDefaults(config, request, caller.ActiveTenantId);
+        if (defaults.IsFailure)
+        {
+            return defaults.ToNewResult<ScheduleDetailDto>();
+        }
 
         var saveResult = await _provider.Save(config, "Schedule", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
@@ -80,6 +93,37 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
         }
 
         return GenericResult<ScheduleDetailDto>.Success(MapToDetail(config, request, scheduleId));
+    }
+
+    // What a create request leaves out takes the caller's tenant's setting (FDW-3580): whether the schedule runs, and how often and how long
+    // apart it retries a failed run, which no request names. Mike: "make it configurable ... as long as it is in configuration and not hardcoded".
+    private IGenericResult ApplyDefaults(TConfig config, CreateScheduleRequest request, Guid? tenantId)
+    {
+        var enabled = InstanceDefault.Resolve(
+            request.IsEnabled, _settings, DefaultValueSettings.DefaultScheduleIsEnabled, tenantId, "schedule", request.Name, "IsEnabled", Logger);
+        if (enabled.IsFailure)
+        {
+            return enabled;
+        }
+
+        var retries = InstanceDefault.Resolve<int>(
+            null, _settings, DefaultValueSettings.DefaultScheduleMaxRetries, tenantId, "schedule", request.Name, "MaxRetries", Logger);
+        if (retries.IsFailure)
+        {
+            return retries;
+        }
+
+        var delay = InstanceDefault.Resolve<int>(
+            null, _settings, DefaultValueSettings.DefaultScheduleRetryDelaySeconds, tenantId, "schedule", request.Name, "RetryDelaySeconds", Logger);
+        if (delay.IsFailure)
+        {
+            return delay;
+        }
+
+        config.IsEnabled = enabled.Value;
+        config.MaxRetries = retries.Value;
+        config.RetryDelaySeconds = delay.Value;
+        return GenericResult.Success();
     }
 
     /// <summary>Builds a concrete schedule configuration from the create request. Override for type-specific fields.</summary>

@@ -64,28 +64,44 @@ public static class ContainerComposition
         ArgumentNullException.ThrowIfNull(format);
 
         var meta = new Dictionary<string, object>(StringComparer.Ordinal);
-
-        if (!string.IsNullOrWhiteSpace(cfg.RecordSelector))
-            meta["RecordSelector"] = cfg.RecordSelector!;
-        if (cfg.FlattenNestedObjects.HasValue)
-            meta["FlattenNestedObjects"] = cfg.FlattenNestedObjects.Value;
-        if (!string.IsNullOrWhiteSpace(cfg.FlattenSeparator))
-            meta["FlattenSeparator"] = cfg.FlattenSeparator!;
-        if (cfg.HasHeader.HasValue)
-            meta["HasHeader"] = cfg.HasHeader.Value;
-        if (!string.IsNullOrEmpty(format.Separator))
-            meta["Separator"] = format.Separator!;
-        else if (!string.IsNullOrEmpty(cfg.Separator))
-            meta["Separator"] = cfg.Separator!;
-        if (!string.IsNullOrWhiteSpace(cfg.SheetName))
-            meta["SheetName"] = cfg.SheetName!;
-        if (!string.IsNullOrWhiteSpace(cfg.WriteEndpoint))
-            meta["Endpoint"] = cfg.WriteEndpoint!;
-        if (!string.IsNullOrWhiteSpace(cfg.WriteMethod))
-            meta["Method"] = cfg.WriteMethod!;
-        if (!string.IsNullOrWhiteSpace(cfg.WriteContentType))
-            meta["ContentType"] = cfg.WriteContentType!;
-
+        Put(meta, "RecordSelector", cfg.RecordSelector);
+        Put(meta, "FlattenNestedObjects", cfg.FlattenNestedObjects);
+        Put(meta, "FlattenSeparator", cfg.FlattenSeparator);
+        Put(meta, "HasHeader", cfg.HasHeader);
+        // A format that defines its separator (Csv, Tsv) states it; only the plain Delimited format takes the container's.
+        Put(meta, "Separator", string.IsNullOrEmpty(format.Separator) ? cfg.Separator : format.Separator);
+        Put(meta, "SheetName", cfg.SheetName);
+        // The format choices a container states (FDW-3823): a reader or writer refuses a container that leaves out one its format needs.
+        Put(meta, nameof(cfg.ContinueOnError), cfg.ContinueOnError);
+        Put(meta, nameof(cfg.PropertyNameCaseInsensitive), cfg.PropertyNameCaseInsensitive);
+        Put(meta, nameof(cfg.SkipValidation), cfg.SkipValidation);
+        Put(meta, nameof(cfg.UseElementContent), cfg.UseElementContent);
+        Put(meta, nameof(cfg.IncludeAttributes), cfg.IncludeAttributes);
+        Put(meta, nameof(cfg.OmitXmlDeclaration), cfg.OmitXmlDeclaration);
+        Put(meta, nameof(cfg.ContainsQuotedFields), cfg.ContainsQuotedFields);
+        Put(meta, nameof(cfg.Trim), cfg.Trim);
+        Put(meta, nameof(cfg.WriteByteOrderMark), cfg.WriteByteOrderMark);
+        Put(meta, nameof(cfg.NeutralizeFormulas), cfg.NeutralizeFormulas);
+        Put(meta, nameof(cfg.RootElementName), cfg.RootElementName);
+        Put(meta, nameof(cfg.RowElementName), cfg.RowElementName);
+        Put(meta, nameof(cfg.QuoteChar), cfg.QuoteChar);
+        Put(meta, "Endpoint", cfg.WriteEndpoint);
+        Put(meta, "Method", cfg.WriteMethod);
+        Put(meta, "ContentType", cfg.WriteContentType);
         return meta;
+    }
+
+    // A flag the container does not state is left out of the metadata, so the reader or writer that needs it says it is missing.
+    private static void Put(Dictionary<string, object> meta, string key, bool? value)
+    {
+        if (value.HasValue)
+            meta[key] = value.Value;
+    }
+
+    // Text is stated when it is not empty; whitespace is text (a tab is a separator).
+    private static void Put(Dictionary<string, object> meta, string key, string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+            meta[key] = value!;
     }
 }

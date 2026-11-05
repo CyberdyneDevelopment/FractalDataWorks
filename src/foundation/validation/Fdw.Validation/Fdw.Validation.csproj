@@ -8,6 +8,9 @@
     <ProjectReference Include="..\Fdw.Validation.Abstractions\Fdw.Validation.Abstractions.csproj" />
     <ProjectReference Include="..\..\results\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\..\collections\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\..\messagelogging\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\..\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

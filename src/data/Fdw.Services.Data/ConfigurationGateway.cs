@@ -438,7 +438,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         if (!containerResult.IsSuccess)
         {
             ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
-                containerResult.CurrentMessage ?? "Container could not be resolved from the configuration schema");
+                containerResult.FailureReason().Message);
 
             return containerResult.ToNewResult<(IDataContainer, IDataConnection)>();
         }
@@ -513,7 +513,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         {
             return GenericResult<IRecordSource<DataRecord>>.Failure(
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
-                    containerResult.CurrentMessage ?? "Container could not be resolved from the configuration schema"));
+                    containerResult.NoValueReason().Message));
         }
 
         var container = containerResult.Value;
@@ -600,7 +600,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         {
             return GenericResult<IEnumerable<object>>.Failure(
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
-                    containerResult.CurrentMessage ?? "Container could not be resolved from the configuration schema"));
+                    containerResult.NoValueReason().Message));
         }
 
         var container = containerResult.Value;
@@ -686,7 +686,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         {
             return GenericResult.Failure(
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
-                    containerResult.CurrentMessage ?? "Container could not be resolved from the configuration schema"));
+                    containerResult.NoValueReason().Message));
         }
 
         var container = containerResult.Value;
@@ -729,7 +729,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         {
             return GenericResult<IDataGatewayTransaction>.Failure(
                 DataGatewayLogger.BeginTransactionFailed(_logger, connectionName,
-                    txnResult.CurrentMessage ?? "Transaction start failed"));
+                    txnResult.NoValueReason().Message));
         }
 
         IDataGatewayTransaction scope = new DataGatewayTransaction(
@@ -804,7 +804,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
             .ConfigureAwait(false);
         if (!factoryResult.IsSuccess || factoryResult.Value is null)
         {
-            var reason = factoryResult.CurrentMessage?.ToString() ?? "factory returned failure";
+            var reason = factoryResult.CurrentMessage?.ToString() ?? string.Empty;
             return GenericResult<IDataConnection>.Failure(
                 ConfigurationGatewayLog.ConnectionCreationFailed(_logger, ConnectionName, reason));
         }
@@ -885,7 +885,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         if (!buildResult.IsSuccess || buildResult.Value is null)
         {
             ConfigurationGatewayLog.ExecuteFailed(logger, storeCfg.Name,
-                buildResult.CurrentMessage?.ToString() ?? "store build failed");
+                buildResult.CurrentMessage?.ToString() ?? string.Empty);
             return null;
         }
 

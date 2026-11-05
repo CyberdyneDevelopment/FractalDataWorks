@@ -56,9 +56,9 @@ public partial class RoleImplementationConfiguration
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets whether this role is tenant-scoped.
+    /// Gets or sets whether this role is tenant-scoped. The creating request states it; a create that omits it is refused (FDW-3823).
     /// </summary>
-    public bool IsTenantScoped { get; set; } = true;
+    public bool IsTenantScoped { get; set; }
 
     /// <summary>
     /// Gets or sets the tenant ID if this is a tenant-specific role.

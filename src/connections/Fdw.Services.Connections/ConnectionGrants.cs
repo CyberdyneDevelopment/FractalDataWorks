@@ -27,20 +27,20 @@ public sealed class ConnectionGrants : IConnectionGrants
 
     private readonly IConnectionGrantConfigurationProvider _grants;
     private readonly IConnectionAssignmentConfigurationProvider _assignments;
-    private readonly IDocumentConnectionProvider _connections;
+    private readonly IConnectionProvider _connections;
     private readonly ITenantProvider _tenants;
     private readonly ILogger<ConnectionGrants> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ConnectionGrants"/> class.</summary>
     /// <param name="grants">Reads and writes the grants.</param>
     /// <param name="assignments">Reads the assignments, to keep a grant that is in use.</param>
-    /// <param name="connections">Finds the document connection being granted.</param>
+    /// <param name="connections">Opens the connection being granted, so the purpose can say whether it fits.</param>
     /// <param name="tenants">Finds the tenant being granted to.</param>
     /// <param name="logger">The logger.</param>
     public ConnectionGrants(
         IConnectionGrantConfigurationProvider grants,
         IConnectionAssignmentConfigurationProvider assignments,
-        IDocumentConnectionProvider connections,
+        IConnectionProvider connections,
         ITenantProvider tenants,
         ILogger<ConnectionGrants>? logger)
     {
@@ -104,6 +104,7 @@ public sealed class ConnectionGrants : IConnectionGrants
                 : GenericResult<ConnectionGrantView>.Failure(ConnectionGrantsLog.GrantNotFound(_logger, connectionName, tenantId, purpose));
         }
 
+        // Why a superseded assignment counts: files stored under it are still read through this grant (FDW-3396).
         var assigned = await _assignments.Find<ConnectionAssignmentImplementationConfiguration>(
             assignment => assignment.GrantId == grant.Id && assignment.IsCurrent && !assignment.IsDeleted, cancellationToken).ConfigureAwait(false);
         if (assigned.IsFailure || assigned.Value is null)
@@ -141,13 +142,23 @@ public sealed class ConnectionGrants : IConnectionGrants
     private static ConnectionGrantView ViewOf(IConnectionGrantImplementationConfiguration grant)
         => new(grant.Id, grant.GranteeTenantId, grant.ConnectionName, grant.Purpose, grant.FolderPath, grant.MayRegisterOwn);
 
-    // The checks every grant makes first: the texts are given, the folder is a folder, the tenant exists and the connection is a document connection.
-    // The result carries the folder as parsed.
+    // The checks every grant makes first: the texts are given, the purpose is one, the folder is a folder the purpose takes, the tenant exists,
+    // and the connection fits the purpose (FDW-3673). The result carries the folder as parsed.
     private async Task<IGenericResult<DocumentPath>> CheckGrantInput(Guid tenantId, string connectionName, string purpose, string? folder, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(connectionName) || string.IsNullOrWhiteSpace(purpose))
         {
             return GenericResult<DocumentPath>.Failure(ConnectionGrantsLog.FieldRequired(_logger, string.IsNullOrWhiteSpace(connectionName) ? "connection name" : "purpose"));
+        }
+
+        if (PurposeLookup.Named(purpose) is not { } purposeOption)
+        {
+            return GenericResult<DocumentPath>.Failure(ConnectionGrantsLog.PurposeUnknown(_logger, purpose, PurposeLookup.Names()));
+        }
+
+        if (!purposeOption.TakesFolder && !string.IsNullOrWhiteSpace(folder))
+        {
+            return GenericResult<DocumentPath>.Failure(ConnectionGrantsLog.FolderNotTaken(_logger, "grant", purpose, folder));
         }
 
         var parsed = DocumentPath.Parse(folder);
@@ -163,8 +174,13 @@ public sealed class ConnectionGrants : IConnectionGrants
         }
 
         var connection = await _connections.Get(connectionName, cancellationToken).ConfigureAwait(false);
-        return connection.IsFailure
-            ? GenericResult<DocumentPath>.Failure(ConnectionGrantsLog.NotADocumentConnection(_logger, connectionName, connection.CurrentMessage))
+        if (connection.IsFailure || connection.Value is not { } opened)
+        {
+            return GenericResult<DocumentPath>.Failure(ConnectionGrantsLog.ConnectionNotOpened(_logger, connectionName, connection.CurrentMessage));
+        }
+
+        return purposeOption.Unfit(opened) is { } reason
+            ? GenericResult<DocumentPath>.Failure(ConnectionGrantsLog.UnfitForPurpose(_logger, connectionName, purpose, reason))
             : GenericResult<DocumentPath>.Success(parsed.Value);
     }
 

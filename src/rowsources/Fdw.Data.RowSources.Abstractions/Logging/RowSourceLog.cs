@@ -218,4 +218,32 @@ public static partial class RowSourceLog
         ILogger logger,
         int pageCount,
         long totalRows);
+
+    /// <summary>
+    /// Logs that what a row format reads or writes does not state one of the format's choices (FDW-3823): no choice is taken in its place.
+    /// </summary>
+    [MessageLogging(
+        EventId = 91003,
+        Level = LogLevel.Error,
+        Message = "'{owner}' states no '{choice}' for its {format} rows; a {format} reader or writer takes it from what it reads or writes, and nothing stands in for it")]
+    public static partial IGenericMessage FormatChoiceNotStated(
+        ILogger logger,
+        string owner,
+        string format,
+        string choice);
+
+    /// <summary>
+    /// Logs that a stated row-format choice cannot be used as it is written (FDW-3823).
+    /// </summary>
+    [MessageLogging(
+        EventId = 91004,
+        Level = LogLevel.Error,
+        Message = "'{owner}' states '{value}' as the '{choice}' of its {format} rows, which is not {expected}")]
+    public static partial IGenericMessage FormatChoiceNotUsable(
+        ILogger logger,
+        string owner,
+        string format,
+        string choice,
+        string value,
+        string expected);
 }

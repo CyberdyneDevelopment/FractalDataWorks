@@ -17,10 +17,11 @@ public sealed class PooledDictionaryMapperConfigurationTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void MaxDictionarySizeDefaultsTo100()
+    public void MaxDictionarySizeIsUnstatedUntilSet()
     {
+        // FDW-3956: the Pooled type declares it; the configuration carries no value of its own.
         var config = new PooledDictionaryMapperConfiguration();
-        config.MaxDictionarySize.ShouldBe(100);
+        config.MaxDictionarySize.ShouldBeNull();
     }
 
     [Fact]
@@ -35,19 +36,30 @@ public sealed class PooledDictionaryMapperConfigurationTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void MaxPoolSizeDefaultsTo1000()
+    public void MaxPoolSizeIsUnstatedUntilSet()
     {
         var config = new PooledDictionaryMapperConfiguration();
-        config.MaxPoolSize.ShouldBe(1000);
+        config.MaxPoolSize.ShouldBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void EnablePoolingDefaultsToTrue()
+    public void EnablePoolingIsUnstatedUntilSet()
     {
         var config = new PooledDictionaryMapperConfiguration();
-        config.EnablePooling.ShouldBeTrue();
+        config.EnablePooling.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void ThePooledTypeDeclaresWhatAConfigurationLeavesOut()
+    {
+        var declared = new PooledDictionaryMapperType().DeclaredDefaults;
+        declared[nameof(PooledDictionaryMapperConfiguration.MaxPoolSize)].ShouldBe(1000);
+        declared[nameof(PooledDictionaryMapperConfiguration.MaxDictionarySize)].ShouldBe(100);
+        declared[nameof(PooledDictionaryMapperConfiguration.EnablePooling)].ShouldBe(true);
     }
 
     [Fact]

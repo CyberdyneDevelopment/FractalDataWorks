@@ -26,14 +26,14 @@ public sealed class RecordWriterContext
     /// <param name="fields">The container's field children — the flyweight schema / column order.</param>
     /// <param name="options">
     /// Format-specific options (the concrete subclass of <see cref="RowWriterOptions"/> for the selected
-    /// format). Null requests the format's defaults.
+    /// format), built by the format's <c>CreateOptions</c>. Required.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> or <paramref name="fields"/> is null.</exception>
-    public RecordWriterContext(TextWriter target, IReadOnlyList<IDataField> fields, RowWriterOptions? options = null)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> or <paramref name="fields"/> or <paramref name="options"/> is null.</exception>
+    public RecordWriterContext(TextWriter target, IReadOnlyList<IDataField> fields, RowWriterOptions options)
     {
         Target = target ?? throw new ArgumentNullException(nameof(target));
         Fields = fields ?? throw new ArgumentNullException(nameof(fields));
-        Options = options;
+        Options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     /// <summary>
@@ -41,14 +41,14 @@ public sealed class RecordWriterContext
     /// </summary>
     /// <param name="target">The destination stream; the writer finishes the file when it is disposed, and the stream is left open.</param>
     /// <param name="fields">The container's field children — the flyweight schema / column order.</param>
-    /// <param name="options">Format-specific options; null requests the format's defaults.</param>
+    /// <param name="options">Format-specific options, built by the format's <c>CreateOptions</c>.</param>
     /// <returns>A context for <see cref="IRecordWriterType.Create"/>, which a text format refuses.</returns>
     /// <remarks>
     /// <see cref="Target"/> is a text writer that discards, so a caller that ignores <see cref="ByteTarget"/> writes nothing
     /// rather than text into a file: a text format asked to build from this context refuses it, naming the format, instead of
     /// silently writing to nowhere.
     /// </remarks>
-    public static RecordWriterContext ForBytes(Stream target, IReadOnlyList<IDataField> fields, RowWriterOptions? options = null)
+    public static RecordWriterContext ForBytes(Stream target, IReadOnlyList<IDataField> fields, RowWriterOptions options)
     {
         return new RecordWriterContext(TextWriter.Null, fields, options) { ByteTarget = target ?? throw new ArgumentNullException(nameof(target)) };
     }
@@ -70,7 +70,7 @@ public sealed class RecordWriterContext
     public IReadOnlyList<IDataField> Fields { get; }
 
     /// <summary>
-    /// Gets the format-specific options, or null to request the format's defaults.
+    /// Gets the format-specific options.
     /// </summary>
-    public RowWriterOptions? Options { get; }
+    public RowWriterOptions Options { get; }
 }

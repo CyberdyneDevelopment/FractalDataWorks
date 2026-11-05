@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -7,6 +6,7 @@ using Fdw.Results;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -61,9 +61,7 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
     /// <inheritdoc/>
     public override async Task HandleAsync(ReviewAccessRequestRequest req, CancellationToken ct)
     {
-        var userIdClaim = HttpContext.User.FindFirst("sub")?.Value
-            ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var reviewerUserId))
+                if (!CallerClaims.TryGetUserId(HttpContext.User, out var reviewerUserId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
             await Send.UnauthorizedAsync(ct).ConfigureAwait(false);

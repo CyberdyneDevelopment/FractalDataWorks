@@ -232,7 +232,8 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = WriteTempFile("petstore-filtered.json", PetStoreOpenApiJson);
         var options = new Fdw.Data.SchemaImporters.Abstractions.Configuration.SchemaImporterOptions
         {
-            IncludeSchemas = ["POST"]
+            IncludeSchemas = ["POST"],
+            IncludeExtendedProperties = true,
         };
 
         // Act
@@ -254,7 +255,8 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = WriteTempFile("petstore-maxcontainers.json", PetStoreOpenApiJson);
         var options = new Fdw.Data.SchemaImporters.Abstractions.Configuration.SchemaImporterOptions
         {
-            MaxContainers = 1
+            MaxContainers = 1,
+            IncludeExtendedProperties = true,
         };
 
         // Act

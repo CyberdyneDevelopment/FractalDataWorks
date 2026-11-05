@@ -125,8 +125,9 @@ public sealed class DataSetProvider
             return GenericResult<IHost>.Success(host);
         }
 
-        var logger = loggerFactory?.CreateLogger<DataSetProvider>()
-            ?? host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
+        var logger = loggerFactory is null
+            ? host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>()
+            : loggerFactory.CreateLogger<DataSetProvider>();
 
         DataSetTypesLog.DataSetTypesInitializedNoConfig(logger, DataSetTypes.All().Count);
     
@@ -222,7 +223,7 @@ public sealed class DataSetProvider
             }
             else
             {
-                DataSetProviderLog.CfgDataSetLoadFailed(_logger, dbResult.CurrentMessage ?? "Unknown error");
+                DataSetProviderLog.CfgDataSetLoadFailed(_logger, dbResult.NoValueReason().Message);
             }
         }
 

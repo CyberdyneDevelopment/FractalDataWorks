@@ -17,6 +17,13 @@ public interface IPipelineClient
     Task<IGenericResult<IReadOnlyList<PipelineSummaryResponse>>> List(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the configured pipelines that carry every one of the named tags (FDW-3816).
+    /// </summary>
+    /// <param name="tags">The tag names, sent as <c>?tag=</c>; none lists every pipeline.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    Task<IGenericResult<IReadOnlyList<PipelineSummaryResponse>>> List(IReadOnlyList<string> tags, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a pipeline by name.
     /// </summary>
     Task<IGenericResult<PipelineDetailResponse>> Get(string name, CancellationToken cancellationToken = default);
@@ -35,6 +42,16 @@ public interface IPipelineClient
     /// Creates a graph pipeline (FDW-1396); the graph is refused whole when it cannot run.
     /// </summary>
     Task<IGenericResult<GraphPayload>> CreateGraph(GraphPayload graph, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Makes a graph pipeline from a template and the values given for the template's parameters (FDW-3379).
+    /// </summary>
+    Task<IGenericResult<GraphPayload>> CreateGraphFromTemplate(GraphFromTemplatePayload request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the pipelines that are templates (FDW-3379).
+    /// </summary>
+    Task<IGenericResult<IReadOnlyList<PipelineSummaryResponse>>> ListTemplates(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Replaces a graph pipeline whole with the graph in the request (FDW-1396).

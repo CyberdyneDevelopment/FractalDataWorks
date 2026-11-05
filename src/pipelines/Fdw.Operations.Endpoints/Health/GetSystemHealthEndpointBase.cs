@@ -61,7 +61,7 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
 
             if (!monitorResult.IsSuccess || monitorResult.Value is null)
             {
-                OperationsEndpointLog.GetSystemHealthFailed(_logger, monitorResult.CurrentMessage ?? "Unknown error");
+                OperationsEndpointLog.GetSystemHealthFailed(_logger, monitorResult.NoValueReason().Message);
                 AddError("Failed to retrieve system health");
                 await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
                 return;
@@ -71,7 +71,7 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
 
             if (!result.IsSuccess)
             {
-                OperationsEndpointLog.GetSystemHealthFailed(_logger, result.CurrentMessage ?? "Unknown error");
+                OperationsEndpointLog.GetSystemHealthFailed(_logger, result.FailureReason().Message);
                 AddError("Failed to retrieve system health");
                 await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
                 return;

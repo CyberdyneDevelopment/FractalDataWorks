@@ -68,13 +68,14 @@ public sealed class HubScopeAuthorizationTests
     }
 
     [Fact]
-    public async Task TheNameIdentifierClaimNamesThePersonWhenThereIsNoSubClaim()
+    public async Task ANameIdentifierWithoutSubJoinsNoUserScope()
     {
+        // FDW names the caller by sub alone; NameIdentifier is at most a copy of it (FDW-3580).
         var (hub, groups, _) = Hub(Principal(new Claim(ClaimTypes.NameIdentifier, Me)));
 
         await hub.Subscribe(HubScopes.User(Me));
 
-        Joined(groups, HubScopes.User(Me));
+        NothingJoined(groups);
     }
 
     [Fact]

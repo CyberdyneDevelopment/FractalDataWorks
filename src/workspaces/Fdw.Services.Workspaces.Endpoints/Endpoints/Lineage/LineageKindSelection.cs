@@ -11,12 +11,13 @@ internal sealed class LineageKindSelection
     /// <summary>The Connection kind: named by the console, not offered by the lineage yet, so a request that names it is told so.</summary>
     public const string Connection = "Connection";
 
-    private static readonly string[] KnownKinds = [MapKinds.DataSet, MapKinds.DataStore, MapKinds.Pipeline, Connection];
+    private static readonly string[] KnownKinds = [MapKinds.DataSet, MapKinds.DataStore, MapKinds.Container, MapKinds.Pipeline, Connection];
 
-    private LineageKindSelection(bool dataSets, bool dataStores, bool pipelines, string[] unavailable)
+    private LineageKindSelection(bool dataSets, bool dataStores, bool containers, bool pipelines, string[] unavailable)
     {
         DataSets = dataSets;
         DataStores = dataStores;
+        Containers = containers;
         Pipelines = pipelines;
         Unavailable = unavailable;
     }
@@ -26,6 +27,9 @@ internal sealed class LineageKindSelection
 
     /// <summary>Gets a value indicating whether data stores are walked.</summary>
     public bool DataStores { get; }
+
+    /// <summary>Gets a value indicating whether containers a pipeline reads or writes directly are walked (FDW-3824).</summary>
+    public bool Containers { get; }
 
     /// <summary>Gets a value indicating whether pipelines are named on the edges that pass through them.</summary>
     public bool Pipelines { get; }
@@ -38,6 +42,7 @@ internal sealed class LineageKindSelection
     {
         MapKinds.DataSet => DataSets,
         MapKinds.DataStore => DataStores,
+        MapKinds.Container => Containers,
         MapKinds.Pipeline => Pipelines,
         _ => false,
     };
@@ -62,14 +67,15 @@ internal sealed class LineageKindSelection
         var selection = new LineageKindSelection(
             chosen.Contains(MapKinds.DataSet),
             chosen.Contains(MapKinds.DataStore),
+            chosen.Contains(MapKinds.Container),
             chosen.Contains(MapKinds.Pipeline),
             chosen.Contains(Connection) ? [Connection] : []);
 
         return selection.Walks(pipelinesAreNodes)
             ? GenericResult<LineageKindSelection>.Success(selection)
             : MapRequestRefusals.Invalid<LineageKindSelection>(
-                logger, $"kinds names no kind to walk: name DataSet or DataStore{(pipelinesAreNodes ? " or Pipeline" : string.Empty)}");
+                logger, $"kinds names no kind to walk: name DataSet, DataStore or Container{(pipelinesAreNodes ? " or Pipeline" : string.Empty)}");
     }
 
-    private bool Walks(bool pipelinesAreNodes) => DataSets || DataStores || (pipelinesAreNodes && Pipelines);
+    private bool Walks(bool pipelinesAreNodes) => DataSets || DataStores || Containers || (pipelinesAreNodes && Pipelines);
 }

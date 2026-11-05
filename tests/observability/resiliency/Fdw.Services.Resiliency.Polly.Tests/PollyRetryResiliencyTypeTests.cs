@@ -104,7 +104,7 @@ public sealed class PollyRetryResiliencyTypeTests
     {
         // Arrange
         var type = new PollyRetryResiliencyType();
-        var config = new PollyRetryResiliencyConfiguration { MaxRetries = 3, BaseDelayMs = 1, MaxDelayMs = 5 };
+        var config = new PollyRetryResiliencyConfiguration { BackoffKind = "Exponential", MaxRetries = 3, BaseDelayMs = 1, MaxDelayMs = 5 };
         var ctx = new FakeResiliencyExecutionContext();
         var callCount = 0;
         Func<CancellationToken, Task<IGenericResult>> runStage = _ =>
@@ -130,7 +130,6 @@ public sealed class PollyRetryResiliencyTypeTests
     [InlineData("FIXED")]
     [InlineData("Random")]
     [InlineData("random")]
-    [InlineData("SomeUnknownKind")]
     public async Task ExecuteRetriesUntilStageSucceeds(string backoffKind)
     {
         // Arrange
@@ -168,7 +167,7 @@ public sealed class PollyRetryResiliencyTypeTests
     {
         // Arrange
         var type = new PollyRetryResiliencyType();
-        var config = new PollyRetryResiliencyConfiguration { MaxRetries = 2, BaseDelayMs = 1, MaxDelayMs = 5 };
+        var config = new PollyRetryResiliencyConfiguration { BackoffKind = "Exponential", MaxRetries = 2, BaseDelayMs = 1, MaxDelayMs = 5 };
         var ctx = new FakeResiliencyExecutionContext();
         var callCount = 0;
         Func<CancellationToken, Task<IGenericResult>> runStage = _ =>
@@ -196,7 +195,7 @@ public sealed class PollyRetryResiliencyTypeTests
     {
         // Arrange
         var type = new PollyRetryResiliencyType();
-        var config = new PollyRetryResiliencyConfiguration { MaxRetries = 3, BaseDelayMs = 1, MaxDelayMs = 5 };
+        var config = new PollyRetryResiliencyConfiguration { BackoffKind = "Exponential", MaxRetries = 3, BaseDelayMs = 1, MaxDelayMs = 5 };
         var ctx = new FakeResiliencyExecutionContext();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -218,7 +217,7 @@ public sealed class PollyRetryResiliencyTypeTests
     {
         // Arrange
         var type = new PollyRetryResiliencyType();
-        var config = new PollyRetryResiliencyConfiguration { MaxRetries = 1, BaseDelayMs = 1, MaxDelayMs = 5 };
+        var config = new PollyRetryResiliencyConfiguration { BackoffKind = "Exponential", MaxRetries = 1, BaseDelayMs = 1, MaxDelayMs = 5 };
         var ctx = new FakeLoggerProviderExecutionContext();
 
         // Act
@@ -238,7 +237,7 @@ public sealed class PollyRetryResiliencyTypeTests
         // Arrange
         var type = new PollyRetryResiliencyType();
         var config = new PollyRetryResiliencyConfiguration
-        {
+        { BackoffKind = "Exponential", BaseDelayMs = 1, MaxDelayMs = 5,
             MaxRetries = 1,
             TimeoutSeconds = 1,
         };
@@ -261,7 +260,7 @@ public sealed class PollyRetryResiliencyTypeTests
     {
         // Arrange
         var type = new PollyRetryResiliencyType();
-        var config = new PollyRetryResiliencyConfiguration { MaxRetries = 0 };
+        var config = new PollyRetryResiliencyConfiguration { BackoffKind = "Exponential", BaseDelayMs = 1, MaxDelayMs = 5, MaxRetries = 0 };
         var ctx = new FakeResiliencyExecutionContext();
 
         // Act & Assert
@@ -277,7 +276,7 @@ public sealed class PollyRetryResiliencyTypeTests
         // Arrange
         var type = new PollyRetryResiliencyType();
         var config = new PollyRetryResiliencyConfiguration
-        {
+        { BackoffKind = "Exponential",
             MaxRetries = 2,
             BaseDelayMs = 1,
             MaxDelayMs = 5,
@@ -297,5 +296,58 @@ public sealed class PollyRetryResiliencyTypeTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         callCount.ShouldBe(3); // initial attempt + 2 retries; a wired circuit breaker would have stopped short
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "CoreFramework")]
+    [InlineData("MaxRetries")]
+    [InlineData("BackoffKind")]
+    [InlineData("BaseDelayMs")]
+    [InlineData("MaxDelayMs")]
+    public async Task ExecuteRefusesAPolicyThatLeavesOutAValue(string field)
+    {
+        // Arrange: whoever defines the policy states every value; nothing is assumed (FDW-3931).
+        var type = new PollyRetryResiliencyType();
+        var config = new PollyRetryResiliencyConfiguration { Name = "Strict", MaxRetries = 1, BackoffKind = "Fixed", BaseDelayMs = 1, MaxDelayMs = 5 };
+        switch (field)
+        {
+            case "MaxRetries": config.MaxRetries = null; break;
+            case "BackoffKind": config.BackoffKind = null; break;
+            case "BaseDelayMs": config.BaseDelayMs = null; break;
+            default: config.MaxDelayMs = null; break;
+        }
+
+        var calls = 0;
+        Func<CancellationToken, Task<IGenericResult>> runStage = _ =>
+        {
+            calls++;
+            return Task.FromResult(GenericResult.Success());
+        };
+
+        // Act
+        var result = await type.Execute(runStage, config, new FakeResiliencyExecutionContext(), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldContain(field);
+        calls.ShouldBe(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "CoreFramework")]
+    public async Task ExecuteRefusesABackoffKindThatIsNotOne()
+    {
+        // Arrange: an unknown kind was read as Exponential before FDW-3931.
+        var type = new PollyRetryResiliencyType();
+        var config = new PollyRetryResiliencyConfiguration { Name = "Odd", MaxRetries = 1, BackoffKind = "SomeUnknownKind", BaseDelayMs = 1, MaxDelayMs = 5 };
+
+        // Act
+        var result = await type.Execute(AlwaysSucceeds(), config, new FakeResiliencyExecutionContext(), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldContain("SomeUnknownKind");
     }
 }

@@ -10,6 +10,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -57,7 +58,7 @@ public abstract class ListTenantsEndpointBase : Endpoint<ListTenantsRequest, Lis
     public override async Task HandleAsync(ListTenantsRequest req, CancellationToken ct)
     {
         var isAdmin = _systemRoleConfiguration.IsPlatformAdmin(User);
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = CallerClaims.UserId(User);
 
         if (req.IncludeDeleted && !isAdmin)
         {

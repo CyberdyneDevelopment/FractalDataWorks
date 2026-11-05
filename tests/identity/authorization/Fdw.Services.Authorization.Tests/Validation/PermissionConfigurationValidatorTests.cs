@@ -19,6 +19,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Domain = "connections",
             Resource = "connections",
@@ -40,6 +41,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = string.Empty,
             Resource = "connections",
             Action = "read"
@@ -60,6 +62,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "1permission",
             Resource = "connections",
             Action = "read"
@@ -80,6 +83,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Resource = string.Empty,
             Action = "read"
@@ -100,6 +104,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "test-read",
             Resource = new string('a', 101),
             Action = "read"
@@ -120,6 +125,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Resource = "Connections",
             Action = "read"
@@ -140,6 +146,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "test-read",
             Resource = "1connections",
             Action = "read"
@@ -160,6 +167,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "test-read",
             Resource = "data_store-items",
             Action = "read"
@@ -180,6 +188,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-test",
             Resource = "connections",
             Action = string.Empty
@@ -200,6 +209,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-browse",
             Resource = "connections",
             Action = "browse"
@@ -225,6 +235,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = $"connections-{action}",
             Resource = "connections",
             Action = action
@@ -248,6 +259,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange - validator uses OrdinalIgnoreCase
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-test",
             Resource = "connections",
             Action = action
@@ -268,6 +280,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Domain = "connections",
             Resource = "connections",
@@ -290,6 +303,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Domain = "connections",
             Resource = "connections",
@@ -312,6 +326,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Resource = "connections",
             Action = "read",
@@ -333,6 +348,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Domain = "connections",
             Resource = "connections",
@@ -355,6 +371,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Resource = "connections",
             Action = "read",
@@ -376,6 +393,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = "connections-read",
             Domain = "connections",
             Resource = "connections",
@@ -397,6 +415,7 @@ public sealed class PermissionConfigurationValidatorTests
         // Arrange
         var config = new PermissionImplementationConfiguration
         {
+            Scope = "tenant",
             Name = string.Empty,
             Resource = string.Empty,
             Action = string.Empty

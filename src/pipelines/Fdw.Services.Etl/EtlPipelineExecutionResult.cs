@@ -49,7 +49,7 @@ public sealed class EtlPipelineExecutionResult : IEtlPipelineExecutionResult
     public TimeSpan LoadDuration { get; set; }
 
     /// <inheritdoc />
-    public TimeSpan TotalDuration => (CompletedAt ?? DateTime.UtcNow) - StartedAt;
+    public TimeSpan TotalDuration => CompletedAt is { } completed ? completed - StartedAt : DateTime.UtcNow - StartedAt;
 
     /// <inheritdoc />
     public DateTime StartedAt { get; }

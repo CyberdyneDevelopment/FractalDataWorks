@@ -26,8 +26,8 @@ public sealed class ApplyWorkspaceChangesTranslator : SqlCommandTranslatorBase<A
         var applied = await workspace.ApplyChanges(cancellationToken).ConfigureAwait(false);
         if (!applied.IsSuccess)
             return GenericResult<QueryResult<IReadOnlyList<string>>>.Failure(
-                ApplyWorkspaceChangesTranslatorLog.ApplyFailed(logger, applied.CurrentMessage ?? "Apply failed"));
-        var paths = applied.Value ?? new List<string>();
+                ApplyWorkspaceChangesTranslatorLog.ApplyFailed(logger, applied.FailureReason().Message));
+        var paths = applied.Value ?? [];
         ApplyWorkspaceChangesTranslatorLog.ChangesApplied(logger, paths.Count);
         return GenericResult<QueryResult<IReadOnlyList<string>>>.Success(
             new QueryResult<IReadOnlyList<string>>($"Wrote {paths.Count} script(s) to disk", paths));

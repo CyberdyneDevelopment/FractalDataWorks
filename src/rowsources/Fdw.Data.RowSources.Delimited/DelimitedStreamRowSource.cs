@@ -36,10 +36,10 @@ public sealed class DelimitedStreamRowSource : IRowSourceReader
     /// <param name="content">The input stream containing delimited data.</param>
     /// <param name="options">Delimited processing options (column names are required).</param>
     /// <exception cref="ArgumentException">Thrown when no column names are supplied.</exception>
-    public DelimitedStreamRowSource(Stream content, DelimitedRowSourceOptions? options = null)
+    public DelimitedStreamRowSource(Stream content, DelimitedRowSourceOptions options)
     {
         if (content is null) throw new ArgumentNullException(nameof(content));
-        _options = options ?? new DelimitedRowSourceOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         if (_options.Columns.Count == 0)
         {
             throw new ArgumentException(

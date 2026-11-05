@@ -41,11 +41,10 @@ public sealed class WorkspacePlaceParentSource : IPlaceParentSource
         if (read.Value is not { IsDeleted: false } workspace)
             return GenericResult<PlaceRef?>.Failure(PlaceAncestryLog.WorkspaceNotFound(_logger, placeId.ToString("D")));
 
-        if (workspace.OrganizationId is { } organizationId)
-            return GenericResult<PlaceRef?>.Success(new PlaceRef(PlaceKinds.Organization, organizationId));
-
-        return workspace.TenantId is { } tenantId
-            ? GenericResult<PlaceRef?>.Success(new PlaceRef(PlaceKinds.Tenant, tenantId))
+        // A workspace is always in an organization (FDW-3668); a row that names none is data nothing has migrated, and it fails here
+        // rather than being read as sitting directly under its tenant.
+        return workspace.OrganizationId != Guid.Empty
+            ? GenericResult<PlaceRef?>.Success(new PlaceRef(PlaceKinds.Organization, workspace.OrganizationId))
             : GenericResult<PlaceRef?>.Failure(PlaceAncestryLog.WorkspaceSitsNowhere(_logger, placeId.ToString("D")));
     }
 }

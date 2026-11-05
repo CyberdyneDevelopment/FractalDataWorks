@@ -73,7 +73,7 @@ public sealed class CheckboxModel : IInputComponentModel<bool>
         // IsRequired for checkbox typically means "must be checked"
         if (IsRequired && Value != true)
         {
-            return ValidationResult.Error($"{Label ?? Id} must be checked.");
+            return ValidationResult.Error($"{Id} must be checked.");
         }
 
         if (CustomValidator != null)

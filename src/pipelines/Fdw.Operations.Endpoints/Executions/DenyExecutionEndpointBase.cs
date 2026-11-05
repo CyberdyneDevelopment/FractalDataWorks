@@ -25,8 +25,5 @@ public abstract class DenyExecutionEndpointBase : DecideExecutionEndpointBase
     protected override IExecutionStateType Target => ExecutionStateTypes.Cancelled;
 
     /// <inheritdoc />
-    protected override string DefaultMessage => "Denied";
-
-    /// <inheritdoc />
     protected override string EndpointSummary => "Deny a run that waits for approval";
 }

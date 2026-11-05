@@ -50,12 +50,16 @@ public sealed class MsSqlTypesProvider : ITypesProvider
             using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
+                var kind = KindOf(reader.GetString(1), reader.GetString(3));
+                if (kind.IsFailure)
+                    return kind.ToNewResult<IReadOnlyList<TypeCollectionMetadata>>();
+
                 var collection = new TypeCollectionMetadata
                 {
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     FullName = reader.GetString(2),
-                    CollectionKind = CollectionKinds.ByName(reader.GetString(3)) ?? CollectionKinds.Immutable,
+                    CollectionKind = kind.Value!,
                     ServiceCategory = await reader.IsDBNullAsync(4, cancellationToken).ConfigureAwait(false) ? null : reader.GetString(4),
                     AssemblyQualifiedName = await reader.IsDBNullAsync(5, cancellationToken).ConfigureAwait(false) ? null : reader.GetString(5)
                 };
@@ -91,12 +95,16 @@ public sealed class MsSqlTypesProvider : ITypesProvider
             using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
+                var kind = KindOf(reader.GetString(1), reader.GetString(3));
+                if (kind.IsFailure)
+                    return kind.ToNewResult<TypeCollectionMetadata>();
+
                 var collection = new TypeCollectionMetadata
                 {
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     FullName = reader.GetString(2),
-                    CollectionKind = CollectionKinds.ByName(reader.GetString(3)) ?? CollectionKinds.Immutable,
+                    CollectionKind = kind.Value!,
                     ServiceCategory = await reader.IsDBNullAsync(4, cancellationToken).ConfigureAwait(false) ? null : reader.GetString(4),
                     AssemblyQualifiedName = await reader.IsDBNullAsync(5, cancellationToken).ConfigureAwait(false) ? null : reader.GetString(5)
                 };
@@ -112,6 +120,16 @@ public sealed class MsSqlTypesProvider : ITypesProvider
             return GenericResult<TypeCollectionMetadata>.Failure(
                 MsSqlTypesProviderLog.GetCollectionFailed(_logger, ex, ex.Message));
         }
+    }
+
+    // Why a failure: the stored kind names how the collection behaves, and a name the platform does not know is a row
+    // written by something else, never a reason to treat the collection as Immutable (FDW-3580).
+    private IGenericResult<ICollectionKind> KindOf(string collectionName, string kindName)
+    {
+        var kind = CollectionKinds.ByName(kindName);
+        return kind == CollectionKinds.NotFound
+            ? GenericResult<ICollectionKind>.Failure(MsSqlTypesProviderLog.UnknownCollectionKind(_logger, collectionName, kindName))
+            : GenericResult<ICollectionKind>.Success(kind);
     }
 
     /// <inheritdoc/>

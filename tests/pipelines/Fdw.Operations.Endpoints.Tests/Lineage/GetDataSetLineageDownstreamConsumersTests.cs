@@ -96,12 +96,19 @@ public class GetDataSetLineageDownstreamConsumersTests
                 .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(pipeline));
         }
 
+        // A list read composes the members of a page as a set (FDW-3906).
+        implementations
+            .Setup(i => i.GetSet(It.IsAny<IEnumerable<Guid>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<Guid> ids, int _, CancellationToken _) =>
+                GenericResult<IReadOnlyDictionary<Guid, IPipelineImplementationConfiguration>>.Success(
+                    pipelines.Where(p => ids.Contains(p.Id)).ToDictionary(p => p.Id, p => (IPipelineImplementationConfiguration)p)));
+
         var provider = new PipelineServiceConfigurationProvider(
-            NullLogger<PipelineServiceConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "pipe", "Pipeline");
+            NullLogger<PipelineServiceConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "pipe", "Pipeline", new Fdw.Services.Configuration.UnavailablePlacement());
         provider.Register("Graph", implementations.Object);
 
         var dataSets = new DataSetConfigurationProvider(
-            NullLogger<DataSetConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "data", "DataSet");
+            NullLogger<DataSetConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement());
 
         // Calculation consumers are read through the composed calculations; this store holds none.
         var calculations = new Mock<ICalculationConfigurationProvider>();

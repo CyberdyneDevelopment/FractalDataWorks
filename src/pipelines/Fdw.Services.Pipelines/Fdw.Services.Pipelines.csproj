@@ -36,6 +36,9 @@
     <ProjectReference Include="..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\..\workspaces\Fdw.Services.Workspaces.Abstractions\Fdw.Services.Workspaces.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\..\hosts\Fdw.Services.Hosts\Fdw.Services.Hosts.csproj" />
+    <ProjectReference Include="..\..\hosts\Fdw.Services.Hosts.Abstractions\Fdw.Services.Hosts.Abstractions.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,3 +1,4 @@
+using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
@@ -5,45 +6,17 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Etl.Thresholds;
 
 /// <summary>
-/// MessageLogging for the thresholds on waiting pipeline runs (FDW-3161): a threshold that fires or clears, and thresholds that are stated wrongly.
-/// EventId range: 22140-22157 (the leading digit of an id that surfaces as an answer names its category: 2 a refusal, 3 a missing owner, 6 a configuration fault, 9 an internal one, 4 a conflict), 32159, 42160, 62155, 92158, 92160.
+/// MessageLogging for the thresholds on waiting pipeline runs (FDW-3161, FDW-3975): the level of thresholds an owner states, the gate that holds new runs, and the waiting runs
+/// reported to the threshold evaluator.
+/// EventId range: 22140-22166 (the leading digit of an id that surfaces as an answer names its category: 2 a refusal, 3 a missing owner, 6 a configuration fault, 9 an internal one, 4 a conflict).
 /// </summary>
 [MessageLoggingTypeCode("WAITTHRESHOLD")]
 public static partial class WaitThresholdLog
 {
-    /// <summary>Logs a threshold that began to fire.</summary>
-    [MessageLogging(EventId = 22140, Level = LogLevel.Warning,
-        Message = "The threshold '{threshold}' of {owner} fires: {count} waiting runs, {comparison} {number}")]
-    public static partial IGenericMessage Fired(ILogger logger, string threshold, string owner, int count, string comparison, int number);
-
-    /// <summary>Logs a threshold that stopped firing.</summary>
-    [MessageLogging(EventId = 22141, Level = LogLevel.Information, Message = "The threshold '{key}' no longer fires")]
-    public static partial IGenericMessage Cleared(ILogger logger, string key);
-
     /// <summary>Logs a server that states that it takes the thresholds of a level above it.</summary>
     [MessageLogging(EventId = 22142, Level = LogLevel.Error,
         Message = "The server states its thresholds on waiting runs as '{mode}', but the server has no level above it: it states its own thresholds or states none")]
     public static partial IGenericMessage ServerInherits(ILogger logger, string mode);
-
-    /// <summary>Logs a level that states thresholds of its own and states none.</summary>
-    [MessageLogging(EventId = 22143, Level = LogLevel.Error,
-        Message = "{owner} states thresholds of its own on waiting runs but states none")]
-    public static partial IGenericMessage OwnWithoutThresholds(ILogger logger, string owner);
-
-    /// <summary>Logs a level that states that it has none and lists thresholds.</summary>
-    [MessageLogging(EventId = 22144, Level = LogLevel.Error,
-        Message = "{owner} states that it has no thresholds on waiting runs but lists {count}")]
-    public static partial IGenericMessage NoneWithThresholds(ILogger logger, string owner, int count);
-
-    /// <summary>Logs a threshold whose notification rule could not be sent.</summary>
-    [MessageLogging(EventId = 22146, Level = LogLevel.Error,
-        Message = "The threshold '{threshold}' fired, but its notification rule '{rule}' was not sent: {reason}")]
-    public static partial IGenericMessage NotificationNotSent(ILogger logger, string threshold, string rule, string? reason);
-
-    /// <summary>Logs thresholds that could not be read while the waiting runs were judged.</summary>
-    [MessageLogging(EventId = 22147, Level = LogLevel.Error,
-        Message = "The thresholds on waiting runs could not be read, so the waiting runs were not judged: {reason}")]
-    public static partial IGenericMessage ConfigurationNotRead(ILogger logger, string? reason);
 
     /// <summary>Logs a run whose pipeline states nothing about thresholds.</summary>
     [MessageLogging(EventId = 22148, Level = LogLevel.Error,
@@ -73,10 +46,6 @@ public static partial class WaitThresholdLog
     [MessageLogging(EventId = 22153, Level = LogLevel.Error, Message = "{owner} states the mode '{mode}' of thresholds on waiting runs, which is not one of Inherit, Own and None")]
     public static partial IGenericMessage ModeUnknown(ILogger logger, string owner, string mode);
 
-    /// <summary>Logs a threshold that states a comparison or a severity that is not an option.</summary>
-    [MessageLogging(EventId = 22154, Level = LogLevel.Error, Message = "The threshold '{threshold}' of {owner} states the {part} '{value}', which is not an option")]
-    public static partial IGenericMessage OptionUnknown(ILogger logger, string threshold, string owner, string part, string value);
-
     /// <summary>Logs rows of the thresholds that could not be read.</summary>
     [MessageLogging(EventId = 62155, Level = LogLevel.Error, Message = "The {container} of thresholds on waiting runs could not be read: {reason}")]
     public static partial IGenericMessage RowsNotRead(ILogger logger, string container, string? reason);
@@ -99,18 +68,41 @@ public static partial class WaitThresholdLog
         ClientMessage = "There is no {kind} '{owner}' to state thresholds on waiting runs")]
     public static partial IGenericMessage NoSuchOwner(ILogger logger, string kind, string owner);
 
-    /// <summary>Logs a pipeline that cannot be deleted because a threshold of another owner counts it.</summary>
-    [MessageLogging(EventId = 42160, Level = LogLevel.Warning,
-        Message = "The pipeline '{pipeline}' is counted by the threshold '{threshold}' of {owner}, so it is not deleted",
-        ClientMessage = "The pipeline '{pipeline}' is counted by the threshold '{threshold}' of {owner}; change or remove that threshold first")]
-    public static partial IGenericMessage PipelineStillCounted(ILogger logger, string pipeline, string threshold, string owner);
-
     /// <summary>Logs the level of an owner that is being deleted and could not be removed.</summary>
     [MessageLogging(EventId = 92160, Level = LogLevel.Error, Message = "The level of thresholds on waiting runs of {owner} could not be removed: {reason}")]
     public static partial IGenericMessage NotReleased(ILogger logger, string owner, string? reason);
 
-    /// <summary>Logs a level that inherits and lists thresholds.</summary>
-    [MessageLogging(EventId = 22145, Level = LogLevel.Error,
-        Message = "{owner} takes the thresholds of the level above it but lists {count} of its own")]
-    public static partial IGenericMessage InheritWithThresholds(ILogger logger, string owner, int count);
+    /// <summary>Logs a waiting run that names no tenant, so the thresholds of its pipeline cannot be judged for it (FDW-3975).</summary>
+    [MessageLogging(EventId = 22161, Level = LogLevel.Warning,
+        Message = "A waiting run of '{pipeline}' names no tenant, so it is not counted against the thresholds on waiting runs of the pipeline")]
+    public static partial IGenericMessage WaitingRunHasNoTenant(ILogger logger, string pipeline);
+
+    /// <summary>Logs a count of waiting runs that the evaluator could not judge (FDW-3975).</summary>
+    [MessageLogging(EventId = 22162, Level = LogLevel.Warning,
+        Message = "The waiting runs of '{pipeline}' were not judged against its thresholds: {reason}")]
+    public static partial IGenericMessage WaitingRunsNotJudged(ILogger logger, string pipeline, string? reason);
+
+    /// <summary>Logs a report of waiting runs that threw (FDW-3975).</summary>
+    [MessageLogging(EventId = 92161, Level = LogLevel.Error, Message = "Reporting the waiting runs of '{pipeline}' to the threshold evaluator failed")]
+    public static partial IGenericMessage WaitingRunsReportFailed(ILogger logger, Exception ex, string pipeline);
+
+    /// <summary>Logs a run that names no tenant, so the thresholds on waiting runs cannot say whether it is held (FDW-3975).</summary>
+    [MessageLogging(EventId = 22165, Level = LogLevel.Error,
+        Message = "A run of '{pipeline}' names no tenant, so the thresholds on waiting runs cannot say whether it is held; it is not taken")]
+    public static partial IGenericMessage HoldRunHasNoTenant(ILogger logger, string pipeline);
+
+    /// <summary>Logs a run for which the thresholds of its owner were not read, so it is not taken (FDW-3975).</summary>
+    [MessageLogging(EventId = 22167, Level = LogLevel.Error,
+        Message = "The thresholds on waiting runs of the {kind} a run of '{pipeline}' is held by were not read, so it is not taken")]
+    public static partial IGenericMessage HoldThresholdsNotRead(ILogger logger, string pipeline, string kind);
+
+    /// <summary>Logs a waiting run that names a schedule but not its Id, so it is not counted against the thresholds of the schedule (FDW-3975).</summary>
+    [MessageLogging(EventId = 32163, Level = LogLevel.Warning,
+        Message = "A waiting run of '{pipeline}' names the schedule '{schedule}' but not its Id, so it is not counted against the thresholds of that schedule")]
+    public static partial IGenericMessage WaitingRunHasNoScheduleId(ILogger logger, string pipeline, string schedule);
+
+    /// <summary>Logs a run started by a schedule that carries no schedule Id, so the thresholds of that schedule cannot say whether it is held (FDW-3975).</summary>
+    [MessageLogging(EventId = 32166, Level = LogLevel.Error,
+        Message = "A run of '{pipeline}' names the schedule '{schedule}' but not its Id, so the thresholds of that schedule cannot say whether it is held; it is not taken")]
+    public static partial IGenericMessage HoldScheduleIdMissing(ILogger logger, string pipeline, string schedule);
 }

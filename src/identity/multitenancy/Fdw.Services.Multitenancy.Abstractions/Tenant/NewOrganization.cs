@@ -8,4 +8,5 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 /// <param name="TenantId">The tenant the organization belongs to.</param>
 /// <param name="Name">The organization's display name.</param>
 /// <param name="Slug">The organization's slug, unique among the organizations of the tenant.</param>
-public sealed record NewOrganization(Guid TenantId, string Name, string Slug);
+/// <param name="IsDefault">Whether this is the tenant's default organization (FDW-3668). Only a tenant's founding states it; the tenant has at most one.</param>
+public sealed record NewOrganization(Guid TenantId, string Name, string Slug, bool IsDefault = false);

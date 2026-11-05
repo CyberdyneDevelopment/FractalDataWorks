@@ -28,7 +28,7 @@ public sealed class AggregateTransformTypeTests
         IEnumerable<string> groupByFields,
         params PipelineTransformAggregationConfiguration[] aggregations)
     {
-        var config = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
+        var config = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
         config.GroupByFields = groupByFields
             .Select((f, ordinal) => new PipelineTransformGroupByFieldConfiguration { Id = Guid.NewGuid(), FieldName = f, Ordinal = ordinal })
             .ToList();
@@ -276,7 +276,7 @@ public sealed class AggregateTransformTypeTests
             GroupByFields = ["TeamId"],
             Aggregations = [new FakeAggregationSpec { SourceField = "Points", Function = "Sum", OutputField = "TotalPoints" }],
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -303,7 +303,7 @@ public sealed class AggregateTransformTypeTests
             OperationType = "Aggregate",
             Aggregations = [new FakeAggregationSpec { SourceField = "Points", Function = "Sum", OutputField = "TotalPoints" }],
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -326,7 +326,7 @@ public sealed class AggregateTransformTypeTests
             GroupByFields = ["TeamId"],
             Aggregations = [new FakeAggregationSpec { SourceField = "Points", Function = "Median", OutputField = "MedianPoints" }],
         };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Agg1", OperationType = "Aggregate" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);

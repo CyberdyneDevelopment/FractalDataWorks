@@ -21,7 +21,8 @@ public sealed class PostgreSqlQueryTranslatorTests
         string name = "customers",
         string schema = "public",
         string database = "",
-        IField[]? fields = null)
+        IField[]? fields = null,
+        string? declaredKey = null)
     {
         var dbPath = new PostgreSqlDatabasePath(database, schema, name);
         var containerSchema = new Mock<IContainerSchema>();
@@ -30,7 +31,11 @@ public sealed class PostgreSqlQueryTranslatorTests
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
+        container.As<IStorageContainer>().Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
+        if (declaredKey is not null)
+            container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = declaredKey });
+
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
@@ -137,7 +142,7 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Trait("Category", "DataGateway")]
     public async Task TranslatePagingUsesLimitOffset()
     {
-        var container = CreateContainer(fields: new[] { CreateField("id").Object });
+        var container = CreateContainer(fields: new[] { CreateField("id").Object }, declaredKey: "id");
         var paging = new PagingExpression { Skip = 20, Take = 10 };
 
         var queryCommand = new Mock<IQueryCommand>();
@@ -157,8 +162,31 @@ public sealed class PostgreSqlQueryTranslatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataGateway")]
-    public async Task TranslatePagingInjectsDefaultOrderByFirstFieldWhenNoOrdering()
+    public async Task TranslatePagingWithNoOrderingFollowsTheDeclaredKeyNotTheFirstField()
     {
+        var fields = new[] { CreateField("name").Object, CreateField("email").Object };
+        var container = CreateContainer(fields: fields, declaredKey: "email");
+        var paging = new PagingExpression { Skip = 0, Take = 50 };
+
+        var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
+        queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
+        queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
+        queryCommand.Setup(q => q.Paging).Returns(paging);
+
+        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("ORDER BY \"email\"");
+        result.Value.CommandText.ShouldNotContain("ORDER BY \"name\"");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslatePagingWithNoOrderingRefusesAContainerThatDeclaresNoKey()
+    {
+        // FDW-3454: the order was the first field, then "1"; a container that declares no key is refused, naming it.
         var fields = new[] { CreateField("name").Object, CreateField("email").Object };
         var container = CreateContainer(fields: fields);
         var paging = new PagingExpression { Skip = 0, Take = 50 };
@@ -171,9 +199,9 @@ public sealed class PostgreSqlQueryTranslatorTests
 
         var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeTrue();
-        // Default ORDER BY uses dialect-quoted first field name
-        result.Value!.CommandText.ShouldContain("ORDER BY \"name\"");
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldEndWith("-21020");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("customers");
     }
 
     [Fact]

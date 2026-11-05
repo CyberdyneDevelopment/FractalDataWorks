@@ -7,29 +7,29 @@ using Fdw.Data.Abstractions;
 namespace Fdw.Data.DataSets.Abstractions;
 
 /// <summary>
-/// A data set variation as its domain row holds it: the four properties every domain has, and everything a list of
-/// variations shows, whatever the kind.
+/// A data set variation as a list shows it: the data set's Id, Name, Domain and Implementation, and everything a list of variations
+/// shows, whatever the kind. Read from the <c>data.DataSetVariationList</c> view, which joins <c>data.DataSet</c> to the variation's
+/// own row, so a lookup by owner, by the data set it varies, by its parent or by its name is one query (FDW-3638).
 /// </summary>
 /// <remarks>
 /// <para>
-/// A variation is a view of a data set. It holds no fields of its own: the data route runs the data set it points at.
-/// It is its own domain, not a data set, so it never appears in a list or picker of data sets (FDW-1022). The kind is
-/// the implementation (FDW-1026): <see cref="ScopedDataSetVariationConfiguration"/>, a data set a workspace owns as its
-/// own view of a main one, and <see cref="DataViewDataSetVariationConfiguration"/>, a saved chart owned by a user.
-/// <see cref="BaseDataSetId"/> is the root data set for every kind, so one query by it lists every variation of a data
-/// set.
+/// A variation is a data set of kind Variation (<see cref="VariationDataSetConfiguration"/>): it appears in the lists of data sets with
+/// the rest, and it holds no fields of its own, because the data route runs the data set it points at. <see cref="BaseDataSetId"/> is
+/// the root data set for every kind, so one query by it lists every variation of a data set.
 /// </para>
 /// <para>
-/// Maps to <c>data.DataSetVariation</c>. <see cref="DomainConfiguration.Name"/> is the unique key per tenant, because
-/// the domain provider identifies a member by name alone: a Scoped variation's is the owning workspace's name and
-/// <see cref="VariationName"/> joined by <c>/</c>, a data view's is its <see cref="VariationName"/>. Set once at
-/// create. Exactly one of <see cref="OwnerWorkspaceId"/> and <see cref="OwnerUserId"/> is set.
+/// <see cref="DomainConfiguration.Name"/> is the unique key per tenant: a Scoped variation's is the owning workspace's name and
+/// <see cref="VariationName"/> joined by <c>/</c>, a data view's is its <see cref="VariationName"/>. Set once at create. Exactly one
+/// of <see cref="OwnerWorkspaceId"/> and <see cref="OwnerUserId"/> is set, and <see cref="VariationKind"/> says which.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 public partial class DataSetVariationDomainConfiguration : DomainConfiguration
 {
+    /// <summary>Gets or sets the kind of variation: <see cref="VariationKinds.Scoped"/> when a workspace owns it, <see cref="VariationKinds.DataView"/> when a user does.</summary>
+    public string VariationKind { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the name the owning workspace knows the variation by: unique within that workspace.</summary>
     public string VariationName { get; set; } = string.Empty;
 
@@ -61,7 +61,7 @@ public partial class DataSetVariationDomainConfiguration : DomainConfiguration
     /// Gets or sets the view's stored filter tree, in the body shape of the data route's filter, or null for none. The data
     /// route adds the filter of every view in the chain, parent first, to the request's own (FDW-1032).
     /// </summary>
-    public string? Filters { get; set; }
+    public string? StoredFilters { get; set; }
 
     /// <summary>
     /// Gets or sets how sensitive this variation's data is: the <c>ClassificationId</c> of a <c>DataClassifications</c>

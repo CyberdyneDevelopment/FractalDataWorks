@@ -7,12 +7,12 @@ internal sealed class ComparisonRecordPredicate(string fieldName, string compara
 {
     public bool Evaluate(IDictionary<string, object?> record)
     {
-        if (comparator == RecordPredicateKeywords.Equal)
+        if (string.Equals(comparator, RecordPredicateKeywords.Equal, System.StringComparison.Ordinal))
         {
             return RecordValues.TextEquals(record, fieldName, text);
         }
 
-        if (comparator == RecordPredicateKeywords.NotEqual)
+        if (string.Equals(comparator, RecordPredicateKeywords.NotEqual, System.StringComparison.Ordinal))
         {
             return !RecordValues.TextEquals(record, fieldName, text);
         }

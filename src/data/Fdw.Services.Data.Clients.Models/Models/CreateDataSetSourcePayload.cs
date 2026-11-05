@@ -26,11 +26,11 @@ public sealed class CreateDataSetSourcePayload
     /// <summary>Gets or sets the container name.</summary>
     public string ContainerName { get; set; } = string.Empty;
     /// <summary>Gets or sets whether pushdown is supported.</summary>
-    public bool SupportsPredicatePushdown { get; set; }
+    public bool? SupportsPredicatePushdown { get; set; }
     /// <summary>Gets or sets whether this is the primary source.</summary>
     public bool IsPrimary { get; set; }
     /// <summary>Gets or sets the priority.</summary>
-    public int Priority { get; set; }
+    public int? Priority { get; set; }
     /// <summary>Gets or sets the mapper type name.</summary>
     public string? MapperTypeName { get; set; }
     /// <summary>Gets or sets the HTTP endpoint.</summary>

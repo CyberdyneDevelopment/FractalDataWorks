@@ -13,6 +13,7 @@ using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Fdw.Roslyn.Commands.Symbols;
 
 namespace Fdw.Roslyn.Commands.Analysis.Translators;
 
@@ -69,8 +70,7 @@ public sealed class AnalyzeCouplingTranslator
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
-        var symbol = semanticModel.GetSymbolInfo(token.Parent!, cancellationToken).Symbol
-                  ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
+        var symbol = TokenSymbols.Resolve(semanticModel, token, cancellationToken);
 
         if (symbol is not INamedTypeSymbol typeSymbol)
         {
