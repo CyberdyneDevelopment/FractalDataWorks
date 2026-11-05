@@ -24,8 +24,8 @@ public abstract class GetWaitThresholdLevelEndpointBase : WaitThresholdLevelEndp
         Policies("pipelines:read");
         Summary(s =>
         {
-            s.Summary = "Read the thresholds on waiting runs an owner states";
-            s.Description = "Answers the mode (Inherit, Own or None) and the thresholds the server, a pipeline or a schedule states. An owner that states nothing answers Inherit with no thresholds.";
+            s.Summary = "Read the level of thresholds on waiting runs an owner states";
+            s.Description = "Answers the mode (Inherit, Own or None) the server, a pipeline or a schedule states. The thresholds are attached to the owner through the threshold routes. An owner that states nothing answers Inherit.";
         });
     }
 

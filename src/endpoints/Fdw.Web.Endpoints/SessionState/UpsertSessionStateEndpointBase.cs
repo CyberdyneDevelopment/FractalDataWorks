@@ -5,6 +5,7 @@ using Fdw.Services.SessionState;
 using Fdw.Web.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Web.Endpoints.SessionState;
 
@@ -41,8 +42,12 @@ public abstract class UpsertSessionStateEndpointBase : Endpoint<UpsertSessionSta
     /// <inheritdoc/>
     public override async Task HandleAsync(UpsertSessionStateRequest req, CancellationToken ct)
     {
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                  ?? User.FindFirst("sub")?.Value ?? string.Empty;
+        if (CallerClaims.UserId(User) is not { } userId)
+        {
+            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            return;
+        }
+
         SessionStateEndpointLog.UpsertingState(_logger, userId, req.Key);
 
         var result = await _sessionState.SaveState(userId, req.Key, req.Value, ct).ConfigureAwait(false);

@@ -17,6 +17,7 @@ using Fdw.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Operations.Endpoints;
 using Fdw.Schema.Clients.Models;
+using Fdw.Conventions;
 
 namespace Fdw.Schema.Endpoints;
 
@@ -176,7 +177,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
         await Send.ResultAsync(TypedResults.Json(new
         {
             errorCode = "ReadFailed",
-            messages = new[] { $"Reading {what} failed: {reason ?? "no reason given"}" }
+            messages = new[] { $"Reading {what} failed: {reason ?? LogPlaceholders.NoReason}" }
         }, statusCode: 500)).ConfigureAwait(false);
     }
 }

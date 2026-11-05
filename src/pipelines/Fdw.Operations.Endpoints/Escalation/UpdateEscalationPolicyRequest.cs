@@ -26,6 +26,12 @@ public class UpdateEscalationPolicyRequest
     /// <summary>Gets or sets the cooldown period in minutes. Omitted leaves it unchanged.</summary>
     public int? CooldownMinutes { get; set; }
 
+    /// <summary>Gets or sets how many times a failed notification is retried. Omitted leaves it unchanged.</summary>
+    public int? MaxRetries { get; set; }
+
+    /// <summary>Gets or sets the seconds between retries. Omitted leaves it unchanged.</summary>
+    public int? RetryDelaySeconds { get; set; }
+
     /// <summary>
     /// Gets or sets the escalation levels. Omitted (null) leaves them unchanged; an empty list is a
     /// real request to clear them.

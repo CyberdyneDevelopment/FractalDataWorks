@@ -41,6 +41,13 @@ public interface IScheduleImplementationConfiguration : IImplementationConfigura
     /// <summary>Gets or sets the IANA time zone the schedule is evaluated in.</summary>
     string TimeZoneId { get; set; }
 
+    /// <summary>
+    /// Gets or sets what the scheduler does with a cron fire time of this schedule that passed while it was down (FDW-3788): the name of a <c>MissedFireRules</c> option, Skip or FireOnce.
+    /// Required on every schedule, with no default. It applies to a Cron schedule only: an Interval schedule counts its interval from the moment the scheduler starts and a Once schedule
+    /// fires at its time, so neither has fire times to miss.
+    /// </summary>
+    string MissedFireRule { get; set; }
+
     /// <summary>Gets or sets how many times a failed run is retried.</summary>
     int MaxRetries { get; set; }
 
@@ -48,7 +55,7 @@ public interface IScheduleImplementationConfiguration : IImplementationConfigura
     int RetryDelaySeconds { get; set; }
 
     /// <summary>Gets or sets how long a run may take before it is abandoned, in seconds.</summary>
-    int TimeoutSeconds { get; set; }
+    int? TimeoutSeconds { get; set; }
 
     /// <summary>
     /// Gets or sets the run parameters the schedule passes to its pipeline on every run, by name.

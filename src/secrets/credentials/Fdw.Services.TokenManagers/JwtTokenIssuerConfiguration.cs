@@ -19,9 +19,10 @@ public sealed record JwtTokenIssuerConfiguration
 
     /// <summary>Gets how long an access token remains valid.</summary>
     /// <remarks>
-    /// Short by default. A JWT cannot be recalled once minted, so the window during which a revoked
+    /// Required: the issuer states it (the resolver reads it from the token manager's own configuration), there is no default (FDW-3823).
+    /// A JWT cannot be recalled once minted, so the window during which a revoked
     /// principal still holds a working token is exactly this value — which is the argument for
     /// minutes rather than hours, with a refresh token carrying the longer session.
     /// </remarks>
-    public TimeSpan Lifetime { get; init; } = TimeSpan.FromMinutes(15);
+    public required TimeSpan Lifetime { get; init; }
 }

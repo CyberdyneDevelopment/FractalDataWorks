@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Execution.Abstractions.Models;
 
@@ -43,6 +44,7 @@ public class ProcessMetrics : IProcessMetrics
     /// <summary>
     /// Get empty metrics.
     /// </summary>
+    [PlatformDefault]
     public static ProcessMetrics Empty => new();
 
     /// <summary>

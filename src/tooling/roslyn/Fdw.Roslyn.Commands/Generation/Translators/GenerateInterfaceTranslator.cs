@@ -125,8 +125,8 @@ public sealed class GenerateInterfaceTranslator : RoslynCommandTranslatorBase<Ge
             }
         }
 
-        var fileName = $"{command.InterfaceName}.cs";
-        var filePath = command.FilePath ?? fileName;
+        var fileName = command.ConventionalFileName;
+        var filePath = command.FilePath ?? command.ConventionalFileName;
 
         // Check if document already exists
         var existingDocId = targetProject.Documents.FirstOrDefault(d => string.Equals(d.Name, fileName, StringComparison.Ordinal))?.Id;

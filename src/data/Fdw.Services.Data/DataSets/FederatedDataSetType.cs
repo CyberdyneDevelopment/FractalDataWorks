@@ -18,6 +18,7 @@ using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
 using IDataField = Fdw.Data.DataSets.Abstractions.IDataField;
+using System.Collections.Immutable;
 
 namespace Fdw.Services.Data;
 
@@ -69,7 +70,12 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             return DataSetExecutionHelpers.KindMismatch<T>(ctx, "Federated");
 
         IReadOnlyList<DataSetSourceConfiguration> sources =
-            ctx.Config.Sources as IReadOnlyList<DataSetSourceConfiguration> ?? ctx.Config.Sources?.ToList() ?? [];
+            ctx.Config.Sources switch
+            {
+                IReadOnlyList<DataSetSourceConfiguration> list => list,
+                { } other => other.ToList(),
+                _ => [],
+            };
         if (sources.Count == 0)
             return GenericResult<T>.Failure(DataGatewayLogger.DataSetNoSources(ctx.Logger, ctx.Config.Name));
 
@@ -106,9 +112,11 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             var decomposed = ctx.Pushdown.DecomposeBySource(inputFilter, ctx.Config, sources, fieldMappings);
             if (!decomposed.IsSuccess)
                 return GenericResult<T>.Failure(
-                    DataGatewayLogger.FilterDecompositionFailed(ctx.Logger, ctx.Config.Name, decomposed.CurrentMessage ?? "Unknown error"));
+                    DataGatewayLogger.FilterDecompositionFailed(ctx.Logger, ctx.Config.Name, decomposed.FailureReason().Message));
 
-            var sourceFilters = decomposed.Value ?? new Dictionary<string, IFilterExpression>(StringComparer.OrdinalIgnoreCase);
+            IReadOnlyDictionary<string, IFilterExpression> sourceFilters = decomposed.Value is { } decomposedFilters
+                ? decomposedFilters
+                : ImmutableDictionary<string, IFilterExpression>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase);
             DataGatewayLogger.FilterDecomposed(ctx.Logger, sourceFilters.Count);
 
             var pulled = await PullAllSources(ctx, sources, sourceFilters, fieldMappings, isParallel, ct).ConfigureAwait(false);
@@ -152,7 +160,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
     private static async Task<IGenericResult<Dictionary<string, MaterializedSource>>> PullAllSources(
         DataSetExecutionContext ctx,
         IReadOnlyList<DataSetSourceConfiguration> sources,
-        Dictionary<string, IFilterExpression> sourceFilters,
+        IReadOnlyDictionary<string, IFilterExpression> sourceFilters,
         Dictionary<string, IReadOnlyDictionary<string, string>> fieldMappings,
         bool isParallel,
         CancellationToken ct)
@@ -196,20 +204,20 @@ public sealed class FederatedDataSetType : DataSetTypeBase
     private static async Task<IGenericResult<MaterializedSource>> PullSource(
         DataSetExecutionContext ctx,
         DataSetSourceConfiguration sourceConfig,
-        Dictionary<string, IFilterExpression> sourceFilters,
+        IReadOnlyDictionary<string, IFilterExpression> sourceFilters,
         Dictionary<string, IReadOnlyDictionary<string, string>> fieldMappings,
         CancellationToken ct)
     {
         var sourceName = sourceConfig.SourceName;
+        fieldMappings.TryGetValue(sourceName, out var mappingsForSource);
 
         IFilterExpression? translatedFilter = null;
         if (sourceFilters.TryGetValue(sourceName, out var rawFilter) && rawFilter is not null)
         {
-            fieldMappings.TryGetValue(sourceName, out var mappingsForSource);
             var translation = ctx.Pushdown.TranslateToPhysical(rawFilter, mappingsForSource);
             if (!translation.IsSuccess)
                 return GenericResult<MaterializedSource>.Failure(
-                    DataGatewayLogger.FilterTranslationFailed(ctx.Logger, sourceName, translation.CurrentMessage ?? "Unknown error"));
+                    DataGatewayLogger.FilterTranslationFailed(ctx.Logger, sourceName, translation.FailureReason().Message));
             translatedFilter = translation.Value;
         }
 
@@ -223,8 +231,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value is null)
             return GenericResult<MaterializedSource>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceName));
 
-        var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
-        if (connectionId == Guid.Empty)
+        if (containerResult.Value.Parent?.Store?.ConnectionId is not { } connectionId || connectionId == Guid.Empty)
             return GenericResult<MaterializedSource>.Failure(
                 DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName,
                     "the container's DataStore carries no ConnectionId"));
@@ -232,7 +239,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
             return GenericResult<MaterializedSource>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.NoValueReason().Message));
 
         if (connectionResult.Value is not IRecordSourceConnection recordConnection)
             return GenericResult<MaterializedSource>.Failure(
@@ -240,7 +247,13 @@ public sealed class FederatedDataSetType : DataSetTypeBase
 
         DataGatewayLogger.ExecutingSourceQuery(ctx.Logger, sourceName, containerName);
         var sourceQuery = new QueryCommand<DataRecord> { Filter = translatedFilter };
-        return await ReadRecords(ctx, recordConnection, sourceQuery, containerResult.Value, sourceName, ct).ConfigureAwait(false);
+        var read = await ReadRecords(ctx, recordConnection, sourceQuery, containerResult.Value, sourceName, ct).ConfigureAwait(false);
+        if (read.IsFailure || mappingsForSource is null)
+            return read;
+
+        // The records come back in the store's names; the join, the chains and the result use the data set's (FDW-3629).
+        var logical = DataSetExecutionHelpers.RenameToLogical(ctx, read.Value.Schema, read.Value.Records, mappingsForSource, sourceName);
+        return GenericResult<MaterializedSource>.Success(new MaterializedSource(logical.Records, logical.Schema));
     }
 
     private static async Task<IGenericResult<MaterializedSource>> ReadRecords(
@@ -263,7 +276,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             {
                 if (!recordResult.IsSuccess)
                     return GenericResult<MaterializedSource>.Failure(
-                        DataGatewayLogger.FederatedRecordReadFailed(ctx.Logger, ctx.Config.Name, sourceName, recordResult.CurrentMessage ?? "Unknown error"));
+                        DataGatewayLogger.FederatedRecordReadFailed(ctx.Logger, ctx.Config.Name, sourceName, recordResult.FailureReason().Message));
                 records.Add(recordResult.Value);
             }
 
@@ -299,11 +312,25 @@ public sealed class FederatedDataSetType : DataSetTypeBase
                 return GenericResult<List<DataRecord>>.Failure(
                     DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.RightSourceName));
 
-            var leftRecords = accumulated ?? left.Records;
-            var leftSchema = accumulatedSchema ?? left.Schema;
-            var combinedSchema = CombineSchema(leftSchema, right.Schema);
+            var leftRecords = accumulated is null ? left.Records : accumulated;
+            var leftSchema = accumulatedSchema is null ? left.Schema : accumulatedSchema;
 
-            accumulated = HashJoin(leftRecords, right.Records, combinedSchema, join.LeftFieldName, join.RightFieldName, join.JoinType);
+            // A join field missing from its side would read as null on every record and match nothing: refused, never an empty result (FDW-3629).
+            if (leftSchema.GetFieldOrdinal(join.LeftFieldName) < 0)
+                return GenericResult<List<DataRecord>>.Failure(
+                    DataGatewayLogger.JoinFieldNotFound(ctx.Logger, ctx.Config.Name, join.LeftSourceName, join.LeftFieldName));
+            if (right.Schema.GetFieldOrdinal(join.RightFieldName) < 0)
+                return GenericResult<List<DataRecord>>.Failure(
+                    DataGatewayLogger.JoinFieldNotFound(ctx.Logger, ctx.Config.Name, join.RightSourceName, join.RightFieldName));
+
+            // Both sides' keys usually carry the same logical name; the key is kept once, from the left, as SQL's JOIN ... USING does, so a
+            // left join that matches nothing still reads its own key and not the right side's null (FDW-3629).
+            var sharedKey = string.Equals(join.LeftFieldName, join.RightFieldName, StringComparison.OrdinalIgnoreCase)
+                ? right.Schema.GetFieldOrdinal(join.RightFieldName)
+                : -1;
+            var combinedSchema = CombineSchema(leftSchema, right.Schema, sharedKey);
+
+            accumulated = HashJoin(leftRecords, right.Records, combinedSchema, join.LeftFieldName, join.RightFieldName, join.JoinType, sharedKey);
             accumulatedSchema = combinedSchema;
 
             DataGatewayLogger.JoinCompleted(
@@ -319,7 +346,8 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         RecordSchema combinedSchema,
         string leftField,
         string rightField,
-        string joinType)
+        string joinType,
+        int sharedKey)
     {
         var rightLookup = new Dictionary<object, List<DataRecord>>();
         foreach (var right in rightRecords)
@@ -342,7 +370,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             if (key is not null && rightLookup.TryGetValue(key, out var matches))
             {
                 foreach (var right in matches)
-                    results.Add(Merge(left, right, combinedSchema));
+                    results.Add(Merge(left, right, combinedSchema, sharedKey));
             }
             else if (isLeftOuter)
             {
@@ -353,15 +381,21 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return results;
     }
 
-    private static DataRecord Merge(DataRecord left, DataRecord right, RecordSchema combinedSchema)
+    // The left values, then the right values without the shared key, which the left already holds.
+    private static DataRecord Merge(DataRecord left, DataRecord right, RecordSchema combinedSchema, int sharedKey)
     {
         var values = new object?[combinedSchema.FieldCount];
         var leftValues = left.Values;
         var rightValues = right.Values;
         for (var i = 0; i < leftValues.Length; i++)
             values[i] = leftValues[i];
+        var next = leftValues.Length;
         for (var i = 0; i < rightValues.Length; i++)
-            values[leftValues.Length + i] = rightValues[i];
+        {
+            if (i != sharedKey)
+                values[next++] = rightValues[i];
+        }
+
         return new DataRecord(combinedSchema, values);
     }
 
@@ -374,8 +408,8 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return new DataRecord(combinedSchema, values);
     }
 
-    private static RecordSchema CombineSchema(RecordSchema left, RecordSchema right)
-        => new(left.Fields.Concat(right.Fields).ToList());
+    private static RecordSchema CombineSchema(RecordSchema left, RecordSchema right, int sharedKey)
+        => new(left.Fields.Concat(right.Fields.Where((_, ordinal) => ordinal != sharedKey)).ToList());
 
     private static string? GetContainerName(DataSetSourceConfiguration source)
     {
@@ -430,7 +464,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             if (!itemResult.IsSuccess)
                 return GenericResult<T>.Failure(
                     DataServiceResultCodes.ByName("PocoMappingFailed"),
-                    ResultDetails.Create("TypeName", itemType.Name, "Reason", itemResult.CurrentMessage ?? "Unknown error"));
+                    ResultDetails.Create("TypeName", itemType.Name, "Reason", itemResult.FailureReason().Message));
             list.Add(itemResult.Value!);
         }
 

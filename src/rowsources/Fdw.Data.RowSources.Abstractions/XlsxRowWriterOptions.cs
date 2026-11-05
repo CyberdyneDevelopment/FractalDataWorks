@@ -26,8 +26,8 @@ public sealed class XlsxRowWriterOptions : RowWriterOptions
         => !string.IsNullOrWhiteSpace(name) && name!.Length <= MaxSheetNameLength && !name.Any(IsForbiddenInSheetName);
 
     /// <summary>Gets or sets the first worksheet's name; a further one is named after it and numbered. Excel limits a name to 31 characters and forbids <c>[ ] : * ? / \</c>; the writer replaces them.</summary>
-    public string SheetName { get; set; } = "Data";
+    public required string SheetName { get; set; }
 
     /// <summary>Gets or sets the rows a worksheet holds, the header row included, before the rows continue on a further worksheet. At least 2 and at most <see cref="MaxRowsPerSheet"/>.</summary>
-    public int RowsPerSheet { get; set; } = MaxRowsPerSheet;
+    public int RowsPerSheet { get; set; }
 }

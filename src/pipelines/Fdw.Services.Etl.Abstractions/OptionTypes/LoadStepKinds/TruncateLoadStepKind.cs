@@ -10,4 +10,7 @@ public sealed class TruncateLoadStepKind : LoadStepKindBase
     public TruncateLoadStepKind() : base("Truncate", "The destination is emptied.", usesKeyColumns: false, usesCompareColumns: false, usesWriteColumns: false, allowsVersioning: false, allowsSoftDelete: false, usesSourceDataSet: false, usesRows: false, acceptsRejectedRecords: false)
     {
     }
+
+    /// <inheritdoc/>
+    public override bool RepeatsToSameResult => true;
 }

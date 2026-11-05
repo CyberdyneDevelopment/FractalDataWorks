@@ -27,7 +27,7 @@ internal sealed class TestHttpProtocol : HttpProtocolBase
     public new HttpMethod GetHttpMethod(IDataCommand command, IStorageContainer container, HttpProtocolContext context)
         => base.GetHttpMethod(command, container, context);
 
-    public new string GetRequestPath(IDataCommand command, IStorageContainer container, HttpProtocolContext context)
+    public new IGenericResult<string> GetRequestPath(IDataCommand command, IStorageContainer container, HttpProtocolContext context)
         => base.GetRequestPath(command, container, context);
 
     public new Task<IGenericResult<HttpContent?>> BuildRequestBody(
@@ -51,6 +51,8 @@ internal sealed class TestHttpProtocol : HttpProtocolBase
         HttpProtocolContext context,
         CancellationToken cancellationToken)
         => base.ExtractResult(content, response, resultType, context, cancellationToken);
+
+    public IGenericResult<object?> ExtractForTest(string content, IStorageContainer container) => ExtractRowsFromContent(content, container);
 }
 
 public class HttpProtocolBaseTests
@@ -135,15 +137,16 @@ public class HttpProtocolBaseTests
         var path = _protocol.GetRequestPath(_mockCommand.Object, _mockContainer.Object, _context);
 
         // Assert
-        path.ShouldBe("/test/path");
+        path.IsSuccess.ShouldBeTrue();
+        path.Value.ShouldBe("/test/path");
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void GetRequestPathUsesContainerNameWhenPathIsNull()
+    public void GetRequestPathRefusesAContainerWithoutAPath()
     {
-        // Arrange
+        // Arrange: the container's name is a label, never the address (FDW-3580)
         _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
         _mockContainer.Setup(c => c.Name).Returns("TestContainer");
 
@@ -151,23 +154,23 @@ public class HttpProtocolBaseTests
         var path = _protocol.GetRequestPath(_mockCommand.Object, _mockContainer.Object, _context);
 
         // Assert
-        path.ShouldBe("TestContainer");
+        path.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void GetRequestPathReturnsEmptyWhenBothPathAndContainerNameAreNull()
+    public void GetRequestPathRefusesAnEmptyPath()
     {
         // Arrange
-        _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
-        _mockContainer.Setup(c => c.Name).Returns(string.Empty);
+        _mockContainer.Setup(c => c.Path).Returns(Mock.Of<IPath>(p => p.PathValue == string.Empty));
+        _mockContainer.Setup(c => c.Name).Returns("TestContainer");
 
         // Act
         var path = _protocol.GetRequestPath(_mockCommand.Object, _mockContainer.Object, _context);
 
         // Assert
-        path.ShouldBe(string.Empty);
+        path.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]
@@ -249,7 +252,7 @@ public class HttpProtocolBaseTests
         var mockCommandWithInput = new Mock<IDataCommandWithInput>();
         mockCommandWithInput.Setup(c => c.CommandType).Returns("Insert");
         mockCommandWithInput.Setup(c => c.InputData).Returns(new[] { new { Name = "A" }, new { Name = "B" } });
-        _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
+        _mockContainer.Setup(c => c.Path).Returns(Mock.Of<IPath>(p => p.PathValue == "/resource"));
         _mockContainer.Setup(c => c.Name).Returns("test");
 
         // Act
@@ -331,7 +334,7 @@ public class HttpProtocolBaseTests
     {
         // Arrange
         _mockCommand.Setup(c => c.CommandType).Returns("Query");
-        _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
+        _mockContainer.Setup(c => c.Path).Returns(Mock.Of<IPath>(p => p.PathValue == "/resource"));
         _mockContainer.Setup(c => c.Name).Returns("test");
 
         // Act
@@ -356,7 +359,7 @@ public class HttpProtocolBaseTests
         var mockCommandWithInput = new Mock<IDataCommandWithInput>();
         mockCommandWithInput.Setup(c => c.CommandType).Returns("Insert");
         mockCommandWithInput.Setup(c => c.InputData).Returns(new { Name = "Test" });
-        _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
+        _mockContainer.Setup(c => c.Path).Returns(Mock.Of<IPath>(p => p.PathValue == "/resource"));
         _mockContainer.Setup(c => c.Name).Returns("test");
 
         // Act
@@ -379,7 +382,7 @@ public class HttpProtocolBaseTests
     {
         // Arrange
         _mockCommand.Setup(c => c.CommandType).Returns("Query");
-        _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
+        _mockContainer.Setup(c => c.Path).Returns(Mock.Of<IPath>(p => p.PathValue == "/resource"));
         _mockContainer.Setup(c => c.Name).Returns("test");
 
         // Act

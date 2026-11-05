@@ -22,15 +22,12 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | `CompensateMode` | class | Error handling mode that triggers compensation logic (saga pattern). |
 | `CreateNewWriteMode` | class | Write mode that only creates new records, failing if they exist. |
 | `CriticalSeverity` | class | Critical validation severity that always blocks execution. |
-| `CustomStageType` | class | Stage type for custom processing logic. |
 | `CustomValidationRuleType` | class | Validation rule for custom validation logic. |
 | `DataTypeParameterRequiredCode` | class | DataType validation requires a 'DataType' parameter. |
 | `DataTypeValidationRuleType` | class | Validation rule that checks if values can be converted to a specified data type. |
 | `DecorrelatedJitterBackoffStrategy` | class | Backoff strategy with decorrelated jitter for distributed systems. |
 | `ErrorSeverity` | class | Error validation severity that may block execution depending on configuration. |
 | `ExponentialBackoffStrategy` | class | Backoff strategy with exponentially increasing delays between retry attempts. |
-| `ExtractStageRequiresConfigurationCode` | class | Extract stage requires configuration. |
-| `ExtractStageType` | class | Stage type for extracting data from a source. |
 | `FailedStatus` | class | Execution status indicating the orchestration failed. |
 | `FixedBackoffStrategy` | class | Backoff strategy with a constant delay between retry attempts. |
 | `InListValidationRuleType` | class | Validation rule that checks if values are in a predefined list of allowed values. |

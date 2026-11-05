@@ -293,6 +293,84 @@ public sealed class RecursiveCascadeSaveTests
         gateway.Deleted.ShouldBeEmpty();
     }
 
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task APlacedProviderPlacesAMintedMemberInTheUnitThatMadeIt()
+    {
+        var gateway = new RecordingGateway();
+        var placement = new RecordingPlacement();
+        var domain = new TestPlacedRootDomainProvider(GatewayProviderFor(gateway), placement, _ => true);
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // FDW-3692: made and placed together, so a member is never made unplaced.
+        result.IsSuccess.ShouldBeTrue();
+        var made = gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem();
+        var request = placement.Placed.ShouldHaveSingleItem();
+        request.Kind.ShouldBe("TestKind");
+        request.Name.ShouldBe("Root");
+        request.Id.ShouldBe(made.Id);
+        gateway.Transaction.Committed.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFailingPlacementFailsTheWriteAndRollsTheUnitBack()
+    {
+        var gateway = new RecordingGateway();
+        var placement = new RecordingPlacement { Fails = true };
+        var domain = new TestPlacedRootDomainProvider(GatewayProviderFor(gateway), placement, _ => true);
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // A member whose placement could not be made is not made: the unit holding its rows is abandoned with it.
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("placement refused");
+        gateway.Transaction.RolledBack.ShouldBeTrue();
+        gateway.Transaction.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AMemberThatNeedsNoPlacementIsNotPlaced()
+    {
+        var gateway = new RecordingGateway();
+        var placement = new RecordingPlacement();
+        var domain = new TestPlacedRootDomainProvider(GatewayProviderFor(gateway), placement, _ => false);
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // A member that already has an owner of its own (a variation a workspace owns) is made as before.
+        result.IsSuccess.ShouldBeTrue();
+        placement.Placed.ShouldBeEmpty();
+        gateway.Transaction.Committed.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AProviderThatDoesNotDeclarePlacementPlacesNothing()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        gateway.Transaction.Committed.ShouldBeTrue();
+    }
+
     private static IEnumerable<FilterCondition> Conditions(IFilterNode node)
     {
         if (node is FilterCondition condition)
@@ -307,6 +385,44 @@ public sealed class RecursiveCascadeSaveTests
                 foreach (var nested in Conditions(child))
                     yield return nested;
         }
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task SaveFailsWhenTheImplementationTypeHasNoMapper()
+    {
+        // FDW-3587: with no mapper the cascade cannot know the type's child collections. It answered
+        // success with no children written, while a read of the same type fails.
+        var gateway = new RecordingGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Unmapped", new TestUnmappedRootImplementationProvider(GatewayProviderFor(gateway)));
+
+        var result = await domain.Save(
+            new TestUnmappedRootConfiguration(), "TestRoot", "Unmapped", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull();
+        result.CurrentMessage.ShouldContain(nameof(TestUnmappedRootConfiguration));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task SaveOverAPriorVersionFailsWhenTheImplementationTypeHasNoMapper()
+    {
+        // FDW-3587: retiring the replaced version's children needs the owner's mapper. Without one the
+        // retire answered success and left the old children current under a retired row.
+        var gateway = new RecordingGateway { ReplacesUnmappedVersion = true };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Unmapped", new TestUnmappedRootImplementationProvider(GatewayProviderFor(gateway)));
+
+        var result = await domain.Save(
+            new TestUnmappedRootConfiguration(), "TestRoot", "Unmapped", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull();
+        result.CurrentMessage.ShouldContain("Cannot retire the children of");
     }
 
     private static TestRootImplementationProvider ImplementationProvider(IConfigurationGateway gateway)
@@ -372,6 +488,33 @@ public sealed class RecursiveCascadeSaveTests
         }
     }
 
+    /// <summary>An implementation record with no generated mapper (FDW-3587).</summary>
+    public sealed class TestUnmappedRootConfiguration : ITestRootImplementationConfiguration
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        public string Name { get; set; } = string.Empty;
+
+        public string Domain { get; set; } = string.Empty;
+
+        public string Implementation { get; set; } = "Unmapped";
+    }
+
+    /// <summary>Writes <see cref="TestUnmappedRootConfiguration"/> into the same container as the mapped root.</summary>
+    public sealed class TestUnmappedRootImplementationProvider
+        : ImplementationProviderBase<TestUnmappedRootConfiguration, ITestRootImplementationConfiguration>
+    {
+        public TestUnmappedRootImplementationProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<ImplementationProviderBase<TestUnmappedRootConfiguration, ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRoot")
+        {
+        }
+    }
+
     /// <summary>The domain provider: it owns the registry and dispatches by the row's implementation.</summary>
     public sealed class TestRootDomainProvider
         : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>
@@ -384,6 +527,49 @@ public sealed class RecursiveCascadeSaveTests
                 "pipe",
                 "TestRootDomain")
         {
+        }
+    }
+
+    /// <summary>The domain provider declared placed (FDW-3692): what it makes is handed to the placement it was given.</summary>
+    public sealed class TestPlacedRootDomainProvider
+        : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>,
+          IPlacedConfigurationProvider<ITestRootImplementationConfiguration>
+    {
+        private readonly Func<ITestRootImplementationConfiguration, bool> _needs;
+
+        public TestPlacedRootDomainProvider(
+            IConfigurationGatewayProvider gatewayProvider,
+            IConfigurationPlacement placement,
+            Func<ITestRootImplementationConfiguration, bool> needs)
+            : base(
+                NullLogger<DomainConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRootDomain")
+        {
+            Placement = placement;
+            _needs = needs;
+        }
+
+        public IConfigurationPlacement Placement { get; }
+
+        public string PlacementKind => "TestKind";
+
+        public bool Needs(ITestRootImplementationConfiguration record) => _needs(record);
+    }
+
+    /// <summary>A placement that records what it was asked to place, and refuses when told to.</summary>
+    private sealed class RecordingPlacement : IConfigurationPlacement
+    {
+        public List<PlacementRequest> Placed { get; } = [];
+
+        public bool Fails { get; init; }
+
+        public Task<IGenericResult> Place(PlacementRequest request, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
+        {
+            Placed.Add(request);
+            return Task.FromResult(Fails ? GenericResult.Failure(new GenericMessage("placement refused")) : GenericResult.Success());
         }
     }
 
@@ -420,6 +606,9 @@ public sealed class RecursiveCascadeSaveTests
 
         /// <summary>Ids named by delete commands, in call order.</summary>
         public List<Guid> Deleted { get; } = [];
+
+        /// <summary>Answer the unmapped implementation's write as replacing a prior version, so its retire runs (FDW-3587).</summary>
+        public bool ReplacesUnmappedVersion { get; init; }
 
         // The domain container owns the implementation container through the Foreign key the
         // implementation declares against the domain's Physical key, as the DDL would.
@@ -478,7 +667,10 @@ public sealed class RecursiveCascadeSaveTests
                 ["Id"] = (data as IGenericConfiguration)?.Id,
             };
             if (data is not null) _rowIds[data] = _rowId;
-            return Task.FromResult(GenericResult<T>.Success((T)(object)new ConfigurationWriteResult([], written)));
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> retired = ReplacesUnmappedVersion && data is TestUnmappedRootConfiguration
+                ? [new Dictionary<string, object?>(StringComparer.Ordinal) { ["RowId"] = 0 }]
+                : [];
+            return Task.FromResult(GenericResult<T>.Success((T)(object)new ConfigurationWriteResult(retired, written)));
         }
 
         internal static IDataStore TestRootStore()

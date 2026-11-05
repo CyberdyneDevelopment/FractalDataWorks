@@ -28,6 +28,9 @@ public class ScheduleDetailDto : ResourceDetail
     /// <summary>Gets or sets the time zone the schedule's times are expressed in.</summary>
     public string? TimeZoneId { get; set; }
 
+    /// <summary>Gets or sets what the scheduler does with a cron fire time that passed while it was down: Skip or FireOnce (FDW-3788).</summary>
+    public string MissedFireRule { get; set; } = string.Empty;
+
     /// <summary>Gets or sets whether the schedule is enabled.</summary>
     public bool IsEnabled { get; set; }
 

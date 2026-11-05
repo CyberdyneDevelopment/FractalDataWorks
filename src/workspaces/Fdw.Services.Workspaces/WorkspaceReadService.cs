@@ -88,7 +88,17 @@ public sealed class WorkspaceReadService : IWorkspaceReadService
                 continue;
             }
 
-            readable.Add(new ReadableDataSet(dataSet.Value.Name, dataSet.Value, []));
+            // A variation attached as a resource is a data set that reads another (FDW-3638): it runs the data set it varies, filtered.
+            var attached = dataSet.Value is IDataSetVariationImplementationConfiguration variationAttached
+                ? await VariedDataSet(variationAttached.VariationName, variationAttached.BaseDataSetId, variationAttached.ParentVariationId, variationAttached.StoredFilters, cancellationToken).ConfigureAwait(false)
+                : GenericResult<ReadableDataSet>.Success(new ReadableDataSet(dataSet.Value.Name, dataSet.Value, []));
+            if (attached.IsFailure)
+            {
+                WorkspaceReadLog.AttachmentLeftOut(_logger, workspace.Name, attachment.Name);
+                continue;
+            }
+
+            readable.Add(attached.Value!);
         }
 
         // The variations the workspace owns are read as data sets too, under the names the workspace knows them by.
@@ -97,7 +107,7 @@ public sealed class WorkspaceReadService : IWorkspaceReadService
 
         foreach (var variation in owned.Value!)
         {
-            var varied = await VariedDataSet(variation, cancellationToken).ConfigureAwait(false);
+            var varied = await VariedDataSet(variation.VariationName, variation.BaseDataSetId, variation.ParentVariationId, variation.StoredFilters, cancellationToken).ConfigureAwait(false);
             if (varied.IsFailure)
             {
                 WorkspaceReadLog.AttachmentLeftOut(_logger, workspace.Name, variation.VariationName);
@@ -123,7 +133,7 @@ public sealed class WorkspaceReadService : IWorkspaceReadService
         if (variation.IsFailure) return variation.ToNewResult<ReadableDataSet>();
 
         var found = variation.Value is { } varied
-            ? await VariedDataSet(varied, cancellationToken).ConfigureAwait(false)
+            ? await VariedDataSet(varied.VariationName, varied.BaseDataSetId, varied.ParentVariationId, varied.StoredFilters, cancellationToken).ConfigureAwait(false)
             : await FindAttachedDataSet(workspace.Value!, dataSetName, cancellationToken).ConfigureAwait(false);
         if (found.IsSuccess)
             WorkspaceReadLog.DataSetResolved(_logger, workspaceName, dataSetName, found.Value!.ExecutionTarget.Name);
@@ -158,7 +168,9 @@ public sealed class WorkspaceReadService : IWorkspaceReadService
             if (dataSet.Value is not { } found || !string.Equals(found.Name, dataSetName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            return GenericResult<ReadableDataSet>.Success(new ReadableDataSet(found.Name, found, []));
+            return found is IDataSetVariationImplementationConfiguration variationFound
+                ? await VariedDataSet(variationFound.VariationName, variationFound.BaseDataSetId, variationFound.ParentVariationId, variationFound.StoredFilters, cancellationToken).ConfigureAwait(false)
+                : GenericResult<ReadableDataSet>.Success(new ReadableDataSet(found.Name, found, []));
         }
 
         if (firstFailure is not null) return firstFailure.ToNewResult<ReadableDataSet>();
@@ -175,20 +187,20 @@ public sealed class WorkspaceReadService : IWorkspaceReadService
     /// answers like an absent data set, so a variation never confirms what the caller cannot see.
     /// </remarks>
     private async Task<IGenericResult<ReadableDataSet>> VariedDataSet(
-        DataSetVariationDomainConfiguration variation, CancellationToken cancellationToken)
+        string variationName, Guid baseDataSetId, Guid? parentVariationId, string? storedFilters, CancellationToken cancellationToken)
     {
-        var main = await _dataSets.Get(variation.BaseDataSetId, cancellationToken).ConfigureAwait(false);
+        var main = await _dataSets.Get(baseDataSetId, cancellationToken).ConfigureAwait(false);
         if (main.IsFailure) return main.ToNewResult<ReadableDataSet>();
 
         if (main.Value is not { } found)
             return GenericResult<ReadableDataSet>.Failure(
                 WorkspacesResultCodes.ByName("DataSetNotVisible"), _logger,
-                ResultDetails.Create("dataSet", variation.VariationName));
+                ResultDetails.Create("dataSet", variationName));
 
-        var filters = await DataSetVariationChain.StoredFilters(_variations, variation, _logger, cancellationToken).ConfigureAwait(false);
+        var filters = await DataSetVariationChain.StoredFilters(_variations, parentVariationId, variationName, storedFilters, _logger, cancellationToken).ConfigureAwait(false);
         return filters.IsFailure
             ? filters.ToNewResult<ReadableDataSet>()
-            : GenericResult<ReadableDataSet>.Success(new ReadableDataSet(variation.VariationName, found, filters.Value!));
+            : GenericResult<ReadableDataSet>.Success(new ReadableDataSet(variationName, found, filters.Value!));
     }
 
     private static bool IsCurrentDataSet(WorkspaceResourceConfiguration resource) =>

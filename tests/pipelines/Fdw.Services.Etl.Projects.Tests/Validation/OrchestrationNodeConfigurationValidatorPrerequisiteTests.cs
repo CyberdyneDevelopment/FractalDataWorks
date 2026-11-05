@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using System;
 using System.Linq;
 using Fdw.Services.Etl.Projects.Abstractions;
@@ -17,7 +18,7 @@ public sealed class OrchestrationNodeConfigurationValidatorPrerequisiteTests
     private static readonly Guid B = Guid.Parse("00000000-0000-0000-0000-00000000000b");
     private static readonly Guid C = Guid.Parse("00000000-0000-0000-0000-00000000000c");
 
-    private readonly OrchestrationNodeConfigurationValidator _sut = new(Mock.Of<IServerPolicyDefaults>());
+    private readonly OrchestrationNodeConfigurationValidator _sut = new(Fdw.Services.Etl.Projects.Tests.Policy.ServerPolicyDefaultsStub.Returning().Object);
 
     private static OrchestrationNodeImplementationConfiguration Step(
         Guid[] members, (Guid Pipeline, Guid Needs)[] prerequisites) => new()
@@ -39,10 +40,10 @@ public sealed class OrchestrationNodeConfigurationValidatorPrerequisiteTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void PrerequisitesBetweenMembersWithNoCycleAreAccepted()
+    public async Task PrerequisitesBetweenMembersWithNoCycleAreAccepted()
     {
         // Act
-        var result = _sut.Validate(Step([A, B, C], [(C, A), (C, B)]));
+        var result = await _sut.ValidateAsync(Step([A, B, C], [(C, A), (C, B)]), TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.ShouldBeTrue(string.Join("; ", result.Errors.Select(e => e.ErrorMessage)));
@@ -51,10 +52,10 @@ public sealed class OrchestrationNodeConfigurationValidatorPrerequisiteTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void PrerequisiteOnAPipelineOutsideTheNodeIsRefused()
+    public async Task PrerequisiteOnAPipelineOutsideTheNodeIsRefused()
     {
         // Act
-        var result = _sut.Validate(Step([A, B], [(B, C)]));
+        var result = await _sut.ValidateAsync(Step([A, B], [(B, C)]), TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.ShouldBeFalse();
@@ -66,10 +67,10 @@ public sealed class OrchestrationNodeConfigurationValidatorPrerequisiteTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void PipelineThatNeedsItselfIsRefused()
+    public async Task PipelineThatNeedsItselfIsRefused()
     {
         // Act
-        var result = _sut.Validate(Step([A], [(A, A)]));
+        var result = await _sut.ValidateAsync(Step([A], [(A, A)]), TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.ShouldBeFalse();
@@ -79,13 +80,13 @@ public sealed class OrchestrationNodeConfigurationValidatorPrerequisiteTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ALoopIsNamedByAPipelineInItNotOneThatOnlyDependsOnIt()
+    public async Task ALoopIsNamedByAPipelineInItNotOneThatOnlyDependsOnIt()
     {
         // Arrange: C needs A, and A and B need each other. C is listed first but is not in the loop.
         var step = Step([C, A, B], [(A, B), (B, A), (C, A)]);
 
         // Act
-        var result = _sut.Validate(step);
+        var result = await _sut.ValidateAsync(step, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.ShouldBeFalse();
@@ -96,10 +97,10 @@ public sealed class OrchestrationNodeConfigurationValidatorPrerequisiteTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void PrerequisitesThatLoopAreRefusedNamingAPipelineInTheLoop()
+    public async Task PrerequisitesThatLoopAreRefusedNamingAPipelineInTheLoop()
     {
         // Act
-        var result = _sut.Validate(Step([A, B, C], [(A, B), (B, A), (C, A)]));
+        var result = await _sut.ValidateAsync(Step([A, B, C], [(A, B), (B, A), (C, A)]), TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.ShouldBeFalse();

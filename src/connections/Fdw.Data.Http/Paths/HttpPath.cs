@@ -33,7 +33,7 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>, IReaddres
         : base("HttpPath")
     {
         PathValue = path ?? throw new ArgumentNullException(nameof(path));
-        _containers = containers?.ToList() ?? new List<IStorageContainer>();
+        _containers = containers?.ToList() ?? [];
         _parameters = parameters != null
             ? parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal)
             : new Dictionary<string, PathParameter>(StringComparer.Ordinal);
@@ -99,7 +99,7 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>, IReaddres
         var resolvedPath = PathValue;
         foreach (var kvp in parameters)
         {
-            resolvedPath = resolvedPath.Replace($"{{{kvp.Key}}}", kvp.Value?.ToString() ?? string.Empty);
+            resolvedPath = resolvedPath.Replace($"{{{kvp.Key}}}", kvp.Value?.ToString() ?? string.Empty, StringComparison.Ordinal);
         }
 
         return new HttpPath(resolvedPath, _containers, _parameters);

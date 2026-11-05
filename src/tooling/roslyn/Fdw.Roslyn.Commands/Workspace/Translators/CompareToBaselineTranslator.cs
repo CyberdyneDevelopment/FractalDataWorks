@@ -68,7 +68,8 @@ public sealed class CompareToBaselineTranslator
         var baselineDocs = new Dictionary<string, Document>(StringComparer.Ordinal);
         foreach (var doc in baseline.Projects.SelectMany(p => p.Documents))
         {
-            var key = doc.FilePath ?? doc.Name;
+            // A document with no file path is in memory and has nothing on disk to compare; it is skipped, never keyed by its name.
+            if (doc.FilePath is not { } key) continue;
             if (!baselineDocs.ContainsKey(key))
                 baselineDocs[key] = doc;
         }
@@ -76,7 +77,7 @@ public sealed class CompareToBaselineTranslator
         var currentDocs = new Dictionary<string, Document>(StringComparer.Ordinal);
         foreach (var doc in solution.Projects.SelectMany(p => p.Documents))
         {
-            var key = doc.FilePath ?? doc.Name;
+            if (doc.FilePath is not { } key) continue;
             if (!currentDocs.ContainsKey(key))
                 currentDocs[key] = doc;
         }

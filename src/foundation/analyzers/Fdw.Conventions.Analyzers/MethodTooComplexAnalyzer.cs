@@ -113,6 +113,7 @@ public sealed class MethodTooComplexAnalyzer : DiagnosticAnalyzer
         var diagnostic = Diagnostic.Create(
             Rule,
             identifier.GetLocation(),
+            ConventionOverrideHelper.MeasuredValueProperties(complexity),
             methodName,
             complexity,
             threshold);

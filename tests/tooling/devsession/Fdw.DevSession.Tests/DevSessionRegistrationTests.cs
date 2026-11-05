@@ -10,7 +10,7 @@ public sealed class DevSessionRegistrationTests
     [Fact]
     public void Every_contract_resolves()
     {
-        using var provider = new ServiceCollection().AddLogging().AddDevSessions().BuildServiceProvider();
+        using var provider = new ServiceCollection().AddLogging().AddDevSessions(bus => bus.RingCapacity = 100).BuildServiceProvider();
 
         provider.GetRequiredService<IWorktreeEngine>().ShouldNotBeNull();
         provider.GetRequiredService<IDevSessionManager>().ShouldNotBeNull();
@@ -20,7 +20,7 @@ public sealed class DevSessionRegistrationTests
     [Fact]
     public void The_event_bus_is_registered_as_a_dependency()
     {
-        using var provider = new ServiceCollection().AddLogging().AddDevSessions().BuildServiceProvider();
+        using var provider = new ServiceCollection().AddLogging().AddDevSessions(bus => bus.RingCapacity = 100).BuildServiceProvider();
 
         provider.GetRequiredService<IMcpEventBus>().ShouldNotBeNull();
     }
@@ -28,7 +28,7 @@ public sealed class DevSessionRegistrationTests
     [Fact]
     public void The_session_manager_and_coordinator_are_shared_singletons()
     {
-        using var provider = new ServiceCollection().AddLogging().AddDevSessions().BuildServiceProvider();
+        using var provider = new ServiceCollection().AddLogging().AddDevSessions(bus => bus.RingCapacity = 100).BuildServiceProvider();
 
         provider.GetRequiredService<IDevSessionManager>()
             .ShouldBeSameAs(provider.GetRequiredService<IDevSessionManager>());
@@ -43,7 +43,7 @@ public sealed class DevSessionRegistrationTests
         using var provider = new ServiceCollection()
             .AddLogging()
             .AddSingleton<IWorktreeEngine>(replacement)
-            .AddDevSessions()
+            .AddDevSessions(bus => bus.RingCapacity = 100)
             .BuildServiceProvider();
 
         provider.GetRequiredService<IWorktreeEngine>().ShouldBeSameAs(replacement);

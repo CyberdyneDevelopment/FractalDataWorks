@@ -62,9 +62,20 @@ public abstract class CreateQualityRuleEndpointBase : Endpoint<CreateQualityRule
             return;
         }
 
+        // Severity and whether the rule runs are the caller's choice; there is no default (FDW-3823).
+        if (string.IsNullOrWhiteSpace(req.Severity) || req.IsEnabled is not { } isEnabled)
+        {
+            await Send.ResultAsync(TypedResults.Json(new
+                {
+                    Error = "Quality rule rejected",
+                    Details = "severity and isEnabled are both required.",
+                }, statusCode: 400)).ConfigureAwait(false);
+            return;
+        }
+
         var config = QualityRuleRequestMapper.FromRequest(
             req.DataSetName, req.FieldName, req.RuleType, req.Severity,
-            req.IsEnabled, req.Description, req.MinValue, req.MaxValue,
+            isEnabled, req.Description, req.MinValue, req.MaxValue,
             req.Pattern, req.Expression);
 
         var result = await _provider.Create(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);

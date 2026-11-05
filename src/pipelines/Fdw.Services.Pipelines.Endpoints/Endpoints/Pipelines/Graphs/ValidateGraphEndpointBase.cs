@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Clients.Abstractions;
@@ -15,20 +16,24 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 /// <remarks>
 /// It judges what saving would judge: each component's settings against its kind and the shape of the whole graph. It does not
-/// judge the name, so one route serves a new graph and an edit of a saved one, and it does not reach any data, so a data set
-/// that does not exist is the run's to refuse. A body it cannot read at all (a setting of the wrong type) comes back as one
+/// judge the name, so one route serves a new graph and an edit of a saved one. It reads the fields of a destination's data set only to
+/// judge the columns a Guid-minting value source fills (FDW-3400); a data set that does not exist is the run's to refuse. A body it cannot read at all (a setting of the wrong type) comes back as one
 /// problem with no path.
 /// </remarks>
 public abstract class ValidateGraphEndpointBase : Endpoint<GraphPayload, GraphValidationPayload>
 {
     private readonly ILogger _logger;
     private readonly StageChainLookup _chains;
+    private readonly IDataSetConfigurationProvider _dataSets;
 
     /// <summary>Initializes a new instance of the <see cref="ValidateGraphEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="transformations">Resolves the named transformations a field mapping's chain applies.</param>
-    protected ValidateGraphEndpointBase(ILogger<ValidateGraphEndpointBase> logger, ITransformationConfigurationProvider transformations)
+    /// <param name="dataSets">The data sets, read for the type of the columns a destination's value sources fill.</param>
+    protected ValidateGraphEndpointBase(
+        ILogger<ValidateGraphEndpointBase> logger, ITransformationConfigurationProvider transformations, IDataSetConfigurationProvider dataSets)
     {
+        _dataSets = dataSets;
         _logger = logger;
         _chains = new StageChainLookup(transformations, logger);
     }
@@ -64,7 +69,7 @@ public abstract class ValidateGraphEndpointBase : Endpoint<GraphPayload, GraphVa
                 IsValid = false,
                 Problems = [new GraphProblemPayload { Path = [], Reason = PipelineProblems.ReasonOf(graph.CurrentMessage, "reading the graph") }],
             }
-            : Answer([.. unread, .. GraphShapeValidator.Problems(graph.Value, _logger)]);
+            : Answer([.. unread, .. await GraphSave.Problems(graph.Value, _dataSets, _logger, ct).ConfigureAwait(false)]);
         await Send.OkAsync(answer, ct).ConfigureAwait(false);
     }
 

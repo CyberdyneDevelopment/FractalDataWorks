@@ -26,7 +26,8 @@ public class PropertyMetadata
     /// <summary>
     /// Gets component type name for serialization.
     /// </summary>
-    public string ComponentType => ComponentTypes.ById(ComponentTypeId)?.Name ?? "TextInput";
+    public string ComponentType => ComponentTypes.ById(ComponentTypeId)?.Name
+        ?? throw new InvalidOperationException($"Component type {ComponentTypeId} is not one of ComponentTypes; a property states a component type the collection holds.");
 
     /// <summary>
     /// Current property value.

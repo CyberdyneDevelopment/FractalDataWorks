@@ -36,6 +36,7 @@
     <ProjectReference Include="..\..\secrets\secretmanagers\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
     <ProjectReference Include="..\..\foundation\services\Fdw.Services\Fdw.Services.csproj" />
     <ProjectReference Include="..\Fdw.Data.PostgreSql\Fdw.Data.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
 
   <ItemGroup>

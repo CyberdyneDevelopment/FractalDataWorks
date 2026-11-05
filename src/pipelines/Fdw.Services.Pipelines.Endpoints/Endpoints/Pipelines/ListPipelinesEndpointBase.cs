@@ -11,6 +11,7 @@ using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.Web.RestEndpoints.Models;
 using Fdw.Services.Pipelines.Clients.Abstractions;
+using Fdw.Services.Tags;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -27,24 +28,40 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class ListPipelinesEndpointBase : CrudPageEndpointBase<DomainConfiguration, PipelineSummaryResponse>
 {
     private readonly PipelineServiceConfigurationProvider _configProvider;
+    private readonly ITagService? _tags;
 
     /// <summary>Initializes a new instance of the <see cref="ListPipelinesEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="configProvider">Reads the pipelines.</param>
+    /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c> (FDW-3816).</param>
     protected ListPipelinesEndpointBase(
         ILogger<ListPipelinesEndpointBase> logger,
-        PipelineServiceConfigurationProvider configProvider) : base(logger)
+        PipelineServiceConfigurationProvider configProvider,
+        ITagService? tags = null) : base(logger)
     {
         _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
+        _tags = tags;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "pipelines";
 
     /// <inheritdoc />
-    protected override Task<IGenericResult<ConfigurationPage<DomainConfiguration>>> LoadPage(
+    /// <remarks><c>?tag=</c> keeps the pipelines that carry every tag named (FDW-3816).</remarks>
+    protected override async Task<IGenericResult<ConfigurationPage<DomainConfiguration>>> LoadPage(
         PaginatedListRequest paging, CancellationToken ct)
-        => _configProvider.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct);
+    {
+        var selection = await TagSelection.Read(TaggedWith, _tags, "Pipeline", Logger, ct).ConfigureAwait(false);
+        if (selection.IsFailure || selection.Value is null)
+            return selection.ToNewResult<ConfigurationPage<DomainConfiguration>>();
+
+        return await selection.Value.Read(
+            (skip, take, token) => _configProvider.Get(new DomainQuery(null, null, skip, take, false), token),
+            pipeline => pipeline.Id,
+            paging.Skip,
+            paging.Take,
+            ct).ConfigureAwait(false);
+    }
 
     /// <summary>Leaves out pipelines with no name.</summary>
     /// <param name="item">The pipeline.</param>

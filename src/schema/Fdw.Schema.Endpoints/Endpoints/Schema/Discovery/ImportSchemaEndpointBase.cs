@@ -74,7 +74,7 @@ public abstract class ImportSchemaEndpointBase : Endpoint<ImportSchemaRequest, I
     /// </summary>
     public override async Task HandleAsync(ImportSchemaRequest req, CancellationToken ct)
     {
-        var dataStoreName = req.DataStoreName ?? req.ConnectionName;
+        var dataStoreName = req.DataStoreName ?? req.ConventionalDataStoreName;
         SchemaEndpointLog.ImportingSchema(_logger, req.ConnectionName, dataStoreName);
 
         try
@@ -89,7 +89,7 @@ public abstract class ImportSchemaEndpointBase : Endpoint<ImportSchemaRequest, I
                 {
                     Success = false,
                     DataStoreName = dataStoreName,
-                    ErrorMessage = result.CurrentMessage ?? "Schema import failed"
+                    ErrorMessage = result.NoValueReason().Message
                 };
 
                 await Send.ResponseAsync(response, 400, ct).ConfigureAwait(false);

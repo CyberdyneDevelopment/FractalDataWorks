@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
+using Fdw.Conventions;
 using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Connections.RoslynWorkspace;

@@ -68,7 +68,7 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
                     var root = await syntaxTree.GetRootAsync(cancellationToken).ConfigureAwait(false);
 
                     var declaredSymbols = root.DescendantNodes()
-                        .Select(node => semanticModel.GetDeclaredSymbol(node))
+                        .Select(node => semanticModel.GetDeclaredSymbol(node, cancellationToken))
                         .Where(s => s is not null)
                         .Where(s => IsTargetSymbol(s!, command.IncludePrivate, command.IncludeInternal))
                         .Cast<ISymbol>();

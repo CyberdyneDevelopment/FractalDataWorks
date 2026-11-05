@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Security.Claims;
 using Fdw.Services.RateLimiting.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.RateLimiting.Abstractions.Tests;
 
@@ -12,7 +13,7 @@ namespace Fdw.Services.RateLimiting.Abstractions.Tests;
 public class RateLimitPartitioningTests
 {
     private static ClaimsPrincipal Caller(string id) =>
-        new(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, id) }, "test"));
+        new(new ClaimsIdentity(new[] { new Claim(ClaimDefinitions.sub.Name, id) }, "test"));
 
     [Fact]
     [Trait("Priority", "P1")]

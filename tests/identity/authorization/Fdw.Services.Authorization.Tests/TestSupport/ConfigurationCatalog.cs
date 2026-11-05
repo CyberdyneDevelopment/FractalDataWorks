@@ -125,6 +125,13 @@ internal static class ConfigurationCatalog
                     ? GenericResult<TContract>.Success(item)
                     : GenericResult<TContract>.Success(default!)));
 
+        // A list read asks for the members of a page as a set (FDW-3906).
+        implementations
+            .Setup(p => p.GetSet(It.IsAny<IEnumerable<Guid>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns((IEnumerable<Guid> ids, int _, CancellationToken _) => Task.FromResult<IGenericResult<IReadOnlyDictionary<Guid, TContract>>>(
+                GenericResult<IReadOnlyDictionary<Guid, TContract>>.Success(
+                    ids.Where(byRow.ContainsKey).Distinct().ToDictionary(id => id, id => byRow[id]))));
+
         provider.Register(OneImplementation, implementations.Object);
         return provider;
     }

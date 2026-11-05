@@ -1,3 +1,7 @@
+using Fdw.Commands.Data.Logging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Fdw.Commands.Data.SoftDeletes;
 
 /// <summary>
@@ -33,7 +37,7 @@ public sealed class SoftDeleteOptions
     /// Gets the value the flag column is set to: true for a deleted flag, false to clear a flag that marks the live
     /// version of a row.
     /// </summary>
-    public bool FlagValue { get; init; } = true;
+    public required bool FlagValue { get; init; }
 
     /// <summary>Gets the optional column that records when a row was flagged, or <see langword="null"/> for none.</summary>
     public string? DeletedAtColumn { get; init; }
@@ -51,13 +55,16 @@ public sealed class SoftDeleteOptions
     /// Describes the first thing wrong with these options, or returns <see langword="null"/> when they are
     /// consistent. Column names are checked against the target's schema by the translator.
     /// </summary>
-    /// <returns>A plain-language reason, or <see langword="null"/>.</returns>
-    public string? FirstProblem()
+    /// <returns>The reason, as a message, or <see langword="null"/>.</returns>
+    public IGenericMessage? FirstProblem()
     {
         if (string.IsNullOrWhiteSpace(DeletedFlagColumn))
-            return "a soft delete names the deleted-flag column";
+            return Problem("a soft delete names the deleted-flag column");
         if (DeletedAtColumn is not null && string.IsNullOrWhiteSpace(DeletedAtColumn))
-            return "a soft delete's deleted-at column is named or left out, not blank";
+            return Problem("a soft delete's deleted-at column is named or left out, not blank");
         return Mode.Problem(this);
     }
+
+    private static IGenericMessage Problem(string reason)
+        => CommandOptionsLog.SoftDeleteOptionsInconsistent(NullLogger.Instance, reason);
 }

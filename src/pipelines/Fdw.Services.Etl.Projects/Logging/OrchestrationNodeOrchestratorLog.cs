@@ -56,6 +56,15 @@ public static partial class OrchestrationNodeOrchestratorLog
         Message = "OrchestrationNode not found: Id='{nodeId}' — cannot execute")]
     public static partial IGenericMessage NodeNotFound(ILogger logger, Guid nodeId);
 
+    /// <summary>A run cannot start: its root node's policy inherits from the server defaults, which could not be read (FDW-3580).</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="executionId">The run that does not start.</param>
+    /// <param name="reason">Why the server defaults could not be read.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61003, Level = LogLevel.Error,
+        Message = "Run {executionId} does not start: its root policy inherits from the server defaults, which could not be read: {reason}")]
+    public static partial IGenericMessage RootPolicyUnresolved(ILogger logger, Guid executionId, string reason);
+
     /// <summary>Logs when an unhandled exception occurs in the orchestrator.</summary>
     [MessageLogging(EventId = 91000, Level = LogLevel.Error,
         Message = "Unhandled exception in orchestrator for '{nodeName}' (ExecutionId: {executionId})")]

@@ -52,7 +52,7 @@ public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnume
     /// </summary>
     /// <param name="items">The items to create an array from.</param>
     public EquatableArray(IEnumerable<T> items)
-        : this(items?.ToImmutableArray() ?? ImmutableArray<T>.Empty)
+        : this(items?.ToImmutableArray() ?? [])
     {
     }
 
@@ -142,7 +142,7 @@ public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnume
         var hash = 17;
         foreach (var item in _array)
         {
-            hash = hash * 31 + (item?.GetHashCode() ?? 0);
+            hash = hash * 31 + EqualityComparer<T>.Default.GetHashCode(item);
         }
         return hash;
     }

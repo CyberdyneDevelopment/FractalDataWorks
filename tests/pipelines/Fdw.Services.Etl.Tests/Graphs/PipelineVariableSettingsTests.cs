@@ -28,7 +28,7 @@ public sealed class PipelineVariableSettingsTests
     }
 
     private static string[] Reasons(GraphPipelineConfiguration graph, string name) =>
-        [.. GraphComponentValidator.Problems(graph, [], NullLogger.Instance).Select(problem => problem.Reason).Where(reason => reason.Contains(name))];
+        [.. GraphComponentValidator.Problems(graph, [], NullLogger.Instance).Select(problem => problem.Reason).Where(reason => reason.Contains(name, System.StringComparison.Ordinal))];
 
     [Fact]
     [Trait("Priority", "P0")]

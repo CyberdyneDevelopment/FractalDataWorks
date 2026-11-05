@@ -76,7 +76,7 @@ public abstract class PreviewStandInEndpointBase : Endpoint<PreviewStandInReques
         }
 
         IReadOnlyList<string>? candidates = null;
-        if (req.Strategy == "DrawFromDataSet" && req.SourceFieldId is { } sourceFieldId)
+        if (string.Equals(req.Strategy, "DrawFromDataSet", System.StringComparison.Ordinal) && req.SourceFieldId is { } sourceFieldId)
         {
             var gateway = _configurationGateways.Get(_dataSets.DataStoreName);
             if (gateway.IsFailure) { await SendError(gateway, ct).ConfigureAwait(false); return; }

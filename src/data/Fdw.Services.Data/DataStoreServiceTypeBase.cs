@@ -2,6 +2,7 @@ using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data;
 
@@ -16,6 +17,10 @@ public abstract class DataStoreServiceTypeBase<TService, TFactory> :
     where TService : IGenericService
     where TFactory : IServiceFactory<TService, IServiceConfiguration>
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "DataStoreService";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DataStoreServiceTypeBase{TService, TFactory}"/> class.
     /// </summary>
@@ -30,7 +35,7 @@ public abstract class DataStoreServiceTypeBase<TService, TFactory> :
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "DataStoreService")
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory)
     {
     }
 }

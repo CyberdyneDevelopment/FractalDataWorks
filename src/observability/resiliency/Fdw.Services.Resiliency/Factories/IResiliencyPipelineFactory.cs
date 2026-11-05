@@ -17,55 +17,55 @@ public interface IResiliencyPipelineFactory
     /// Gets or creates a ResiliencePipeline for the specified policy.
     /// </summary>
     /// <param name="policy">The resiliency policy configuration.</param>
-    /// <param name="operationName">Optional operation name for logging context.</param>
+    /// <param name="operationName">The operation name the log lines carry.</param>
     /// <returns>
     /// A result containing the ResiliencePipeline if successful,
     /// or an error message if pipeline creation fails.
     /// </returns>
     IGenericResult<ResiliencePipeline> GetOrCreate(
         IResiliencyPolicy policy,
-        string? operationName = null);
+        string operationName);
 
     /// <summary>
     /// Gets or creates a ResiliencePipeline for the specified policy name.
     /// </summary>
     /// <param name="policyName">The name of the resiliency policy (e.g., "Database", "HttpClient").</param>
-    /// <param name="operationName">Optional operation name for logging context.</param>
+    /// <param name="operationName">The operation name the log lines carry.</param>
     /// <returns>
     /// A result containing the ResiliencePipeline if successful,
     /// or an error message if the policy is not found or pipeline creation fails.
     /// </returns>
     IGenericResult<ResiliencePipeline> GetOrCreate(
         string policyName,
-        string? operationName = null);
+        string operationName);
 
     /// <summary>
     /// Gets or creates a generic ResiliencePipeline{TResult} for the specified policy.
     /// </summary>
     /// <typeparam name="TResult">The result type for the pipeline.</typeparam>
     /// <param name="policy">The resiliency policy configuration.</param>
-    /// <param name="operationName">Optional operation name for logging context.</param>
+    /// <param name="operationName">The operation name the log lines carry.</param>
     /// <returns>
     /// A result containing the ResiliencePipeline if successful,
     /// or an error message if pipeline creation fails.
     /// </returns>
     IGenericResult<ResiliencePipeline<TResult>> GetOrCreatePipeline<TResult>(
         IResiliencyPolicy policy,
-        string? operationName = null);
+        string operationName);
 
     /// <summary>
     /// Gets or creates a generic ResiliencePipeline{TResult} for the specified policy name.
     /// </summary>
     /// <typeparam name="TResult">The result type for the pipeline.</typeparam>
     /// <param name="policyName">The name of the resiliency policy (e.g., "Database", "HttpClient").</param>
-    /// <param name="operationName">Optional operation name for logging context.</param>
+    /// <param name="operationName">The operation name the log lines carry.</param>
     /// <returns>
     /// A result containing the ResiliencePipeline if successful,
     /// or an error message if the policy is not found or pipeline creation fails.
     /// </returns>
     IGenericResult<ResiliencePipeline<TResult>> GetOrCreatePipeline<TResult>(
         string policyName,
-        string? operationName = null);
+        string operationName);
 
     /// <summary>
     /// Clears all cached pipelines.

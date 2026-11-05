@@ -75,7 +75,7 @@ public sealed class ComputeTransformTypeTests
     {
         var mapped = Declared.Select(input => input.Name).Where(name => !unmapped.Contains(name)).ToList();
         return new PipelineTransformConfiguration
-        {
+        { IsEnabled = true,
             Id = Guid.NewGuid(),
             Name = "Settle",
             OperationType = "Compute",
@@ -169,7 +169,7 @@ public sealed class ComputeTransformTypeTests
     [Trait("Category", "Etl")]
     public async Task APipelineWithNoComputeStageNeedsNoProviderAndNoSettings()
     {
-        var stage = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Shape", OperationType = "Filter" };
+        var stage = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Shape", OperationType = "Filter" };
 
         var resolved = await BuiltCalculationResolver.Resolve([stage], null, null, NullLogger.Instance, TestContext.Current.CancellationToken);
 

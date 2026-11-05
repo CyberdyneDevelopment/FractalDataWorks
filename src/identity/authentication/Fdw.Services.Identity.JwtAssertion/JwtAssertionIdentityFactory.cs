@@ -7,6 +7,7 @@ using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Identity.JwtAssertion;
 
@@ -60,7 +61,7 @@ internal sealed class JwtAssertionIdentityFactory
         => configuration is IIdentityServiceImplementationConfiguration implementation
             ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? "(null)", "JwtAssertion"));
+                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? LogPlaceholders.Null, "JwtAssertion"));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService

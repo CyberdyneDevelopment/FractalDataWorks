@@ -42,5 +42,6 @@ public class ComponentMetadata
     /// <summary>
     /// Gets render mode name for serialization.
     /// </summary>
-    public string RenderMode => RenderModes.ById(RenderModeId)?.Name ?? "View";
+    public string RenderMode => RenderModes.ById(RenderModeId)?.Name
+        ?? throw new InvalidOperationException($"Render mode {RenderModeId} is not one of RenderModes; a component states a render mode the collection holds.");
 }

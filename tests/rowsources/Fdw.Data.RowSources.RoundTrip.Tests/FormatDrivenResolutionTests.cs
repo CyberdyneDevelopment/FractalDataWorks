@@ -82,14 +82,14 @@ public class FormatDrivenResolutionTests
         // is an IRowWriter; cast to reach the schema-agnostic dictionary write path the transport uses.
         using (var tw = new StringWriter(sb))
         {
-            using var writer = (IRowWriter)writerType.CreateWriter(tw, new DelimitedRowWriterOptions { Columns = [.. columns] });
+            using var writer = (IRowWriter)writerType.CreateWriter(tw, new DelimitedRowWriterOptions { Columns = [.. columns], Separator = ",", QuoteChar = '"', WriteHeader = false, WriteByteOrderMark = false, NeutralizeFormulas = false, BufferSize = 16 * 1024 });
             await writer.WriteAll(rows, TestContext.Current.CancellationToken);
             writer.Flush();
         }
 
         // Act — read via the seam
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString()));
-        using var reader = readerType.CreateReader(stream, new DelimitedRowSourceOptions { Columns = [.. columns] });
+        using var reader = readerType.CreateReader(stream, new DelimitedRowSourceOptions { Columns = [.. columns], ContinueOnError = true, HasHeader = false, Separator = ",", ContainsQuotedFields = true, Trim = false, BufferSize = 16 * 1024 });
 
         var readBack = new List<Dictionary<string, object?>>();
         while (reader.Read())

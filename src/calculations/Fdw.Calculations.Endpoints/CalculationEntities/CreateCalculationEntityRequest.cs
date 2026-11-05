@@ -29,7 +29,7 @@ public sealed class CreateCalculationEntityRequest
     public string? ResultFieldName { get; set; }
 
     /// <summary>Gets or sets the data type name for the result (e.g. "Decimal", "Int32").</summary>
-    public string ResultDataTypeName { get; set; } = "Decimal";
+    public string ResultDataTypeName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the calculation type's own settings, as a JSON object read into the configuration
@@ -38,4 +38,7 @@ public sealed class CreateCalculationEntityRequest
     /// calculation is written as.
     /// </summary>
     public JsonElement? Configuration { get; set; }
+
+    /// <summary>Gets or sets whether the calculation runs. Required: the caller chooses, there is no default (FDW-3823).</summary>
+    public bool? IsEnabled { get; set; }
 }

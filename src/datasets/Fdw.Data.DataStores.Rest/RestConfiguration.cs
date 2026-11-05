@@ -33,19 +33,4 @@ public sealed class RestConfiguration
     /// </summary>
     [SecretValue]
     public string? BearerToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the request timeout in seconds.
-    /// </summary>
-    public int TimeoutSeconds { get; set; } = 30;
-
-    /// <summary>
-    /// Gets or sets whether to retry failed requests.
-    /// </summary>
-    public bool EnableRetries { get; set; } = true;
-
-    /// <summary>
-    /// Gets or sets the maximum number of retry attempts.
-    /// </summary>
-    public int MaxRetries { get; set; } = 3;
 }

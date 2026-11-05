@@ -58,7 +58,7 @@ public sealed class AggregateTransformType : TransformTypeBase
         ITransformContext context,
         CancellationToken cancellationToken = default)
     {
-        var name = (configuration as PipelineTransformConfiguration)?.Name ?? "Aggregate";
+        var name = configuration is PipelineTransformConfiguration { Name: { } named } ? named : Name;
         return Task.FromResult(GenericResult<IDictionary<string, object?>>.Failure(
             EtlLog.TransformRequiresBatchExecution(context.Logger, name)));
     }
@@ -87,7 +87,7 @@ public sealed class AggregateTransformType : TransformTypeBase
 
         var groups = inputList.GroupBy(
             record => string.Join("|", groupByFields.Select(f =>
-                record.TryGetValue(f, out var v) ? v?.ToString() ?? "" : "")),
+                record.TryGetValue(f, out var v) ? v?.ToString() ?? string.Empty : "")),
             StringComparer.OrdinalIgnoreCase);
 
         var results = new List<IDictionary<string, object?>>();

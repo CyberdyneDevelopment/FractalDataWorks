@@ -30,7 +30,7 @@ public sealed class InsertLoadStepCommandBuilder : LoadStepCommandBuilderBase
         var bindings = ValueBindings.Build(input.Row.ValueSources, input.Owner, input.Logger);
         if (bindings.IsFailure)
             return bindings.ToNewResult<IReadOnlyList<IDataCommand>>();
-        var values = ValueBindings.RowValues(bindings.Value!, input.Owner, LoadKind, input.Now, input.Logger);
+        var values = ValueBindings.RowValues(bindings.Value!, input.Owner, LoadKind, replacesRows: false, input.Now, input.Logger);
         if (values.IsFailure)
             return values.ToNewResult<IReadOnlyList<IDataCommand>>();
 

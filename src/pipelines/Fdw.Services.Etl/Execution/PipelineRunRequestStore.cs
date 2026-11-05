@@ -13,6 +13,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Etl.Tracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -64,9 +65,15 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
         {
             Elevate(scope.ServiceProvider, tenantId);
             var open = Open(scope.ServiceProvider);
-            return open.IsFailure
-                ? open
-                : await Save(open.Value.Gateway, open.Value.Store, request.ExecutionId, tenantId, text.Value, 0, cancellationToken).ConfigureAwait(false);
+            if (open.IsFailure)
+            {
+                return open;
+            }
+
+            var host = await PipelineRunHost.IdOf(scope.ServiceProvider, _logger, cancellationToken).ConfigureAwait(false);
+            return host.IsFailure
+                ? host
+                : await Save(open.Value.Gateway, open.Value.Store, new Stamp(request.ExecutionId, tenantId, host.Value), text.Value, 0, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -127,6 +134,12 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 return open.ToNewResult<PipelineExecutionRequest>();
             }
 
+            var host = await PipelineRunHost.IdOf(scope.ServiceProvider, _logger, cancellationToken).ConfigureAwait(false);
+            if (host.IsFailure)
+            {
+                return host.ToNewResult<PipelineExecutionRequest>();
+            }
+
             var tracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
             var created = await tracker.CreateItem(
                 ExecutionItemTypes.Job,
@@ -135,7 +148,11 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 parentId: null,
                 correlationId: Guid.NewGuid().ToString("N"),
                 triggerSource: old.TriggerSource,
-                parameters: new Dictionary<string, object?>(StringComparer.Ordinal) { ["PipelineName"] = old.PipelineName },
+                parameters: new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["PipelineName"] = old.PipelineName,
+                    ["ContinuesRun"] = old.ExecutionId,
+                },
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (created.IsFailure || created.Value is null)
             {
@@ -149,13 +166,43 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 PipelineName = old.PipelineName,
                 TriggerSource = old.TriggerSource,
                 ScheduleName = old.ScheduleName,
+                ScheduleId = old.ScheduleId,
                 TenantId = old.TenantId,
                 RunRoles = old.RunRoles,
                 Parameters = old.Parameters,
-                TestRowsPerSource = old.TestRowsPerSource
+                TestRowsPerSource = old.TestRowsPerSource,
+                TimeoutSeconds = old.TimeoutSeconds
             };
             await OpenMetrics(open.Value.Gateway, open.Value.Store, again, created.Value.State.Name, cancellationToken).ConfigureAwait(false);
-            return await Replace(tracker, open.Value.Gateway, open.Value.Store, tenantId, run, again, cancellationToken).ConfigureAwait(false);
+            return await Replace(tracker, open.Value.Gateway, open.Value.Store, new Stamp(again.ExecutionId, tenantId, host.Value), run, again, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<CommittedLoad>>> CommittedLoads(InterruptedRun run, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        var scope = _scopes.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            Elevate(scope.ServiceProvider, run.Request.TenantId);
+            var tracking = await RunTrackingReader.Read(scope.ServiceProvider.GetRequiredService<IExecutionTracker>(), run.Request.ExecutionId, cancellationToken).ConfigureAwait(false);
+            if (tracking.IsFailure || tracking.Value is null)
+            {
+                return GenericResult<IReadOnlyList<CommittedLoad>>.Failure(PipelineRunRecoveryLog.CommittedLoadsNotRead(_logger, run.Request.ExecutionId, tracking.CurrentMessage));
+            }
+
+            // Why a flag the records do not state counts as not repeating: a retry over a load that may add its rows again is refused, and the refusal says so.
+            var loads = new List<CommittedLoad>();
+            foreach (var component in tracking.Value.Stages.SelectMany(stage => stage.Components))
+            {
+                if (component.RowsCommitted is { } rows && rows > 0)
+                {
+                    loads.Add(new CommittedLoad(component.Name, rows, component.RepeatsToSameResult == true));
+                }
+            }
+
+            return GenericResult<IReadOnlyList<CommittedLoad>>.Success(loads);
         }
     }
 
@@ -175,8 +222,8 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
             }
 
             await CloseMetrics(open.Value.Gateway, open.Value.Store, run.Request.ExecutionId, reason, cancellationToken).ConfigureAwait(false);
-            var closed = await scope.ServiceProvider.GetRequiredService<IExecutionTracker>()
-                .Complete(run.Request.ExecutionId, false, "ServerStopped", reason, cancellationToken).ConfigureAwait(false);
+            var closed = await new OpenRunRecords(scope.ServiceProvider.GetRequiredService<IExecutionTracker>(), _logger)
+                .Close(run.Request.ExecutionId, ExecutionStateTypes.Interrupted, "ServerStopped", reason, cancellationToken).ConfigureAwait(false);
             return closed.IsFailure
                 ? GenericResult.Failure(PipelineRunRecoveryLog.RecordNotClosed(_logger, run.Request.ExecutionId, closed.CurrentMessage))
                 : await Remove(open.Value.Gateway, open.Value.Store, run.Request.ExecutionId, cancellationToken).ConfigureAwait(false);
@@ -196,12 +243,12 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
         }
     }
 
-    // The cut-off run's metrics row is closed as failed with the reason, the way a run that fails ends.
+    // The cut-off run's metrics row is closed as Interrupted with the reason, the state its execution record ends in (FDW-3787).
     private async Task CloseMetrics(IDataGateway gateway, string store, Guid executionId, string reason, CancellationToken cancellationToken)
     {
         var updated = await gateway.Execute<int>(
             Update.In<ExecutionUpdateRecord>(MetricsContainerName).DataStore(store).Path(PathName).Where("Id", executionId)
-                .Value(new ExecutionUpdateRecord { Status = "Failed", CompletedAt = DateTimeOffset.UtcNow, ErrorMessage = reason }),
+                .Value(new ExecutionUpdateRecord { Status = ExecutionStateTypes.Interrupted.Name, CompletedAt = DateTimeOffset.UtcNow, ErrorMessage = reason }),
             cancellationToken).ConfigureAwait(false);
         if (updated.IsFailure)
         {
@@ -209,16 +256,16 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
         }
     }
 
-    // Stores the new run's request with one more restart, closes the old run as failed naming the new one, and removes the old run's request. A new run whose
+    // Stores the new run's request with one more restart, closes the old run and the records under it as Interrupted naming the new one (FDW-3787), and removes the old run's request. A new run whose
     // request cannot be stored is closed too, so no record of a run is left unstarted with nothing to start it from.
     private async Task<IGenericResult<PipelineExecutionRequest>> Replace(
-        IExecutionTracker tracker, IDataGateway gateway, string store, Guid tenantId, InterruptedRun run, PipelineExecutionRequest again,
+        IExecutionTracker tracker, IDataGateway gateway, string store, Stamp stamp, InterruptedRun run, PipelineExecutionRequest again,
         CancellationToken cancellationToken)
     {
         var text = PipelineRunRequestJson.Write(again, _logger);
         var saved = text.IsFailure || text.Value is null
             ? text
-            : await Save(gateway, store, again.ExecutionId, tenantId, text.Value, run.Restarts + 1, cancellationToken).ConfigureAwait(false);
+            : await Save(gateway, store, stamp, text.Value, run.Restarts + 1, cancellationToken).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             _ = await tracker.Complete(again.ExecutionId, false, "RunRequestNotStored", saved.CurrentMessage, cancellationToken).ConfigureAwait(false);
@@ -227,7 +274,8 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
 
         var reason = $"The server stopped while the run was running; started again as run {again.ExecutionId}";
         await CloseMetrics(gateway, store, run.Request.ExecutionId, reason, cancellationToken).ConfigureAwait(false);
-        var closed = await tracker.Complete(run.Request.ExecutionId, false, "ServerStopped", reason, cancellationToken).ConfigureAwait(false);
+        var closed = await new OpenRunRecords(tracker, _logger)
+            .Close(run.Request.ExecutionId, ExecutionStateTypes.Interrupted, "ServerStopped", reason, cancellationToken).ConfigureAwait(false);
         if (closed.IsFailure)
         {
             PipelineRunRecoveryLog.RecordNotClosed(_logger, run.Request.ExecutionId, closed.CurrentMessage);
@@ -250,8 +298,26 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 return open.ToNewResult<PipelineRunRecovery>();
             }
 
+            var host = await PipelineRunHost.IdOf(scope.ServiceProvider, _logger, cancellationToken).ConfigureAwait(false);
+            if (host.IsFailure)
+            {
+                return host.ToNewResult<PipelineRunRecovery>();
+            }
+
             var tracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
-            var rows = await Rows(open.Value.Gateway, open.Value.Store, cancellationToken).ConfigureAwait(false);
+            var keys = await Keys(open.Value.Gateway, open.Value.Store, cancellationToken).ConfigureAwait(false);
+            if (keys.IsFailure || keys.Value is null)
+            {
+                return keys.ToNewResult<PipelineRunRecovery>();
+            }
+
+            var unstamped = keys.Value.Count(key => key.HostId is null);
+            if (unstamped > 0)
+            {
+                PipelineRunRecoveryLog.RequestsWithoutHost(_logger, unstamped);
+            }
+
+            var rows = await Rows(open.Value.Gateway, open.Value.Store, host.Value, cancellationToken).ConfigureAwait(false);
             if (rows.IsFailure || rows.Value is null)
             {
                 return rows.ToNewResult<PipelineRunRecovery>();
@@ -263,13 +329,16 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 return unstarted.ToNewResult<PipelineRunRecovery>();
             }
 
-            var without = await WithoutRow(tracker, rows.Value.Select(row => row.ExecutionId).ToHashSet(), cancellationToken).ConfigureAwait(false);
+            var without = await WithoutRow(tracker, keys.Value.Select(key => key.ExecutionId).ToHashSet(), cancellationToken).ConfigureAwait(false);
             return without.IsFailure
                 ? without.ToNewResult<PipelineRunRecovery>()
                 : GenericResult<PipelineRunRecovery>.Success(
                     new PipelineRunRecovery(unstarted.Value.Waiting, unstarted.Value.Approvals, unstarted.Value.Interrupted, without.Value));
         }
     }
+
+    // What a stored request is stamped with: the run it is for, the run's tenant and the host that accepted it (FDW-4084).
+    private sealed record Stamp(Guid ExecutionId, Guid TenantId, Guid HostId);
 
     private sealed record Unstarted(
         IReadOnlyList<PipelineExecutionRequest> Waiting, IReadOnlyList<PipelineExecutionRequest> Approvals, IReadOnlyList<InterruptedRun> Interrupted);
@@ -285,11 +354,12 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
 
     // A run accepted a second time (one approved after it was held for approval) already has its row: the row's request is rewritten.
     private async Task<IGenericResult> Save(
-        IDataGateway gateway, string store, Guid executionId, Guid tenantId, string text, int restarts, CancellationToken cancellationToken)
+        IDataGateway gateway, string store, Stamp stamp, string text, int restarts, CancellationToken cancellationToken)
     {
+        var executionId = stamp.ExecutionId;
         var inserted = await gateway.Execute<int>(
             Insert.Into<EtlPipelineRunRequestRecord>(ContainerName).DataStore(store).Path(PathName)
-                .Value(new EtlPipelineRunRequestRecord { ExecutionId = executionId, TenantId = tenantId, Request = text, Restarts = restarts }),
+                .Value(new EtlPipelineRunRequestRecord { ExecutionId = executionId, TenantId = stamp.TenantId, Request = text, Restarts = restarts, HostId = stamp.HostId }),
             cancellationToken).ConfigureAwait(false);
         if (inserted.IsSuccess)
         {
@@ -315,13 +385,25 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
             : GenericResult.Failure(PipelineRunRecoveryLog.RequestNotRemoved(_logger, executionId, removed.CurrentMessage));
     }
 
-    private static async Task<IGenericResult<IReadOnlyList<EtlPipelineRunRequestRecord>>> Rows(IDataGateway gateway, string store, CancellationToken cancellationToken)
+    // Only the rows that name this host (FDW-4084): another host's queued and running runs are never read, so they are never started or cut off here.
+    private static async Task<IGenericResult<IReadOnlyList<EtlPipelineRunRequestRecord>>> Rows(IDataGateway gateway, string store, Guid hostId, CancellationToken cancellationToken)
     {
         var read = await gateway.Execute<IEnumerable<EtlPipelineRunRequestRecord>>(
-            Query.From<EtlPipelineRunRequestRecord>(store, PathName, ContainerName).Build(), cancellationToken).ConfigureAwait(false);
+            Query.From<EtlPipelineRunRequestRecord>(store, PathName, ContainerName).Where("HostId", hostId).Build(), cancellationToken).ConfigureAwait(false);
         return read.IsFailure || read.Value is null
             ? read.ToNewResult<IReadOnlyList<EtlPipelineRunRequestRecord>>()
             : GenericResult<IReadOnlyList<EtlPipelineRunRequestRecord>>.Success([.. read.Value]);
+    }
+
+    // Which run each row is for and which host accepted it, across every host: only to count the rows that name no host and to tell another host's queued run from a run with no
+    // request. Nothing is started, cut off or closed from it.
+    private static async Task<IGenericResult<IReadOnlyList<EtlPipelineRunRequestKey>>> Keys(IDataGateway gateway, string store, CancellationToken cancellationToken)
+    {
+        var read = await gateway.Execute<IEnumerable<EtlPipelineRunRequestKey>>(
+            Query.From<EtlPipelineRunRequestKey>(store, PathName, ContainerName).Build(), cancellationToken).ConfigureAwait(false);
+        return read.IsFailure || read.Value is null
+            ? read.ToNewResult<IReadOnlyList<EtlPipelineRunRequestKey>>()
+            : GenericResult<IReadOnlyList<EtlPipelineRunRequestKey>>.Success([.. read.Value]);
     }
 
     // Splits the stored requests by what their run is now. A run that is Scheduled is waiting, one that is AwaitingApproval waits for approval, oldest first
@@ -376,10 +458,12 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     }
 
     // A stored request is kept for a run that has not started (Scheduled, AwaitingApproval) and for one that was running when the host stopped (Running, or
-    // on its way there, Triggered or Initialized, FDW-3236); a run in any other state has ended, and its request is stale.
+    // on its way there, Triggered or Initialized, FDW-3236), and for one the host stopped itself, which it marked Interrupted and left its request so the next start
+    // applies the retry or leave rule (FDW-3786); a run in any other state has ended, and its request is stale.
     private static bool IsKept(IExecutionItem item) =>
         Is(item, ExecutionStateTypes.Scheduled) || Is(item, ExecutionStateTypes.AwaitingApproval)
-        || Is(item, ExecutionStateTypes.Running) || Is(item, ExecutionStateTypes.Triggered) || Is(item, ExecutionStateTypes.Initialized);
+        || Is(item, ExecutionStateTypes.Running) || Is(item, ExecutionStateTypes.Triggered) || Is(item, ExecutionStateTypes.Initialized)
+        || Is(item, ExecutionStateTypes.Interrupted);
 
     private static bool Is(IExecutionItem item, IExecutionStateType state) => string.Equals(item.State.Name, state.Name, StringComparison.Ordinal);
 
@@ -397,7 +481,8 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
         _ = await Remove(gateway, store, executionId, cancellationToken).ConfigureAwait(false);
     }
 
-    // How many records of unstarted runs have no stored request: runs accepted before requests were kept. They are left as they are.
+    // How many records of unstarted runs have no stored request: runs accepted before requests were kept. They are left as they are. A run's execution record names no host,
+    // so this count is across every host's rows (FDW-4084): it is told apart from another host's queued run by the row's id, whichever host the row names.
     private static async Task<IGenericResult<int>> WithoutRow(IExecutionTracker tracker, HashSet<Guid> withRow, CancellationToken cancellationToken)
     {
         var without = 0;

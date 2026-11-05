@@ -169,4 +169,36 @@ public sealed class ContainerCompositionTests
         delimited["Separator"].ShouldBe("|");
         noSeparator.ContainsKey("Separator").ShouldBeFalse();
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void BuildMetadataCarriesEachFormatChoiceOnlyWhenTheContainerStatesIt()
+    {
+        var stated = ContainerComposition.BuildMetadata(
+            new DataContainerConfiguration
+            {
+                Name = "Rows", ContinueOnError = false, PropertyNameCaseInsensitive = true, SkipValidation = false, UseElementContent = true,
+                IncludeAttributes = false, OmitXmlDeclaration = true, ContainsQuotedFields = true, Trim = false, WriteByteOrderMark = false,
+                NeutralizeFormulas = true, RootElementName = "Rows", RowElementName = "Row", QuoteChar = "'",
+            },
+            FormatTypes.Delimited);
+        var none = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "Empty" }, FormatTypes.Delimited);
+
+        stated["ContinueOnError"].ShouldBe(false);
+        stated["PropertyNameCaseInsensitive"].ShouldBe(true);
+        stated["SkipValidation"].ShouldBe(false);
+        stated["UseElementContent"].ShouldBe(true);
+        stated["IncludeAttributes"].ShouldBe(false);
+        stated["OmitXmlDeclaration"].ShouldBe(true);
+        stated["ContainsQuotedFields"].ShouldBe(true);
+        stated["Trim"].ShouldBe(false);
+        stated["WriteByteOrderMark"].ShouldBe(false);
+        stated["NeutralizeFormulas"].ShouldBe(true);
+        stated["RootElementName"].ShouldBe("Rows");
+        stated["RowElementName"].ShouldBe("Row");
+        stated["QuoteChar"].ShouldBe("'");
+        foreach (var key in stated.Keys)
+            none.ContainsKey(key).ShouldBeFalse(key);
+    }
 }

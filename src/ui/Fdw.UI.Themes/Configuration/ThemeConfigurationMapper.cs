@@ -1,3 +1,4 @@
+using System;
 using Fdw.UI.Themes.Clients.Models;
 
 namespace Fdw.UI.Themes.Configuration;
@@ -33,8 +34,8 @@ public static class ThemeConfigurationMapper
             TextPrimary = managed.TextPrimary,
             TextSecondary = managed.TextSecondary,
             TextDisabled = managed.TextDisabled ?? string.Empty,
-            TextOnPrimary = managed.TextOnPrimary ?? "#FFFFFF",
-            TextOnSecondary = managed.TextOnSecondary ?? "#FFFFFF",
+            TextOnPrimary = managed.TextOnPrimary ?? throw new InvalidOperationException($"Theme '{managed.Name}' states no TextOnPrimary colour."),
+            TextOnSecondary = managed.TextOnSecondary ?? throw new InvalidOperationException($"Theme '{managed.Name}' states no TextOnSecondary colour."),
             FontFamily = managed.FontFamily,
             FontFamilyMono = managed.FontFamilyMono,
             FontSizeBase = managed.FontSizeBase,

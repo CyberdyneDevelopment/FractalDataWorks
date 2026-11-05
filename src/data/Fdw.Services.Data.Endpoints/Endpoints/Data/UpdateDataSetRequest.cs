@@ -27,8 +27,8 @@ public class UpdateDataSetRequest
     /// </summary>
     public string? Category { get; set; }
 
-    /// <summary>Gets or sets the data set version.</summary>
-    public string Version { get; set; } = "1.0";
+    /// <summary>Gets or sets the data set version. Left out, the stored version is kept.</summary>
+    public string? Version { get; set; }
 
     /// <summary>Gets or sets the record type name.</summary>
     public string RecordTypeName { get; set; } = string.Empty;

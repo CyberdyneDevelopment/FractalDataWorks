@@ -7,6 +7,7 @@ using System.Reflection;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Operations.Endpoints.ConfigurationMetadata.PropertyTypes;
+using Fdw.Abstractions;
 
 namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 
@@ -29,20 +30,21 @@ public static class ConfigurationPropertyExtractor
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.CanWrite)
             .Where(p => !SystemProperties.Contains(p.Name))
-            .OrderBy(p => GetDisplayOrder(p))
+            .OrderBy(p => StatedOrder(p) is null)
+            .ThenBy(p => StatedOrder(p))
             .Select((p, idx) => MapProperty(p, idx))
             .ToList();
 
         return properties;
     }
 
-    private static int GetDisplayOrder(PropertyInfo property)
-    {
-        var displayAttr = property.GetCustomAttribute<DisplayAttribute>();
-        return displayAttr?.Order ?? 1000;
-    }
+    // A property that states [Display(Order)] sorts before one that does not; the rest keep their declared order (OrderBy is stable).
+    private static int? StatedOrder(PropertyInfo property) =>
+        property.GetCustomAttribute<DisplayAttribute>()?.GetOrder();
 
-    private static ConfigurationPropertyInfoDto MapProperty(PropertyInfo property, int defaultOrder)
+    // The position is the display order: the list is already sorted by the stated order, so no sentinel stands in for an unstated one.
+    // A setting's label is always its name spaced at the capitals (FDW-3025); no configuration type states [Display(Name)].
+    private static ConfigurationPropertyInfoDto MapProperty(PropertyInfo property, int position)
     {
         var displayAttr = property.GetCustomAttribute<DisplayAttribute>();
         var descAttr = property.GetCustomAttribute<DescriptionAttribute>();
@@ -55,16 +57,16 @@ public static class ConfigurationPropertyExtractor
         return new ConfigurationPropertyInfoDto
         {
             Name = property.Name,
-            DisplayName = displayAttr?.Name ?? FormatDisplayName(property.Name),
+            DisplayName = FormatDisplayName(property.Name),
             PropertyType = propertyType,
             IsRequired = requiredAttr != null || IsRequiredByType(property.PropertyType),
             CanBeEmpty = CanBeEmpty(property),
             IsSecret = propertyType == ConfigurationPropertyTypeDtos.Secret,
             DefaultValue = GetDefaultValue(property),
-            Description = descAttr?.Description ?? displayAttr?.Description,
+            Description = descAttr?.Description,
             Placeholder = displayAttr?.Prompt,
             Group = displayAttr?.GroupName,
-            DisplayOrder = displayAttr?.Order ?? defaultOrder,
+            DisplayOrder = position,
             ValidationRules = validationRules.Count > 0 ? validationRules : null,
             AllowedValues = allowedValues
         };
@@ -97,7 +99,7 @@ public static class ConfigurationPropertyExtractor
                 return names;
         }
 
-        var underlyingType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+        var underlyingType = property.PropertyType.WithoutNullable();
 
         if (!underlyingType.IsEnum)
             return null;
@@ -129,8 +131,8 @@ public static class ConfigurationPropertyExtractor
                 if (displayProperty != null)
                 {
                     var propInfo = item.GetType().GetProperty(displayProperty, BindingFlags.Public | BindingFlags.Instance);
-                    var displayValue = propInfo?.GetValue(item)?.ToString();
-                    result.Add(displayValue ?? typeOption.Name);
+                    result.Add(propInfo?.GetValue(item)?.ToString()
+                        ?? throw new InvalidOperationException($"[ValuesFrom] names display property '{displayProperty}', which {collectionType.Name} option '{typeOption.Name}' does not state."));
                 }
                 else
                 {
@@ -158,7 +160,7 @@ public static class ConfigurationPropertyExtractor
             rules.Add(new ValidationRuleInfoDto
             {
                 RuleType = "Required",
-                Message = requiredAttr.ErrorMessage ?? $"{property.Name} is required"
+                Message = requiredAttr.ErrorMessage
             });
         }
 

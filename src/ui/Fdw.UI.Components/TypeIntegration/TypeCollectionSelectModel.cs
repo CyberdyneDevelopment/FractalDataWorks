@@ -136,12 +136,12 @@ public sealed class TypeCollectionSelectModel : ISelectableComponentModel<int>
     {
         if (IsRequired && !Value.HasValue)
         {
-            return ValidationResult.Error($"{Label ?? Id} is required.");
+            return ValidationResult.Error($"{Id} is required.");
         }
 
         if (Value.HasValue && !_options.Any(o => o.Value == Value.Value))
         {
-            return ValidationResult.Error($"{Label ?? Id} has an invalid selection.");
+            return ValidationResult.Error($"{Id} has an invalid selection.");
         }
 
         if (CustomValidator != null)

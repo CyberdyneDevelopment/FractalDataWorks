@@ -32,6 +32,9 @@ public sealed class LoadStepCommandBuilderTests
     private static PipelineLoadValueSourceConfiguration Stamp(string column) =>
         new() { Name = column, ColumnName = column, SourceKind = "CurrentTimestamp" };
 
+    private static PipelineLoadValueSourceConfiguration Uuid(string column) =>
+        new() { Name = column, ColumnName = column, SourceKind = "UuidV7" };
+
     private static PipelineLoadValueSourceConfiguration Sequence(string column) =>
         new()
         {
@@ -171,6 +174,38 @@ public sealed class LoadStepCommandBuilderTests
 
     [Fact]
     [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void InsertGivesEveryRowItsOwnVersionSevenGuidInTheUuidV7Column()
+    {
+        // Arrange
+        var row = Row(Column("Write", "Id"), Column("Write", "Name"));
+        row.ValueSources = [Uuid("PublicId")];
+
+        // Act
+        var commands = Built("Insert", Input(row, Rows(50)));
+
+        // Assert
+        var ids = Data(commands[0]).Select(r => r["PublicId"].ShouldBeOfType<Guid>()).ToList();
+        ids.Count.ShouldBe(50);
+        ids.Distinct().Count().ShouldBe(50);
+        ids.ShouldAllBe(id => id.Version == 7);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void InsertRefusesAUuidV7ColumnTheRowsAlsoSupply()
+    {
+        // Arrange
+        var row = Row(Column("Write", "Id"), Column("Write", "Name"));
+        row.ValueSources = [Uuid("Name")];
+
+        // Act / Assert
+        Refused("Insert", Input(row), "PIPELINERUN-20215");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public void InsertRefusesASequenceValueSourceBecauseTheDatabaseMustNumberTheBatch()
     {
@@ -279,6 +314,26 @@ public sealed class LoadStepCommandBuilderTests
 
     [Fact]
     [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void UpsertPassesUuidV7ToTheCommandAsAnInsertOnlyValueSourceOutsideTheCompareAndWriteColumns()
+    {
+        // Arrange
+        var row = Row(Column("Key", "Id"), Column("Compare", "Name"), Column("Write", "Id"), Column("Write", "Name", 1));
+        row.ValueSources = [Uuid("PublicId")];
+
+        // Act
+        var command = Built("Upsert", Input(row))[0].ShouldBeOfType<BulkUpsertCommand<IDictionary<string, object?>>>();
+
+        // Assert
+        command.Options.ValueSources!.Select(b => b.Column).ShouldBe(new[] { "PublicId" });
+        command.Options.ValueSources![0].Source.ShouldBeOfType<UuidV7ValueSource>();
+        command.Options.CompareColumns.ShouldNotContain("PublicId");
+        command.Options.WriteColumns.ShouldNotContain("PublicId");
+        Data(command).First().Keys.ShouldNotContain("PublicId");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public void UpsertRefusesWhatTheCommandLayerRefusesWithItsReason()
     {
@@ -298,6 +353,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"), Column("Write", "Id"), Column("Write", "Name", 1));
         row.SoftDeleteMode = "AbsentFromSource";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
         row.DeletedAtColumn = "DeletedAt";
 
         // Act
@@ -325,6 +381,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"), Column("Write", "Id"), Column("Write", "Name", 1));
         row.SoftDeleteMode = "MarkerMatches";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
         row.SoftDeleteMarkerColumn = "Status";
         row.SoftDeleteMarkerValue = "closed";
 
@@ -341,6 +398,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"), Column("Write", "Id"), Column("Write", "Name", 1));
         row.SoftDeleteMode = "AbsentFromSource";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
 
         // Act / Assert
         Refused("Upsert", Input(row, []), "PIPELINERUN-20228");
@@ -384,6 +442,19 @@ public sealed class LoadStepCommandBuilderTests
 
     [Fact]
     [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void UpdateRefusesAUuidV7ValueSourceBecauseItWouldReplaceTheIdOfEveryRowItChanges()
+    {
+        // Arrange
+        var row = Row(Column("Key", "Id"), Column("Write", "Name"));
+        row.ValueSources = [Uuid("PublicId")];
+
+        // Act / Assert
+        Refused("Update", Input(row), "PIPELINERUN-20213", "PublicId");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
     public void UpdateMatchesACompositeKeyOnEveryKeyColumn()
     {
@@ -408,6 +479,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"), Column("Write", "Name"));
         row.SoftDeleteMode = "MarkerMatches";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
         row.SoftDeleteMarkerColumn = "Status";
         row.SoftDeleteMarkerValue = "closed";
 
@@ -430,6 +502,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"), Column("Write", "Name"));
         row.SoftDeleteMode = "AbsentFromSource";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
 
         // Act / Assert
         Refused("Update", Input(row), "PIPELINERUN-20223", "AbsentFromSource");
@@ -490,6 +563,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"));
         row.SoftDeleteMode = "MarkerMatches";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
         row.SoftDeleteMarkerColumn = "Status";
         row.SoftDeleteMarkerValue = "open";
 
@@ -510,6 +584,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"));
         row.SoftDeleteMode = "AbsentFromSource";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
 
         // Act
         var commands = Built("Delete", Input(row, Rows(3)));
@@ -530,6 +605,7 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"));
         row.SoftDeleteMode = "AbsentFromSource";
         row.DeletedFlagColumn = "IsDeleted";
+        row.DeletedFlagValue = true;
 
         // Act / Assert
         Refused("Delete", Input(row, []), "PIPELINERUN-20228");
@@ -554,5 +630,6 @@ public sealed class LoadStepCommandBuilderTests
 
         command.Filter.ShouldBeNull();
         command.SoftDelete.ShouldBeNull();
+        command.AllRows.ShouldBeTrue();
     }
 }

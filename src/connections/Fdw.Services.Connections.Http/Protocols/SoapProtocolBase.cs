@@ -1,3 +1,5 @@
+using Fdw.Data.RowSources.Abstractions;
+using System.IO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -105,7 +107,12 @@ public abstract class SoapProtocolBase : HttpProtocolBase
 
             // Step 4: Build HTTP request
             var endpoint = GetRequestPath(command, container, context);
-            var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            if (!endpoint.IsSuccess)
+            {
+                return endpoint.ToNewResult<HttpRequestMessage>();
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Post, endpoint.Value!)
             {
                 Content = new StringContent(envelope.ToString(), Encoding.UTF8, DefaultContentType)
             };
@@ -148,7 +155,7 @@ public abstract class SoapProtocolBase : HttpProtocolBase
                 HttpResultCodes.ByName("SoapHttpError"),
                 ResultDetails.Create()
                     .With("StatusCode", (int)response.StatusCode)
-                    .With("ReasonPhrase", response.ReasonPhrase ?? "Unknown"));
+                    .With("ReasonPhrase", response.ReasonPhrase ?? HttpPlaceholders.NoReasonPhrase));
         }
 
         XDocument doc;
@@ -201,9 +208,15 @@ public abstract class SoapProtocolBase : HttpProtocolBase
         HttpProtocolContext context,
         CancellationToken cancellationToken)
     {
-        // Default: create a simple element from the command
-        var operationName = command.Metadata.GetValueOrDefault("Operation") as string
-            ?? command.CommandType;
+        // Default: the body element is the operation the command's metadata names. Without one there is no element to
+        // build: the command type is not a SOAP operation (FDW-3580).
+        if (command.Metadata.GetValueOrDefault("Operation") is not string { Length: > 0 } operationName)
+        {
+            return Task.FromResult(GenericResult<XElement>.Failure(
+                HttpResultCodes.ByName("SoapOperationMissing"),
+                ResultDetails.Create().With("CommandType", command.CommandType)));
+        }
+
         var body = new XElement(operationName);
 
         // Add command input data if present
@@ -234,8 +247,8 @@ public abstract class SoapProtocolBase : HttpProtocolBase
         if (!string.IsNullOrEmpty(pattern))
         {
             return pattern
-                .Replace("{operation}", command.CommandType)
-                .Replace("{container}", container.Name);
+                .Replace("{operation}", command.CommandType, StringComparison.Ordinal)
+                .Replace("{container}", container.Name, StringComparison.Ordinal);
         }
 
         return command.Metadata.GetValueOrDefault("SoapAction") as string;
@@ -320,20 +333,18 @@ public abstract class SoapProtocolBase : HttpProtocolBase
             return GenericResult.Success();
         }
 
-        // Extract fault information (differs between SOAP 1.1 and 1.2)
-        var faultCode = fault.Element("faultcode")?.Value
-            ?? fault.Element(Version.EnvelopeNamespace + "Code")?.Element(Version.EnvelopeNamespace + "Value")?.Value
-            ?? "Unknown";
-
-        var faultString = fault.Element("faultstring")?.Value
-            ?? fault.Element(Version.EnvelopeNamespace + "Reason")?.Element(Version.EnvelopeNamespace + "Text")?.Value
-            ?? "Unknown SOAP fault";
+        // Why read by version: SOAP 1.1 and 1.2 shape a fault differently, and this protocol speaks one of them, so
+        // its own version says where the code and text are, not a try of one shape and then the other (FDW-3580).
+        var ns = Version.EnvelopeNamespace;
+        var (faultCode, faultString) = Version.Equals(SoapVersion.Soap11)
+            ? (fault.Element("faultcode")?.Value, fault.Element("faultstring")?.Value)
+            : (fault.Element(ns + "Code")?.Element(ns + "Value")?.Value, fault.Element(ns + "Reason")?.Element(ns + "Text")?.Value);
 
         return GenericResult.Failure(
             HttpResultCodes.ByName("SoapFault"),
             ResultDetails.Create()
-                .With("FaultCode", faultCode)
-                .With("FaultString", faultString));
+                .With("FaultCode", faultCode ?? HttpPlaceholders.NoFaultCode)
+                .With("FaultString", faultString ?? HttpPlaceholders.NoFaultString));
     }
 
     /// <summary>
@@ -362,4 +373,13 @@ public abstract class SoapProtocolBase : HttpProtocolBase
     }
 
     #endregion
+
+    // Why (FDW-3823): the protocol base knows no format; every protocol that reads a response as rows reads through the format types.
+    /// <inheritdoc />
+    protected override bool HasRowReaderForFormat(IStorageContainer container)
+        => FormatRowReaders.Has(container);
+
+    /// <inheritdoc />
+    protected override IGenericResult<IRowSourceReader?> TryCreateRowReader(IStorageContainer container, Stream content)
+        => FormatRowReaders.Create(container, content);
 }

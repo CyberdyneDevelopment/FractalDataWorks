@@ -32,6 +32,7 @@
     <ProjectReference Include="..\..\..\src\connections\Fdw.Services.Connections.RoslynWorkspace\Fdw.Services.Connections.RoslynWorkspace.csproj" />
     <!-- Registration.SourceGenerators generates the module initializer that registers TypeOptions -->
     <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\src\connections\Fdw.Services.Connections.RoslynWorkspace.Registration\Fdw.Services.Connections.RoslynWorkspace.Registration.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Why: transitive of MSBuild family — Build.Locator's MSBL001 check forbids its runtime DLL

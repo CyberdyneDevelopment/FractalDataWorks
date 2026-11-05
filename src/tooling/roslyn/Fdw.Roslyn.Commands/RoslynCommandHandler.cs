@@ -68,7 +68,7 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
             CommandHandlerLog.TranslatorNotFound(_logger, commandName, typeof(TCommand).Name);
             return GenericResult<TResult>.Failure(
                 RoslynResultCodes.ByName("TranslatorNotFound"),
-                ResultDetails.Create("Message", translatorResult.CurrentMessage ?? "Unknown translator"));
+                ResultDetails.Create("Message", translatorResult.FailureReason().Message));
         }
 
         var translator = translatorResult.Value!;
@@ -140,7 +140,7 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
             CommandHandlerLog.TranslatorNotFound(_logger, commandName, commandType.Name);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("TranslatorNotFound"),
-                ResultDetails.Create("Message", translatorResult.CurrentMessage ?? "Unknown translator"));
+                ResultDetails.Create("Message", translatorResult.FailureReason().Message));
         }
 
         var translator = translatorResult.Value!;
@@ -288,7 +288,12 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
 
         // The translator's own counts are the ones taken against the solution it saw, so they are kept;
         // only the id it could not know is replaced.
-        var placeholder = (resultValue as MutationResult<SnapshotData>)?.Data;
+        if ((resultValue as MutationResult<SnapshotData>)?.Data is not { } placeholder)
+        {
+            return GenericResult<IRoslynCommandResult>.Failure(
+                RoslynResultCodes.ByName("CommandExecutionFailed"),
+                ResultDetails.Create("ErrorMessage", "the snapshot translator returned no snapshot data"));
+        }
 
         return GenericResult<IRoslynCommandResult>.Success(
             new MutationResult<SnapshotData>(
@@ -299,8 +304,8 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
                     SnapshotId = realId,
                     Name = command.SnapshotName,
                     Description = command.SnapshotDescription,
-                    ProjectCount = placeholder?.ProjectCount ?? 0,
-                    DocumentCount = placeholder?.DocumentCount ?? 0,
+                    ProjectCount = placeholder.ProjectCount,
+                    DocumentCount = placeholder.DocumentCount,
                     Restored = false,
                 }));
     }
@@ -320,7 +325,7 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
             return applyResult.ToNewResult<IRoslynCommandResult>();
         }
 
-        var written = applyResult.Value ?? Array.Empty<string>();
+        var written = applyResult.Value ?? [];
 
         if (written.Count > 0)
         {

@@ -40,7 +40,7 @@ public sealed class ContainerSchemaConverter : JsonConverter<IContainerSchema>
 
         return new ContainerSchema
         {
-            Fields = fields ?? new List<IField>()
+            Fields = fields ?? []
         };
     }
 

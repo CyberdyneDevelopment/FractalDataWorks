@@ -64,9 +64,9 @@ public class PipelineExecutionRecord
     public int RecordsFailed { get; set; }
 
     /// <summary>
-    /// Gets or sets the total duration in milliseconds.
+    /// Gets or sets the total duration in milliseconds, or <see langword="null"/> while the run has not reported one; never 0 for unknown.
     /// </summary>
-    public double TotalDurationMs { get; set; }
+    public double? TotalDurationMs { get; set; }
 
     /// <summary>
     /// Gets or sets who executed the pipeline.

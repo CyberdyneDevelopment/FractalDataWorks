@@ -15,6 +15,11 @@ namespace Fdw.Schema.Ddl.MsSql.Tests;
 /// </summary>
 public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 {
+    private static readonly DdlGenerationOptions Options = new()
+    {
+        SchemaName = "dbo", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false,
+    };
+
     private readonly MsSqlDdlGenerator _sut = new();
 
     private static Mock<IPropertyDefinition> CreateProperty(
@@ -67,7 +72,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         });
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -78,20 +83,18 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void GenerateCommandsUsesDefaultOptionsWhenNull()
+    public void GenerateCommandsRefusesMissingOptions()
     {
+        // FDW-3823: the caller states every DDL option; no options are taken in place of missing ones.
         var prop = CreateProperty("Id", metadata: new Dictionary<string, object>
         {
             ["ClrType"] = "System.Int32"
         });
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object, null);
+        var result = _sut.GenerateCommands(schema.Object, null!);
 
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        var createTable = result.Value[0].ShouldBeOfType<CreateTableCommand>();
-        createTable.SchemaName.ShouldBe("dbo");
+        result.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]
@@ -104,7 +107,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
             ["ClrType"] = "System.Int32"
         });
         var schema = CreateSchema("TestTable", [prop.Object]);
-        var options = new DdlGenerationOptions { SchemaName = "cfg" };
+        var options = new DdlGenerationOptions { SchemaName = "cfg", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         var result = _sut.GenerateCommands(schema.Object, options);
 
@@ -125,7 +128,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         });
         var schema = CreateSchema("Connection", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -148,7 +151,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object], surrogateKey: surrogateKey.Object);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -175,7 +178,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object], surrogateKey: surrogateKey.Object);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -207,7 +210,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop1.Object, prop2.Object], naturalKey: naturalKey.Object);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -237,7 +240,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
             surrogateKey: surrogateKey.Object,
             naturalKey: naturalKey.Object);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -259,7 +262,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("HeapTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -282,7 +285,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("Connection", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -306,7 +309,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [requiredProp.Object, optionalProp.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -331,7 +334,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -352,7 +355,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -372,7 +375,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -393,7 +396,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -414,7 +417,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -435,7 +438,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -454,7 +457,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -485,7 +488,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         indexDef.Setup(i => i.FilterPredicate).Returns((string?)null);
 
         var schema = CreateSchema("TestTable", [prop.Object], indexes: [indexDef.Object]);
-        var options = new DdlGenerationOptions { IncludeIndexes = true };
+        var options = new DdlGenerationOptions { IncludeIndexes = true, SchemaName = "dbo", IfNotExists = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         var result = _sut.GenerateCommands(schema.Object, options);
 
@@ -513,7 +516,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         indexDef.Setup(i => i.IsClustered).Returns(false);
 
         var schema = CreateSchema("TestTable", [prop.Object], indexes: [indexDef.Object]);
-        var options = new DdlGenerationOptions { IncludeIndexes = false };
+        var options = new DdlGenerationOptions { IncludeIndexes = false, SchemaName = "dbo", IfNotExists = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         var result = _sut.GenerateCommands(schema.Object, options);
 
@@ -533,7 +536,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         });
 
         var schema = CreateSchema("TestTable", [prop.Object], indexes: []);
-        var options = new DdlGenerationOptions { IncludeIndexes = true };
+        var options = new DdlGenerationOptions { IncludeIndexes = true, SchemaName = "dbo", IfNotExists = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         var result = _sut.GenerateCommands(schema.Object, options);
 
@@ -562,7 +565,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object], indexes: [indexDef.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -591,7 +594,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         indexDef.Setup(i => i.IsClustered).Returns(false);
 
         var schema = CreateSchema("TestTable", [prop.Object], indexes: [indexDef.Object]);
-        var options = new DdlGenerationOptions { SchemaName = "etl" };
+        var options = new DdlGenerationOptions { SchemaName = "etl", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         var result = _sut.GenerateCommands(schema.Object, options);
 
@@ -626,7 +629,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("TestTable", [prop.Object], indexes: [index1.Object, index2.Object]);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -668,7 +671,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         var schema = CreateSchema("Connection", props, surrogateKey: surrogateKey.Object);
 
-        var result = _sut.GenerateCommands(schema.Object);
+        var result = _sut.GenerateCommands(schema.Object, Options);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -722,7 +725,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         surrogateKey.Setup(k => k.Members).Returns([new KeyMember(0, "Id")]);
 
         var schema = CreateSchema("TestTable", props, surrogateKey: surrogateKey.Object);
-        var options = new DdlGenerationOptions { SchemaName = "cfg" };
+        var options = new DdlGenerationOptions { SchemaName = "cfg", IfNotExists = true, IncludeIndexes = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         var commandsResult = _sut.GenerateCommands(schema.Object, options);
         commandsResult.IsSuccess.ShouldBeTrue();
@@ -763,7 +766,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         indexDef.Setup(i => i.FilterPredicate).Returns((string?)null);
 
         var schema = CreateSchema("TestTable", props, indexes: [indexDef.Object]);
-        var options = new DdlGenerationOptions { SchemaName = "dbo", IncludeIndexes = true };
+        var options = new DdlGenerationOptions { SchemaName = "dbo", IncludeIndexes = true, IfNotExists = true, IncludeForeignKeys = true, IncludeDropStatements = false };
 
         var commandsResult = _sut.GenerateCommands(schema.Object, options);
         commandsResult.IsSuccess.ShouldBeTrue();

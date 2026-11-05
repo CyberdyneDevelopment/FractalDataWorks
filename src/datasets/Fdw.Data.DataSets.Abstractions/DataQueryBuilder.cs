@@ -27,9 +27,9 @@ public sealed class DataQueryBuilder<TSource> : IDataQuery<TSource>
         DataSetName = dataSetName ?? throw new ArgumentNullException(nameof(dataSetName));
         // For root queries, create a constant representing the queryable source
         // Using QueryableSource instead of 'this' to avoid circular references in ToString()
-        QueryExpression = expression ?? Expression.Constant(
-            new QueryableSource<TSource>(dataSetName),
-            typeof(IQueryable<TSource>));
+        QueryExpression = expression is null
+            ? Expression.Constant(new QueryableSource<TSource>(dataSetName), typeof(IQueryable<TSource>))
+            : expression;
         SourceType = typeof(TSource);
         ResultType = typeof(TSource);
     }

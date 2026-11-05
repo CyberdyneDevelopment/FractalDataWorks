@@ -9,7 +9,7 @@ namespace Fdw.Security.Encryption.Logging;
 /// MessageLogging for <see cref="AesGcmEncryptionCommandExecutor"/>.
 /// </summary>
 /// <remarks>
-/// EventId range: 7000–7009. Neither plaintext, ciphertext, nor key material ever appears here at
+/// EventId range: 7000–7019. Neither plaintext, ciphertext, nor key material ever appears here at
 /// any level — a log is the wrong place for any of the three, and a key name is the only thing about
 /// a key that is ever safe to record.
 /// </remarks>
@@ -100,4 +100,12 @@ internal static partial class EncryptionLog
         Message = "Reused cached key '{keyName}' from secret manager '{secretManagerName}'")]
     internal static partial IGenericMessage KeyReused(
         ILogger<AesGcmEncryptionCommandExecutor> logger, string secretManagerName, string keyName);
+
+    /// <summary>A required input to an encrypt or decrypt was null or empty.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="member">The command or member that was missing.</param>
+    [MessageLogging(EventId = 7010, Level = LogLevel.Error,
+        Message = "'{member}' is required to encrypt or decrypt and was null or empty")]
+    internal static partial IGenericMessage RequiredValueMissing(
+        ILogger<AesGcmEncryptionCommandExecutor> logger, string member);
 }

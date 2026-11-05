@@ -94,7 +94,7 @@ public sealed class PipelineReachTests
         tool.Stages =
         [
             new PipelineTransformConfiguration
-            {
+            { IsEnabled = true,
                 Name = "Enrich",
                 Lookups = [new PipelineTransformLookupConfiguration { Name = "a", LookupDataSet = "Customers" }],
                 ComputeTables = [new PipelineTransformComputeTableConfiguration { TableName = "t", FromKind = "DataSet", FromName = "Prices" }],
@@ -117,7 +117,7 @@ public sealed class PipelineReachTests
         tool.Stages =
         [
             new PipelineTransformConfiguration
-            {
+            { IsEnabled = true,
                 Name = "Enrich",
                 Lookups =
                 [
@@ -197,5 +197,23 @@ public sealed class PipelineReachTests
 
         found.IsSuccess.ShouldBeFalse();
         found.CurrentMessage.ShouldNotBeNull().ShouldContain("Which");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void ATemplateIsRefusedARunNamingItAndAPipelineMadeFromOneIsNot()
+    {
+        var template = Graph(Component("DataSetSource", dataSet: "Orders"));
+        template.IsTemplate = true;
+        var made = Graph(Component("DataSetSource", dataSet: "Orders"));
+        made.TemplateName = "Nightly";
+
+        var refused = PipelineReach.Of(template, NoValues, NullLogger.Instance);
+
+        refused.IsSuccess.ShouldBeFalse();
+        refused.CurrentMessage.ShouldNotBeNull().ShouldContain("Nightly");
+        refused.CurrentMessage.ShouldContain("template");
+        ReachOf(made).DataSets.ShouldBe([new ReachedDataSet("Orders", false)]);
     }
 }

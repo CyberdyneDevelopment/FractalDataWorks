@@ -36,7 +36,7 @@ public sealed class FindTypeOptionsTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        FindTypeOptionsTranslatorLog.Scanning(Logger, command.CollectionName ?? "(all)");
+        FindTypeOptionsTranslatorLog.Scanning(Logger, command.CollectionName ?? RoslynReportPlaceholders.All);
 
         var typeOptions = new List<TypeOptionInfo>();
 
@@ -45,7 +45,7 @@ public sealed class FindTypeOptionsTranslator
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) continue;
 
-            foreach (var document in project.Documents)
+            foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
             {
                 if (command.IsGeneratedDocument(document)) continue;
 
@@ -85,7 +85,7 @@ public sealed class FindTypeOptionsTranslator
                         FullName = symbol.ToDisplayString(),
                         Collection = collectionArg,
                         Project = project.Name,
-                        FilePath = document.FilePath ?? document.Name,
+                        FilePath = documentPath,
                         IsSealed = symbol.IsSealed
                     });
                 }
@@ -97,7 +97,7 @@ public sealed class FindTypeOptionsTranslator
         var data = new TypeOptionsData
         {
             Count = typeOptions.Count,
-            CollectionFilter = command.CollectionName ?? "(all)",
+            CollectionFilter = command.CollectionName ?? RoslynReportPlaceholders.All,
             TypeOptions = typeOptions
         };
 

@@ -71,7 +71,7 @@ public sealed class ScriptPayloadTests
         var problems = ScriptChecker.Problems(draft);
 
         problems.Select(problem => problem.Path[0]).ShouldBe(["name", "connection", "text", "kind", "parameters", "parameters"], ignoreOrder: true);
-        problems.Single(problem => problem.Reason.Contains("Nothing")).Path.ShouldBe(["parameters", "A", "type"]);
+        problems.Single(problem => problem.Reason.Contains("Nothing", System.StringComparison.Ordinal)).Path.ShouldBe(["parameters", "A", "type"]);
     }
 
     [Fact]

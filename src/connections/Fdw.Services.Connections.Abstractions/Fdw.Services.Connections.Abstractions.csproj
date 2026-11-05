@@ -44,6 +44,7 @@
     <!-- Data.SourceGenerators for [GenerateMapper] (ConnectionHealthCheckRecord query mapping) -->
     <ProjectReference Include="..\..\data\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\documents\Fdw.Documents.Abstractions\Fdw.Documents.Abstractions.csproj" />
+    <ProjectReference Include="..\..\documents\Fdw.Documents.Records.Abstractions\Fdw.Documents.Records.Abstractions.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />

@@ -51,12 +51,13 @@ public sealed class PipelineLoadCollectionsTests
     }
 
     [Theory]
-    [InlineData("Column", true, true, false, false, false)]
-    [InlineData("NextSequenceValue", false, false, true, true, false)]
-    [InlineData("CurrentTimestamp", false, false, false, false, false)]
-    [InlineData("Constant", false, false, false, false, true)]
+    [InlineData("Column", true, true, false, false, false, false)]
+    [InlineData("NextSequenceValue", false, false, true, true, false, false)]
+    [InlineData("CurrentTimestamp", false, false, false, false, false, false)]
+    [InlineData("Constant", false, false, false, false, true, false)]
+    [InlineData("UuidV7", false, false, false, false, false, true)]
     public void ValueSourceKindStatesWhatItNeeds(
-        string name, bool mapsSourceColumn, bool sourceField, bool sequenceName, bool sequenceOrder, bool constant)
+        string name, bool mapsSourceColumn, bool sourceField, bool sequenceName, bool sequenceOrder, bool constant, bool guidColumn)
     {
         // Act
         var kind = ValueSourceKinds.ByName(name);
@@ -68,6 +69,7 @@ public sealed class PipelineLoadCollectionsTests
         kind.RequiresSequenceName.ShouldBe(sequenceName);
         kind.RequiresSequenceOrder.ShouldBe(sequenceOrder);
         kind.RequiresConstant.ShouldBe(constant);
+        kind.RequiresGuidColumn.ShouldBe(guidColumn);
     }
 
     [Theory]

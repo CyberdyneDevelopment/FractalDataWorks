@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Authorization;
 
 namespace Fdw.Services.Authorization.Tests;
 
@@ -55,7 +56,7 @@ public sealed class PreAuthenticationPermissionContextTests
                     : [];
                 return GenericResult<IReadOnlyList<UserPermissionGrant>>.Success(rows);
             });
-        var userPermissions = new UserPermissions(grants.Object, accessor, NullLogger<UserPermissions>.Instance);
+        var userPermissions = new UserPermissions(grants.Object, accessor, NullLogger<UserPermissions>.Instance, NullOrgAccessProvider.Instance);
 
         var assigned = await userPermissions.Get(userId.ToString(), tenantId, null, TestContext.Current.CancellationToken);
         var stranger = await userPermissions.Get(Guid.NewGuid().ToString(), tenantId, null, TestContext.Current.CancellationToken);
@@ -79,7 +80,7 @@ public sealed class PreAuthenticationPermissionContextTests
             accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
             throw new OperationCanceledException();
         });
-        var userPermissions = new UserPermissions(grants.Object, accessor, NullLogger<UserPermissions>.Instance);
+        var userPermissions = new UserPermissions(grants.Object, accessor, NullLogger<UserPermissions>.Instance, NullOrgAccessProvider.Instance);
 
         await Should.ThrowAsync<OperationCanceledException>(() => userPermissions.Get(Guid.NewGuid().ToString(), null,
             null, TestContext.Current.CancellationToken));

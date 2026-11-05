@@ -1,10 +1,15 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Workspaces;
 
 namespace Fdw.Services.Multitenancy;
 
@@ -49,13 +54,23 @@ public abstract class MultitenancyTypeBase<TFactory> :
     /// <inheritdoc/>
     public virtual bool EnablesTenantResolution => false;
 
+    private const string WorkspacePathName = "workspace";
+    private const string OrganizationPathName = "tenant";
+
     /// <summary>
     /// Registers the request-scoped tenant/org contexts every multitenancy option needs, regardless
-    /// of whether it resolves a real tenant. Shared so <c>SingleTenant</c> and <c>Sql</c> (and any
+    /// of whether it resolves a real tenant, and the placement of a new member in its tenant's default workspace (FDW-3692). Shared so
+    /// <c>SingleTenant</c> and <c>Sql</c> (and any
     /// future option) don't duplicate these statements — only exactly ONE option's
     /// <c>Register</c> ever runs per host (see <see cref="MultitenancyTypes"/> remarks),
     /// so calling this from each option is not a double-registration.
     /// </summary>
+    /// <remarks>
+    /// The placement is here, not in the Sql option, because every host that creates a data set, data store, pipeline or calculation needs it
+    /// whatever its multitenancy option is: the ETL host and the scheduler run <c>SingleTenant</c> and make pipelines for real tenants. It reads the
+    /// tenant's default organization from the configuration connection itself, so it does not depend on the organization provider the option
+    /// registers. A singleton, because the providers that hold it are.
+    /// </remarks>
     protected static IServiceCollection RegisterAlwaysOnContexts(IServiceCollection services)
     {
         // Tenant context (always registered - supports single-tenant mode)
@@ -70,6 +85,13 @@ public abstract class MultitenancyTypeBase<TFactory> :
         // Request-scoped tenant info for audit and context (needs HttpContextAccessor)
         services.AddHttpContextAccessor();
         services.AddScoped<IRequestTenantInfo, RequestTenantInfo>();
+
+        services.TryAddSingleton<IConfigurationPlacement>(sp => new DefaultWorkspacePlacement(
+            sp.GetRequiredService<IAuthenticationContextAccessor>(),
+            MultitenancyTypes.ConfigurationConnection,
+            WorkspacePathName,
+            OrganizationPathName,
+            sp.GetService<ILogger<DefaultWorkspacePlacement>>()));
 
         return services;
     }

@@ -16,13 +16,18 @@ namespace Fdw.Commands.Abstractions;
 public abstract class TranslatorTypeBase : TypeOptionBase<TranslatorTypeBase>, ITranslatorType
 {
     /// <inheritdoc/>
-    public IDataFormat SourceFormat { get; }
+    /// <remarks>
+    /// Why abstract and not a constructor parameter: the collection's generated NotFound sentinel calls the base
+    /// constructor and could only pass null for it (TC009, FDW-3467). An abstract member is stubbed instead.
+    /// The same holds for <see cref="TargetFormat"/> and <see cref="Capabilities"/>.
+    /// </remarks>
+    public abstract IDataFormat SourceFormat { get; }
 
     /// <inheritdoc/>
-    public IDataFormat TargetFormat { get; }
+    public abstract IDataFormat TargetFormat { get; }
 
     /// <inheritdoc/>
-    public TranslationCapabilities Capabilities { get; }
+    public abstract TranslationCapabilities Capabilities { get; }
 
     /// <inheritdoc/>
     public int Priority { get; }
@@ -35,22 +40,13 @@ public abstract class TranslatorTypeBase : TypeOptionBase<TranslatorTypeBase>, I
     /// </summary>
     /// <param name="name">The name of this translator type.</param>
     /// <param name="description">The description of this translator type.</param>
-    /// <param name="sourceFormat">The source format this translator handles.</param>
-    /// <param name="targetFormat">The target format this translator produces.</param>
-    /// <param name="capabilities">The translation capabilities.</param>
     /// <param name="priority">The priority for translator selection (default 50).</param>
     protected TranslatorTypeBase(
         string name,
         string description,
-        IDataFormat sourceFormat,
-        IDataFormat targetFormat,
-        TranslationCapabilities capabilities,
         int priority = 50)
         : base(name, description)
     {
-        SourceFormat = sourceFormat;
-        TargetFormat = targetFormat;
-        Capabilities = capabilities;
         Priority = priority;
     }
 }

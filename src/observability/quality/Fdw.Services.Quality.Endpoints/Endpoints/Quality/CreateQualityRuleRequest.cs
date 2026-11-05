@@ -17,11 +17,11 @@ public class CreateQualityRuleRequest
     /// <summary>Gets or sets the type of quality rule (e.g., NotNull, Unique, InRange, MatchesPattern).</summary>
     public string RuleType { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the severity level of the rule. Defaults to "Error".</summary>
-    public string Severity { get; set; } = "Error";
+    /// <summary>Gets or sets the severity level of the rule. Required: the caller chooses, there is no default (FDW-3823).</summary>
+    public string? Severity { get; set; }
 
-    /// <summary>Gets or sets whether the rule is enabled. Defaults to true.</summary>
-    public bool IsEnabled { get; set; } = true;
+    /// <summary>Gets or sets whether the rule is enabled. Required: the caller chooses, there is no default (FDW-3823).</summary>
+    public bool? IsEnabled { get; set; }
 
     /// <summary>Gets or sets a human-readable description of the rule.</summary>
     public string? Description { get; set; }

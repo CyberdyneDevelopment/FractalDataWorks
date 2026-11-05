@@ -309,7 +309,7 @@ public class CalculationEntityServiceTests
         var store = new CalculationStore();
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Bogus", [], new CalculationOutputSpec(), null, TestContext.Current.CancellationToken);
+            "Name", null, "Bogus", [], new CalculationOutputSpec(), true, null, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("CALCULATIONS-41000");
@@ -323,7 +323,7 @@ public class CalculationEntityServiceTests
         var inputs = new List<CalculationInput> { new() { Kind = null!, InputAlias = "A" } };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Windowed", inputs, new CalculationOutputSpec(), null, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", inputs, new CalculationOutputSpec(), true, null, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
@@ -338,7 +338,7 @@ public class CalculationEntityServiceTests
         var store = new CalculationStore();
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Windowed", [], new CalculationOutputSpec(), null, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), true, null, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
@@ -352,7 +352,7 @@ public class CalculationEntityServiceTests
         var store = new CalculationStore();
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Windowed", [], new CalculationOutputSpec(),
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), true,
             Mock.Of<IGenericConfiguration>(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -368,7 +368,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Windowed", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldBe("save failed");
@@ -383,7 +383,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", "desc", "Windowed", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
+            "Name", "desc", "Windowed", [], new CalculationOutputSpec(), true, typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Id.ShouldBe(saved.Id);
@@ -401,7 +401,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Windowed", [], new CalculationOutputSpec(), typedConfig, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("CALCULATIONS-71011");

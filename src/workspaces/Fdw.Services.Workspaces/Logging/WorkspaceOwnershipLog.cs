@@ -19,6 +19,14 @@ public static partial class WorkspaceOwnershipLog
         Message = "Workspace '{workspaceName}' was read with no owning tenant; workspace.Workspace.TenantId is NOT NULL, so the read did not carry the column")]
     public static partial IGenericMessage NoOwningTenant(ILogger logger, string workspaceName);
 
+    /// <summary>Logs that a workspace was read with no organization, which every workspace has (FDW-3668).</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="workspaceName">The workspace read.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 91063, Level = LogLevel.Error,
+        Message = "Workspace '{workspaceName}' was read with no organization; every workspace names one, so the row has not been migrated")]
+    public static partial IGenericMessage NoOwningOrganization(ILogger logger, string workspaceName);
+
     /// <summary>Logs who owns a workspace.</summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="workspaceName">The workspace.</param>

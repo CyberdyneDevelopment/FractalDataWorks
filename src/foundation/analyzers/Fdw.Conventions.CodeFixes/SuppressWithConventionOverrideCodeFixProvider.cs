@@ -16,9 +16,20 @@ namespace Fdw.Conventions.CodeFixes;
 /// <summary>
 /// Code fix provider that adds [ConventionOverride] attribute to suppress FDW006 or FDW007.
 /// </summary>
+/// <remarks>
+/// It writes exactly the value the analyzer measured, which it reads from the diagnostic's
+/// <see cref="ActualValueProperty"/>. With no measured value it offers no fix: an invented number is an assumed
+/// value, against the no-fallbacks rule (FDW-3504).
+/// </remarks>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(SuppressWithConventionOverrideCodeFixProvider)), Shared]
 public class SuppressWithConventionOverrideCodeFixProvider : CodeFixProvider
 {
+    /// <summary>
+    /// The diagnostic property that carries the measured value. ConventionOverrideHelper.ActualValueProperty in
+    /// Fdw.Conventions.Analyzers sets it under the same name; this project does not reference that one.
+    /// </summary>
+    private const string ActualValueProperty = "ActualValue";
+
     /// <summary>
     /// Gets the diagnostic IDs that this provider can fix.
     /// </summary>
@@ -41,53 +52,64 @@ public class SuppressWithConventionOverrideCodeFixProvider : CodeFixProvider
             return;
 
         var diagnostic = context.Diagnostics.First();
-        var diagnosticSpan = diagnostic.Location.SourceSpan;
 
-        // Find the method/ctor/dtor declaration
-        var token = root.FindToken(diagnosticSpan.Start);
-        var declaration = token.Parent?.AncestorsAndSelf()
-            .OfType<BaseMethodDeclarationSyntax>()
-            .FirstOrDefault();
+        // The measured unit is the innermost method, constructor, destructor, local function or lambda at the
+        // diagnostic: FDW006 measures a lambda or local function apart from the method that declares it.
+        var target = root.FindToken(diagnostic.Location.SourceSpan.Start).Parent?
+            .AncestorsAndSelf()
+            .FirstOrDefault(node => node is BaseMethodDeclarationSyntax
+                or LocalFunctionStatementSyntax
+                or AnonymousFunctionExpressionSyntax);
 
-        if (declaration == null)
+        // A simple lambda (x => ...) and an anonymous method cannot carry an attribute without being rewritten.
+        if (target is null || !CanCarryAttribute(target))
             return;
 
-        var isFDW006 = string.Equals(diagnostic.Id, "FDW006", StringComparison.Ordinal);
-        var propertyName = isFDW006 ? "MaxMethodLines" : "MaxCyclomaticComplexity";
+        if (!diagnostic.Properties.TryGetValue(ActualValueProperty, out var measured) ||
+            !int.TryParse(measured, NumberStyles.Integer, CultureInfo.InvariantCulture, out var measuredValue))
+            return;
 
-        // Parse the actual count from the diagnostic message args
-        // FDW006 message: "Method '{0}' has {1} executable lines (threshold: {2})"
-        // FDW007 message: "Method '{0}' has cyclomatic complexity {1} (threshold: {2})"
-        int overrideValue;
-        if (diagnostic.Properties.TryGetValue("ActualValue", out var actualStr) &&
-            int.TryParse(actualStr, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var actual))
-        {
-            overrideValue = actual + (isFDW006 ? 20 : 5);
-        }
-        else
-        {
-            // Fallback: safe defaults
-            overrideValue = isFDW006 ? 100 : 20;
-        }
-
-        var title = string.Format(
-            CultureInfo.InvariantCulture,
-            "Add [ConventionOverride({0} = {1})]",
-            propertyName,
-            overrideValue);
+        var propertyName = string.Equals(diagnostic.Id, "FDW006", StringComparison.Ordinal)
+            ? "MaxMethodLines"
+            : "MaxCyclomaticComplexity";
 
         context.RegisterCodeFix(
             CodeAction.Create(
-                title: title,
+                title: string.Format(
+                    CultureInfo.InvariantCulture,
+                    "Add [ConventionOverride({0} = {1})]",
+                    propertyName,
+                    measuredValue),
                 createChangedDocument: c => AddConventionOverrideAttribute(
-                    context.Document, declaration, propertyName, overrideValue, c),
+                    context.Document, target, propertyName, measuredValue, c),
                 equivalenceKey: $"ConventionOverride_{diagnostic.Id}"),
             diagnostic);
     }
 
+    private static bool CanCarryAttribute(SyntaxNode target)
+        => target is BaseMethodDeclarationSyntax
+            or LocalFunctionStatementSyntax
+            or ParenthesizedLambdaExpressionSyntax;
+
+    private static SyntaxList<AttributeListSyntax> GetAttributeLists(SyntaxNode target) => target switch
+    {
+        BaseMethodDeclarationSyntax method => method.AttributeLists,
+        LocalFunctionStatementSyntax localFunction => localFunction.AttributeLists,
+        ParenthesizedLambdaExpressionSyntax lambda => lambda.AttributeLists,
+        _ => throw new InvalidOperationException($"A {target.Kind()} cannot carry [ConventionOverride]."),
+    };
+
+    private static SyntaxNode WithAttributeLists(SyntaxNode target, SyntaxList<AttributeListSyntax> attributeLists) => target switch
+    {
+        BaseMethodDeclarationSyntax method => method.WithAttributeLists(attributeLists),
+        LocalFunctionStatementSyntax localFunction => localFunction.WithAttributeLists(attributeLists),
+        ParenthesizedLambdaExpressionSyntax lambda => lambda.WithAttributeLists(attributeLists),
+        _ => throw new InvalidOperationException($"A {target.Kind()} cannot carry [ConventionOverride]."),
+    };
+
     private static async Task<Document> AddConventionOverrideAttribute(
         Document document,
-        BaseMethodDeclarationSyntax declaration,
+        SyntaxNode target,
         string propertyName,
         int value,
         CancellationToken cancellationToken)
@@ -102,26 +124,38 @@ public class SuppressWithConventionOverrideCodeFixProvider : CodeFixProvider
             null,
             SyntaxFactory.LiteralExpression(
                 SyntaxKind.NumericLiteralExpression,
-                SyntaxFactory.Literal(value)));
+                SyntaxFactory.Literal(value)))
+            .NormalizeWhitespace();
 
-        var existingAttrLists = declaration.AttributeLists;
-        BaseMethodDeclarationSyntax newDeclaration;
+        var existingAttrLists = GetAttributeLists(target);
+        SyntaxNode newTarget;
 
         var existingOverride = FindExistingConventionOverride(existingAttrLists);
         if (existingOverride.HasValue)
         {
-            // Merge into existing [ConventionOverride(...)]
+            // Merge into the existing [ConventionOverride(...)]: replace the property's value when it is already named,
+            // since a second named argument for one property does not compile.
             var (listIndex, attrIndex) = existingOverride.Value;
             var existingAttr = existingAttrLists[listIndex].Attributes[attrIndex];
             var existingArgList = existingAttr.ArgumentList ?? SyntaxFactory.AttributeArgumentList();
-            var newArgList = existingArgList.AddArguments(attributeArgument);
+            var existingArgument = existingArgList.Arguments.FirstOrDefault(argument =>
+                argument.NameEquals != null &&
+                string.Equals(argument.NameEquals.Name.Identifier.Text, propertyName, StringComparison.Ordinal));
+            var arguments = existingArgList.Arguments;
+            var newArgList = existingArgument != null
+                ? existingArgList.ReplaceNode(existingArgument, attributeArgument.WithTriviaFrom(existingArgument))
+                : existingArgList.WithArguments(SyntaxFactory.SeparatedList(
+                    arguments.Append(attributeArgument),
+                    arguments.Count == 0
+                        ? Enumerable.Empty<SyntaxToken>()
+                        : arguments.GetSeparators().Append(
+                            SyntaxFactory.Token(SyntaxKind.CommaToken).WithTrailingTrivia(SyntaxFactory.Space))));
             var newAttr = existingAttr.WithArgumentList(newArgList);
 
             var updatedAttrList = existingAttrLists[listIndex].WithAttributes(
                 existingAttrLists[listIndex].Attributes.Replace(existingAttr, newAttr));
 
-            newDeclaration = declaration.WithAttributeLists(
-                existingAttrLists.Replace(existingAttrLists[listIndex], updatedAttrList));
+            newTarget = WithAttributeLists(target, existingAttrLists.Replace(existingAttrLists[listIndex], updatedAttrList));
         }
         else
         {
@@ -131,15 +165,10 @@ public class SuppressWithConventionOverrideCodeFixProvider : CodeFixProvider
                 SyntaxFactory.AttributeArgumentList(
                     SyntaxFactory.SingletonSeparatedList(attributeArgument)));
 
-            var attributeList = SyntaxFactory.AttributeList(
-                SyntaxFactory.SingletonSeparatedList(attribute))
-                .WithTrailingTrivia(SyntaxFactory.ElasticLineFeed);
-
-            newDeclaration = declaration.WithAttributeLists(
-                existingAttrLists.Add(attributeList));
+            newTarget = AddAttributeList(target, SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(attribute)));
         }
 
-        var newRoot = root.ReplaceNode(declaration, newDeclaration);
+        var newRoot = root.ReplaceNode(target, newTarget);
 
         // Add using directive if needed
         var compilationUnit = (CompilationUnitSyntax)newRoot;
@@ -147,11 +176,74 @@ public class SuppressWithConventionOverrideCodeFixProvider : CodeFixProvider
         {
             var usingDirective = SyntaxFactory.UsingDirective(
                 SyntaxFactory.ParseName("Fdw.Conventions"))
-                .WithTrailingTrivia(SyntaxFactory.ElasticLineFeed);
+                .WithTrailingTrivia(FirstEndOfLine(compilationUnit) is { } endOfLine ? endOfLine : SyntaxFactory.Space);
             newRoot = compilationUnit.AddUsings(usingDirective);
         }
 
         return document.WithSyntaxRoot(newRoot);
+    }
+
+    /// <summary>
+    /// Adds <paramref name="attributeList"/> after the target's existing attribute lists, writing its trivia by hand.
+    /// </summary>
+    /// <remarks>
+    /// Why no formatter: formatting the changed node rewrote every line ending inside it to the machine's default,
+    /// so a fix touched lines it had no business with. A declaration's new attribute takes the declaration's leading
+    /// trivia (or, after existing attributes, its indentation) and ends with the line ending the declaration already
+    /// uses; a lambda, or a declaration written on one line, gets a single space.
+    /// </remarks>
+    private static SyntaxNode AddAttributeList(SyntaxNode target, AttributeListSyntax attributeList)
+    {
+        var existing = GetAttributeLists(target);
+        var endOfLine = target is ParenthesizedLambdaExpressionSyntax ? null : FirstEndOfLine(target);
+
+        if (endOfLine is null)
+        {
+            var sameLine = existing.Count == 0
+                ? attributeList.WithLeadingTrivia(target.GetLeadingTrivia()).WithTrailingTrivia(SyntaxFactory.Space)
+                : attributeList.WithTrailingTrivia(SyntaxFactory.Space);
+            var bare = existing.Count == 0 ? target.WithoutLeadingTrivia() : target;
+            return WithAttributeLists(bare, GetAttributeLists(bare).Add(sameLine));
+        }
+
+        var leading = target.GetLeadingTrivia();
+        var indentation = Indentation(leading);
+        if (existing.Count == 0)
+        {
+            return WithAttributeLists(
+                target.WithLeadingTrivia(indentation),
+                SyntaxFactory.SingletonList(attributeList.WithLeadingTrivia(leading).WithTrailingTrivia(endOfLine.Value)));
+        }
+
+        return WithAttributeLists(
+            target,
+            existing.Add(attributeList.WithLeadingTrivia(indentation).WithTrailingTrivia(endOfLine.Value)));
+    }
+
+    /// <summary>The whitespace after the last line break in <paramref name="leading"/>: the declaration's indentation.</summary>
+    private static SyntaxTriviaList Indentation(SyntaxTriviaList leading)
+    {
+        var lastLineBreak = -1;
+        for (var i = 0; i < leading.Count; i++)
+        {
+            if (leading[i].IsKind(SyntaxKind.EndOfLineTrivia) || leading[i].IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia))
+                lastLineBreak = i;
+        }
+
+        return SyntaxFactory.TriviaList(
+            leading.Skip(lastLineBreak + 1).TakeWhile(trivia => trivia.IsKind(SyntaxKind.WhitespaceTrivia)));
+    }
+
+    /// <summary>The first line break inside <paramref name="node"/>, or null when it is written on one line.</summary>
+    private static SyntaxTrivia? FirstEndOfLine(SyntaxNode node)
+    {
+        foreach (var trivia in node.DescendantTrivia())
+        {
+            if (trivia.IsKind(SyntaxKind.EndOfLineTrivia))
+                return trivia;
+        }
+
+        return null;
     }
 
     private static (int listIndex, int attrIndex)? FindExistingConventionOverride(

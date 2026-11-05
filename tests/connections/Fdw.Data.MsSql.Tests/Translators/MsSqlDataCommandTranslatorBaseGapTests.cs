@@ -10,6 +10,7 @@ using Fdw.Results;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Data.MsSql.Tests.TestSupport;
 
 namespace Fdw.Data.MsSql.Tests.Translators;
 
@@ -31,6 +32,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
     {
         var dbPath = new DatabasePath("", schema, name);
         var mockField = new Mock<IField>();
+        mockField.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
         mockField.Setup(f => f.Name).Returns("Id");
         mockField.Setup(f => f.IsIdentity).Returns(false);
         mockField.Setup(f => f.IsComputed).Returns(false);
@@ -317,6 +319,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
     {
         // Arrange
         var fields = new Mock<IField>();
+        fields.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
         fields.Setup(f => f.Name).Returns("Id");
 
         var containerSchema = new Mock<IContainerSchema>();
@@ -327,6 +330,8 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns("Test");
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
+        // A page follows the order the container declares (FDW-3454): its surrogate key here.
+        container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = "Id" });
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));

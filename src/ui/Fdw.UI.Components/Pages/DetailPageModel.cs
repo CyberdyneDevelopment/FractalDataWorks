@@ -164,7 +164,8 @@ public sealed class DetailPageModel : IDetailPageModel
         var page = new DetailPageModel
         {
             Id = $"edit-{entityTypeName.ToLowerInvariant()}-{entityId}",
-            Title = entityName ?? $"Edit {displayName}",
+            // The title names the entity when it has a name, else what is being edited: two titles, not a stand-in value.
+            Title = entityName is { } editedName ? editedName : $"Edit {displayName}",
             EntityTypeName = entityTypeName,
             EntityTypeDisplayName = displayName,
             EntityId = entityId,
@@ -182,7 +183,8 @@ public sealed class DetailPageModel : IDetailPageModel
         var page = new DetailPageModel
         {
             Id = $"view-{entityTypeName.ToLowerInvariant()}-{entityId}",
-            Title = entityName ?? displayName,
+            // The title names the entity when it has a name, else its type: two titles, not a stand-in value.
+            Title = entityName is { } viewedName ? viewedName : displayName,
             EntityTypeName = entityTypeName,
             EntityTypeDisplayName = displayName,
             EntityId = entityId,

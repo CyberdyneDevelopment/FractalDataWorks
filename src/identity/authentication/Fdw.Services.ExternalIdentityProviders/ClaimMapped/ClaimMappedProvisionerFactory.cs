@@ -12,6 +12,7 @@ using Fdw.Services.Users;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
@@ -103,8 +104,8 @@ internal sealed class ClaimMappedProvisionerFactory
             return Create(typed);
 
         return GenericResult<IExternalIdentityProvisioner>.Failure(
-            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? "(null)",
-                $"expected IExternalIdentityProvisionerImplementationConfiguration but received '{configuration?.GetType().FullName ?? "null"}'."));
+            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? LogPlaceholders.Null,
+                $"expected IExternalIdentityProvisionerImplementationConfiguration but received '{configuration?.GetType().FullName ?? LogPlaceholders.NullName}'."));
     }
 
     /// <inheritdoc />
@@ -118,7 +119,7 @@ internal sealed class ClaimMappedProvisionerFactory
             return GenericResult<T>.Success(typed);
 
         return GenericResult<T>.Failure(
-            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? "(null)",
+            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? LogPlaceholders.Null,
                 $"created service does not implement requested type '{typeof(T).FullName}'."));
     }
 

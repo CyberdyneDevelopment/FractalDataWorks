@@ -85,6 +85,16 @@ public static partial class MsSqlTranslatorLog
         string containerName,
         string pathType);
 
+    /// <summary>Logged when a query pages its rows with no ordering and its container declares no primary key to order by (FDW-3454).</summary>
+    [MessageLogging(
+        EventId = 21020,
+        Level = LogLevel.Error,
+        Message = "Query on container '{containerName}' pages its rows with no ordering, and the container declares no primary key to order them by; state an ordering",
+        ClientMessage = "The query on '{containerName}' pages its rows with no ordering, and '{containerName}' declares no primary key to order them by; state an ordering")]
+    public static partial IGenericMessage PagedQueryHasNoOrder(
+        ILogger logger,
+        string containerName);
+
     /// <summary>Logged when building the SQL for a query throws.</summary>
     [MessageLogging(
         EventId = 91006,

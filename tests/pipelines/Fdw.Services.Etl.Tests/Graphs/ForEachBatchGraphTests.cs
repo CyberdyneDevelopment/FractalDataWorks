@@ -42,7 +42,7 @@ public sealed class ForEachBatchGraphTests
     }
 
     private static string[] Reasons(GraphPipelineConfiguration graph, string text) =>
-        [.. GraphComponentValidator.Problems(graph, [], NullLogger.Instance).Select(problem => problem.Reason).Where(reason => reason.Contains(text))];
+        [.. GraphComponentValidator.Problems(graph, [], NullLogger.Instance).Select(problem => problem.Reason).Where(reason => reason.Contains(text, System.StringComparison.Ordinal))];
 
     [Theory]
     [Trait("Priority", "P0")]

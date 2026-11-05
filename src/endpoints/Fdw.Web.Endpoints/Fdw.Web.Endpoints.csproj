@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
     <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\foundation\security\Fdw.Claims.Abstractions\Fdw.Claims.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

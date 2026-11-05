@@ -9,16 +9,16 @@ public sealed class PollyRetryResiliencyConfigurationTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Configuration")]
-    public void DefaultsMatchDocumentedValues()
+    public void APolicyHasNoValueUntilItsDefinerStatesOne()
     {
-        // Arrange & Act
+        // Arrange & Act: every value of a policy is its definer's to state (FDW-3931).
         var config = new PollyRetryResiliencyConfiguration();
 
         // Assert
-        config.MaxRetries.ShouldBe(3);
-        config.BackoffKind.ShouldBe("Exponential");
-        config.BaseDelayMs.ShouldBe(1000);
-        config.MaxDelayMs.ShouldBe(30000);
+        config.MaxRetries.ShouldBeNull();
+        config.BackoffKind.ShouldBeNull();
+        config.BaseDelayMs.ShouldBeNull();
+        config.MaxDelayMs.ShouldBeNull();
         config.JitterPercent.ShouldBeNull();
         config.CircuitBreakerThreshold.ShouldBeNull();
         config.TimeoutSeconds.ShouldBeNull();

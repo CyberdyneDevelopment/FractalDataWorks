@@ -96,7 +96,7 @@ public sealed class MoveTypesToNamespaceTranslator
             MoveCommandLog.ProjectUnverifiable(Logger, u.FilePath);
 
         if (unverifiable.Count > 0 && command.AcceptUnverified)
-            MoveCommandLog.ProceedingUnverified(Logger, "MoveTypesToNamespace", command.Reason ?? "(no reason given)");
+            MoveCommandLog.ProceedingUnverified(Logger, "MoveTypesToNamespace", command.Reason ?? RoslynReportPlaceholders.NoReasonGiven);
 
         if (!command.DryRun && !command.AcceptUnverified && unverifiable.Count > 0)
         {
@@ -150,7 +150,7 @@ public sealed class MoveTypesToNamespaceTranslator
         CancellationToken cancellationToken)
     {
         var wanted = new HashSet<string>(
-            (command.FilePaths ?? Array.Empty<string>()).Select(Normalise),
+            (command.FilePaths ?? []).Select(Normalise),
             StringComparer.OrdinalIgnoreCase);
 
         var results = new List<SelectedType>();

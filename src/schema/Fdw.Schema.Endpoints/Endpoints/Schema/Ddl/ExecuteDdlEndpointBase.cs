@@ -105,7 +105,7 @@ public abstract class ExecuteDdlEndpointBase : Endpoint<ExecuteDdlRequest, Execu
                 await Send.ResponseAsync(new ExecuteDdlResponse
                 {
                     Success = false,
-                    Message = result.CurrentMessage ?? "DDL execution failed"
+                    Message = result.FailureReason().Message
                 }, 500, ct).ConfigureAwait(false);
             }
         }

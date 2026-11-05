@@ -1,3 +1,5 @@
+using Fdw.Results;
+using Fdw.Data.Abstractions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -24,6 +26,7 @@ public sealed class XlsxRowSourceType : RecordSourceTypeBase
     /// <summary>Initializes a new instance of the <see cref="XlsxRowSourceType"/> class.</summary>
     public XlsxRowSourceType() : base("Xlsx")
     {
+        BufferSize = 16 * 1024;
     }
 
     /// <inheritdoc />
@@ -45,9 +48,25 @@ public sealed class XlsxRowSourceType : RecordSourceTypeBase
     public override bool ReadsBinary => true;
 
     /// <inheritdoc />
-    public override IRowSourceReader CreateReader(Stream content, RowSourceOptions? options)
+    public override IRowSourceReader CreateReader(Stream content, RowSourceOptions options)
         => new XlsxRowSource(content, options as XlsxRowSourceOptions
             ?? throw new ArgumentException("The Xlsx format reads with XlsxRowSourceOptions.", nameof(options)));
+
+    /// <inheritdoc />
+    public override IGenericResult<RowSourceOptions> CreateOptions(IStorageContainer container)
+    {
+        var choices = Choices(container);
+        // Why the columns are the container's field order (FDW-1308): the reader names its columns left to right from column A. Leaving
+        // the sheet out is itself the choice of a workbook's only sheet, and the reader refuses a workbook of several.
+        return choices.Result<RowSourceOptions>(new XlsxRowSourceOptions
+        {
+            ContinueOnError = choices.Flag(ContinueOnErrorKey),
+            HasHeader = choices.Flag("HasHeader"),
+            SheetName = choices.OptionalText("SheetName"),
+            Columns = ContainerRowMetadata.FieldNames(container),
+            BufferSize = BufferSize,
+        });
+    }
 
     /// <inheritdoc />
     public override IRecordSource<DataRecord> Create(RecordSourceContext context)

@@ -132,7 +132,7 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
                     {
                         return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(
                             DataSetSourceMapperLog.TransformStepFailed(Logger, step.TransformType, step.Ordinal, logicalName,
-                                stepResult.CurrentMessage ?? "transform failed"));
+                                stepResult.FailureReason().Message));
                     }
 
                     record[logicalName] = stepResult.Value;

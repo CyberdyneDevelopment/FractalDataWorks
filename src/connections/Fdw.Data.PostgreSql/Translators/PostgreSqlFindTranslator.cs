@@ -231,8 +231,8 @@ public sealed class PostgreSqlFindTranslator : PostgreSqlDataCommandTranslatorBa
     {
         // PostgreSQL LIKE escape: backslash is the default escape character
         return value
-            .Replace(@"\", @"\\")
-            .Replace("%", @"\%")
-            .Replace("_", @"\_");
+            .Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("%", @"\%", StringComparison.Ordinal)
+            .Replace("_", @"\_", StringComparison.Ordinal);
     }
 }

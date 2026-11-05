@@ -47,7 +47,7 @@ internal sealed class OrganizationMapSelection : MapSelection
         MapSources sources, MapState state, [EnumeratorCancellation] CancellationToken ct)
     {
         var all = MapSources.Pages(
-            (skip, take, token) => sources.Pipelines.Get(skip, take, ConfigurationLevels.RecordOnly, token), state, ct);
+            (skip, take, token) => sources.Pipelines.Get(skip, take, ConfigurationLevels.WholeAggregate, token), state, ct);
 
         await foreach (var pipeline in all.WithCancellation(ct).ConfigureAwait(false))
         {

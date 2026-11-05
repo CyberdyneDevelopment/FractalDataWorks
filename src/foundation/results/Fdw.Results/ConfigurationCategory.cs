@@ -15,7 +15,7 @@ public sealed class ConfigurationCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="ConfigurationCategory"/> class.
     /// </summary>
     public ConfigurationCategory()
-        : base(id: 6, name: "Configuration", isFailure: true, isRetryable: false, httpStatus: 500, clientMessage: "A service configuration error occurred", clientAction: "Contact your administrator")
+        : base(id: 6, name: "Configuration", isFailure: true, isRetryable: false, countsTowardFailureThresholds: true, httpStatus: 500, clientMessage: "A service configuration error occurred", clientAction: "Contact your administrator")
     {
     }
 }

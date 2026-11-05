@@ -10,25 +10,24 @@ namespace Fdw.Data.RowSources.Xml.Abstractions;
 public sealed class XmlRowWriterOptions : RowWriterOptions
 {
     /// <summary>
-    /// Gets or sets the root element name that wraps all rows. Default is "Rows".
+    /// Gets or sets the root element name that wraps all rows.
     /// </summary>
-    public string RootElementName { get; set; } = "Rows";
+    public required string RootElementName { get; set; }
 
     /// <summary>
-    /// Gets or sets the element name for each row. Default is "Row".
+    /// Gets or sets the element name for each row.
     /// Matches <see cref="XmlRowSourceOptions.RowElementName"/> on the read side.
     /// </summary>
-    public string RowElementName { get; set; } = "Row";
+    public required string RowElementName { get; set; }
 
     /// <summary>
     /// Gets or sets whether the output XML is indented (<c>XmlWriterSettings.Indent</c>).
-    /// Default is false.
     /// </summary>
     public bool Indent { get; set; }
 
     /// <summary>
     /// Gets or sets whether to omit the XML declaration
-    /// (<c>XmlWriterSettings.OmitXmlDeclaration</c>). Default is true.
+    /// (<c>XmlWriterSettings.OmitXmlDeclaration</c>).
     /// </summary>
-    public bool OmitXmlDeclaration { get; set; } = true;
+    public required bool OmitXmlDeclaration { get; set; }
 }

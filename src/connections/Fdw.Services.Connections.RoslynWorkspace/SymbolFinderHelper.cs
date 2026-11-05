@@ -69,6 +69,10 @@ internal static class SymbolFinderHelper
             return GenericResult<RoslynSymbolMatch>.Failure(
                 RoslynWorkspaceConnectionLog.SymbolNameUnresolved(logger, connectionName, name));
 
+        if (!IsAddressable(best))
+            return GenericResult<RoslynSymbolMatch>.Failure(
+                RoslynWorkspaceConnectionLog.SymbolHasNoDeclarationId(logger, connectionName, name, best.ToDisplayString()));
+
         var match = ToMatch(best);
         RoslynWorkspaceConnectionLog.SymbolResolved(logger, connectionName, name, match.DocumentationCommentId);
         return GenericResult<RoslynSymbolMatch>.Success(match);
@@ -102,7 +106,7 @@ internal static class SymbolFinderHelper
             var callerInfo = await SymbolFinder.FindCallersAsync(target, solution, cancellationToken).ConfigureAwait(false);
             var results = callerInfo
                 .Select(ci => ci.CallingSymbol)
-                .Where(s => s is not null)
+                .Where(s => s is not null && IsAddressable(s))
                 .Distinct<ISymbol>(SymbolEqualityComparer.Default)
                 .Take(max)
                 .Select(ToMatch)
@@ -164,7 +168,7 @@ internal static class SymbolFinderHelper
                     var symbolInfo = model.GetSymbolInfo(node, cancellationToken);
                     var s = symbolInfo.Symbol;
                     if (s is null) continue;
-                    if (s.Kind is SymbolKind.Method or SymbolKind.Property)
+                    if (s.Kind is (SymbolKind.Method or SymbolKind.Property) && IsAddressable(s))
                         callees.Add(s);
                     if (callees.Count >= max) break;
                 }
@@ -213,7 +217,7 @@ internal static class SymbolFinderHelper
 
             var impls = await SymbolFinder.FindImplementationsAsync(target, solution, cancellationToken: cancellationToken).ConfigureAwait(false);
             var results = impls
-                .Where(s => s is not null)
+                .Where(s => s is not null && IsAddressable(s))
                 .Distinct<ISymbol>(SymbolEqualityComparer.Default)
                 .Take(max)
                 .Select(ToMatch)
@@ -248,11 +252,18 @@ internal static class SymbolFinderHelper
         return null;
     }
 
+    // Why only symbols with a declaration id: a match's id is fed back to GetSymbolsForDeclarationId on the next call,
+    // and a display string finds nothing there. A symbol without one (a local, a lambda) is not addressable across
+    // calls, so it is not a match; FindSymbol refuses it by name (FDW-3580).
+    private static bool IsAddressable(ISymbol symbol) => symbol.GetDocumentationCommentId() is not null;
+
+    // Called only for symbols IsAddressable accepted.
     private static RoslynSymbolMatch ToMatch(ISymbol symbol)
     {
         var loc = symbol.Locations.FirstOrDefault(l => l.IsInSource);
         var lineSpan = loc?.GetLineSpan();
-        var id = symbol.GetDocumentationCommentId() ?? symbol.ToDisplayString();
+        var id = symbol.GetDocumentationCommentId()
+            ?? throw new InvalidOperationException($"'{symbol.ToDisplayString()}' has no declaration id; only addressable symbols are matched");
         var displayName = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         return new RoslynSymbolMatch(
             DocumentationCommentId: id,

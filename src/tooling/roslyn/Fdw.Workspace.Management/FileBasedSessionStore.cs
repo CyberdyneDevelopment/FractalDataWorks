@@ -10,6 +10,7 @@ using Fdw.Workspace.Management.Logging;
 using Fdw.Workspace.Roslyn.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Workspace.Management;
 
@@ -33,7 +34,7 @@ public sealed class FileBasedSessionStore : IWorkspaceSessionStore
     /// <param name="logger">Optional logger.</param>
     public FileBasedSessionStore(string? sessionDirectory = null, ILogger<FileBasedSessionStore>? logger = null)
     {
-        _sessionDirectory = sessionDirectory ?? GetDefaultSessionDirectory();
+        _sessionDirectory = sessionDirectory ?? DefaultSessionDirectory;
         _logger = logger ?? NullLogger<FileBasedSessionStore>.Instance;
         _jsonOptions = new JsonSerializerOptions
         {
@@ -143,7 +144,7 @@ public sealed class FileBasedSessionStore : IWorkspaceSessionStore
             try
             {
                 var loadResult = await Load(
-                    Guid.Parse(Path.GetFileNameWithoutExtension(filePath).Replace(".session", "")),
+                    Guid.Parse(Path.GetFileNameWithoutExtension(filePath).Replace(".session", "", StringComparison.Ordinal)),
                     cancellationToken).ConfigureAwait(false);
 
                 if (loadResult.IsSuccess && loadResult.Value is not null)
@@ -189,13 +190,18 @@ public sealed class FileBasedSessionStore : IWorkspaceSessionStore
         }
     }
 
-    private static string GetDefaultSessionDirectory()
+    /// <summary>The session directory of a store that states none: the platform's local application data, or ~/.local/share on Linux and macOS.</summary>
+    [PlatformDefault]
+    public static string DefaultSessionDirectory => ComputeDefaultSessionDirectory();
+
+    private static string ComputeDefaultSessionDirectory()
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (string.IsNullOrEmpty(localAppData))
         {
             // Fallback for Linux/macOS
-            var home = Environment.GetEnvironmentVariable("HOME") ?? ".";
+            var home = Environment.GetEnvironmentVariable("HOME")
+                ?? throw new InvalidOperationException("The session directory cannot be chosen: neither LocalApplicationData nor HOME is set. Pass the directory to FileBasedSessionStore.");
             return Path.Combine(home, ".local", "share", "Fdw", "Sessions");
         }
 

@@ -11,11 +11,14 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 /// <typeparam name="TSource">Source type system converter.</typeparam>
 /// <typeparam name="TTarget">Target type system converter.</typeparam>
+/// <remarks>
+/// Why the converters are abstract members and not constructor parameters: DataMappers' generated
+/// NotFound sentinel calls this constructor with default arguments and could only pass null for them
+/// (TC009, FDW-3467). An abstract member is stubbed by the sentinel instead.
+/// </remarks>
 public abstract class DataMapperBase<TSource, TTarget>(
     string id,
-    string name,
-    TSource sourceConverter,
-    TTarget targetConverter)
+    string name)
     : TypeOptionBase<string, DataMapperBase<TSource, TTarget>>(id, name),
       IDataMapper<TSource, TTarget>
     where TSource : IDataTypeConverter
@@ -24,12 +27,12 @@ public abstract class DataMapperBase<TSource, TTarget>(
     /// <summary>
     /// Gets the source type system converter.
     /// </summary>
-    public TSource SourceConverter { get; } = sourceConverter;
+    public abstract TSource SourceConverter { get; }
 
     /// <summary>
     /// Gets the target type system converter.
     /// </summary>
-    public TTarget TargetConverter { get; } = targetConverter;
+    public abstract TTarget TargetConverter { get; }
 
     /// <summary>
     /// Gets a value indicating whether this mapper can perform the mapping.

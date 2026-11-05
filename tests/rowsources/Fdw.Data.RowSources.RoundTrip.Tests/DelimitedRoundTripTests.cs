@@ -33,7 +33,11 @@ public class DelimitedRoundTripTests
         {
             Columns = [.. Columns],
             WriteHeader = true,
-            Separator = ","
+            Separator = ",",
+            QuoteChar = '"',
+            WriteByteOrderMark = false,
+            NeutralizeFormulas = false,
+            BufferSize = 16 * 1024,
         }))
         {
             await writer.WriteAll(rows, TestContext.Current.CancellationToken);
@@ -46,7 +50,11 @@ public class DelimitedRoundTripTests
         {
             Columns = [.. Columns],
             HasHeader = true,
-            Separator = ","
+            Separator = ",",
+            ContinueOnError = true,
+            ContainsQuotedFields = true,
+            Trim = false,
+            BufferSize = 16 * 1024,
         });
 
         var readBack = Drain(reader);
@@ -70,14 +78,14 @@ public class DelimitedRoundTripTests
         var sb = new StringBuilder();
 
         using (var tw = new StringWriter(sb))
-        using (var writer = new DelimitedStreamRowWriter(tw, new DelimitedRowWriterOptions { Columns = [.. Columns] }))
+        using (var writer = new DelimitedStreamRowWriter(tw, new DelimitedRowWriterOptions { Columns = [.. Columns], Separator = ",", QuoteChar = '"', WriteHeader = false, WriteByteOrderMark = false, NeutralizeFormulas = false, BufferSize = 16 * 1024 }))
         {
             await writer.WriteAll(rows, TestContext.Current.CancellationToken);
             writer.Flush();
         }
 
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString()));
-        using var reader = new DelimitedStreamRowSource(stream, new DelimitedRowSourceOptions { Columns = [.. Columns] });
+        using var reader = new DelimitedStreamRowSource(stream, new DelimitedRowSourceOptions { Columns = [.. Columns], ContinueOnError = true, HasHeader = false, Separator = ",", ContainsQuotedFields = true, Trim = false, BufferSize = 16 * 1024 });
         var readBack = Drain(reader);
 
         readBack.Count.ShouldBe(rows.Count);
@@ -91,7 +99,7 @@ public class DelimitedRoundTripTests
     {
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("a,b,c"));
         Should.Throw<System.ArgumentException>(() =>
-            new DelimitedStreamRowSource(stream, new DelimitedRowSourceOptions()));
+            new DelimitedStreamRowSource(stream, new DelimitedRowSourceOptions() { ContinueOnError = true, HasHeader = false, Separator = ",", ContainsQuotedFields = true, Trim = false, BufferSize = 16 * 1024 }));
     }
 
     [Fact]
@@ -100,7 +108,7 @@ public class DelimitedRoundTripTests
     {
         using var tw = new StringWriter();
         Should.Throw<System.ArgumentException>(() =>
-            new DelimitedStreamRowWriter(tw, new DelimitedRowWriterOptions()));
+            new DelimitedStreamRowWriter(tw, new DelimitedRowWriterOptions() { Separator = ",", QuoteChar = '"', WriteHeader = false, WriteByteOrderMark = false, NeutralizeFormulas = false, BufferSize = 16 * 1024 }));
     }
 
     private static List<Dictionary<string, object?>> Drain(DelimitedStreamRowSource reader)

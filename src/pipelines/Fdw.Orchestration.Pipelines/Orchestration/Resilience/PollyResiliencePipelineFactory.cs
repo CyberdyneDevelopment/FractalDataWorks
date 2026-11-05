@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Fdw.Orchestration.Abstractions;
 using Fdw.Orchestration.Abstractions.Resilience;
 using Fdw.Orchestration.Abstractions.TypeCollections.BackoffStrategyOptions;
 using Polly;
@@ -44,35 +43,6 @@ public sealed class PollyResiliencePipelineFactory : IResiliencePipelineFactory
         return builder.Build();
     }
 
-    /// <inheritdoc/>
-    public ResiliencePipeline Create(IOrchestrationStep step)
-    {
-        var options = CreateOptionsFromStep(step);
-        return Create(options);
-    }
-
-    /// <inheritdoc/>
-    public ResiliencePipeline<TResult> CreateForStep<TResult>(IOrchestrationStep step)
-    {
-        var options = CreateOptionsFromStep(step);
-        return Create<TResult>(options);
-    }
-
-    private static ResilienceOptions CreateOptionsFromStep(IOrchestrationStep step)
-    {
-        var config = step.Configuration;
-        var options = new ResilienceOptions();
-
-        if (config != null)
-        {
-            options.MaxRetryAttempts = (config as OrchestrationStepConfiguration)?.MaxRetries ?? 0;
-            // Note: Timeout, ErrorHandlingMode, and BackoffStrategy would need to be
-            // set explicitly on ResilienceOptions or the step configuration extended
-        }
-
-        return options;
-    }
-
     private static void ConfigureRetry(ResiliencePipelineBuilder builder, ResilienceOptions options)
     {
         if (options.MaxRetryAttempts <= 0)
@@ -85,7 +55,7 @@ public sealed class PollyResiliencePipelineFactory : IResiliencePipelineFactory
             MaxRetryAttempts = options.MaxRetryAttempts,
             DelayGenerator = CreateDelayGenerator(options.BackoffStrategy),
             ShouldHandle = new PredicateBuilder().Handle<Exception>(ex =>
-                options.ShouldRetryOnException?.Invoke(ex) ?? true),
+                options.ShouldRetryOnException is not { } shouldRetry || shouldRetry(ex)),
             OnRetry = args =>
             {
                 options.OnRetry?.Invoke(
@@ -111,7 +81,7 @@ public sealed class PollyResiliencePipelineFactory : IResiliencePipelineFactory
             MaxRetryAttempts = options.MaxRetryAttempts,
             DelayGenerator = CreateDelayGenerator<TResult>(options.BackoffStrategy),
             ShouldHandle = new PredicateBuilder<TResult>().Handle<Exception>(ex =>
-                options.ShouldRetryOnException?.Invoke(ex) ?? true),
+                options.ShouldRetryOnException is not { } shouldRetry || shouldRetry(ex)),
             OnRetry = args =>
             {
                 if (args.Outcome.Exception != null)
@@ -130,17 +100,17 @@ public sealed class PollyResiliencePipelineFactory : IResiliencePipelineFactory
 
     private static void ConfigureCircuitBreaker(ResiliencePipelineBuilder builder, ResilienceOptions options)
     {
-        if (!options.EnableCircuitBreaker)
+        if (options.CircuitBreaker is not { } breaker)
         {
             return;
         }
 
         var circuitBreakerOptions = new CircuitBreakerStrategyOptions
         {
-            FailureRatio = options.CircuitBreakerFailureRatio,
-            MinimumThroughput = options.CircuitBreakerMinimumThroughput,
-            BreakDuration = options.CircuitBreakerBreakDuration,
-            SamplingDuration = TimeSpan.FromSeconds(30)
+            FailureRatio = breaker.FailureRatio,
+            MinimumThroughput = breaker.MinimumThroughput,
+            BreakDuration = breaker.BreakDuration,
+            SamplingDuration = breaker.SamplingDuration
         };
 
         builder.AddCircuitBreaker(circuitBreakerOptions);
@@ -148,17 +118,17 @@ public sealed class PollyResiliencePipelineFactory : IResiliencePipelineFactory
 
     private static void ConfigureCircuitBreaker<TResult>(ResiliencePipelineBuilder<TResult> builder, ResilienceOptions options)
     {
-        if (!options.EnableCircuitBreaker)
+        if (options.CircuitBreaker is not { } breaker)
         {
             return;
         }
 
         var circuitBreakerOptions = new CircuitBreakerStrategyOptions<TResult>
         {
-            FailureRatio = options.CircuitBreakerFailureRatio,
-            MinimumThroughput = options.CircuitBreakerMinimumThroughput,
-            BreakDuration = options.CircuitBreakerBreakDuration,
-            SamplingDuration = TimeSpan.FromSeconds(30)
+            FailureRatio = breaker.FailureRatio,
+            MinimumThroughput = breaker.MinimumThroughput,
+            BreakDuration = breaker.BreakDuration,
+            SamplingDuration = breaker.SamplingDuration
         };
 
         builder.AddCircuitBreaker(circuitBreakerOptions);

@@ -14,5 +14,7 @@ internal readonly record struct TypeOptionModel(
     int GeneratedId,
     string? Category,
     ImmutableArray<ConstructorModel> Constructors,
-    ImmutableArray<LookupPropertyModel> LookupProperties
+    ImmutableArray<LookupPropertyModel> LookupProperties,
+    string? DeclaredId,
+    string? DeclaredIdProblem
 );

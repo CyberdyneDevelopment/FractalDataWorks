@@ -170,7 +170,15 @@ internal sealed class OverviewMapStream : MapStream
         => counts.TryGetValue(dataSetId, out var found) ? found : [];
 
     private static MapPipelineLinks LinksOf(IPipelineImplementationConfiguration pipeline)
-        => new(pipeline.Id, PipelineDataSets.Reads(pipeline), PipelineDataSets.Writes(pipeline));
+        => new(
+        pipeline.Id, PipelineDataSets.Reads(pipeline), PipelineDataSets.Writes(pipeline), PipelineContainers.Reads(pipeline), PipelineContainers.Writes(pipeline));
+
+    // A variation reads the view it narrows, else the data set it varies (FDW-3638): that is its one source.
+    private static IEnumerable<Guid> VariedFrom(IDataSetImplementationConfiguration dataSet)
+    {
+        if (dataSet is IDataSetVariationImplementationConfiguration variation)
+            yield return variation.ParentVariationId is { } parent ? parent : variation.BaseDataSetId;
+    }
 
     private static MapDataSetLinks LinksOf(IDataSetImplementationConfiguration dataSet) => new(
         dataSet.Id,
@@ -182,6 +190,7 @@ internal sealed class OverviewMapStream : MapStream
         dataSet.Sources
             .Where(source => source.SourceDataSetId.HasValue)
             .Select(source => source.SourceDataSetId!.Value)
+            .Concat(VariedFrom(dataSet))
             .Distinct()
             .ToList(),
         dataSet.Sources

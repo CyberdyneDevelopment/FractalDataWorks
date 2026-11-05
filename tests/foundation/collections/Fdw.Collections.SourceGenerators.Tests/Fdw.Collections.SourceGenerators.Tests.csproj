@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\..\src\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" />
     <ProjectReference Include="..\..\..\..\src\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
     <ProjectReference Include="..\..\..\..\src\tooling\roslyn\Fdw.CodeBuilder.Analysis.CSharp\Fdw.CodeBuilder.Analysis.CSharp.csproj" />
+    <ProjectReference Include="..\..\..\..\src\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />

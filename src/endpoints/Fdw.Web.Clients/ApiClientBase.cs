@@ -3,6 +3,7 @@ namespace Fdw.Web.Clients.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -54,6 +55,18 @@ public abstract class ApiClientBase
     /// </remarks>
     protected string RequestUri(string path)
         => HttpClient.BaseAddress is null ? path : new Uri(HttpClient.BaseAddress, path).ToString();
+
+    /// <summary>
+    /// Adds a query parameter that is repeated once for each value to a path (<c>path?name=a&amp;name=b</c>).
+    /// </summary>
+    /// <param name="path">The relative request path, with no query of its own.</param>
+    /// <param name="name">The query parameter's name.</param>
+    /// <param name="values">The values, each sent as given and escaped; none leaves the path as it is.</param>
+    /// <returns>The path with the parameter.</returns>
+    protected static string WithRepeatedQuery(string path, string name, IReadOnlyList<string> values)
+        => values.Count == 0
+            ? path
+            : $"{path}?{string.Join('&', values.Select(value => $"{Uri.EscapeDataString(name)}={Uri.EscapeDataString(value)}"))}";
 
     /// <summary>
     /// Performs a GET request and deserializes the response.

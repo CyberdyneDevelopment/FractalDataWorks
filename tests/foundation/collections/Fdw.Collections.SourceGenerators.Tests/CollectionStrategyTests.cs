@@ -44,8 +44,8 @@ public class Option1 : TestBase
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("System.Collections.Frozen", generated);
-        Assert.Contains("RegisterMember", generated); // Immutable collections have RegisterMember for cross-assembly discovery
+        Assert.Contains("System.Collections.Frozen", generated, System.StringComparison.Ordinal);
+        Assert.Contains("RegisterMember", generated, System.StringComparison.Ordinal); // Immutable collections have RegisterMember for cross-assembly discovery
     }
 
     [Fact]
@@ -80,8 +80,8 @@ public class AlphaType : TestBase
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("public static", generated);
-        Assert.Contains("Alpha", generated);
+        Assert.Contains("public static", generated, System.StringComparison.Ordinal);
+        Assert.Contains("Alpha", generated, System.StringComparison.Ordinal);
     }
 
     #endregion
@@ -120,7 +120,7 @@ public class CorePlugin : PluginBase
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Plugins.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("ConcurrentDictionary", generated);
+        Assert.Contains("ConcurrentDictionary", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public partial class Plugins : TypeCollectionBase<PluginBase, PluginBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Plugins.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("Register", generated);
-        Assert.Contains("public static void Register", generated);
+        Assert.Contains("Register", generated, System.StringComparison.Ordinal);
+        Assert.Contains("public static void Register", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public partial class Plugins : TypeCollectionBase<PluginBase, IPlugin>
 
         Assert.NotNull(generated);
         // Register should take the return type (IPlugin), not base type
-        Assert.Contains("Register(IPlugin", generated);
+        Assert.Contains("Register(IPlugin", generated, System.StringComparison.Ordinal);
     }
 
     #endregion
@@ -223,8 +223,8 @@ public class EmailService : ServiceBase
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceFactories.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("Create", generated);
-        Assert.Contains("Email", generated);
+        Assert.Contains("Create", generated, System.StringComparison.Ordinal);
+        Assert.Contains("Email", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -254,8 +254,8 @@ public partial class Services : TypeCollectionBase<ServiceBase, ServiceBase>
 
         Assert.NotNull(generated);
         // Should use Dictionary, not FrozenDictionary (mutable for Register)
-        Assert.Contains("Dictionary", generated);
-        Assert.DoesNotContain("FrozenDictionary", generated);
+        Assert.Contains("Dictionary", generated, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("FrozenDictionary", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -284,8 +284,8 @@ public partial class Services : TypeCollectionBase<ServiceBase, ServiceBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Services.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("Register", generated);
-        Assert.Contains("public static void Register", generated);
+        Assert.Contains("Register", generated, System.StringComparison.Ordinal);
+        Assert.Contains("public static void Register", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -321,8 +321,8 @@ public class SmtpService : ServiceBase
 
         Assert.NotNull(generated);
         // Should have CreateSmtp() or similar
-        Assert.Contains("Smtp", generated);
-        Assert.Contains("new ", generated); // Creates new instance
+        Assert.Contains("Smtp", generated, System.StringComparison.Ordinal);
+        Assert.Contains("new ", generated, System.StringComparison.Ordinal); // Creates new instance
     }
 
     #endregion
@@ -412,7 +412,7 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("Empty", generated);
+        Assert.Contains("Empty", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -513,8 +513,8 @@ public partial class Plugins : TypeCollectionBase<PluginBase, PluginBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Plugins.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("public static void Register(PluginBase item)", generated);
-        Assert.Contains("TryAdd", generated); // ConcurrentDictionary.TryAdd
+        Assert.Contains("public static void Register(PluginBase item)", generated, System.StringComparison.Ordinal);
+        Assert.Contains("TryAdd", generated, System.StringComparison.Ordinal); // ConcurrentDictionary.TryAdd
     }
 
     [Fact]
@@ -543,9 +543,9 @@ public partial class Services : TypeCollectionBase<ServiceBase, ServiceBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Services.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("public static void Register(ServiceBase item)", generated);
+        Assert.Contains("public static void Register(ServiceBase item)", generated, System.StringComparison.Ordinal);
         // Should add to factories dictionary
-        Assert.Contains("Dictionary", generated);
+        Assert.Contains("Dictionary", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -574,8 +574,8 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("ArgumentNullException", generated);
-        Assert.True(generated.Contains("if (item == null)") || generated.Contains("ArgumentNullException.ThrowIfNull"));
+        Assert.Contains("ArgumentNullException", generated, System.StringComparison.Ordinal);
+        Assert.True(generated.Contains("if (item == null)", System.StringComparison.Ordinal) || generated.Contains("ArgumentNullException.ThrowIfNull", System.StringComparison.Ordinal));
     }
 
     #endregion
@@ -592,10 +592,10 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         var mutable = CompileAndGetGenerated("[MutableTypeCollection", "Mutable");
         var factory = CompileAndGetGenerated("[TypeInstanceCollection", "Factory");
 
-        Assert.Contains("System.Collections.Frozen", immutable);
-        Assert.Contains("ConcurrentDictionary", mutable);
-        Assert.Contains("Dictionary", factory);
-        Assert.DoesNotContain("ConcurrentDictionary", immutable); // Not ConcurrentDictionary
+        Assert.Contains("System.Collections.Frozen", immutable, System.StringComparison.Ordinal);
+        Assert.Contains("ConcurrentDictionary", mutable, System.StringComparison.Ordinal);
+        Assert.Contains("Dictionary", factory, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("ConcurrentDictionary", immutable, System.StringComparison.Ordinal); // Not ConcurrentDictionary
     }
 
     private static string CompileAndGetGenerated(string attributeName, string className)

@@ -206,6 +206,9 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     {
         if (InUnitOfWork || this is not ITransactionalDataConnection transactional)
         {
+            if (!InUnitOfWork)
+                ConnectionLogger.ExpansionRunsWithoutTransaction(Logger, Configuration.Name, command.CommandType);
+
             ConnectionLogger.TraceExpansionTransaction(Logger, command.CommandType, false);
             return await CommandExpansion.RunAssembled(
                 command,
@@ -244,14 +247,53 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
 
     // A kind with no translator for a command that declares an expansion runs the simpler commands it expands into,
     // each through the full lookup (so one may expand again). CommandExpansion holds the loop; a unit of work uses it too.
-    private Task<IGenericResult<T>> ExecuteExpansion<T>(IExpandableDataCommand command, IDataContainer container, CancellationToken cancellationToken)
-        => CommandExpansion.Run<T>(
-            command,
-            container,
-            (step, token) => Execute<int>(step, container, token),
-            Logger,
-            Configuration is IDatabaseConnectionConfiguration database ? database.MaxSerialInsert : null,
-            cancellationToken);
+    // The steps run in one transaction when this connection can open one, so either every step is done or none is: the delete
+    // and insert an upsert expands into never leave a row deleted when the insert fails (FDW-3601). A connection that already
+    // runs inside a unit of work runs them in that unit's transaction, and one that cannot open a transaction (HTTP) runs them in order
+    // and warns that a failed step leaves the steps before it in place.
+    private async Task<IGenericResult<T>> ExecuteExpansion<T>(IExpandableDataCommand command, IDataContainer container, CancellationToken cancellationToken)
+    {
+        int? maxSerialInsert = Configuration is IDatabaseConnectionConfiguration database ? database.MaxSerialInsert : null;
+        if (InUnitOfWork || this is not ITransactionalDataConnection transactional)
+        {
+            if (!InUnitOfWork)
+                ConnectionLogger.ExpansionRunsWithoutTransaction(Logger, Configuration.Name, command.CommandType);
+
+            ConnectionLogger.TraceCountedExpansionTransaction(Logger, command.CommandType, false);
+            return await CommandExpansion.Run<T>(
+                command,
+                container,
+                (step, token) => Execute<int>(step, container, token),
+                Logger,
+                maxSerialInsert,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var begun = await BeginAssembledUnit(transactional, cancellationToken).ConfigureAwait(false);
+        if (begun.IsFailure)
+            return begun.ToNewResult<T>();
+
+        ConnectionLogger.TraceCountedExpansionTransaction(Logger, command.CommandType, true);
+        var scope = begun.Value!;
+        await using (scope.ConfigureAwait(false))
+        {
+            var result = await CommandExpansion.Run<T>(
+                command,
+                container,
+                (step, token) => scope.Execute<int>(step, container, token),
+                Logger,
+                maxSerialInsert,
+                cancellationToken).ConfigureAwait(false);
+            if (result.IsFailure)
+            {
+                await scope.Rollback(cancellationToken).ConfigureAwait(false);
+                return result;
+            }
+
+            var committed = await scope.Commit(cancellationToken).ConfigureAwait(false);
+            return committed.IsFailure ? committed.ToNewResult<T>() : result;
+        }
+    }
 
     /// <summary>
     /// Executes a data command against the unified container.

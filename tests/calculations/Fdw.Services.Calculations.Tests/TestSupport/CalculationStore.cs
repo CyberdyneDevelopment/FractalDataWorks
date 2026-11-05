@@ -83,10 +83,20 @@ internal sealed class CalculationStore
             .Setup(p => p.Supersede(It.IsAny<IDataContainer>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult.Success());
         Provider = new CalculationConfigurationProvider(
-            NullLogger<CalculationConfigurationProvider>.Instance, gateways.Object, StoreName, "calc", "CalculationEntity");
+            NullLogger<CalculationConfigurationProvider>.Instance, gateways.Object, StoreName, "calc", "CalculationEntity", Placing());
         Provider.Register(OneImplementation, Implementations.Object);
 
         Holds();
+    }
+
+    // A placement that places every new calculation without writing anything, so the calculation tests stay about calculations.
+    private static Fdw.Services.Configuration.IConfigurationPlacement Placing()
+    {
+        var placement = new Mock<Fdw.Services.Configuration.IConfigurationPlacement>();
+        placement
+            .Setup(p => p.Place(It.IsAny<Fdw.Services.Configuration.PlacementRequest>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult.Success());
+        return placement.Object;
     }
 
     private static Dictionary<string, object?> DomainKeys()
@@ -114,8 +124,10 @@ internal sealed class CalculationStore
             Implementations
                 .Setup(p => p.Get(record.Id, It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(record));
+            _held[record.Id] = record;
         }
 
+        ServeSetsFromWhatIsHeld();
         return this;
     }
 
@@ -136,8 +148,10 @@ internal sealed class CalculationStore
             Implementations
                 .Setup(p => p.Get(record.Id, It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(record));
+            _held[record.Id] = record;
         }
 
+        ServeSetsFromWhatIsHeld();
         return this;
     }
 
@@ -154,8 +168,38 @@ internal sealed class CalculationStore
         Implementations
             .Setup(p => p.Get(id, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(() => Task.FromResult(answers.Dequeue()));
+
+        // A set read of the record takes the next answer from the same queue.
+        Implementations
+            .Setup(p => p.GetSet(It.IsAny<IEnumerable<Guid>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns((IEnumerable<Guid> ids, int _, CancellationToken _) =>
+            {
+                if (!ids.Contains(id))
+                    return Task.FromResult<IGenericResult<IReadOnlyDictionary<Guid, ICalculationEntityImplementationConfiguration>>>(
+                        GenericResult<IReadOnlyDictionary<Guid, ICalculationEntityImplementationConfiguration>>.Success(
+                            new Dictionary<Guid, ICalculationEntityImplementationConfiguration>()));
+
+                var next = answers.Dequeue();
+                return Task.FromResult<IGenericResult<IReadOnlyDictionary<Guid, ICalculationEntityImplementationConfiguration>>>(
+                    next.IsSuccess
+                        ? GenericResult<IReadOnlyDictionary<Guid, ICalculationEntityImplementationConfiguration>>.Success(
+                            next.Value is null
+                                ? new Dictionary<Guid, ICalculationEntityImplementationConfiguration>()
+                                : new Dictionary<Guid, ICalculationEntityImplementationConfiguration> { [id] = next.Value })
+                        : GenericResult<IReadOnlyDictionary<Guid, ICalculationEntityImplementationConfiguration>>.Failure(new GenericMessage(next.CurrentMessage ?? string.Empty)));
+            });
         return this;
     }
+
+    private readonly Dictionary<Guid, ICalculationEntityImplementationConfiguration> _held = [];
+
+    // A set read answers the records the store holds under the ids asked, as a read of each would.
+    private void ServeSetsFromWhatIsHeld()
+        => Implementations
+            .Setup(p => p.GetSet(It.IsAny<IEnumerable<Guid>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns((IEnumerable<Guid> ids, int _, CancellationToken _) => Task.FromResult<IGenericResult<IReadOnlyDictionary<Guid, ICalculationEntityImplementationConfiguration>>>(
+                GenericResult<IReadOnlyDictionary<Guid, ICalculationEntityImplementationConfiguration>>.Success(
+                    ids.Where(_held.ContainsKey).Distinct().ToDictionary(id => id, id => _held[id]))));
 
     /// <summary>The store cannot be read.</summary>
     public CalculationStore Unreadable(string reason)

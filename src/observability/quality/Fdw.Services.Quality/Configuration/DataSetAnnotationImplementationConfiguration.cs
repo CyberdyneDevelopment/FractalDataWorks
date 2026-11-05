@@ -79,11 +79,6 @@ public sealed partial class DataSetAnnotationImplementationConfiguration
     public Guid? ResolvedBy { get; set; }
 
     /// <summary>
-    /// Gets or sets the tags for this annotation.
-    /// </summary>
-    public IList<DataSetAnnotationTagConfiguration> Tags { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the field descriptions for this annotation.
     /// </summary>
     public IList<DataSetAnnotationFieldDescriptionConfiguration> FieldDescriptions { get; set; } = [];

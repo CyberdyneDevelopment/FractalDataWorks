@@ -58,7 +58,7 @@ public sealed class LookupEndpointBasesTests
     private sealed class DataSetLookup : LookupDataSetsEndpointBase
     {
         public DataSetLookup()
-            : base(NullLogger<LookupDataSetsEndpointBase>.Instance, null!, new Mock<IDataSetVariationConfigurationProvider>().Object)
+            : base(NullLogger<LookupDataSetsEndpointBase>.Instance, null!)
         {
         }
 

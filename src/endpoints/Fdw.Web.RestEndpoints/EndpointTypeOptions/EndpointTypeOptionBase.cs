@@ -33,7 +33,7 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOption
         Type endpointType,
         string description,
         string? category = null)
-        : base(name, name, name, description, category ?? "Endpoint")
+        : base(name, name, name, description, category ?? EndpointPlaceholders.NoCategory)
     {
         EndpointType = endpointType ?? throw new ArgumentNullException(nameof(endpointType));
     }

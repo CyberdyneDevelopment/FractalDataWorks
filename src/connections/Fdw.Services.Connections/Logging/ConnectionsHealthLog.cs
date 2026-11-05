@@ -53,6 +53,13 @@ public static partial class ConnectionsHealthLog
     public static partial IGenericMessage ConnectionResolutionFailed(ILogger logger, string connectionName, string reason);
 
     /// <summary>
+    /// Logs that <c>IConnectionProvider</c> answered success for a connection but carried no connection; it is
+    /// reported unhealthy (FDW-3580).
+    /// </summary>
+    [MessageLogging(EventId = 12019, Level = LogLevel.Error, Message = "Resolving connection '{connectionName}' for health check succeeded but returned no connection")]
+    public static partial IGenericMessage ConnectionResolvedEmpty(ILogger logger, string connectionName);
+
+    /// <summary>
     /// Logs that a connection's health probe failed.
     /// </summary>
     [MessageLogging(EventId = 12005, Level = LogLevel.Error, Message = "Health probe failed for connection '{connectionName}': {reason}")]

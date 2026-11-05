@@ -8,10 +8,12 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\foundation\analyzers\Fdw.Conventions.Analyzers\Fdw.Conventions.Analyzers.csproj" />
+    <ProjectReference Include="..\..\..\..\src\foundation\analyzers\Fdw.Conventions.CodeFixes\Fdw.Conventions.CodeFixes.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing" />
     <!-- Force newer Roslyn packages to override transitive dependencies from testing package -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />

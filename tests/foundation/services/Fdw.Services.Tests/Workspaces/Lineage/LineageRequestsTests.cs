@@ -174,4 +174,49 @@ public class LineageRequestsTests
         LineageRequests.Path(tooDeep, NullLogger.Instance).IsFailure.ShouldBeTrue();
         LineageRequests.Path(new LineagePathRequest { From = DataSetId(1) }, NullLogger.Instance).IsFailure.ShouldBeTrue();
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("category,tag")]
+    [InlineData("owner")]
+    public void AGroupsRequestWithoutAValidGroupByIsRefusedAndNothingIsAssumed(string? groupBy)
+    {
+        var ask = LineageRequests.Groups(new LineageGroupsRequest { GroupBy = groupBy }, NullLogger.Instance);
+
+        ask.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AGroupsRequestNamesItsGroupingInAnyCase()
+    {
+        LineageRequests.Groups(new LineageGroupsRequest { GroupBy = "Tag", Tag = "gas", ContainerGroups = "StorePath" }, NullLogger.Instance).Value!
+            .ShouldBe(new LineageGroupsAsk(LineageGroups.ByTag, null, "gas", false));
+        LineageRequests.Groups(new LineageGroupsRequest { GroupBy = "CATEGORY", Category = "Sports" }, NullLogger.Instance).Value!
+            .ShouldBe(new LineageGroupsAsk(LineageGroups.ByCategory, "Sports", null, false));
+    }
+
+    [Fact]
+    public void ACategoryLimitNeedsTheCategoryGroupingAndATagLimitTheTagGrouping()
+    {
+        LineageRequests.Groups(new LineageGroupsRequest { GroupBy = "tag", Category = "Sports", ContainerGroups = "storePath" }, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Groups(new LineageGroupsRequest { GroupBy = "category", Tag = "gas" }, NullLogger.Instance).IsFailure.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("both")]
+    public void GroupingByTagNeedsTheCallerToSayWhereContainersSit(string? containerGroups)
+    {
+        LineageRequests.Groups(new LineageGroupsRequest { GroupBy = "tag", ContainerGroups = containerGroups }, NullLogger.Instance).IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void StoreTagsMakesContainersTakeTheirDataStoresTagsAndIsRefusedWhenGroupingByCategory()
+    {
+        LineageRequests.Groups(new LineageGroupsRequest { GroupBy = "tag", ContainerGroups = "storeTags" }, NullLogger.Instance).Value!.ContainersTakeStoreTags.ShouldBeTrue();
+        LineageRequests.Groups(new LineageGroupsRequest { GroupBy = "category", ContainerGroups = "storeTags" }, NullLogger.Instance).IsFailure.ShouldBeTrue();
+    }
 }

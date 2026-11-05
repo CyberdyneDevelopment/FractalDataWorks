@@ -482,4 +482,20 @@ public static partial class OrchestrationLogger
         string executionId,
         string checkpointId,
         string errorMessage);
+
+    /// <summary>
+    /// Logs when a step whose error handling retries does not state how many times. Nothing assumes a count (FDW-3931).
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="executionId">The execution identifier.</param>
+    /// <param name="stepId">The step identifier.</param>
+    /// <returns>A generic message naming the step.</returns>
+    [MessageLogging(
+        EventId = 21000,
+        Level = LogLevel.Error,
+        Message = "Step '{stepId}' retries but does not state how many times: its configuration is not an OrchestrationStepConfiguration with MaxRetries. ExecutionId={executionId}")]
+    public static partial IGenericMessage StepRetryCountNotStated(
+        ILogger logger,
+        string executionId,
+        string stepId);
 }

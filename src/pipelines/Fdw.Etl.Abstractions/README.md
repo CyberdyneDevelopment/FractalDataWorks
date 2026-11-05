@@ -13,7 +13,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IAlertSeverity` | interface | Interface for alert severity levels. Extends ITypeOption to enable TypeCollection discovery. |
 | `IAlertingService` | interface | Service for sending alerts and notifications. |
 | `IComparisonOperator` | interface | Interface for comparison operators used in alert rules. Extends ITypeOption to enable TypeCollection… |
-| `IEtlMetricsCollector` | interface | Collects metrics for ETL pipeline executions. |
 | `IEtlTelemetryService` | interface | Service for sending telemetry events. |
 | `IHealthCheckResult` | interface | Represents the result of a health check. |
 | `IHealthCheckService` | interface | Service for performing health checks. |

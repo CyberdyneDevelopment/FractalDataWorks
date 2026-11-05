@@ -9,6 +9,7 @@ using Fdw.Configuration.Endpoints.Logging;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Configuration.Endpoints;
 
@@ -56,7 +57,7 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
     /// <inheritdoc/>
     public override async Task HandleAsync(ListConfigurationInstancesRequest req, CancellationToken ct)
     {
-        ConfigurationEndpointLog.ListingInstances(_logger, req.Category ?? "none");
+        ConfigurationEndpointLog.ListingInstances(_logger, req.Category ?? LogPlaceholders.Null);
 
         var containers = string.IsNullOrEmpty(req.Category)
             ? _containerLookup.All()
@@ -123,13 +124,11 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
 
     private static ConfigurationInstanceSummaryResponse MapToSummary(ConfigurationRecord record, IDataContainer container)
     {
-        var serviceType = record.Type ?? container.Name;
-
         return new ConfigurationInstanceSummaryResponse
         {
             Id = record.Id,
             Name = record.Name,
-            ServiceType = serviceType,
+            ServiceType = record.Type,
             Category = container.Parent.Name,
             CreatedAt = record.CreatedAt,
             ModifiedAt = record.ModifiedAt

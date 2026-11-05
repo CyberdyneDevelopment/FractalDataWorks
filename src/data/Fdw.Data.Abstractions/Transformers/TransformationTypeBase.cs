@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Conventions;
 
 namespace Fdw.Data.Abstractions;
 
@@ -8,6 +9,10 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 public abstract class TransformationTypeBase : TypeOptionBase<TransformationTypeBase>, ITransformationType
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Transformer";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TransformationTypeBase"/> class.
     /// </summary>
@@ -22,7 +27,7 @@ public abstract class TransformationTypeBase : TypeOptionBase<TransformationType
         string description,
         bool supportsStreaming,
         string? category = null)
-        : base(name, $"Transformers:{name}", displayName, description, category ?? "Transformer")
+        : base(name, $"Transformers:{name}", displayName, description, category ?? DefaultCategory)
     {
         SupportsStreaming = supportsStreaming;
     }

@@ -160,7 +160,7 @@ public sealed class PocoMapperModuleInitializerGenerator : IIncrementalGenerator
             mappers.Add(new PocoMapperModel(
                 TypeName: type.Name,
                 TypeFullName: type.ToDisplayString(),
-                Namespace: type.ContainingNamespace?.ToDisplayString() ?? "",
+                Namespace: type.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 MapperTypeName: $"{type.Name}PocoMapper"
             ));
         }

@@ -10,7 +10,7 @@ namespace Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 [ExcludeFromCodeCoverage]
 public sealed class InitializedStateType : ExecutionStateTypeBase
 {
-    private static readonly string[] ValidTransitionsArray = new[] { "Running", "Failed", "Cancelled" };
+    private static readonly string[] ValidTransitionsArray = new[] { "Running", "Failed", "Cancelled", "Interrupted" };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InitializedStateType"/> class.

@@ -1,5 +1,4 @@
-using Fdw.DevSession;
-using Microsoft.Extensions.DependencyInjection;
+using Fdw.ServiceTypes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -16,14 +15,31 @@ public static class Program
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 
-        builder.Services.AddDevSessions();
+        // Every discovered domain configures and registers itself, the session domain and its MCP server included
+        // (DevSessionHosting, FDW-3957); the application registers nothing (FDW056). Each phase stops the host on failure.
+        var configured = PlatformServices.Configure(builder);
+        if (configured.IsFailure)
+        {
+            await Console.Error.WriteLineAsync($"Configure phase failed: {configured.CurrentMessage}").ConfigureAwait(false);
+            return 1;
+        }
 
-        builder.Services
-            .AddMcpServer()
-            .WithStdioServerTransport()
-            .WithTools<DevSessionToolService>();
+        var registered = PlatformServices.Register(builder);
+        if (registered.IsFailure)
+        {
+            await Console.Error.WriteLineAsync($"Register phase failed: {registered.CurrentMessage}").ConfigureAwait(false);
+            return 1;
+        }
 
-        await builder.Build().RunAsync().ConfigureAwait(false);
+        var host = builder.Build();
+        var initialized = PlatformServices.Initialize(host);
+        if (initialized.IsFailure)
+        {
+            await Console.Error.WriteLineAsync($"Initialize phase failed: {initialized.CurrentMessage}").ConfigureAwait(false);
+            return 1;
+        }
+
+        await host.RunAsync().ConfigureAwait(false);
         return 0;
     }
 }

@@ -38,10 +38,12 @@ public sealed class NarrowedDocumentStore : IDocumentStore
     /// <summary>Initializes a new instance of the <see cref="NarrowedDocumentStore"/> class.</summary>
     /// <param name="connection">The granted connection, which never leaves the store.</param>
     /// <param name="folder">The folder the store is narrowed to, relative to the connection's scope.</param>
+    /// <param name="storedUnder">The id of the assignment the store was resolved through (FDW-3396).</param>
     /// <param name="logger">The logger.</param>
-    public NarrowedDocumentStore(IDocumentConnection connection, DocumentPath folder, ILogger<NarrowedDocumentStore>? logger)
+    public NarrowedDocumentStore(IDocumentConnection connection, DocumentPath folder, Guid storedUnder, ILogger<NarrowedDocumentStore>? logger)
     {
         _connection = connection ?? throw new ArgumentNullException(nameof(connection));
+        StoredUnder = storedUnder;
         _folder = new DocumentScope(folder);
         Scope = new DocumentScope(DocumentPath.Root);
         _logger = logger ?? NullLogger<NarrowedDocumentStore>.Instance;
@@ -49,6 +51,9 @@ public sealed class NarrowedDocumentStore : IDocumentStore
 
     /// <inheritdoc />
     public DocumentScope Scope { get; }
+
+    /// <inheritdoc />
+    public Guid StoredUnder { get; }
 
     /// <inheritdoc />
     public IReadOnlyCollection<IDocumentCapability> Capabilities => _connection.Capabilities;

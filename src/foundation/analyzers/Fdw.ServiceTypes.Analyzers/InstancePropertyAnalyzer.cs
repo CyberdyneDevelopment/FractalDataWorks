@@ -50,7 +50,7 @@ This violates the TypeOption pattern architecture. Access instances via collecti
     {
         var propertyDeclaration = (PropertyDeclarationSyntax)context.Node;
         var semanticModel = context.SemanticModel;
-        var propertySymbol = semanticModel.GetDeclaredSymbol(propertyDeclaration);
+        var propertySymbol = semanticModel.GetDeclaredSymbol(propertyDeclaration, context.CancellationToken);
 
         if (propertySymbol == null)
             return;
@@ -81,14 +81,12 @@ This violates the TypeOption pattern architecture. Access instances via collecti
         if (initializerExpression is not (ImplicitObjectCreationExpressionSyntax or ObjectCreationExpressionSyntax))
             return;
 
-        // Check if the containing type inherits from TypeOptionBase or ServiceTypeBase
+        // Check if the containing type inherits from TypeOptionBase. ServiceTypeBase<,,> derives from it (through
+        // GuidTypeOptionBase), so this covers service types too; the old ServiceTypeBase`6/`5 lookups named types that
+        // no longer exist (FDW-3511).
         var typeOptionBase = context.Compilation.GetTypeByMetadataName("Fdw.Collections.TypeOptionBase`2");
-        var serviceTypeBase = context.Compilation.GetTypeByMetadataName("Fdw.ServiceTypes.ServiceTypeBase`6");
-        var serviceTypeBase5 = context.Compilation.GetTypeByMetadataName("Fdw.ServiceTypes.ServiceTypeBase`5");
 
         bool inheritsFromTypeOption = InheritsFromGenericType(containingType, typeOptionBase);
-        bool inheritsFromServiceType = InheritsFromGenericType(containingType, serviceTypeBase) ||
-                                        InheritsFromGenericType(containingType, serviceTypeBase5);
 
         // Also check if the type has [TypeOption] or [Implementation] attribute
         var hasTypeOptionAttribute = containingType.GetAttributes()
@@ -97,7 +95,7 @@ This violates the TypeOption pattern architecture. Access instances via collecti
                          string.Equals(attr.AttributeClass?.Name, "ImplementationAttribute", StringComparison.Ordinal) ||
                          string.Equals(attr.AttributeClass?.Name, "Implementation", StringComparison.Ordinal));
 
-        if (inheritsFromTypeOption || inheritsFromServiceType || hasTypeOptionAttribute)
+        if (inheritsFromTypeOption || hasTypeOptionAttribute)
         {
             // Report critical error - Singleton property pattern is forbidden
             var diagnostic = Diagnostic.Create(

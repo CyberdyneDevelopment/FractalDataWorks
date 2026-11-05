@@ -50,6 +50,9 @@ public static class UpdateScheduleChanges
         new(nameof(UpdateScheduleRequest.TimeZoneId), request => request.TimeZoneId is not null,
             Apply: (request, schedule, _) => schedule.TimeZoneId = request.TimeZoneId!),
 
+        new(nameof(UpdateScheduleRequest.MissedFireRule), request => request.MissedFireRule is not null,
+            Apply: (request, schedule, _) => schedule.MissedFireRule = request.MissedFireRule!),
+
         new(nameof(UpdateScheduleRequest.IsEnabled), request => request.IsEnabled.HasValue,
             Apply: (request, schedule, _) => schedule.IsEnabled = request.IsEnabled!.Value),
 

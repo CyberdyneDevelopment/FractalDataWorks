@@ -40,7 +40,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         var policy = ResiliencyPolicies.ByName("Database");
 
         // Act
-        var pipeline = policy.Create();
+        var pipeline = policy.Create("TestOperation");
 
         // Assert
         pipeline.ShouldNotBeNull();
@@ -55,7 +55,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         var policy = ResiliencyPolicies.ByName("Database");
 
         // Act
-        var pipeline = policy.Create(_loggerMock.Object);
+        var pipeline = policy.Create("TestOperation", _loggerMock.Object);
 
         // Assert
         pipeline.ShouldNotBeNull();
@@ -70,7 +70,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         var policy = ResiliencyPolicies.ByName("Database");
 
         // Act
-        var pipeline = policy.Create(_loggerMock.Object, "TestOperation");
+        var pipeline = policy.Create("TestOperation", _loggerMock.Object);
 
         // Assert
         pipeline.ShouldNotBeNull();
@@ -85,7 +85,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         IResiliencyPolicy? policy = null;
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => policy!.Create());
+        Should.Throw<ArgumentNullException>(() => policy!.Create("TestOperation"));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         var policy = ResiliencyPolicies.ByName("HttpClient");
 
         // Act
-        var pipeline = policy.CreatePipeline<string>();
+        var pipeline = policy.CreatePipeline<string>("TestOperation");
 
         // Assert
         pipeline.ShouldNotBeNull();
@@ -112,7 +112,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         var policy = ResiliencyPolicies.ByName("HttpClient");
 
         // Act
-        var pipeline = policy.CreatePipeline<int>(_loggerMock.Object);
+        var pipeline = policy.CreatePipeline<int>("TestOperation", _loggerMock.Object);
 
         // Assert
         pipeline.ShouldNotBeNull();
@@ -127,7 +127,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         IResiliencyPolicy? policy = null;
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => policy!.CreatePipeline<string>());
+        Should.Throw<ArgumentNullException>(() => policy!.CreatePipeline<string>("TestOperation"));
     }
 
     [Fact]
@@ -141,6 +141,7 @@ public sealed class ResiliencyPipelineExtensionsTests
         // Act
         var result = await policy.Execute<string>(
             _ => Task.FromResult("success"),
+            "TestOperation",
             _loggerMock.Object,
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -165,6 +166,7 @@ public sealed class ResiliencyPipelineExtensionsTests
                 executed = true;
                 return Task.CompletedTask;
             },
+            "TestOperation",
             _loggerMock.Object,
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -183,7 +185,7 @@ public sealed class ResiliencyPipelineExtensionsTests
 
         // Act & Assert
         await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy!.Execute<string>(_ => Task.FromResult("test")));
+            await policy!.Execute<string>(_ => Task.FromResult("test"), "TestOperation"));
     }
 
     [Fact]
@@ -196,7 +198,7 @@ public sealed class ResiliencyPipelineExtensionsTests
 
         // Act & Assert
         await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy.Execute<string>(null!));
+            await policy.Execute<string>(null!, "TestOperation"));
     }
 
     [Fact]
@@ -209,7 +211,7 @@ public sealed class ResiliencyPipelineExtensionsTests
 
         // Act & Assert
         await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy!.Execute(_ => Task.CompletedTask));
+            await policy!.Execute(_ => Task.CompletedTask, "TestOperation"));
     }
 
     [Fact]
@@ -222,7 +224,7 @@ public sealed class ResiliencyPipelineExtensionsTests
 
         // Act & Assert
         await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy.Execute((Func<CancellationToken, Task>)null!));
+            await policy.Execute((Func<CancellationToken, Task>)null!, "TestOperation"));
     }
 
     [Fact]
@@ -241,8 +243,8 @@ public sealed class ResiliencyPipelineExtensionsTests
                 attemptCount++;
                 throw new InvalidOperationException("Test failure");
             },
-            _loggerMock.Object,
             "TestOperation",
+            _loggerMock.Object,
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -264,8 +266,8 @@ public sealed class ResiliencyPipelineExtensionsTests
         // Act
         var result = await policy.Execute<string>(
             _ => Task.FromResult("success"),
-            _loggerMock.Object,
             customOperationName,
+            _loggerMock.Object,
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -290,6 +292,7 @@ public sealed class ResiliencyPipelineExtensionsTests
                 await Task.Delay(100, ct);
                 return "test";
             },
+            "TestOperation",
             _loggerMock.Object,
             cancellationToken: cts.Token);
 
@@ -307,8 +310,8 @@ public sealed class ResiliencyPipelineExtensionsTests
         var httpPolicy = ResiliencyPolicies.ByName("HttpClient");
 
         // Act
-        var databasePipeline = databasePolicy.Create();
-        var httpPipeline = httpPolicy.Create();
+        var databasePipeline = databasePolicy.Create("TestOperation");
+        var httpPipeline = httpPolicy.Create("TestOperation");
 
         // Assert
         databasePipeline.ShouldNotBeNull();

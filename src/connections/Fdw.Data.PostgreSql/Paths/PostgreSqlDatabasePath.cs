@@ -38,7 +38,7 @@ public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContain
         Database = database ?? string.Empty;
         Schema = schema ?? throw new ArgumentNullException(nameof(schema));
         ObjectName = objectName ?? throw new ArgumentNullException(nameof(objectName));
-        _containers = containers?.ToList() ?? new List<IStorageContainer>();
+        _containers = containers?.ToList() ?? [];
     }
 
     /// <summary>

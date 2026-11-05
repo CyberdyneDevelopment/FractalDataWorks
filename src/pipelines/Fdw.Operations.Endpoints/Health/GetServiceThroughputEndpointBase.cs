@@ -70,7 +70,7 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
 
             if (!monitorResult.IsSuccess || monitorResult.Value is null)
             {
-                OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, monitorResult.CurrentMessage ?? "Unknown error");
+                OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, monitorResult.NoValueReason().Message);
                 AddError("Failed to retrieve throughput data");
                 await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
                 return;
@@ -80,7 +80,7 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
 
             if (!result.IsSuccess)
             {
-                OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, result.CurrentMessage ?? "Unknown error");
+                OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, result.FailureReason().Message);
                 await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }

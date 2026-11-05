@@ -2,6 +2,8 @@ using System;
 using FluentValidation;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
+using Fdw.Results;
+using Fdw.Services.Etl.Projects.Policy;
 
 namespace Fdw.Services.Etl.Projects.Validation;
 
@@ -14,8 +16,8 @@ public sealed class ProjectConfigurationValidator : AbstractValidator<ProjectCon
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectConfigurationValidator"/> class.
     /// </summary>
-    /// <param name="serverDefaults">Server-level policy defaults used to validate elevation direction.</param>
-    public ProjectConfigurationValidator(IServerPolicyDefaults serverDefaults)
+    /// <param name="serverDefaults">Reads the server's policy defaults, which a project may tighten but not relax.</param>
+    public ProjectConfigurationValidator(IServerPolicyDefaultConfigurationProvider serverDefaults)
     {
         if (serverDefaults == null) throw new ArgumentNullException(nameof(serverDefaults));
 
@@ -33,14 +35,6 @@ public sealed class ProjectConfigurationValidator : AbstractValidator<ProjectCon
             .When(x => x.StepFailurePolicy is not null)
             .WithMessage(x => $"Invalid StepFailurePolicy '{x.StepFailurePolicy}'. Valid values: 'HaltStage', 'ContinueStage'.");
 
-        // Cannot set ContinueStage when server default is HaltStage.
-        RuleFor(x => x.StepFailurePolicy)
-            .Must(val => val is null ||
-                         !string.Equals(val, "ContinueStage", StringComparison.OrdinalIgnoreCase) ||
-                         !string.Equals(serverDefaults.StepFailurePolicy, "HaltStage", StringComparison.OrdinalIgnoreCase))
-            .When(x => x.StepFailurePolicy is not null)
-            .WithMessage(x => $"StepFailurePolicy 'ContinueStage' is less strict than server default 'HaltStage'.");
-
         RuleFor(x => x.StageFailurePolicy)
             .Must(val => val is null ||
                          string.Equals(val, "HaltProject", StringComparison.OrdinalIgnoreCase) ||
@@ -48,47 +42,35 @@ public sealed class ProjectConfigurationValidator : AbstractValidator<ProjectCon
             .When(x => x.StageFailurePolicy is not null)
             .WithMessage(x => $"Invalid StageFailurePolicy '{x.StageFailurePolicy}'. Valid values: 'HaltProject', 'ContinueProject'.");
 
-        // Cannot set ContinueProject when server default is HaltProject.
-        RuleFor(x => x.StageFailurePolicy)
-            .Must(val => val is null ||
-                         !string.Equals(val, "ContinueProject", StringComparison.OrdinalIgnoreCase) ||
-                         !string.Equals(serverDefaults.StageFailurePolicy, "HaltProject", StringComparison.OrdinalIgnoreCase))
-            .When(x => x.StageFailurePolicy is not null)
-            .WithMessage(x => $"StageFailurePolicy 'ContinueProject' is less strict than server default 'HaltProject'.");
-
-        // MaxParallelPipelines: must be positive and <= server default.
+        // MaxParallelPipelines: must be positive (the server-default ceiling is checked with the defaults below).
         RuleFor(x => x.MaxParallelPipelines)
             .GreaterThan(0)
             .When(x => x.MaxParallelPipelines is not null)
             .WithMessage("MaxParallelPipelines must be > 0 when set.");
-
-        RuleFor(x => x.MaxParallelPipelines)
-            .Must(val => val is null || val.Value <= serverDefaults.MaxParallelPipelines)
-            .When(x => x.MaxParallelPipelines is not null)
-            .WithMessage(x => $"MaxParallelPipelines {x.MaxParallelPipelines} exceeds server default {serverDefaults.MaxParallelPipelines}.");
-
-        // RequireApprovalToRun: project may set true; may not set false if server default is true.
-        RuleFor(x => x.RequireApprovalToRun)
-            .Must(val => val is null || val.Value || !serverDefaults.RequireApprovalToRun)
-            .When(x => x.RequireApprovalToRun is not null)
-            .WithMessage("RequireApprovalToRun cannot be false when server default is true.");
-
-        // AllowResume: project may set false; may not set true if server default is false.
-        RuleFor(x => x.AllowResume)
-            .Must(val => val is null || !val.Value || serverDefaults.AllowResume)
-            .When(x => x.AllowResume is not null)
-            .WithMessage("AllowResume cannot be true when server default is false.");
-
-        // AllowCrossTenant: project may set false; may not set true if server default is false.
-        RuleFor(x => x.AllowCrossTenant)
-            .Must(val => val is null || !val.Value || serverDefaults.AllowCrossTenant)
-            .When(x => x.AllowCrossTenant is not null)
-            .WithMessage("AllowCrossTenant cannot be true when server default is false.");
 
         // ResiliencyPolicyId: if set, must not be the empty GUID (resolved by executor at runtime).
         RuleFor(x => x.ResiliencyPolicyId)
             .Must(val => val is null || val.Value != Guid.Empty)
             .When(x => x.ResiliencyPolicyId is not null)
             .WithMessage("ResiliencyPolicyId must not be an empty GUID when specified. Set to null to inherit.");
+
+        // Why one async rule: the server's defaults are read from their provider when a configuration is validated,
+        // once per validation, and each setting is checked against them (FDW-3580). A failed read is the failure.
+        RuleFor(x => x).CustomAsync(async (config, context, ct) =>
+        {
+            var defaults = await serverDefaults.GetCurrent(ct).ConfigureAwait(false);
+            if (defaults.IsFailure || defaults.Value is not { } current)
+            {
+                context.AddFailure(defaults.NoValueReason().Message);
+                return;
+            }
+
+            foreach (var violation in ServerPolicyElevation.Violations(
+                config.StepFailurePolicy, config.StageFailurePolicy, config.MaxParallelPipelines,
+                config.RequireApprovalToRun, config.AllowResume, config.AllowCrossTenant, current))
+            {
+                context.AddFailure(violation);
+            }
+        });
     }
 }

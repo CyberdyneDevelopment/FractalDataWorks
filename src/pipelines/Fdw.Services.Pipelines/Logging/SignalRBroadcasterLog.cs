@@ -17,16 +17,27 @@ public static partial class SignalRBroadcasterLog
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Logged once at startup when the broadcaster is initialized with its configured Hz and byte cap.
+    /// Logged once at startup when the broadcaster is initialized with the pipeline hub's coalescing rate.
     /// </summary>
     [MessageLogging(
         EventId = 11006,
         Level = LogLevel.Information,
-        Message = "PipelineStatusBroadcaster configured: BroadcastHz={broadcastHz}, SampleBufferMaxBytes={sampleBufferMaxBytes}")]
+        Message = "PipelineStatusBroadcaster configured: BroadcastHz={broadcastHz}")]
     public static partial IGenericMessage BroadcasterConfigured(
         ILogger logger,
-        int broadcastHz,
-        long sampleBufferMaxBytes);
+        int broadcastHz);
+
+    /// <summary>
+    /// Logged when the pipeline hub declares no positive coalescing rate and no host overrides it (FDW-3956). Nothing assumes one.
+    /// </summary>
+    [MessageLogging(
+        EventId = 91006,
+        Level = LogLevel.Error,
+        Message = "The pipeline hub declares no positive {key} and no host overrides it (found '{found}'); the status broadcaster is not built")]
+    public static partial IGenericMessage BroadcastRateNotDeclared(
+        ILogger logger,
+        string key,
+        string found);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Coalescing (9164-9167)

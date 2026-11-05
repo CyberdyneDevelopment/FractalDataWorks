@@ -1,103 +1,50 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Fdw.Validation.Tests;
 
 public sealed class ValidationResultExtensionsTests
 {
+    private static readonly ILogger Logger = NullLogger.Instance;
+
+    private static ValidationResult Refused(params (string Property, string Error)[] errors)
+        => new(errors.Select(error => new ValidationFailure(error.Property, error.Error)).ToList());
+
     // ToGenericResult (non-generic) tests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
     public void ToGenericResultReturnsSuccessWhenValid()
     {
-        // Arrange
-        var validationResult = new ValidationResult();
+        var result = new ValidationResult().ToGenericResult(Logger);
 
-        // Act
-        var result = validationResult.ToGenericResult();
-
-        // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Messages.ShouldBeEmpty();
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
+    [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void ToGenericResultReturnsFailureWithErrors()
+    public void ToGenericResultNamesEveryFailedRuleInOneRefusal()
     {
-        // Arrange
-        var validationResult = new ValidationResult(new[]
-        {
-            new ValidationFailure("Name", "Name is required"),
-            new ValidationFailure("Email", "Email is invalid")
-        });
+        var result = Refused(("Name", "Name is required"), ("Email", "Email is invalid")).ToGenericResult(Logger);
 
-        // Act
-        var result = validationResult.ToGenericResult();
-
-        // Assert
         result.IsFailure.ShouldBeTrue();
-        result.Messages.Count.ShouldBe(2);
+        var message = result.Messages.Single();
+        message.Message.ShouldContain("Name: Name is required");
+        message.Message.ShouldContain("Email: Email is invalid");
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
+    [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void ToGenericResultIncludesPropertyNameInMessage()
+    public void ToGenericResultCarriesANumberInTheValidationBand()
     {
-        // Arrange
-        var validationResult = new ValidationResult(new[]
-        {
-            new ValidationFailure("Name", "is required")
-        });
+        var result = Refused(("Name", "is required")).ToGenericResult(Logger);
 
-        // Act
-        var result = validationResult.ToGenericResult();
-
-        // Assert
-        result.IsFailure.ShouldBeTrue();
-        var message = result.Messages.First();
-        message.Message.ShouldContain("Name:");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ToGenericResultSetsMessageSeverityToError()
-    {
-        // Arrange
-        var validationResult = new ValidationResult(new[]
-        {
-            new ValidationFailure("Name", "is required")
-        });
-
-        // Act
-        var result = validationResult.ToGenericResult();
-
-        // Assert
-        result.IsFailure.ShouldBeTrue();
-        var message = (GenericMessage)result.Messages.First();
-        message.Severity.ShouldBe(MessageSeverity.Error);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ToGenericResultSetsCodeToValidation()
-    {
-        // Arrange
-        var validationResult = new ValidationResult(new[]
-        {
-            new ValidationFailure("Name", "is required")
-        });
-
-        // Act
-        var result = validationResult.ToGenericResult();
-
-        // Assert
-        result.IsFailure.ShouldBeTrue();
-        var message = result.Messages.First();
-        message.Code.ShouldNotBeNull();
-        message.Code.ShouldContain("VALIDATION");
+        var message = result.Messages.Single();
+        message.Code.ShouldBe("VALIDATION-20001");
+        message.ShouldBeAssignableTo<IClientMessage>().ClientText.ShouldNotBeNull().ShouldContain("Name: is required");
     }
 
     // ToGenericResult<T> (generic) tests
@@ -106,16 +53,10 @@ public sealed class ValidationResultExtensionsTests
     [Trait("Category", "CoreFramework")]
     public void ToGenericResultReturnsSuccessWithValue()
     {
-        // Arrange
-        var validationResult = new ValidationResult();
-        var value = "TestValue";
+        var result = new ValidationResult().ToGenericResult("TestValue", Logger);
 
-        // Act
-        var result = validationResult.ToGenericResult(value);
-
-        // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBe(value);
+        result.Value.ShouldBe("TestValue");
     }
 
     [Fact]
@@ -123,41 +64,23 @@ public sealed class ValidationResultExtensionsTests
     [Trait("Category", "CoreFramework")]
     public void ToGenericResultReturnsFailureWithoutValue()
     {
-        // Arrange
-        var validationResult = new ValidationResult(new[]
-        {
-            new ValidationFailure("Name", "is required")
-        });
-        var value = "TestValue";
+        var result = Refused(("Name", "is required")).ToGenericResult("TestValue", Logger);
 
-        // Act
-        var result = validationResult.ToGenericResult(value);
-
-        // Assert
         result.IsFailure.ShouldBeTrue();
         Should.Throw<InvalidOperationException>(() => { var _ = result.Value; });
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
+    [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void ToGenericResultIncludesErrorMessages()
+    public void GenericToGenericResultNamesEveryFailedRuleAndCarriesTheNumber()
     {
-        // Arrange
-        var validationResult = new ValidationResult(new[]
-        {
-            new ValidationFailure("Name", "Name is required"),
-            new ValidationFailure("Port", "Port must be greater than 0")
-        });
-        var value = "TestValue";
+        var result = Refused(("Name", "Name is required"), ("Port", "Port must be greater than 0")).ToGenericResult("TestValue", Logger);
 
-        // Act
-        var result = validationResult.ToGenericResult(value);
-
-        // Assert
         result.IsFailure.ShouldBeTrue();
-        result.Messages.Count.ShouldBe(2);
-        result.Messages.ShouldContain(m => m.Message.Contains("Name:"));
-        result.Messages.ShouldContain(m => m.Message.Contains("Port:"));
+        var message = result.Messages.Single();
+        message.Code.ShouldBe("VALIDATION-20001");
+        message.Message.ShouldContain("Name: Name is required");
+        message.Message.ShouldContain("Port: Port must be greater than 0");
     }
 }

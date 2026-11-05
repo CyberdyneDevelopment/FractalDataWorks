@@ -58,12 +58,38 @@ public static class PipelineRunParameterReferences
         string owner,
         string expression,
         IReadOnlyDictionary<string, object?> values,
-        ILogger logger)
+        ILogger logger) => Replace(owner, expression, values, logger, leaveOthers: false);
+
+    /// <summary>Replaces only the references to the parameters in <paramref name="values"/> and leaves every other reference as written (FDW-3379).</summary>
+    /// <remarks>
+    /// A template is filled with the values its creator gives; a reference to a parameter nobody gave stays in the text, because it is a run parameter and a run
+    /// resolves it. A value is placed by the same rule a run's value is, so what a template fill refuses is what a run would refuse.
+    /// </remarks>
+    /// <param name="owner">What the expression belongs to, for the refusal message.</param>
+    /// <param name="expression">The expression text.</param>
+    /// <param name="values">The typed values of the parameters to fill in.</param>
+    /// <param name="logger">The logger the refusals are written to.</param>
+    /// <returns>The expression with the given parameters' references replaced, or a failure naming the reference.</returns>
+    public static IGenericResult<string> ResolveGiven(
+        string owner,
+        string expression,
+        IReadOnlyDictionary<string, object?> values,
+        ILogger logger) => Replace(owner, expression, values, logger, leaveOthers: true);
+
+    private static IGenericResult<string> Replace(
+        string owner,
+        string expression,
+        IReadOnlyDictionary<string, object?> values,
+        ILogger logger,
+        bool leaveOthers)
     {
         var builder = new StringBuilder(expression.Length);
         var last = 0;
         foreach (Match match in Reference.Matches(expression))
         {
+            if (leaveOthers && !values.ContainsKey(match.Groups["name"].Value))
+                continue;
+
             var text = TextOf(owner, match.Groups["name"].Value, values, logger);
             if (text.IsFailure)
                 return text;
@@ -99,7 +125,7 @@ public static class PipelineRunParameterReferences
     {
         foreach (var character in text)
         {
-            if (!char.IsLetterOrDigit(character) && " _-.:/@+,".IndexOf(character) < 0)
+            if (!char.IsLetterOrDigit(character) && " _-.:/@+,".IndexOf(character, StringComparison.Ordinal) < 0)
                 return false;
         }
 

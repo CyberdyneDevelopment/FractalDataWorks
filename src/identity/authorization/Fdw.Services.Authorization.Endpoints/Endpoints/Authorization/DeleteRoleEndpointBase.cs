@@ -8,6 +8,7 @@ using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.TokenManagers.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -75,7 +76,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         if (!existing.IsSuccess)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name, existing.CurrentMessage);
-            ThrowError(existing.CurrentMessage ?? "Failed to read role", 500);
+            ThrowError(existing.FailureReason().Message, 500);
             return;
         }
 
@@ -103,7 +104,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         if (!result.IsSuccess)
         {
             AuthorizationEndpointLog.RoleWriteFailed(EndpointLogger, "delete", req.Name, result.CurrentMessage);
-            ThrowError(result.CurrentMessage ?? "Failed to delete role", 500);
+            ThrowError(result.FailureReason().Message, 500);
             return;
         }
 

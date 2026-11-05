@@ -21,7 +21,8 @@ public class DataSetConfigurationTests
         // Assert
         config.Name.ShouldBe(string.Empty);
         config.Description.ShouldBe(string.Empty);
-        config.Version.ShouldBe("1.0");
+        // A configuration states no version until one is set; the default is declared on the data set kind (FDW-3956).
+        config.Version.ShouldBe(string.Empty);
         config.CategoryId.ShouldBeNull();
         config.RecordTypeName.ShouldBe(string.Empty);
         config.Fields.ShouldNotBeNull();

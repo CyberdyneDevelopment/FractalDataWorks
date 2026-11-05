@@ -200,7 +200,7 @@ public sealed class ODataSchemaImporterTests
     public void ShouldExcludeReturnsTrueWhenNameDoesNotMatchIncludeSchemas()
     {
         // Arrange
-        var options = new SchemaImporterOptions { IncludeSchemas = ["Sales"] };
+        var options = new SchemaImporterOptions { IncludeSchemas = ["Sales"], IncludeExtendedProperties = true };
 
         // Act
         var excluded = InvokeShouldExclude("Widgets", options);
@@ -215,7 +215,7 @@ public sealed class ODataSchemaImporterTests
     public void ShouldExcludeReturnsFalseWhenNameMatchesIncludeSchemas()
     {
         // Arrange
-        var options = new SchemaImporterOptions { IncludeSchemas = ["Widget"] };
+        var options = new SchemaImporterOptions { IncludeSchemas = ["Widget"], IncludeExtendedProperties = true };
 
         // Act
         var excluded = InvokeShouldExclude("Widgets", options);
@@ -230,7 +230,7 @@ public sealed class ODataSchemaImporterTests
     public void ShouldExcludeReturnsTrueWhenNameMatchesExcludeSchemas()
     {
         // Arrange
-        var options = new SchemaImporterOptions { ExcludeSchemas = ["Widget"] };
+        var options = new SchemaImporterOptions { ExcludeSchemas = ["Widget"], IncludeExtendedProperties = true };
 
         // Act
         var excluded = InvokeShouldExclude("Widgets", options);
@@ -245,7 +245,7 @@ public sealed class ODataSchemaImporterTests
     public void ShouldExcludeReturnsFalseWhenNameDoesNotMatchExcludeSchemas()
     {
         // Arrange
-        var options = new SchemaImporterOptions { ExcludeSchemas = ["Sales"] };
+        var options = new SchemaImporterOptions { ExcludeSchemas = ["Sales"], IncludeExtendedProperties = true };
 
         // Act
         var excluded = InvokeShouldExclude("Widgets", options);
@@ -436,7 +436,7 @@ public sealed class ODataSchemaImporterTests
                     new XElement(edmNs + "EntitySet", new XAttribute("Name", "Gadgets"), new XAttribute("EntityType", "Sample.Gadget")))));
 
         var importer = CreateImporter();
-        var options = new SchemaImporterOptions { MaxContainers = 1 };
+        var options = new SchemaImporterOptions { MaxContainers = 1, IncludeExtendedProperties = true };
 
         // Act
         var results = InvokeParseEntitySets(importer, edmx, edmNs, "http://host/odata", options);

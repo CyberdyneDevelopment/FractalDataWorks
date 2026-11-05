@@ -34,10 +34,15 @@ namespace Fdw.Commands.Data;
 /// var result = await gateway.Execute&lt;int&gt;(call, ct);
 /// </code>
 /// </para>
+/// <para>
+/// A delete names the rows it removes with <see cref="Filter"/>, flags rows with <see cref="SoftDelete"/>, or empties the
+/// container only when <see cref="AllRows"/> is set (FDW-3660). One with none of these is refused by every translator
+/// (<see cref="DeleteScope"/>), so no connection sends a delete with no condition by accident.
+/// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Delete", RestrictToCurrentCompilation = true)]
-public sealed class DeleteCommand : DataCommandBase<int>, IFilterableCommand, ISoftDeletableCommand
+public sealed class DeleteCommand : DataCommandBase<int>, IDeleteScopeCommand, ISoftDeletableCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteCommand"/> class.
@@ -53,6 +58,16 @@ public sealed class DeleteCommand : DataCommandBase<int>, IFilterableCommand, IS
     /// Determines which records to delete.
     /// </summary>
     public IFilterExpression? Filter { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the caller asked to remove every row of the container. A delete with no
+    /// <see cref="Filter"/> and no <see cref="SoftDelete"/> is refused unless this is set, and one with a filter is refused
+    /// when it is (FDW-3660).
+    /// </summary>
+    public bool AllRows { get; init; }
+
+    /// <inheritdoc />
+    bool IDeleteScopeCommand.FlagsRows => SoftDelete is not null;
 
     /// <summary>
     /// Gets or sets the soft-delete options. When set, matching rows are flagged deleted (the configured

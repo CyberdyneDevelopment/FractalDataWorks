@@ -8,6 +8,7 @@ using Fdw.Operations.Configuration;
 using Fdw.Operations.Logging;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Operations.Escalation;
 
@@ -20,6 +21,10 @@ namespace Fdw.Operations.Escalation;
 /// </summary>
 public sealed class EscalationService : IEscalationService
 {
+    /// <summary>The id of a policy no one has saved yet: the provider mints its own on the first save.</summary>
+    [PlatformDefault]
+    private static readonly Guid NotYetMinted = Guid.Empty;
+
     private const string EscalationPolicyDomain = "EscalationPolicy";
 
     private readonly IEscalationConfigurationProvider _provider;
@@ -188,24 +193,26 @@ public sealed class EscalationService : IEscalationService
     private static EscalationPolicyImplementationConfiguration BuildConfig(IEscalationPolicy policy, Guid? id)
         => new()
         {
-            Id = id ?? Guid.Empty,
+            Id = id ?? NotYetMinted,
             Name = policy.Name,
             IsEnabled = policy.IsEnabled,
             WorkflowId = policy.WorkflowId,
             MaxEscalationLevel = policy.MaxEscalationLevel,
             CooldownMinutes = policy.CooldownMinutes,
+            MaxRetries = policy.MaxRetries,
+            RetryDelaySeconds = policy.RetryDelaySeconds,
             Levels = policy.Levels.Select(level => new EscalationLevelConfiguration
             {
                 Level = level.Level,
                 DelayMinutes = level.DelayMinutes,
                 NotificationChannel = level.NotificationChannel,
                 Template = level.MessageTemplate,
-                Severity = "Warning",
+                Severity = level.Severity,
                 Recipients = level.Recipients.Select(recipient => new EscalationLevelRecipientConfiguration
                 {
                     Name = recipient,
                     Recipient = recipient,
-                    RecipientType = "Email"
+                    RecipientType = level.RecipientType
                 }).ToList<EscalationLevelRecipientConfiguration>()
             }).ToList<EscalationLevelConfiguration>()
         };

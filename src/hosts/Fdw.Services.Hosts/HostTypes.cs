@@ -97,7 +97,7 @@ public partial class HostTypes : ServiceTypeCollectionBase<
 
         Initialization((host, loggerFactory) =>
         {
-            foreach (var option in Options.OrderBy(o => (o as IHostPipelinePosition)?.PipelinePosition ?? int.MaxValue))
+            foreach (var option in Options.OrderBy(o => o is IHostPipelinePosition ? 0 : 1).ThenBy(o => (o as IHostPipelinePosition)?.PipelinePosition))
             {
                 var result = option.Initialize(host, loggerFactory);
                 if (result.IsFailure)

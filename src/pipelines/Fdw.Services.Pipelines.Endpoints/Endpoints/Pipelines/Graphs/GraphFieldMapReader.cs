@@ -177,7 +177,8 @@ internal static class GraphFieldMapReader
 
             row.TransformationChain.Add(new PipelineComponentFieldTransformationConfiguration
             {
-                Name = name ?? id.ToString("D"),
+                // A step named by its id states no name; the chain resolves steps by TransformationId.
+                Name = name ?? string.Empty,
                 TransformationId = id,
                 Ordinal = step.Ordinal,
             });

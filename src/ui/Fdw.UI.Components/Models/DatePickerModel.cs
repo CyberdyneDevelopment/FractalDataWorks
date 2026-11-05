@@ -89,19 +89,19 @@ public sealed class DatePickerModel : IInputComponentModel<DateTime>
     {
         if (IsRequired && !Value.HasValue)
         {
-            return ValidationResult.Error($"{Label ?? Id} is required.");
+            return ValidationResult.Error($"{Id} is required.");
         }
 
         if (Value.HasValue)
         {
             if (MinDate.HasValue && Value.Value < MinDate.Value)
             {
-                return ValidationResult.Error($"{Label ?? Id} must be on or after {MinDate.Value.ToString(Format, System.Globalization.CultureInfo.CurrentCulture)}.");
+                return ValidationResult.Error($"{Id} must be on or after {MinDate.Value.ToString(Format, System.Globalization.CultureInfo.CurrentCulture)}.");
             }
 
             if (MaxDate.HasValue && Value.Value > MaxDate.Value)
             {
-                return ValidationResult.Error($"{Label ?? Id} must be on or before {MaxDate.Value.ToString(Format, System.Globalization.CultureInfo.CurrentCulture)}.");
+                return ValidationResult.Error($"{Id} must be on or before {MaxDate.Value.ToString(Format, System.Globalization.CultureInfo.CurrentCulture)}.");
             }
         }
 

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
+using Fdw.Conventions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.MsSql.Authentication;
 using Fdw.Services.Connections.MsSql.Limits;
@@ -89,7 +90,10 @@ public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfigura
     /// <summary>
     /// Gets or sets the SQL Server hostname or IP address.
     /// </summary>
-    public string Server { get; set; } = "localhost";
+    /// <remarks>
+    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
+    /// </remarks>
+    public string Server { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the database name.
@@ -97,9 +101,9 @@ public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfigura
     public string Database { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the SQL Server port. Default is 1433.
+    /// Gets or sets the SQL Server port.
     /// </summary>
-    public int Port { get; set; } = 1433;
+    public int Port { get; set; }
 
     /// <summary>
     /// Gets or sets the SQL Server instance name (for named instances).
@@ -144,29 +148,37 @@ public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfigura
     public int MaxSerialInsert { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection timeout in seconds.
+    /// Gets or sets the connection timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3580).
     /// </summary>
-    public int ConnectionTimeoutSeconds { get; set; } = 15;
+    /// <remarks>
+    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultConnectionTimeoutSeconds,
+    /// and is not built when that is not set either, as the command timeout is read (FDW-3284).
+    /// </remarks>
+    public int? ConnectionTimeoutSeconds { get; set; }
 
     /// <summary>
     /// Gets or sets the default schema to use for operations.
     /// </summary>
-    public string DefaultSchema { get; set; } = "dbo";
+    /// <remarks>
+    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
+    /// </remarks>
+    public string DefaultSchema { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a value indicating whether to trust the server certificate.
     /// </summary>
+    [CallerChoice]
     public bool TrustServerCertificate { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to encrypt the connection.
     /// </summary>
-    public bool Encrypt { get; set; } = true;
+    public bool Encrypt { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to enable connection pooling.
     /// </summary>
-    public bool EnableConnectionPooling { get; set; } = true;
+    public bool EnableConnectionPooling { get; set; }
 
     /// <summary>
     /// Gets or sets the minimum pool size.
@@ -176,7 +188,7 @@ public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfigura
     /// <summary>
     /// Gets or sets the maximum pool size.
     /// </summary>
-    public int MaxPoolSize { get; set; } = 100;
+    public int MaxPoolSize { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to enable multiple active result sets (MARS).

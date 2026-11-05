@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System.Linq;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Scheduling.Clients.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
@@ -51,11 +53,12 @@ public abstract class GetSchedulesProxyEndpointBase : EndpointWithoutRequest<IRe
         
         ScheduleProxyEndpointLog.ProxyRequest(EndpointLogger, "GET", "Scheduler", "schedules");
 
-        var result = await _client.List(ct).ConfigureAwait(false);
+        // ?tag= is forwarded as sent, so the scheduler host that holds the tags answers it; it is never dropped here (FDW-3816).
+        var result = await _client.List(HttpContext.Request.Query["tag"].Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value!).ToList(), ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            var errorMessage = result.CurrentMessage ?? "Proxy request failed";
+            var errorMessage = result.FailureReason().Message;
             ScheduleProxyEndpointLog.ProxyFailed(EndpointLogger, "Scheduler", errorMessage);
             AddError("Failed to proxy request to SchedulerServer");
             await Send.ErrorsAsync(502, ct).ConfigureAwait(false);

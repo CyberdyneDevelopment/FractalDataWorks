@@ -1,7 +1,9 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Workspaces.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 
@@ -49,8 +51,24 @@ public abstract class GetWorkspaceEndpointBase : CrudGetEndpointBase<WorkspaceNa
         }
 
         var ownership = await WorkspaceOwnershipReader.Read(Resolve<IOrganizationProvider>(), result.Value, Logger, ct).ConfigureAwait(false);
-        return ownership.IsFailure
-            ? ownership.ToNewResult<WorkspaceDetailResponse?>()
-            : GenericResult<WorkspaceDetailResponse?>.Success(WorkspaceResponseMapper.ToDetail(result.Value, ownership.Value!));
+        if (ownership.IsFailure) return ownership.ToNewResult<WorkspaceDetailResponse?>();
+
+        // The variations a workspace owns are data sets it owns (FDW-3638), so they are among its resources beside the ones attached.
+        var owned = await DataSetVariationQueries.OwnedBy(Resolve<IDataSetVariationConfigurationProvider>(), result.Value.Id, ct).ConfigureAwait(false);
+        if (owned.IsFailure) return owned.ToNewResult<WorkspaceDetailResponse?>();
+
+        var detail = WorkspaceResponseMapper.ToDetail(result.Value, ownership.Value!);
+        foreach (var variation in owned.Value!)
+        {
+            detail.Resources.Add(new WorkspaceResourceDto
+            {
+                Id = variation.Id,
+                ResourceType = MapKinds.DataSet,
+                ResourceId = variation.Id,
+                Relationship = WorkspaceResourceRelationships.ByName("Owns").Name,
+            });
+        }
+
+        return GenericResult<WorkspaceDetailResponse?>.Success(detail);
     }
 }

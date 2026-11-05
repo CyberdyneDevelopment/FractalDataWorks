@@ -196,7 +196,7 @@ public abstract class CrudListEndpointBase<TSummary> : EndpointWithoutRequest<Li
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
             await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
-                Code = msg.Code ?? "INTERNAL_ERROR",
+                Code = msg.Code ?? EndpointPlaceholders.InternalErrorCode,
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
@@ -392,6 +392,8 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
                 }
             }
 
+            TaggedWith = TagQuery.Read(HttpContext);
+
             var result = await LoadItems(req, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
@@ -421,7 +423,7 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
             await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
-                Code = msg.Code ?? "INTERNAL_ERROR",
+                Code = msg.Code ?? EndpointPlaceholders.InternalErrorCode,
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
@@ -434,6 +436,10 @@ public abstract class CrudListEndpointBase<TListRequest, TSummary> : Endpoint<TL
     /// Loads the list of resource summaries based on the request parameters.
     /// </summary>
     protected abstract Task<IGenericResult<List<TSummary>>> LoadItems(TListRequest request, CancellationToken ct);
+
+    /// <summary>Gets the tags this request names with <c>?tag=</c>; none when it names none (FDW-3816).</summary>
+    /// <remarks>Read from the request before the items are loaded; settable so a test that calls <c>LoadItems</c> directly can state them without a running host.</remarks>
+    protected IReadOnlyList<string> TaggedWith { get; set; } = [];
 
     /// <summary>
     /// Resolves which page of the loaded list to send.

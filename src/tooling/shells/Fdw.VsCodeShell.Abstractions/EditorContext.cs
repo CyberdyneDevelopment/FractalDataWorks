@@ -1,3 +1,4 @@
+using Fdw.Conventions;
 using Fdw.VsCodeShell.Abstractions;
 namespace Fdw.VsCodeShell;
 
@@ -13,4 +14,9 @@ public sealed record EditorContext(
     int? CursorLine,
     int? CursorCharacter,
     string? SelectionText,
-    string? WordUnderCursor);
+    string? WordUnderCursor)
+{
+    /// <summary>The context of a command invoked with no editor state: every field <c>null</c>, as when the bootstrap posts no body.</summary>
+    [PlatformDefault]
+    public static EditorContext None { get; } = new(null, null, null, null, null, null);
+}

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Workspaces.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 
@@ -77,30 +78,20 @@ public abstract class GetWorkspaceMapEndpointBase : CrudGetEndpointBase<Workspac
                 : permitted.ToNewResult<WorkspaceMapResponse?>();
         }
 
-        var counts = await VariationCounts(result.Value, ct).ConfigureAwait(false);
-        return counts.IsFailure
-            ? counts.ToNewResult<WorkspaceMapResponse?>()
-            : GenericResult<WorkspaceMapResponse?>.Success(ToMap(result.Value, counts.Value!));
-    }
-
-    /// <summary>Counts, per data set, the variations the workspace owns of it by kind.</summary>
-    /// <remarks>One domain query for the whole workspace, not one per node.</remarks>
-    private async Task<IGenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<WorkspaceMapVariationCountDto>>>> VariationCounts(
-        IWorkspaceImplementationConfiguration workspace, CancellationToken ct)
-    {
-        var owned = await DataSetVariationQueries.OwnedBy(_variations, workspace.Id, ct).ConfigureAwait(false);
-        if (owned.IsFailure) return owned.ToNewResult<IReadOnlyDictionary<Guid, IReadOnlyList<WorkspaceMapVariationCountDto>>>();
-
-        return GenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<WorkspaceMapVariationCountDto>>>.Success(
-            MapVariationCounts.Of(owned.Value!));
+        var owned = await DataSetVariationQueries.OwnedBy(_variations, result.Value.Id, ct).ConfigureAwait(false);
+        return owned.IsFailure
+            ? owned.ToNewResult<WorkspaceMapResponse?>()
+            : GenericResult<WorkspaceMapResponse?>.Success(ToMap(result.Value, MapVariationCounts.Of(owned.Value!), owned.Value!));
     }
 
     /// <summary>Projects a workspace onto its graph shape.</summary>
     /// <param name="config">The workspace, with its resources and relationships loaded.</param>
     /// <param name="variationCounts">The variations the workspace owns, counted by kind, per data set's logical id.</param>
+    /// <param name="owned">The variations the workspace owns: each is a node of its own, with an edge from what it varies.</param>
     protected static WorkspaceMapResponse ToMap(
         IWorkspaceImplementationConfiguration config,
-        IReadOnlyDictionary<Guid, IReadOnlyList<WorkspaceMapVariationCountDto>> variationCounts) => new()
+        IReadOnlyDictionary<Guid, IReadOnlyList<WorkspaceMapVariationCountDto>> variationCounts,
+        IReadOnlyList<DataSetVariationDomainConfiguration> owned) => new()
     {
         Nodes = config.Resources.Select(r => new WorkspaceMapNodeDto
         {
@@ -118,7 +109,7 @@ public abstract class GetWorkspaceMapEndpointBase : CrudGetEndpointBase<Workspac
                 ["resourceId"] = r.ResourceId.ToString(),
                 ["addedByUserId"] = r.AddedByUserId.ToString(),
             },
-        }).ToList(),
+        }).Concat(owned.Select(VariationNode)).ToList(),
 
         Edges = config.Relationships.Select(rel => new WorkspaceMapEdgeDto
         {
@@ -135,7 +126,32 @@ public abstract class GetWorkspaceMapEndpointBase : CrudGetEndpointBase<Workspac
             // The field ids are omitted rather than emitted as empty when unset, so a client cannot
             // read a placeholder as a chosen field.
             Metadata = BuildEdgeMetadata(rel),
-        }).ToList(),
+        }).Concat(owned.Select(VariationEdge)).ToList(),
+    };
+
+    // A variation the workspace owns is a data set it owns (FDW-3638): a node of its own, beside the attached resources.
+    private static WorkspaceMapNodeDto VariationNode(DataSetVariationDomainConfiguration variation) => new()
+    {
+        Id = variation.Id.ToString(),
+        Label = variation.VariationName,
+        NodeType = MapKinds.DataSet,
+        Category = WorkspaceResourceRelationships.ByName("Owns").Name,
+        Metadata = new Dictionary<string, object>(System.StringComparer.Ordinal)
+        {
+            ["resourceId"] = variation.Id.ToString(),
+            ["variationKind"] = variation.VariationKind,
+        },
+    };
+
+    // The edge from what the variation varies to the variation: its parent view, else the data set (the base the lineage reaches).
+    private static WorkspaceMapEdgeDto VariationEdge(DataSetVariationDomainConfiguration variation) => new()
+    {
+        Id = variation.Id.ToString(),
+        Source = (variation.ParentVariationId is { } parent ? parent : variation.BaseDataSetId).ToString(),
+        Target = variation.Id.ToString(),
+        RelationType = variation.VariationKind,
+        Label = variation.VariationName,
+        IsDefined = true,
     };
 
     /// <summary>The variation tokens of a node: a data set's counts, and none for any other kind of resource.</summary>

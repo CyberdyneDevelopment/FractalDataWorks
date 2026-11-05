@@ -12,24 +12,24 @@ public sealed class PollyRetryResiliencyConfiguration : ResiliencyConfiguration
 
 
     /// <summary>
-    /// Gets or sets the maximum number of retry attempts (not counting the initial attempt).
+    /// Gets or sets the maximum number of retry attempts (not counting the initial attempt). Required: the policy's definer states it, and the strategy refuses a policy that does not (FDW-3931).
     /// </summary>
-    public int MaxRetries { get; set; } = 3;
+    public int? MaxRetries { get; set; }
 
     /// <summary>
-    /// Gets or sets the backoff kind: Exponential, Fixed, or Random.
+    /// Gets or sets the backoff kind: Exponential, Fixed, or Random. Required: the policy's definer states it, and the strategy refuses a policy that does not (FDW-3931).
     /// </summary>
-    public string BackoffKind { get; set; } = "Exponential";
+    public string? BackoffKind { get; set; }
 
     /// <summary>
-    /// Gets or sets the base delay in milliseconds before the first retry.
+    /// Gets or sets the base delay in milliseconds before the first retry. Required: the policy's definer states it, and the strategy refuses a policy that does not (FDW-3931).
     /// </summary>
-    public int BaseDelayMs { get; set; } = 1000;
+    public int? BaseDelayMs { get; set; }
 
     /// <summary>
-    /// Gets or sets the maximum delay in milliseconds (caps exponential growth).
+    /// Gets or sets the maximum delay in milliseconds (caps exponential growth). Required: the policy's definer states it, and the strategy refuses a policy that does not (FDW-3931).
     /// </summary>
-    public int MaxDelayMs { get; set; } = 30000;
+    public int? MaxDelayMs { get; set; }
 
     /// <summary>
     /// Gets or sets the optional jitter percentage (0-100) to add randomness to delays.

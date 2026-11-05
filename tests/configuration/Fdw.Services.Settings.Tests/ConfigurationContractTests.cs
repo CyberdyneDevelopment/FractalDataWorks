@@ -29,7 +29,8 @@ public sealed class ConfigurationContractTests
         config.Description.ShouldBeNull();
         config.MinValue.ShouldBeNull();
         config.MaxValue.ShouldBeNull();
-        config.IsActive.ShouldBeTrue();
+        // A setting is active only when it says so; nothing is assumed (FDW-3823).
+        config.IsActive.ShouldBeFalse();
     }
 
     [Fact]
@@ -45,7 +46,8 @@ public sealed class ConfigurationContractTests
         config.TenantId.ShouldBe(Guid.Empty);
         config.Name.ShouldBe(string.Empty);
         config.SettingValue.ShouldBe(string.Empty);
-        config.IsActive.ShouldBeTrue();
+        // A setting is active only when it says so; nothing is assumed (FDW-3823).
+        config.IsActive.ShouldBeFalse();
     }
 
     [Fact]
@@ -62,6 +64,7 @@ public sealed class ConfigurationContractTests
         config.RoleName.ShouldBe(string.Empty);
         config.Name.ShouldBe(string.Empty);
         config.SettingValue.ShouldBe(string.Empty);
-        config.IsActive.ShouldBeTrue();
+        // A setting is active only when it says so; nothing is assumed (FDW-3823).
+        config.IsActive.ShouldBeFalse();
     }
 }

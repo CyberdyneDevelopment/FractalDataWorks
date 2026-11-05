@@ -1,6 +1,7 @@
 using System;
 using Fdw.Conventions;
 using Fdw.Data.DataContainers.Abstractions;
+using Fdw.Abstractions;
 
 namespace Fdw.Data.DataSets.Abstractions;
 
@@ -78,7 +79,7 @@ public sealed class DataField : IDataField, IEquatable<DataField>
     /// <summary>
     /// Gets the display name for this field.
     /// </summary>
-    public string DisplayName => Description ?? Name;
+    public string DisplayName => Description is null ? Name : Description;
 
     /// <summary>
     /// Gets the SQL type name equivalent for this field type.
@@ -141,7 +142,7 @@ public sealed class DataField : IDataField, IEquatable<DataField>
     [ConventionOverride(MaxCyclomaticComplexity = 15)]  // Numeric type detection for all primitive numeric types (signed, unsigned, floating-point)
     private static bool IsNumericType(Type type)
     {
-        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        var underlyingType = type.WithoutNullable();
 
         return underlyingType == typeof(byte) ||
                underlyingType == typeof(sbyte) ||
@@ -165,7 +166,7 @@ public sealed class DataField : IDataField, IEquatable<DataField>
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // CLR to SQL type mapping with comprehensive switch for primitives and common types
     private static string GetSqlTypeName(Type type, int? maxLength)
     {
-        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        var underlyingType = type.WithoutNullable();
 
         return underlyingType.Name switch
         {
@@ -189,7 +190,7 @@ public sealed class DataField : IDataField, IEquatable<DataField>
     /// Equality operator.
     /// </summary>
     public static bool operator ==(DataField? left, DataField? right) =>
-        left?.Equals(right) ?? right is null;
+        left is null ? right is null : left.Equals(right);
 
     /// <summary>
     /// Inequality operator.

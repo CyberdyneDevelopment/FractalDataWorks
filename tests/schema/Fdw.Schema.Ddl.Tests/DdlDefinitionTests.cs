@@ -1,3 +1,4 @@
+using Fdw.Configuration.Persistence.Schema;
 using Fdw.Schema.Ddl.Definitions;
 
 namespace Fdw.Schema.Ddl.Tests;
@@ -47,7 +48,7 @@ public class DdlDefinitionTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DdlForeignKeyDefinitionDefaultActions()
+    public void DdlForeignKeyDefinitionKeepsTheActionsTheCallerStates()
     {
         var fk = new DdlForeignKeyDefinition
         {
@@ -55,11 +56,13 @@ public class DdlDefinitionTests
             ColumnName = "ParentId",
             ReferencedSchema = "cfg",
             ReferencedTable = "Parent",
-            ReferencedColumn = "Id"
+            ReferencedColumn = "Id",
+            OnDelete = ForeignKeyActions.NoAction,
+            OnUpdate = ForeignKeyActions.NoAction
         };
 
-        fk.OnDelete.ShouldBe(DdlForeignKeyActions.NoAction);
-        fk.OnUpdate.ShouldBe(DdlForeignKeyActions.NoAction);
+        fk.OnDelete.ShouldBe(ForeignKeyActions.NoAction);
+        fk.OnUpdate.ShouldBe(ForeignKeyActions.NoAction);
     }
 
     [Fact]
@@ -74,12 +77,12 @@ public class DdlDefinitionTests
             ReferencedSchema = "dbo",
             ReferencedTable = "Orders",
             ReferencedColumn = "Id",
-            OnDelete = DdlForeignKeyActions.Cascade,
-            OnUpdate = DdlForeignKeyActions.SetNull
+            OnDelete = ForeignKeyActions.Cascade,
+            OnUpdate = ForeignKeyActions.SetNull
         };
 
-        fk.OnDelete.ShouldBe(DdlForeignKeyActions.Cascade);
-        fk.OnUpdate.ShouldBe(DdlForeignKeyActions.SetNull);
+        fk.OnDelete.ShouldBe(ForeignKeyActions.Cascade);
+        fk.OnUpdate.ShouldBe(ForeignKeyActions.SetNull);
     }
 
 }

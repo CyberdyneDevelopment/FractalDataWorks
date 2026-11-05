@@ -11,6 +11,7 @@ using Fdw.Results;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Data.MsSql.Tests.TestSupport;
 
 namespace Fdw.Data.MsSql.Tests.Translators;
 
@@ -43,6 +44,7 @@ public sealed class MsSqlQueryTranslatorAggregationTests
     private static IField CreateField(string name)
     {
         var field = new Mock<IField>();
+        field.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
         field.Setup(f => f.Name).Returns(name);
         field.Setup(f => f.IsIdentity).Returns(false);
         field.Setup(f => f.IsComputed).Returns(false);

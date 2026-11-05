@@ -42,6 +42,7 @@
     <ProjectReference Include="..\..\secrets\secretmanagers\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
     <ProjectReference Include="..\..\data\Fdw.Data.DataNodes\Fdw.Data.DataNodes.csproj" />
     <ProjectReference Include="..\Fdw.Data.Http\Fdw.Data.Http.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
 
   <ItemGroup>

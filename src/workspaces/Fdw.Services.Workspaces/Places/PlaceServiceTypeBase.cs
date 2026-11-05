@@ -16,14 +16,12 @@ public abstract class PlaceServiceTypeBase : ServiceTypeBase<IGenericService, IP
     /// <param name="sectionName">The configuration section name.</param>
     /// <param name="displayName">The display name.</param>
     /// <param name="description">The description.</param>
-    /// <param name="category">The optional category.</param>
     protected PlaceServiceTypeBase(
         string name,
         string sectionName,
         string displayName,
-        string description,
-        string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "Places")
+        string description)
+        : base(name, sectionName, displayName, description, "Places")
     {
     }
 }

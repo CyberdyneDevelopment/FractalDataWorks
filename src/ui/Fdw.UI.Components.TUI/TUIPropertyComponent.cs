@@ -15,7 +15,7 @@ public abstract class TUIPropertyComponent<TSelf, TProperty> : PropertyComponent
     /// <summary>
     /// Theme configuration.
     /// </summary>
-    public TUIThemeConfiguration? Theme { get; set; }
+    public required TUIThemeConfiguration Theme { get; set; }
 
     /// <summary>
     /// Prompts the user to enter a value for this property.
@@ -32,7 +32,7 @@ public abstract class TUIPropertyComponent<TSelf, TProperty> : PropertyComponent
     /// </summary>
     protected virtual string GetPromptText()
     {
-        return Metadata?.Label ?? typeof(TProperty).Name;
+        return Metadata?.Label ?? string.Empty;
     }
 
     /// <summary>

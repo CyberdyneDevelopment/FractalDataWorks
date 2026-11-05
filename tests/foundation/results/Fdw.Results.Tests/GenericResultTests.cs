@@ -812,9 +812,9 @@ public class GenericResultTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void GenericOfT_Map_WhenFailureWithNoMessage_PreservesNullCurrentMessage()
+    public void GenericOfT_Map_WhenFailureWithNoMessage_PreservesTheUnstatedFailure()
     {
-        // Arrange - empty message text is filtered out by GenericResult constructor
+        // Arrange - empty message text is filtered out, so the failure carries the named UnstatedFailure (FDW-3580)
         var result = (GenericResult<int>)GenericResult<int>.Failure(new GenericMessage(null!));
 
         // Act
@@ -822,7 +822,7 @@ public class GenericResultTests
 
         // Assert
         mapped.IsSuccess.ShouldBeFalse();
-        mapped.CurrentMessage.ShouldBeNull();
+        mapped.FailureReason().Code.ShouldBe(UnstatedFailure.Code);
     }
 
     #endregion
@@ -967,7 +967,7 @@ public class GenericResultTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void GenericOfT_Match_WhenFailureWithNoMessage_PassesEmptyString()
+    public void GenericOfT_Match_WhenFailureWithNoMessage_PassesTheUnstatedFailure()
     {
         // Arrange
         var result = (GenericResult<int>)GenericResult<int>.Failure(new GenericMessage(null!));
@@ -980,7 +980,7 @@ public class GenericResultTests
         );
 
         // Assert
-        capturedError.ShouldBe(string.Empty);
+        capturedError.ShouldBe(UnstatedFailure.Message().Message);
     }
 
     #endregion

@@ -56,4 +56,22 @@ public class CreateDataStoreRequest
     /// and keys, alongside whatever <see cref="Paths"/> supplies.
     /// </summary>
     public bool Discover { get; set; }
+
+    /// <summary>Gets or sets the schemas a discovery leaves out; an empty list leaves out none. Required when <see cref="Discover"/> is set (FDW-3823).</summary>
+    public IList<string>? ExcludedSchemas { get; set; }
+
+    /// <summary>Gets or sets the only schemas a discovery reads; null reads every schema not left out.</summary>
+    public IList<string>? IncludeOnlySchemas { get; set; }
+
+    /// <summary>Gets or sets whether a discovery reads views. Required when <see cref="Discover"/> is set.</summary>
+    public bool? DiscoverViews { get; set; }
+
+    /// <summary>Gets or sets whether a discovery reads indexes. Required when <see cref="Discover"/> is set.</summary>
+    public bool? DiscoverIndexes { get; set; }
+
+    /// <summary>Gets or sets whether a discovery reads foreign keys. Required when <see cref="Discover"/> is set.</summary>
+    public bool? DiscoverForeignKeys { get; set; }
+
+    /// <summary>Gets or sets whether a discovery reads descriptions. Required when <see cref="Discover"/> is set.</summary>
+    public bool? DiscoverDescriptions { get; set; }
 }

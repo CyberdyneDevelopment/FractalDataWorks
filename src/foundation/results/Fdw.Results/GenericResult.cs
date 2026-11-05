@@ -31,6 +31,8 @@ public class GenericResult : IGenericResult
         {
             EnsureMessages().Add(new GenericMessage(message!));
         }
+
+        RequireMessageOnFailure();
     }
 
     /// <summary>
@@ -46,6 +48,8 @@ public class GenericResult : IGenericResult
         {
             EnsureMessages().Add(message);
         }
+
+        RequireMessageOnFailure();
     }
 
     /// <summary>
@@ -61,6 +65,8 @@ public class GenericResult : IGenericResult
         {
             AppendMessages(messages);
         }
+
+        RequireMessageOnFailure();
     }
 
     /// <summary>
@@ -76,6 +82,8 @@ public class GenericResult : IGenericResult
         {
             AppendMessages(messages);
         }
+
+        RequireMessageOnFailure();
     }
 
     /// <summary>
@@ -84,19 +92,34 @@ public class GenericResult : IGenericResult
     /// <param name="code">The result code.</param>
     /// <param name="details">Optional details to format into the message.</param>
     protected GenericResult(IResultCode code, IResultDetails? details = null)
+        : this(code, SeveritySucceeded(code), details)
+    {
+    }
+
+    /// <summary>
+    /// Constructor for GenericResult with IResultCode and the outcome the caller states.
+    /// </summary>
+    /// <param name="code">The result code.</param>
+    /// <param name="isSuccess">Whether the call succeeded. The caller says so; the code's severity does not decide it (FDW-3463).</param>
+    /// <param name="details">Optional details to format into the message.</param>
+    protected GenericResult(IResultCode code, bool isSuccess, IResultDetails? details = null)
     {
         Code = code ?? throw new ArgumentNullException(nameof(code));
         Details = details;
-        IsSuccess = code.Severity.IsSuccess;
-        Status = code.Severity.IsSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
+        IsSuccess = isSuccess;
+        Status = isSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
 
         var formattedMessage = code.FormatMessage(details);
         EnsureMessages().Add(new GenericMessage(
-            code.Severity.IsSuccess ? MessageSeverity.Information : MessageSeverity.Error,
+            isSuccess ? MessageSeverity.Information : MessageSeverity.Error,
             formattedMessage,
             code.Code,
             code.Domain));
     }
+
+    // Why a helper: only Success(code) asks the code's severity for the outcome; a null code is refused here, naming it, as the constructors do.
+    private protected static bool SeveritySucceeded(IResultCode code) =>
+        (code ?? throw new ArgumentNullException(nameof(code))).Severity.IsSuccess;
 
     /// <summary>
     /// Constructor for GenericResult with IResultCode and inner result for chaining.
@@ -105,17 +128,29 @@ public class GenericResult : IGenericResult
     /// <param name="innerResult">The inner result to wrap.</param>
     /// <param name="details">Optional details to format into the message.</param>
     protected GenericResult(IResultCode code, IGenericResult innerResult, IResultDetails? details = null)
+        : this(code, innerResult, SeveritySucceeded(code), details)
+    {
+    }
+
+    /// <summary>
+    /// Constructor for GenericResult with IResultCode, an inner result for chaining, and the outcome the caller states.
+    /// </summary>
+    /// <param name="code">The result code.</param>
+    /// <param name="innerResult">The inner result to wrap.</param>
+    /// <param name="isSuccess">Whether the call succeeded. The caller says so; the code's severity does not decide it (FDW-3463).</param>
+    /// <param name="details">Optional details to format into the message.</param>
+    protected GenericResult(IResultCode code, IGenericResult innerResult, bool isSuccess, IResultDetails? details = null)
     {
         Code = code ?? throw new ArgumentNullException(nameof(code));
         InnerResult = innerResult ?? throw new ArgumentNullException(nameof(innerResult));
         Details = details;
-        IsSuccess = code.Severity.IsSuccess;
-        Status = code.Severity.IsSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
+        IsSuccess = isSuccess;
+        Status = isSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
 
         var formattedMessage = code.FormatMessage(details);
         var messages = EnsureMessages();
         messages.Add(new GenericMessage(
-            code.Severity.IsSuccess ? MessageSeverity.Information : MessageSeverity.Error,
+            isSuccess ? MessageSeverity.Information : MessageSeverity.Error,
             formattedMessage,
             code.Code,
             code.Domain));
@@ -143,6 +178,8 @@ public class GenericResult : IGenericResult
         {
             EnsureMessages().AddRange(source.Messages);
         }
+
+        RequireMessageOnFailure();
     }
 
 
@@ -257,6 +294,15 @@ public class GenericResult : IGenericResult
 
     private List<IGenericMessage> EnsureMessages() => _messages ??= [];
 
+    // A failed result always says why: every reader takes FailureReason() from it, so a failure built without a
+    // message carries the named UnstatedFailure, added here where it is made, instead of each reader inventing one.
+    // Not a throw: a result factory runs in endpoints and host phases, which must never throw (Mike, ee99604a, FDW-3580).
+    private void RequireMessageOnFailure()
+    {
+        if (!IsSuccess && _messages is not { Count: > 0 })
+            EnsureMessages().Add(UnstatedFailure.Message());
+    }
+
     // An empty collection adds nothing, so it must not be the thing that allocates the list.
     private void AppendMessages(IEnumerable<IGenericMessage> messages)
     {
@@ -364,7 +410,7 @@ public class GenericResult : IGenericResult
     /// <param name="code">The failure result code.</param>
     /// <param name="details">Optional details to format into the message.</param>
     /// <returns>A failed result.</returns>
-    public static IGenericResult Failure(IResultCode code, IResultDetails? details = null) => new GenericResult(code, details);
+    public static IGenericResult Failure(IResultCode code, IResultDetails? details = null) => new GenericResult(code, false, details);
 
     /// <summary>
     /// Creates a failed result with a result code and logs it.
@@ -376,7 +422,7 @@ public class GenericResult : IGenericResult
     public static IGenericResult Failure(IResultCode code, ILogger logger, IResultDetails? details = null)
     {
         code.Log(logger, details);
-        return new GenericResult(code, details);
+        return new GenericResult(code, false, details);
     }
 
     /// <summary>
@@ -387,7 +433,7 @@ public class GenericResult : IGenericResult
     /// <param name="details">Optional details to format into the message.</param>
     /// <returns>A failed result with chain.</returns>
     public static IGenericResult Chain(IResultCode code, IGenericResult innerResult, IResultDetails? details = null) =>
-        new GenericResult(code, innerResult, details);
+        new GenericResult(code, innerResult, false, details);
 
     /// <summary>
     /// Creates a failed result that chains to an inner result, adding context, and logs it.
@@ -400,7 +446,7 @@ public class GenericResult : IGenericResult
     public static IGenericResult Chain(IResultCode code, IGenericResult innerResult, ILogger logger, IResultDetails? details = null)
     {
         code.Log(logger, details);
-        return new GenericResult(code, innerResult, details);
+        return new GenericResult(code, innerResult, false, details);
     }
 
     /// <inheritdoc/>
@@ -470,17 +516,23 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
         _hasValue = status.IsSuccess;
     }
 
-    private GenericResult(TResult value, IResultCode code, IResultDetails? details = null) : base(code, details)
+    private GenericResult(TResult value, IResultCode code, IResultDetails? details = null)
+        : this(value, code, SeveritySucceeded(code), details)
     {
-        _value = value;
-        _hasValue = code.Severity.IsSuccess;
     }
 
-    private GenericResult(TResult value, IResultCode code, IGenericResult innerResult, IResultDetails? details = null)
-        : base(code, innerResult, details)
+    private GenericResult(TResult value, IResultCode code, bool isSuccess, IResultDetails? details = null)
+        : base(code, isSuccess, details)
     {
         _value = value;
-        _hasValue = code.Severity.IsSuccess;
+        _hasValue = isSuccess;
+    }
+
+    private GenericResult(TResult value, IResultCode code, IGenericResult innerResult, bool isSuccess, IResultDetails? details = null)
+        : base(code, innerResult, isSuccess, details)
+    {
+        _value = value;
+        _hasValue = isSuccess;
     }
 
     private GenericResult(TResult value, IGenericResult source) : base(source)
@@ -617,7 +669,7 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     /// <param name="code">The failure result code.</param>
     /// <param name="details">Optional details to format into the message.</param>
     /// <returns>A failed result.</returns>
-    public new static IGenericResult<TResult> Failure(IResultCode code, IResultDetails? details = null) => new GenericResult<TResult>(default!, code, details);
+    public new static IGenericResult<TResult> Failure(IResultCode code, IResultDetails? details = null) => new GenericResult<TResult>(default!, code, false, details);
 
     /// <summary>
     /// Creates a failed result with a result code and logs it.
@@ -629,7 +681,7 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     public new static IGenericResult<TResult> Failure(IResultCode code, ILogger logger, IResultDetails? details = null)
     {
         code.Log(logger, details);
-        return new GenericResult<TResult>(default!, code, details);
+        return new GenericResult<TResult>(default!, code, false, details);
     }
 
     /// <summary>
@@ -640,7 +692,7 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     /// <param name="details">Optional details to format into the message.</param>
     /// <returns>A failed result with chain.</returns>
     public new static IGenericResult<TResult> Chain(IResultCode code, IGenericResult innerResult, IResultDetails? details = null) =>
-        new GenericResult<TResult>(default!, code, innerResult, details);
+        new GenericResult<TResult>(default!, code, innerResult, false, details);
 
     /// <summary>
     /// Creates a failed result that chains to an inner result, adding context, and logs it.
@@ -653,7 +705,7 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     public new static IGenericResult<TResult> Chain(IResultCode code, IGenericResult innerResult, ILogger logger, IResultDetails? details = null)
     {
         code.Log(logger, details);
-        return new GenericResult<TResult>(default!, code, innerResult, details);
+        return new GenericResult<TResult>(default!, code, innerResult, false, details);
     }
 
 
@@ -700,7 +752,7 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     /// </summary>
     /// <typeparam name="T">The output type produced by both branches.</typeparam>
     /// <param name="success">Function invoked with the value when the result is successful.</param>
-    /// <param name="failure">Function invoked with the current message when the result is a failure.</param>
+    /// <param name="failure">Function invoked with the failure's message when the result is a failure; a failure always carries one.</param>
     /// <returns>The value produced by whichever branch was selected.</returns>
     public T Match<T>(Func<TResult, T> success, Func<string, T> failure)
     {
@@ -709,6 +761,6 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
         if (failure == null)
             throw new ArgumentNullException(nameof(failure));
 
-        return IsSuccess ? success(Value) : failure(CurrentMessage ?? string.Empty);
+        return IsSuccess ? success(Value) : failure(this.FailureReason().Message);
     }
 }

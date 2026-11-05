@@ -17,5 +17,5 @@ public sealed class PooledDictionaryMapperConfiguration : EtlRowMapperConfigurat
     /// Gets or sets the maximum dictionary size to pool.
     /// Dictionaries larger than this are not returned to the pool.
     /// </summary>
-    public int MaxDictionarySize { get; set; } = 100;
+    public int? MaxDictionarySize { get; set; }
 }

@@ -119,26 +119,7 @@ public class TypeCollectionGenerator : IIncrementalGenerator
             resolvedBaseType = baseType as INamedTypeSymbol;
         }
 
-        if (resolvedBaseType == null)
-            return ImmutableArray<ParameterModel>.Empty;
-
-        // Find the protected constructor with fewest parameters (prefer parameterless for Empty sentinel)
-        var ctor = resolvedBaseType.InstanceConstructors
-            .Where(c => c.DeclaredAccessibility == Accessibility.Protected)
-            .OrderBy(c => c.Parameters.Length)
-            .FirstOrDefault();
-
-        if (ctor == null)
-            return ImmutableArray<ParameterModel>.Empty;
-
-        return ctor.Parameters
-            .Select(p => new ParameterModel(
-                Name: p.Name,
-                Type: p.Type.ToDisplayString(),
-                HasDefaultValue: p.HasExplicitDefaultValue,
-                DefaultValue: string.Empty
-            ))
-            .ToImmutableArray();
+        return CodeGeneration.ExtractSentinelConstructorParameters(resolvedBaseType);
     }
 
     private static void Execute(
@@ -166,6 +147,9 @@ public class TypeCollectionGenerator : IIncrementalGenerator
 
             // Validate (but don't error on empty - that's expected for abstractions packages)
             ValidateOptions(context, collection, options);
+
+            if (CodeGeneration.GeneratesNotFound(options.Select(o => o.OptionName)))
+                CodeGeneration.ReportSentinelHostileParameters(context, collection.ClassName, collection.BaseConstructorParameters);
 
             // Look up the type symbols to extract abstract members
             var baseTypeSymbol = compilation.GetTypeByMetadataName(collection.BaseTypeName)
@@ -246,17 +230,8 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         // Check for duplicate lookup property values
         ValidateLookupPropertyValues(context, collection.ClassName, options);
 
-        // Check for constructor parameters that can't be safely defaulted
-        var unsafeParams = CodeGeneration.GetUnsafeParameters(collection.BaseConstructorParameters);
-        foreach (var param in unsafeParams)
-        {
-            context.ReportDiagnostic(Diagnostic.Create(
-                TypeCollectionGeneratorDiagnostics.UnknownConstructorParameterType,
-                Location.None,
-                collection.ClassName,
-                param.Name,
-                param.Type));
-        }
+        // Check for duplicate declared Ids (TC008) and say which cannot be read (TC013)
+        DeclaredIdValidation.Report(context, collection.ClassName, options);
     }
 
     private static void ValidateLookupPropertyValues(
@@ -764,8 +739,7 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         }
 
         // NotFound sentinel - skip if a TypeOption named "NotFound" already exists
-        var hasNotFoundOption = options.Any(o => string.Equals(o.OptionName, "NotFound", StringComparison.Ordinal));
-        if (!hasNotFoundOption)
+        if (CodeGeneration.GeneratesNotFound(options.Select(o => o.OptionName)))
         {
             bodySb.AppendLine($"        private static readonly {collection.InterfaceTypeName} _notFound = new NotFound{collection.ClassName}();");
             bodySb.AppendLine($"        /// <summary>Gets a sentinel instance returned when lookups fail.</summary>");

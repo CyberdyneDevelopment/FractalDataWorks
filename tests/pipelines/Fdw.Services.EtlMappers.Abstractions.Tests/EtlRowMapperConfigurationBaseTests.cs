@@ -100,7 +100,7 @@ public class EtlRowMapperConfigurationBaseTests
         config.EnablePooling = false;
 
         // Assert
-        config.EnablePooling.ShouldBeFalse();
+        config.EnablePooling.ShouldBe(false);
     }
 
     [Fact]

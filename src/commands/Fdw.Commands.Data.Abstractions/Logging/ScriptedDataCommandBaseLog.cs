@@ -16,4 +16,9 @@ public static partial class ScriptedDataCommandBaseLog
     [MessageLogging(EventId = 11290, Level = LogLevel.Trace,
         Message = "[ScriptedDataCommandBase] Created scripted command {commandId} of type '{commandType}'")]
     public static partial IGenericMessage CommandCreated(ILogger logger, Guid commandId, string commandType);
+
+    /// <summary>The first thing wrong with a scripted command itself, found before any store is reached (FDW-3580).</summary>
+    [MessageLogging(EventId = 61003, Level = LogLevel.Error,
+        Message = "The scripted command is not sound: {reason}")]
+    public static partial IGenericMessage CommandUnsound(ILogger logger, string reason);
 }

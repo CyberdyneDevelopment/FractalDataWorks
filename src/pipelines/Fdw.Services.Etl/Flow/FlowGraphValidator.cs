@@ -40,7 +40,7 @@ public static class FlowGraphValidator
     public static IReadOnlyList<FlowGraphProblem> Problems(FlowGraph graph)
     {
         ArgumentNullException.ThrowIfNull(graph);
-        return [.. ComponentProblems(graph), .. LinkProblems(graph), .. NodeCoverageProblems(graph), .. CycleProblems(graph), .. StageProblems(graph)];
+        return [.. ComponentProblems(graph), .. LinkProblems(graph), .. NodeCoverageProblems(graph), .. CycleProblems(graph), .. StageProblems(graph), .. CompletionProblems(graph)];
     }
 
     private static IEnumerable<FlowGraphProblem> ComponentProblems(FlowGraph graph)
@@ -182,6 +182,11 @@ public static class FlowGraphValidator
             }
         }
     }
+
+    // The completion lines (FDW-3640) are judged by the one validator the save also uses, over every component, an action or a loop among them.
+    private static IEnumerable<FlowGraphProblem> CompletionProblems(FlowGraph graph) =>
+        FlowCompletionValidator.Problems(
+            [.. graph.Components.Select(component => component.Name).Where(name => !string.IsNullOrWhiteSpace(name))], graph.Links, graph.Completions, graph.RankOf);
 
     private static string Rank(FlowGraph graph, string component) =>
         graph.RankOf(component) == 0 ? "(none)" : graph.RankOf(component).ToString(System.Globalization.CultureInfo.InvariantCulture);

@@ -18,6 +18,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         // Arrange
         var config = new ServerSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = "MaxRows",
             SettingValue = "1000",
             DataType = "Int32"
@@ -38,6 +39,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         // Arrange
         var config = new ServerSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = string.Empty,
             SettingValue = "1000",
             DataType = "Int32"
@@ -58,6 +60,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         // Arrange
         var config = new ServerSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = "MaxRows",
             SettingValue = string.Empty,
             DataType = "Int32"
@@ -78,6 +81,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         // Arrange
         var config = new ServerSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = "MaxRows",
             SettingValue = "1000",
             DataType = string.Empty
@@ -98,6 +102,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         // Arrange
         var config = new ServerSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = "MaxRows",
             SettingValue = "1000",
             DataType = new string('x', 65)
@@ -118,6 +123,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         // Arrange
         var config = new ServerSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = "MaxRows",
             SettingValue = "1000",
             DataType = "Int32",
@@ -142,6 +148,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         // Arrange
         var config = new ServerSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = name,
             SettingValue = "0",
             DataType = "Int32"

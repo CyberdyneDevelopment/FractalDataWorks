@@ -128,4 +128,87 @@ public sealed class GraphShapeValidatorTests
 
         problems.Count(problem => Path(problem) == "components/thing").ShouldBe(1);
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void ACompletionLineBetweenTwoSeparateChainsIsAcceptedAndCarriesNoRowNode()
+    {
+        var graph = Graph(
+            [DataSetSource("srcA"), Mapped("mapA", ("A", "B")), DataSetSource("srcB"), Mapped("mapB", ("A", "B"))],
+            [Link("srcA", "mapA"), Link("srcB", "mapB"), Link("mapA", "srcB", "done", "after")],
+            Dropped("mapA"),
+            Dropped("mapB"));
+
+        GraphShapeValidator.Problems(graph, NullLogger.Instance).ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void ACompletionLineBetweenComponentsThatPassRowsIsRefusedAtTheLine()
+    {
+        var graph = Graph(
+            [DataSetSource("src"), Mapped("map", ("A", "B"))],
+            [Link("src", "map"), Link("map", "src", "done", "after")],
+            Dropped("map"));
+
+        var problems = GraphShapeValidator.Problems(graph, NullLogger.Instance);
+
+        problems.Select(Path).ShouldContain("links/1");
+        problems.Select(problem => problem.Reason).ShouldContain(reason => reason.Contains("run together", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void ACompletionLineToAnEarlierStageIsRefusedAtTheLine()
+    {
+        var srcA = DataSetSource("srcA");
+        var mapA = Mapped("mapA", ("A", "B"));
+        var srcB = DataSetSource("srcB");
+        var mapB = Mapped("mapB", ("A", "B"));
+        srcA.Stage = 2;
+        mapA.Stage = 2;
+        srcB.Stage = 1;
+        mapB.Stage = 1;
+        var graph = Graph(
+            [srcA, mapA, srcB, mapB],
+            [Link("srcA", "mapA"), Link("srcB", "mapB"), Link("mapA", "srcB", "done", "after")],
+            Dropped("mapA"),
+            Dropped("mapB"));
+
+        var problems = GraphShapeValidator.Problems(graph, NullLogger.Instance);
+
+        problems.Select(Path).ShouldContain("links/2");
+        problems.Select(problem => problem.Reason).ShouldContain(reason => reason.Contains("runs from stage 2 to stage 1", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void ACompletionLineToAComponentThatIsNotInTheGraphIsRefused()
+    {
+        var graph = Graph([DataSetSource("src"), Mapped("map", ("A", "B"))], [Link("src", "map"), Link("map", "nowhere", "done", "after")], Dropped("map"));
+
+        GraphShapeValidator.Problems(graph, NullLogger.Instance).Select(Path).ShouldContain("links/1");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnOutputAPersonNamesDoneIsRefusedBecauseEveryComponentAlreadyHasThatName()
+    {
+        var split = new PipelineComponentConfiguration { Name = "split", ComponentType = "ConditionalSplit", Routing = "FirstMatch", UnmatchedOutput = "rest" };
+        split.SplitOutputs.Add(new PipelineComponentSplitOutputConfiguration { Ordinal = 0, OutputName = "done", FilterExpression = "Id > 1" });
+        var graph = Graph(
+            [DataSetSource("src"), split, Mapped("mapRest", ("A", "B"))],
+            [Link("src", "split"), Link("split", "mapRest", "rest")],
+            Dropped("mapRest"));
+
+        var problems = GraphShapeValidator.Problems(graph, NullLogger.Instance);
+
+        problems.Select(Path).ShouldContain("components/split");
+        problems.Select(problem => problem.Reason).ShouldContain(reason => reason.Contains("output named 'done'", System.StringComparison.Ordinal));
+    }
 }

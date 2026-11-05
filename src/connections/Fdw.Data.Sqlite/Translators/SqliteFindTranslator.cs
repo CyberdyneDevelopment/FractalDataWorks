@@ -166,8 +166,8 @@ public sealed class SqliteFindTranslator : SqliteDataCommandTranslatorBase
     }
 
     private static string EscapeLikeWildcards(string value)
-        => value.Replace("%", "\\%").Replace("_", "\\_");
+        => value.Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
 
     private static string EscapeGlobWildcards(string value)
-        => value.Replace("[", "[[]").Replace("*", "[*]").Replace("?", "[?]");
+        => value.Replace("[", "[[]", StringComparison.Ordinal).Replace("*", "[*]", StringComparison.Ordinal).Replace("?", "[?]", StringComparison.Ordinal);
 }

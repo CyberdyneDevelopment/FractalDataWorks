@@ -26,6 +26,8 @@ internal sealed class EscalationPolicyRecord : IEscalationPolicy
     public Guid? WorkflowId => _config.WorkflowId;
     public int MaxEscalationLevel => _config.MaxEscalationLevel;
     public int CooldownMinutes => _config.CooldownMinutes;
+    public int MaxRetries => _config.MaxRetries;
+    public int RetryDelaySeconds => _config.RetryDelaySeconds;
 
     public IReadOnlyList<IEscalationLevel> Levels =>
         (_config.Levels ?? [])

@@ -10,7 +10,7 @@ namespace Fdw.Services.Connections.Configuration;
 /// </summary>
 /// <remarks>
 /// Persisted to <c>tenant.ConnectionAssignmentConfiguration</c>, reached through the domain row in <c>tenant.ConnectionAssignment</c>, whose name is
-/// <c>{OrganizationId}:{Purpose}</c>.
+/// <c>{OrganizationId}:{Purpose}</c>, or <c>{OrganizationId}:{Purpose}:{Id}</c> for an assignment that superseded another (FDW-3396).
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
@@ -42,6 +42,9 @@ public partial class ConnectionAssignmentImplementationConfiguration : IConnecti
 
     /// <inheritdoc />
     public string? BaseFolder { get; set; }
+
+    /// <inheritdoc />
+    public DateTimeOffset? SupersededAt { get; set; }
 
     /// <inheritdoc />
     public bool IsCurrent { get; set; } = true;

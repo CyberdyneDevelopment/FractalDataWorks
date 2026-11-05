@@ -196,7 +196,8 @@ public class RecordExpectations
     /// <returns>This <see cref="RecordExpectations"/> instance for method chaining.</returns>
     public RecordExpectations HasParameterCount(int count)
     {
-        var actualCount = _recordDeclaration.ParameterList?.Parameters.Count ?? 0;
+        // A record declared without a parameter list has no parameters (FDW-3580).
+        var actualCount = _recordDeclaration.ParameterList is { } parameterList ? parameterList.Parameters.Count : 0;
         actualCount.ShouldBe(
             count,
             $"Expected record '{_recordDeclaration.Identifier}' to have {count} parameters but found {actualCount}");

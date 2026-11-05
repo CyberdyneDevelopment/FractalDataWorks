@@ -31,15 +31,15 @@ public static class ConnectionRequestBody
     {
         var body = new JsonObject();
         SetText(body, "server", request.Server);
-        if (request.Port != new CreateConnectionRequest().Port)
-            body["port"] = request.Port;
+        if (request.Port is { } port)
+            body["port"] = port;
         SetText(body, "database", request.Database);
         SetText(body, "authenticationType", request.AuthenticationType);
         SetEntries(body, "authentication", request.Authentication);
-        if (request.TrustServerCertificate)
-            body["trustServerCertificate"] = true;
-        if (!request.Encrypt)
-            body["encrypt"] = false;
+        if (request.TrustServerCertificate is { } trust)
+            body["trustServerCertificate"] = trust;
+        if (request.Encrypt is { } encrypt)
+            body["encrypt"] = encrypt;
         SetText(body, "baseUrl", request.BaseUrl);
         SetText(body, "protocol", request.Protocol);
         if (request.TimeoutSeconds is { } timeout)
@@ -47,8 +47,8 @@ public static class ConnectionRequestBody
         SetEntries(body, "headers", request.Headers);
         SetText(body, "securityType", request.SecurityType);
         SetEntries(body, "security", request.Security);
-        if (request.UseMtls)
-            body["useMtls"] = true;
+        if (request.UseMtls is { } useMtls)
+            body["useMtls"] = useMtls;
         SetText(body, "defaultValuePolicy", request.DefaultValuePolicy);
 
         return Overlay(body, request.Configuration);

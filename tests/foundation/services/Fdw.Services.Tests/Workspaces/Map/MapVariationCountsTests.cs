@@ -18,7 +18,7 @@ public class MapVariationCountsTests
     {
         Id = Guid.NewGuid(),
         BaseDataSetId = baseDataSetId,
-        Implementation = kind,
+        VariationKind = kind,
     };
 
     [Fact]

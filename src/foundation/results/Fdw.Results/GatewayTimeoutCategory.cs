@@ -16,7 +16,7 @@ public sealed class GatewayTimeoutCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="GatewayTimeoutCategory"/> class.
     /// </summary>
     public GatewayTimeoutCategory()
-        : base(id: 11, name: "GatewayTimeout", isFailure: true, isRetryable: true, httpStatus: 504, clientMessage: "The request timed out waiting on a downstream service", clientAction: "Retry in a few moments")
+        : base(id: 11, name: "GatewayTimeout", isFailure: true, isRetryable: true, countsTowardFailureThresholds: true, httpStatus: 504, clientMessage: "The request timed out waiting on a downstream service", clientAction: "Retry in a few moments")
     {
     }
 }

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Fdw.Conventions;
 
 namespace Fdw.Services.TokenManagers;
 
@@ -58,7 +59,7 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         // minting anything other than that exact string -- including a Uri-canonicalised form --
         // guarantees a mismatch.
         if (!Uri.TryCreate(_configuration.Issuer, UriKind.Absolute, out var issuerUri)
-            || (issuerUri.Scheme != Uri.UriSchemeHttps && issuerUri.Scheme != Uri.UriSchemeHttp))
+            || (!string.Equals(issuerUri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal) && !string.Equals(issuerUri.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal)))
         {
             return GenericResult<IssuedToken>.Failure(IssuerLog.IssuerNotAbsolute(_logger, _configuration.Issuer));
         }
@@ -147,7 +148,7 @@ public sealed class JwtTokenIssuer : ITokenIssuer
             TokenType = "at+jwt",
         });
 
-        IssuerLog.Issued(_logger, request.Audience, request.PrincipalId, request.Acr ?? "none");
+        IssuerLog.Issued(_logger, request.Audience, request.PrincipalId, request.Acr ?? LogPlaceholders.NoLevel);
 
         return GenericResult<IssuedToken>.Success(new IssuedToken
         {

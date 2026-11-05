@@ -3,14 +3,14 @@ using Shouldly;
 
 namespace Fdw.Services.Multitenancy.Abstractions.Tests;
 
-/// <summary>Proves an organization names no default workspace until one is set (FDW-1060).</summary>
+/// <summary>Proves an organization's default workspace id is what was set and is the empty id until one is (FDW-3668).</summary>
 [Trait("Priority", "P1")]
 public class OrganizationConfigurationTests
 {
     [Fact]
-    public void ANewOrganizationNamesNoDefaultWorkspace()
+    public void ANewOrganizationHoldsTheEmptyIdUntilItsDefaultWorkspaceIsSet()
     {
-        new OrganizationConfiguration().DefaultWorkspaceId.ShouldBeNull();
+        new OrganizationConfiguration().DefaultWorkspaceId.ShouldBe(Guid.Empty);
     }
 
     [Fact]

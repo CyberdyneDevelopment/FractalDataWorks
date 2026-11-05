@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Abstractions.Logging;
 using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Sqlite.Logging;
@@ -12,12 +13,13 @@ using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Sql;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Connections.Sqlite;
 
 /// <summary>
-/// Translates DeleteCommand to a SQLite DELETE statement. A command with no filter has no condition, so it deletes
-/// every row: the container is emptied. A command that carries soft-delete options flags the rows instead (an UPDATE
+/// Translates DeleteCommand to a SQLite DELETE statement. A command with no filter deletes every row only when it says
+/// AllRows; without it the command is refused (<see cref="DeleteScope"/>, FDW-3660). A command that carries soft-delete options flags the rows instead (an UPDATE
 /// that sets the deleted-flag column).
 /// </summary>
 [TypeOption(typeof(SqliteDataCommandTranslators), "Delete", RestrictToCurrentCompilation = true)]
@@ -60,6 +62,10 @@ public sealed class SqliteDeleteTranslator : SqliteDataCommandTranslatorBase
 
             if (container.Path is not IDatabasePath dbPath)
                 return Task.FromResult(GenericResult<SqliteCommand>.Failure(SqliteDataResultCodes.ByName("InvalidContainerPath")));
+
+            // A delete states its rows: a filter, soft-delete options, or AllRows. One with none is never sent (FDW-3660).
+            if (DeleteScope.Problem(command) is { } problem)
+                return Task.FromResult(GenericResult<SqliteCommand>.Failure(DeleteScopeLog.Refused(NullLogger<SqliteDeleteTranslator>.Instance, container.Name, problem)));
 
             if (command is ISoftDeletableCommand { SoftDelete: { } soft })
                 return Task.FromResult(GenericResult<SqliteCommand>.Success(BuildSoftDeleteStatement(dbPath, container, soft, command.Filter)));

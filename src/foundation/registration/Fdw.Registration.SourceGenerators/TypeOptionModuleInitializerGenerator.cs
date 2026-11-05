@@ -386,9 +386,9 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
             options.Add(new ModuleInitOptionModel(
                 OptionTypeName: type.Name,
                 OptionFullTypeName: type.ToDisplayString(),
-                OptionNamespace: type.ContainingNamespace?.ToDisplayString() ?? "",
+                OptionNamespace: type.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 CollectionFullName: collectionFullName,
-                CollectionNamespace: collectionType.ContainingNamespace?.ToDisplayString() ?? "",
+                CollectionNamespace: collectionType.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 CollectionClassName: collectionType.Name
             ));
         }

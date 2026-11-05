@@ -23,10 +23,10 @@ public static class TableRenderer
         IAnsiConsole console,
         IEnumerable<T> items,
         Dictionary<string, Func<T, string>> columns,
-        TUIThemeConfiguration? theme = null)
+        TUIThemeConfiguration theme)
     {
-        var border = theme?.Borders.Table ?? TableBorder.Rounded;
-        var borderColor = theme?.Colors.Primary ?? Color.Blue;
+        var border = theme.Borders.Table;
+        var borderColor = theme.Colors.Primary;
 
         var table = new Table()
             .Border(border)

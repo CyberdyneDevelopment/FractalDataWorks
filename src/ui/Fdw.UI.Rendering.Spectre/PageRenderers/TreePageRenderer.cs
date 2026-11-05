@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.UI.Abstractions;
 using Fdw.UI.Abstractions.Pages;
 using Fdw.UI.Themes;
 using Spectre.Console;
@@ -114,7 +115,7 @@ public sealed class TreePageRenderer
 
         var statusColor = GetStatusColor(node.Status, theme);
         var labelColor = isSelected ? theme.Colors.Selected : theme.Colors.Foreground;
-        var icon = node.Icon ?? GetDefaultIcon(node.NodeType);
+        var icon = NodeIcon(node, theme);
 
         var selectionMarker = isSelected ? $"[{theme.Colors.Primary}]►[/] " : "  ";
 
@@ -133,24 +134,14 @@ public sealed class TreePageRenderer
         };
     }
 
-    private static string GetDefaultIcon(string nodeType)
+    private static string NodeIcon(ITreeNode node, IMenuTheme theme)
     {
-        return nodeType.ToLowerInvariant() switch
+        if (!string.IsNullOrEmpty(node.Icon))
         {
-            "dataset" => "📊",
-            "field" => "📄",
-            "mapping" => "🔗",
-            "source" => "💾",
-            "join" => "⊕",
-            "pipeline" => "⚙",
-            "stage" => "▶",
-            "workflow" => "🔄",
-            "step" => "•",
-            "folder" => "📁",
-            "file" => "📄",
-            "connection" => "🔌",
-            _ => "○"
-        };
+            return node.Icon;
+        }
+
+        return theme.Icons.NodeIcon(node.NodeType);
     }
 
     private static void RenderNodeDetails(ITreeNode node, IAnsiConsole console, IMenuTheme theme)
@@ -171,7 +162,7 @@ public sealed class TreePageRenderer
             {
                 table.AddRow(
                     $"[{theme.Colors.Muted}]{key}[/]",
-                    $"[{theme.Colors.Foreground}]{value ?? "-"}[/]"
+                    $"[{theme.Colors.Foreground}]{value ?? UiPlaceholders.NoValue}[/]"
                 );
             }
 
@@ -216,7 +207,7 @@ public sealed class TreePageRenderer
         foreach (var node in flatNodes.Where(n => n.IsSelectable))
         {
             var indent = new string(' ', node.Depth * 2);
-            var icon = node.Icon ?? GetDefaultIcon(node.NodeType);
+            var icon = NodeIcon(node, theme);
             var isSelected = string.Equals(page.SelectedNode?.Id, node.Id, StringComparison.Ordinal) ? "►" : " ";
             choices.Add(($"select:{node.Id}", $"{isSelected}{indent}{icon} {node.Label}", node));
         }
@@ -293,8 +284,8 @@ public sealed class TreePageRenderer
                 return new TreePageResult { ShouldExit = false };
 
             default:
-                var action = page.TreeActions.FirstOrDefault(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal))
-                    ?? page.NodeActions.FirstOrDefault(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal));
+                var action = page.TreeActions.Concat(page.NodeActions)
+                    .FirstOrDefault(a => string.Equals(a.Id, selected.Id, StringComparison.Ordinal));
 
                 if (action != null)
                 {

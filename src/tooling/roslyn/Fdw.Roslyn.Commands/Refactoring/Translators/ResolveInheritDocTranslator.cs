@@ -319,11 +319,14 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
             .FirstOrDefault(e => string.Equals(e.Name.LocalName, "inheritdoc", StringComparison.OrdinalIgnoreCase))
             ?.Attribute("cref")?.Value;
 
+    // What <inheritdoc/> inherits from, searched in the order C# documents it: the member a member overrides, else the interface member it
+    // implements. A search order, so each step is its own return; nothing is substituted for a missing value.
     private static ISymbol? FindBaseMember(ISymbol symbol) => symbol switch
     {
-        IMethodSymbol method => method.OverriddenMethod ?? FindInterfaceMember(method),
-        IPropertySymbol property => property.OverriddenProperty ?? FindInterfaceMember(property),
-        IEventSymbol @event => @event.OverriddenEvent ?? FindInterfaceMember(@event),
+        IMethodSymbol { OverriddenMethod: { } overridden } => overridden,
+        IPropertySymbol { OverriddenProperty: { } overridden } => overridden,
+        IEventSymbol { OverriddenEvent: { } overridden } => overridden,
+        IMethodSymbol or IPropertySymbol or IEventSymbol => FindInterfaceMember(symbol),
         INamedTypeSymbol type => type.BaseType is not null && type.BaseType.SpecialType != SpecialType.System_Object
             ? type.BaseType
             : type.Interfaces.FirstOrDefault(),

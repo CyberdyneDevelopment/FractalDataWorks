@@ -12,5 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\..\..\..\src\foundation\validation\Fdw.Validation.Abstractions\Fdw.Validation.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\..\src\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 </Project>

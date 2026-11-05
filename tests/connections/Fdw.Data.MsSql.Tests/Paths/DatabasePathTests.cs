@@ -27,13 +27,27 @@ public sealed class DatabasePathTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void TwoPartConstructorDefaultsToDboSchema()
+    public void NoConstructorAssumesASchemaForTheCallerWhoStatesNone()
     {
-        var sut = new DatabasePath("Northwind", "Customers");
+        // FDW-3454: the two-argument constructor defaulted the schema to "dbo"; a path states its schema.
+        var twoStrings = typeof(DatabasePath).GetConstructors()
+            .Where(constructor => constructor.GetParameters().Length == 2
+                && constructor.GetParameters().All(parameter => parameter.ParameterType == typeof(string)));
 
-        sut.Database.ShouldBe("Northwind");
-        sut.Schema.ShouldBe("dbo");
-        sut.ObjectName.ShouldBe("Customers");
+        twoStrings.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void ConstructorRefusesABlankSchemaInsteadOfBuildingAPathWithNone(string schema)
+    {
+        var refused = Should.Throw<ArgumentException>(() => new DatabasePath("Northwind", schema, "Customers"));
+
+        refused.ParamName.ShouldBe("schema");
+        refused.Message.ShouldContain("states its schema");
     }
 
     [Fact]

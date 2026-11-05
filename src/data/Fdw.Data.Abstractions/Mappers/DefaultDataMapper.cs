@@ -16,12 +16,16 @@ public sealed class DefaultDataMapper<TSource, TTarget>(
     TTarget targetConverter)
     : DataMapperBase<TSource, TTarget>(
         id: $"Default_{sourceConverter.Name}_to_{targetConverter.Name}",
-        name: $"{sourceConverter.Name} → {targetConverter.Name}",
-        sourceConverter: sourceConverter,
-        targetConverter: targetConverter)
+        name: $"{sourceConverter.Name} → {targetConverter.Name}")
     where TSource : IDataTypeConverter
     where TTarget : IDataTypeConverter
 {
+    /// <inheritdoc/>
+    public override TSource SourceConverter { get; } = sourceConverter;
+
+    /// <inheritdoc/>
+    public override TTarget TargetConverter { get; } = targetConverter;
+
     /// <summary>
     /// Uses default CLR bridge (delegates to MapViaClr).
     /// No optimization - two conversions occur.

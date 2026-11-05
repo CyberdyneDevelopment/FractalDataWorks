@@ -56,7 +56,7 @@ public sealed class ListReferencesTranslator : RoslynCommandTranslatorBase<ListR
                 var refProject = solution.GetProject(r.ProjectId);
                 return new ReferenceSummary(
                     type: "Project",
-                    name: refProject?.Name ?? "Unknown",
+                    name: refProject?.Name ?? RoslynReportPlaceholders.Unknown,
                     filePath: refProject?.FilePath ?? string.Empty);
             })
             .ToList();
@@ -64,7 +64,7 @@ public sealed class ListReferencesTranslator : RoslynCommandTranslatorBase<ListR
         var metadataReferences = project.MetadataReferences
             .Select(r => new ReferenceSummary(
                 type: "Assembly",
-                name: Path.GetFileName(r.Display ?? "Unknown"),
+                name: Path.GetFileName(r.Display ?? RoslynReportPlaceholders.Unknown),
                 filePath: r.Display ?? string.Empty))
             .ToList();
 

@@ -10,4 +10,7 @@ public sealed class DeleteLoadStepKind : LoadStepKindBase
     public DeleteLoadStepKind() : base("Delete", "The rows with the keys of the output rows are removed, or flagged deleted.", usesKeyColumns: true, usesCompareColumns: false, usesWriteColumns: false, allowsVersioning: false, allowsSoftDelete: true, usesSourceDataSet: false, usesRows: true, acceptsRejectedRecords: false)
     {
     }
+
+    /// <inheritdoc/>
+    public override bool RepeatsToSameResult => true;
 }

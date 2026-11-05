@@ -44,7 +44,7 @@ public abstract class GetLineagePathEndpointBase : LineageEndpointBase<LineagePa
         var query = LineageRequests.Path(request, LineageLogger);
         if (query.IsFailure) return query.ToNewResult<LineagePathResponse>();
 
-        var graph = await Reader.Read(request.Workspace, User, ct).ConfigureAwait(false);
+        var graph = await Reader.Read(request.Workspace, User, readCategories: false, ct).ConfigureAwait(false);
         if (graph.IsFailure) return graph.ToNewResult<LineagePathResponse>();
 
         var missing = Missing(graph.Value!, query.Value!);

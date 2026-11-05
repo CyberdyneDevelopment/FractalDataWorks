@@ -16,7 +16,7 @@ public sealed class DependencyCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="DependencyCategory"/> class.
     /// </summary>
     public DependencyCategory()
-        : base(id: 7, name: "Dependency", isFailure: true, isRetryable: true, httpStatus: 502, clientMessage: "A required downstream service is unavailable", clientAction: "Retry in a few moments")
+        : base(id: 7, name: "Dependency", isFailure: true, isRetryable: true, countsTowardFailureThresholds: true, httpStatus: 502, clientMessage: "A required downstream service is unavailable", clientAction: "Retry in a few moments")
     {
     }
 }

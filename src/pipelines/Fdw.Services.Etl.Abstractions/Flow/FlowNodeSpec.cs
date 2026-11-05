@@ -14,6 +14,7 @@ namespace Fdw.Services.Etl.Abstractions.Flow;
 /// (<c>outputs</c> names a split's filtered outputs from their rows, <c>errorOutput</c> and <c>unmatchedOutput</c> name one
 /// node each); <see langword="null"/> when the graph's links name it, and for a node whose name the kind fixes.
 /// </param>
+/// <param name="IsCompletion">Whether the node carries no rows and only completion (FDW-3640): the <c>after</c> and <c>done</c> nodes of every kind.</param>
 public sealed record FlowNodeSpec(
     string Name,
     bool IsNamedByUser,
@@ -21,4 +22,5 @@ public sealed record FlowNodeSpec(
     int? Max,
     bool IsError,
     string HelpText,
-    string? NamedBySetting = null);
+    string? NamedBySetting = null,
+    bool IsCompletion = false);

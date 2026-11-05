@@ -79,7 +79,28 @@ internal sealed class WorkspaceMapSelection : MapSelection
     public override async IAsyncEnumerable<IDataSetImplementationConfiguration> DataSets(
         MapSources sources, MapState state, [EnumeratorCancellation] CancellationToken ct)
     {
-        foreach (var id in Attached(MapKinds.DataSet))
+        await foreach (var dataSet in ReadDataSets(sources, state, Attached(MapKinds.DataSet), ct).WithCancellation(ct).ConfigureAwait(false))
+            yield return dataSet;
+
+        if (state.Outcome.IsFailure) yield break;
+
+        // A variation the workspace owns is a data set it owns (FDW-3638), drawn with the data set it varies so the edge between them has both ends.
+        var owned = await DataSetVariationQueries.OwnedBy(sources.Variations, _workspace.Id, ct).ConfigureAwait(false);
+        if (owned.IsFailure)
+        {
+            state.Fail(owned);
+            yield break;
+        }
+
+        await foreach (var dataSet in ReadDataSets(sources, state, owned.Value!.SelectMany(v => new[] { v.Id, v.BaseDataSetId }), ct).WithCancellation(ct).ConfigureAwait(false))
+            yield return dataSet;
+    }
+
+    // Reads each data set by id, as far as the first failure; an id that names nothing is noted in the state and left out.
+    private async IAsyncEnumerable<IDataSetImplementationConfiguration> ReadDataSets(
+        MapSources sources, MapState state, IEnumerable<Guid> ids, [EnumeratorCancellation] CancellationToken ct)
+    {
+        foreach (var id in ids)
         {
             var read = await sources.DataSets.Get(id, ConfigurationLevels.Children, ct).ConfigureAwait(false);
             var dataSet = MapSources.Resolve(read, MapKinds.DataSet, Reference(id), NamedBy(), state, _logger);

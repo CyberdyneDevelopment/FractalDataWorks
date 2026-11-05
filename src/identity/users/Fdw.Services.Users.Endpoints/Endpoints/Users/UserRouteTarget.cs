@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Users.Configuration;
 using Fdw.Services.Users.Results;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -34,8 +35,7 @@ public static class UserRouteTarget
     {
         if (string.Equals(idOrName, Self, StringComparison.OrdinalIgnoreCase))
         {
-            var subject = caller.FindFirstValue(ClaimTypes.NameIdentifier) ?? caller.FindFirstValue("sub");
-            return Guid.TryParse(subject, out var callerId)
+            return CallerClaims.TryGetUserId(caller, out var callerId)
                 ? provider.Get(callerId, ct)
                 : Task.FromResult(GenericResult<IUserImplementationConfiguration>.Failure(
                     UserResultCodes.ByName("UserNotFound")));

@@ -194,6 +194,16 @@ public interface IFrameworkSchedulingService : IServiceOption
     Task<IGenericResult> TriggerSchedule(string scheduleId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Runs a schedule once for the fire times it missed while the scheduler was down (FDW-3788), when its missed-fire rule is FireOnce.
+    /// </summary>
+    /// <param name="scheduleId">The identifier of the schedule to run.</param>
+    /// <param name="dueTime">The latest fire time that was missed: the time the run was due.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
+    /// <returns>A task representing the result of the trigger operation.</returns>
+    /// <remarks>The run goes through the same path as any other fire, is recorded with the trigger type Catchup, and states the time it was due as the time it was scheduled for.</remarks>
+    Task<IGenericResult> TriggerCatchup(string scheduleId, DateTimeOffset dueTime, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves a specific schedule by its identifier.
     /// </summary>
     /// <param name="scheduleId">The identifier of the schedule to retrieve.</param>

@@ -10,6 +10,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Results;
 using Fdw.Configuration;
 using Fdw.Services.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services;
 
@@ -64,7 +65,7 @@ public abstract class PlatformServiceFactory<TService, TConfiguration> : IServic
                 ServicesResultCodes.ByName("ConfigurationRequired"),
                 ResultDetails.Create("ServiceType", serviceTypeName));
 
-        ServiceFactoryLogger.CreatingService(_logger, serviceTypeName, configuration.Name ?? "unnamed");
+        ServiceFactoryLogger.CreatingService(_logger, serviceTypeName, configuration.Name ?? LogPlaceholders.Unnamed);
 
         // FastNew requires the service's own logger as the first constructor parameter.
         if (FastNew.TryCreateInstance<TService, ILogger<TService>, TConfiguration>(_serviceLogger, configuration, out var service))

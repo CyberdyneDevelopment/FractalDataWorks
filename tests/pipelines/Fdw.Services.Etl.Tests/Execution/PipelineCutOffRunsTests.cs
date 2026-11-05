@@ -12,7 +12,7 @@ namespace Fdw.Services.Etl.Tests.Execution;
 
 /// <summary>
 /// Tests for what happens to the runs that were running when the ETL host stopped (FDW-3236): the restart limit is a setting with no default, a run is
-/// started again while it has been started fewer times than the limit, and every other run is closed as failed with the reason it is not.
+/// started again while it has been started fewer times than the limit, and every other run is closed as Interrupted with the reason it is not.
 /// </summary>
 public sealed class PipelineCutOffRunsTests
 {
@@ -52,6 +52,8 @@ public sealed class PipelineCutOffRunsTests
         var scopes = new ServiceCollection().AddSingleton<IEffectiveSettingsProvider>(settings).AddSingleton(accessor.Object).BuildServiceProvider()
             .GetRequiredService<IServiceScopeFactory>();
         _store.Setup(s => s.GiveUp(It.IsAny<InterruptedRun>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
+        _store.Setup(s => s.CommittedLoads(It.IsAny<InterruptedRun>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<CommittedLoad>>.Success([]));
         _store.Setup(s => s.StartAgain(It.IsAny<InterruptedRun>(), It.IsAny<CancellationToken>())).ReturnsAsync((InterruptedRun run, CancellationToken _) =>
             GenericResult<PipelineExecutionRequest>.Success(new PipelineExecutionRequest
             {
@@ -136,5 +138,102 @@ public sealed class PipelineCutOffRunsTests
         var started = await sut.StartAgain([bad, good], TestContext.Current.CancellationToken);
 
         started.Select(request => request.PipelineName).ShouldBe(["good"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ALimitOfZeroLeavesTheRunInterruptedAndSaysSo()
+    {
+        var sut = Sut(new Settings(0));
+        var run = Run("monthly-sales", 0);
+
+        var started = await sut.StartAgain([run], TestContext.Current.CancellationToken);
+
+        started.ShouldBeEmpty();
+        _store.Verify(s => s.StartAgain(It.IsAny<InterruptedRun>(), It.IsAny<CancellationToken>()), Times.Never);
+        _store.Verify(
+            s => s.GiveUp(run, It.Is<string>(reason => reason.Contains("MaxPipelineRunRestarts") && reason.Contains("is 0") && reason.Contains("Interrupted")), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    private void Committed(InterruptedRun run, params CommittedLoad[] loads) =>
+        _store.Setup(s => s.CommittedLoads(run, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<CommittedLoad>>.Success(loads));
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ARunWhoseInsertCommittedRowsIsLeftInterruptedAndTheRefusalNamesTheDestinationAndTheCount()
+    {
+        var sut = Sut(new Settings(1));
+        var run = Run("monthly-sales", 0);
+        Committed(run, new CommittedLoad("Players", 1200, false));
+
+        var started = await sut.StartAgain([run], TestContext.Current.CancellationToken);
+
+        started.ShouldBeEmpty();
+        _store.Verify(s => s.StartAgain(It.IsAny<InterruptedRun>(), It.IsAny<CancellationToken>()), Times.Never);
+        _store.Verify(
+            s => s.GiveUp(run, It.Is<string>(reason => reason.Contains("'Players'") && reason.Contains("1200") && reason.Contains("twice")), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ARunWhoseDestinationsRepeatToTheSameResultIsStartedAgain()
+    {
+        var sut = Sut(new Settings(1));
+        var run = Run("monthly-sales", 0);
+        Committed(run, new CommittedLoad("Players", 1200, true), new CommittedLoad("Teams", 32, true));
+
+        var started = await sut.StartAgain([run], TestContext.Current.CancellationToken);
+
+        started.Count.ShouldBe(1);
+        _store.Verify(s => s.GiveUp(It.IsAny<InterruptedRun>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task OneDestinationThatWouldAddItsRowsAgainRefusesTheRetryEvenWhenTheOthersRepeat()
+    {
+        var sut = Sut(new Settings(1));
+        var run = Run("monthly-sales", 0);
+        Committed(run, new CommittedLoad("Teams", 32, true), new CommittedLoad("Players", 7, false));
+
+        var started = await sut.StartAgain([run], TestContext.Current.CancellationToken);
+
+        started.ShouldBeEmpty();
+        _store.Verify(s => s.GiveUp(run, It.Is<string>(reason => reason.Contains("'Players'") && !reason.Contains("'Teams'")), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ARunWhoseCommittedRowsCannotBeReadIsNotStartedAgainAndSaysSo()
+    {
+        var sut = Sut(new Settings(1));
+        var run = Run("monthly-sales", 0);
+        _store.Setup(s => s.CommittedLoads(run, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<CommittedLoad>>.Failure(new GenericMessage("no records")));
+
+        var started = await sut.StartAgain([run], TestContext.Current.CancellationToken);
+
+        started.ShouldBeEmpty();
+        _store.Verify(s => s.GiveUp(run, It.Is<string>(reason => reason.Contains("could not be read") && reason.Contains("no records")), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AFullLimitIsAppliedBeforeAnyReadOfWhatWasCommitted()
+    {
+        var sut = Sut(new Settings(1));
+        var run = Run("monthly-sales", 1);
+
+        await sut.StartAgain([run], TestContext.Current.CancellationToken);
+
+        _store.Verify(s => s.CommittedLoads(It.IsAny<InterruptedRun>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

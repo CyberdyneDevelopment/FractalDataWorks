@@ -40,7 +40,7 @@ public sealed class ValidateResultHandlingTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        ValidateResultHandlingTranslatorLog.Scanning(Logger, command.ProjectFilter ?? "(all)");
+        ValidateResultHandlingTranslatorLog.Scanning(Logger, command.ProjectFilter ?? RoslynReportPlaceholders.All);
 
         var issues = new List<ResultHandlingIssue>();
 
@@ -61,7 +61,7 @@ public sealed class ValidateResultHandlingTranslator
                 var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
                 if (compilation is null) continue;
 
-                foreach (var document in project.Documents)
+                foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
@@ -85,7 +85,7 @@ public sealed class ValidateResultHandlingTranslator
                                 Severity = "Warning",
                                 Message = $"Result of '{methodSymbol.Name}' is discarded — no IsSuccess / Match / await check.",
                                 Project = project.Name,
-                                FilePath = document.FilePath ?? document.Name,
+                                FilePath = documentPath,
                                 Line = lineSpan.StartLinePosition.Line + 1,
                                 Code = invocation.ToString(),
                                 MethodName = methodSymbol.Name,
@@ -103,7 +103,7 @@ public sealed class ValidateResultHandlingTranslator
                                 Severity = "Warning",
                                 Message = $"Result of '{methodSymbol.Name}' is explicitly discarded via '_'.",
                                 Project = project.Name,
-                                FilePath = document.FilePath ?? document.Name,
+                                FilePath = documentPath,
                                 Line = lineSpan.StartLinePosition.Line + 1,
                                 Code = invocation.ToString(),
                                 MethodName = methodSymbol.Name,
@@ -134,7 +134,7 @@ public sealed class ValidateResultHandlingTranslator
         var data = new ResultHandlingValidationData
         {
             IssueCount = issues.Count,
-            ProjectFilter = command.ProjectFilter ?? "(all)",
+            ProjectFilter = command.ProjectFilter ?? RoslynReportPlaceholders.All,
             Issues = issues,
         };
 
@@ -154,7 +154,7 @@ public sealed class ValidateResultHandlingTranslator
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) return GenericResult.Success();
 
-            foreach (var document in project.Documents)
+            foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
@@ -176,7 +176,7 @@ public sealed class ValidateResultHandlingTranslator
                             Severity = "Warning",
                             Message = $"Result of '{methodSymbol.Name}' is discarded — no IsSuccess / Match / await check.",
                             Project = project.Name,
-                            FilePath = document.FilePath ?? document.Name,
+                            FilePath = documentPath,
                             Line = lineSpan.StartLinePosition.Line + 1,
                             Code = invocation.ToString(),
                             MethodName = methodSymbol.Name,
@@ -192,7 +192,7 @@ public sealed class ValidateResultHandlingTranslator
                             Severity = "Warning",
                             Message = $"Result of '{methodSymbol.Name}' is explicitly discarded via '_'.",
                             Project = project.Name,
-                            FilePath = document.FilePath ?? document.Name,
+                            FilePath = documentPath,
                             Line = lineSpan.StartLinePosition.Line + 1,
                             Code = invocation.ToString(),
                             MethodName = methodSymbol.Name,

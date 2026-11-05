@@ -53,9 +53,6 @@ public sealed class ODataInsertTranslator : ODataCommandTranslatorBase
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
-        ODataInsertTranslatorLog.Translating(
-            NullLogger<ODataInsertTranslator>.Instance, container?.Name ?? "<null>");
-
         try
         {
             if (container == null)
@@ -65,6 +62,8 @@ public sealed class ODataInsertTranslator : ODataCommandTranslatorBase
                     GenericResult<HttpRequestMessage>.Failure(
                         ODataResultCodes.ByName("ContainerNull")));
             }
+
+            ODataInsertTranslatorLog.Translating(NullLogger<ODataInsertTranslator>.Instance, container.Name);
 
             // Get entity data from metadata
             if (command.Metadata == null || !command.Metadata.TryGetValue("Data", out var dataObj) || dataObj == null)
@@ -98,7 +97,7 @@ public sealed class ODataInsertTranslator : ODataCommandTranslatorBase
         catch (Exception ex)
         {
             ODataInsertTranslatorLog.InsertTranslationFailed(
-                NullLogger<ODataInsertTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
+                NullLogger<ODataInsertTranslator>.Instance, ex, container.Name, ex.Message);
             return Task.FromResult<IGenericResult<HttpRequestMessage>>(
                 GenericResult<HttpRequestMessage>.Failure(
                     ODataResultCodes.ByName("InsertTranslationFailed"),

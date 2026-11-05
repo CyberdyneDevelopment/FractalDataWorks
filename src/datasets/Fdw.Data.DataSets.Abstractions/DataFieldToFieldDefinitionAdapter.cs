@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Schema;
 using Fdw.Schema.Properties;
+using Fdw.Conventions;
 
 namespace Fdw.Data.DataSets.Abstractions;
 
@@ -17,6 +18,10 @@ namespace Fdw.Data.DataSets.Abstractions;
 [ExcludeFromCodeCoverage]
 public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
 {
+    /// <summary>The role a field takes when no role provider names one: an attribute.</summary>
+    [PlatformDefault]
+    private static IDatumType DefaultRole => DatumTypes.Attribute;
+
     private readonly DataSetFieldConfiguration _config;
     private readonly IDatumType _role;
     private readonly Type _clrType;
@@ -33,7 +38,7 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
         _config = config;
 
         // Resolve role
-        _role = roleProvider?.Invoke(config.Role) ?? DatumTypes.Attribute;
+        _role = roleProvider?.Invoke(config.Role) ?? DefaultRole;
 
         // The field's data type is a DataTypes option name; one that is not has no CLR type to adapt to.
         _clrType = DataSetFieldTypes.Resolve(config.TypeName)

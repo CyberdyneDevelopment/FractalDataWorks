@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Conventions;
 
 namespace Fdw.Data.Abstractions;
 
@@ -8,6 +9,10 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 public abstract class PathTypeBase : TypeOptionBase<PathTypeBase>, IPathType
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Path";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PathTypeBase"/> class.
     /// </summary>
@@ -22,7 +27,7 @@ public abstract class PathTypeBase : TypeOptionBase<PathTypeBase>, IPathType
         string description,
         string domain,
         string? category = null)
-        : base(name, $"Paths:{name}", displayName, description, category ?? "Path")
+        : base(name, $"Paths:{name}", displayName, description, category ?? DefaultCategory)
     {
         Domain = domain;
     }

@@ -368,7 +368,9 @@ public sealed class RoslynCommandHandlerTests
     {
         // Arrange
         var command = new FakeCreateSnapshotCommand { SnapshotName = "my-snapshot", SnapshotDescription = "desc" };
-        var fakeResult = new FakeSnapshotCommandResult();
+        // The translator's real result shape: its counts are kept, its placeholder id is replaced.
+        var fakeResult = new MutationResult<SnapshotData>(
+            "placeholder", NewSolution(), new SnapshotData { SnapshotId = "placeholder", Name = "my-snapshot", Description = "desc" });
         var translatorMock = new Mock<IRoslynCommandTranslator>();
         translatorMock
             .Setup(t => t.Execute(command, It.IsAny<Solution>(), It.IsAny<CancellationToken>()))

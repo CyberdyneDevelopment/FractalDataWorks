@@ -56,7 +56,7 @@ public abstract class SqlCommandTranslatorBase<TCommand, TResult> : SqlCommandTr
         {
             return GenericResult<ISqlCommandResult>.Failure(
                 SqlResultCodes.CommandExecutionFailed,
-                ResultDetails.Create("Message", result.CurrentMessage ?? "Unknown error"));
+                ResultDetails.Create("Message", result.FailureReason().Message));
         }
         return GenericResult<ISqlCommandResult>.Success(result.Value!);
     }

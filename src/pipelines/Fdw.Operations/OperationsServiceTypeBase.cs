@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Operations;
 
@@ -9,6 +10,10 @@ namespace Fdw.Operations;
 /// </summary>
 public abstract class OperationsServiceTypeBase : ServiceTypeBase<IGenericService, IOperationsServiceFactory, IServiceConfiguration>, IOperationsServiceType
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Operations";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OperationsServiceTypeBase"/> class.
     /// </summary>
@@ -18,7 +23,7 @@ public abstract class OperationsServiceTypeBase : ServiceTypeBase<IGenericServic
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "Operations")
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory)
     {
     }
 }

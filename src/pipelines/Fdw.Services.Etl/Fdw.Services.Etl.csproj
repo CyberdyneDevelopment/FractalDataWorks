@@ -38,6 +38,7 @@
     <ProjectReference Include="..\..\notifications\Fdw.Services.Notifications.Abstractions\Fdw.Services.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
     <ProjectReference Include="..\..\calculations\Fdw.Services.Calculations\Fdw.Services.Calculations.csproj" />
+    <ProjectReference Include="..\Fdw.Operations\Fdw.Operations.csproj" />
     <!-- Why: IExecutionCompletionSignaler lives in Projects.Abstractions so the optional signaler
          hook in PipelineExecutionBackgroundService can call Signal without a circular reference.
          Services.Etl.Projects depends on Services.Etl, not the reverse. -->

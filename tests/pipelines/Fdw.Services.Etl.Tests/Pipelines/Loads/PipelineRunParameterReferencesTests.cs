@@ -170,4 +170,32 @@ public sealed class PipelineRunParameterReferencesTests
         // Assert
         result.Messages[^1].Code.ShouldBe("PIPELINERUN-20207");
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void ResolveGivenReplacesTheParametersItIsGivenAndLeavesTheOthersAsWritten()
+    {
+        // Act
+        var result = PipelineRunParameterReferences.ResolveGiven(
+            "template", "SELECT * FROM {{Table}} WHERE Year = {{ Year }} AND Region = {{Region}}", Values(("Table", "dbo.Team"), ("Year", 2026L)), NullLogger.Instance);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldBe("SELECT * FROM dbo.Team WHERE Year = 2026 AND Region = {{Region}}");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void ResolveGivenLeavesATextWithNoReferenceUntouchedAndRefusesAValueThatCannotBePlaced()
+    {
+        // Act
+        var plain = PipelineRunParameterReferences.ResolveGiven("template", "nothing to fill", Values(("Table", "dbo.Team")), NullLogger.Instance);
+        var unsafeValue = PipelineRunParameterReferences.ResolveGiven("template", "FROM {{Table}}", Values(("Table", "Team; DROP TABLE x")), NullLogger.Instance);
+
+        // Assert
+        plain.Value.ShouldBe("nothing to fill");
+        unsafeValue.IsFailure.ShouldBeTrue();
+    }
 }

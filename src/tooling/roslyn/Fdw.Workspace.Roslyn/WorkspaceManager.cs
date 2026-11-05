@@ -10,6 +10,7 @@ using Fdw.Results;
 using Fdw.Workspace.Roslyn.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Workspace.Roslyn;
 
@@ -33,6 +34,7 @@ public sealed class WorkspaceManager : IWorkspaceManager
     /// <summary>
     /// Default sleep timeout of 5 minutes.
     /// </summary>
+    [PlatformDefault]
     public static readonly TimeSpan DefaultSleepTimeout = TimeSpan.FromMinutes(5);
 
     /// <summary>

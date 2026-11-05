@@ -44,4 +44,8 @@ public interface IPipelineStatusHubClient
     /// Called when a test execution is resumed.
     /// </summary>
     Task OnExecutionResumed(Guid executionId);
+
+    /// <summary>Sent when the components of a run in flight changed (FDW-3778).</summary>
+    /// <param name="update">The run's components.</param>
+    Task OnComponentsChanged(PipelineComponentsUpdate update);
 }

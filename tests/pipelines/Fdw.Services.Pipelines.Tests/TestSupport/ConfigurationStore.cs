@@ -159,6 +159,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
             .ReturnsAsync(GenericResult<IEnumerable<Dictionary<string, object?>>>.Success([DomainKeys()]));
 
         store.ImplementationsReadFromWhatIsHeld();
+        store.ImplementationsReadSetsFromWhatIsHeld();
         store.SaveSucceeds();
 
         store.Provider.Register(implementationName, store.Implementations.Object);
@@ -288,6 +289,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
         var failure = new Mock<IGenericResult<TContract>>();
         failure.SetupGet(r => r.IsSuccess).Returns(false);
         failure.SetupGet(r => r.CurrentMessage).Returns((string?)null);
+        failure.SetupGet(r => r.Messages).Returns(new List<Fdw.Messages.IGenericMessage>());
 
         Implementations
             .Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -295,6 +297,14 @@ internal sealed class ConfigurationStore<TProvider, TContract>
         Implementations
             .Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(failure.Object);
+
+        var setFailure = new Mock<IGenericResult<IReadOnlyDictionary<Guid, TContract>>>();
+        setFailure.SetupGet(r => r.IsSuccess).Returns(false);
+        setFailure.SetupGet(r => r.CurrentMessage).Returns((string?)null);
+        setFailure.SetupGet(r => r.Messages).Returns(new List<Fdw.Messages.IGenericMessage>());
+        Implementations
+            .Setup(p => p.GetSet(It.IsAny<IEnumerable<Guid>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(setFailure.Object);
     }
 
     /// <summary>Makes the implementation read answer from what this store holds.</summary>
@@ -314,6 +324,14 @@ internal sealed class ConfigurationStore<TProvider, TContract>
                     ? GenericResult<TContract>.Success(item)
                     : GenericResult<TContract>.Success(default!)));
     }
+
+    /// <summary>Makes the implementation set read answer from what this store holds, keyed by the id each was asked under.</summary>
+    private void ImplementationsReadSetsFromWhatIsHeld()
+        => Implementations
+            .Setup(p => p.GetSet(It.IsAny<IEnumerable<Guid>>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns((IEnumerable<Guid> ids, int _, CancellationToken _) => Task.FromResult<IGenericResult<IReadOnlyDictionary<Guid, TContract>>>(
+                GenericResult<IReadOnlyDictionary<Guid, TContract>>.Success(
+                    ids.Where(_byRow.ContainsKey).Distinct().ToDictionary(id => id, id => _byRow[id]))));
 
     /// <summary>Makes the implementation write succeed, handing back the record it was given.</summary>
     public void SaveSucceeds()
@@ -338,6 +356,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
         var failure = new Mock<IGenericResult<ConfigurationWriteResult>>();
         failure.SetupGet(r => r.IsSuccess).Returns(false);
         failure.SetupGet(r => r.CurrentMessage).Returns((string?)null);
+        failure.SetupGet(r => r.Messages).Returns(new List<Fdw.Messages.IGenericMessage>());
 
         Implementations
             .Setup(p => p.Save(It.IsAny<TContract>(), It.IsAny<IDataContainer>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
@@ -365,5 +384,5 @@ internal static class ConfigurationStore
             NewDataSetProvider, DataSetsImplementation, items);
 
     private static DataSetConfigurationProvider NewDataSetProvider(IConfigurationGatewayProvider gateways)
-        => new(NullLogger<DataSetConfigurationProvider>.Instance, gateways, StoreName, "data", "DataSet");
+        => new(NullLogger<DataSetConfigurationProvider>.Instance, gateways, StoreName, "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement());
 }

@@ -36,6 +36,7 @@ internal static class DestinationOptions
         row.InsertOnlyRuleValue = component.InsertOnlyRuleValue;
         row.SoftDeleteMode = component.SoftDeleteMode;
         row.DeletedFlagColumn = component.DeletedFlagColumn;
+        row.DeletedFlagValue = component.DeletedFlagValue;
         row.DeletedAtColumn = component.DeletedAtColumn;
         row.SoftDeleteMarkerColumn = component.SoftDeleteMarkerColumn;
         row.SoftDeleteMarkerValue = component.SoftDeleteMarkerValue;

@@ -87,4 +87,14 @@ public static partial class PipelineLoadLog
         Message = "In {owner}: a value is supplied for '{columnName}' by two value sources")]
     public static partial IGenericMessage ValueSourceColumnDuplicated(ILogger logger, string owner, string columnName);
 
+    /// <summary>Logs a refused graph destination: In owner: value source 'valueSource' fills a column that is not of type Guid.</summary>
+    [MessageLogging(EventId = 20032, Level = LogLevel.Warning,
+        Message = "In {owner}: the {kind} value source fills column '{columnName}', which cannot hold a Guid: {reason}")]
+    public static partial IGenericMessage ValueSourceColumnNotGuid(ILogger logger, string owner, string kind, string columnName, string reason);
+
+    /// <summary>Logs a graph destination whose data set could not be read, so its value source columns were not checked against it.</summary>
+    [MessageLogging(EventId = 20033, Level = LogLevel.Information,
+        Message = "In {owner}: the data set '{dataSet}' could not be read, so the columns its value sources fill were not checked against it; the run checks them")]
+    public static partial IGenericMessage ValueSourceColumnsNotChecked(ILogger logger, string owner, string dataSet);
+
 }

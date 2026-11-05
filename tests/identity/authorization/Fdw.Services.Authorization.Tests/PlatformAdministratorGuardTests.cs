@@ -207,7 +207,7 @@ public sealed class PlatformAdministratorGuardTests
         return new PlatformAdministratorGuard(
             systemRoles.Object,
             tenants.Object,
-            ConfigurationCatalog.Roles([new RoleImplementationConfiguration { Id = AdminRoleId, Name = AdminName, TenantId = GlobalTenant }]),
+            ConfigurationCatalog.Roles([new RoleImplementationConfiguration { IsTenantScoped = true, Id = AdminRoleId, Name = AdminName, TenantId = GlobalTenant }]),
             ConfigurationCatalog.UserRoles(assignments),
             NullLogger<PlatformAdministratorGuard>.Instance);
     }

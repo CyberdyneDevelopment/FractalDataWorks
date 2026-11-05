@@ -33,6 +33,7 @@
          RoslynWorkspaceConnection wraps IRoslynWorkspace — it does not duplicate the loading
          logic. The IRoslynWorkspaceFactory.CreateFromSolution() call is the single seam. -->
     <ProjectReference Include="..\..\tooling\roslyn\Fdw.Workspace.Roslyn\Fdw.Workspace.Roslyn.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Fdw.Services.Connections.RoslynWorkspace.Tests" />

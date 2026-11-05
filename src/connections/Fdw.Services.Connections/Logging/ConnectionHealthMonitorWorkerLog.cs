@@ -31,6 +31,10 @@ public static partial class ConnectionHealthMonitorWorkerLog
     [MessageLogging(EventId = 12204, Level = LogLevel.Error, Message = "Failed to resolve connection '{connectionName}' during the health monitor pass: {reason}")]
     public static partial IGenericMessage ConnectionResolutionFailed(ILogger logger, string connectionName, string reason);
 
+    /// <summary>Logs that IConnectionProvider answered success for a connection but carried no connection; it is recorded unhealthy (FDW-3580).</summary>
+    [MessageLogging(EventId = 12207, Level = LogLevel.Error, Message = "Resolving connection '{connectionName}' during the health monitor pass succeeded but returned no connection")]
+    public static partial IGenericMessage ConnectionResolvedEmpty(ILogger logger, string connectionName);
+
     /// <summary>Logs that a connection has health checks enabled but its type does not support probing.</summary>
     [MessageLogging(EventId = 12205, Level = LogLevel.Debug, Message = "Connection '{connectionName}' has health checks enabled but its connection type does not support health probing — skipping")]
     public static partial IGenericMessage NoProbeCapability(ILogger logger, string connectionName);

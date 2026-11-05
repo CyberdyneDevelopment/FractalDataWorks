@@ -28,9 +28,6 @@ public abstract class ApproveExecutionEndpointBase : DecideExecutionEndpointBase
     protected override IExecutionStateType Target => ExecutionStateTypes.Scheduled;
 
     /// <inheritdoc />
-    protected override string DefaultMessage => "Approved";
-
-    /// <inheritdoc />
     protected override string EndpointSummary => "Approve a run that waits for approval";
 
     /// <summary>Queues the approved run the way the trigger would have: the host knows what a run of its kind is queued as.</summary>

@@ -45,6 +45,21 @@ public class GraphPayload
     /// <summary>Gets or sets the time zone the time of day is read in (FDW-3129).</summary>
     public string? DelayedStartTimeZoneId { get; set; }
 
+    /// <summary>
+    /// Gets or sets why the pipeline is disabled by its failure rule (FDW-3864); answered by a read, never read from a save. Null when the pipeline is enabled, states no rule, or its
+    /// recent failures do not reach its threshold.
+    /// </summary>
+    public GraphDisabledByFailureRule? DisabledByFailureRule { get; set; }
+
+    /// <summary>Gets or sets whether the pipeline is a template (FDW-3379): it is never triggered or scheduled, and a new pipeline is made from it.</summary>
+    public bool IsTemplate { get; set; }
+
+    /// <summary>Gets or sets the name of the template the pipeline was made from (FDW-3379); omitted when it was not made from one.</summary>
+    public string? TemplateName { get; set; }
+
+    /// <summary>Gets or sets the version of that template the pipeline was made from, the time the template was last changed (FDW-3379); omitted when it was not made from one.</summary>
+    public System.DateTimeOffset? TemplateVersion { get; set; }
+
     /// <summary>Gets or sets the variables the graph declares, in scope in every component.</summary>
     public IList<GraphVariablePayload> Variables { get; set; } = [];
 

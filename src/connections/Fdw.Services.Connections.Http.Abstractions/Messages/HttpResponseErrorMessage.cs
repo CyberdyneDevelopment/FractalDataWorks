@@ -26,6 +26,6 @@ public sealed class HttpResponseErrorMessage : ConnectionMessage
     /// <param name="reasonPhrase">The reason phrase from the response.</param>
     public HttpResponseErrorMessage(int statusCode, string? reasonPhrase = null)
         : base(4003, "HttpResponseError", MessageSeverity.Error,
-               $"HTTP response error: {statusCode} {reasonPhrase ?? ""}".Trim(), "HTTP_RESPONSE_ERROR")
+               $"HTTP response error: {statusCode} {reasonPhrase ?? string.Empty}".Trim(), "HTTP_RESPONSE_ERROR")
     { }
 }

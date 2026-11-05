@@ -10,5 +10,10 @@ public abstract class ForeignKeyActionBase : TypeOptionBase<ForeignKeyActionBase
     /// <summary>
     /// Initializes a new instance of <see cref="ForeignKeyActionBase"/>.
     /// </summary>
-    protected ForeignKeyActionBase(string name) : base(name) { }
+    /// <param name="name">The action's name.</param>
+    /// <param name="sqlKeyword">The action's SQL keyword, as it follows ON DELETE / ON UPDATE.</param>
+    protected ForeignKeyActionBase(string name, string sqlKeyword) : base(name) => SqlKeyword = sqlKeyword;
+
+    /// <inheritdoc />
+    public string SqlKeyword { get; }
 }

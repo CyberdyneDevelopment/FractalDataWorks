@@ -7,6 +7,7 @@ using FastEndpoints;
 using Fdw.Services.Users.Clients.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -76,7 +77,7 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
             // Users screen printed for a year while every user held one. A read that failed and a
             // store that is genuinely empty are opposite facts.
             AuthorizationEndpointLog.UserRoleAssignmentsUnreadable(
-                EndpointLogger, assignments.CurrentMessage ?? "no value returned");
+                EndpointLogger, assignments.NoValueReason().Message);
             await Send.ResponseAsync(
                 new AllUserRolesResponse(), StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
             return;

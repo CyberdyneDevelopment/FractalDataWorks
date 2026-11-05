@@ -15,6 +15,7 @@ using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration.Logging;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Validation.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -51,6 +52,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     private readonly ILogger<ImplementationProviderBase<TConfiguration, TContract>> _logger;
     private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ImplementationConfigurationCommand<TConfiguration> _commands;
+    private readonly ChildSetLoader _children;
     private string? _domainContainer;
 
     /// <summary>Gets the configuration connection this implementation's rows live on.</summary>
@@ -81,6 +83,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
         _commands = new ImplementationConfigurationCommand<TConfiguration>(
             tableName ?? throw new ArgumentNullException(nameof(tableName)));
+        _children = new ChildSetLoader(_gatewayProvider, DataStoreName, _logger, LookupContainer, ForeignKeyToOwner, ChildContainer);
     }
 
 
@@ -234,6 +237,146 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         return GenericResult<IReadOnlyList<TConfiguration>>.Success(found);
     }
 
+    /// <inheritdoc cref="IImplementationConfigurationProvider{TContract}.GetSet"/>
+    /// <remarks>
+    /// The domain rows are read by their durable Ids, then the implementation rows by the physical keys of those domain rows, then each child table
+    /// by the physical keys of the rows above it (see <see cref="ChildSetLoader"/>): a statement for each table at each level, a chunk of
+    /// <see cref="ParentChain.MaxKeys"/> keys to a statement. What it reads is what <see cref="Get(Guid, int, CancellationToken)"/> reads for each id
+    /// (current, not deleted, the domain row current and not deleted too), and the rows are built the same way.
+    /// </remarks>
+    public async Task<IGenericResult<IReadOnlyDictionary<Guid, TConfiguration>>> GetSet(
+        IEnumerable<Guid> domainIds, int levels, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(domainIds);
+        if (levels < 0)
+            return GenericResult<IReadOnlyDictionary<Guid, TConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TConfiguration).Name, nameof(levels), levels));
+
+        var plan = SetPlanFor();
+        if (plan.IsFailure) return plan.ToNewResult<IReadOnlyDictionary<Guid, TConfiguration>>();
+
+        var wanted = domainIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        var found = new Dictionary<Guid, TConfiguration>();
+        foreach (var chunk in wanted.Chunk(ParentChain.MaxKeys))
+        {
+            var read = await ReadSet(plan.Value!, chunk, levels, cancellationToken).ConfigureAwait(false);
+            if (read.IsFailure) return read.ToNewResult<IReadOnlyDictionary<Guid, TConfiguration>>();
+
+            foreach (var pair in read.Value!)
+                found[pair.Key] = pair.Value;
+        }
+
+        DefaultConfigurationProviderLog.SetComposed(_logger, typeof(TConfiguration).Name, wanted.Count, found.Count);
+        return GenericResult<IReadOnlyDictionary<Guid, TConfiguration>>.Success(found);
+    }
+
+    // Everything a set read needs of the store's configuration, resolved once: the domain's container and the field that joins to it, this
+    // implementation's container and its physical key, and the mapper that builds its records.
+    private sealed record SetPlan(
+        IDataContainer Domain, IDataContainer Own, IPocoMapper Mapper, string ForeignKey, string JoinColumn, string KeyColumn, string OwnPhysical);
+
+    private IGenericResult<SetPlan> SetPlanFor()
+    {
+        var join = DomainJoin();
+        if (join.IsFailure) return join.ToNewResult<SetPlan>();
+        var (foreignKey, domainContainer, joinColumn, keyColumn) = join.Value!;
+
+        var domain = LookupContainer(domainContainer);
+        if (domain.IsFailure) return domain.ToNewResult<SetPlan>();
+
+        var own = LookupContainer(_commands.TableName);
+        if (own.IsFailure) return own.ToNewResult<SetPlan>();
+
+        var physical = ConfigurationKeys.FieldOf(own.Value!.Keys, "Physical");
+        if (physical is null)
+            return GenericResult<SetPlan>.Failure(DefaultConfigurationProviderLog.ContainerKeyNotDeclared(_logger, own.Value.Name, "Physical"));
+
+        var mapper = PocoMapperCollection.ByName(typeof(TConfiguration).Name);
+        if (mapper == PocoMapperCollection.NotFound)
+            return GenericResult<SetPlan>.Failure(DefaultConfigurationProviderLog.DetachMapperMissing(_logger, typeof(TConfiguration).Name));
+
+        return GenericResult<SetPlan>.Success(new SetPlan(domain.Value!, own.Value, mapper, foreignKey, joinColumn, keyColumn, physical));
+    }
+
+    private ConfigurationRowReader RowsOf(IDataContainer container)
+        => new(_gatewayProvider, DataStoreName, container.Parent.Name, container.Name, _logger);
+
+    private static FilterCondition In(string column, IReadOnlyCollection<object> keys)
+        => new() { PropertyName = column, Operator = FilterOperators.ByName("In"), Value = keys.ToList() };
+
+    // One chunk of domain Ids: their domain rows, the implementation rows hanging from those, the children of those rows. Keyed by domain Id.
+    private async Task<IGenericResult<Dictionary<Guid, TConfiguration>>> ReadSet(
+        SetPlan plan, Guid[] domainIds, int levels, CancellationToken ct)
+    {
+        var domainRows = await RowsOf(plan.Domain).All(In(plan.KeyColumn, [.. domainIds.Cast<object>()]), ct).ConfigureAwait(false);
+        if (domainRows.IsFailure) return domainRows.ToNewResult<Dictionary<Guid, TConfiguration>>();
+
+        var domainByKey = DomainsByPhysicalKey(plan, domainRows.Value!);
+        if (domainByKey.IsFailure) return domainByKey.ToNewResult<Dictionary<Guid, TConfiguration>>();
+        if (domainByKey.Value!.Count == 0) return GenericResult<Dictionary<Guid, TConfiguration>>.Success([]);
+
+        var ownRows = await RowsOf(plan.Own).All(In(plan.ForeignKey, [.. domainByKey.Value.Values.Select(domain => domain.Key)]), ct).ConfigureAwait(false);
+        if (ownRows.IsFailure) return ownRows.ToNewResult<Dictionary<Guid, TConfiguration>>();
+
+        var built = _children.Materialize(plan.Mapper, plan.Own, ownRows.Value!);
+        if (built.IsFailure) return built.ToNewResult<Dictionary<Guid, TConfiguration>>();
+
+        var owned = OwnedBy(plan, domainByKey.Value, ownRows.Value!, built.Value!);
+        if (owned.IsFailure) return owned.ToNewResult<Dictionary<Guid, TConfiguration>>();
+
+        var children = await _children.Load(owned.Value!.Owners, plan.Mapper, _commands.TableName, levels, ct).ConfigureAwait(false);
+        return children.IsFailure
+            ? children.ToNewResult<Dictionary<Guid, TConfiguration>>()
+            : GenericResult<Dictionary<Guid, TConfiguration>>.Success(owned.Value.ByDomain);
+    }
+
+    // The domain rows read, under the text of the physical key an implementation row's Foreign key holds.
+    private IGenericResult<Dictionary<string, (object Key, Guid Id)>> DomainsByPhysicalKey(SetPlan plan, IReadOnlyList<ConfigurationRow> rows)
+    {
+        var byKey = new Dictionary<string, (object Key, Guid Id)>(StringComparer.Ordinal);
+        foreach (var row in rows)
+        {
+            if (!row.Columns.TryGetValue(plan.JoinColumn, out var physicalKey) || physicalKey is null)
+                return GenericResult<Dictionary<string, (object Key, Guid Id)>>.Failure(
+                    DefaultConfigurationProviderLog.SetChildKeyUnreadable(_logger, plan.Domain.Name, plan.JoinColumn));
+
+            if (row.Identifier(plan.KeyColumn) is not { } id)
+                return GenericResult<Dictionary<string, (object Key, Guid Id)>>.Failure(
+                    DefaultConfigurationProviderLog.SetChildKeyUnreadable(_logger, plan.Domain.Name, plan.KeyColumn));
+
+            byKey[ChildSetLoader.KeyText(physicalKey)] = (physicalKey, id);
+        }
+
+        return GenericResult<Dictionary<string, (object Key, Guid Id)>>.Success(byKey);
+    }
+
+    private sealed record OwnedRows(List<ConfigurationSetOwner> Owners, Dictionary<Guid, TConfiguration> ByDomain);
+
+    // Each implementation record with the physical key its children hang from and the domain Id that owns it.
+    private IGenericResult<OwnedRows> OwnedBy(
+        SetPlan plan, Dictionary<string, (object Key, Guid Id)> domains, IReadOnlyList<ConfigurationRow> rows, List<object> built)
+    {
+        var owners = new List<ConfigurationSetOwner>(rows.Count);
+        var byDomain = new Dictionary<Guid, TConfiguration>(rows.Count);
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (!rows[i].Columns.TryGetValue(plan.ForeignKey, out var domainKey) || domainKey is null)
+                return GenericResult<OwnedRows>.Failure(DefaultConfigurationProviderLog.SetChildKeyUnreadable(_logger, plan.Own.Name, plan.ForeignKey));
+
+            if (!domains.TryGetValue(ChildSetLoader.KeyText(domainKey), out var domain))
+                return GenericResult<OwnedRows>.Failure(
+                    DefaultConfigurationProviderLog.SetChildOrphaned(_logger, plan.Own.Name, ChildSetLoader.KeyText(domainKey)));
+
+            if (rows[i].Number(plan.OwnPhysical) is not { } rowId || built[i] is not TConfiguration record)
+                return GenericResult<OwnedRows>.Failure(DefaultConfigurationProviderLog.SetChildKeyUnreadable(_logger, plan.Own.Name, plan.OwnPhysical));
+
+            owners.Add(new ConfigurationSetOwner(record, rowId));
+            byDomain[domain.Id] = record;
+        }
+
+        return GenericResult<OwnedRows>.Success(new OwnedRows(owners, byDomain));
+    }
+
     /// <summary>Writes the row and every child that hangs from it into the domain provider's unit of work.</summary>
     /// <remarks>
     /// The row's Foreign key to the domain container is filled from the domain row's key values, through
@@ -247,6 +390,11 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         ConfigurationWriteScope unit,
         CancellationToken cancellationToken)
     {
+        // Why before any row is touched: a configuration its validator refuses (or whose class declares neither a validator nor why it needs none)
+        // is refused with nothing written, so there is nothing to roll back (FDW-3541).
+        var validated = ConfigurationValidatorRunner.Validate(record, _logger);
+        if (validated.IsFailure) return validated.ToNewResult<ConfigurationWriteResult>();
+
         var own = unit.Container(PathName, _commands.TableName);
         if (own.IsFailure) return own.ToNewResult<ConfigurationWriteResult>();
 
@@ -437,6 +585,15 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             : found.ToNewResult<IReadOnlyList<TContract>>();
     }
 
+    async Task<IGenericResult<IReadOnlyDictionary<Guid, TContract>>> IImplementationConfigurationProvider<TContract>.GetSet(
+        IEnumerable<Guid> domainIds, int levels, CancellationToken cancellationToken)
+    {
+        var found = await GetSet(domainIds, levels, cancellationToken).ConfigureAwait(false);
+        return found.IsSuccess
+            ? GenericResult<IReadOnlyDictionary<Guid, TContract>>.Success(found.Value!.ToDictionary(pair => pair.Key, pair => (TContract)pair.Value))
+            : found.ToNewResult<IReadOnlyDictionary<Guid, TContract>>();
+    }
+
     async Task<IGenericResult<ConfigurationWriteResult>> IConfigurationWriteParticipant<TContract>.Save(
         TContract record,
         IDataContainer domain,
@@ -447,7 +604,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             ? await Save(typed, domain, domainKeyValues, unit, cancellationToken).ConfigureAwait(false)
             : GenericResult<ConfigurationWriteResult>.Failure(
                 DefaultConfigurationProviderLog.UntypedSaveTypeMismatch(
-                    _logger, typeof(TConfiguration).Name, record?.GetType().Name ?? "(null)"));
+                    _logger, typeof(TConfiguration).Name, record?.GetType().Name ?? LogPlaceholders.Null));
 
     void IConfigurationWriteParticipant<TContract>.AttachDomain(string domainContainerName)
     {
@@ -874,9 +1031,12 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         ConfigurationWriteScope unit,
         CancellationToken ct)
     {
+        // The read of this type fails without a mapper, so a write that went on without one would
+        // report success while writing no children and retiring none of the old ones.
         var mapper = PocoMapperCollection.ByName(owner.GetType().Name);
         if (mapper == PocoMapperCollection.NotFound)
-            return GenericResult.Success();
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.CascadeMapperMissing(_logger, owner.GetType().Name, "save"));
 
         // A tree list holds members of their own, saved on their own; saving the parent does not rewrite them.
         var descriptors = mapper.CascadeChildren.Where(d => !ConfigurationTrees.IsTree(d, owner.GetType())).ToList();
@@ -912,7 +1072,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             if (item is not IGenericConfiguration childCfg)
             {
                 DefaultConfigurationProviderLog.ChildSkippedNotConfiguration(
-                    _logger, owner.GetType().Name, item?.GetType().Name ?? "null");
+                    _logger, owner.GetType().Name, item?.GetType().Name ?? LogPlaceholders.NullName);
                 continue;
             }
 
@@ -933,6 +1093,9 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         ConfigurationWriteScope unit,
         CancellationToken ct)
     {
+        var validated = ConfigurationValidatorRunner.Validate(childCfg, _logger);
+        if (validated.IsFailure) return validated;
+
         var command = ChildCommand(childCfg.GetType());
         if (command is null)
             return GenericResult.Failure(
@@ -1009,7 +1172,8 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
 
         var mapper = PocoMapperCollection.ByName(ownerType.Name);
         if (mapper == PocoMapperCollection.NotFound)
-            return GenericResult.Success();
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.CascadeMapperMissing(_logger, ownerType.Name, "retire"));
 
         // A tree list holds members of their own; retiring the parent retires its own rows, not theirs.
         var descriptors = mapper.CascadeChildren.Where(d => !ConfigurationTrees.IsTree(d, ownerType)).ToList();

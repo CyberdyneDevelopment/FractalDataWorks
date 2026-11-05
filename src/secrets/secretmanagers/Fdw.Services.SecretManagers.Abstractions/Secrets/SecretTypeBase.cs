@@ -1,5 +1,6 @@
 using System;
 using Fdw.Collections;
+using Fdw.Conventions;
 
 namespace Fdw.Services.SecretManagers.Abstractions.Secrets;
 
@@ -13,6 +14,10 @@ namespace Fdw.Services.SecretManagers.Abstractions.Secrets;
 /// </remarks>
 public abstract class SecretTypeBase : TypeOptionBase<ISecretType>, ISecretType
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "Secret";
+
     /// <summary>
     /// Gets a value indicating whether this secret type requires secure storage.
     /// </summary>
@@ -30,7 +35,7 @@ public abstract class SecretTypeBase : TypeOptionBase<ISecretType>, ISecretType
         string description,
         bool requiresSecureStorage = true,
         string? category = null)
-        : base(name, name, name, description ?? string.Empty, category ?? "Secret")
+        : base(name, name, name, description ?? string.Empty, category ?? DefaultCategory)
     {
         RequiresSecureStorage = requiresSecureStorage;
     }

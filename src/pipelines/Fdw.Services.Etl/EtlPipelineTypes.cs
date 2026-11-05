@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Collections;
+using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
@@ -10,6 +11,7 @@ using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Thresholds;
 using Fdw.Services.Etl.Execution;
+using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Thresholds;
 using Fdw.Services.Pipelines;
 using Fdw.Configuration;
@@ -126,30 +128,69 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
         if (services.Any(d => d.ServiceType == typeof(IPipelineExecutionQueue)))
             return;
 
+        // Why only a host that names its operational store hosts the services that run pipelines (FDW-3975): the ETL host names the store its runs are kept in. A host that only
+        // sends runs to it, the scheduler, has no queue to consume, no stored requests to take up again (a second host taking up the ETL host's runs would run them twice) and
+        // no alerts to time, and it cannot read the store it does not name, so these services would only log that.
+        var hostsRuns = OperationalConnection is { Length: > 0 };
+
         // What the host keeps of each run it accepts, so a restart can take the runs that were held or waiting up again (FDW-3216). The queue takes the
         // request of every run it accepts into it.
         services.TryAddSingleton<IPipelineRunRequestStore, PipelineRunRequestStore>();
 
-        // The thresholds on waiting runs (FDW-3161): one monitor is the observer the scheduler tells, the check a trigger asks before it takes a run, and the
-        // loop that judges the thresholds and sends their notification rules.
+        // The thresholds on waiting runs (FDW-3161, FDW-3975): one monitor is the observer the scheduler tells, the check a trigger asks before it takes a run (the gate asks
+        // the evaluator which HoldNewRuns rules hold), and the loop that has the evaluator judge the thresholds attached to pipelines, schedules and the server.
         services.TryAddSingleton<IWaitThresholdSource, WaitThresholdSource>();
         services.TryAddScoped<IWaitThresholdStore, WaitThresholdStore>();
-        services.TryAddSingleton<WaitThresholdJudge>();
+        services.TryAddScoped<IPipelineFailureConfigurations, PipelineFailureConfigurations>();
+        services.TryAddScoped<IPipelineRunHistory, PipelineRunHistory>();
+        services.TryAddScoped<IPipelineDisableRecord, PipelineDisableRecord>();
+        services.TryAddScoped<IPipelineDisabler, PipelineDisabler>();
+        services.TryAddScoped<PipelineFailureReporter>();
+        services.TryAddSingleton<WaitHoldGate>();
+        services.TryAddSingleton<WaitThresholdReporter>();
         services.TryAddSingleton<WaitThresholdMonitor>();
         services.TryAddSingleton<IPipelineWaitObserver>(provider => provider.GetRequiredService<WaitThresholdMonitor>());
         services.TryAddSingleton<IPipelineRunStopCheck>(provider => provider.GetRequiredService<WaitThresholdMonitor>());
-        services.AddHostedService(provider => provider.GetRequiredService<WaitThresholdMonitor>());
+        if (hostsRuns)
+        {
+            services.AddHostedService(provider => provider.GetRequiredService<WaitThresholdMonitor>());
+        }
 
         // The number of triggers the queue holds is a setting (FDW-3155), read when the host first needs the queue.
         services.AddSingleton(PipelineExecutionQueue.Create);
         services.TryAddSingleton<PipelineRunScheduler>();
 
+        // What the live view reads: the components of the runs in flight (FDW-3382).
+        services.TryAddSingleton<RunningFlows>();
+
         // What the host holds of each run it has queued, so cancelling, pausing and resuming an execution reaches the run (FDW-2950).
         services.TryAddSingleton<PipelineRunControl>();
         services.TryAddSingleton<Fdw.Operations.Abstractions.Execution.IExecutionRunControl>(
             provider => provider.GetRequiredService<PipelineRunControl>());
+
+        // How the StopRun escalation of a threshold stops a run this host holds (FDW-3865).
+        services.TryAddSingleton<Fdw.Operations.Abstractions.Thresholds.IRunStopper>(
+            provider => new ThresholdRunStopper(provider.GetRequiredService<PipelineRunControl>()));
         services.AddSingleton<IPipelineExecutionQueue>(provider => provider.GetRequiredService<PipelineExecutionQueue>());
-        services.AddHostedService<PipelineExecutionBackgroundService>();
+
+        // How long a stopping host lets the runs in flight finish is a setting (FDW-3786), read when the host first needs it; the host's shutdown timeout
+        // follows it, since the default of the generic host (30 seconds) would end the host before the runs have had their time.
+        services.AddSingleton(PipelineStopGrace.Create);
+        services.AddOptions<Microsoft.Extensions.Hosting.HostOptions>()
+            .Configure<PipelineStopGrace>((options, grace) => options.ShutdownTimeout = grace.ShutdownTimeout);
+        if (hostsRuns)
+        {
+            services.AddHostedService<PipelineExecutionBackgroundService>();
+            services.AddHostedService<PipelineComponentsPublisher>();
+        }
+
+        // The timer that sends the levels of open escalation alerts as they fall due (FDW-3863). Only the host that runs pipelines runs it: the alerts are opened by thresholds
+        // judged there, and a host that serves requests only has no use for a timer.
+        services.TryAddSingleton(TimeProvider.System);
+        if (hostsRuns)
+        {
+            services.AddHostedService<Fdw.Operations.Escalation.EscalationBackgroundService>();
+        }
 
         // Scoped: it takes the execution tracker and the data gateways, which are per scope. A pipeline that starts another and
         // an orchestration node that dispatches its members both start runs through it (FDW-1381).

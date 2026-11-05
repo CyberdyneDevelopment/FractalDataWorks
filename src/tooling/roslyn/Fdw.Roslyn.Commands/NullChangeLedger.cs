@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
+using Fdw.Conventions;
 
 namespace Fdw.Roslyn.Commands;
 
@@ -16,6 +17,7 @@ public sealed class NullChangeLedger : IChangeLedger
     /// <summary>
     /// Gets the shared singleton instance.
     /// </summary>
+    [PlatformDefault]
     public static NullChangeLedger Instance { get; } = new();
 
     private NullChangeLedger() { }

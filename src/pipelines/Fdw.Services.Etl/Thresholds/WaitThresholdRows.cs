@@ -12,20 +12,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Etl.Thresholds;
 
-/// <summary>Reads the current rows of the configuration containers that hold thresholds on waiting runs, for the source that judges them and the store that writes them (FDW-3161).</summary>
+/// <summary>Reads the current rows of the configuration containers that hold the levels of thresholds on waiting runs and the schedules, for the source and the store of the levels (FDW-3161, FDW-3975).</summary>
 internal sealed class WaitThresholdRows(ILogger logger)
 {
-    /// <summary>The configuration path of the containers that hold the levels, the thresholds and their rules.</summary>
+    /// <summary>The configuration path of the container that holds the levels.</summary>
     public const string PathName = "pipe";
 
     /// <summary>The container that holds the level each owner states.</summary>
     public const string LevelContainer = "WaitThresholdLevel";
-
-    /// <summary>The container that holds the thresholds.</summary>
-    public const string ThresholdContainer = "WaitThreshold";
-
-    /// <summary>The container that holds the notification rule names of each threshold.</summary>
-    public const string RuleContainer = "WaitThresholdRule";
 
     /// <summary>The configuration path of the schedules.</summary>
     public const string SchedulePath = "sched";
@@ -87,29 +81,12 @@ internal sealed class WaitThresholdRows(ILogger logger)
         return GenericResult.Success();
     }
 
-    /// <summary>Reads the current rows of the levels, the thresholds and the rules together.</summary>
+    /// <summary>Reads the current level rows.</summary>
     /// <param name="gateway">The configuration gateway.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The three tables; a failure naming the container that could not be read.</returns>
-    public async Task<IGenericResult<WaitThresholdTables>> Tables(IConfigurationGateway gateway, CancellationToken cancellationToken)
-    {
-        var levels = await Active<WaitThresholdLevelRecord>(gateway, PathName, LevelContainer, cancellationToken).ConfigureAwait(false);
-        if (levels.IsFailure || levels.Value is null)
-        {
-            return levels.ToNewResult<WaitThresholdTables>();
-        }
-
-        var thresholds = await Active<WaitThresholdRecord>(gateway, PathName, ThresholdContainer, cancellationToken).ConfigureAwait(false);
-        if (thresholds.IsFailure || thresholds.Value is null)
-        {
-            return thresholds.ToNewResult<WaitThresholdTables>();
-        }
-
-        var rules = await Active<WaitThresholdRuleRecord>(gateway, PathName, RuleContainer, cancellationToken).ConfigureAwait(false);
-        return rules.IsFailure || rules.Value is null
-            ? rules.ToNewResult<WaitThresholdTables>()
-            : GenericResult<WaitThresholdTables>.Success(new WaitThresholdTables(levels.Value, thresholds.Value, rules.Value));
-    }
+    /// <returns>The level each owner states; a failure when the rows cannot be read.</returns>
+    public Task<IGenericResult<IReadOnlyList<WaitThresholdLevelRecord>>> Levels(IConfigurationGateway gateway, CancellationToken cancellationToken) =>
+        Active<WaitThresholdLevelRecord>(gateway, PathName, LevelContainer, cancellationToken);
 
     private static FilterExpression ActiveRows()
     {

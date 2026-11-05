@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Conventions;
 
 namespace Fdw.Data.Abstractions;
 
@@ -8,6 +9,10 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 public abstract class ContainerTypeBase : TypeOptionBase<ContainerTypeBase>, IContainerType
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Container";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ContainerTypeBase"/> class.
     /// </summary>
@@ -22,7 +27,7 @@ public abstract class ContainerTypeBase : TypeOptionBase<ContainerTypeBase>, ICo
         string description,
         bool supportsSchemaDiscovery,
         string? category = null)
-        : base(name, $"Containers:{name}", displayName, description, category ?? "Container")
+        : base(name, $"Containers:{name}", displayName, description, category ?? DefaultCategory)
     {
         SupportsSchemaDiscovery = supportsSchemaDiscovery;
     }

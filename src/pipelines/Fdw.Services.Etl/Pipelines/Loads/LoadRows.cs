@@ -22,14 +22,14 @@ public static class LoadRows
     /// <param name="owner">What the load is, for refusal messages.</param>
     /// <param name="rows">The transformed output rows.</param>
     /// <param name="columns">The columns to keep, or <see langword="null"/> to keep every field of each row.</param>
-    /// <param name="values">The column values the value sources give every row.</param>
+    /// <param name="values">The producers of the column values the value sources give the rows; each is called once for each row.</param>
     /// <param name="logger">The logger the refusals are written to.</param>
     /// <returns>New rows, or a failure naming the column a row lacks or a column supplied twice.</returns>
     public static IGenericResult<List<IDictionary<string, object?>>> Shape(
         string owner,
         IReadOnlyList<IDictionary<string, object?>> rows,
         IReadOnlyList<string>? columns,
-        IReadOnlyList<KeyValuePair<string, object?>> values,
+        IReadOnlyList<KeyValuePair<string, Func<object?>>> values,
         ILogger logger)
     {
         var twice = FirstSuppliedTwice(columns, values);
@@ -50,7 +50,7 @@ public static class LoadRows
                 return GenericResult<List<IDictionary<string, object?>>>.Failure(
                     PipelineRunLog.ColumnSuppliedTwice(logger, owner, values.First(pair => one.ContainsKey(pair.Key)).Key));
             foreach (var pair in values)
-                one[pair.Key] = pair.Value;
+                one[pair.Key] = pair.Value();
             shaped.Add(one);
         }
 
@@ -79,7 +79,7 @@ public static class LoadRows
         return false;
     }
 
-    private static string? FirstSuppliedTwice(IReadOnlyList<string>? columns, IReadOnlyList<KeyValuePair<string, object?>> values)
+    private static string? FirstSuppliedTwice(IReadOnlyList<string>? columns, IReadOnlyList<KeyValuePair<string, Func<object?>>> values)
         => columns is null
             ? null
             : values.Select(pair => pair.Key).FirstOrDefault(name => columns.Contains(name, StringComparer.OrdinalIgnoreCase));

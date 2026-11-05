@@ -28,17 +28,11 @@
     <!-- Roslyn -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-
-    <!-- Project References -->
-    <ProjectReference Include="..\..\foundation\analyzers\Fdw.SourceGenerators\Fdw.SourceGenerators.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Pack the generator into the analyzer directory -->
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-
-    <!-- Include dependencies in package -->
-    <None Include="$(OutputPath)\Fdw.SourceGenerators.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

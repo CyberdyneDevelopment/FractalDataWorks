@@ -20,7 +20,7 @@ public sealed class DistinctTransformTypeTests
 
     private static PipelineTransformConfiguration CreateConfig(params string[] keys)
     {
-        var config = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Unique", OperationType = "Distinct" };
+        var config = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Unique", OperationType = "Distinct" };
         config.GroupByFields = keys
             .Select((key, ordinal) => new PipelineTransformGroupByFieldConfiguration { Id = Guid.NewGuid(), Name = key, FieldName = key, Ordinal = ordinal })
             .ToList();

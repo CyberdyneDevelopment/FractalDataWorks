@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Orchestration.Abstractions.TypeCollections.ValidationSeverityOptions;
+using System.Collections.Immutable;
 
 namespace Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.ValidationRuleTypeOptions;
 
@@ -25,7 +26,7 @@ public sealed class ValidationRuleResult
         IsValid = isValid;
         Message = message;
         Severity = severity;
-        FieldErrors = fieldErrors ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        FieldErrors = fieldErrors ?? ImmutableDictionary<string, string>.Empty;
     }
 
     /// <summary>

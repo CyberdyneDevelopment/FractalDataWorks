@@ -18,6 +18,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Authentication.Validation;
 
@@ -101,8 +102,9 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
             .ConfigureAwait(false);
 
         if (!validated.IsValid)
-            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
-                _log, ServiceName, validated.Exception?.Message ?? "no reason given")));
+            return AuthenticateResult.Fail(Text(validated.Exception is { } rejection
+                ? AuthenticationValidationLog.TokenRejected(_log, ServiceName, rejection.Message)
+                : AuthenticationValidationLog.TokenRejectedWithoutReason(_log, ServiceName)));
 
         RemoveForeignPlatformClaims(validated.ClaimsIdentity);
 
@@ -113,9 +115,9 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         var conferred = await ConferDeclaredRoles(
             validated.ClaimsIdentity, parameters.Value.ValidAudience, _context.RequestAborted).ConfigureAwait(false);
         if (!conferred.IsSuccess)
-            return AuthenticateResult.Fail(conferred.CurrentMessage ?? string.Empty);
+            return AuthenticateResult.Fail(conferred.FailureReason().Message);
 
-        AuthenticationValidationLog.TokenAccepted(_log, ServiceName, validated.ClaimsIdentity.Name ?? "(no name)");
+        AuthenticationValidationLog.TokenAccepted(_log, ServiceName, validated.ClaimsIdentity.Name ?? LogPlaceholders.NoName);
 
         return AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(validated.ClaimsIdentity), _scheme.Name));
@@ -250,7 +252,7 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         {
             return GenericResult.Failure(AuthenticationValidationLog.DeclaredRolesNotResolved(
                 _log, ServiceName, string.Join(", ", roles),
-                permissions.CurrentMessage ?? "role grants reported success with no permission set"));
+                permissions.NoValueReason().Message));
         }
 
         foreach (var role in roles)
@@ -261,7 +263,7 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
 
         AuthenticationValidationLog.DeclaredRolesConferred(
             _log, ServiceName, roles.Count, granted.Count,
-            identity.FindFirst(ClaimDefinitions.sub.Name)?.Value ?? "(no sub)");
+            identity.FindFirst(ClaimDefinitions.sub.Name)?.Value ?? string.Empty);
 
         return GenericResult.Success();
     }

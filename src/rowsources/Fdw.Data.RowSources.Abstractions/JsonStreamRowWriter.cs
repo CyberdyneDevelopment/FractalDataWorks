@@ -48,10 +48,10 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// </summary>
     /// <param name="target">The destination text writer.</param>
     /// <param name="options">JSON writer options.</param>
-    public JsonStreamRowWriter(TextWriter target, JsonRowWriterOptions? options = null)
+    public JsonStreamRowWriter(TextWriter target, JsonRowWriterOptions options)
     {
         _target = target ?? throw new ArgumentNullException(nameof(target));
-        var opts = options ?? new JsonRowWriterOptions();
+        var opts = options ?? throw new ArgumentNullException(nameof(options));
         _bridge = new MemoryStream();
         _writer = new Utf8JsonWriter(_bridge, new JsonWriterOptions
         {

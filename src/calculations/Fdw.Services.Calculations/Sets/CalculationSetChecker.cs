@@ -12,12 +12,27 @@ internal static class CalculationSetChecker
     internal static IGenericResult Check(CalculationSetDefinition definition)
     {
         var tables = definition.TableInputs.Select(table => table.Name).ToList();
-        var problem = Duplicate("table input", tables)
-            ?? Duplicate("derived value", definition.Derived.Select(value => value.Name))
-            ?? Duplicate("output", definition.Outputs.Select(output => output.Name))
-            ?? DerivedProblem(definition, tables)
-            ?? OutputsProblem(definition, tables);
+        var problem = FirstOf(
+            () => Duplicate("table input", tables),
+            () => Duplicate("derived value", definition.Derived.Select(value => value.Name)),
+            () => Duplicate("output", definition.Outputs.Select(output => output.Name)),
+            () => DerivedProblem(definition, tables),
+            () => OutputsProblem(definition, tables));
         return problem is null ? GenericResult.Success() : SetFailure.Of("SetDefinitionInvalid", definition.Name, problem);
+    }
+
+    // The first problem wins: each check runs only when the ones before it found none.
+    private static string? FirstOf(params Func<string?>[] checks)
+    {
+        foreach (var check in checks)
+        {
+            if (check() is { } problem)
+            {
+                return problem;
+            }
+        }
+
+        return null;
     }
 
     private static string? Duplicate(string kind, IEnumerable<string> names)
@@ -49,10 +64,11 @@ internal static class CalculationSetChecker
     {
         foreach (var output in definition.Outputs)
         {
-            var problem = Duplicate($"column of output '{output.Name}'", output.Columns.Select(column => column.Name))
-                ?? (output.Columns.Count == 0 ? $"output '{output.Name}' has no columns" : null)
-                ?? ShadowProblem(definition, output)
-                ?? (output.Rows.TableName is { } table && !tables.Contains(table, StringComparer.Ordinal)
+            var problem = FirstOf(
+                () => Duplicate($"column of output '{output.Name}'", output.Columns.Select(column => column.Name)),
+                () => output.Columns.Count == 0 ? $"output '{output.Name}' has no columns" : null,
+                () => ShadowProblem(definition, output),
+                () => output.Rows.TableName is { } table && !tables.Contains(table, StringComparer.Ordinal)
                     ? $"output '{output.Name}' reads table '{table}', which is not a table input"
                     : null);
             if (problem is not null)

@@ -8,6 +8,9 @@ using Fdw.Data.MsSql.Results;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
+using Fdw.Commands.Data.Logging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.MsSql.Translators;
 
@@ -32,9 +35,9 @@ internal static class MsSqlSoftDeleteSql
 
         var problem = options.FirstProblem() ?? ColumnProblem(options, container);
         if (problem is null && options.HasAbsentSet && !allowAbsentSet)
-            problem = "an update flags rows by its filter; the absent-key set belongs to a delete";
+            problem = Inconsistent("an update flags rows by its filter; the absent-key set belongs to a delete");
         if (problem is not null)
-            return new MsSqlSoftDeleteFragments(problem);
+            return new MsSqlSoftDeleteFragments(problem.Message);
 
         var parameters = new List<SqlParameter> { new("@fdw_sd_flag", options.FlagValue) };
         var marker = options.Marker is null ? null : dialect.QuoteIdentifier(options.Marker.Column);
@@ -51,7 +54,7 @@ internal static class MsSqlSoftDeleteSql
             MsSqlDataResultCodes.ByName("InvalidSoftDeleteOptions"),
             ResultDetails.Create("Reason", soft.Problem));
 
-    private static string? ColumnProblem(SoftDeleteOptions options, IStorageContainer container)
+    private static IGenericMessage? ColumnProblem(SoftDeleteOptions options, IStorageContainer container)
     {
         var names = new List<string> { options.DeletedFlagColumn };
         if (options.DeletedAtColumn is not null)
@@ -63,16 +66,20 @@ internal static class MsSqlSoftDeleteSql
 
         var unknown = MsSqlLoadColumns.UnknownOrUnsafe(container, names);
         if (unknown is not null)
-            return unknown;
+            return Inconsistent(unknown);
 
         var computed = names.FirstOrDefault(n => MsSqlLoadColumns.IsComputed(container, n));
         if (computed is not null)
-            return $"column '{computed}' is computed by the database and cannot be a soft-delete column";
+            return Inconsistent($"column '{computed}' is computed by the database and cannot be a soft-delete column");
 
         return MsSqlLoadColumns.IsIdentity(container, options.DeletedFlagColumn)
-            ? $"column '{options.DeletedFlagColumn}' is an identity column and cannot be the deleted-flag column"
+            ? Inconsistent($"column '{options.DeletedFlagColumn}' is an identity column and cannot be the deleted-flag column")
             : null;
     }
+
+    // The options' own problems and this container's are the same kind of refusal: the options cannot be used here.
+    private static IGenericMessage Inconsistent(string reason)
+        => CommandOptionsLog.SoftDeleteOptionsInconsistent(NullLogger.Instance, reason);
 
     /// <summary>
     /// Builds the soft-delete UPDATE for a delete command: flag the rows <paramref name="whereBuilder"/>'s filter matches

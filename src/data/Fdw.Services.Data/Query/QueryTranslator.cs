@@ -233,7 +233,7 @@ public sealed class QueryTranslator
         if (used is null || allowed.Contains(used, StringComparer.OrdinalIgnoreCase)) return null;
 
         return _refusals.Invalid<bool>(allowed.Count == 0
-            ? field.NoOperatorsReason ?? $"'{field.Name}' takes no filter operator"
+            ? field.NoOperatorsReason is { } reason ? reason : $"'{field.Name}' takes no filter operator"
             : $"operator '{used}' cannot be used on '{field.Name}'; it takes {string.Join(", ", allowed)}");
     }
 

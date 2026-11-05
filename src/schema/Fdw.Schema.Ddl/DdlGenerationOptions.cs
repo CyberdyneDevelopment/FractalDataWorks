@@ -4,30 +4,31 @@ namespace Fdw.Schema.Ddl;
 /// <summary>
 /// Options for controlling DDL generation behavior.
 /// </summary>
+/// <remarks>Every member is required (FDW-3823): the caller that asks for DDL states each, and no value is taken in its place.</remarks>
 public sealed class DdlGenerationOptions
 {
     /// <summary>
-    /// Gets or sets the schema name to use (default: "dbo").
+    /// Gets or sets the schema name to use.
     /// </summary>
-    public string SchemaName { get; init; } = "dbo";
+    public required string SchemaName { get; init; }
 
     /// <summary>
-    /// Gets or sets whether to generate "IF NOT EXISTS" checks (default: true).
+    /// Gets or sets whether to generate "IF NOT EXISTS" checks.
     /// </summary>
-    public bool IfNotExists { get; init; } = true;
+    public required bool IfNotExists { get; init; }
 
     /// <summary>
-    /// Gets or sets whether to include index creation statements (default: true).
+    /// Gets or sets whether to include index creation statements.
     /// </summary>
-    public bool IncludeIndexes { get; init; } = true;
+    public required bool IncludeIndexes { get; init; }
 
     /// <summary>
-    /// Gets or sets whether to include foreign key constraints (default: true).
+    /// Gets or sets whether to include foreign key constraints.
     /// </summary>
-    public bool IncludeForeignKeys { get; init; } = true;
+    public required bool IncludeForeignKeys { get; init; }
 
     /// <summary>
-    /// Gets or sets whether to include DROP statements before CREATE (default: false).
+    /// Gets or sets whether to include DROP statements before CREATE.
     /// </summary>
-    public bool IncludeDropStatements { get; init; }
+    public required bool IncludeDropStatements { get; init; }
 }

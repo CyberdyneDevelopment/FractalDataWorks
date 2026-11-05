@@ -38,7 +38,7 @@ public sealed partial class DataSetFieldMappingConfiguration : IGenericConfigura
     /// <c>"DataSet"</c> (a field on another DataSet via SourceDataSetId — compound/federated),
     /// <c>"Calculation"</c> (a CalculationEntity produces the value — derived field).
     /// </summary>
-    public string SourceKind { get; set; } = "DataStore";
+    public string SourceKind { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the physical field name in the source (used when SourceKind='DataStore').

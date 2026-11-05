@@ -22,11 +22,11 @@ public interface IDdlGenerator
     /// </summary>
     /// <typeparam name="TProperty">The property definition type.</typeparam>
     /// <param name="schema">The schema definition to generate commands from.</param>
-    /// <param name="options">Optional generation options.</param>
+    /// <param name="options">The generation options; the caller states every one.</param>
     /// <returns>A result containing the list of DDL commands, or an error.</returns>
     IGenericResult<IReadOnlyList<IDdlCommand>> GenerateCommands<TProperty>(
         ISchemaDefinition<TProperty> schema,
-        DdlGenerationOptions? options = null)
+        DdlGenerationOptions options)
         where TProperty : IPropertyDefinition;
 
     /// <summary>

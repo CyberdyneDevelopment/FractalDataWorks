@@ -45,15 +45,13 @@ public class SecretValueTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void StringConstructorWithDefaultsUsesUtcNow()
+    public void StringConstructorWithNoDatesLeavesThemUnknown()
     {
-        var before = DateTimeOffset.UtcNow;
         using var sut = new SecretValue("key", "value");
-        var after = DateTimeOffset.UtcNow;
 
-        sut.CreatedAt.ShouldBeGreaterThanOrEqualTo(before);
-        sut.CreatedAt.ShouldBeLessThanOrEqualTo(after);
-        sut.ModifiedAt.ShouldBeGreaterThanOrEqualTo(before);
+        // A store that records no date leaves it null; now is not when the secret was made (FDW-3646).
+        sut.CreatedAt.ShouldBeNull();
+        sut.ModifiedAt.ShouldBeNull();
         sut.Version.ShouldBeNull();
         sut.ExpiresAt.ShouldBeNull();
         sut.Metadata.ShouldBeEmpty();

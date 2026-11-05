@@ -25,9 +25,11 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
     /// Initializes a new instance of the <see cref="DatabasePath"/> class.
     /// </summary>
     /// <param name="database">The database name.</param>
-    /// <param name="schema">The schema name (default: "dbo").</param>
+    /// <param name="schema">The schema name; always stated, never assumed (FDW-3454).</param>
     /// <param name="objectName">The object name (table, view, stored procedure).</param>
     /// <param name="containers">Optional containers at this path.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="schema"/> or <paramref name="objectName"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="schema"/> is empty or blank: a path with no schema would read as <c>.Customers</c>.</exception>
     public DatabasePath(
         string? database,
         string schema,
@@ -37,18 +39,11 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
     {
         Database = database ?? string.Empty;
         Schema = schema ?? throw new ArgumentNullException(nameof(schema));
-        ObjectName = objectName ?? throw new ArgumentNullException(nameof(objectName));
-        _containers = containers?.ToList() ?? new List<IStorageContainer>();
-    }
+        if (string.IsNullOrWhiteSpace(schema))
+            throw new ArgumentException("A database path states its schema; none is assumed.", nameof(schema));
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DatabasePath"/> class with default schema "dbo".
-    /// </summary>
-    /// <param name="database">The database name.</param>
-    /// <param name="objectName">The object name (table, view, stored procedure).</param>
-    public DatabasePath(string database, string objectName)
-        : this(database, "dbo", objectName)
-    {
+        ObjectName = objectName ?? throw new ArgumentNullException(nameof(objectName));
+        _containers = containers?.ToList() ?? [];
     }
 
     /// <summary>

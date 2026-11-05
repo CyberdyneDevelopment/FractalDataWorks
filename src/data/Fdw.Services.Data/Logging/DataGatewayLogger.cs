@@ -325,6 +325,19 @@ public static partial class DataGatewayLogger
         string sourceName);
 
     /// <summary>
+    /// Logs when a join names a field its source does not have under the data set's names (FDW-3629).
+    /// </summary>
+    [MessageLogging(
+        EventId = 31070,
+        Level = LogLevel.Error,
+        Message = "Join in dataset '{dataSetName}' names the field '{fieldName}' on source '{sourceName}', which the source does not have; map it in the source's field mappings or join on a field it has")]
+    public static partial IGenericMessage JoinFieldNotFound(
+        ILogger logger,
+        string dataSetName,
+        string sourceName,
+        string fieldName);
+
+    /// <summary>
     /// Logs when federated dataset execution fails with an exception.
     /// </summary>
     [MessageLogging(

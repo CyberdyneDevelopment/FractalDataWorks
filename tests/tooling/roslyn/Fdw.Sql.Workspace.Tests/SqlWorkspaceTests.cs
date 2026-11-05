@@ -56,7 +56,7 @@ public sealed class SqlWorkspaceTests
     {
         var ws = (await SqlWorkspace.Load(SqlProjPath, cancellationToken: TestContext.Current.CancellationToken)).Value!;
 
-        var customerPath = ws.ScriptPaths.First(p => p.EndsWith("dbo.Customer.sql"));
+        var customerPath = ws.ScriptPaths.First(p => p.EndsWith("dbo.Customer.sql", System.StringComparison.Ordinal));
         var originalText = ws.GetScriptText(customerPath);
         originalText.ShouldNotBeNull();
 
@@ -77,7 +77,7 @@ public sealed class SqlWorkspaceTests
     public async Task SetBaseline_then_RevertToBaseline_undoes_intermediate_edits()
     {
         var ws = (await SqlWorkspace.Load(SqlProjPath, cancellationToken: TestContext.Current.CancellationToken)).Value!;
-        var path = ws.ScriptPaths.First(p => p.EndsWith("dbo.Customer.sql"));
+        var path = ws.ScriptPaths.First(p => p.EndsWith("dbo.Customer.sql", System.StringComparison.Ordinal));
         var baselineText = ws.GetScriptText(path)!;
 
         ws.SetBaseline();
@@ -102,7 +102,7 @@ public sealed class SqlWorkspaceTests
             var tempSqlproj = Path.Combine(tempRoot, "SampleSqlProject.sqlproj");
 
             var ws = (await SqlWorkspace.Load(tempSqlproj, cancellationToken: TestContext.Current.CancellationToken)).Value!;
-            var path = ws.ScriptPaths.First(p => p.EndsWith("dbo.Customer.sql"));
+            var path = ws.ScriptPaths.First(p => p.EndsWith("dbo.Customer.sql", System.StringComparison.Ordinal));
             var marker = "-- ApplyChanges test " + System.Guid.NewGuid().ToString("N");
             ws.UpdateScript(path, (ws.GetScriptText(path) ?? string.Empty) + "\n" + marker);
 
@@ -123,8 +123,8 @@ public sealed class SqlWorkspaceTests
     {
         Directory.CreateDirectory(dst);
         foreach (var dir in Directory.GetDirectories(src, "*", SearchOption.AllDirectories))
-            Directory.CreateDirectory(dir.Replace(src, dst));
+            Directory.CreateDirectory(dir.Replace(src, dst, System.StringComparison.Ordinal));
         foreach (var file in Directory.GetFiles(src, "*", SearchOption.AllDirectories))
-            File.Copy(file, file.Replace(src, dst), overwrite: true);
+            File.Copy(file, file.Replace(src, dst, System.StringComparison.Ordinal), overwrite: true);
     }
 }

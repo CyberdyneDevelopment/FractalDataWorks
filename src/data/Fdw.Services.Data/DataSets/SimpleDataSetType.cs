@@ -100,7 +100,14 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (plan.HasError)
             return plan.ErrorResult!;
 
-        var sourceQuery = SourceQuery<T>(command, filterResult.TranslatedFilter, fieldMappings, plan.Aggregation, plan.GroupMappings);
+        // A grouped read orders its groups in the store; every other page follows the order the caller stated, else the data set's keys.
+        var ordering = plan.Aggregation is null
+            ? DataSetKeyOrder.For(ctx.Config, command, ctx.Logger)
+            : GenericResult<IOrderingExpression?>.Success((command as IQueryCommand)?.Ordering);
+        if (ordering.IsFailure)
+            return ordering.ToNewResult<T>();
+
+        var sourceQuery = SourceQuery<T>(command, ordering.Value, filterResult.TranslatedFilter, fieldMappings, plan.Aggregation, plan.GroupMappings);
         var result = await ExecuteSourceQuery<T>(ctx, sourceQuery, sourceConfig, ct).ConfigureAwait(false);
 
         return result.IsFailure
@@ -121,6 +128,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
     /// </remarks>
     private static QueryCommand<T> SourceQuery<T>(
         IDataCommand command,
+        IOrderingExpression? ordering,
         IFilterExpression? translatedFilter,
         IReadOnlyDictionary<string, string>? fieldMappings,
         IAggregationExpression? aggregation,
@@ -130,7 +138,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         return new QueryCommand<T>
         {
             Filter = translatedFilter,
-            Ordering = PredicatePushdownAnalyzer.TranslateOrderingToPhysical(requested?.Ordering, groupMappings is null ? fieldMappings : groupMappings),
+            Ordering = PredicatePushdownAnalyzer.TranslateOrderingToPhysical(ordering, groupMappings is null ? fieldMappings : groupMappings),
             Paging = aggregation is not null && groupMappings is null ? null : requested?.Paging,
             Aggregation = aggregation
         };
@@ -328,7 +336,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (!translationResult.IsSuccess)
         {
             return (true, null, GenericResult<T>.Failure(
-                DataGatewayLogger.FilterTranslationFailed(ctx.Logger, sourceName, translationResult.CurrentMessage ?? "Unknown error")));
+                DataGatewayLogger.FilterTranslationFailed(ctx.Logger, sourceName, translationResult.FailureReason().Message)));
         }
 
         return (false, translationResult.Value, null);
@@ -355,8 +363,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
 
-        var connectionId = containerResult.Value.Parent?.Store?.ConnectionId ?? Guid.Empty;
-        if (connectionId == Guid.Empty)
+        if (containerResult.Value.Parent?.Store?.ConnectionId is not { } connectionId || connectionId == Guid.Empty)
             return GenericResult<T>.Failure(
                 DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName,
                     "the container's DataStore carries no ConnectionId"));
@@ -364,7 +371,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
             return GenericResult<T>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
+                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.NoValueReason().Message));
 
         return await RunOnConnection<T>(ctx, connectionResult.Value, containerResult.Value, command, sourceConfig, ct).ConfigureAwait(false);
     }
@@ -394,7 +401,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (result.IsSuccess)
             DataGatewayLogger.SourceQueryCompleted(ctx.Logger, sourceConfig.SourceName, 0);
         else
-            DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, result.CurrentMessage ?? "Source query failed");
+            DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, result.FailureReason().Message);
 
         return result.IsFailure ? result : GenericResult<T>.Success(result.Value!);
     }

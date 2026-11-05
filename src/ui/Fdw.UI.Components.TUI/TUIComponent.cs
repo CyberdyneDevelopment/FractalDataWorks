@@ -19,7 +19,7 @@ public abstract class TUIComponent<TSelf, TModel> : ComponentBase<TSelf, TModel>
     /// <summary>
     /// Theme configuration for this component.
     /// </summary>
-    public TUIThemeConfiguration? Theme { get; set; }
+    public required TUIThemeConfiguration Theme { get; set; }
 
     /// <summary>
     /// Prompts the user to enter/edit the model value interactively.
@@ -39,18 +39,15 @@ public abstract class TUIComponent<TSelf, TModel> : ComponentBase<TSelf, TModel>
     /// </summary>
     public virtual string GetDisplayText()
     {
-        return Value?.ToString() ?? "[dim]null[/]";
+        return Value?.ToString() ?? UiPlaceholders.NullValueMarkup;
     }
 
     /// <summary>
     /// Renders a section header with the component name.
     /// </summary>
-    protected virtual void RenderHeader(IAnsiConsole console, string? title = null)
+    protected virtual void RenderHeader(IAnsiConsole console, string title)
     {
-        var headerTitle = title ?? typeof(TModel).Name;
-        var color = Theme?.Colors.Primary ?? Color.Yellow;
-
-        console.Write(new Rule($"[{color}]{headerTitle}[/]").LeftJustified());
+        console.Write(new Rule($"[{Theme.Colors.Primary}]{title}[/]").LeftJustified());
     }
 
     /// <summary>

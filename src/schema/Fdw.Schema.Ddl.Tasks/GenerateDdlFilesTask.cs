@@ -245,6 +245,6 @@ public sealed class GenerateDdlFilesTask : Task
         if (value is Guid guid)
             return $"'{guid}'";
 
-        return value.ToString() ?? "NULL";
+        return value.ToString() ?? throw new InvalidOperationException($"A {value.GetType().Name} value has no text to write as a SQL literal.");
     }
 }

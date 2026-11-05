@@ -34,20 +34,20 @@ public class CreateDataSetSourceRequest
     public string ContainerName { get; set; } = string.Empty;
 
     /// <summary>Gets or sets whether predicate pushdown is supported.</summary>
-    public bool SupportsPredicatePushdown { get; set; }
+    public bool? SupportsPredicatePushdown { get; set; }
 
     /// <summary>Gets or sets whether this is the primary source.</summary>
     public bool IsPrimary { get; set; }
 
     /// <summary>Gets or sets the priority.</summary>
-    public int Priority { get; set; }
+    public int? Priority { get; set; }
 
     /// <summary>Gets or sets the mapper type name.</summary>
     public string? MapperTypeName { get; set; }
 
     /// <summary>Gets or sets the source kind discriminator ('DataStore', 'DataSet', 'Calculation').</summary>
     /// <remarks>Determines whether this source is a physical DataStore, another DataSet, or a derived calculation.</remarks>
-    public string SourceKind { get; set; } = "DataStore";
+    public string? SourceKind { get; set; }
 
     /// <summary>Gets or sets the source DataSet identifier when SourceKind='DataSet'.</summary>
     /// <remarks>Used for compound/federated DataSet joins; null for other source kinds.</remarks>

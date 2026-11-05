@@ -18,7 +18,7 @@ public sealed class CreateConnectionClientRequest
     /// <summary>Gets or sets the server hostname or IP address.</summary>
     public string Server { get; set; } = string.Empty;
     /// <summary>Gets or sets the port number.</summary>
-    public int Port { get; set; } = 1433;
+    public int? Port { get; set; }
     /// <summary>Gets or sets the database name.</summary>
     public string Database { get; set; } = string.Empty;
     /// <summary>Gets or sets the authentication type discriminator (e.g., "SqlAuth", "WindowsAuth").</summary>
@@ -26,9 +26,9 @@ public sealed class CreateConnectionClientRequest
     /// <summary>Gets or sets the authentication property bag (auth-type-specific fields, no type discriminator).</summary>
     public ConnectionAuthenticationRequest? Authentication { get; set; }
     /// <summary>Gets or sets whether to trust the server certificate.</summary>
-    public bool TrustServerCertificate { get; set; }
+    public bool? TrustServerCertificate { get; set; }
     /// <summary>Gets or sets whether to encrypt the connection.</summary>
-    public bool Encrypt { get; set; } = true;
+    public bool? Encrypt { get; set; }
 
     /// <summary>Gets or sets the base URL for HTTP connections (e.g., "https://api.example.com/v1/").</summary>
     public string? BaseUrl { get; set; }
@@ -41,7 +41,7 @@ public sealed class CreateConnectionClientRequest
     /// <summary>Gets or sets the security configuration key-value pairs (API key, credentials, etc.).</summary>
     public System.Collections.Generic.IDictionary<string, string?>? Security { get; set; }
     /// <summary>Gets or sets whether to use mutual TLS (client certificate).</summary>
-    public bool UseMtls { get; set; }
+    public bool? UseMtls { get; set; }
 
     /// <summary>Gets or sets the name of the schema discovery option the connection uses; <c>None</c> when it does not discover.</summary>
     public string SchemaDiscovery { get; set; } = string.Empty;

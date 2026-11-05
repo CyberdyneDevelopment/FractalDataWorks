@@ -1,5 +1,7 @@
 using System.IO;
 using Fdw.Collections;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Data.RowSources.Abstractions;
 
@@ -39,7 +41,7 @@ public interface IRecordSourceType : ITypeOption<int, RecordSourceTypeBase>
     /// <param name="content">The input stream containing data in this type's format.</param>
     /// <param name="options">
     /// Format-specific options (the concrete subclass of <see cref="RowSourceOptions"/> for this
-    /// format, e.g. <c>JsonRowSourceOptions</c>). Null requests the format's defaults.
+    /// format, e.g. <c>JsonRowSourceOptions</c>), built by <see cref="CreateOptions"/>. Required: a reader takes no value of its own.
     /// </param>
     /// <returns>A cursor/reader positioned before the first row.</returns>
     /// <remarks>
@@ -49,7 +51,23 @@ public interface IRecordSourceType : ITypeOption<int, RecordSourceTypeBase>
     /// is the record-source surface layered on the same parsing; this cursor surface stays so the current
     /// HTTP read path keeps working.
     /// </remarks>
-    IRowSourceReader CreateReader(Stream content, RowSourceOptions? options);
+    IRowSourceReader CreateReader(Stream content, RowSourceOptions options);
+
+    /// <summary>
+    /// Builds this format's own reader options for a container: each choice from what the container's metadata states, each tuning value
+    /// from this format's own declaration.
+    /// </summary>
+    /// <param name="container">The container whose metadata and fields state the format's choices.</param>
+    /// <returns>Options of the concrete type this format's reader expects, or the failure naming the first choice the container leaves out.</returns>
+    /// <remarks>
+    /// Why the format builds them (FDW-3823): the HTTP protocols and the file-system and HTTP record connectors each read the container's
+    /// metadata with their own copy of this mapping, and each held literal defaults. A choice (a separator, a header, an element name) is
+    /// never defaulted: a container that leaves one out is refused, naming it.
+    /// </remarks>
+    IGenericResult<RowSourceOptions> CreateOptions(IStorageContainer container);
+
+    /// <summary>Gets the buffer size, in bytes, this format's reader streams with. Declared by the format; a host may change it at registration.</summary>
+    int BufferSize { get; set; }
 
     /// <summary>
     /// Gets whether this source type supports synchronous reading.

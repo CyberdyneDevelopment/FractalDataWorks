@@ -15,7 +15,7 @@ public sealed class SuccessCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="SuccessCategory"/> class.
     /// </summary>
     public SuccessCategory()
-        : base(id: 1, name: "Success", isFailure: false, isRetryable: false, httpStatus: 200, clientMessage: "The request succeeded", clientAction: null)
+        : base(id: 1, name: "Success", isFailure: false, isRetryable: false, countsTowardFailureThresholds: false, httpStatus: 200, clientMessage: "The request succeeded", clientAction: null)
     {
     }
 }

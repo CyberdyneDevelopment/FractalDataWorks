@@ -38,10 +38,10 @@ public sealed partial class WindowedCalculationConfiguration : ICalculationTyped
     public string? ResultFieldName { get; set; }
 
     /// <inheritdoc/>
-    public string ResultDataTypeName { get; set; } = "Decimal";
+    public string ResultDataTypeName { get; set; } = string.Empty;
 
     /// <inheritdoc/>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets the inputs the calculation reads, held in <c>calc.WindowedCalculationInput</c>.</summary>
 #pragma warning disable MA0016

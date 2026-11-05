@@ -1,6 +1,9 @@
 using System;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Results;
 
 namespace Fdw.Services.Etl.Projects.Policy;
 
@@ -10,29 +13,35 @@ namespace Fdw.Services.Etl.Projects.Policy;
 /// </summary>
 public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
 {
-    private readonly IServerPolicyDefaults _serverDefaults;
+    private readonly IServerPolicyDefaultConfigurationProvider _serverDefaults;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EffectivePolicyResolver"/> class.
     /// </summary>
-    public EffectivePolicyResolver(IServerPolicyDefaults serverDefaults)
+    public EffectivePolicyResolver(IServerPolicyDefaultConfigurationProvider serverDefaults)
     {
         _serverDefaults = serverDefaults ?? throw new ArgumentNullException(nameof(serverDefaults));
     }
 
     /// <inheritdoc/>
-    public ExecutionPolicySnapshot ResolveForProject(ProjectConfiguration project)
+    public async Task<IGenericResult<ExecutionPolicySnapshot>> ResolveForProject(ProjectConfiguration project, CancellationToken cancellationToken = default)
     {
         if (project == null) throw new ArgumentNullException(nameof(project));
 
-        return new ExecutionPolicySnapshot(
-            StepFailurePolicy: project.StepFailurePolicy ?? _serverDefaults.StepFailurePolicy,
-            StageFailurePolicy: project.StageFailurePolicy ?? _serverDefaults.StageFailurePolicy,
-            MaxParallelPipelines: project.MaxParallelPipelines ?? _serverDefaults.MaxParallelPipelines,
-            RequireApprovalToRun: project.RequireApprovalToRun ?? _serverDefaults.RequireApprovalToRun,
-            AllowResume: project.AllowResume ?? _serverDefaults.AllowResume,
-            AllowCrossTenant: project.AllowCrossTenant ?? _serverDefaults.AllowCrossTenant,
-            ResiliencyPolicyId: project.ResiliencyPolicyId ?? _serverDefaults.ResiliencyPolicyId);
+        var server = await ServerSnapshot(cancellationToken).ConfigureAwait(false);
+        if (server.IsFailure || server.Value is not { } parent)
+        {
+            return GenericResult<ExecutionPolicySnapshot>.Failure(server.NoValueReason());
+        }
+
+        return GenericResult<ExecutionPolicySnapshot>.Success(new ExecutionPolicySnapshot(
+            StepFailurePolicy: project.StepFailurePolicy ?? parent.StepFailurePolicy,
+            StageFailurePolicy: project.StageFailurePolicy ?? parent.StageFailurePolicy,
+            MaxParallelPipelines: project.MaxParallelPipelines ?? parent.MaxParallelPipelines,
+            RequireApprovalToRun: project.RequireApprovalToRun ?? parent.RequireApprovalToRun,
+            AllowResume: project.AllowResume ?? parent.AllowResume,
+            AllowCrossTenant: project.AllowCrossTenant ?? parent.AllowCrossTenant,
+            ResiliencyPolicyId: project.ResiliencyPolicyId ?? parent.ResiliencyPolicyId));
     }
 
     /// <inheritdoc/>
@@ -84,13 +93,32 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     }
 
     /// <inheritdoc/>
-    public ExecutionPolicySnapshot ResolveForRootNode(IOrchestrationNodeImplementationConfiguration node) =>
-        ResolveForNode(node, new ExecutionPolicySnapshot(
-            StepFailurePolicy: _serverDefaults.StepFailurePolicy,
-            StageFailurePolicy: _serverDefaults.StageFailurePolicy,
-            MaxParallelPipelines: _serverDefaults.MaxParallelPipelines,
-            RequireApprovalToRun: _serverDefaults.RequireApprovalToRun,
-            AllowResume: _serverDefaults.AllowResume,
-            AllowCrossTenant: _serverDefaults.AllowCrossTenant,
-            ResiliencyPolicyId: _serverDefaults.ResiliencyPolicyId));
+    public async Task<IGenericResult<ExecutionPolicySnapshot>> ResolveForRootNode(IOrchestrationNodeImplementationConfiguration node, CancellationToken cancellationToken = default)
+    {
+        if (node == null) throw new ArgumentNullException(nameof(node));
+
+        var server = await ServerSnapshot(cancellationToken).ConfigureAwait(false);
+        return server.IsFailure || server.Value is not { } parent
+            ? GenericResult<ExecutionPolicySnapshot>.Failure(server.NoValueReason())
+            : GenericResult<ExecutionPolicySnapshot>.Success(ResolveForNode(node, parent));
+    }
+
+    // The server's defaults as the parent snapshot of a project or a root node, read from their provider now.
+    private async Task<IGenericResult<ExecutionPolicySnapshot>> ServerSnapshot(CancellationToken cancellationToken)
+    {
+        var defaults = await _serverDefaults.GetCurrent(cancellationToken).ConfigureAwait(false);
+        if (defaults.IsFailure || defaults.Value is not { } row)
+        {
+            return GenericResult<ExecutionPolicySnapshot>.Failure(defaults.NoValueReason());
+        }
+
+        return GenericResult<ExecutionPolicySnapshot>.Success(new ExecutionPolicySnapshot(
+            StepFailurePolicy: row.StepFailurePolicy,
+            StageFailurePolicy: row.StageFailurePolicy,
+            MaxParallelPipelines: row.MaxParallelPipelines,
+            RequireApprovalToRun: row.RequireApprovalToRun,
+            AllowResume: row.AllowResume,
+            AllowCrossTenant: row.AllowCrossTenant,
+            ResiliencyPolicyId: row.ResiliencyPolicyId));
+    }
 }

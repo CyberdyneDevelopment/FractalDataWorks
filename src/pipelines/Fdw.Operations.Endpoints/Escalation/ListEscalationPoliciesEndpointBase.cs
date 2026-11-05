@@ -60,7 +60,7 @@ public abstract class ListEscalationPoliciesEndpointBase : EndpointWithoutReques
                 return;
             }
 
-            var policies = (result.Value ?? Array.Empty<IEscalationPolicy>())
+            var policies = (result.Value ?? [])
                 .Select(EscalationMapper.ToDto)
                 .ToList();
 

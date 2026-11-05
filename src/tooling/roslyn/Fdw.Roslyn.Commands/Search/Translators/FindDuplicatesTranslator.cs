@@ -61,7 +61,7 @@ public sealed class FindDuplicatesTranslator : RoslynCommandTranslatorBase<FindD
 
                 foreach (var method in methods)
                 {
-                    var body = method.Body?.ToString() ?? method.ExpressionBody?.ToString() ?? string.Empty;
+                    var body = BodyText(method);
                     var lines = body.Split('\n').Length;
                     var tokens = method.DescendantTokens().Count();
 
@@ -108,8 +108,8 @@ public sealed class FindDuplicatesTranslator : RoslynCommandTranslatorBase<FindD
     {
         // Remove whitespace differences and normalize identifiers
         var normalized = code
-            .Replace("\r\n", "\n")
-            .Replace("\r", "\n");
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
 
         // Simple normalization - remove empty lines and trim
         var lines = normalized.Split('\n')
@@ -132,4 +132,12 @@ public sealed class FindDuplicatesTranslator : RoslynCommandTranslatorBase<FindD
         return Convert.ToHexString(hash);
     }
 #pragma warning restore CA5351, SCS0006
+
+    // The method's block body, else its expression body; the Where above keeps only methods that have one of them.
+    private static string BodyText(MethodDeclarationSyntax method)
+    {
+        if (method.Body is { } block) return block.ToString();
+        if (method.ExpressionBody is { } expression) return expression.ToString();
+        return string.Empty;
+    }
 }

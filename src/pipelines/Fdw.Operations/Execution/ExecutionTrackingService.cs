@@ -260,8 +260,36 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         if (!StoreIsNamed)
             return GenericResult.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 
-        IExecutionStateType targetState = success ? ExecutionStateTypes.Completed : ExecutionStateTypes.Failed;
+        return await CloseItem(
+            executionItemId, success ? ExecutionStateTypes.Completed : ExecutionStateTypes.Failed, success, resultCode, resultMessage, cancellationToken).ConfigureAwait(false);
+    }
 
+    /// <inheritdoc />
+    public async Task<IGenericResult> Close(
+        Guid executionItemId,
+        IExecutionStateType finalState,
+        string? resultCode = null,
+        string? resultMessage = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(finalState);
+        if (!StoreIsNamed)
+            return GenericResult.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+
+        return finalState.IsTerminal
+            ? await CloseItem(executionItemId, finalState, false, resultCode, resultMessage, cancellationToken).ConfigureAwait(false)
+            : GenericResult.Failure(OperationsLog.StateIsNotTerminal(_logger, executionItemId, finalState.Name));
+    }
+
+    // Ends the item in the given terminal state: stores its result, moves its state and tells the notification rules, for the root item only.
+    private async Task<IGenericResult> CloseItem(
+        Guid executionItemId,
+        IExecutionStateType targetState,
+        bool success,
+        string? resultCode,
+        string? resultMessage,
+        CancellationToken cancellationToken)
+    {
         var itemResult = await GetItemInternal(executionItemId, cancellationToken).ConfigureAwait(false);
         if (!itemResult.IsSuccess)
         {
@@ -372,7 +400,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         var events = result.Value?.Select(e => (IExecutionEvent)new ExecutionEventRecord(e)).ToList()
-            ?? new List<IExecutionEvent>();
+            ?? [];
 
         return GenericResult<IReadOnlyList<IExecutionEvent>>.Success(events);
     }
@@ -420,7 +448,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         var items = result.Value?.Select(i => (IExecutionItem)new ExecutionItemRecord(i)).ToList()
-            ?? new List<IExecutionItem>();
+            ?? [];
 
         return GenericResult<IReadOnlyList<IExecutionItem>>.Success(items);
     }
@@ -468,7 +496,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         var items = result.Value?.Select(i => (IExecutionItem)new ExecutionItemRecord(i)).ToList()
-            ?? new List<IExecutionItem>();
+            ?? [];
 
         if (items.Count == 0)
         {
@@ -533,7 +561,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             return result.ToNewResult<IPagedResponse<IExecutionItem>>();
 
         var items = result.Value?.Select(i => (IExecutionItem)new ExecutionItemRecord(i)).ToList()
-            ?? new List<IExecutionItem>();
+            ?? [];
 
         var totalEstimate = items.Count < pageSize
             ? (long)((page - 1) * pageSize + items.Count)
@@ -700,7 +728,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         if (!insertResult.IsSuccess)
         {
             return GenericResult.Failure(
-                OperationsLog.ExecutionItemPersistFailed(_logger, poco.Id, insertResult.CurrentMessage ?? "Unknown error"));
+                OperationsLog.ExecutionItemPersistFailed(_logger, poco.Id, insertResult.FailureReason().Message));
         }
 
         return GenericResult.Success();
@@ -766,7 +794,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         if (!updateResult.IsSuccess)
         {
             return GenericResult.Failure(
-                OperationsLog.ExecutionItemPersistFailed(_logger, executionItemId, updateResult.CurrentMessage ?? "Unknown error"));
+                OperationsLog.ExecutionItemPersistFailed(_logger, executionItemId, updateResult.FailureReason().Message));
         }
 
         return GenericResult.Success();
@@ -843,7 +871,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         var lastEvent = result.Value?.FirstOrDefault();
-        return (lastEvent?.SequenceNumber ?? 0) + 1;
+        return lastEvent is null ? 1 : lastEvent.SequenceNumber + 1;
     }
 
     private async Task EmitTerminalNotifications(

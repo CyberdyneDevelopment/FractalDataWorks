@@ -25,7 +25,7 @@ public static class MigrationGuideReader
     public const string AssemblyMovesColumns = "| Type (FQN) | Old assembly | New assembly | Relative position |";
 
     /// <summary>The placeholder written when a move recorded no relative position.</summary>
-    public const string NotRecorded = "(not recorded)";
+    public const string NotRecorded = MigrationGuidePlaceholders.NotRecorded;
 
     /// <summary>
     /// Reads every cross-assembly move recorded in a guide.
@@ -65,7 +65,7 @@ public static class MigrationGuideReader
 
             if (!trimmed.StartsWith('|')) { inTable = false; continue; }
             if (string.Equals(trimmed, AssemblyMovesColumns, StringComparison.Ordinal)) continue;
-            if (trimmed.Replace("|", string.Empty).Trim().Trim('-').Length == 0) continue;
+            if (trimmed.Replace("|", string.Empty, StringComparison.Ordinal).Trim().Trim('-').Length == 0) continue;
 
             var move = ParseRow(trimmed);
             if (move is not null) moves.Add(move);

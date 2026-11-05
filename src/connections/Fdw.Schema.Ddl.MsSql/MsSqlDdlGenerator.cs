@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Fdw.Results;
+using Fdw.Configuration.Persistence.Schema;
 using Fdw.Results.Abstractions;
 using Fdw.Schema.Ddl.Commands;
 using Fdw.Schema.Ddl.Definitions;
@@ -11,7 +12,6 @@ using Fdw.Schema.Ddl.Results;
 using Fdw.Schema.Indexes;
 using Fdw.Schema.Properties;
 using Fdw.Schema.Schemas;
-using StringComparison = System.StringComparison;
 
 namespace Fdw.Schema.Ddl.MsSql;
 
@@ -26,17 +26,17 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
     /// <inheritdoc/>
     public IGenericResult<IReadOnlyList<IDdlCommand>> GenerateCommands<TProperty>(
         ISchemaDefinition<TProperty> schema,
-        DdlGenerationOptions? options = null)
+        DdlGenerationOptions options)
         where TProperty : IPropertyDefinition
     {
         try
         {
-            options ??= new DdlGenerationOptions();
+            var generation = options ?? throw new ArgumentNullException(nameof(options));
             var commands = new List<IDdlCommand>();
 
             var columns = ConvertToColumnDefinitions(schema.Properties);
             var primaryKeyColumns = GetPrimaryKeyColumns(schema);
-            var schemaName = options.SchemaName;
+            var schemaName = generation.SchemaName;
             var tableName = schema.Name;
 
             var createTableCommand = new CreateTableCommand
@@ -46,12 +46,12 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
                 Columns = columns,
                 PrimaryKeyName = $"PK_{tableName}",
                 PrimaryKeyColumns = primaryKeyColumns.Count > 0 ? primaryKeyColumns : null,
-                ForeignKeys = options.IncludeForeignKeys ? ConvertForeignKeys(schema) : null
+                ForeignKeys = generation.IncludeForeignKeys ? ConvertForeignKeys(schema) : null
             };
 
             commands.Add(createTableCommand);
 
-            if (options.IncludeIndexes && schema.Indexes?.Count > 0)
+            if (generation.IncludeIndexes && schema.Indexes?.Count > 0)
             {
                 commands.AddRange(CreateIndexCommands(schema.Indexes, schemaName, tableName));
             }
@@ -157,20 +157,27 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
     /// <inheritdoc/>
     public IGenericResult<string> GenerateSql(IDdlCommand command)
     {
+        // Why refused here: the constraint name is the command's to give, and the generator invents none (FDW-3580).
+        if (command is CreateTableCommand { PrimaryKeyColumns.Count: > 0, PrimaryKeyName: null or "" } unnamed)
+        {
+            return GenericResult<string>.Failure(
+                DdlResultCodes.ByName("PrimaryKeyNameMissing"),
+                ResultDetails.Create("tableName", unnamed.TableName));
+        }
+
         try
         {
-            var sql = command switch
+            // A table can be refused (a foreign key action SQL Server cannot express), so its arm answers a result.
+            return command switch
             {
-                CreateSchemaCommand cs => GenerateCreateSchema(cs),
+                CreateSchemaCommand cs => GenericResult<string>.Success(GenerateCreateSchema(cs)),
                 CreateTableCommand ct => GenerateCreateTable(ct),
-                CreateIndexCommand ci => GenerateCreateIndex(ci),
-                DropTableCommand dt => GenerateDropTable(dt),
-                DropIndexCommand di => GenerateDropIndex(di),
-                DropSchemaCommand ds => GenerateDropSchema(ds),
+                CreateIndexCommand ci => GenericResult<string>.Success(GenerateCreateIndex(ci)),
+                DropTableCommand dt => GenericResult<string>.Success(GenerateDropTable(dt)),
+                DropIndexCommand di => GenericResult<string>.Success(GenerateDropIndex(di)),
+                DropSchemaCommand ds => GenericResult<string>.Success(GenerateDropSchema(ds)),
                 _ => throw new NotSupportedException($"Command type {command.CommandType} is not supported")
             };
-
-            return GenericResult<string>.Success(sql);
         }
         catch (Exception ex)
         {
@@ -222,8 +229,12 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         return sb.ToString();
     }
 
-    private static string GenerateCreateTable(CreateTableCommand command)
+    private static IGenericResult<string> GenerateCreateTable(CreateTableCommand command)
     {
+        var constraints = BuildConstraints(command);
+        if (!constraints.IsSuccess || constraints.Value is null)
+            return constraints.ToNewResult<string>();
+
         var sb = new StringBuilder();
         var fullTableName = string.IsNullOrWhiteSpace(command.SchemaName)
             ? command.TableName
@@ -243,8 +254,7 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         }
 
         // Constraints
-        var constraints = BuildConstraints(command);
-        foreach (var constraint in constraints)
+        foreach (var constraint in constraints.Value)
         {
             sb.AppendLine();
             sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    ,{constraint}");
@@ -254,7 +264,7 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         sb.AppendLine("END");
         sb.Append("GO");
 
-        return sb.ToString();
+        return GenericResult<string>.Success(sb.ToString());
     }
 
     private static List<string> BuildColumnLines(IReadOnlyList<DdlColumnDefinition> columns)
@@ -296,7 +306,7 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         return columnLines;
     }
 
-    private static List<string> BuildConstraints(CreateTableCommand command)
+    private static IGenericResult<List<string>> BuildConstraints(CreateTableCommand command)
     {
         var constraints = new List<string>();
 
@@ -304,8 +314,7 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         if (command.PrimaryKeyColumns?.Count > 0)
         {
             var pkColumns = string.Join(", ", command.PrimaryKeyColumns);
-            var pkName = command.PrimaryKeyName ?? $"PK_{command.TableName}";
-            constraints.Add($"CONSTRAINT {pkName} PRIMARY KEY ({pkColumns})");
+            constraints.Add($"CONSTRAINT {command.PrimaryKeyName} PRIMARY KEY ({pkColumns})");
         }
 
         // Unique constraints
@@ -320,25 +329,19 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         {
             foreach (var fk in command.ForeignKeys)
             {
-                var fkDef = new StringBuilder();
-                fkDef.Append(System.Globalization.CultureInfo.InvariantCulture, $"CONSTRAINT {fk.Name} FOREIGN KEY ({fk.ColumnName}) ");
-                fkDef.Append(System.Globalization.CultureInfo.InvariantCulture, $"REFERENCES {fk.ReferencedSchema}.{fk.ReferencedTable}({fk.ReferencedColumn})");
+                var onDelete = ForeignKeyActionClause(fk, "ON DELETE", fk.OnDelete);
+                if (!onDelete.IsSuccess || onDelete.Value is null) return onDelete.ToNewResult<List<string>>();
+                var onUpdate = ForeignKeyActionClause(fk, "ON UPDATE", fk.OnUpdate);
+                if (!onUpdate.IsSuccess || onUpdate.Value is null) return onUpdate.ToNewResult<List<string>>();
 
-                if (!string.Equals(fk.OnDelete.Name, "NoAction", StringComparison.Ordinal))
-                {
-                    fkDef.Append(System.Globalization.CultureInfo.InvariantCulture, $" ON DELETE {GetForeignKeyAction(fk.OnDelete)}");
-                }
-
-                if (!string.Equals(fk.OnUpdate.Name, "NoAction", StringComparison.Ordinal))
-                {
-                    fkDef.Append(System.Globalization.CultureInfo.InvariantCulture, $" ON UPDATE {GetForeignKeyAction(fk.OnUpdate)}");
-                }
-
-                constraints.Add(fkDef.ToString());
+                constraints.Add(
+                    $"CONSTRAINT {fk.Name} FOREIGN KEY ({fk.ColumnName}) " +
+                    $"REFERENCES {fk.ReferencedSchema}.{fk.ReferencedTable}({fk.ReferencedColumn})" +
+                    onDelete.Value + onUpdate.Value);
             }
         }
 
-        return constraints;
+        return GenericResult<List<string>>.Success(constraints);
     }
 
     private static string GenerateCreateIndex(CreateIndexCommand command)
@@ -421,15 +424,19 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         return sb.ToString();
     }
 
-    private static string GetForeignKeyAction(IDdlForeignKeyAction action)
+    // The clause one referential action adds to a foreign key: empty for NO ACTION, which is what SQL Server does
+    // when the clause is absent, otherwise the action's own keyword. SQL Server has no RESTRICT, and the NotFound
+    // sentinel names no action at all: both are refused, never written as another action (FDW-3610).
+    private static IGenericResult<string> ForeignKeyActionClause(DdlForeignKeyDefinition fk, string clause, IForeignKeyAction action)
     {
-        return action.Name switch
+        if (action.Id == ForeignKeyActions.NotFound.Id || action.Id == ForeignKeyActions.Restrict.Id)
         {
-            "Cascade" => "CASCADE",
-            "SetNull" => "SET NULL",
-            "SetDefault" => "SET DEFAULT",
-            "NoAction" => "NO ACTION",
-            _ => "NO ACTION"
-        };
+            return GenericResult<string>.Failure(
+                DdlResultCodes.ByName("ForeignKeyActionNotSupported"),
+                ResultDetails.Create("constraint", fk.Name, "clause", clause, "action", action.Name).With("dialect", "SQL Server"));
+        }
+
+        return GenericResult<string>.Success(
+            action.Id == ForeignKeyActions.NoAction.Id ? string.Empty : $" {clause} {action.SqlKeyword}");
     }
 }

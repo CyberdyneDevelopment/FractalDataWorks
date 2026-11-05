@@ -172,7 +172,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         if (!configResult.IsSuccess)
         {
             DataStoreTypesLog.OptionsBindingSummary(logger, 0, 0, 0, 0);
-            DataStoreProviderLog.ContainerCreationFailed(logger, "all", "Initialize", configResult.CurrentMessage ?? "Config provider failure");
+            DataStoreProviderLog.ContainerCreationFailed(logger, "all", "Initialize", configResult.FailureReason().Message);
             return;
         }
 
@@ -377,8 +377,8 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         {
             DataStoreProviderLog.LoadFailed(
                 _logger,
-                new InvalidOperationException(coreResult.CurrentMessage ?? "core provider Get(all) returned failure"),
-                coreResult.CurrentMessage ?? "core provider Get(all) returned failure");
+                new InvalidOperationException(coreResult.FailureReason().Message),
+                coreResult.FailureReason().Message);
             return [];
         }
 

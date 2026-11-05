@@ -20,6 +20,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin"
         };
 
@@ -38,6 +39,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = string.Empty
         };
 
@@ -56,6 +58,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "1Role"
         };
 
@@ -74,6 +77,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = new string('A', 101)
         };
 
@@ -92,6 +96,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin",
             DisplayName = null
         };
@@ -111,6 +116,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin",
             DisplayName = "System Administrator"
         };
@@ -130,6 +136,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin",
             DisplayName = new string('A', 201)
         };
@@ -149,6 +156,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin",
             Description = null
         };
@@ -168,6 +176,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin",
             Description = "Full system access"
         };
@@ -187,6 +196,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin",
             Description = "Invalid\0Description"
         };
@@ -201,13 +211,14 @@ public sealed class RoleConfigurationValidatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ValidateFailsWithDescriptionExceedingMaxLength()
+    public void ValidateFailsWithDescriptionExceedingTheColumnsFiveHundred()
     {
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin",
-            Description = new string('A', 1001)
+            Description = new string('A', 501)
         };
 
         // Act
@@ -305,6 +316,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = "Admin"
         };
 
@@ -323,6 +335,7 @@ public sealed class RoleConfigurationValidatorTests
         // Arrange
         var config = new RoleImplementationConfiguration
         {
+            IsTenantScoped = true,
             Name = string.Empty
         };
 

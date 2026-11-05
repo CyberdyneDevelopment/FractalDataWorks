@@ -22,7 +22,7 @@ public class XmlStreamRowSourceTests
             </root>
             """;
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        var options = new XmlRowSourceOptions { RowElementName = "row", IncludeAttributes = true };
+        var options = new XmlRowSourceOptions { RowElementName = "row", IncludeAttributes = true, ContinueOnError = true, UseElementContent = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 };
         using var source = new XmlStreamRowSource(stream, options);
 
         // Act & Assert
@@ -53,7 +53,7 @@ public class XmlStreamRowSourceTests
             </root>
             """;
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true };
+        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true, ContinueOnError = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 };
         using var source = new XmlStreamRowSource(stream, options);
 
         // Act
@@ -76,7 +76,7 @@ public class XmlStreamRowSourceTests
             </root>
             """;
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        var options = new XmlRowSourceOptions { RowElementName = "item", IncludeAttributes = true };
+        var options = new XmlRowSourceOptions { RowElementName = "item", IncludeAttributes = true, ContinueOnError = true, UseElementContent = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 };
         using var source = new XmlStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -97,7 +97,7 @@ public class XmlStreamRowSourceTests
             </root>
             """;
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true };
+        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true, ContinueOnError = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 };
         using var source = new XmlStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -119,7 +119,7 @@ public class XmlStreamRowSourceTests
             </root>
             """;
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true };
+        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true, ContinueOnError = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 };
         using var source = new XmlStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -143,7 +143,11 @@ public class XmlStreamRowSourceTests
         {
             RowElementName = "row",
             IncludeAttributes = true,
-            UseElementContent = true
+            UseElementContent = true,
+            ContinueOnError = true,
+            BufferSize = 16 * 1024,
+            MaxDepth = 32,
+            MaxCharactersFromEntities = 10_000_000,
         };
         using var source = new XmlStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
@@ -170,7 +174,12 @@ public class XmlStreamRowSourceTests
         var options = new XmlRowSourceOptions
         {
             RowElementName = "row",
-            IncludeAttributes = true
+            IncludeAttributes = true,
+            ContinueOnError = true,
+            UseElementContent = true,
+            BufferSize = 16 * 1024,
+            MaxDepth = 32,
+            MaxCharactersFromEntities = 10_000_000,
         };
         using var source = new XmlStreamRowSource(stream, options);
 
@@ -194,7 +203,7 @@ public class XmlStreamRowSourceTests
             </root>
             """;
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true };
+        var options = new XmlRowSourceOptions { RowElementName = "row", UseElementContent = true, ContinueOnError = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 };
         using var source = new XmlStreamRowSource(stream, options);
         await source.Read(TestContext.Current.CancellationToken);
 
@@ -210,7 +219,7 @@ public class XmlStreamRowSourceTests
         // Arrange
         var xml = """<root><row><id>1</id></row></root>""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        using var source = new XmlStreamRowSource(stream);
+        using var source = new XmlStreamRowSource(stream, new XmlRowSourceOptions() { ContinueOnError = true, UseElementContent = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 });
 
         // Assert
         source.EstimatedAllocationsPerRow.ShouldBe(1);
@@ -224,7 +233,7 @@ public class XmlStreamRowSourceTests
         // Arrange
         var xml = """<root><row><id>1</id></row></root>""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        using var source = new XmlStreamRowSource(stream);
+        using var source = new XmlStreamRowSource(stream, new XmlRowSourceOptions() { ContinueOnError = true, UseElementContent = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 });
 
         // Assert
         source.CanReset.ShouldBeFalse();
@@ -238,7 +247,7 @@ public class XmlStreamRowSourceTests
         // Arrange
         var xml = """<root><row><id>1</id></row></root>""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        using var source = new XmlStreamRowSource(stream);
+        using var source = new XmlStreamRowSource(stream, new XmlRowSourceOptions() { ContinueOnError = true, UseElementContent = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 });
 
         // Assert
         source.HasCurrentRow.ShouldBeFalse();
@@ -252,7 +261,7 @@ public class XmlStreamRowSourceTests
         // Arrange
         var xml = """<root></root>""";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
-        var options = new XmlRowSourceOptions { RowElementName = "row" };
+        var options = new XmlRowSourceOptions { RowElementName = "row", ContinueOnError = true, UseElementContent = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 };
         using var source = new XmlStreamRowSource(stream, options);
 
         // Act & Assert
@@ -281,7 +290,11 @@ public class XmlStreamRowSourceTests
         {
             RowElementName = "level4",
             MaxDepth = 2,
-            UseElementContent = true
+            UseElementContent = true,
+            ContinueOnError = true,
+            IncludeAttributes = true,
+            BufferSize = 16 * 1024,
+            MaxCharactersFromEntities = 10_000_000,
         };
         using var source = new XmlStreamRowSource(stream, options);
 

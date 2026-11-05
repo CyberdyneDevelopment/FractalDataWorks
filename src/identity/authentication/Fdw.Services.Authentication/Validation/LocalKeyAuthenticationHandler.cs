@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using Fdw.Results;
 using Fdw.Messages;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Authentication.Validation;
 
@@ -90,15 +91,16 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
             .ConfigureAwait(false);
 
         if (!validated.IsValid)
-            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
-                _log, ServiceName, validated.Exception?.Message ?? "no reason given")));
+            return AuthenticateResult.Fail(Text(validated.Exception is { } rejection
+                ? AuthenticationValidationLog.TokenRejected(_log, ServiceName, rejection.Message)
+                : AuthenticationValidationLog.TokenRejectedWithoutReason(_log, ServiceName)));
 
         if (await CheckRevocation(validated, _context.RequestAborted).ConfigureAwait(false) is { } rejected)
             return rejected;
 
         // The inbound claim map is not applied: JsonWebTokenHandler does not rewrite claim types the
         // way it would, so sub stays sub and roles stays roles.
-        AuthenticationValidationLog.TokenAccepted(_log, ServiceName, validated.ClaimsIdentity.Name ?? "(no name)");
+        AuthenticationValidationLog.TokenAccepted(_log, ServiceName, validated.ClaimsIdentity.Name ?? LogPlaceholders.NoName);
 
         return AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(validated.ClaimsIdentity), _scheme.Name));

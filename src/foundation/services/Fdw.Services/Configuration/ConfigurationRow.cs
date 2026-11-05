@@ -26,6 +26,10 @@ public sealed class ConfigurationRow
         }
     }
 
+    /// <summary>Gets the columns the store returned, read without regard to case.</summary>
+    /// <remarks>For a caller that builds the typed record this row stands for, through the coercing reader a mapper reads.</remarks>
+    public IReadOnlyDictionary<string, object?> Columns => _columns;
+
     /// <summary>Reads a text column.</summary>
     /// <param name="column">The column's name.</param>
     /// <returns>The text, or nothing when the column is null.</returns>

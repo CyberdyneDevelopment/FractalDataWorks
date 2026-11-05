@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using Fdw.Collections;
 using Fdw.Configuration;
+using Fdw.Conventions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
 using Fdw.Services.Connections.Http.Limits;
@@ -90,7 +91,10 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     /// Gets or sets the service lifetime for the connection.
     /// Valid values: "Singleton", "Scoped", "Transient".
     /// </summary>
-    public string Lifetime { get; set; } = "Scoped";
+    /// <remarks>
+    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
+    /// </remarks>
+    public string Lifetime { get; set; } = string.Empty;
 
 
     /// <summary>
@@ -111,14 +115,19 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     /// <item><description>"OData" - OData protocol</description></item>
     /// <item><description>Custom protocol names registered via TypeOption</description></item>
     /// </list>
+    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
     /// </remarks>
     [ValuesFrom(typeof(HttpProtocols))]
-    public string Protocol { get; set; } = "Rest";
+    public string Protocol { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the timeout for HTTP requests in seconds.
+    /// Gets or sets the timeout for HTTP requests in seconds, or <see langword="null"/> when the connection states none.
     /// </summary>
-    public int TimeoutSeconds { get; set; } = 30;
+    /// <remarks>
+    /// No number is assumed: a connection that states none leaves <c>HttpClient.Timeout</c> unset, so the platform's own
+    /// timeout applies (FDW-3580).
+    /// </remarks>
+    public int? TimeoutSeconds { get; set; }
 
     /// <summary>
     /// Gets or sets the default content type for requests.
@@ -137,8 +146,11 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     /// option: None/Basic/Bearer/ApiKey/UsernameToken/WsSecurity). The factory resolves the typed method
     /// via <c>HttpAuthenticationTypes.ByName(AuthenticationType)</c> and delegates secret resolution to it.
     /// </summary>
+    /// <remarks>
+    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
+    /// </remarks>
     [ValuesFrom(typeof(HttpAuthenticationTypes))]
-    public string AuthenticationType { get; set; } = "None";
+    public string AuthenticationType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the authentication key-value configuration for the selected method (SecretManagerName

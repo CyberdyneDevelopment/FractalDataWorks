@@ -48,10 +48,10 @@ public sealed class XlsxRowWriter : IRowWriter
     /// <summary>Initializes a new instance of the <see cref="XlsxRowWriter"/> class.</summary>
     /// <param name="target">Where the workbook goes; written synchronously and left open.</param>
     /// <param name="options">The columns and worksheet limits.</param>
-    public XlsxRowWriter(Stream target, XlsxRowWriterOptions? options = null)
+    public XlsxRowWriter(Stream target, XlsxRowWriterOptions options)
     {
         ArgumentNullException.ThrowIfNull(target);
-        var opts = options ?? new XlsxRowWriterOptions();
+        var opts = options ?? throw new ArgumentNullException(nameof(options));
         if (opts.Columns.Count == 0)
         {
             throw new ArgumentException("XlsxRowWriterOptions.Columns must contain at least one column name.", nameof(options));

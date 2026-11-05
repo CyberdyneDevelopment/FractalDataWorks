@@ -80,14 +80,15 @@ public sealed class InheritedSettingsTests
         => new(_serverProvider.Object, _tenantProvider.Object, _organizationProvider.Object, _scope.Object, NullLogger<InheritedSettings>.Instance);
 
     private void Platform(string name, string value, bool locked = false)
-        => _server.Add(new ServerSettingImplementationConfiguration { Name = name, SettingValue = value, DataType = "Int32", IsLocked = locked });
+        => _server.Add(new ServerSettingImplementationConfiguration { IsActive = true, Name = name, SettingValue = value, DataType = "Int32", IsLocked = locked });
 
     private void ForTenant(string name, string value, bool locked = false)
-        => _tenants.Add(new TenantSettingImplementationConfiguration { Name = $"{Tenant}/{name}", TenantId = Tenant, SettingName = name, SettingValue = value, IsLocked = locked });
+        => _tenants.Add(new TenantSettingImplementationConfiguration { IsActive = true, Name = $"{Tenant}/{name}", TenantId = Tenant, SettingName = name, SettingValue = value, IsLocked = locked });
 
     private void ForOrganization(string name, string value)
         => _organizations.Add(new OrganizationSettingImplementationConfiguration
         {
+            IsActive = true,
             Name = $"{Finance}/{name}", TenantId = Tenant, OrganizationId = Finance, SettingName = name, SettingValue = value,
         });
 
@@ -305,11 +306,11 @@ public sealed class InheritedSettingsTests
     {
         var tenantRows = new List<ITenantSettingImplementationConfiguration>
         {
-            new TenantSettingImplementationConfiguration { TenantId = Tenant, SettingName = "MaxRows", SettingValue = "300" },
+            new TenantSettingImplementationConfiguration { IsActive = true, TenantId = Tenant, SettingName = "MaxRows", SettingValue = "300" },
         };
         var server = new Mock<IServerSettingConfigurationProvider>();
         server.Setup(p => p.Get("MaxRows", It.IsAny<CancellationToken>())).ReturnsAsync(
-            GenericResult<IServerSettingImplementationConfiguration>.Success(new ServerSettingImplementationConfiguration { Name = "MaxRows", SettingValue = "500", DataType = "Int32", IsLocked = true }));
+            GenericResult<IServerSettingImplementationConfiguration>.Success(new ServerSettingImplementationConfiguration { IsActive = true, Name = "MaxRows", SettingValue = "500", DataType = "Int32", IsLocked = true }));
         var tenant = new Mock<ITenantSettingConfigurationProvider>();
         tenant.Setup(p => p.Get(It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<ITenantSettingImplementationConfiguration>>.Success(tenantRows));
         var role = new Mock<IRoleSettingConfigurationProvider>();

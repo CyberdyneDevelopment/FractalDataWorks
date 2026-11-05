@@ -22,7 +22,7 @@ public sealed class MutableTenantContext : IMutableTenantContext
     public bool HasTenant => _currentTenant != null;
 
     /// <inheritdoc />
-    public bool IsGlobalTenant => _currentTenant?.IsGlobal ?? false;
+    public bool IsGlobalTenant => _currentTenant is { IsGlobal: true };
 
     /// <inheritdoc />
     public string? ConnectionName => _currentTenant?.ConnectionName;

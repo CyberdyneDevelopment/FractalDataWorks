@@ -1,3 +1,6 @@
+using Fdw.Results;
+using Fdw.Data.Abstractions;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.IO;
@@ -23,6 +26,7 @@ public sealed class FixedWidthRowWriterType : RecordWriterTypeBase
     /// </summary>
     public FixedWidthRowWriterType() : base("FixedWidth")
     {
+        BufferSize = 16 * 1024;
     }
 
     /// <inheritdoc />
@@ -38,10 +42,28 @@ public sealed class FixedWidthRowWriterType : RecordWriterTypeBase
     public override string FileExtension => "txt";
 
     /// <inheritdoc />
-    public override RowWriterOptions CreateOptions(IReadOnlyList<string> columns)
-        => new FixedWidthRowWriterOptions { Columns = [.. columns] };
+    public override IGenericResult<RowWriterOptions> CreateOptions(IReadOnlyList<string> columns, IReadOnlyDictionary<string, object> stated, string owner)
+    {
+        var choices = new RowFormatChoices(stated, owner, Format);
+        return choices.Result<RowWriterOptions>(new FixedWidthRowWriterOptions
+        {
+            Columns = [.. columns],
+            WriteHeader = choices.Flag("HasHeader"),
+            BufferSize = BufferSize,
+        });
+    }
 
     /// <inheritdoc />
-    public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)
-        => new FixedWidthStreamRowWriter(target, options as FixedWidthRowWriterOptions);
+    /// <remarks>A fixed-width file also takes each field's offset and width from the container's field metadata.</remarks>
+    public override IGenericResult<RowWriterOptions> CreateOptions(IStorageContainer container)
+    {
+        var options = base.CreateOptions(container);
+        if (options.IsSuccess && options.Value is FixedWidthRowWriterOptions fixedWidth)
+            fixedWidth.Fields = FixedWidthField.FromContainer(container);
+        return options;
+    }
+
+    /// <inheritdoc />
+    public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions options)
+        => new FixedWidthStreamRowWriter(target, options as FixedWidthRowWriterOptions ?? throw new ArgumentException("The FixedWidth format writes with FixedWidthRowWriterOptions.", nameof(options)));
 }

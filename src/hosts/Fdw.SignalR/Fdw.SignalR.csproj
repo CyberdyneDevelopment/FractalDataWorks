@@ -26,6 +26,8 @@
     <ProjectReference Include="..\..\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
     <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
     <ProjectReference Include="..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\..\foundation\security\Fdw.Claims.Abstractions\Fdw.Claims.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

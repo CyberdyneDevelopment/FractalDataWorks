@@ -7,6 +7,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql;
 using Fdw.Schema.Properties;
 using Moq;
+using Fdw.Data.MsSql.Tests.TestSupport;
 
 namespace Fdw.Data.MsSql.Tests;
 
@@ -39,6 +40,7 @@ public sealed class MsSqlFindTranslatorTests
         mockFieldType.Setup(ft => ft.ClrType).Returns(clrType);
 
         var mockField = new Mock<IField>();
+        mockField.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
         mockField.Setup(f => f.Name).Returns(name);
         mockField.Setup(f => f.FieldType).Returns(mockFieldType.Object);
 

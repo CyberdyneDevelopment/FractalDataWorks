@@ -37,7 +37,7 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("namespace MyNamespace.Collections", generated);
+        Assert.Contains("namespace MyNamespace.Collections", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class Option1 : TestBase
         Assert.NotNull(generated);
 
         // TypeCollection uses FrozenDictionary for immutable collections
-        Assert.Contains("FrozenDictionary", generated);
+        Assert.Contains("FrozenDictionary", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("static Tests()", generated);
+        Assert.Contains("static Tests()", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -134,10 +134,10 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         Assert.NotNull(generated);
 
         // MutableTypeCollection should use ConcurrentDictionary
-        Assert.Contains("ConcurrentDictionary", generated);
+        Assert.Contains("ConcurrentDictionary", generated, System.StringComparison.Ordinal);
 
         // Should have Register method
-        Assert.Contains("Register", generated);
+        Assert.Contains("Register", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class Option1 : TestBase
         Assert.NotNull(generated);
 
         // Factory collections should have Create methods
-        Assert.Contains("Create", generated);
+        Assert.Contains("Create", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
 
         Assert.NotNull(generated);
-        Assert.Contains("NotFound", generated);
-        Assert.Contains("NotFoundTests", generated);
+        Assert.Contains("NotFound", generated, System.StringComparison.Ordinal);
+        Assert.Contains("NotFoundTests", generated, System.StringComparison.Ordinal);
     }
 }

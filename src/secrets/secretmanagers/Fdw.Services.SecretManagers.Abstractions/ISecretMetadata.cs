@@ -36,13 +36,13 @@ public interface ISecretMetadata
     /// Gets the date and time when the secret was created.
     /// </summary>
     /// <value>The creation timestamp.</value>
-    DateTimeOffset CreatedAt { get; }
+    DateTimeOffset? CreatedAt { get; }
 
     /// <summary>
     /// Gets the date and time when the secret was last modified.
     /// </summary>
     /// <value>The last modification timestamp.</value>
-    DateTimeOffset ModifiedAt { get; }
+    DateTimeOffset? ModifiedAt { get; }
 
     /// <summary>
     /// Gets the date and time when the secret expires.
@@ -76,7 +76,7 @@ public interface ISecretMetadata
     /// Disabled secrets cannot be retrieved but their metadata remains accessible
     /// for management operations.
     /// </remarks>
-    bool IsEnabled { get; }
+    bool? IsEnabled { get; }
 
     /// <summary>
     /// Gets a value indicating whether this secret contains binary data.

@@ -16,7 +16,7 @@ public sealed class FixedWidthRowWriterOptions : RowWriterOptions
     public IList<FixedWidthField> Fields { get; set; } = new List<FixedWidthField>();
 
     /// <summary>
-    /// Gets or sets whether to emit a header row of field names before the data rows. Default false.
+    /// Gets or sets whether to emit a header row of field names before the data rows.
     /// </summary>
-    public bool WriteHeader { get; set; }
+    public required bool WriteHeader { get; set; }
 }

@@ -35,7 +35,7 @@ public static class ScriptedCommands
         var problem = command.FirstProblem();
         if (problem is not null)
         {
-            return GenericResult<T>.Failure(ScriptedCommandsLog.Refused(logger, command.CommandType, problem));
+            return GenericResult<T>.Failure(ScriptedCommandsLog.Refused(logger, command.CommandType, problem.Message));
         }
 
         // Why only Read and Run: they are the commands of the family, and each has an answer a connection reads. A command added

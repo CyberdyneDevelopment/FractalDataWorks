@@ -84,7 +84,7 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
             if (!containersResult.IsSuccess || containersResult.Value == null)
             {
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.ConnectionName, "schema-graph");
-                AddError(containersResult.CurrentMessage ?? "Schema discovery failed");
+                AddError(containersResult.NoValueReason().Message);
                 await Send.ErrorsAsync(containersResult.IsSuccess ? 404 : 400, ct).ConfigureAwait(false);
                 return;
             }

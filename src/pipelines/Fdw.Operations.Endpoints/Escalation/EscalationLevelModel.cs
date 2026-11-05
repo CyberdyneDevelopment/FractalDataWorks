@@ -22,4 +22,10 @@ public class EscalationLevelModel : IEscalationLevel
 
     /// <inheritdoc/>
     public string? MessageTemplate { get; set; }
+
+    /// <inheritdoc />
+    public string Severity { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    public string RecipientType { get; set; } = string.Empty;
 }

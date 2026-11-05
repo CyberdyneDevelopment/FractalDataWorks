@@ -4,6 +4,7 @@ using Fdw.Services.Connections.Sql;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Data.Sqlite.Translators;
 
@@ -20,6 +21,10 @@ namespace Fdw.Data.Sqlite.Translators;
 /// </remarks>
 public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslatorBase<SqliteCommand>
 {
+    /// <summary>What the database is given for a parameter whose value is null: ADO.NET's own null.</summary>
+    [PlatformDefault]
+    private static readonly object DatabaseNull = System.DBNull.Value;
+
     /// <summary>
     /// Null logger used by translator catch blocks to satisfy the structured-logging contract.
     /// </summary>
@@ -54,7 +59,7 @@ public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslator
             ? JsonSerializer.Serialize(enumerable)
             : value;
 
-        var param = new SqliteParameter($"@{name}", materialized ?? (object)System.DBNull.Value);
+        var param = new SqliteParameter($"@{name}", materialized ?? DatabaseNull);
         command.Parameters.Add(param);
     }
 }

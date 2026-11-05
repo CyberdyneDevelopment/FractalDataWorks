@@ -43,7 +43,7 @@ public class IEtlRowMapperConfigurationTests
 
         // Assert
         property.ShouldNotBeNull();
-        property.PropertyType.ShouldBe(typeof(bool));
+        property.PropertyType.ShouldBe(typeof(bool?));
         property.CanRead.ShouldBeTrue();
     }
 
@@ -57,7 +57,7 @@ public class IEtlRowMapperConfigurationTests
 
         // Assert
         property.ShouldNotBeNull();
-        property.PropertyType.ShouldBe(typeof(int));
+        property.PropertyType.ShouldBe(typeof(int?));
         property.CanRead.ShouldBeTrue();
     }
 

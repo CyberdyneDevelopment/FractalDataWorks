@@ -40,8 +40,16 @@ public abstract class MessageCollectionBase<T> where T : class, IGenericMessage,
     protected internal static void Initialize(ImmutableArray<T> values)
     {
         _all = values;
-        // Set empty to first value that contains "Empty" or default
-        _empty = values.FirstOrDefault(v => v.Name.Contains("Empty", StringComparison.OrdinalIgnoreCase)) ?? values.FirstOrDefault() ?? default!;
+        // The collection's empty message is the one it names Empty; a collection that declares none has none, and no other message
+        // stands in for it (FDW055).
+        foreach (var value in values)
+        {
+            if (value.Name.Contains("Empty", StringComparison.OrdinalIgnoreCase))
+            {
+                _empty = value;
+                break;
+            }
+        }
     }
 
 #if NET8_0_OR_GREATER

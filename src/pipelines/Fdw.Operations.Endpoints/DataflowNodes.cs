@@ -33,7 +33,7 @@ internal static class DataflowNodes
         Id = DataflowNodeIds.Variation(variation.Id),
         Label = variation.Name,
         NodeType = "variation",
-        Category = variation.Implementation,
+        Category = variation.VariationKind,
         Metadata = Metadata(
             ("variationName", variation.VariationName),
             ("displayName", variation.DisplayName),

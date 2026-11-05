@@ -74,106 +74,25 @@ public sealed class ThemeConfigurationTests
     [Fact]
     [Trait("Priority", "P3")]
     [Trait("Category", "Ui")]
-    public void CreateDefaultLightReturnsLightTheme()
-    {
-        var theme = ThemeConfiguration.CreateDefaultLight();
-
-        theme.Name.ShouldBe("default-light");
-        theme.DisplayName.ShouldBe("Default Light");
-        theme.Description.ShouldBe("Standard light theme");
-        theme.IsDefault.ShouldBeTrue();
-        theme.IsDarkMode.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P3")]
-    [Trait("Category", "Ui")]
-    public void CreateDefaultDarkReturnsDarkTheme()
-    {
-        var theme = ThemeConfiguration.CreateDefaultDark();
-
-        theme.Name.ShouldBe("default-dark");
-        theme.DisplayName.ShouldBe("Default Dark");
-        theme.Description.ShouldBe("Standard dark theme");
-        theme.IsDarkMode.ShouldBeTrue();
-        theme.IsDefault.ShouldBeFalse();
-        theme.PrimaryColor.ShouldBe("#90CAF9");
-        theme.SecondaryColor.ShouldBe("#CE93D8");
-        theme.TertiaryColor.ShouldBe("#FFB74D");
-        theme.BackgroundColor.ShouldBe("#121212");
-        theme.SurfaceColor.ShouldBe("#1E1E1E");
-        theme.ErrorColor.ShouldBe("#EF5350");
-        theme.WarningColor.ShouldBe("#FFB74D");
-        theme.SuccessColor.ShouldBe("#66BB6A");
-        theme.InfoColor.ShouldBe("#42A5F5");
-        theme.TextPrimary.ShouldBe("#E0E0E0");
-        theme.TextSecondary.ShouldBe("#9E9E9E");
-        theme.TextDisabled.ShouldBe("#616161");
-        theme.TextOnPrimary.ShouldBe("#000000");
-        theme.TextOnSecondary.ShouldBe("#000000");
-    }
-
-    [Fact]
-    [Trait("Priority", "P3")]
-    [Trait("Category", "Ui")]
-    public void CreateFractalThemeReturnsFractalBrandTheme()
-    {
-        var theme = ThemeConfiguration.CreateFractalTheme();
-
-        theme.Name.ShouldBe("fractal");
-        theme.DisplayName.ShouldBe("Fractal");
-        theme.Description.ShouldBe("Deep Logic Purple - Fdw brand theme");
-        theme.IsDarkMode.ShouldBeTrue();
-        theme.IsDefault.ShouldBeFalse();
-        theme.PrimaryColor.ShouldBe("#7209B7");
-        theme.SecondaryColor.ShouldBe("#3A0CA3");
-        theme.TertiaryColor.ShouldBe("#F72585");
-        theme.BackgroundColor.ShouldBe("#0F1115");
-        theme.SurfaceColor.ShouldBe("#1A1D24");
-        theme.ErrorColor.ShouldBe("#FF6B6B");
-        theme.WarningColor.ShouldBe("#FFE66D");
-        theme.SuccessColor.ShouldBe("#4ECDC4");
-        theme.InfoColor.ShouldBe("#4EA8DE");
-        theme.TextPrimary.ShouldBe("#E2E8F0");
-        theme.TextSecondary.ShouldBe("#94A3B8");
-        theme.TextDisabled.ShouldBe("#64748B");
-        theme.TextOnPrimary.ShouldBe("#FFFFFF");
-        theme.TextOnSecondary.ShouldBe("#FFFFFF");
-    }
-
-    [Fact]
-    [Trait("Priority", "P3")]
-    [Trait("Category", "Ui")]
-    public void DefaultConstructorSetsExpectedDefaults()
+    public void DefaultConstructorStatesNoValue()
     {
         var theme = new ThemeConfiguration();
 
-        theme.Id.ShouldNotBe(Guid.Empty);
+        // A theme's values come from the server (ToDto) or a seeded setting, never from the type (FDW-3823).
+        theme.Id.ShouldBe(Guid.Empty);
         theme.Name.ShouldBe(string.Empty);
         theme.DisplayName.ShouldBeNull();
         theme.Description.ShouldBeNull();
-        theme.PrimaryColor.ShouldBe("#1976D2");
-        theme.SecondaryColor.ShouldBe("#424242");
-        theme.TertiaryColor.ShouldBe("#7B1FA2");
-        theme.BackgroundColor.ShouldBe("#FFFFFF");
-        theme.SurfaceColor.ShouldBe("#F5F5F5");
-        theme.ErrorColor.ShouldBe("#D32F2F");
-        theme.WarningColor.ShouldBe("#FFA000");
-        theme.SuccessColor.ShouldBe("#388E3C");
-        theme.InfoColor.ShouldBe("#1976D2");
-        theme.TextPrimary.ShouldBe("#212121");
-        theme.TextSecondary.ShouldBe("#757575");
-        theme.TextDisabled.ShouldBe("#9E9E9E");
-        theme.TextOnPrimary.ShouldBe("#FFFFFF");
-        theme.TextOnSecondary.ShouldBe("#FFFFFF");
-        theme.FontFamily.ShouldBe("Roboto, sans-serif");
-        theme.FontFamilyMono.ShouldBe("JetBrains Mono, Consolas, monospace");
-        theme.FontSizeBase.ShouldBe(14);
-        theme.BorderRadius.ShouldBe(4);
+        theme.PrimaryColor.ShouldBe(string.Empty);
+        theme.SecondaryColor.ShouldBe(string.Empty);
+        theme.BackgroundColor.ShouldBe(string.Empty);
+        theme.FontFamily.ShouldBe(string.Empty);
+        theme.FontSizeBase.ShouldBe(0);
+        theme.BorderRadius.ShouldBe(0);
         theme.IsDarkMode.ShouldBeFalse();
         theme.IsDefault.ShouldBeFalse();
         theme.LogoUrl.ShouldBeNull();
-        theme.AppName.ShouldBe("Fdw");
+        theme.AppName.ShouldBe(string.Empty);
         theme.FaviconUrl.ShouldBeNull();
     }
 }

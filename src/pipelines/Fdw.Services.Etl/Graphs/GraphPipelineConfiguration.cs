@@ -23,7 +23,7 @@ namespace Fdw.Services.Etl.Graphs;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "Graph")]
-public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementationConfiguration, IApprovalGatedPipelineConfiguration, IParallelRunPipelineConfiguration, IDeclaresRunParameters
+public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementationConfiguration, IApprovalGatedPipelineConfiguration, IParallelRunPipelineConfiguration, ITemplatePipelineConfiguration, IDeclaresRunParameters
 {
     /// <summary>Gets or sets the durable identity of the pipeline, the domain row's.</summary>
     public Guid Id { get; set; }
@@ -81,6 +81,24 @@ public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementat
 
     /// <summary>Gets or sets the time zone, a <see cref="TimeZoneInfo"/> id, <see cref="DelayedStartTimeOfDay"/> is read in (FDW-3129). A tenant has no time zone to read, so the pipeline states its own.</summary>
     public string? DelayedStartTimeZoneId { get; set; }
+
+    /// <summary>Gets or sets whether the pipeline is a template (FDW-3379): it is never triggered or scheduled, and a new pipeline is made from it.</summary>
+    public bool IsTemplate { get; set; }
+
+    /// <summary>Gets or sets the name of the template the pipeline was made from (FDW-3379); null when it was not made from one.</summary>
+    public string? TemplateName { get; set; }
+
+    /// <summary>Gets or sets the version of that template the pipeline was made from, the time the template was last changed (FDW-3379); null when it was not made from one.</summary>
+    public DateTimeOffset? TemplateVersion { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the failure rule disabled the pipeline (FDW-3864); null when it did not. Only the judge writes it, in the save that disables the pipeline; a save through the
+    /// API never carries it, so any save by a person clears it.
+    /// </summary>
+    public DateTimeOffset? DisabledByFailureRuleAt { get; set; }
+
+    /// <summary>Gets or sets the run whose end passed the threshold (FDW-3864); the record of the failures that counted is on that run. Set and cleared with <see cref="DisabledByFailureRuleAt"/>.</summary>
+    public Guid? DisabledByFailureRuleRunId { get; set; }
 
     /// <summary>Gets or sets the organization the pipeline belongs to.</summary>
     public Guid? OrgId { get; set; }

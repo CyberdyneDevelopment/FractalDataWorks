@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -5,6 +6,7 @@ using Fdw.Commands.Data;
 using Fdw.Commands.Data.Upserts;
 using Fdw.Commands.Data.ValueSources;
 using Fdw.Data.MsSql.Tests.TestSupport;
+using Fdw.Data.MsSql.ValueSources;
 using Fdw.Data.MsSql.Translators;
 using Fdw.Results;
 
@@ -172,6 +174,39 @@ public sealed class MsSqlUpsertTranslatorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("NEXT VALUE FOR [dbo].[OrderSeq] OVER (ORDER BY [s].[Name])");
+    }
+
+    [Fact]
+    public async Task UuidV7ValueSourceIsRenderedInTheInsertOnlyAndNeverInTheUpdateOrTheCompare()
+    {
+        var options = new UpsertOptions(["Code"], ["Name"], ["Code", "Name"])
+        {
+            ValueSources = [new ColumnValueBinding("PublicId", new UuidV7ValueSource())],
+        };
+
+        var result = await Run(options, "Code", "Name", "PublicId");
+
+        result.IsSuccess.ShouldBeTrue();
+        var sql = result.Value!.CommandText;
+        sql.ShouldContain("INSERT INTO [dbo].[Customers] ([Code], [Name], [PublicId]) SELECT s.[Code], s.[Name], CAST(STUFF(");
+        sql.ShouldContain("AS uniqueidentifier) FROM #fdw_");
+        sql.ShouldContain("DATEDIFF_BIG(MILLISECOND, '19700101', SYSUTCDATETIME())");
+        sql.ShouldContain("UPDATE t SET t.[Name] = s.[Name] FROM [dbo].[Customers] AS t");
+        sql[..sql.IndexOf("INSERT INTO [dbo].[Customers]", StringComparison.Ordinal)].ShouldNotContain("PublicId");
+        sql.ShouldNotContain("t.[PublicId]");
+        sql.ShouldNotContain("s.[PublicId]");
+    }
+
+    [Fact]
+    public void UuidV7RendererRendersOnlyItsOwnKind()
+    {
+        var context = new MsSqlValueSourceContext(new Microsoft.Data.SqlClient.SqlCommand(), TSqlDialect.Instance, "s");
+        var renderer = new MsSqlUuidV7ValueRenderer();
+
+        var rendered = renderer.Render(new UuidV7ValueSource(), context).ShouldNotBeNull();
+        rendered.ShouldStartWith("CAST(STUFF(");
+        rendered.ShouldEndWith("AS uniqueidentifier)");
+        renderer.Render(new CurrentTimestampValueSource(), context).ShouldBeNull();
     }
 
     [Fact]

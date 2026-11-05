@@ -79,4 +79,12 @@ public interface IPipelineStatusBroadcaster
     /// Broadcasts that a test execution has been resumed.
     /// </summary>
     Task BroadcastExecutionResumed(Guid executionId);
+
+    /// <summary>
+    /// Broadcasts the components of a run in flight (FDW-3778) to the execution, pipeline and, when <paramref name="orgId"/>
+    /// is given, the owning org's firehose group, as <see cref="BroadcastStatusChange"/> does.
+    /// </summary>
+    /// <param name="update">The run's components.</param>
+    /// <param name="orgId">The owning org for firehose scoping; see <see cref="BroadcastStatusChange"/>.</param>
+    Task BroadcastComponents(PipelineComponentsUpdate update, Guid? orgId = null);
 }

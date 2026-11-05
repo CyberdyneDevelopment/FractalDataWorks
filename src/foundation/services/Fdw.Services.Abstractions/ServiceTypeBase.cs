@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Fdw.Abstractions;
 using Fdw.Collections;
@@ -29,7 +30,8 @@ namespace Fdw.ServiceTypes;
 public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     : GuidTypeOptionBase<IServiceType<Guid>>,
       IServiceType<Guid, TService, TFactory, TConfiguration>,
-      IServiceType
+      IServiceType,
+      IDeclaresDefaults
     where TService : IGenericService
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IServiceFactory<TService, TConfiguration>
@@ -47,6 +49,15 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
 
     /// <summary>Gets the configuration type this service reads.</summary>
     public Type ConfigurationType => typeof(TConfiguration);
+
+    /// <summary>Gets the tuning defaults this type declares for its configuration, by property name (FDW-3823); none unless a domain or type declares them.</summary>
+    /// <remarks>
+    /// Why a virtual member and not a constructor parameter: the generated NotFound sentinel calls the base constructor and can only pass
+    /// null for a parameter it cannot default (FDW-2931); a virtual member keeps this empty answer for it.
+    /// </remarks>
+    public virtual IReadOnlyDictionary<string, object> DeclaredDefaults => NoDeclaredDefaults;
+
+    private static readonly IReadOnlyDictionary<string, object> NoDeclaredDefaults = new Dictionary<string, object>(StringComparer.Ordinal);
 
     /// <summary>The connection this type's configuration is read from.</summary>
     /// <remarks>
@@ -421,7 +432,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> segment,
         string origin)
     {
-        var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
+        var logger = loggerFactory?.CreateLogger(GetType()) ?? (ILogger)NullLogger.Instance;
         var position = ++_registrationRunPosition;
 
         ServiceTypeLog.PhaseSegmentRunning(logger, Name, "Register", position, _registrationSegments, origin);
@@ -439,7 +450,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         Func<IHost, ILoggerFactory?, IGenericResult<IHost>> segment,
         string origin)
     {
-        var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
+        var logger = loggerFactory?.CreateLogger(GetType()) ?? (ILogger)NullLogger.Instance;
         var position = ++_initializationRunPosition;
 
         ServiceTypeLog.PhaseSegmentRunning(logger, Name, "Initialize", position, _initializationSegments, origin);
@@ -573,7 +584,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         ServiceTypePhaseSequence sequence,
         Func<IGenericResult<T>> body)
     {
-        var logger = loggerFactory?.CreateLogger(GetType().FullName ?? Name) ?? (ILogger)NullLogger.Instance;
+        var logger = loggerFactory?.CreateLogger(GetType()) ?? (ILogger)NullLogger.Instance;
         var ordinal = sequence.NextOption();
         ServiceTypeLog.OptionPhaseCustom(logger, Name, phase, ordinal, sequence.CurrentCollectionName, ServiceTypeLog.PhaseDocumentation);
 

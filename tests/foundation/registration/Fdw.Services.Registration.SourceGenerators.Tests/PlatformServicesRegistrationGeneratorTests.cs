@@ -68,7 +68,7 @@ public sealed class PlatformServicesRegistrationGeneratorTests
 
         var generated = compilation.SyntaxTrees
             .Select(t => t.GetText().ToString())
-            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration"));
+            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration", System.StringComparison.Ordinal));
 
         generated.ShouldNotBeNull();
         generated.ShouldContain("[ModuleInitializer]");
@@ -106,7 +106,7 @@ public sealed class PlatformServicesRegistrationGeneratorTests
 
         var generated = compilation.SyntaxTrees
             .Select(t => t.GetText().ToString())
-            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration"));
+            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration", System.StringComparison.Ordinal));
 
         generated.ShouldNotBeNull();
         generated.ShouldContain("BrokenTypes");
@@ -119,7 +119,7 @@ public sealed class PlatformServicesRegistrationGeneratorTests
 
         var generated = compilation.SyntaxTrees
             .Select(t => t.GetText().ToString())
-            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration"));
+            .FirstOrDefault(t => t.Contains("PlatformServicesRegistration", System.StringComparison.Ordinal));
 
         generated.ShouldBeNull();
     }

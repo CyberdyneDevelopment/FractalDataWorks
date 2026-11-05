@@ -20,8 +20,8 @@ internal static class PipelineRunRequestJson
         DataTypes.All().Select(type => type.ClrType).Distinct().ToDictionary(type => type.FullName!, StringComparer.Ordinal);
 
     internal sealed record RequestRecord(
-        Guid ExecutionId, Guid PipelineId, string PipelineName, string TriggerSource, string? ScheduleName, Guid? TenantId,
-        IReadOnlyList<string> RunRoles, int? TestRowsPerSource, IReadOnlyList<ValueRecord>? Values);
+        Guid ExecutionId, Guid PipelineId, string PipelineName, string TriggerSource, string? ScheduleName, Guid? ScheduleId, Guid? TenantId,
+        IReadOnlyList<string> RunRoles, int? TestRowsPerSource, IReadOnlyList<ValueRecord>? Values, int? TimeoutSeconds);
 
     internal sealed record ValueRecord(string Name, string? Type, bool IsList, JsonElement? Value);
 
@@ -50,8 +50,8 @@ internal static class PipelineRunRequestJson
         }
 
         return GenericResult<string>.Success(JsonSerializer.Serialize(new RequestRecord(
-            request.ExecutionId, request.PipelineId, request.PipelineName, request.TriggerSource, request.ScheduleName, request.TenantId,
-            [.. request.RunRoles], request.TestRowsPerSource, values)));
+            request.ExecutionId, request.PipelineId, request.PipelineName, request.TriggerSource, request.ScheduleName, request.ScheduleId, request.TenantId,
+            [.. request.RunRoles], request.TestRowsPerSource, values, request.TimeoutSeconds)));
     }
 
     /// <summary>Reads a request written by <see cref="Write"/>.</summary>
@@ -101,10 +101,12 @@ internal static class PipelineRunRequestJson
             PipelineName = record.PipelineName,
             TriggerSource = record.TriggerSource,
             ScheduleName = record.ScheduleName,
+            ScheduleId = record.ScheduleId,
             TenantId = record.TenantId,
             RunRoles = record.RunRoles,
             Parameters = values,
             TestRowsPerSource = record.TestRowsPerSource,
+            TimeoutSeconds = record.TimeoutSeconds,
             HeldUntil = heldUntil
         });
     }

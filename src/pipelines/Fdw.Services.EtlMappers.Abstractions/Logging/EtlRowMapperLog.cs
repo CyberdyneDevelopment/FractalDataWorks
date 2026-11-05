@@ -126,4 +126,16 @@ public static partial class EtlRowMapperLog
         int mapperCount);
 
     #endregion
+
+    /// <summary>
+    /// Logs a mapper configuration that leaves out a value its mapper type declares no default for (FDW-3956). Nothing assumes one.
+    /// </summary>
+    [MessageLogging(
+        EventId = 91004,
+        Level = LogLevel.Error,
+        Message = "Mapper '{mapperType}' configuration states no {field}, and the mapper type declares none")]
+    public static partial IGenericMessage MapperValueNotStated(
+        ILogger logger,
+        string mapperType,
+        string field);
 }

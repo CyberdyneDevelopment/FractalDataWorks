@@ -10,6 +10,7 @@ using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs.Building;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl.Graphs;
 
@@ -24,6 +25,10 @@ namespace Fdw.Services.Etl.Graphs;
 /// </remarks>
 public static class GraphComponentValidator
 {
+    /// <summary>The stage a component runs in when it names none: the first.</summary>
+    [PlatformDefault]
+    private const int UnstagedStage = 0;
+
     /// <summary>Lists what is wrong with the graph's variables and components.</summary>
     /// <param name="graph">The stored graph.</param>
     /// <param name="broken">Receives the names of the components that have a problem of their own.</param>
@@ -198,7 +203,7 @@ public static class GraphComponentValidator
                 continue;
             }
 
-            return (a[index].Stage ?? 0) < (b[index].Stage ?? 0);
+            return (a[index].Stage ?? UnstagedStage) < (b[index].Stage ?? UnstagedStage);
         }
 
         return false;

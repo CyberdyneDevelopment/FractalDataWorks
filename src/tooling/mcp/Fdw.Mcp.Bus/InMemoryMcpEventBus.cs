@@ -30,9 +30,9 @@ public sealed class InMemoryMcpEventBus : IMcpEventBus
     private ulong _nextEventId = 1;
 
     /// <summary>Initializes a new in-memory bus with the given ring capacity.</summary>
-    /// <param name="ringCapacity">Max number of events retained for live-window replay. Defaults to 10,000.</param>
+    /// <param name="ringCapacity">Max number of events retained for live-window replay. The caller states it; there is no default (FDW-3823).</param>
     /// <param name="logger">Optional logger; defaults to <see cref="NullLogger{T}"/>.</param>
-    public InMemoryMcpEventBus(int ringCapacity = 10_000, ILogger<InMemoryMcpEventBus>? logger = null)
+    public InMemoryMcpEventBus(int ringCapacity, ILogger<InMemoryMcpEventBus>? logger = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ringCapacity);
         _ringCapacity = ringCapacity;

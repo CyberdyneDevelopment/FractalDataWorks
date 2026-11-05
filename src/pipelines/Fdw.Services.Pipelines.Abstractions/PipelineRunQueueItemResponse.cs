@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Fdw.Services.Pipelines.Clients.Abstractions;
 
@@ -39,4 +40,16 @@ public class PipelineRunQueueItemResponse
 
     /// <summary>Gets or sets when a held run joins the queue, for a run its pipeline holds past its limit until a set time (FDW-3129).</summary>
     public DateTimeOffset? HeldUntil { get; set; }
+
+    /// <summary>
+    /// Gets or sets the components of the run in flight with the stage each runs in and the rows it has passed on so far (FDW-3382), or <see langword="null"/> for a run that
+    /// waits for its turn, and for a run the host has not begun to follow.
+    /// </summary>
+    public IList<PipelineRunComponentResponse>? Components { get; set; }
+
+    /// <summary>
+    /// Gets or sets what every link between the components has carried so far (FDW-3778); null for a run that waits and for a run the host
+    /// does not follow, as <see cref="Components"/>.
+    /// </summary>
+    public IList<PipelineRunLinkResponse>? Links { get; set; }
 }

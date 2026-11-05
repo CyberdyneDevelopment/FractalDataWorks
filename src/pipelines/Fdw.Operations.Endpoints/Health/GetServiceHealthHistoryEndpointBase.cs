@@ -71,7 +71,7 @@ public abstract class GetServiceHealthHistoryEndpointBase : Endpoint<ServiceHeal
 
             if (!monitorResult.IsSuccess || monitorResult.Value is null)
             {
-                OperationsEndpointLog.GetHealthHistoryFailed(_logger, req.Name, monitorResult.CurrentMessage ?? "Unknown error");
+                OperationsEndpointLog.GetHealthHistoryFailed(_logger, req.Name, monitorResult.NoValueReason().Message);
                 AddError("Failed to retrieve health history");
                 await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
                 return;
@@ -81,7 +81,7 @@ public abstract class GetServiceHealthHistoryEndpointBase : Endpoint<ServiceHeal
 
             if (!result.IsSuccess)
             {
-                OperationsEndpointLog.GetHealthHistoryFailed(_logger, req.Name, result.CurrentMessage ?? "Unknown error");
+                OperationsEndpointLog.GetHealthHistoryFailed(_logger, req.Name, result.FailureReason().Message);
                 await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }

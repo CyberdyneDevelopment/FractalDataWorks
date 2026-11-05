@@ -72,6 +72,7 @@ public sealed class ComputeSetStageTests
     {
         Id = Guid.NewGuid(),
         Name = "Settle",
+        IsEnabled = true,
         OperationType = "Compute",
         ComputeTransformationId = BuiltId,
         ComputeOnRowFailure = "Fail",

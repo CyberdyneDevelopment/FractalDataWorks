@@ -65,6 +65,7 @@
     <ProjectReference Include="..\..\calculations\Fdw.Services.Calculations\Fdw.Services.Calculations.csproj" />
     <ProjectReference Include="..\..\transformations\Fdw.Data.Transformations\Fdw.Data.Transformations.csproj" />
     <ProjectReference Include="..\..\workspaces\Fdw.Services.Workspaces\Fdw.Services.Workspaces.csproj" />
+    <ProjectReference Include="..\..\tags\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
   </ItemGroup>
 
 </Project>

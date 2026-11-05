@@ -12,7 +12,7 @@ public class ThemeHelperTests
     public void ToCssVariablesReturnsAll12Tokens()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToCssVariables();
@@ -51,7 +51,7 @@ public class ThemeHelperTests
     public void ToCssRootBlockUsesCustomSelector()
     {
         // Arrange
-        var theme = new TenantTheme();
+        var theme = ThemePalette.Stated();
 
         // Act
         var result = theme.ToCssRootBlock(".custom-theme");

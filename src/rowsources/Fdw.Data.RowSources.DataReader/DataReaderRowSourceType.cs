@@ -39,7 +39,7 @@ public sealed class DataReaderRowSourceType : RecordSourceTypeBase
     public override string Format => "Tabular";
 
     /// <inheritdoc />
-    public override IRowSourceReader CreateReader(Stream content, RowSourceOptions? options)
+    public override IRowSourceReader CreateReader(Stream content, RowSourceOptions options)
         => throw new NotSupportedException(
             "DataReader row sources wrap an existing IDataReader and cannot be created from a content stream.");
 

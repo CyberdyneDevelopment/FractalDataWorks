@@ -7,13 +7,21 @@ namespace Fdw.Services.Users.Logging;
 
 /// <summary>
 /// MessageLogging for making an organization with its first administrator (FDW-1758).
-/// EventId ranges: 12735 (made), 32735-32736 (the person has no account, the organization to copy is not found, 404), 72735-72737 (the
-/// roles or the first administrator could not be set, the organization could not be removed again), 102735-102736 (not the tenant's own,
-/// 403).
+/// EventId ranges: 12735 (made), 32735-32736 (the person has no account, the organization to copy is not found, 404), 72735-72738 (the
+/// roles or the first administrator could not be set, the organization could not be removed again, its default workspace could not be
+/// made), 102735-102736 (not the tenant's own, 403).
 /// </summary>
 [MessageLoggingTypeCode("USERS")]
 public static partial class OrganizationFoundingLog
 {
+    /// <summary>Logs that the default workspace of a new organization could not be made (FDW-3668).</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="organizationId">The new organization.</param>
+    /// <param name="reason">Why.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 72738, Level = LogLevel.Error, Message = "The default workspace of the new organization '{organizationId}' could not be made: {reason}; the organization is being removed again")]
+    public static partial IGenericMessage DefaultWorkspaceNotMade(ILogger logger, Guid organizationId, string? reason);
+
     /// <summary>Logs that an organization was made with its first administrator.</summary>
     [MessageLogging(EventId = 12735, Level = LogLevel.Information, Message = "Organization '{organizationId}' of tenant '{tenantId}' was made with user '{administratorId}' as its first administrator, holding role '{roleName}'")]
     public static partial IGenericMessage Founded(ILogger logger, Guid organizationId, Guid tenantId, Guid administratorId, string roleName);

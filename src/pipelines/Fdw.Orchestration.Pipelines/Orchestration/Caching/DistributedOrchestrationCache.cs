@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Orchestration.Abstractions.Caching;
 using Microsoft.Extensions.Caching.Distributed;
+using Fdw.Conventions;
 
 namespace Fdw.Orchestration.Caching;
 
@@ -19,6 +20,14 @@ namespace Fdw.Orchestration.Caching;
 /// </remarks>
 public sealed class DistributedOrchestrationCache : IOrchestrationCache
 {
+    /// <summary>The serializer options used when the caller states none: camel-case names, not indented. A fresh object each time.</summary>
+    [PlatformDefault]
+    private static JsonSerializerOptions DefaultSerializerOptions => new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
+
     private readonly IDistributedCache _cache;
     private readonly JsonSerializerOptions _serializerOptions;
     private readonly ConcurrentDictionary<string, byte> _localKeyTracker;
@@ -40,11 +49,7 @@ public sealed class DistributedOrchestrationCache : IOrchestrationCache
     public DistributedOrchestrationCache(IDistributedCache cache, JsonSerializerOptions? serializerOptions)
     {
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _serializerOptions = serializerOptions ?? new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false
-        };
+        _serializerOptions = serializerOptions ?? DefaultSerializerOptions;
         _localKeyTracker = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
     }
 

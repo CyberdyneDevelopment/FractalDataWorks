@@ -28,14 +28,14 @@ public static class TypeCollectionPromptHelper
         IAnsiConsole console,
         string promptText,
         IEnumerable<TOption> options,
-        TUIThemeConfiguration? theme = null)
+        TUIThemeConfiguration theme)
         where TOption : class, ITypeOption<int>
     {
         var list = options.ToList();
 
         if (list.Count == 0)
         {
-            console.MarkupLine($"[{theme?.Colors.Warning ?? Color.Yellow}]No options available[/]");
+            console.MarkupLine($"[{theme.Colors.Warning}]No options available[/]");
             return 0;
         }
 
@@ -44,7 +44,7 @@ public static class TypeCollectionPromptHelper
                 .Title(promptText)
                 .AddChoices(list)
                 .UseConverter(opt => $"{opt.Name} [dim]({opt.Id})[/]")
-                .HighlightStyle(new Style(theme?.Colors.Selected ?? Color.Blue)));
+                .HighlightStyle(new Style(theme.Colors.Selected)));
 
         return selection.Id;
     }

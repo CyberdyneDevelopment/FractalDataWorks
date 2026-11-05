@@ -13,10 +13,10 @@ namespace Fdw.Web.Api.Tests.Endpoints.Pipelines;
 public sealed class PipelineStageRulesTests
 {
     private static CreatePipelineTransformRequest Validate(string name = "Clean", string? onFail = "Reject", PipelineCheck[]? checks = null) =>
-        new() { Name = name, OperationType = "Validate", OnFail = onFail, Checks = checks is null ? [] : [.. checks] };
+        new() { Name = name, OperationType = "Validate", IsEnabled = true, OnFail = onFail, Checks = checks is null ? [] : [.. checks] };
 
     private static CreatePipelineTransformRequest Filter(string name = "Keep", string expression = "Age >= 18") =>
-        new() { Name = name, OperationType = "Filter", FilterExpression = expression };
+        new() { Name = name, OperationType = "Filter", IsEnabled = true, FilterExpression = expression };
 
     [Fact]
     [Trait("Priority", "P0")]

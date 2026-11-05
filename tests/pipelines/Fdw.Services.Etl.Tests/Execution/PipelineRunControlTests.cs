@@ -45,6 +45,24 @@ public sealed class PipelineRunControlTests
     }
 
     [Fact]
+    public void TheGateSaysTheRunWasStoppedWithTheHostOnlyWhenTheHostIsStoppingAndNoPersonCancelledIt()
+    {
+        var control = new PipelineRunControl();
+        using var stopping = new CancellationTokenSource();
+        using var run = control.Register(Guid.NewGuid(), stopping.Token);
+        run.Gate.StoppedWithHost.ShouldBeFalse();
+
+        stopping.Cancel();
+        run.Gate.StoppedWithHost.ShouldBeTrue();
+
+        using var other = new CancellationTokenSource();
+        using var cancelled = control.Register(Guid.NewGuid(), other.Token);
+        control.Cancel(cancelled.ExecutionId).IsSuccess.ShouldBeTrue();
+        other.Cancel();
+        cancelled.Gate.StoppedWithHost.ShouldBeFalse();
+    }
+
+    [Fact]
     public void ShutdownEndsTheRunsTokenButIsNotACancel()
     {
         var control = new PipelineRunControl();

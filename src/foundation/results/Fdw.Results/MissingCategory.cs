@@ -19,7 +19,7 @@ public sealed class MissingCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="MissingCategory"/> class.
     /// </summary>
     public MissingCategory()
-        : base(id: 3, name: "Missing", isFailure: true, isRetryable: false, httpStatus: 404, clientMessage: "The requested resource was not found", clientAction: null)
+        : base(id: 3, name: "Missing", isFailure: true, isRetryable: false, countsTowardFailureThresholds: true, httpStatus: 404, clientMessage: "The requested resource was not found", clientAction: null)
     {
     }
 }

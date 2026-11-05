@@ -15,10 +15,6 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Data.RowSources;
 using Fdw.Data.RowSources.Abstractions;
-using Fdw.Data.RowSources.Delimited.Abstractions;
-using Fdw.Data.RowSources.FixedWidth.Abstractions;
-using Fdw.Data.RowSources.Json.Abstractions;
-using Fdw.Data.RowSources.Xml.Abstractions;
 using Fdw.Results;
 using Fdw.Results.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions;
@@ -81,7 +77,13 @@ public abstract class RestProtocolBase : HttpProtocolBase
         try
         {
             var method = GetHttpMethod(command, container, context);
-            var path = GetRequestPath(command, container, context);
+            var pathResult = GetRequestPath(command, container, context);
+            if (!pathResult.IsSuccess)
+            {
+                return pathResult.ToNewResult<HttpRequestMessage>();
+            }
+
+            var path = pathResult.Value!;
 
             // Build query string for GET requests
             if (method == HttpMethod.Get && command is IQueryCommand queryCommand)
@@ -116,7 +118,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
                 var queryString = BuildFullQueryString(queryCommand, context);
                 if (!string.IsNullOrEmpty(queryString))
                 {
-                    var separator = path.Contains('?') ? "&" : "?";
+                    var separator = path.Contains('?', StringComparison.Ordinal) ? "&" : "?";
                     path = $"{path}{separator}{queryString}";
                 }
             }
@@ -167,7 +169,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
                 HttpResultCodes.ByName("HttpErrorResponse"),
                 ResultDetails.Create()
                     .With("StatusCode", (int)response.StatusCode)
-                    .With("ReasonPhrase", response.ReasonPhrase ?? "Unknown")
+                    .With("ReasonPhrase", response.ReasonPhrase ?? HttpPlaceholders.NoReasonPhrase)
                     .With("ErrorContent", errorContent));
         }
 
@@ -561,35 +563,9 @@ public abstract class RestProtocolBase : HttpProtocolBase
             try
             {
                 using var doc = JsonDocument.Parse(content);
-                var root = doc.RootElement;
-
-                // Check for common error properties
-                if (root.TryGetProperty("error", out var error))
+                if (ErrorText(doc.RootElement) is { } text)
                 {
-                    if (error.ValueKind == JsonValueKind.String)
-                    {
-                        return error.GetString() ?? $"HTTP {(int)response.StatusCode}";
-                    }
-                    if (error.TryGetProperty("message", out var errorMsg))
-                    {
-                        return errorMsg.GetString() ?? $"HTTP {(int)response.StatusCode}";
-                    }
-                }
-
-                if (root.TryGetProperty("message", out var message))
-                {
-                    return message.GetString() ?? $"HTTP {(int)response.StatusCode}";
-                }
-
-                // RFC 7807 Problem Details
-                if (root.TryGetProperty("detail", out var detail))
-                {
-                    return detail.GetString() ?? $"HTTP {(int)response.StatusCode}";
-                }
-
-                if (root.TryGetProperty("title", out var title))
-                {
-                    return title.GetString() ?? $"HTTP {(int)response.StatusCode}";
+                    return text;
                 }
             }
             catch (JsonException ex)
@@ -607,6 +583,42 @@ public abstract class RestProtocolBase : HttpProtocolBase
 
         return $"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}";
     }
+
+    // The first common error property that holds text: error (as text, or its message), message, then the RFC 7807
+    // detail and title. A property that is there but null or not text is passed over, and with none the caller states
+    // the status code and reason phrase (FDW-3580: a null message used to answer the status code alone).
+    private static string? ErrorText(JsonElement root)
+    {
+        if (root.TryGetProperty("error", out var error))
+        {
+            if (error.ValueKind == JsonValueKind.String)
+            {
+                return error.GetString();
+            }
+
+            if (error.ValueKind == JsonValueKind.Object && TextProperty(error, "message") is { } errorMessage)
+            {
+                return errorMessage;
+            }
+        }
+
+        foreach (var name in ErrorTextProperties)
+        {
+            if (TextProperty(root, name) is { } text)
+            {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
+    private static readonly string[] ErrorTextProperties = ["message", "detail", "title"];
+
+    private static string? TextProperty(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var property) && property.ValueKind == JsonValueKind.String
+            ? property.GetString()
+            : null;
 
     /// <summary>
     /// Extracts pagination information from the response.
@@ -648,8 +660,8 @@ public abstract class RestProtocolBase : HttpProtocolBase
             if (linkHeader.Contains("rel=\"next\"", StringComparison.OrdinalIgnoreCase) || linkHeader.Contains("rel=next", StringComparison.OrdinalIgnoreCase))
             {
                 // Extract URL - this is simplified, real impl would parse properly
-                var startIndex = linkHeader.IndexOf('<');
-                var endIndex = linkHeader.IndexOf('>');
+                var startIndex = linkHeader.IndexOf('<', StringComparison.Ordinal);
+                var endIndex = linkHeader.IndexOf('>', StringComparison.Ordinal);
                 if (startIndex >= 0 && endIndex > startIndex)
                 {
                     nextCursor = linkHeader.Substring(startIndex + 1, endIndex - startIndex - 1);
@@ -834,100 +846,11 @@ public abstract class RestProtocolBase : HttpProtocolBase
 
     /// <inheritdoc />
     protected override bool HasRowReaderForFormat(IStorageContainer container)
-    {
-        if (container.Format is null) return false;
-        return RecordSourceTypes.ByName(container.Format.Family) != RecordSourceTypes.NotFound;
-    }
+        => FormatRowReaders.Has(container);
 
     /// <inheritdoc />
-    protected override IRowSourceReader? TryCreateRowReader(IStorageContainer container, Stream content)
-    {
-        if (container.Format is null) return null;
-
-        var sourceType = RecordSourceTypes.ByName(container.Format.Family);
-        if (sourceType == RecordSourceTypes.NotFound) return null;
-
-        return sourceType.CreateReader(content, BuildRowSourceOptions(container));
-    }
-
-    private static RowSourceOptions? BuildRowSourceOptions(IStorageContainer container)
-        => container.Format.Family switch
-        {
-            "Json" => BuildJsonOptions(container.Metadata),
-            "Xml" => BuildXmlOptions(container.Metadata),
-            "Delimited" => BuildDelimitedOptions(container),
-            "FixedWidth" => BuildFixedWidthOptions(container),
-            // Unknown/registered-elsewhere format: let the type use its own defaults.
-            _ => null
-        };
-
-    private static JsonRowSourceOptions BuildJsonOptions(IReadOnlyDictionary<string, object> meta)
-        => new()
-        {
-            RowArrayPath = meta.TryGetValue("RecordSelector", out var sel) ? sel as string : null,
-            FlattenNestedObjects = meta.TryGetValue("FlattenNestedObjects", out var fn) && fn is bool fb && fb,
-            FlattenSeparator = meta.TryGetValue("FlattenSeparator", out var fs) && fs is string s && !string.IsNullOrEmpty(s) ? s : "."
-        };
-
-    private static XmlRowSourceOptions BuildXmlOptions(IReadOnlyDictionary<string, object> meta)
-        => new()
-        {
-            RowElementName = meta.TryGetValue("RowElementName", out var rn) ? rn as string : null,
-            RowElementPath = meta.TryGetValue("RecordSelector", out var rp) ? rp as string : null
-        };
-
-    private static DelimitedRowSourceOptions BuildDelimitedOptions(IStorageContainer container)
-    {
-        var meta = container.Metadata;
-        var options = new DelimitedRowSourceOptions
-        {
-            HasHeader = meta.TryGetValue("HasHeader", out var hh) && hh is bool hb && hb,
-            Separator = meta.TryGetValue("Separator", out var sep) && sep is string ss && !string.IsNullOrEmpty(ss) ? ss : ","
-        };
-        options.Columns = new List<string>(FieldNames(container));
-        return options;
-    }
-
-    private static FixedWidthRowSourceOptions BuildFixedWidthOptions(IStorageContainer container)
-    {
-        var meta = container.Metadata;
-        var options = new FixedWidthRowSourceOptions
-        {
-            HasHeader = meta.TryGetValue("HasHeader", out var hh) && hh is bool hb && hb
-        };
-        options.Fields = new List<FixedWidthField>(FixedWidthFields(container));
-        return options;
-    }
-
-    private static IEnumerable<string> FieldNames(IStorageContainer container)
-    {
-        var fields = container.Schema?.Fields;
-        if (fields is null) yield break;
-        foreach (var field in fields) yield return field.Name;
-    }
-
-    private static IEnumerable<FixedWidthField> FixedWidthFields(IStorageContainer container)
-    {
-        var fields = container.Schema?.Fields;
-        if (fields is null) yield break;
-        foreach (var field in fields)
-        {
-            var fieldMeta = field.Metadata;
-            if (fieldMeta is null
-                || !fieldMeta.TryGetValue("StartIndex", out var startObj)
-                || !fieldMeta.TryGetValue("Length", out var lenObj))
-            {
-                continue;
-            }
-
-            yield return new FixedWidthField
-            {
-                Name = field.Name,
-                StartIndex = Convert.ToInt32(startObj, System.Globalization.CultureInfo.InvariantCulture),
-                Length = Convert.ToInt32(lenObj, System.Globalization.CultureInfo.InvariantCulture)
-            };
-        }
-    }
+    protected override IGenericResult<IRowSourceReader?> TryCreateRowReader(IStorageContainer container, Stream content)
+        => FormatRowReaders.Create(container, content);
 
     #endregion
 

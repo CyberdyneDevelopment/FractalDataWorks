@@ -45,7 +45,7 @@ public sealed class FieldTypeConverter : JsonConverter<IFieldType>
         if (string.IsNullOrEmpty(typeName) || string.IsNullOrEmpty(clrTypeName))
             throw new JsonException("FieldType must have TypeName and ClrType properties");
 
-        var clrType = Type.GetType(clrTypeName) ?? typeof(object);
+        var clrType = Type.GetType(clrTypeName) ?? throw new JsonException($"FieldType ClrType '{clrTypeName}' is not a type this process can load");
 
         return new SimpleFieldType
         {
@@ -59,7 +59,7 @@ public sealed class FieldTypeConverter : JsonConverter<IFieldType>
     {
         writer.WriteStartObject();
         writer.WriteString("TypeName", value.TypeName);
-        writer.WriteString("ClrType", value.ClrType.AssemblyQualifiedName ?? value.ClrType.FullName ?? "System.Object");
+        writer.WriteString("ClrType", value.ClrType.AssemblyQualifiedName ?? throw new JsonException($"FieldType ClrType '{value.ClrType}' has no assembly-qualified name, so it cannot be written"));
         writer.WriteEndObject();
     }
 }

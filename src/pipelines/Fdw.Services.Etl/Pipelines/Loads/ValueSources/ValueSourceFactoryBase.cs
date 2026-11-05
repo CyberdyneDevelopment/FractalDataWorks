@@ -16,18 +16,23 @@ public abstract class ValueSourceFactoryBase : TypeOptionBase<ValueSourceFactory
     /// </summary>
     /// <param name="name">The option name, the same as the <c>ValueSourceKinds</c> option it builds.</param>
     /// <param name="suppliesRowValue">Whether the engine can give the column its value in the rows themselves.</param>
-    protected ValueSourceFactoryBase(string name, bool suppliesRowValue) : base(name)
+    /// <param name="insertOnly">Whether the value is new for each row and must never replace the value an existing row has.</param>
+    protected ValueSourceFactoryBase(string name, bool suppliesRowValue, bool insertOnly = false) : base(name)
     {
         SuppliesRowValue = suppliesRowValue;
+        InsertOnly = insertOnly;
     }
 
     /// <inheritdoc/>
     public bool SuppliesRowValue { get; }
 
     /// <inheritdoc/>
+    public bool InsertOnly { get; }
+
+    /// <inheritdoc/>
     public abstract IGenericResult<ColumnValueSource> Create(PipelineLoadValueSourceConfiguration source, string owner, ILogger logger);
 
     /// <inheritdoc/>
-    public virtual object? RowValue(ColumnValueSource source, DateTimeOffset now) => throw new InvalidOperationException(
+    public virtual Func<object?> RowValueProducer(ColumnValueSource source, DateTimeOffset now) => throw new InvalidOperationException(
         $"A {Name} value source cannot be given to the rows; check SuppliesRowValue first.");
 }

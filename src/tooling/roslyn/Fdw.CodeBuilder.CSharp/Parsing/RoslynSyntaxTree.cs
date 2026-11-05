@@ -20,13 +20,12 @@ public sealed class RoslynSyntaxTree : ISyntaxTree
     /// <param name="tree">The Roslyn syntax tree.</param>
     /// <param name="sourceText">The source text.</param>
     /// <param name="language">The language.</param>
-    /// <param name="filePath">The file path.</param>
-    public RoslynSyntaxTree(SyntaxTree tree, string sourceText, string language, string? filePath = null)
+    public RoslynSyntaxTree(SyntaxTree tree, string sourceText, string language)
     {
         _tree = tree;
         SourceText = sourceText;
         Language = language;
-        FilePath = filePath ?? tree.FilePath;
+        FilePath = tree.FilePath;
         _root = new RoslynSyntaxNode(_tree.GetRoot(), sourceText);
     }
 

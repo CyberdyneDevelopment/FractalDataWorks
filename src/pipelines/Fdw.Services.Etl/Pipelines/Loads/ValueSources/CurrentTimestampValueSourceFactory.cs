@@ -20,5 +20,5 @@ public sealed class CurrentTimestampValueSourceFactory : ValueSourceFactoryBase
         => GenericResult<ColumnValueSource>.Success(new CurrentTimestampValueSource());
 
     /// <inheritdoc/>
-    public override object? RowValue(ColumnValueSource source, DateTimeOffset now) => now;
+    public override Func<object?> RowValueProducer(ColumnValueSource source, DateTimeOffset now) => () => now;
 }

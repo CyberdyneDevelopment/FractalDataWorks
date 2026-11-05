@@ -10,6 +10,7 @@ using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Identity.ClientCredentials;
 
@@ -73,7 +74,7 @@ internal sealed class ClientCredentialsIdentityFactory
         => configuration is IIdentityServiceImplementationConfiguration implementation
             ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? "(null)", "ClientCredentials"));
+                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? LogPlaceholders.Null, "ClientCredentials"));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService

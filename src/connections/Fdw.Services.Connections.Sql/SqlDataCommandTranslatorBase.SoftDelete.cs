@@ -5,6 +5,9 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Commands.Data.Logging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Connections.Sql;
 
@@ -40,9 +43,9 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand>
     {
         var problem = options.FirstProblem() ?? SoftDeleteColumnProblem(options, container);
         if (problem is null && options.Mode.NeedsSourceSet)
-            problem = $"flagging the keys absent from a source set is not supported by the {dialect.Name} dialect";
+            problem = SoftDeleteInconsistent($"flagging the keys absent from a source set is not supported by the {dialect.Name} dialect");
         if (problem is not null)
-            throw new InvalidOperationException($"The soft delete on container {container.Name} is refused: {problem}");
+            throw new InvalidOperationException($"The soft delete on container {container.Name} is refused: {problem.Message}");
 
         var p = dialect.ParameterPrefix;
         var flag = dialect.QuoteIdentifier(options.DeletedFlagColumn);
@@ -78,7 +81,7 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand>
             throw new InvalidOperationException($"An update of container {container.Name} cannot also soft delete on this connection; send a delete with soft-delete options");
     }
 
-    private static string? SoftDeleteColumnProblem(SoftDeleteOptions options, IStorageContainer container)
+    private static IGenericMessage? SoftDeleteColumnProblem(SoftDeleteOptions options, IStorageContainer container)
     {
         var declared = container.Schema.Fields;
         var names = new List<string> { options.DeletedFlagColumn };
@@ -88,14 +91,18 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand>
 
         var unknown = names.FirstOrDefault(n => !declared.Any(f => string.Equals(f.Name, n, StringComparison.OrdinalIgnoreCase)));
         if (unknown is not null)
-            return $"container {container.Name} does not declare column '{unknown}'";
+            return SoftDeleteInconsistent($"container {container.Name} does not declare column '{unknown}'");
 
         var computed = names.FirstOrDefault(n => declared.Any(f => f.IsComputed && string.Equals(f.Name, n, StringComparison.OrdinalIgnoreCase)));
         if (computed is not null)
-            return $"column '{computed}' is computed by the database and cannot be a soft-delete column";
+            return SoftDeleteInconsistent($"column '{computed}' is computed by the database and cannot be a soft-delete column");
 
         return declared.Any(f => f.IsIdentity && string.Equals(f.Name, options.DeletedFlagColumn, StringComparison.OrdinalIgnoreCase))
-            ? $"column '{options.DeletedFlagColumn}' is an identity column and cannot be the deleted-flag column"
+            ? SoftDeleteInconsistent($"column '{options.DeletedFlagColumn}' is an identity column and cannot be the deleted-flag column")
             : null;
     }
+
+    // The options' own problems and this container's are the same kind of refusal: the options cannot be used here.
+    private static IGenericMessage SoftDeleteInconsistent(string reason)
+        => CommandOptionsLog.SoftDeleteOptionsInconsistent(NullLogger.Instance, reason);
 }

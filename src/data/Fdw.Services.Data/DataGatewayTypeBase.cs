@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data;
 
@@ -15,6 +16,10 @@ public abstract class DataGatewayTypeBase<TService, TFactory> :
     where TService : IGenericService
     where TFactory : IServiceFactory<TService, IServiceConfiguration>
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "DataGateway";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DataGatewayTypeBase{TService, TFactory}"/> class.
     /// </summary>
@@ -33,7 +38,7 @@ public abstract class DataGatewayTypeBase<TService, TFactory> :
         string defaultPathName,
         string defaultContainerName,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "DataGateway",
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory,
                defaultPathName: defaultPathName,
                defaultContainerName: defaultContainerName)
     {

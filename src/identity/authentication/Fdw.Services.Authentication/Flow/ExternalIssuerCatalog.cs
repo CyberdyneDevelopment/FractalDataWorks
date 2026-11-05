@@ -50,7 +50,7 @@ public sealed class ExternalIssuerCatalog : IExternalIssuerCatalog
             if (issuer.IsFailure || string.IsNullOrWhiteSpace(issuer.Value))
             {
                 ExternalIssuerCatalogLog.IssuerUnreadable(
-                    _logger, option.Name, issuer.CurrentMessage ?? "no issuer returned");
+                    _logger, option.Name, issuer.IsFailure ? issuer.FailureReason().Message : "no issuer returned");
                 complete = false;
                 continue;
             }

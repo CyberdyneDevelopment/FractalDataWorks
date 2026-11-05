@@ -20,6 +20,7 @@ internal static class TestContainers
         var fields = columns.Select(c =>
         {
             var field = new Mock<IField>();
+            field.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
             field.Setup(f => f.Name).Returns(c.Name);
             field.Setup(f => f.IsIdentity).Returns(c.IsIdentity);
             field.Setup(f => f.IsComputed).Returns(false);

@@ -45,7 +45,7 @@ public abstract class GetLineageNeighbourhoodEndpointBase : LineageEndpointBase<
         var query = LineageRequests.Neighbourhood(request, LineageLogger);
         if (query.IsFailure) return query.ToNewResult<LineageNeighbourhoodResponse>();
 
-        var graph = await Reader.Read(request.Workspace, User, ct).ConfigureAwait(false);
+        var graph = await Reader.Read(request.Workspace, User, readCategories: false, ct).ConfigureAwait(false);
         if (graph.IsFailure) return graph.ToNewResult<LineageNeighbourhoodResponse>();
 
         var focus = graph.Value!.Node(query.Value!.Node);

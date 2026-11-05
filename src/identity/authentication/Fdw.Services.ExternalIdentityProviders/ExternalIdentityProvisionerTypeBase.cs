@@ -3,6 +3,7 @@ using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.ExternalIdentityProviders;
 
@@ -31,6 +32,10 @@ public abstract class ExternalIdentityProvisionerTypeBase<TService, TConfigurati
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IExternalIdentityProvisionerFactory<TService, TConfiguration>
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "ExternalIdentityProvisioner";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ExternalIdentityProvisionerTypeBase{TService, TConfiguration, TFactory}"/> class.
     /// </summary>
@@ -42,7 +47,7 @@ public abstract class ExternalIdentityProvisionerTypeBase<TService, TConfigurati
         string? category = null,
         string defaultContainerName = "")
         : base(name, $"ExternalIdentityProvisioners:{name}", $"{name} External Identity Provisioner",
-               $"External identity provisioner using {name}", category ?? "ExternalIdentityProvisioner",
+               $"External identity provisioner using {name}", category ?? DefaultCategory,
                defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)

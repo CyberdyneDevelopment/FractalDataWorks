@@ -25,7 +25,7 @@ namespace Fdw.Services.Etl.Flow;
 /// is given) holds its batches back and loads them once, after its input ends, the way the load of a pipeline does (FDW-1647).
 /// </para>
 /// </remarks>
-public sealed class FlowLoadDestination : IFlowComponent
+public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound
 {
     /// <summary>The name of the destination's one input node.</summary>
     public const string InputName = FlowDestination.InputName;
@@ -39,6 +39,9 @@ public sealed class FlowLoadDestination : IFlowComponent
     private readonly DateTimeOffset _startedAt;
     private readonly ILogger _logger;
     private readonly bool _skipWrites;
+    private FlowStageRecords? _records;
+    private int _stage;
+    private bool _targetEmptied;
 
     /// <summary>Initializes a new instance of the <see cref="FlowLoadDestination"/> class.</summary>
     /// <param name="name">The component's name.</param>
@@ -85,6 +88,13 @@ public sealed class FlowLoadDestination : IFlowComponent
 
     /// <inheritdoc />
     public IReadOnlyList<string> Outputs => [];
+
+    /// <inheritdoc />
+    void IFlowStageBound.BindStages(FlowStageRecords records, int stage)
+    {
+        _records = records ?? throw new ArgumentNullException(nameof(records));
+        _stage = stage;
+    }
 
     /// <summary>Gets how many rows the load commands affected over the run.</summary>
     public int RowsLoaded { get; private set; }
@@ -160,8 +170,17 @@ public sealed class FlowLoadDestination : IFlowComponent
         }
 
         RowsLoaded += loaded.Value;
+        _targetEmptied |= first && _truncateFirst is not null;
+        await Report().ConfigureAwait(false);
         return GenericResult.Success();
     }
+
+    // Tells the run's records what has been committed so far (FDW-3785), so a run that is stopped or lost still says how many rows reached the target and whether it was
+    // emptied. Why not the run's token: the rows are committed already, and a cancel must not lose the figure that says so. A run that is not tracked reports nothing.
+    private Task Report() =>
+        _records is null
+            ? Task.CompletedTask
+            : _records.Committed(_stage, new DestinationCommit(_name, RowsLoaded, _targetEmptied, NeedsWholeSet(_unit), _truncateFirst is not null || _unit.Kind.RepeatsToSameResult), CancellationToken.None);
 
     // A test run: the rows are received and counted by the link, and none is written.
     private async Task<IGenericResult> CountOnly(IFlowInput input, CancellationToken cancellationToken)
@@ -194,6 +213,9 @@ public sealed class FlowLoadDestination : IFlowComponent
             {
                 return GenericResult.Failure(FlowLog.DestinationTruncateFailed(_logger, _name, emptied.CurrentMessage));
             }
+
+            _targetEmptied = true;
+            await Report().ConfigureAwait(false);
         }
 
         var loaded = await _executor
@@ -205,6 +227,7 @@ public sealed class FlowLoadDestination : IFlowComponent
         }
 
         RowsLoaded += loaded.Value;
+        await Report().ConfigureAwait(false);
         return GenericResult.Success();
     }
 }

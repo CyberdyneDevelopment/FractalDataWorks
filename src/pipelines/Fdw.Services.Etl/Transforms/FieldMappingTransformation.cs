@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fdw.Services.Etl.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl;
 
@@ -29,6 +30,7 @@ internal sealed class FieldMappingTransformation : IFieldMappingTransformation
     }
 
     /// <summary>The shared empty bag, so "nothing was configured" allocates nothing per step.</summary>
+    [PlatformDefault]
     private static readonly Dictionary<string, string> EmptyParameters = new(System.StringComparer.Ordinal);
 
     /// <inheritdoc/>

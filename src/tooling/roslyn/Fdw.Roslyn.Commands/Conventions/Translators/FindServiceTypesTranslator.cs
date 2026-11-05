@@ -45,7 +45,7 @@ public sealed class FindServiceTypesTranslator
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null) continue;
 
-            foreach (var document in project.Documents)
+            foreach (var (document, documentPath) in SourceDocuments.Of(project.Documents))
             {
                 if (command.IsGeneratedDocument(document)) continue;
 
@@ -75,7 +75,7 @@ public sealed class FindServiceTypesTranslator
                         Name = symbol.Name,
                         FullName = symbol.ToDisplayString(),
                         Project = project.Name,
-                        FilePath = document.FilePath ?? document.Name,
+                        FilePath = documentPath,
                         IsCollection = isCollection,
                         IsSealed = symbol.IsSealed,
                         HasRegisterMethod = symbol.GetMembers("Register").Any()

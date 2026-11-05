@@ -79,7 +79,7 @@ public sealed class DetailPageRenderer
         var operationLabel = page.IsNew ? "Create" : "Edit";
         var title = $"{operationIcon} {operationLabel} {page.EntityTypeDisplayName}";
 
-        var panel = new Panel(new Markup(page.Description ?? page.EntityTypeDisplayName))
+        var panel = new Panel(new Markup(page.Description ?? string.Empty))
         {
             Header = new PanelHeader($"[{theme.Colors.Primary} bold]{title}[/]"),
             Border = theme.Borders.Panel,
@@ -162,7 +162,7 @@ public sealed class DetailPageRenderer
     {
         var requiredMarker = component.IsRequired ? $"[{theme.Colors.Error}]*[/]" : "";
         var labelColor = component.IsRequired ? theme.Colors.Primary : theme.Colors.Foreground;
-        return $"[{labelColor}]{component.Label ?? component.Id}[/]{requiredMarker}:";
+        return $"[{labelColor}]{component.Label}[/]{requiredMarker}:";
     }
 
     private static string GetComponentDisplayValue(IComponentModel component, IMenuTheme theme, SpectreRenderContext context)
@@ -196,11 +196,11 @@ public sealed class DetailPageRenderer
             // Handle enums/select values
             if (component is ISelectableComponentModel)
             {
-                return $"[{theme.Colors.Foreground}]{Markup.Escape(value.ToString() ?? "")}[/]";
+                return $"[{theme.Colors.Foreground}]{Markup.Escape(value.ToString() ?? string.Empty)}[/]";
             }
 
             // Default display
-            var displayValue = value.ToString() ?? "";
+            var displayValue = value.ToString() ?? string.Empty;
             if (displayValue.Length > 60)
             {
                 displayValue = string.Concat(displayValue.AsSpan(0, 57), "...");
@@ -227,7 +227,7 @@ public sealed class DetailPageRenderer
 
         foreach (var entity in related)
         {
-            var icon = entity.Icon ?? "→";
+            var icon = entity.Icon ?? string.Empty;
             table.AddRow(
                 $"[{theme.Colors.Muted}]{entity.RelationshipType}[/]",
                 $"[{theme.Colors.Muted}]{icon}[/]",
@@ -327,7 +327,7 @@ public sealed class DetailPageRenderer
 
         // Prompt which field to edit
         var fieldChoices = editableComponents
-            .Select(c => (Component: (IComponentModel?)c, Label: c.Label ?? c.Id))
+            .Select(c => (Component: (IComponentModel?)c, Label: c.Label ?? string.Empty))
             .ToList();
 
         fieldChoices.Add((Component: null, Label: "[Done editing]"));

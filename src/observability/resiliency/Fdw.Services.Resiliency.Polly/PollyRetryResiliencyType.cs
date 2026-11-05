@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Resiliency;
 using Fdw.Services.Resiliency.Abstractions;
@@ -56,9 +57,14 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
                 PollyRetryLog.WrongConfigurationType(logger, config.GetType().Name));
         }
 
-        var pipeline = BuildPipeline(pollyConfig);
-        string? lastFailureMessage = null;
+        var refusal = Refusal(pollyConfig, logger);
+        if (refusal is not null)
+        {
+            return GenericResult.Failure(refusal);
+        }
 
+        var maxRetries = pollyConfig.MaxRetries!.Value;
+        var pipeline = BuildPipeline(pollyConfig, ToDelayBackoffType(pollyConfig.BackoffKind!)!.Value);
         try
         {
             var pollyResult = await pipeline.ExecuteAsync(
@@ -67,8 +73,7 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
                     var stageResult = await runStage(ct).ConfigureAwait(false);
                     if (!stageResult.IsSuccess)
                     {
-                        lastFailureMessage = stageResult.CurrentMessage;
-                        throw new ResiliencyRetryException(lastFailureMessage ?? "Stage failed");
+                        throw new ResiliencyRetryException(stageResult.FailureReason().Message);
                     }
 
                     return stageResult;
@@ -81,8 +86,8 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
                     PollyRetryLog.RetriesExhausted(
                         logger,
                         ctx.ExecutionId,
-                        pollyConfig.MaxRetries,
-                        pollyResult.CurrentMessage ?? "Polly returned failure"));
+                        maxRetries,
+                        pollyResult.FailureReason().Message));
             }
 
             return pollyResult;
@@ -97,13 +102,30 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
                 PollyRetryLog.RetriesExhausted(
                     logger,
                     ctx.ExecutionId,
-                    pollyConfig.MaxRetries,
-                    lastFailureMessage ?? ex.Message));
+                    maxRetries,
+                    ex.Message));
         }
     }
 
+    // Why a refusal: every value of a policy is its definer's to state (Mike, FDW-3931: "you are defining a resilience policy. why in the
+    // fuck would you have a default?"). The first one left out, or a backoff kind that is not one, is named.
+    private static IGenericMessage? Refusal(PollyRetryResiliencyConfiguration config, ILogger logger)
+    {
+        var unstated = config.MaxRetries is null ? nameof(config.MaxRetries)
+            : config.BackoffKind is null ? nameof(config.BackoffKind)
+            : config.BaseDelayMs is null ? nameof(config.BaseDelayMs)
+            : config.MaxDelayMs is null ? nameof(config.MaxDelayMs)
+            : null;
+        if (unstated is not null)
+        {
+            return PollyRetryLog.PolicyValueNotStated(logger, config.Name, unstated);
+        }
+
+        return ToDelayBackoffType(config.BackoffKind!) is null ? PollyRetryLog.BackoffKindUnknown(logger, config.Name, config.BackoffKind!) : null;
+    }
+
     private static ResiliencePipeline<IGenericResult> BuildPipeline(
-        PollyRetryResiliencyConfiguration config)
+        PollyRetryResiliencyConfiguration config, DelayBackoffType backoff)
     {
         var builder = new ResiliencePipelineBuilder<IGenericResult>();
 
@@ -114,10 +136,10 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
 
         builder.AddRetry(new RetryStrategyOptions<IGenericResult>
         {
-            MaxRetryAttempts = config.MaxRetries,
-            Delay = TimeSpan.FromMilliseconds(config.BaseDelayMs),
-            MaxDelay = TimeSpan.FromMilliseconds(config.MaxDelayMs),
-            BackoffType = ToDelayBackoffType(config.BackoffKind),
+            MaxRetryAttempts = config.MaxRetries!.Value,
+            Delay = TimeSpan.FromMilliseconds(config.BaseDelayMs!.Value),
+            MaxDelay = TimeSpan.FromMilliseconds(config.MaxDelayMs!.Value),
+            BackoffType = backoff,
             UseJitter = config.JitterPercent.HasValue && config.JitterPercent.Value > 0,
             ShouldHandle = new PredicateBuilder<IGenericResult>()
                 .Handle<ResiliencyRetryException>()
@@ -126,12 +148,15 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
         return builder.Build();
     }
 
-    private static DelayBackoffType ToDelayBackoffType(string backoffKind)
+    // The backoff a kind names; null for a name that is not a kind, which the strategy refuses rather than reading as Exponential.
+    private static DelayBackoffType? ToDelayBackoffType(string backoffKind)
     {
         if (string.Equals(backoffKind, "Fixed", StringComparison.OrdinalIgnoreCase))
             return DelayBackoffType.Constant;
         if (string.Equals(backoffKind, "Random", StringComparison.OrdinalIgnoreCase))
             return DelayBackoffType.Linear;
-        return DelayBackoffType.Exponential;
+        if (string.Equals(backoffKind, "Exponential", StringComparison.OrdinalIgnoreCase))
+            return DelayBackoffType.Exponential;
+        return null;
     }
 }

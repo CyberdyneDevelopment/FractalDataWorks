@@ -129,17 +129,17 @@ public sealed class MultiSelectModel<T> : IMultiSelectComponentModel<T>
 
         if (IsRequired && count == 0)
         {
-            return ValidationResult.Error($"{Label ?? Id} requires at least one selection.");
+            return ValidationResult.Error($"{Id} requires at least one selection.");
         }
 
         if (MinSelections.HasValue && count < MinSelections.Value)
         {
-            return ValidationResult.Error($"{Label ?? Id} requires at least {MinSelections.Value} selections.");
+            return ValidationResult.Error($"{Id} requires at least {MinSelections.Value} selections.");
         }
 
         if (MaxSelections.HasValue && count > MaxSelections.Value)
         {
-            return ValidationResult.Error($"{Label ?? Id} allows at most {MaxSelections.Value} selections.");
+            return ValidationResult.Error($"{Id} allows at most {MaxSelections.Value} selections.");
         }
 
         // Verify all selected values are valid options
@@ -148,7 +148,7 @@ public sealed class MultiSelectModel<T> : IMultiSelectComponentModel<T>
         {
             if (!optionValues.Contains(selected))
             {
-                return ValidationResult.Error($"{Label ?? Id} contains an invalid selection.");
+                return ValidationResult.Error($"{Id} contains an invalid selection.");
             }
         }
 

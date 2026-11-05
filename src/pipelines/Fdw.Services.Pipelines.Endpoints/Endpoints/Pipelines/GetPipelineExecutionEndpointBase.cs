@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 using Fdw.Services.Pipelines;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -92,7 +93,7 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
 
         if (!result.IsSuccess)
         {
-            OnExecutionHistoryFetchFailed(result.CurrentMessage ?? "Unknown error");
+            OnExecutionHistoryFetchFailed(result.FailureReason().Message);
             await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution record", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
@@ -126,7 +127,7 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
         RecordsTransformed = dbRecord.RecordsTransformed,
         RecordsLoaded = dbRecord.RecordsLoaded,
         RecordsFailed = dbRecord.RecordsFailed,
-        TotalDurationMs = dbRecord.DurationMs ?? 0,
+        TotalDurationMs = dbRecord.DurationMs,
         ExecutedBy = dbRecord.ExecutedBy
     };
 

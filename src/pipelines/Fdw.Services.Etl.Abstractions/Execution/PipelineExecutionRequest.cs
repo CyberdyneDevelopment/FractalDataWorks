@@ -47,6 +47,12 @@ public sealed class PipelineExecutionRequest
     public string? ScheduleName { get; init; }
 
     /// <summary>
+    /// Gets the Id of the schedule that triggered this execution (FDW-3975): the schedule's domain Id, which the thresholds attached to the schedule are found by.
+    /// Null for manual/ad-hoc executions. A scheduled execution carries both the name and the Id.
+    /// </summary>
+    public Guid? ScheduleId { get; init; }
+
+    /// <summary>
     /// Gets the tenant this execution belongs to, if known. Sourced from
     /// <c>ScheduleConfiguration.TenantId</c> for scheduled triggers, or from the triggering caller's own
     /// <c>IAuthenticationContext.ActiveTenantId</c> for API-triggered executions. Null when no tenant
@@ -82,6 +88,18 @@ public sealed class PipelineExecutionRequest
     /// rows from each source and writes nothing; null means a real run.
     /// </summary>
     public int? TestRowsPerSource { get; init; }
+
+    /// <summary>
+    /// Gets how long this execution may take once it starts running, in seconds (FDW-3805): the timeout the triggering schedule states. The host cancels the run when the
+    /// time has passed, and it ends with the result code TimedOut. Null means no time limit is stated and the run has none.
+    /// </summary>
+    public int? TimeoutSeconds { get; init; }
+
+    /// <summary>
+    /// The longest timeout a request may state, in seconds, about 49 days: the longest delay the timer that stops the run can be given. A longer time is refused where
+    /// the request is accepted, naming this limit, and never cut short.
+    /// </summary>
+    public const int MaxTimeoutSeconds = 4_294_967;
 
     /// <summary>
     /// Gets when a run that was held back (DelayedStart) is due, for a run the host takes up again after a restart (FDW-3216); none for a run that is

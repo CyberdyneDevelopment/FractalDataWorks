@@ -43,4 +43,8 @@ public interface IIconSet : ITypeOption<int, IconSetBase>
 
     /// <summary>Icon for loading/processing (e.g., "\u231b" or "[...]").</summary>
     string LoadingIcon { get; }
+
+    /// <summary>Icon for a tree node of the given kind (for example "dataset" or "folder"); a kind the set has no icon for gets the set's generic node icon.</summary>
+    /// <param name="nodeType">The node kind, compared without regard to case.</param>
+    string NodeIcon(string nodeType);
 }

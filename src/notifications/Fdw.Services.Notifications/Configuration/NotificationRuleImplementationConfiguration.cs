@@ -57,7 +57,7 @@ public partial class NotificationRuleImplementationConfiguration
     /// <summary>
     /// Gets or sets whether this rule is enabled.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the schedule ID this rule applies to (cross-domain FK).
@@ -81,7 +81,7 @@ public partial class NotificationRuleImplementationConfiguration
     /// Gets or sets how multiple conditions are combined.
     /// </summary>
     /// <value>"And" or "Or" (default is "Or")</value>
-    public string ConditionOperator { get; set; } = "Or";
+    public string ConditionOperator { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the notification service type to use (e.g., "Email", "Slack", "Teams").
@@ -103,7 +103,7 @@ public partial class NotificationRuleImplementationConfiguration
     /// Gets or sets the severity level for this rule.
     /// </summary>
     /// <value>"Info", "Warning", "Error", or "Critical"</value>
-    public string Severity { get; set; } = "Info";
+    public string Severity { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the minimum interval between notifications in minutes (cooldown).

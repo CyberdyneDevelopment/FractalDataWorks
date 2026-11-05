@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration.Persistence.Schema;
 
 namespace Fdw.Services.Connections.MsSql.Discovery;
 
@@ -35,12 +36,12 @@ public sealed class DiscoveredForeignKey
     /// <summary>
     /// Gets the action to take on delete.
     /// </summary>
-    public IForeignKeyAction OnDelete { get; init; } = new NoActionForeignKeyAction();
+    public required IForeignKeyAction OnDelete { get; init; }
 
     /// <summary>
     /// Gets the action to take on update.
     /// </summary>
-    public IForeignKeyAction OnUpdate { get; init; } = new NoActionForeignKeyAction();
+    public required IForeignKeyAction OnUpdate { get; init; }
 
     /// <summary>
     /// Gets whether this foreign key is enabled.

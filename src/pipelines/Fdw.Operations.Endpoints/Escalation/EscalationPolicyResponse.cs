@@ -26,6 +26,12 @@ public class EscalationPolicyResponse
     /// <summary>Gets or sets the cooldown period in minutes.</summary>
     public int CooldownMinutes { get; set; }
 
+    /// <summary>Gets or sets how many times a failed notification is retried.</summary>
+    public int MaxRetries { get; set; }
+
+    /// <summary>Gets or sets the seconds between retries.</summary>
+    public int RetryDelaySeconds { get; set; }
+
     /// <summary>Gets or sets the escalation levels.</summary>
     public IReadOnlyList<EscalationLevelResponse> Levels { get; set; } = [];
 }

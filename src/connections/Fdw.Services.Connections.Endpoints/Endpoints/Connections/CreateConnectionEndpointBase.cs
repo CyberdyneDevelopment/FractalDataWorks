@@ -8,6 +8,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
+using Fdw.Services.Settings;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Connections.Clients.Models;
@@ -61,6 +62,35 @@ public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<Crea
         return GenericResult<bool>.Success(existingResult.IsSuccess && existingResult.Value != null);
     }
 
+    // Health checking is common to every connection type, so it is set here rather than in each type's CreateConfiguration --
+    // the same place the update endpoint sets it. A flag the request leaves out takes the caller's tenant's setting (FDW-3580).
+    private IGenericResult ApplyHealthCheck(
+        IConnectionImplementationConfiguration connection, CreateConnectionRequest request, Lazy<IEffectiveSettingsProvider> settings, Guid? tenantId)
+    {
+        var enabled = InstanceDefault.Resolve(
+            request.HealthCheckEnabled, settings, DefaultValueSettings.DefaultConnectionHealthCheckEnabled, tenantId, "connection", request.Name,
+            nameof(request.HealthCheckEnabled), Logger);
+        if (enabled.IsFailure)
+        {
+            return enabled;
+        }
+
+        var onStartup = InstanceDefault.Resolve(
+            request.HealthCheckOnStartup, settings, DefaultValueSettings.DefaultConnectionHealthCheckOnStartup, tenantId, "connection", request.Name,
+            nameof(request.HealthCheckOnStartup), Logger);
+        if (onStartup.IsFailure)
+        {
+            return onStartup;
+        }
+
+        connection.HealthCheckEnabled = enabled.Value;
+        connection.HealthCheckOnStartup = onStartup.Value;
+        connection.HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds;
+        return connection.HealthCheckEnabled && !connection.HealthCheckOnStartup && connection.HealthCheckIntervalSeconds is null
+            ? GenericResult.Failure(ConnectionEndpointLog.HealthCheckEnabledWithoutTrigger(Logger, request.Name))
+            : GenericResult.Success();
+    }
+
     /// <summary>Builds the connection's implementation configuration and saves it through the provider.</summary>
     protected override async Task<IGenericResult<ConnectionDetailDto>> Create(CreateConnectionRequest request, CancellationToken ct)
     {
@@ -80,7 +110,17 @@ public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<Crea
                 Logger, request.Name, request.SchemaDiscovery, request.ServiceType, offered.Select(option => option.Name));
         }
 
-        var bound = connectionType.EndpointBehavior.Bind(ConnectionRequestBody.ForCreate(request), Logger);
+        // What the request leaves out takes the caller's tenant's setting (FDW-3580): "in configuration and not hardcoded".
+        var settings = Resolve<Lazy<IEffectiveSettingsProvider>>();
+        var tenantId = new ClaimsPrincipalAuthenticationContext(User).ActiveTenantId;
+        var body = ConnectionCreateDefaults.Fill(
+            ConnectionRequestBody.ForCreate(request), connectionType.EndpointBehavior, connectionType, settings, tenantId, request.Name, Logger);
+        if (body.IsFailure)
+        {
+            return body.ToNewResult<ConnectionDetailDto>();
+        }
+
+        var bound = connectionType.EndpointBehavior.Bind(body.Value, Logger);
         if (bound.IsFailure)
         {
             return bound.ToNewResult<ConnectionDetailDto>();
@@ -97,17 +137,10 @@ public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<Crea
             return admitted.ToNewResult<ConnectionDetailDto>();
         }
 
-        // Health checking is common to every connection type, so it is set here rather than in each
-        // type's CreateConfiguration -- the same place the update endpoint sets it. No type mapped it,
-        // so every created connection saved as unchecked and the trigger validation below never fired.
-        connection.HealthCheckEnabled = request.HealthCheckEnabled;
-        connection.HealthCheckOnStartup = request.HealthCheckOnStartup;
-        connection.HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds;
-
-        if (connection.HealthCheckEnabled && !connection.HealthCheckOnStartup && connection.HealthCheckIntervalSeconds is null)
+        var health = ApplyHealthCheck(connection, request, settings, tenantId);
+        if (health.IsFailure)
         {
-            return GenericResult<ConnectionDetailDto>.Failure(
-                ConnectionEndpointLog.HealthCheckEnabledWithoutTrigger(Logger, request.Name));
+            return health.ToNewResult<ConnectionDetailDto>();
         }
 
         // Where a connection's credentials are stored is the server's choice, and their values arrive write-only: refuse

@@ -22,9 +22,9 @@ public static class NumericPromptHelper
     public static T Prompt<T>(
         IAnsiConsole console,
         string promptText,
-        T? defaultValue = default,
-        PropertyMetadata? metadata = null,
-        TUIThemeConfiguration? theme = null)
+        T? defaultValue,
+        PropertyMetadata? metadata,
+        TUIThemeConfiguration theme)
         where T : struct, IComparable<T>
     {
         var prompt = new TextPrompt<T>(promptText);
@@ -42,7 +42,7 @@ public static class NumericPromptHelper
             {
                 if (value.CompareTo(min) < 0)
                 {
-                    return ValidationResult.Error($"[{theme?.Colors.Error ?? Color.Red}]Value must be at least {min}[/]");
+                    return ValidationResult.Error($"[{theme.Colors.Error}]Value must be at least {min}[/]");
                 }
                 return ValidationResult.Success();
             });
@@ -55,7 +55,7 @@ public static class NumericPromptHelper
             {
                 if (value.CompareTo(max) > 0)
                 {
-                    return ValidationResult.Error($"[{theme?.Colors.Error ?? Color.Red}]Value must be at most {max}[/]");
+                    return ValidationResult.Error($"[{theme.Colors.Error}]Value must be at most {max}[/]");
                 }
                 return ValidationResult.Success();
             });

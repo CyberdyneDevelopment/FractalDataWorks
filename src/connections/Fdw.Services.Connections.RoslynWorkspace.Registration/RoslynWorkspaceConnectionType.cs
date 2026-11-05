@@ -1,3 +1,4 @@
+using Fdw.ServiceTypes;
 using System;
 using Fdw.Services.Results;
 using System.Collections.Generic;
@@ -23,6 +24,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Fdw.Services.Connections.Abstractions.Authentication;
 using Fdw.Services.Connections.Results;
+using Fdw.Services.Connections.RoslynWorkspace.Validation;
 
 namespace Fdw.Services.Connections.RoslynWorkspace.Registration;
 
@@ -38,6 +40,16 @@ public sealed class RoslynWorkspaceConnectionType
 {
 
     /// <summary>
+    /// Gets the tuning defaults this type carries (FDW-3823, Mike: "the thing you select carries it"), ModeName Snapshot: a configuration that states its own
+    /// value uses it, and a host can change one at registration with ServiceTypeDefaults.Override. What the caller chooses (where it connects,
+    /// which schema, how it authenticates, whether it trusts a certificate) has no default.
+    /// </summary>
+    public override IReadOnlyDictionary<string, object> DeclaredDefaults
+        => _declaredDefaults ??= ServiceTypeDefaults.With(base.DeclaredDefaults, (nameof(RoslynWorkspaceConnectionConfiguration.ModeName), "Snapshot"));
+
+    private IReadOnlyDictionary<string, object>? _declaredDefaults;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="RoslynWorkspaceConnectionType"/> class.
     /// </summary>
     public RoslynWorkspaceConnectionType() : base(
@@ -50,6 +62,10 @@ public sealed class RoslynWorkspaceConnectionType
         // The flat create request carried the solution path in BaseUrl and the mode in Protocol.
         EndpointAlias("baseUrl", nameof(RoslynWorkspaceConnectionConfiguration.SolutionPath));
         EndpointAlias("protocol", nameof(RoslynWorkspaceConnectionConfiguration.ModeName));
+
+        // What a Roslyn workspace connection must state (its solution path and mode) is the configuration validator's; a create or
+        // update that fails it is refused before it is saved (FDW-3541).
+        EndpointValidation(new RoslynWorkspaceConnectionConfigurationValidator());
 
         Initialization((host, loggerFactory) =>
         {

@@ -9,8 +9,10 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Fdw.ServiceTypes.Analyzers;
 
 /// <summary>
-/// Analyzer that ensures every cross-assembly <c>[TypeOption]</c>-tagged class has a public
-/// parameterless constructor. The cross-assembly TypeOption module initializer
+/// Analyzer that ensures every cross-assembly <c>[TypeOption]</c>- or <c>[Implementation]</c>-tagged class has a
+/// public parameterless constructor. <c>[Implementation]</c> options are registered the same way, by
+/// <c>Fdw.Registration.SourceGenerators.ImplementationModuleInitializerGenerator</c>, which skips them silently too
+/// (FDW-3512). The cross-assembly TypeOption module initializer
 /// (<c>Fdw.Registration.SourceGenerators.TypeOptionModuleInitializerGenerator</c>) registers every
 /// tagged option with a bare <c>new()</c> call in the consuming executable — before any DI
 /// container exists — and silently skips (no diagnostic) any class that lacks a public
@@ -37,8 +39,8 @@ public class TypeOptionConstructorAnalyzer : DiagnosticAnalyzer
     public const string DiagnosticId = "FDW027";
 
     private static readonly LocalizableString Title = "Missing public parameterless constructor";
-    private static readonly LocalizableString MessageFormat = "TypeOption '{0}' must have a public parameterless constructor — the module initializer registers it via a bare new() call and will silently skip it otherwise";
-    private static readonly LocalizableString Description = "Every [TypeOption]-tagged class is instantiated via a bare new() by the TypeOption module initializer, before any DI container exists. A class without a public parameterless constructor is silently skipped — never registered — with no build signal.";
+    private static readonly LocalizableString MessageFormat = "{0} '{1}' must have a public parameterless constructor — the module initializer registers it via a bare new() call and will silently skip it otherwise";
+    private static readonly LocalizableString Description = "Every [TypeOption]- or [Implementation]-tagged class is instantiated via a bare new() by its module initializer, before any DI container exists. A class without a public parameterless constructor is silently skipped — never registered — with no build signal.";
     private const string Category = "Usage";
 
     private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
@@ -65,21 +67,27 @@ public class TypeOptionConstructorAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeType(SyntaxNodeAnalysisContext context)
     {
         var typeDeclaration = (TypeDeclarationSyntax)context.Node;
-        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration);
+        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration, context.CancellationToken);
         if (typeSymbol == null) return;
 
-        // Check if this type carries [TypeOption(...)] (Fdw.Collections.Attributes.TypeOptionAttribute).
-        var typeOptionAttr = typeSymbol.GetAttributes()
-            .FirstOrDefault(a => string.Equals(a.AttributeClass?.Name, "TypeOptionAttribute", StringComparison.Ordinal));
+        // Check if this type carries [TypeOption(...)] (Fdw.Collections.Attributes.TypeOptionAttribute) or
+        // [Implementation(...)] (Fdw.Collections.ImplementationAttribute).
+        var optionAttr = typeSymbol.GetAttributes()
+            .FirstOrDefault(a => string.Equals(a.AttributeClass?.Name, "TypeOptionAttribute", StringComparison.Ordinal) ||
+                                 string.Equals(a.AttributeClass?.Name, "ImplementationAttribute", StringComparison.Ordinal));
 
-        if (typeOptionAttr == null) return;
+        if (optionAttr == null) return;
+
+        var isImplementation = string.Equals(optionAttr.AttributeClass?.Name, "ImplementationAttribute", StringComparison.Ordinal);
 
         // RestrictToCurrentCompilation = true options are registered by a different mechanism
-        // (the TypeCollection's own same-compilation static constructor) that does not require a
+        // (the collection's own same-compilation static constructor) that does not require a
         // strictly zero-parameter constructor — see the class remarks. Not this analyzer's concern.
-        var isRestrictedToCurrentCompilation = typeOptionAttr.NamedArguments
-            .Any(a => string.Equals(a.Key, "RestrictToCurrentCompilation", StringComparison.Ordinal) &&
-                     a.Value.Value is true);
+        // A [TypeOption] carries the flag itself; an [Implementation] has no such property, so the flag is read
+        // from the collection attribute on the type its first argument names.
+        var isRestrictedToCurrentCompilation = isImplementation
+            ? IsCollectionRestrictedToCurrentCompilation(optionAttr)
+            : HasRestrictToCurrentCompilation(optionAttr);
         if (isRestrictedToCurrentCompilation) return;
 
         // The module initializer itself skips generic and abstract types before ever reaching the
@@ -98,9 +106,30 @@ public class TypeOptionConstructorAnalyzer : DiagnosticAnalyzer
             var diagnostic = Diagnostic.Create(
                 Rule,
                 typeDeclaration.Identifier.GetLocation(),
+                isImplementation ? "Implementation" : "TypeOption",
                 typeSymbol.Name);
 
             context.ReportDiagnostic(diagnostic);
         }
+    }
+
+    private static bool HasRestrictToCurrentCompilation(AttributeData attribute)
+    {
+        return attribute.NamedArguments
+            .Any(a => string.Equals(a.Key, "RestrictToCurrentCompilation", StringComparison.Ordinal) &&
+                     a.Value.Value is true);
+    }
+
+    private static bool IsCollectionRestrictedToCurrentCompilation(AttributeData implementationAttribute)
+    {
+        if (implementationAttribute.ConstructorArguments.Length == 0 ||
+            implementationAttribute.ConstructorArguments[0].Value is not INamedTypeSymbol collectionType)
+            return false;
+
+        // The service collection attributes (ServiceTypeCollection, MutableServiceTypeCollection,
+        // ServiceTypeInstanceCollection) each carry RestrictToCurrentCompilation.
+        return collectionType.GetAttributes()
+            .Any(a => a.AttributeClass?.Name.EndsWith("CollectionAttribute", StringComparison.Ordinal) == true &&
+                      HasRestrictToCurrentCompilation(a));
     }
 }

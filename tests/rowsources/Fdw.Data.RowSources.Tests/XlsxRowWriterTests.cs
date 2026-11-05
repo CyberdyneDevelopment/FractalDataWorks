@@ -14,7 +14,7 @@ public sealed class XlsxRowWriterTests
     private static ZipArchive Written(string[] columns, IEnumerable<Dictionary<string, object?>> rows, int rowsPerSheet = XlsxRowWriterOptions.MaxRowsPerSheet, string sheetName = "Data")
     {
         var body = new MemoryStream();
-        var writer = new XlsxRowWriter(body, new XlsxRowWriterOptions { Columns = [.. columns], RowsPerSheet = rowsPerSheet, SheetName = sheetName });
+        var writer = new XlsxRowWriter(body, new XlsxRowWriterOptions { Columns = [.. columns], RowsPerSheet = rowsPerSheet, SheetName = sheetName, BufferSize = 16 * 1024 });
         foreach (var row in rows)
         {
             writer.Write(row);
@@ -159,8 +159,8 @@ public sealed class XlsxRowWriterTests
     [Fact]
     public void AWorkbookCannotBeBuiltWithoutColumnsOrWithAnImpossibleSheetSize()
     {
-        Should.Throw<ArgumentException>(() => new XlsxRowWriter(new MemoryStream(), new XlsxRowWriterOptions()));
-        Should.Throw<ArgumentOutOfRangeException>(() => new XlsxRowWriter(new MemoryStream(), new XlsxRowWriterOptions { Columns = ["a"], RowsPerSheet = 1 }));
+        Should.Throw<ArgumentException>(() => new XlsxRowWriter(new MemoryStream(), new XlsxRowWriterOptions() { SheetName = "Data", BufferSize = 16 * 1024, RowsPerSheet = XlsxRowWriterOptions.MaxRowsPerSheet }));
+        Should.Throw<ArgumentOutOfRangeException>(() => new XlsxRowWriter(new MemoryStream(), new XlsxRowWriterOptions { Columns = ["a"], RowsPerSheet = 1, SheetName = "Data", BufferSize = 16 * 1024 }));
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public sealed class XlsxRowWriterTests
         format.WritesBinary.ShouldBeTrue();
         format.FileExtension.ShouldBe("xlsx");
         format.MediaType.ShouldBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        Should.Throw<NotSupportedException>(() => format.CreateWriter(new StringWriter(), format.CreateOptions(["a"])));
+        Should.Throw<NotSupportedException>(() => format.CreateWriter(new StringWriter(), format.CreateOptions(["a"], TestRowFormats.Choices, "test").Value!));
         RecordWriterTypes.ByAcceptHeader(format.MediaType).ShouldBeSameAs(format);
     }
 
@@ -181,7 +181,7 @@ public sealed class XlsxRowWriterTests
         var format = RecordWriterTypes.ByName("Xlsx");
 
         var bytes = RecordWriterBytes.Write(
-            format, [], format.CreateOptions(["a"]),
+            format, [], format.CreateOptions(["a"], TestRowFormats.Choices, "test").Value!,
             writer => ((IRowWriter)writer).Write(new Dictionary<string, object?> { ["a"] = "x" }));
 
         bytes.Take(2).ShouldBe(new[] { (byte)'P', (byte)'K' });
@@ -195,9 +195,9 @@ public sealed class XlsxRowWriterTests
         var delimited = RecordWriterTypes.ByName("Delimited");
         var xlsx = RecordWriterTypes.ByName("Xlsx");
 
-        Should.Throw<NotSupportedException>(() => delimited.Create(RecordWriterContext.ForBytes(new MemoryStream(), [], delimited.CreateOptions(["a"]))));
-        Should.Throw<NotSupportedException>(() => xlsx.Create(new RecordWriterContext(new StringWriter(), [], xlsx.CreateOptions(["a"]))));
-        Should.Throw<NotSupportedException>(() => RecordWriterBytes.Write(delimited, [], delimited.CreateOptions(["a"]), _ => { }));
+        Should.Throw<NotSupportedException>(() => delimited.Create(RecordWriterContext.ForBytes(new MemoryStream(), [], delimited.CreateOptions(["a"], TestRowFormats.Choices, "test").Value!)));
+        Should.Throw<NotSupportedException>(() => xlsx.Create(new RecordWriterContext(new StringWriter(), [], xlsx.CreateOptions(["a"], TestRowFormats.Choices, "test").Value!)));
+        Should.Throw<NotSupportedException>(() => RecordWriterBytes.Write(delimited, [], delimited.CreateOptions(["a"], TestRowFormats.Choices, "test").Value!, _ => { }));
     }
 
     [Fact]
@@ -206,6 +206,6 @@ public sealed class XlsxRowWriterTests
         var delimited = RecordWriterTypes.ByName("Delimited");
 
         delimited.WritesBinary.ShouldBeFalse();
-        Should.Throw<NotSupportedException>(() => delimited.CreateBinaryWriter(new MemoryStream(), delimited.CreateOptions(["a"])));
+        Should.Throw<NotSupportedException>(() => delimited.CreateBinaryWriter(new MemoryStream(), delimited.CreateOptions(["a"], TestRowFormats.Choices, "test").Value!));
     }
 }

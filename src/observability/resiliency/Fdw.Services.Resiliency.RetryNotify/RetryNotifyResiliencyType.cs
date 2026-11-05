@@ -4,10 +4,12 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Resiliency;
 using Fdw.Services.Resiliency.Abstractions;
 using Fdw.Services.Resiliency.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Resiliency.RetryNotify;
@@ -19,6 +21,10 @@ namespace Fdw.Services.Resiliency.RetryNotify;
 [TypeOption(typeof(ResiliencyTypes), "RetryNotify")]
 public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
 {
+    // The backoff kinds a policy may name; any other is refused, never read as Exponential (FDW-3931).
+    private static readonly System.Collections.Generic.HashSet<string> BackoffKinds =
+        new(StringComparer.OrdinalIgnoreCase) { "Exponential", "Fixed", "Random" };
+
     /// <summary>Initializes a new instance of <see cref="RetryNotifyResiliencyType"/>.</summary>
     public RetryNotifyResiliencyType()
         : base(
@@ -51,9 +57,16 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
                 RetryNotifyLog.WrongContextType(NullLogger.Instance, ctx.ExecutionId, ctx.GetType().Name));
         }
 
+        var refusal = Refusal(rnConfig, rnCtx.Logger);
+        if (refusal is not null)
+        {
+            return GenericResult.Failure(refusal);
+        }
+
+        var maxRetries = rnConfig.MaxRetries!.Value;
         IGenericResult? lastResult = null;
 
-        for (var attempt = 0; attempt <= rnConfig.MaxRetries; attempt++)
+        for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -62,11 +75,11 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
             if (lastResult.IsSuccess)
                 return lastResult;
 
-            if (attempt < rnConfig.MaxRetries)
+            if (attempt < maxRetries)
             {
                 ResiliencyLog.AttemptFailed(
                     rnCtx.Logger, ctx.ExecutionId, attempt,
-                    lastResult.CurrentMessage ?? "stage failed");
+                    lastResult.FailureReason().Message);
 
                 // Apply backoff delay before the next attempt.
                 var delay = CalculateDelay(rnConfig, attempt);
@@ -74,29 +87,54 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
             }
         }
 
+        // Why before the notification: a MaxRetries below zero runs no attempt, so no stage failed and there is nothing to
+        // notify about. The loop returns on success, so a result here is the last attempt's failure.
+        if (lastResult is null)
+        {
+            return GenericResult.Failure(
+                RetryNotifyLog.RetriesExhausted(
+                    rnCtx.Logger, ctx.ExecutionId, maxRetries, "Stage failed after max retries"));
+        }
+
+        if (lastResult.IsSuccess)
+            return lastResult;
+
         // Terminal failure — all retries exhausted.
-        ResiliencyLog.MaxRetriesExceeded(rnCtx.Logger, ctx.ExecutionId, rnConfig.MaxRetries);
+        ResiliencyLog.MaxRetriesExceeded(rnCtx.Logger, ctx.ExecutionId, maxRetries);
 
         // Send notification.
         await rnCtx.NotifyTerminalFailure(
             rnConfig.NotificationTargetId,
             ctx.ExecutionId,
-            lastResult?.CurrentMessage ?? "Stage failed after max retries",
+            lastResult.FailureReason().Message,
             cancellationToken).ConfigureAwait(false);
 
         ResiliencyLog.NotificationSent(rnCtx.Logger, ctx.ExecutionId, rnConfig.NotificationTargetId);
 
-        if (lastResult is not null)
-            return lastResult;
-
-        return GenericResult.Failure(
-            RetryNotifyLog.RetriesExhausted(
-                rnCtx.Logger, ctx.ExecutionId, rnConfig.MaxRetries, "Stage failed after max retries"));
+        return lastResult;
     }
 
+    // Why a refusal: every value of a policy is its definer's to state (Mike, FDW-3931: "you are defining a resilience policy. why in the
+    // fuck would you have a default?"). The first one left out, or a backoff kind that is not one, is named.
+    private static IGenericMessage? Refusal(RetryNotifyResiliencyConfiguration config, ILogger logger)
+    {
+        var unstated = config.MaxRetries is null ? nameof(config.MaxRetries)
+            : config.BackoffKind is null ? nameof(config.BackoffKind)
+            : config.BaseDelayMs is null ? nameof(config.BaseDelayMs)
+            : config.MaxDelayMs is null ? nameof(config.MaxDelayMs)
+            : null;
+        if (unstated is not null)
+        {
+            return RetryNotifyLog.PolicyValueNotStated(logger, config.Name, unstated);
+        }
+
+        return BackoffKinds.Contains(config.BackoffKind!) ? null : RetryNotifyLog.BackoffKindUnknown(logger, config.Name, config.BackoffKind!);
+    }
+
+    // Refusal has checked every value and the kind before a delay is worked out.
     private static TimeSpan CalculateDelay(RetryNotifyResiliencyConfiguration config, int attempt)
     {
-        var baseMs = config.BaseDelayMs;
+        var baseMs = config.BaseDelayMs!.Value;
         if (string.Equals(config.BackoffKind, "Fixed", StringComparison.OrdinalIgnoreCase))
             return TimeSpan.FromMilliseconds(baseMs);
 
@@ -106,7 +144,7 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
             return TimeSpan.FromMilliseconds(baseMs + jitter);
         }
 
-        var exponentialMs = (int)Math.Min(Math.Pow(2, attempt) * baseMs, 30000);
+        var exponentialMs = (int)Math.Min(Math.Pow(2, attempt) * baseMs, config.MaxDelayMs!.Value);
         return TimeSpan.FromMilliseconds(exponentialMs);
     }
 }

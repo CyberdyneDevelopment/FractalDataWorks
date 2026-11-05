@@ -12,10 +12,10 @@ namespace Fdw.Services.Data.Endpoints.Logging;
 [MessageLoggingTypeCode("DATAENDPOINTS")]
 public static partial class DataSetEndpointLog
 {
-    /// <summary>Refuses a lookup that asks for a kind of data set or variation this host does not register.</summary>
+    /// <summary>Refuses a list or lookup that asks for a kind of data set the DataSetTypes collection does not hold.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="kind">The kind asked for.</param>
-    [MessageLogging(EventId = 21002, Level = LogLevel.Warning, Message = "The data set lookup was asked for kind '{kind}', which is neither DataSet nor a kind of variation this host registers")]
+    [MessageLogging(EventId = 21002, Level = LogLevel.Warning, Message = "The data set list or lookup was asked for kind '{kind}', which is not a kind of data set (Simple, Compound, Federated or Variation)")]
     public static partial IGenericMessage LookupKindUnknown(ILogger logger, string kind);
 
     // List (4400-4401)

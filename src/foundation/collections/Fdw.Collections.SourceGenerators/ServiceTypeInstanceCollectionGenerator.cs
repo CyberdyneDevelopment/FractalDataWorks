@@ -77,7 +77,7 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
 
         var restrictToCurrentCompilation = attribute.NamedArguments
             .FirstOrDefault(kvp => string.Equals(kvp.Key, "RestrictToCurrentCompilation", StringComparison.Ordinal))
-            .Value.Value as bool? ?? false;
+            .Value.Value is true;
 
         var baseConstructorParams = ExtractBaseConstructorParameters(baseType, classSymbol);
 
@@ -127,26 +127,7 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
             resolvedBaseType = baseType as INamedTypeSymbol;
         }
 
-        if (resolvedBaseType == null)
-            return ImmutableArray<ParameterModel>.Empty;
-
-        // Find the protected constructor with fewest parameters (prefer parameterless for Empty sentinel)
-        var ctor = resolvedBaseType.InstanceConstructors
-            .Where(c => c.DeclaredAccessibility == Accessibility.Protected)
-            .OrderBy(c => c.Parameters.Length)
-            .FirstOrDefault();
-
-        if (ctor == null)
-            return ImmutableArray<ParameterModel>.Empty;
-
-        return ctor.Parameters
-            .Select(p => new ParameterModel(
-                Name: p.Name,
-                Type: p.Type.ToDisplayString(),
-                HasDefaultValue: p.HasExplicitDefaultValue,
-                DefaultValue: string.Empty
-            ))
-            .ToImmutableArray();
+        return CodeGeneration.ExtractSentinelConstructorParameters(resolvedBaseType);
     }
 
     private static void Execute(
@@ -170,6 +151,9 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
 
             // Validate (but don't error on empty - that's expected for abstractions packages)
             ValidateOptions(context, collection, options);
+
+            if (CodeGeneration.GeneratesNotFound(options.Select(o => o.OptionName)))
+                CodeGeneration.ReportSentinelHostileParameters(context, collection.ClassName, collection.BaseConstructorParameters);
 
             // Look up the type symbols to extract abstract members
             var baseTypeSymbol = compilation.GetTypeByMetadataName(collection.BaseTypeName)
@@ -352,13 +336,19 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
         sb.AppendLine();
 
         // Register - creates new instances and registers each
-        sb.AppendLine("        /// <summary>Registers all service types with the service collection.</summary>");
-        sb.AppendLine("        public static void Register(IServiceCollection services)");
+        sb.AppendLine("        /// <summary>Registers every service type in the collection through its Register phase, stopping at the first that fails.</summary>");
+        sb.AppendLine("        public static global::Fdw.Results.IGenericResult<global::Microsoft.Extensions.Hosting.IHostApplicationBuilder> Register(");
+        sb.AppendLine("            global::Microsoft.Extensions.Hosting.IHostApplicationBuilder builder,");
+        sb.AppendLine("            global::Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null)");
         sb.AppendLine("        {");
-        sb.AppendLine("            foreach (var factory in _factoriesById.Values)");
+        sb.AppendLine("            foreach (var serviceType in _factoriesById.Values.Select(factory => factory()))");
         sb.AppendLine("            {");
-        sb.AppendLine("                factory().Register(services);");
+        sb.AppendLine("                var result = serviceType.Register(builder, loggerFactory);");
+        sb.AppendLine("                if (!result.IsSuccess)");
+        sb.AppendLine("                    return result;");
         sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            return global::Fdw.Results.GenericResult<global::Microsoft.Extensions.Hosting.IHostApplicationBuilder>.Success(builder);");
         sb.AppendLine("        }");
         sb.AppendLine();
 
@@ -395,8 +385,7 @@ public class ServiceTypeInstanceCollectionGenerator : IIncrementalGenerator
         }
 
         // NotFound sentinel - skip if a TypeOption named "NotFound" already exists
-        var hasNotFoundOption = options.Any(o => string.Equals(o.OptionName, "NotFound", StringComparison.Ordinal));
-        if (!hasNotFoundOption)
+        if (CodeGeneration.GeneratesNotFound(options.Select(o => o.OptionName)))
         {
             sb.AppendLine($"        private static readonly {collection.InterfaceTypeName} _notFound = new NotFound{collection.ClassName}();");
             sb.AppendLine($"        /// <summary>Gets a sentinel instance returned when lookups fail.</summary>");

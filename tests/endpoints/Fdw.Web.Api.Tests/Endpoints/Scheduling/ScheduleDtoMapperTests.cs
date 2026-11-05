@@ -84,6 +84,7 @@ public sealed class ScheduleDtoMapperTests
         schedule.Implementation = "Cron";
         schedule.CronExpression = "0 0/15 * * * ?";
         schedule.TimeZoneId = "Europe/Berlin";
+        schedule.MissedFireRule = "FireOnce";
         schedule.NextRunTime = DateTimeOffset.UtcNow.AddMinutes(15);
         schedule.LastRunTime = DateTimeOffset.UtcNow.AddMinutes(-15);
         schedule.CreateDate = DateTimeOffset.UtcNow.AddDays(-2);

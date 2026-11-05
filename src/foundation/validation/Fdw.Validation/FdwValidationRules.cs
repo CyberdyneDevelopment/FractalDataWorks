@@ -93,6 +93,8 @@ public static class FdwValidationRules
     /// <summary>
     /// Validates that a string value matches the Name of an option in the given TypeCollection.
     /// Use this for [ValuesFrom] properties that reference a TypeCollection.
+    /// An empty value fails the rule: a value that names nothing is not a member. A property that may be left empty says so at its
+    /// call site with <c>.When(...)</c>.
     /// </summary>
     /// <typeparam name="T">The type being validated.</typeparam>
     /// <param name="rule">The rule builder.</param>
@@ -103,20 +105,17 @@ public static class FdwValidationRules
         Func<IReadOnlyCollection<ITypeOption>> typeCollectionAccessor)
     {
         return rule
-            .Must(value =>
-            {
-                if (string.IsNullOrEmpty(value))
-                    return true; // Why: Empty values are handled by NotEmpty — this rule only checks membership.
-
-                var options = typeCollectionAccessor();
-                return options.Any(o => string.Equals(o.Name, value, StringComparison.OrdinalIgnoreCase));
-            })
-            .WithMessage("'{PropertyName}' must be a valid type option. '{PropertyValue}' was not found.");
+            .Must(value => !string.IsNullOrEmpty(value)
+                && typeCollectionAccessor().Any(o => string.Equals(o.Name, value, StringComparison.OrdinalIgnoreCase)))
+            .WithMessage((_, value) => string.IsNullOrEmpty(value)
+                ? "'{PropertyName}' must be a valid type option. A value is required."
+                : "'{PropertyName}' must be a valid type option. '{PropertyValue}' was not found.");
     }
 
     /// <summary>
     /// Validates that a parent configuration exists by checking a provider lookup.
     /// Use this for FK properties that reference another configuration's Name.
+    /// An empty value fails the rule; a property that may be left empty says so at its call site with <c>.When(...)</c>.
     /// </summary>
     /// <typeparam name="T">The type being validated.</typeparam>
     /// <typeparam name="TParent">The parent configuration type.</typeparam>
@@ -129,19 +128,16 @@ public static class FdwValidationRules
         where TParent : class
     {
         return rule
-            .Must(value =>
-            {
-                if (string.IsNullOrEmpty(value))
-                    return true; // Why: Empty values are handled by NotEmpty — this rule only checks existence.
-
-                return parentLookup(value) is not null;
-            })
-            .WithMessage("'{PropertyName}' references '{PropertyValue}' which does not exist.");
+            .Must(value => !string.IsNullOrEmpty(value) && parentLookup(value) is not null)
+            .WithMessage((_, value) => string.IsNullOrEmpty(value)
+                ? "'{PropertyName}' must reference a parent. A value is required."
+                : "'{PropertyName}' references '{PropertyValue}' which does not exist.");
     }
 
     /// <summary>
     /// Validates that a parent configuration exists by checking a provider lookup using a GUID ID.
     /// Use this for FK properties that reference another configuration's ID.
+    /// <see cref="Guid.Empty"/> fails the rule; a property that may be left empty says so at its call site with <c>.When(...)</c>.
     /// </summary>
     /// <typeparam name="T">The type being validated.</typeparam>
     /// <typeparam name="TParent">The parent configuration type.</typeparam>
@@ -154,14 +150,10 @@ public static class FdwValidationRules
         where TParent : class
     {
         return rule
-            .Must(value =>
-            {
-                if (value == Guid.Empty)
-                    return true; // Why: Empty GUIDs are handled by IsNotEmpty — this rule only checks existence.
-
-                return parentLookup(value) is not null;
-            })
-            .WithMessage("'{PropertyName}' references an ID that does not exist.");
+            .Must(value => value != Guid.Empty && parentLookup(value) is not null)
+            .WithMessage((_, value) => value == Guid.Empty
+                ? "'{PropertyName}' must reference a parent. A value is required."
+                : "'{PropertyName}' references an ID that does not exist.");
     }
 
     private static bool ContainsSqlInjectionPatterns(string? value)

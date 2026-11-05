@@ -65,6 +65,9 @@
 
 
     <ProjectReference Include="..\..\data\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+
+
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
 
   <ItemGroup>

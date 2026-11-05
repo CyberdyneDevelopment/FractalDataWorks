@@ -23,7 +23,7 @@ public sealed class CreateCalculationDefinitionRequest
     /// <summary>
     /// Gets or sets the data type of the calculation result.
     /// </summary>
-    public string ResultDataType { get; set; } = "decimal";
+    public string ResultDataType { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the calculation formula expression.
@@ -38,5 +38,5 @@ public sealed class CreateCalculationDefinitionRequest
     /// <summary>
     /// Gets or sets a value indicating whether the calculation is enabled.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool? IsEnabled { get; set; }
 }

@@ -8,6 +8,7 @@ using Fdw.Services.Workspaces.Results;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Workspaces.Endpoints;
 
@@ -80,6 +81,7 @@ public abstract class UpdateWorkspaceEndpointBase : CrudUpdateEndpointBase<Updat
     }
 
     /// <inheritdoc />
+    [ApprovedFallback("an update that omits a field keeps the stored value")]
     protected override async Task<IGenericResult<WorkspaceDetailResponse>> Update(
         UpdateWorkspaceRequest request, WorkspaceDetailResponse existing, CancellationToken ct)
     {

@@ -188,7 +188,7 @@ public sealed class GenericTypeArgumentMismatchAnalyzer : DiagnosticAnalyzer
         if (syntaxReferences.Length == 0)
             return;
 
-        var syntaxNode = syntaxReferences[0].GetSyntax();
+        var syntaxNode = syntaxReferences[0].GetSyntax(context.CancellationToken);
         if (syntaxNode is not ClassDeclarationSyntax classDeclaration)
             return;
 

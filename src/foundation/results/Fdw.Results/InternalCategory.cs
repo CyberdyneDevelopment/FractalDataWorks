@@ -16,7 +16,7 @@ public sealed class InternalCategory : ResultCategoryBase
     /// Initializes a new instance of the <see cref="InternalCategory"/> class.
     /// </summary>
     public InternalCategory()
-        : base(id: 9, name: "Internal", isFailure: true, isRetryable: false, httpStatus: 500, clientMessage: "An unexpected error occurred", clientAction: "Contact your administrator")
+        : base(id: 9, name: "Internal", isFailure: true, isRetryable: false, countsTowardFailureThresholds: true, httpStatus: 500, clientMessage: "An unexpected error occurred", clientAction: "Contact your administrator")
     {
     }
 }

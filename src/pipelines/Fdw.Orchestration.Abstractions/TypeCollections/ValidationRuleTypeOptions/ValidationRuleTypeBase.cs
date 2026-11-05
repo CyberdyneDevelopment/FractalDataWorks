@@ -35,7 +35,7 @@ public abstract class ValidationRuleTypeBase : TypeOptionBase<ValidationRuleType
         RequiresFields = requiresFields;
         SupportsMultipleFields = supportsMultipleFields;
         RequiresParameters = requiresParameters;
-        RequiredParameterNames = requiredParameterNames ?? Array.Empty<string>();
+        RequiredParameterNames = requiredParameterNames ?? [];
     }
 
     /// <inheritdoc/>

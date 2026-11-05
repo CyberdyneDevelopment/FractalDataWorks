@@ -67,14 +67,4 @@ public class TUIThemeConfiguration
     /// Gets the icon set from the current theme.
     /// </summary>
     public IIconSet Icons => _theme.Icons;
-
-    /// <summary>
-    /// Gets or sets whether to use color in output.
-    /// </summary>
-    public bool UseColor { get; set; } = true;
-
-    /// <summary>
-    /// Gets or sets whether to use emoji/icons in output.
-    /// </summary>
-    public bool UseEmoji { get; set; } = true;
 }

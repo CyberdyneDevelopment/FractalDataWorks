@@ -230,8 +230,8 @@ public sealed class MsSqlFindTranslator : MsSqlDataCommandTranslatorBase
     private static string EscapeLikeWildcards(string value)
     {
         return value
-            .Replace("[", "[[]")
-            .Replace("%", "[%]")
-            .Replace("_", "[_]");
+            .Replace("[", "[[]", StringComparison.Ordinal)
+            .Replace("%", "[%]", StringComparison.Ordinal)
+            .Replace("_", "[_]", StringComparison.Ordinal);
     }
 }

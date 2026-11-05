@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using Fdw.Abstractions;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
@@ -96,7 +97,7 @@ public sealed partial class MsSqlInsertTranslator
             var columnType = field.IsNullable && clrType.IsValueType
                 ? typeof(Nullable<>).MakeGenericType(clrType)
                 : clrType;
-            dataTable.Columns.Add(field.Name, Nullable.GetUnderlyingType(columnType) ?? columnType);
+            dataTable.Columns.Add(field.Name, columnType.WithoutNullable());
         }
 
         foreach (var entity in collection)

@@ -29,7 +29,8 @@ public class AddDataStoreContainerEndpointTests
             new DataStoreConfigurationProvider(
                 NullLogger<DataStoreConfigurationProvider>.Instance,
                 Mock.Of<IConfigurationGatewayProvider>(),
-                "TestStore", "dbo", "DataStore"))
+                "TestStore", "dbo", "DataStore",
+                new Fdw.Services.Configuration.UnavailablePlacement()))
         {
         }
 

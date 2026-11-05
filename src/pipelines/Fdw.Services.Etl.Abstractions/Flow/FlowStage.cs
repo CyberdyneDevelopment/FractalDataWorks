@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Fdw.Services.Etl.Abstractions.Flow;
 
 /// <summary>
@@ -6,4 +10,15 @@ namespace Fdw.Services.Etl.Abstractions.Flow;
 /// </summary>
 /// <param name="Component">The component's name.</param>
 /// <param name="Stage">The stage number, at least 1.</param>
-public sealed record FlowStage(string Component, int Stage);
+public sealed record FlowStage(string Component, int Stage)
+{
+    /// <summary>Says what rank a component runs at: its stage number, or 0 when it states none (it runs first).</summary>
+    /// <param name="stages">The stages the components state.</param>
+    /// <param name="component">The component's name.</param>
+    /// <returns>The rank.</returns>
+    public static int RankIn(IEnumerable<FlowStage> stages, string component)
+    {
+        var stated = (stages ?? throw new ArgumentNullException(nameof(stages))).FirstOrDefault(stage => string.Equals(stage.Component, component, StringComparison.OrdinalIgnoreCase));
+        return stated is null ? 0 : stated.Stage;
+    }
+}

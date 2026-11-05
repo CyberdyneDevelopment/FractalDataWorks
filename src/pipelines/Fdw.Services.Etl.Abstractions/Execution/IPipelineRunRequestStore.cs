@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -45,6 +46,12 @@ public interface IPipelineRunRequestStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A failure naming why when the run could not be closed.</returns>
     Task<IGenericResult> GiveUp(InterruptedRun run, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads what the destinations of a cut-off run had committed (FDW-3840), from the run's records, so the host can refuse to start it again over rows it would load twice.</summary>
+    /// <param name="run">The run that was running.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Each destination that had committed rows; none when none had. A failure when the records cannot be read.</returns>
+    Task<IGenericResult<IReadOnlyList<CommittedLoad>>> CommittedLoads(InterruptedRun run, CancellationToken cancellationToken = default);
 
     /// <summary>Reads the runs that were accepted and not started, oldest first, for the host to take up again.</summary>
     /// <param name="cancellationToken">The cancellation token.</param>

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Schema.Endpoints.Discovery;
 
@@ -256,7 +257,7 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
         return firstRow.Keys.Select(k => new PreviewColumnDto
         {
             Name = k,
-            DataType = firstRow[k]?.GetType().Name ?? "Unknown",
+            DataType = firstRow[k]?.GetType().Name ?? LogPlaceholders.NoTypeName,
             IsKey = false
         }).ToList();
     }

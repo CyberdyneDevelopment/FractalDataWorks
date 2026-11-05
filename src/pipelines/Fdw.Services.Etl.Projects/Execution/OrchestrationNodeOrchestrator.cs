@@ -99,8 +99,14 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         await _broadcaster.BroadcastStatusChange(rootNode.Name, request.ExecutionId, "Running", orgId: null)
             .ConfigureAwait(false);
 
-        // The root inherits from the server defaults.
-        var rootPolicy = _policyResolver.ResolveForRootNode(rootNode);
+        // The root inherits from the server defaults, read now from their provider; a run cannot start without them.
+        var rootPolicyResult = await _policyResolver.ResolveForRootNode(rootNode, cancellationToken).ConfigureAwait(false);
+        if (rootPolicyResult.IsFailure || rootPolicyResult.Value is not { } rootPolicy)
+        {
+            OrchestrationNodeOrchestratorLog.RootPolicyUnresolved(_logger, request.ExecutionId, rootPolicyResult.NoValueReason().Message);
+            await CompleteRootExecution(request, nodeName: rootNode.Name, succeeded: false).ConfigureAwait(false);
+            return;
+        }
 
         // Recursive execution.
         var overallSuccess = await ExecuteNode(

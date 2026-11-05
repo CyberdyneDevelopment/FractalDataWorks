@@ -41,7 +41,7 @@ public sealed class ResiliencyPipelineFactoryTests
         var policy = ResiliencyPolicies.ByName("Database");
 
         // Act
-        var result = _factory.GetOrCreate(policy);
+        var result = _factory.GetOrCreate(policy, "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -54,7 +54,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreatePipelineByPolicyNameReturnsPipeline()
     {
         // Act
-        var result = _factory.GetOrCreate("Database");
+        var result = _factory.GetOrCreate("Database", "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -67,7 +67,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreatePipelineReturnsFailureForNullPolicy()
     {
         // Act
-        var result = _factory.GetOrCreate((IResiliencyPolicy)null!);
+        var result = _factory.GetOrCreate((IResiliencyPolicy)null!, "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -80,7 +80,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreatePipelineReturnsFailureForNullPolicyName()
     {
         // Act
-        var result = _factory.GetOrCreate((string)null!);
+        var result = _factory.GetOrCreate((string)null!, "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -92,7 +92,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreatePipelineReturnsFailureForEmptyPolicyName()
     {
         // Act
-        var result = _factory.GetOrCreate(string.Empty);
+        var result = _factory.GetOrCreate(string.Empty, "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -104,7 +104,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreatePipelineReturnsFailureForUnknownPolicyName()
     {
         // Act
-        var result = _factory.GetOrCreate("NonExistent");
+        var result = _factory.GetOrCreate("NonExistent", "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -119,8 +119,8 @@ public sealed class ResiliencyPipelineFactoryTests
         var policy = ResiliencyPolicies.ByName("Database");
 
         // Act
-        var result1 = _factory.GetOrCreate(policy);
-        var result2 = _factory.GetOrCreate(policy);
+        var result1 = _factory.GetOrCreate(policy, "TestOperation");
+        var result2 = _factory.GetOrCreate(policy, "TestOperation");
 
         // Assert
         result1.IsSuccess.ShouldBeTrue();
@@ -137,7 +137,7 @@ public sealed class ResiliencyPipelineFactoryTests
         var policy = ResiliencyPolicies.ByName("Database");
 
         // Act
-        var result = _factory.GetOrCreatePipeline<string>(policy);
+        var result = _factory.GetOrCreatePipeline<string>(policy, "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -150,7 +150,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreateGenericPipelineByPolicyNameReturnsPipeline()
     {
         // Act
-        var result = _factory.GetOrCreatePipeline<int>("HttpClient");
+        var result = _factory.GetOrCreatePipeline<int>("HttpClient", "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -163,7 +163,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreateGenericPipelineReturnsFailureForNullPolicy()
     {
         // Act
-        var result = _factory.GetOrCreatePipeline<string>((IResiliencyPolicy)null!);
+        var result = _factory.GetOrCreatePipeline<string>((IResiliencyPolicy)null!, "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -175,7 +175,7 @@ public sealed class ResiliencyPipelineFactoryTests
     public void GetOrCreateGenericPipelineReturnsFailureForUnknownPolicyName()
     {
         // Act
-        var result = _factory.GetOrCreatePipeline<string>("NonExistent");
+        var result = _factory.GetOrCreatePipeline<string>("NonExistent", "TestOperation");
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -188,11 +188,11 @@ public sealed class ResiliencyPipelineFactoryTests
     {
         // Arrange
         var policy = ResiliencyPolicies.ByName("Database");
-        var result1 = _factory.GetOrCreate(policy);
+        var result1 = _factory.GetOrCreate(policy, "TestOperation");
 
         // Act
         _factory.ClearCache();
-        var result2 = _factory.GetOrCreate(policy);
+        var result2 = _factory.GetOrCreate(policy, "TestOperation");
 
         // Assert - after clearing cache, we should get a new instance
         result1.IsSuccess.ShouldBeTrue();
@@ -226,8 +226,8 @@ public sealed class ResiliencyPipelineFactoryTests
         var httpPolicy = ResiliencyPolicies.ByName("HttpClient");
 
         // Act
-        var databaseResult = _factory.GetOrCreate(databasePolicy);
-        var httpResult = _factory.GetOrCreate(httpPolicy);
+        var databaseResult = _factory.GetOrCreate(databasePolicy, "TestOperation");
+        var httpResult = _factory.GetOrCreate(httpPolicy, "TestOperation");
 
         // Assert
         databaseResult.IsSuccess.ShouldBeTrue();
@@ -244,8 +244,8 @@ public sealed class ResiliencyPipelineFactoryTests
         var policy = ResiliencyPolicies.ByName("Database");
 
         // Act
-        var stringResult = _factory.GetOrCreatePipeline<string>(policy);
-        var intResult = _factory.GetOrCreatePipeline<int>(policy);
+        var stringResult = _factory.GetOrCreatePipeline<string>(policy, "TestOperation");
+        var intResult = _factory.GetOrCreatePipeline<int>(policy, "TestOperation");
 
         // Assert
         stringResult.IsSuccess.ShouldBeTrue();

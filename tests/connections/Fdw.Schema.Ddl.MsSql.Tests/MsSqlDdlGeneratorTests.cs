@@ -1,3 +1,4 @@
+using Fdw.Configuration.Persistence.Schema;
 using Fdw.Schema.Ddl.Commands;
 using Fdw.Schema.Ddl.Definitions;
 using Fdw.Schema.Ddl.MsSql;
@@ -157,7 +158,8 @@ public class MsSqlDdlGeneratorTests
                 ReferencedSchema = "cfg",
                 ReferencedTable = "Parent",
                 ReferencedColumn = "Id",
-                OnDelete = DdlForeignKeyActions.Cascade
+                OnDelete = ForeignKeyActions.Cascade,
+                OnUpdate = ForeignKeyActions.NoAction
             }
         };
 
@@ -416,7 +418,8 @@ public class MsSqlDdlGeneratorTests
                 ReferencedSchema = "dbo",
                 ReferencedTable = "Ref",
                 ReferencedColumn = "Id",
-                OnUpdate = DdlForeignKeyActions.SetDefault
+                OnUpdate = ForeignKeyActions.SetDefault,
+                OnDelete = ForeignKeyActions.NoAction
             }
         };
 
@@ -454,7 +457,8 @@ public class MsSqlDdlGeneratorTests
                 ReferencedSchema = "dbo",
                 ReferencedTable = "Parent",
                 ReferencedColumn = "Id",
-                OnDelete = DdlForeignKeyActions.SetNull
+                OnDelete = ForeignKeyActions.SetNull,
+                OnUpdate = ForeignKeyActions.NoAction
             }
         };
 
@@ -492,7 +496,8 @@ public class MsSqlDdlGeneratorTests
                 ReferencedSchema = "dbo",
                 ReferencedTable = "Parent",
                 ReferencedColumn = "Id",
-                OnUpdate = DdlForeignKeyActions.Cascade
+                OnUpdate = ForeignKeyActions.Cascade,
+                OnDelete = ForeignKeyActions.NoAction
             }
         };
 
@@ -644,8 +649,8 @@ public class MsSqlDdlGeneratorTests
                 ReferencedSchema = "dbo",
                 ReferencedTable = "Parent",
                 ReferencedColumn = "Id",
-                OnDelete = DdlForeignKeyActions.NoAction,
-                OnUpdate = DdlForeignKeyActions.NoAction
+                OnDelete = ForeignKeyActions.NoAction,
+                OnUpdate = ForeignKeyActions.NoAction
             }
         };
 

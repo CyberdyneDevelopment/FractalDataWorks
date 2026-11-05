@@ -8,7 +8,7 @@ Roslyn analyzers that enforce FDW conventions at compile time.
 
 ## Diagnostics
 
-`ENHENUM001` · `FDW025` · `FDW026` · `FDW027` · `FDW028` · `FDW029` · `FDW030` · `FDW031` · `FDW032` · `FDW033` · `FDW034` · `FDW044` · `FDW045` · `SVCTYPE001` · `TC001` · `TC002` · `TC003`
+`FDW024` · `FDW025` · `FDW027` · `FDW044` · `FDW045` · `STC001` · `STC002` · `SVCTYPE001`
 
 ## Analyzers
 

@@ -215,8 +215,12 @@ public class DdlDefinitionTests
     [Trait("Category", "Configuration")]
     public void ForeignKeyDefinition_DefaultValues_AreCorrect()
     {
-        // Act
-        var fk = new ForeignKeyDefinition();
+        // Act: the referential actions have no default (FDW-3610); the caller states both.
+        var fk = new ForeignKeyDefinition
+        {
+            OnDelete = ForeignKeyActions.NoAction,
+            OnUpdate = ForeignKeyActions.NoAction,
+        };
 
         // Assert
         fk.Name.ShouldBe("");
@@ -256,7 +260,24 @@ public class DdlDefinitionTests
     public void ForeignKeyAction_HasExpectedValues()
     {
         // Assert
-        ForeignKeyActions.All().Count.ShouldBe(4);
+        ForeignKeyActions.All().Count.ShouldBe(5);
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Configuration")]
+    [InlineData("NoAction", "NO ACTION")]
+    [InlineData("Cascade", "CASCADE")]
+    [InlineData("SetNull", "SET NULL")]
+    [InlineData("SetDefault", "SET DEFAULT")]
+    [InlineData("Restrict", "RESTRICT")]
+    public void ForeignKeyActionCarriesItsSqlKeyword(string name, string keyword)
+    {
+        // FDW-3610: each action carries its own SQL text, so no renderer dispatches on the name.
+        var action = ForeignKeyActions.ByName(name);
+
+        action.ShouldNotBe(ForeignKeyActions.NotFound);
+        action.SqlKeyword.ShouldBe(keyword);
     }
 
     #endregion

@@ -15,6 +15,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Logging;
 using Fdw.Services.Results;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Services;
 
@@ -107,7 +108,16 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
         }
 
         var configuration = await get(cancellationToken).ConfigureAwait(false);
-        if (!configuration.IsSuccess || configuration.Value is null)
+
+        // A read that failed says why (an ambiguous name, an unreachable store, a refused read), and
+        // that reason is the answer. Only a read that succeeded and found nothing is a not-found.
+        if (!configuration.IsSuccess)
+        {
+            ServiceLogger.ConfigurationReadFailed(_logger, identifier);
+            return configuration.ToNewResult<TService>();
+        }
+
+        if (configuration.Value is null)
         {
             ServiceLogger.ConfigurationNotFound(_logger, identifier);
             return GenericResult<TService>.Failure(
@@ -168,8 +178,8 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
     async Task<IGenericResult<IReadOnlyList<T>>> IDomainServiceProvider.Get<T>(CancellationToken cancellationToken)
     {
         var result = await Get(cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<T>>();
-        return GenericResult<IReadOnlyList<T>>.Success(result.Value?.OfType<T>().ToList() ?? []);
+        if (!result.IsSuccess || result.Value is null) return result.ToNewResult<IReadOnlyList<T>>();
+        return GenericResult<IReadOnlyList<T>>.Success(result.Value.OfType<T>().ToList());
     }
 
     /// <summary>Narrows a resolved service to a more specific type.</summary>
@@ -186,15 +196,51 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
                 : GenericResult<T>.Failure(
                     ServicesResultCodes.ByName("ServiceCastFailed"),
                     ResultDetails.Create("ExpectedType", typeof(T).Name,
-                                         "ActualType", result.Value?.GetType().Name ?? "(null)"));
+                                         "ActualType", result.Value?.GetType().Name ?? LogPlaceholders.Null));
         }
 
         return result.ToNewResult<T>();
     }
 
     /// <inheritdoc />
-    public virtual Task<IGenericResult<IReadOnlyList<TService>>> Get(CancellationToken cancellationToken = default)
-        => Task.FromResult(GenericResult<IReadOnlyList<TService>>.Success([]));
+    /// <remarks>
+    /// Every member the domain configuration provider holds is built through the same path as a
+    /// single <c>Get</c>. The list is all or nothing: a member that fails to build fails the list with
+    /// its own failure, because a list that silently leaves members out answers "not stored" for
+    /// members that are.
+    /// </remarks>
+    public virtual async Task<IGenericResult<IReadOnlyList<TService>>> Get(CancellationToken cancellationToken = default)
+    {
+        ServiceLogger.GettingAllServices(_logger, GetType().Name);
+
+        if (_domainConfigurationProvider is null)
+        {
+            ServiceLogger.NoDomainConfigurationProviderRegistered(_logger, "(all)");
+            return GenericResult<IReadOnlyList<TService>>.Failure(
+                ServicesResultCodes.ByName("NoDomainConfigurationProvider"),
+                ResultDetails.Create("Identifier", "(all)"));
+        }
+
+        var configurations = await _domainConfigurationProvider.Get(cancellationToken).ConfigureAwait(false);
+        if (!configurations.IsSuccess || configurations.Value is null)
+            return configurations.ToNewResult<IReadOnlyList<TService>>();
+
+        var services = new List<TService>(configurations.Value.Count);
+        foreach (var configuration in configurations.Value)
+        {
+            var created = await Create(configuration, configuration.Name, cancellationToken).ConfigureAwait(false);
+            if (!created.IsSuccess || created.Value is null)
+            {
+                ServiceLogger.DomainMemberBuildFailed(_logger, GetType().Name, configuration.Name);
+                return created.ToNewResult<IReadOnlyList<TService>>();
+            }
+
+            services.Add(created.Value);
+        }
+
+        ServiceLogger.AllServicesBuilt(_logger, GetType().Name, services.Count);
+        return GenericResult<IReadOnlyList<TService>>.Success(services);
+    }
 
     /// <inheritdoc />
     public virtual Task<IGenericResult<TService>> Get(IGenericConfiguration configuration, CancellationToken cancellationToken = default)
@@ -204,7 +250,7 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
             return Task.FromResult(GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("InvalidConfigurationType"),
                 ResultDetails.Create("ExpectedType", typeof(TConfiguration).Name,
-                                     "ActualType", configuration?.GetType().Name ?? "(null)")));
+                                     "ActualType", configuration?.GetType().Name ?? LogPlaceholders.Null)));
         }
 
         // A member is identified by name everywhere else here, and an implementation provider may key

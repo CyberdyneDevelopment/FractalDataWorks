@@ -11,6 +11,7 @@ using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Services.Etl.Transforms;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -171,6 +172,7 @@ public sealed class BuiltTransformationKind : TransformationKindBase
         return GenericResult.Success();
     }
 
+    [ApprovedFallback("an update that omits a field keeps the stored value")]
     private static IGenericResult<ITransformationImplementationConfiguration> UpdateRecord(
         UpdateTransformationRequest request, BuiltTransformationConfiguration stored, TransformationKindContext context)
     {
@@ -186,6 +188,7 @@ public sealed class BuiltTransformationKind : TransformationKindBase
             : Built(stored.Name, request.Description ?? stored.Description, request.Inputs ?? StoredInputs(stored), results.Value!, context);
     }
 
+    [ApprovedFallback("an update that omits a field keeps the stored value")]
     private static IGenericResult<ITransformationImplementationConfiguration> UpdateSet(
         UpdateTransformationRequest request, BuiltTransformationConfiguration stored, TransformationKindContext context)
     {

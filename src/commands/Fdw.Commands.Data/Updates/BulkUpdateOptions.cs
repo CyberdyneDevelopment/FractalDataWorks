@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.Commands.Data.Logging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data.Updates;
 
@@ -22,14 +25,17 @@ public sealed class BulkUpdateOptions
 
     /// <summary>Says what is wrong with these options, or nothing when they are consistent.</summary>
     /// <returns>The first problem, or <see langword="null"/>.</returns>
-    public string? FirstProblem()
+    public IGenericMessage? FirstProblem()
     {
         if (KeyColumns.Count == 0)
-            return "a bulk update names at least one key column";
+            return Problem("a bulk update names at least one key column");
         if (KeyColumns.Any(string.IsNullOrWhiteSpace))
-            return "a bulk update key column needs a name";
+            return Problem("a bulk update key column needs a name");
         return KeyColumns.Distinct(StringComparer.OrdinalIgnoreCase).Count() != KeyColumns.Count
-            ? "a key column is listed twice"
+            ? Problem("a key column is listed twice")
             : null;
     }
+
+    private static IGenericMessage Problem(string reason)
+        => CommandOptionsLog.BulkUpdateOptionsInconsistent(NullLogger.Instance, reason);
 }

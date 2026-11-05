@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 using Fdw.Services.Etl.Projects.Policy;
@@ -13,25 +14,16 @@ namespace Fdw.Services.Etl.Projects.Tests.Policy;
 /// </summary>
 public sealed class EffectivePolicyResolverTests
 {
-    private static Mock<IServerPolicyDefaults> CreateServerDefaultsMock(
+    private static Mock<IServerPolicyDefaultConfigurationProvider> CreateServerDefaultsMock(
         string stepFailurePolicy = "HaltStage",
         string stageFailurePolicy = "HaltProject",
         int maxParallelPipelines = 5,
         bool requireApprovalToRun = true,
         bool allowResume = false,
         bool allowCrossTenant = false,
-        Guid? resiliencyPolicyId = null)
-    {
-        var mock = new Mock<IServerPolicyDefaults>();
-        mock.Setup(d => d.StepFailurePolicy).Returns(stepFailurePolicy);
-        mock.Setup(d => d.StageFailurePolicy).Returns(stageFailurePolicy);
-        mock.Setup(d => d.MaxParallelPipelines).Returns(maxParallelPipelines);
-        mock.Setup(d => d.RequireApprovalToRun).Returns(requireApprovalToRun);
-        mock.Setup(d => d.AllowResume).Returns(allowResume);
-        mock.Setup(d => d.AllowCrossTenant).Returns(allowCrossTenant);
-        mock.Setup(d => d.ResiliencyPolicyId).Returns(resiliencyPolicyId);
-        return mock;
-    }
+        Guid? resiliencyPolicyId = null) =>
+        ServerPolicyDefaultsStub.Returning(
+            stepFailurePolicy, stageFailurePolicy, maxParallelPipelines, requireApprovalToRun, allowResume, allowCrossTenant, resiliencyPolicyId);
 
     private static ProjectConfiguration CreateProject(
         string? stepFailurePolicy = null,
@@ -133,7 +125,7 @@ public sealed class EffectivePolicyResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveForProjectInheritsServerDefaultsWhenAllFieldsNull()
+    public async Task ResolveForProjectInheritsServerDefaultsWhenAllFieldsNull()
     {
         // Arrange
         var resiliencyId = Guid.NewGuid();
@@ -142,22 +134,22 @@ public sealed class EffectivePolicyResolverTests
         var project = CreateProject();
 
         // Act
-        var effective = sut.ResolveForProject(project);
+        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
 
         // Assert
-        effective.StepFailurePolicy.ShouldBe(defaults.Object.StepFailurePolicy);
-        effective.StageFailurePolicy.ShouldBe(defaults.Object.StageFailurePolicy);
-        effective.MaxParallelPipelines.ShouldBe(defaults.Object.MaxParallelPipelines);
-        effective.RequireApprovalToRun.ShouldBe(defaults.Object.RequireApprovalToRun);
-        effective.AllowResume.ShouldBe(defaults.Object.AllowResume);
-        effective.AllowCrossTenant.ShouldBe(defaults.Object.AllowCrossTenant);
+        effective.StepFailurePolicy.ShouldBe("HaltStage");
+        effective.StageFailurePolicy.ShouldBe("HaltProject");
+        effective.MaxParallelPipelines.ShouldBe(5);
+        effective.RequireApprovalToRun.ShouldBeTrue();
+        effective.AllowResume.ShouldBeFalse();
+        effective.AllowCrossTenant.ShouldBeFalse();
         effective.ResiliencyPolicyId.ShouldBe(resiliencyId);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveForProjectUsesExplicitValuesWhenAllFieldsSet()
+    public async Task ResolveForProjectUsesExplicitValuesWhenAllFieldsSet()
     {
         // Arrange
         var defaults = CreateServerDefaultsMock();
@@ -173,7 +165,7 @@ public sealed class EffectivePolicyResolverTests
             resiliencyPolicyId: resiliencyId);
 
         // Act
-        var effective = sut.ResolveForProject(project);
+        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
 
         // Assert
         effective.StepFailurePolicy.ShouldBe("ContinueStage");
@@ -188,7 +180,7 @@ public sealed class EffectivePolicyResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveForProjectMixesExplicitAndInheritedFields()
+    public async Task ResolveForProjectMixesExplicitAndInheritedFields()
     {
         // Arrange — only StepFailurePolicy and AllowCrossTenant are explicit; the rest inherit
         var defaults = CreateServerDefaultsMock(
@@ -200,7 +192,7 @@ public sealed class EffectivePolicyResolverTests
         var project = CreateProject(stepFailurePolicy: "ContinueStage", allowCrossTenant: true);
 
         // Act
-        var effective = sut.ResolveForProject(project);
+        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
 
         // Assert
         effective.StepFailurePolicy.ShouldBe("ContinueStage");
@@ -214,13 +206,28 @@ public sealed class EffectivePolicyResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveForProjectThrowsWhenProjectIsNull()
+    public async Task ResolveForProjectThrowsWhenProjectIsNull()
     {
         // Arrange
         var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.ResolveForProject(null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => sut.ResolveForProject(null!, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ResolveForProjectFailsWhenTheServerDefaultsCannotBeRead()
+    {
+        // Arrange: the server's defaults are configuration, so a failed read is the resolution's failure (FDW-3580).
+        var sut = new EffectivePolicyResolver(ServerPolicyDefaultsStub.Failing().Object);
+
+        // Act
+        var effective = await sut.ResolveForProject(CreateProject(), TestContext.Current.CancellationToken);
+
+        // Assert
+        effective.IsFailure.ShouldBeTrue();
     }
 
     // ============================================================
@@ -447,7 +454,7 @@ public sealed class EffectivePolicyResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveChainPropagatesServerDefaultThroughAllLevelsWhenNeverOverridden()
+    public async Task ResolveChainPropagatesServerDefaultThroughAllLevelsWhenNeverOverridden()
     {
         // Arrange — nothing is set anywhere in the chain; the leaf must resolve to the
         // server default that was set three levels above it.
@@ -458,19 +465,18 @@ public sealed class EffectivePolicyResolverTests
         var step = CreateStep();
 
         // Act
-        var projectEffective = sut.ResolveForProject(project);
+        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
         var stageEffective = sut.ResolveForStage(stage, projectEffective);
         var stepEffective = sut.ResolveForStep(step, stageEffective);
 
         // Assert
         stepEffective.AllowCrossTenant.ShouldBeFalse();
-        stepEffective.AllowCrossTenant.ShouldBe(defaults.Object.AllowCrossTenant);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveChainStopsInheritingAtTheLevelThatSetsAnExplicitValue()
+    public async Task ResolveChainStopsInheritingAtTheLevelThatSetsAnExplicitValue()
     {
         // Arrange — Project sets MaxParallelPipelines=2; Stage leaves it null (inherits the
         // Project's 2); Step leaves it null too (inherits the Stage's resolved 2).
@@ -481,7 +487,7 @@ public sealed class EffectivePolicyResolverTests
         var step = CreateStep();
 
         // Act
-        var projectEffective = sut.ResolveForProject(project);
+        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
         var stageEffective = sut.ResolveForStage(stage, projectEffective);
         var stepEffective = sut.ResolveForStep(step, stageEffective);
 
@@ -494,7 +500,7 @@ public sealed class EffectivePolicyResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveChainAllowsEachLevelToOverrideIndependently()
+    public async Task ResolveChainAllowsEachLevelToOverrideIndependently()
     {
         // Arrange — Project sets StepFailurePolicy; Stage overrides StageFailurePolicy;
         // Step overrides MaxParallelPipelines. Each override is independent of the others.
@@ -508,7 +514,7 @@ public sealed class EffectivePolicyResolverTests
         var step = CreateStep(maxParallelPipelines: 4);
 
         // Act
-        var projectEffective = sut.ResolveForProject(project);
+        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
         var stageEffective = sut.ResolveForStage(stage, projectEffective);
         var stepEffective = sut.ResolveForStep(step, stageEffective);
 
@@ -525,13 +531,13 @@ public sealed class EffectivePolicyResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveForRootNodeInheritsServerDefaultApprovalWhenNodeStatesNone()
+    public async Task ResolveForRootNodeInheritsServerDefaultApprovalWhenNodeStatesNone()
     {
         // Arrange
         var sut = new EffectivePolicyResolver(CreateServerDefaultsMock(requireApprovalToRun: true).Object);
 
         // Act
-        var effective = sut.ResolveForRootNode(CreateNode());
+        var effective = (await sut.ResolveForRootNode(CreateNode(), TestContext.Current.CancellationToken)).Value;
 
         // Assert
         effective.RequireApprovalToRun.ShouldBeTrue();
@@ -540,13 +546,13 @@ public sealed class EffectivePolicyResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ResolveForRootNodeUsesTheNodesOwnApprovalOverTheServerDefault()
+    public async Task ResolveForRootNodeUsesTheNodesOwnApprovalOverTheServerDefault()
     {
         // Arrange
         var sut = new EffectivePolicyResolver(CreateServerDefaultsMock(requireApprovalToRun: false).Object);
 
         // Act
-        var effective = sut.ResolveForRootNode(CreateNode(requireApprovalToRun: true));
+        var effective = (await sut.ResolveForRootNode(CreateNode(requireApprovalToRun: true), TestContext.Current.CancellationToken)).Value;
 
         // Assert
         effective.RequireApprovalToRun.ShouldBeTrue();

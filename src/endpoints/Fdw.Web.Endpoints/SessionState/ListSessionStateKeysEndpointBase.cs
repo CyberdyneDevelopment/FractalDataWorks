@@ -5,6 +5,7 @@ using Fdw.Services.SessionState;
 using Fdw.Web.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Web.Endpoints.SessionState;
 
@@ -41,8 +42,12 @@ public abstract class ListSessionStateKeysEndpointBase : EndpointWithoutRequest<
     /// <inheritdoc/>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                  ?? User.FindFirst("sub")?.Value ?? string.Empty;
+        if (CallerClaims.UserId(User) is not { } userId)
+        {
+            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            return;
+        }
+
         SessionStateEndpointLog.ListingKeys(_logger, userId);
 
         var result = await _sessionState.GetAllKeys(userId, ct).ConfigureAwait(false);

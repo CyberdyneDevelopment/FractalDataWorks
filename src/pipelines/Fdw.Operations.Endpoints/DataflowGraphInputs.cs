@@ -35,7 +35,8 @@ internal sealed class DataflowGraphInputs
         _recordsById = dataSets.GroupBy(d => d.Id).ToDictionary(g => g.Key, g => g.First());
         ReachableOwners = DataflowReachability.Owners(pipelines, owners).Where(o => _recordsById.ContainsKey(o.Id)).ToList();
         var reachableIds = ReachableOwners.Select(o => o.Id).ToHashSet();
-        Variations = variations.Where(v => reachableIds.Contains(v.BaseDataSetId)).ToList();
+        // A variation is a data set (FDW-3638): one a pipeline reaches is already drawn as a data set, so it is not drawn twice.
+        Variations = variations.Where(v => reachableIds.Contains(v.BaseDataSetId) && !reachableIds.Contains(v.Id)).ToList();
     }
 
     /// <summary>Every datastore.</summary>

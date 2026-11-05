@@ -1,4 +1,5 @@
 using Fdw.Collections.Attributes;
+using Fdw.Conventions;
 using Fdw.Roslyn.Commands.Abstractions;
 using static Fdw.Roslyn.Commands.Abstractions.RoslynCommands;
 
@@ -52,4 +53,12 @@ public sealed class GeneratePropertyCommand : RoslynCommandBase
     /// Gets or sets the backing field name (if not auto-property).
     /// </summary>
     public string? BackingFieldName { get; set; }
+
+    /// <summary>
+    /// Gets the backing field name under FDW's field naming convention: an underscore and the property name in
+    /// camel case (<c>_camelCase</c>). Used when <see cref="BackingFieldName"/> is not given.
+    /// </summary>
+    [PlatformDefault]
+    public string ConventionalBackingFieldName =>
+        PropertyName.Length == 0 ? string.Empty : $"_{char.ToLowerInvariant(PropertyName[0])}{PropertyName.Substring(1)}";
 }

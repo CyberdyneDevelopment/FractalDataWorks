@@ -45,7 +45,7 @@ public abstract class ListRoleSettingsEndpointBase : CrudListEndpointBase<RoleSe
             return allResult.ToNewResult<List<RoleSettingSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<RoleSettingImplementationConfiguration>)[])
+        var items = (allResult.Value ?? [])
             .Select(s => new RoleSettingSummaryDto
             {
                 Id = s.Id,

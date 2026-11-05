@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Operations.Abstractions.Execution;
+using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -11,11 +12,13 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs.Building;
 using Fdw.Services.Etl.Graphs.Logging;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Pipelines;
 using Fdw.Services.Etl.Pipelines.Loads;
+using Fdw.Services.Etl.Thresholds;
 using Fdw.Services.EtlGateway;
 using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Settings;
@@ -54,6 +57,8 @@ public sealed class GraphPipeline : EtlPipelineBase
     private readonly ITransformationConfigurationProvider? _transformations;
     private readonly IEffectiveSettingsProvider? _settings;
     private readonly IExecutionTracker? _tracker;
+    private readonly RunningFlows? _runningFlows;
+    private readonly IThresholdEvaluator? _thresholds;
     private int _isExecuting;
 
     /// <summary>Initializes a new instance of the <see cref="GraphPipeline"/> class.</summary>
@@ -71,6 +76,8 @@ public sealed class GraphPipeline : EtlPipelineBase
     /// <param name="transformations">Reads the Built transformations a Compute tool applies (optional; a graph with a Compute tool refuses to run without it).</param>
     /// <param name="settings">The effective settings the transformations are compiled under (optional, as above).</param>
     /// <param name="tracker">Records how the steps of a tracked run went as child executions of the run (optional: an untracked host passes none and nothing is recorded).</param>
+    /// <param name="runningFlows">What the live view reads: the run is listed there, component by component, while it runs (optional: a host without the view passes none).</param>
+    /// <param name="thresholds">Judges what each component took in, passed on, rejected and how long it ran against the thresholds of the run's tenant (a run refuses without it, and a host that runs pipelines refuses to start without it).</param>
     public GraphPipeline(
         GraphPipelineConfiguration configuration,
         ILogger<GraphPipeline> logger,
@@ -85,7 +92,9 @@ public sealed class GraphPipeline : EtlPipelineBase
         IRuleNotifier? notifier = null,
         ITransformationConfigurationProvider? transformations = null,
         IEffectiveSettingsProvider? settings = null,
-        IExecutionTracker? tracker = null)
+        IExecutionTracker? tracker = null,
+        RunningFlows? runningFlows = null,
+        IThresholdEvaluator? thresholds = null)
         : base(logger)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -102,6 +111,8 @@ public sealed class GraphPipeline : EtlPipelineBase
         _transformations = transformations;
         _settings = settings;
         _tracker = tracker;
+        _runningFlows = runningFlows;
+        _thresholds = thresholds;
     }
 
     /// <inheritdoc />
@@ -186,17 +197,31 @@ public sealed class GraphPipeline : EtlPipelineBase
             return GenericResult.Failure(GraphLog.RunDependencyMissing(_logger, Name, "the data gateway"));
         }
 
+        // Why a run without the evaluator or without a tenant is refused and not run unjudged (FDW-3865, ruled by the threshold base's owner): a host that runs
+        // pipelines without the evaluator is miswired, and a figure and an alert belong to a tenant, so a run that has none cannot be judged.
+        if (_thresholds is not { } evaluator)
+        {
+            return GenericResult.Failure(GraphLog.RunDependencyMissing(_logger, Name, "the threshold evaluator"));
+        }
+
+        if (options.TenantId is not { } tenantId)
+        {
+            return GenericResult.Failure(Fdw.Services.Etl.Execution.PipelineRunRecoveryLog.RunHasNoTenant(_logger, result.ExecutionId, Name));
+        }
+
         var notifiable = await CheckNotifications(cancellationToken).ConfigureAwait(false);
         if (notifiable.IsFailure)
         {
             return notifiable;
         }
 
-        return await RunSteps(options, result, _dataGateways, RunOptions(options), cancellationToken).ConfigureAwait(false);
+        using var live = _runningFlows?.Begin(result.ExecutionId);
+        return await RunSteps(options, result, _dataGateways, new ThresholdScope(evaluator, tenantId), RunOptions(options, live), cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IGenericResult> RunSteps(
-        PipelineExecutionOptions options, EtlPipelineExecutionResult result, IDataGatewayProvider dataGateways, FlowRunOptions flowOptions, CancellationToken cancellationToken)
+        PipelineExecutionOptions options, EtlPipelineExecutionResult result, IDataGatewayProvider dataGateways, ThresholdScope thresholds, FlowRunOptions flowOptions,
+        CancellationToken cancellationToken)
     {
         var variables = GraphVariables.Declare(_configuration, options.Parameters, options.RunStarted, _logger);
         if (variables.IsFailure || variables.Value is null)
@@ -242,7 +267,7 @@ public sealed class GraphPipeline : EtlPipelineBase
         }
 
         var identity = IdentityOf(options, result.ExecutionId);
-        var tally = new FlowRunTally(_flowExecutor);
+        var tally = new FlowRunTally(ThresholdReporting(thresholds, result.ExecutionId));
         var stepContext = new FlowStepContext(
             variables.Value,
             tally,
@@ -262,6 +287,22 @@ public sealed class GraphPipeline : EtlPipelineBase
         return GenericResult.Success();
     }
 
+    // Why the executor is always wrapped: a component's figures are judged against the thresholds of the run's tenant (FDW-3865); a run without the evaluator
+    // or a tenant was refused before it began.
+    private RunThresholdFlowExecutor ThresholdReporting(ThresholdScope thresholds, Guid executionId)
+    {
+        var componentIds = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var component in _configuration.Components)
+        {
+            componentIds.TryAdd(component.Name, component.Id);
+        }
+
+        return new RunThresholdFlowExecutor(_flowExecutor, Name, thresholds.TenantId, executionId, componentIds, thresholds.Evaluator, _logger);
+    }
+
+    // What a run is judged by: the evaluator and the tenant whose thresholds apply.
+    private readonly record struct ThresholdScope(IThresholdEvaluator Evaluator, Guid TenantId);
+
     // Rows read are the rows that left a source; rows that reached a destination are the rows transformed on the way; rows
     // loaded are what the destinations' loads affected. Each is summed across every flow the run ran.
     private void RecordCounts(EtlPipelineExecutionResult result, FlowRunTally tally, FlowBuildContext context)
@@ -274,7 +315,8 @@ public sealed class GraphPipeline : EtlPipelineBase
     }
 
     // The run's counts of rejected rows need no setting: they hold no row (FDW-1720), so there is no limit to state.
-    private FlowRunOptions RunOptions(PipelineExecutionOptions options) => new() { LinkCapacity = _configuration.LinkCapacity, PauseGate = options.PauseGate };
+    private FlowRunOptions RunOptions(PipelineExecutionOptions options, RunLive? live)
+        => new() { LinkCapacity = _configuration.LinkCapacity, PauseGate = options.PauseGate, Live = live };
 
     // Why before anything moves: a Built transformation or a chain of named transformations that no longer resolves must fail the run
     // naming it, not be found halfway through the data.

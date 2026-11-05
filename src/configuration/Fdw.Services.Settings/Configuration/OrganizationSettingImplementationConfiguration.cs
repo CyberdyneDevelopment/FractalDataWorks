@@ -61,6 +61,6 @@ public sealed partial class OrganizationSettingImplementationConfiguration
     /// <summary>
     /// Gets or sets whether this setting value is active.
     /// </summary>
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; }
 
 }

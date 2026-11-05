@@ -26,7 +26,7 @@ public sealed class DelimitedExcelSafeOptionsTests
     [Fact]
     public void ByDefaultThereIsNoByteOrderMarkAndNothingIsGuarded()
     {
-        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], WriteHeader = true }, Row("a", "=1+1"));
+        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], WriteHeader = true, Separator = ",", QuoteChar = '"', WriteByteOrderMark = false, NeutralizeFormulas = false, BufferSize = 16 * 1024 }, Row("a", "=1+1"));
 
         text.ShouldNotStartWith("\uFEFF");
         text.ShouldContain("=1+1");
@@ -36,7 +36,7 @@ public sealed class DelimitedExcelSafeOptionsTests
     [Fact]
     public void TheByteOrderMarkIsFirstEvenWithNoRows()
     {
-        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], WriteHeader = true, WriteByteOrderMark = true });
+        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], WriteHeader = true, WriteByteOrderMark = true, Separator = ",", QuoteChar = '"', NeutralizeFormulas = false, BufferSize = 16 * 1024 });
 
         text.ShouldStartWith("\uFEFFa");
         Encoding.UTF8.GetBytes(text).Take(3).ShouldBe(new byte[] { 0xEF, 0xBB, 0xBF });
@@ -51,7 +51,7 @@ public sealed class DelimitedExcelSafeOptionsTests
     [InlineData("plain", "plain")]
     public void TextThatStartsLikeAFormulaGetsALeadingApostropheWhenAsked(string value, string written)
     {
-        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], NeutralizeFormulas = true }, Row("a", value));
+        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], NeutralizeFormulas = true, Separator = ",", QuoteChar = '"', WriteHeader = false, WriteByteOrderMark = false, BufferSize = 16 * 1024 }, Row("a", value));
 
         text.TrimEnd('\r', '\n').ShouldBe(written);
     }
@@ -59,7 +59,7 @@ public sealed class DelimitedExcelSafeOptionsTests
     [Fact]
     public void ANegativeNumberIsNotTextSoItIsLeftAlone()
     {
-        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], NeutralizeFormulas = true }, Row("a", -5), Row("a", -2.5d));
+        var text = Written(new DelimitedRowWriterOptions { Columns = ["a"], NeutralizeFormulas = true, Separator = ",", QuoteChar = '"', WriteHeader = false, WriteByteOrderMark = false, BufferSize = 16 * 1024 }, Row("a", -5), Row("a", -2.5d));
 
         text.ShouldNotContain("'");
     }

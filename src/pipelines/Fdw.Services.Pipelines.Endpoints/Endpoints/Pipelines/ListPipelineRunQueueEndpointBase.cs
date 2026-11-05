@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Etl.Execution;
+using Fdw.Services.Etl.Flow;
 using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -31,13 +33,15 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<PipelineRunQueueResponse>
 {
     private readonly PipelineRunScheduler _scheduler;
+    private readonly RunningFlows _running;
     private readonly ITenantContext _tenant;
 
     /// <summary>Initializes a new instance of the <see cref="ListPipelineRunQueueEndpointBase"/> class.</summary>
-    protected ListPipelineRunQueueEndpointBase(ILogger logger, PipelineRunScheduler scheduler, ITenantContext tenant)
+    protected ListPipelineRunQueueEndpointBase(ILogger logger, PipelineRunScheduler scheduler, RunningFlows running, ITenantContext tenant)
     {
         EndpointLogger = logger;
         _scheduler = scheduler;
+        _running = running;
         _tenant = tenant;
     }
 
@@ -72,8 +76,9 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
         var owners = snapshot.Running.Concat(snapshot.Waiting).ToDictionary(entry => entry.Run.ExecutionId, entry => entry.Run.TenantId);
         var response = new PipelineRunQueueResponse
         {
-            Running = [.. snapshot.Running.Where(entry => Reaches(entry, reachesAll, caller)).Select(entry => Item(entry, reachesAll, caller, owners))],
-            Waiting = [.. snapshot.Waiting.Where(entry => Reaches(entry, reachesAll, caller)).Select(entry => Item(entry, reachesAll, caller, owners))],
+            Running = [.. snapshot.Running.Where(entry => Reaches(entry, reachesAll, caller)).Select(entry => Item(entry, reachesAll, caller, owners, _running))],
+            Waiting = [.. snapshot.Waiting.Where(entry => Reaches(entry, reachesAll, caller)).Select(entry => Item(entry, reachesAll, caller, owners, _running))],
+            RefreshSeconds = RefreshSecondsFor(caller),
         };
         OnQueueListed(caller, reachesAll, response.Running.Count, response.Waiting.Count);
         await Send.OkAsync(response, ct).ConfigureAwait(false);
@@ -82,12 +87,27 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
     /// <summary>Called when the request carries no tenant and its caller does not administer the platform. Override for custom logging.</summary>
     protected virtual void OnNoTenant() { }
 
+    /// <summary>Called when the setting that says how often the queue is read again is not set or is not positive for the caller. Override for custom logging.</summary>
+    protected virtual void OnRefreshNotSet(Guid? tenantId, string setting) { }
+
     /// <summary>Called when the queue is listed. Override for custom logging.</summary>
     protected virtual void OnQueueListed(Guid? tenantId, bool reachesAll, int running, int waiting) { }
 
+    // The interval the setting gives the caller's scope; none is assumed, so a setting that is not set or not positive answers null and the page does not read again by itself.
+    private int? RefreshSecondsFor(Guid? tenantId)
+    {
+        if (Resolve<IEffectiveSettingsProvider>().TryGetEffectiveValue<int>(SettingDefinitions.LiveViewRefreshSeconds, out var seconds, tenantId) && seconds > 0)
+        {
+            return seconds;
+        }
+
+        OnRefreshNotSet(tenantId, SettingDefinitions.LiveViewRefreshSeconds);
+        return null;
+    }
+
     private static bool Reaches(PipelineRunQueueEntry entry, bool reachesAll, Guid? caller) => reachesAll || entry.Run.TenantId == caller;
 
-    private static PipelineRunQueueItemResponse Item(PipelineRunQueueEntry entry, bool reachesAll, Guid? caller, Dictionary<Guid, Guid?> owners)
+    private static PipelineRunQueueItemResponse Item(PipelineRunQueueEntry entry, bool reachesAll, Guid? caller, Dictionary<Guid, Guid?> owners, RunningFlows running)
     {
         var blockedBy = BlockerOf(entry.Waiting, reachesAll, caller, owners);
         return new PipelineRunQueueItemResponse
@@ -102,9 +122,23 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
             Limit = entry.Waiting?.Limit,
             BlockedByExecutionId = blockedBy,
             Table = blockedBy is null ? null : entry.Waiting?.Table,
-            HeldUntil = entry.Waiting?.HeldUntil
+            HeldUntil = entry.Waiting?.HeldUntil,
+            Components = ComponentsOf(entry, running),
+            Links = LinksOf(entry, running)
         };
     }
+
+    // Only a run in flight has components; one that waits for its turn has not begun. A run the host does not follow yet answers none, not an empty list.
+    private static List<PipelineRunComponentResponse>? ComponentsOf(PipelineRunQueueEntry entry, RunningFlows running) =>
+        entry.Waiting is not null || running.Components(entry.Run.ExecutionId) is not { } components
+            ? null
+            : FlowLiveResponses.Components(components);
+
+    // The links follow the same rule as the components (FDW-3778).
+    private static List<PipelineRunLinkResponse>? LinksOf(PipelineRunQueueEntry entry, RunningFlows running) =>
+        entry.Waiting is not null || running.Links(entry.Run.ExecutionId) is not { } links
+            ? null
+            : FlowLiveResponses.Links(links);
 
     // The run that holds this one back, named only when the caller reaches it: every run for a platform administrator, the caller's tenant's
     // own otherwise.

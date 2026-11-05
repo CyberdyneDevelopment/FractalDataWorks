@@ -92,9 +92,6 @@ internal sealed class ManagedSessionState
     /// <returns>Public session information.</returns>
     public SessionInfo ToSessionInfo()
     {
-        var loadedProjects = Workspace?.GetLoadedProjects();
-        var allProjects = Workspace?.GetAllProjects();
-
         return new SessionInfo
         {
             Id = Id,
@@ -103,14 +100,17 @@ internal sealed class ManagedSessionState
             CreatedAt = CreatedAt,
             LastModifiedAt = LastModifiedAt,
             ConversationId = ConversationId,
-            ProjectCount = loadedProjects?.Count ?? Workspace?.CurrentSolution?.Projects.Count() ?? 0,
-            TotalProjectCount = allProjects?.Count ?? Workspace?.CurrentSolution?.Projects.Count() ?? 0,
-            ExcludedProjectCount = (allProjects?.Count ?? 0) - (loadedProjects?.Count ?? 0),
+            // A sleeping session has no workspace, so its counts are unknown and stay null (FDW-3580).
+            ProjectCount = Workspace?.GetLoadedProjects().Count,
+            TotalProjectCount = Workspace?.GetAllProjects().Count,
+            ExcludedProjectCount = Workspace is { } workspace
+                ? workspace.GetAllProjects().Count - workspace.GetLoadedProjects().Count
+                : null,
             SnapshotCount = Snapshots.Count,
             HasPendingChanges = HasPendingChanges,
             IsActive = true,
             IsSleeping = IsSleeping,
-            ExcludePatterns = Workspace?.ExcludePatterns?.ToList() ?? ExcludePatterns
+            ExcludePatterns = Workspace is { } live ? [.. live.ExcludePatterns] : ExcludePatterns
         };
     }
 }

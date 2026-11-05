@@ -47,7 +47,7 @@ public sealed class OriginCheckCsrfProtection : SessionCsrfProtectionBase
         // can never equal what a browser sends, so the row would refuse every write it meant to allow.
         var malformed = origins.FirstOrDefault(o =>
             !Uri.TryCreate(o, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)
+            || (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal) && !string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.Ordinal))
             || !string.Equals(uri.GetLeftPart(UriPartial.Authority), o, StringComparison.Ordinal));
         return malformed is null
             ? GenericResult.Success()

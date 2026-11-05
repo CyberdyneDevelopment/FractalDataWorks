@@ -50,7 +50,7 @@ public sealed class RepairMovedReferencesTranslator
                 RoslynResultCodes.ByName("CommandCannotBeNull"));
         }
 
-        RepairMovedReferencesTranslatorLog.Repairing(Logger, command.Scope ?? "(whole solution)", command.DryRun);
+        RepairMovedReferencesTranslatorLog.Repairing(Logger, command.Scope ?? RoslynReportPlaceholders.WholeSolution, command.DryRun);
 
         LedgerAssemblyIndex index;
         if (!string.IsNullOrWhiteSpace(command.GuidePath))
@@ -99,10 +99,10 @@ public sealed class RepairMovedReferencesTranslator
 
         if (errors.Count == 0)
         {
-            RepairMovedReferencesTranslatorLog.NoReferenceErrorsFound(Logger, command.Scope ?? "(whole solution)");
+            RepairMovedReferencesTranslatorLog.NoReferenceErrorsFound(Logger, command.Scope ?? RoslynReportPlaceholders.WholeSolution);
             return GenericResult<IRoslynCommandResult>.Failure(
                 RoslynResultCodes.ByName("NoReferenceErrorsFound"),
-                ResultDetails.Create().With("Scope", command.Scope ?? "(whole solution)"));
+                ResultDetails.Create().With("Scope", command.Scope ?? RoslynReportPlaceholders.WholeSolution));
         }
 
         var outcome = Classify(errors, index);
@@ -269,7 +269,7 @@ public sealed class RepairMovedReferencesTranslator
                     FilePath = error.FilePath,
                     Line = error.Line,
                     MissingName = error.MissingName,
-                    Reason = lookup.Reason ?? "unknown",
+                    Reason = lookup.Reason ?? RoslynReportPlaceholders.UnknownLowerCase,
                 });
                 continue;
             }

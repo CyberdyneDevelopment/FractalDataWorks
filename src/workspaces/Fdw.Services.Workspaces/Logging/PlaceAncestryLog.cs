@@ -47,8 +47,8 @@ public static partial class PlaceAncestryLog
     [MessageLogging(EventId = 31654, Level = LogLevel.Warning, Message = "The caller acts in no tenant, so there is no place to read or write definitions at")]
     public static partial IGenericMessage CallerHasNoPlace(ILogger logger);
 
-    /// <summary>Logs a workspace that names neither an organization nor a tenant.</summary>
-    [MessageLogging(EventId = 91650, Level = LogLevel.Error, Message = "Workspace '{id}' names neither an organization nor a tenant, so it sits nowhere in the scope tree")]
+    /// <summary>Logs a workspace that names no organization, which every workspace has (FDW-3668).</summary>
+    [MessageLogging(EventId = 91650, Level = LogLevel.Error, Message = "Workspace '{id}' names no organization, so it sits nowhere in the scope tree")]
     public static partial IGenericMessage WorkspaceSitsNowhere(ILogger logger, string id);
 
     /// <summary>Logs a walk up the tree that passed every kind of place without reaching the top.</summary>

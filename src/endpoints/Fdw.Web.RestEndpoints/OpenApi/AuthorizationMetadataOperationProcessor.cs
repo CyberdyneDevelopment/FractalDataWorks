@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.AspNetCore.Authorization;
 using NSwag.Generation.AspNetCore;
 using NSwag.Generation.Processors;
@@ -57,7 +58,7 @@ public sealed class AuthorizationMetadataOperationProcessor : IOperationProcesso
         var metadata = aspNetCore.ApiDescription.ActionDescriptor.EndpointMetadata;
         var operation = context.OperationDescription.Operation;
 
-        operation.ExtensionData ??= new Dictionary<string, object?>(StringComparer.Ordinal);
+        operation.ExtensionData = new Dictionary<string, object?>(operation.ExtensionData ?? ImmutableDictionary<string, object?>.Empty, StringComparer.Ordinal);
         operation.ExtensionData[AnonymousExtension] = metadata.OfType<IAllowAnonymous>().Any();
         operation.ExtensionData[PoliciesExtension] = metadata.OfType<IAuthorizeData>()
             .Select(data => data.Policy)

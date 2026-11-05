@@ -122,6 +122,7 @@ public sealed class PipelineLoadValidatorTests
         var step = Step("Delete");
         step.SoftDeleteMode = "MarkerMatches";
         step.DeletedFlagColumn = "IsDeleted";
+        step.DeletedFlagValue = true;
         step.SoftDeleteMarkerColumn = "Status";
         step.SoftDeleteMarkerValue = "Closed";
         Check(step).IsSuccess.ShouldBeTrue();
@@ -133,6 +134,7 @@ public sealed class PipelineLoadValidatorTests
         var step = Step("Insert");
         step.SoftDeleteMode = "AbsentFromSource";
         step.DeletedFlagColumn = "IsDeleted";
+        step.DeletedFlagValue = true;
         Fails(Check(step), "which Insert does not use");
     }
 
@@ -220,6 +222,7 @@ public sealed class PipelineLoadValidatorTests
     {
         var step = Step("Delete");
         step.DeletedFlagColumn = "IsDeleted";
+        step.DeletedFlagValue = true;
         Fails(Check(step), "names its mode");
     }
 
@@ -229,6 +232,7 @@ public sealed class PipelineLoadValidatorTests
         var step = Step("Delete");
         step.SoftDeleteMode = "Never";
         step.DeletedFlagColumn = "IsDeleted";
+        step.DeletedFlagValue = true;
         Fails(Check(step), "not a soft delete mode");
     }
 
@@ -241,11 +245,21 @@ public sealed class PipelineLoadValidatorTests
     }
 
     [Fact]
+    public void ASoftDeleteNeedsTheValueItSetsItsFlagColumnTo()
+    {
+        var step = Step("Delete");
+        step.SoftDeleteMode = "AbsentFromSource";
+        step.DeletedFlagColumn = "IsDeleted";
+        Fails(Check(step), "states the value it sets its flag column to");
+    }
+
+    [Fact]
     public void AMarkerMatchesSoftDeleteNeedsItsMarker()
     {
         var step = Step("Delete");
         step.SoftDeleteMode = "MarkerMatches";
         step.DeletedFlagColumn = "IsDeleted";
+        step.DeletedFlagValue = true;
         Fails(Check(step), "needs a marker column and a marker value");
     }
 
@@ -255,6 +269,7 @@ public sealed class PipelineLoadValidatorTests
         var step = Step("Delete");
         step.SoftDeleteMode = "AbsentFromSource";
         step.DeletedFlagColumn = "IsDeleted";
+        step.DeletedFlagValue = true;
         step.SoftDeleteMarkerColumn = "Status";
         step.SoftDeleteMarkerValue = "Closed";
         Fails(Check(step), "does not use a marker");
@@ -266,6 +281,7 @@ public sealed class PipelineLoadValidatorTests
         var step = Step("Delete");
         step.SoftDeleteMode = "MarkerMatches";
         step.DeletedFlagColumn = "IsDeleted";
+        step.DeletedFlagValue = true;
         step.SoftDeleteMarkerColumn = "Status";
         Fails(Check(step), "SoftDeleteMarkerValue");
     }
@@ -395,6 +411,34 @@ public sealed class PipelineLoadValidatorTests
         source.ConstantDataType = "Telepathy";
         step.ValueSources = [source];
         Fails(Check(step), "not a data type");
+    }
+
+    [Fact]
+    public void AUuidV7NeedsNothingBeyondItsColumn()
+    {
+        var step = Step("Insert");
+        step.ValueSources = [Source("UuidV7", "PublicId")];
+        Check(step).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AUuidV7RefusesASequenceName()
+    {
+        var step = Step("Insert");
+        var source = Source("UuidV7", "PublicId");
+        source.SequenceName = "OrderNumbers";
+        step.ValueSources = [source];
+        Fails(Check(step), "states a sequence name, which a UuidV7 value source does not use");
+    }
+
+    [Fact]
+    public void AUuidV7RefusesAConstant()
+    {
+        var step = Step("Insert");
+        var source = Source("UuidV7", "PublicId");
+        source.ConstantValue = "1";
+        step.ValueSources = [source];
+        Fails(Check(step), "states a constant, which a UuidV7 value source does not use");
     }
 
     [Fact]

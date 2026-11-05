@@ -176,10 +176,12 @@ using Fdw.Validation;
 var validator = new CreateConnectionRequestValidator();
 var result = validator.Validate(request);
 
-IGenericResult genericResult = result.ToGenericResult();
+IGenericResult genericResult = result.ToGenericResult(logger);
 // or with a value:
-IGenericResult<Connection> typedResult = result.ToGenericResult(connection);
+IGenericResult<Connection> typedResult = result.ToGenericResult(connection, logger);
 ```
+
+A refused request is one failure that names every failed rule (`property: message`, joined by `; `). Its message is `VALIDATION-20001`, a number in the Validation band, with a client message, so a host answers it with 400 and the failed rules as the reason (FDW-3539).
 
 ## IEntityValidator Interface
 

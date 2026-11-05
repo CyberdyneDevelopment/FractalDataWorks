@@ -52,6 +52,9 @@ internal sealed class FlowChannelOutput : IFlowOutput
 
         // Why before the links: a node with no links drops its rows, and a rejected row that is dropped is the one the record must keep.
         _rejected?.Keep(_component, Name, batch.Rows);
+
+        // Why once: a batch is sized once however many links it fans out to, and every link counts the same rows.
+        var bytes = RowSize.Of(batch);
         for (var i = 0; i < _links.Count; i++)
         {
             var link = _links[i];
@@ -60,7 +63,7 @@ internal sealed class FlowChannelOutput : IFlowOutput
                 await link.Writer.WriteAsync(i == 0 ? batch : batch.Copy(), cancellationToken).ConfigureAwait(false);
             }
 
-            link.Add(batch.Count);
+            link.Add(batch.Count, bytes);
         }
     }
 

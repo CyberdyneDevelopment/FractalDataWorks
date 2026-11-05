@@ -108,11 +108,14 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("NoFieldsToProject")));
             }
 
-            var npgsqlCommand = command.Joins is { Count: > 0 }
-                ? BuildJoinedSelectStatement(container, dbPath, command.Joins, command.Filter, command.Projection, returnedFieldNames)
-                : BuildSelectStatement(container, dbPath, command.Filter, command.Projection, command.Ordering, command.Paging, returnedFieldNames);
+            if (command.Joins is { Count: > 0 })
+            {
+                return Task.FromResult(GenericResult<NpgsqlCommand>.Success(
+                    BuildJoinedSelectStatement(container, dbPath, command.Joins, command.Filter, command.Projection, returnedFieldNames)));
+            }
 
-            return Task.FromResult(GenericResult<NpgsqlCommand>.Success(npgsqlCommand));
+            return Task.FromResult(
+                BuildSelectStatement(container, dbPath, command.Filter, command.Projection, command.Ordering, command.Paging, returnedFieldNames));
         }
         catch (Exception ex)
         {
@@ -124,10 +127,10 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
     }
 
     /// <summary>
-    /// Builds a complete PostgreSQL SELECT statement.
+    /// Builds a complete PostgreSQL SELECT statement, or refuses a paged read that has no order to page by.
     /// </summary>
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
-    private static NpgsqlCommand BuildSelectStatement(
+    private static IGenericResult<NpgsqlCommand> BuildSelectStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
         IFilterExpression? filter,
@@ -162,18 +165,16 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
         }
         else if (paging != null)
         {
-            // PostgreSQL LIMIT/OFFSET does not strictly require ORDER BY,
-            // but for deterministic results, add a default ordering
-            var fields = container.Schema.Fields;
-            var orderByField = "1";
-
-            if (fields.Count > 0)
+            // PostgreSQL LIMIT/OFFSET does not require ORDER BY, but a page of rows in no stated order is not a page. The order is
+            // the one the container declares for its rows, its primary key; a container that declares none is refused (FDW-3454).
+            var declaredOrder = container.GetDeclaredOrderFieldName();
+            if (declaredOrder is null)
             {
-                var pkName = container.GetPrimaryKeyFieldName();
-                orderByField = pkName ?? fields[0].Name;
+                return GenericResult<NpgsqlCommand>.Failure(
+                    PostgreSqlTranslatorLog.PagedQueryHasNoOrder(NullLogger<PostgreSqlQueryTranslator>.Instance, container.Name));
             }
 
-            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(orderByField)}";
+            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(declaredOrder)}";
         }
 
         // LIMIT/OFFSET clause (paging) - PostgreSQL native syntax
@@ -182,7 +183,7 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
             command.CommandText += $" {dialect.BuildPagingClause(paging)}";
         }
 
-        return command;
+        return GenericResult<NpgsqlCommand>.Success(command);
     }
 
     /// <summary>

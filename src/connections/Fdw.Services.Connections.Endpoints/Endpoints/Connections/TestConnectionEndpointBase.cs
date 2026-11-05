@@ -7,6 +7,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -62,7 +63,7 @@ public abstract class TestConnectionEndpointBase : Endpoint<TestConnectionReques
             {
                 Name = req.Name,
                 Success = false,
-                Message = getResult.CurrentMessage ?? "Connection not found"
+                Message = getResult.FailureReason().Message
             };
 
             await Send.OkAsync(response, ct).ConfigureAwait(false);
@@ -76,7 +77,7 @@ public abstract class TestConnectionEndpointBase : Endpoint<TestConnectionReques
         stopwatch.Stop();
 
         var success = testResult.IsSuccess;
-        var message = success ? "Connection successful" : testResult.CurrentMessage ?? "Connection test failed";
+        var message = testResult.IsSuccess ? "Connection successful" : testResult.FailureReason().Message;
         var responseTimeMs = (int)stopwatch.ElapsedMilliseconds;
 
         await RecordHealthCheck(req.Name, success, responseTimeMs, success ? null : message, ct).ConfigureAwait(false);
@@ -119,7 +120,7 @@ public abstract class TestConnectionEndpointBase : Endpoint<TestConnectionReques
         }
         else
         {
-            ConnectionEndpointLog.HealthCheckRecordFailed(_logger, connectionName, recordResult.CurrentMessage ?? "Record failed");
+            ConnectionEndpointLog.HealthCheckRecordFailed(_logger, connectionName, recordResult.FailureReason().Message);
         }
     }
 }

@@ -230,7 +230,7 @@ public sealed class ConnectionBaseTests : IDisposable
         _mockTranslator.Setup(t => t.Name).Returns("Query");
         _mockTranslator
             .Setup(t => t.Translate(It.IsAny<IDataCommand>(), It.IsAny<IStorageContainer>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestNativeCommand>.Failure());
+            .ReturnsAsync(GenericResult<TestNativeCommand>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
 
         var command = new Mock<IDataCommand>();
         command.Setup(c => c.CommandType).Returns("Query");
@@ -299,7 +299,7 @@ public sealed class ConnectionBaseTests : IDisposable
         _mockTranslator.Setup(t => t.Name).Returns("Query");
         _mockTranslator
             .Setup(t => t.Translate(It.IsAny<IDataCommand>(), It.IsAny<IStorageContainer>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestNativeCommand>.Failure());
+            .ReturnsAsync(GenericResult<TestNativeCommand>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
 
         var command = new Mock<IDataCommand>();
         command.Setup(c => c.CommandType).Returns("Query");
@@ -497,7 +497,7 @@ public sealed class ConnectionBaseTests : IDisposable
             IStorageContainer container,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(GenericResult<T>.Failure());
+            return Task.FromResult(GenericResult<T>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
         }
 
         protected override Task<IGenericResult> Execute(
@@ -505,7 +505,7 @@ public sealed class ConnectionBaseTests : IDisposable
             IStorageContainer container,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(GenericResult.Failure());
+            return Task.FromResult(GenericResult.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")));
         }
     }
 

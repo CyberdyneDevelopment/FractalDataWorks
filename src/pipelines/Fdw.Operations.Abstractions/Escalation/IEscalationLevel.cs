@@ -31,4 +31,14 @@ public interface IEscalationLevel
     /// Gets the message template for notifications at this level.
     /// </summary>
     string? MessageTemplate { get; }
+
+    /// <summary>
+    /// Gets the severity of the notification at this level (Warning, Error, Critical). The caller states it; there is no default (FDW-3823).
+    /// </summary>
+    string Severity { get; }
+
+    /// <summary>
+    /// Gets the type of this level's recipients (Email, Webhook, IntegrationKey). The caller states it; there is no default (FDW-3823).
+    /// </summary>
+    string RecipientType { get; }
 }

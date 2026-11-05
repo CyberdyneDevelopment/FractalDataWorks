@@ -36,14 +36,14 @@ public interface ISchemaImporter
     /// Imports schema from the specified source and returns a discovered DataStore configuration.
     /// </summary>
     /// <param name="source">The source to import from (connection string, URL, file path).</param>
-    /// <param name="options">Optional configuration options.</param>
+    /// <param name="options">The import options; the caller states them.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     /// A <see cref="DataStoreImplementationConfiguration"/> with discovered paths, containers, and fields, or a failure result.
     /// </returns>
     Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
-        SchemaImporterOptions? options = null,
+        SchemaImporterOptions options,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -66,6 +66,6 @@ public interface ISchemaImporter<TConfiguration> : ISchemaImporter
     /// </summary>
     new Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
-        SchemaImporterOptions? options = null,
+        SchemaImporterOptions options,
         CancellationToken cancellationToken = default);
 }

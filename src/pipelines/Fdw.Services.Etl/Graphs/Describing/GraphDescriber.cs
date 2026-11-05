@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl.Graphs.Describing;
 
@@ -26,6 +27,10 @@ namespace Fdw.Services.Etl.Graphs.Describing;
 /// </remarks>
 public static class GraphDescriber
 {
+    /// <summary>The stage a component runs in when it names none: the first.</summary>
+    [PlatformDefault]
+    private const int UnstagedStage = 0;
+
     /// <summary>Describes the fields at every node of every component of a graph.</summary>
     /// <param name="graph">The stored graph or draft.</param>
     /// <param name="context">What reaches the data sets a source reads.</param>
@@ -39,7 +44,7 @@ public static class GraphDescriber
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(logger);
 
-        var links = (IReadOnlyList<PipelineLinkConfiguration>)[.. graph.Links];
+        var links = CompletionLines.Rows(graph.Links);
         var produced = new Dictionary<(string Component, string Node), IReadOnlyList<GraphField>?>(new NodeComparer());
         var nodes = new List<GraphNodeFields>();
         var remaining = graph.Components.GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
@@ -136,8 +141,8 @@ public static class GraphDescriber
             return ready;
         }
 
-        var lowest = ready.Min(component => component.Stage ?? 0);
-        return [.. ready.Where(component => (component.Stage ?? 0) == lowest)];
+        var lowest = ready.Min(component => component.Stage ?? UnstagedStage);
+        return [.. ready.Where(component => (component.Stage ?? UnstagedStage) == lowest)];
     }
 
     private static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);

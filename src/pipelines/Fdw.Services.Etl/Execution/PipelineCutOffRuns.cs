@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -14,7 +15,7 @@ namespace Fdw.Services.Etl.Execution;
 
 /// <summary>
 /// Decides what happens to the runs that were running when the ETL host stopped (FDW-3236): a run is started again as a new run, up to the number of
-/// times the setting <see cref="SettingDefinitions.MaxPipelineRunRestarts"/> gives, and is otherwise closed as failed with the reason it is not. The
+/// times the setting <see cref="SettingDefinitions.MaxPipelineRunRestarts"/> gives, and is otherwise closed as Interrupted with the reason it is not. The
 /// setting has no default in code: while it is not set, no cut-off run is started again, and each is closed naming the setting.
 /// </summary>
 internal sealed class PipelineCutOffRuns
@@ -48,13 +49,25 @@ internal sealed class PipelineCutOffRuns
         {
             if (limit.IsFailure)
             {
-                await GiveUp(run, $"the setting {SettingDefinitions.MaxPipelineRunRestarts} is not set, so no cut-off run is started again", cancellationToken).ConfigureAwait(false);
+                await GiveUp(
+                    run, $"the setting {SettingDefinitions.MaxPipelineRunRestarts} is not set, so no cut-off run is started again and it is left Interrupted", cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else if (limit.Value == 0)
+            {
+                await GiveUp(
+                    run, $"the setting {SettingDefinitions.MaxPipelineRunRestarts} is 0: a cut-off run is left Interrupted and is not started again", cancellationToken)
+                    .ConfigureAwait(false);
             }
             else if (run.Restarts >= limit.Value)
             {
                 await GiveUp(
                     run, $"it was already started again {run.Restarts} times, the number the setting {SettingDefinitions.MaxPipelineRunRestarts} gives", cancellationToken)
                     .ConfigureAwait(false);
+            }
+            else if (await RepeatRefusal(run, cancellationToken).ConfigureAwait(false) is { } refusal)
+            {
+                await GiveUp(run, refusal, cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -68,6 +81,24 @@ internal sealed class PipelineCutOffRuns
         }
 
         return started;
+    }
+
+    // Why a retry is refused when a destination committed rows and its load would add them again (FDW-3840): the new run starts at the beginning of the pipeline. A load that
+    // empties its target first, or whose kind repeats to the same result (an upsert, an update, a delete), is started again. When the records of the run cannot be read it is not
+    // known what was committed, and the run is not started again either: nothing is assumed. None when the run may be started again.
+    private async Task<string?> RepeatRefusal(InterruptedRun run, CancellationToken cancellationToken)
+    {
+        var loads = await _store.CommittedLoads(run, cancellationToken).ConfigureAwait(false);
+        if (loads.IsFailure || loads.Value is null)
+        {
+            return $"what its destinations had committed could not be read, so it is not known whether starting it again would load rows twice: {loads.CurrentMessage}";
+        }
+
+        var adds = loads.Value.Where(load => !load.RepeatsToSameResult).ToList();
+        return adds.Count == 0
+            ? null
+            : string.Join("; ", adds.Select(load => $"destination '{load.Destination}' had committed {load.RowsCommitted} row(s) and its load is not known to repeat to the same result"))
+                + ", so starting it again would load them twice";
     }
 
     // The limit is read for the host under the system context, as the trigger queue's capacity is, since no request is in flight when the host starts.

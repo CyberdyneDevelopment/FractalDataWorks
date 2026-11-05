@@ -8,6 +8,7 @@ using Fdw.Operations.Abstractions;
 using Fdw.Operations.Abstractions.Execution;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
@@ -72,7 +73,7 @@ public abstract class GetExecutionEventsEndpointBase : Endpoint<ExecutionIdReque
 
         if (!eventsResult.IsSuccess)
         {
-            var errorMessage = eventsResult.CurrentMessage ?? "Unknown error";
+            var errorMessage = eventsResult.FailureReason().Message;
             OnEventsFetchFailed(req.Id, errorMessage);
             await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch events", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
             return;

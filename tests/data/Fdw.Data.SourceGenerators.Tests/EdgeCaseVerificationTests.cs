@@ -37,8 +37,8 @@ public class StaticPropPoco
 
         // The generator DOES filter static properties (verified in PocoMapperGenerator line 61)
         // But let's verify the actual behavior
-        var containsStatic = generated.Contains("StaticProp");
-        var containsInstance = generated.Contains("InstanceProp");
+        var containsStatic = generated.Contains("StaticProp", StringComparison.Ordinal);
+        var containsInstance = generated.Contains("InstanceProp", StringComparison.Ordinal);
 
         containsInstance.ShouldBeTrue("Instance property should be included");
         // containsStatic - check what the actual behavior is

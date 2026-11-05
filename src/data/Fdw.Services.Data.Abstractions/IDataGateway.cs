@@ -59,8 +59,7 @@ public interface IDataGateway : IGenericService
     /// <param name="useCache">
     /// When <see langword="true"/> (default), a cached result is returned if one exists.
     /// When <see langword="false"/>, the cache read is skipped and a fresh result is fetched;
-    /// the fresh result is still written to the cache (force-refresh). Has no effect when
-    /// <c>DataGatewayOptions.EnableCache</c> is <see langword="false"/>.
+    /// the fresh result is still written to the cache (force-refresh).
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The execution result.</returns>

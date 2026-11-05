@@ -33,6 +33,12 @@ internal sealed class LineageGraph
         }
     }
 
+    /// <summary>Gets every node the caller can see.</summary>
+    public IReadOnlyCollection<LineageNode> Nodes => _nodes.Values;
+
+    /// <summary>Gets every step between two nodes the caller can see.</summary>
+    public IReadOnlyList<LineageFlow> Flows => _flows;
+
     /// <summary>Finds a node by id; null when the caller cannot see it, exactly as when it does not exist.</summary>
     public LineageNode? Node(string id) => _nodes.GetValueOrDefault(id);
 
@@ -57,7 +63,7 @@ internal sealed class LineageGraph
         var downstream = new List<string>();
         var firstHop = 1;
 
-        if (_nodes[focusId].Kind == MapKinds.Pipeline)
+        if (string.Equals(_nodes[focusId].Kind, MapKinds.Pipeline, StringComparison.Ordinal))
         {
             SeedFromPipeline(traversal, focusId, direction, kinds, upstream, downstream);
             firstHop = 2;

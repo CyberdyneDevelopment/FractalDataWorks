@@ -29,8 +29,8 @@ public sealed class FilePath : PathBase, IDataPath<IStorageContainer>, IFilePath
         : base("FilePath")
     {
         PathValue = path ?? throw new ArgumentNullException(nameof(path));
-        _containers = containers?.ToList() ?? new List<IStorageContainer>();
-        IsPattern = path.Contains('*') || path.Contains('?');
+        _containers = containers?.ToList() ?? [];
+        IsPattern = path.Contains('*', StringComparison.Ordinal) || path.Contains('?', StringComparison.Ordinal);
     }
 
     /// <inheritdoc/>

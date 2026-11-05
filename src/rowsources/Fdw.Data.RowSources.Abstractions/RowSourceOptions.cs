@@ -7,9 +7,8 @@ public class RowSourceOptions
 {
     /// <summary>
     /// Gets or sets the buffer size for streaming operations.
-    /// Default is 16KB.
     /// </summary>
-    public int BufferSize { get; set; } = 16 * 1024;
+    public int BufferSize { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum row count to process.
@@ -19,9 +18,8 @@ public class RowSourceOptions
 
     /// <summary>
     /// Gets or sets whether to continue processing after row-level errors.
-    /// Default is true (continue on error).
     /// </summary>
-    public bool ContinueOnError { get; set; } = true;
+    public required bool ContinueOnError { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum number of row errors before aborting.

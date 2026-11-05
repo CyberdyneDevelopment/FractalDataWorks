@@ -16,6 +16,8 @@
     <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
     <ProjectReference Include="..\..\identity\users\Fdw.Services.Users\Fdw.Services.Users.csproj" />
     <ProjectReference Include="..\..\data\Fdw.Services.Data.Endpoints\Fdw.Services.Data.Endpoints.csproj" />
+    <ProjectReference Include="..\..\tags\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
 
 </Project>

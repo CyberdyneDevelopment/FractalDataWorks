@@ -15,7 +15,11 @@ public sealed class RoleConfigurationValidator : FdwConfigurationValidator<RoleI
     /// </summary>
     public RoleConfigurationValidator()
     {
+        // Why a minimum of three here and not only on the create request: a role named "ab" is the same mistake however it is saved, so the
+        // rule has one source (FDW-3884).
         RuleFor(x => x.Name)
+            .MinimumLength(3)
+            .WithMessage("Role name must be at least 3 characters")
             .IsValidName(100);
 
         When(x => x.DisplayName is not null, () =>
@@ -27,8 +31,9 @@ public sealed class RoleConfigurationValidator : FdwConfigurationValidator<RoleI
 
         When(x => x.Description is not null, () =>
         {
+            // Why 500: authz.Role.Description is VARCHAR(500), so a longer description is refused here and not by a failed insert (FDW-3932).
             RuleFor(x => x.Description!)
-                .IsSafeString(1000);
+                .IsSafeString(500);
         });
 
         When(x => x.IsTenantScoped && x.TenantId.HasValue, () =>

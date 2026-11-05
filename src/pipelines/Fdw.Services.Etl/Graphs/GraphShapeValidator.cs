@@ -139,30 +139,92 @@ public static class GraphShapeValidator
             }
         }
 
-        // Why only the components that move rows: an action or a loop has no nodes, so it is nothing for the flow check to judge.
+        // Why every member: a completion line can start or end at an action or a loop, which has no row nodes, so the lines are judged over all of them (FDW-3640).
+        foreach (var problem in CompletionProblems(graph, members, links, broken))
+        {
+            yield return problem;
+        }
+
+        // Why only the components that move rows: an action or a loop has no row nodes, so it is nothing for the flow check to judge.
         var movers = members.Where(component => !ComponentTypes.ByName(component.ComponentType).IsAction).ToList();
         if (movers.Count == 0)
         {
             yield break;
         }
 
+        var rows = CompletionLines.Rows(links);
+        foreach (var problem in ReservedNameProblems(movers, rows))
+        {
+            yield return problem;
+        }
+
+        foreach (var problem in FlowShapeProblems(graph, movers, rows, inLevel, broken, logger))
+        {
+            yield return problem;
+        }
+    }
+
+    // The engine's own graph check over the components that move rows and the lines that carry rows.
+    private static IEnumerable<GraphProblem> FlowShapeProblems(
+        GraphPipelineConfiguration graph,
+        IReadOnlyList<PipelineComponentConfiguration> movers,
+        IReadOnlyList<PipelineLinkConfiguration> rows,
+        HashSet<string> inLevel,
+        HashSet<string> broken,
+        ILogger logger)
+    {
         var shapes = movers
             .Select(component =>
             {
-                var (inputs, outputs) = ComponentShapes.Of(component, links);
+                var (inputs, outputs) = ComponentShapes.Of(component, rows);
                 return (IFlowComponent)new ShapeFlowComponent(component.Name, inputs, outputs, logger);
             })
             .ToList();
         var flow = new FlowGraph(
             shapes,
-            [.. links.Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
+            [.. rows.Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
             [.. graph.DroppedOutputs.Where(output => inLevel.Contains(output.ComponentName)).Select(output => new FlowDroppedOutput(output.ComponentName, output.OutputName))],
             ComponentStages.Of(movers));
         foreach (var problem in FlowGraphValidator.Problems(flow).Where(problem => problem.Component is null || !broken.Contains(problem.Component)))
         {
-            yield return new GraphProblem(PathOf(problem, graph.Links, links), problem.Reason);
+            yield return new GraphProblem(PathOf(problem, graph.Links, rows), problem.Reason);
         }
     }
+
+    // The completion lines of a level (FDW-3640): judged by the validator the run also uses, over every member, so a line from or to an action is covered.
+    private static IEnumerable<GraphProblem> CompletionProblems(
+        GraphPipelineConfiguration graph, IReadOnlyList<PipelineComponentConfiguration> members, IReadOnlyList<PipelineLinkConfiguration> links, HashSet<string> broken)
+    {
+        var completions = CompletionLines.Completions(links);
+        if (completions.Count == 0)
+        {
+            yield break;
+        }
+
+        var stages = ComponentStages.Of(members);
+        var found = FlowCompletionValidator.Problems(
+            [.. members.Select(member => member.Name)],
+            [.. CompletionLines.Rows(links).Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
+            [.. completions.Select(CompletionLines.ToCompletion)],
+            name => FlowStage.RankIn(stages, name));
+        foreach (var problem in found.Where(problem => problem.Component is null || !broken.Contains(problem.Component)))
+        {
+            yield return new GraphProblem(
+                problem.LinkIndex is { } index
+                    ? ["links", graph.Links.IndexOf(completions[index]).ToString(CultureInfo.InvariantCulture)]
+                    : ["components", problem.Component ?? string.Empty],
+                problem.Reason);
+        }
+    }
+
+    // A row output a person names done would read as a completion output (FDW-3640): the name is refused, naming the component.
+    private static IEnumerable<GraphProblem> ReservedNameProblems(
+        IReadOnlyList<PipelineComponentConfiguration> movers, IReadOnlyList<PipelineLinkConfiguration> rows) =>
+        movers
+            .Where(component => ComponentShapes.Of(component, rows).Outputs.Any(CompletionNodes.IsDone))
+            .Select(component => new GraphProblem(
+                ["components", component.Name],
+                $"component '{component.Name}' has an output named '{CompletionNodes.Done}', which is the name every component's completion output has; give the output another name"));
 
     /// <summary>Judges a stored graph.</summary>
     /// <param name="graph">The stored graph.</param>
@@ -179,7 +241,7 @@ public static class GraphShapeValidator
     }
 
     // A link's index in a level's problem is its place in the level's own list; the path names its place in the graph's.
-    private static IReadOnlyList<string> PathOf(FlowGraphProblem problem, IList<PipelineLinkConfiguration> all, List<PipelineLinkConfiguration> level)
+    private static IReadOnlyList<string> PathOf(FlowGraphProblem problem, IList<PipelineLinkConfiguration> all, IReadOnlyList<PipelineLinkConfiguration> level)
     {
         if (problem.LinkIndex is { } index)
         {

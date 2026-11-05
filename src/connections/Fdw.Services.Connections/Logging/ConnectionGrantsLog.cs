@@ -7,7 +7,7 @@ namespace Fdw.Services.Connections.Logging;
 
 /// <summary>
 /// MessageLogging for the connections granted to tenants and assigned to organizations (FDW-1581).
-/// EventId ranges: 12810-12813 (done), 22810-22811 (invalid input, 400), 32810-32814 (not found, 404), 42810-42812 (conflict, 409),
+/// EventId ranges: 12810-12814 (done), 22810-22813 (invalid input, 400), 32810-32814 (not found, 404), 42810-42813 (conflict, 409),
 /// 72810-72811 (store failures, 500), 102810 (a grant of another tenant, 403).
 /// </summary>
 [MessageLoggingTypeCode("CONNECTIONS")]
@@ -25,9 +25,13 @@ public static partial class ConnectionGrantsLog
     [MessageLogging(EventId = 12812, Level = LogLevel.Information, Message = "Grant '{grantId}' was assigned to organization '{organizationId}' for '{purpose}' (base folder '{baseFolder}')")]
     public static partial IGenericMessage Assigned(ILogger logger, Guid grantId, Guid organizationId, string purpose, string baseFolder);
 
-    /// <summary>Logs that an assignment was removed.</summary>
-    [MessageLogging(EventId = 12813, Level = LogLevel.Information, Message = "The assignment of '{purpose}' to organization '{organizationId}' was removed")]
+    /// <summary>Logs that an assignment was superseded with nothing in its place (FDW-3396).</summary>
+    [MessageLogging(EventId = 12813, Level = LogLevel.Information, Message = "The assignment of '{purpose}' to organization '{organizationId}' was superseded: it takes no new files and still reads the files stored under it")]
     public static partial IGenericMessage Unassigned(ILogger logger, string purpose, Guid organizationId);
+
+    /// <summary>Logs that an assignment of the grant and base folder already in force was kept as it is (FDW-3396).</summary>
+    [MessageLogging(EventId = 12814, Level = LogLevel.Information, Message = "Grant '{grantId}' is already assigned to organization '{organizationId}' for '{purpose}' with the same base folder; the assignment in force was kept")]
+    public static partial IGenericMessage AssignmentKept(ILogger logger, Guid grantId, Guid organizationId, string purpose);
 
     /// <summary>Logs that a required text was not given.</summary>
     [MessageLogging(EventId = 22810, Level = LogLevel.Warning, Message = "A connection grant or assignment was refused: it has no {field}")]
@@ -41,9 +45,21 @@ public static partial class ConnectionGrantsLog
     [MessageLogging(EventId = 32810, Level = LogLevel.Warning, Message = "Tenant '{tenantId}' does not exist")]
     public static partial IGenericMessage TenantNotFound(ILogger logger, Guid tenantId);
 
-    /// <summary>Logs that the connection is not a document connection the platform has.</summary>
-    [MessageLogging(EventId = 32811, Level = LogLevel.Warning, Message = "Connection '{connectionName}' is not a document connection: {reason}")]
-    public static partial IGenericMessage NotADocumentConnection(ILogger logger, string connectionName, string? reason);
+    /// <summary>Logs that the connection being granted is not one the platform has, or could not be opened.</summary>
+    [MessageLogging(EventId = 32811, Level = LogLevel.Warning, Message = "Connection '{connectionName}' was not found or could not be opened: {reason}")]
+    public static partial IGenericMessage ConnectionNotOpened(ILogger logger, string connectionName, string? reason);
+
+    /// <summary>Logs a purpose that is not one connections are granted for (FDW-3673).</summary>
+    [MessageLogging(EventId = 22812, Level = LogLevel.Warning, Message = "'{purpose}' is not a purpose connections are granted for; the purposes are {purposes}")]
+    public static partial IGenericMessage PurposeUnknown(ILogger logger, string purpose, string purposes);
+
+    /// <summary>Logs a folder given for a purpose that takes none (FDW-3673).</summary>
+    [MessageLogging(EventId = 22813, Level = LogLevel.Warning, Message = "The {what} for '{purpose}' names the folder '{folder}', and that purpose takes no folder")]
+    public static partial IGenericMessage FolderNotTaken(ILogger logger, string what, string purpose, string folder);
+
+    /// <summary>Logs a connection that does not fit the purpose it is granted for (FDW-3673).</summary>
+    [MessageLogging(EventId = 42813, Level = LogLevel.Warning, Message = "Connection '{connectionName}' does not fit '{purpose}': {reason}")]
+    public static partial IGenericMessage UnfitForPurpose(ILogger logger, string connectionName, string purpose, string reason);
 
     /// <summary>Logs that the grant does not exist.</summary>
     [MessageLogging(EventId = 32812, Level = LogLevel.Warning, Message = "There is no grant of connection '{connectionName}' to tenant '{tenantId}' for '{purpose}'")]
@@ -62,8 +78,8 @@ public static partial class ConnectionGrantsLog
     public static partial IGenericMessage GrantExists(ILogger logger, Guid tenantId, string connectionName, string purpose);
 
     /// <summary>Logs that a grant was kept because organizations are assigned to it.</summary>
-    [MessageLogging(EventId = 42811, Level = LogLevel.Warning, Message = "The grant of '{connectionName}' to tenant '{tenantId}' was kept: {organizations} organizations are assigned to it")]
-    public static partial IGenericMessage GrantAssigned(ILogger logger, string connectionName, Guid tenantId, int organizations);
+    [MessageLogging(EventId = 42811, Level = LogLevel.Warning, Message = "The grant of '{connectionName}' to tenant '{tenantId}' was kept: {assignments} assignments use it, in force or superseded, and the files stored under a superseded one still read through it")]
+    public static partial IGenericMessage GrantAssigned(ILogger logger, string connectionName, Guid tenantId, int assignments);
 
     /// <summary>Logs that the grant is for another purpose than the assignment.</summary>
     [MessageLogging(EventId = 42812, Level = LogLevel.Warning, Message = "Grant '{grantId}' is for '{grantPurpose}', not '{purpose}'")]

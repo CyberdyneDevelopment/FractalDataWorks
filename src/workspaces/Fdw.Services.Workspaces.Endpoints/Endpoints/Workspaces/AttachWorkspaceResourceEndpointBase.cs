@@ -109,7 +109,7 @@ public abstract class AttachWorkspaceResourceEndpointBase
             // A data view is a variation a user owns; one a workspace owns is not a resource to attach.
             var dataView = await _variations.Get(resourceId, ct).ConfigureAwait(false);
             if (dataView.IsFailure) return dataView.ToNewResult<string>();
-            return dataView.Value is IDataViewDataSetVariationConfiguration { Name.Length: > 0 } found
+            return dataView.Value is { VariationKind: VariationKinds.DataView, Name.Length: > 0 } found
                 ? GenericResult<string>.Success(found.Name)
                 : GenericResult<string>.Failure(
                     WorkspacesResultCodes.ByName("WorkspaceChildNotFound"), Logger,

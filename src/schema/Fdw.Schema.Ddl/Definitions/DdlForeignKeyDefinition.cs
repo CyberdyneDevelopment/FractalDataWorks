@@ -1,3 +1,5 @@
+using Fdw.Configuration.Persistence.Schema;
+
 namespace Fdw.Schema.Ddl.Definitions;
 
 /// <summary>
@@ -33,10 +35,10 @@ public sealed class DdlForeignKeyDefinition
     /// <summary>
     /// Gets or sets the action to take on delete.
     /// </summary>
-    public IDdlForeignKeyAction OnDelete { get; init; } = new NoActionDdlForeignKeyAction();
+    public required IForeignKeyAction OnDelete { get; init; }
 
     /// <summary>
     /// Gets or sets the action to take on update.
     /// </summary>
-    public IDdlForeignKeyAction OnUpdate { get; init; } = new NoActionDdlForeignKeyAction();
+    public required IForeignKeyAction OnUpdate { get; init; }
 }

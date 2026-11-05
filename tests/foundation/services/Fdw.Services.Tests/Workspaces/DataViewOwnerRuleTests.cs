@@ -50,6 +50,6 @@ public class DataViewOwnerRuleTests
         return new AuthenticationContextAccessor { Current = caller.Object };
     }
 
-    private static IDataViewDataSetVariationConfiguration View(Guid owner)
-        => new DataViewDataSetVariationConfiguration { Name = "weekly", OwnerUserId = owner };
+    private static VariationDataSetConfiguration View(Guid owner)
+        => new VariationDataSetConfiguration { Name = "weekly", OwnerUserId = owner };
 }

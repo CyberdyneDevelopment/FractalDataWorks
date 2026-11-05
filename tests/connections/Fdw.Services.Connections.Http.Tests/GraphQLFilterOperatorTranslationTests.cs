@@ -59,7 +59,7 @@ public sealed class GraphQLFilterOperatorTranslationTests
     private static Mock<IStorageContainer> Container()
     {
         var container = new Mock<IStorageContainer>();
-        container.Setup(c => c.Path).Returns((IPath)null!);
+        container.Setup(c => c.Path).Returns(Mock.Of<IPath>(p => p.PathValue == "teams"));
         container.Setup(c => c.Name).Returns("teams");
         // Schema is left unconfigured — BuildFieldSelection treats a null Schema/Fields as "use the
         // default field list", which is all these tests need (they exercise filter-operator gating,

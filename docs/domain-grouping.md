@@ -83,7 +83,6 @@ This document maps every project in `src/` to a logical domain and describes the
 |---------|---------|
 | `Fdw.Collections` | TypeCollection base classes, CRTP pattern |
 | `Fdw.Collections.Analyzers` | TypeCollection analyzer rules |
-| `Fdw.Collections.CodeFixes` | Auto-fixes for TypeCollection violations |
 | `Fdw.Collections.SourceGenerators` | TypeCollection source generator |
 
 ### 3. MessageLogging
@@ -146,7 +145,6 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Services.Abstractions` | Service interfaces |
 | `Fdw.Services.Execution.Abstractions` | IExecutionTracker interfaces |
 | `Fdw.ServiceTypes.Analyzers` | ServiceType analyzer rules |
-| `Fdw.ServiceTypes.CodeFixes` | ServiceType code fixes |
 
 ### 7. Services.Connections
 

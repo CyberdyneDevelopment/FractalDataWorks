@@ -43,8 +43,8 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
     /// </summary>
     public int ExecutionOrder { get; set; }
 
-    /// <summary>Gets or sets whether the step runs. Enabled unless the request says otherwise.</summary>
-    public bool IsEnabled { get; set; } = true;
+    /// <summary>Gets or sets whether the step runs. Required: the caller's choice, never assumed (FDW-3931).</summary>
+    public bool? IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the aggregation parameters (used by Aggregate transforms).
@@ -91,7 +91,14 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
     /// <inheritdoc />
     // Why one list for three transforms: an Aggregate groups by it, and LatestBy and Distinct keep one row per its
     // values -- the key columns of each travel in the spec's GroupByFields (FDW-1109).
-    IReadOnlyList<string> ITransformOperationSpec.GroupByFields => LatestBy?.KeyColumns?.ToList() ?? Distinct?.KeyColumns?.ToList() ?? Aggregation?.GroupByFields ?? [];
+    // A request carries one of the three; the list is that one's, and none for a transform that carries none of them.
+    IReadOnlyList<string> ITransformOperationSpec.GroupByFields => this switch
+    {
+        { LatestBy: { } latest } => [.. latest.KeyColumns],
+        { Distinct: { } distinct } => [.. distinct.KeyColumns],
+        { Aggregation: { } aggregation } => aggregation.GroupByFields,
+        _ => [],
+    };
 
     IReadOnlyList<ITransformCheckSpec> ITransformCheckingSpec.Checks => Checks is null ? [] : [.. Checks.Select(check => new TransformCheckSpec(check.Name, check.Expression))];
 

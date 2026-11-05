@@ -52,13 +52,13 @@ public interface ISecretContainer
     /// Gets when this container was created.
     /// </summary>
     /// <value>The creation timestamp.</value>
-    DateTimeOffset CreatedAt { get; }
+    DateTimeOffset? CreatedAt { get; }
 
     /// <summary>
     /// Gets when this container was last modified.
     /// </summary>
     /// <value>The last modification timestamp.</value>
-    DateTimeOffset ModifiedAt { get; }
+    DateTimeOffset? ModifiedAt { get; }
 
     /// <summary>
     /// Gets the user or system that created this container.

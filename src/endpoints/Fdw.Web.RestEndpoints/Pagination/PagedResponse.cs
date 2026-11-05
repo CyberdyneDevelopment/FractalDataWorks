@@ -49,7 +49,7 @@ public class PagedResponse<T>
     /// <summary>
     /// Gets the count of items in the current page.
     /// </summary>
-    public int Count => Data?.Count() ?? 0;
+    public int Count => Data.Count();
 
     /// <summary>
     /// Creates a paginated response from a query and total count.

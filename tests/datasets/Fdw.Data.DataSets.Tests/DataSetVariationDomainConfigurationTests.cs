@@ -10,19 +10,19 @@ using Xunit;
 namespace Fdw.Data.DataSets.Tests;
 
 /// <summary>
-/// The domain provider copies a record's properties beyond the four every domain has onto the implementation it
-/// composes, and back on save, by mapper property name. A name the implementation lacks fails every read of every
-/// variation, so the domain record and each kind's implementation have to agree.
+/// A variation is a data set of kind Variation (FDW-3638). The list record is read from the <c>data.DataSetVariationList</c> view and the
+/// whole variation from <c>data.VariationDataSetConfiguration</c>; the two have to agree on the names of what a list shows, or a list
+/// and the member it names disagree about the same variation.
 /// </summary>
 public class DataSetVariationDomainConfigurationTests
 {
     private static readonly string[] ListFields =
-        ["VariationName", "DisplayName", "Description", "OwnerWorkspaceId", "OwnerUserId", "BaseDataSetId", "ParentVariationId", "Filters", "ClassificationId", "CreatedAt"];
+        ["VariationName", "VariationKind", "DisplayName", "Description", "OwnerWorkspaceId", "OwnerUserId", "BaseDataSetId", "ParentVariationId", "StoredFilters", "ClassificationId", "CreatedAt"];
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public void TheDomainRecordListsWhatAVariationShows()
+    public void TheListRecordHoldsWhatAListOfVariationsShows()
     {
         var record = PocoMapperCollection.ByName(nameof(DataSetVariationDomainConfiguration));
         var plain = PocoMapperCollection.ByName(nameof(DomainConfiguration));
@@ -33,27 +33,23 @@ public class DataSetVariationDomainConfigurationTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public void EveryListFieldIsAlsoAPropertyOfEachKindsImplementation()
+    public void EveryStoredListFieldIsAlsoAPropertyOfTheVariationDataSet()
     {
-        var scoped = PocoMapperCollection.ByName(nameof(ScopedDataSetVariationConfiguration));
-        var dataView = PocoMapperCollection.ByName(nameof(DataViewDataSetVariationConfiguration));
+        var variation = PocoMapperCollection.ByName(nameof(VariationDataSetConfiguration));
 
-        ListFields.Except(scoped.GetPropertyNames()).ShouldBeEmpty();
-        ListFields.Except(dataView.GetPropertyNames()).ShouldBeEmpty();
+        // VariationKind is told from the owner and is not stored.
+        ListFields.Where(field => field != "VariationKind").Except(variation.GetPropertyNames()).ShouldBeEmpty();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public void ADataViewImplementationHoldsTheChartAndAScopedOneHoldsNothingBeyondTheList()
+    public void TheVariationDataSetHoldsTheChartBesideTheList()
     {
-        var scoped = PocoMapperCollection.ByName(nameof(ScopedDataSetVariationConfiguration));
-        var dataView = PocoMapperCollection.ByName(nameof(DataViewDataSetVariationConfiguration));
+        var variation = PocoMapperCollection.ByName(nameof(VariationDataSetConfiguration));
 
-        dataView.GetPropertyNames().ShouldContain("Encoding");
-        dataView.GetPropertyNames().ShouldContain("ChartType");
-        scoped.GetPropertyNames().ShouldNotContain("Encoding");
-        scoped.GetPropertyNames().ShouldNotContain("ChartType");
+        variation.GetPropertyNames().ShouldContain("Encoding");
+        variation.GetPropertyNames().ShouldContain("ChartType");
     }
 
     [Fact]
@@ -62,26 +58,48 @@ public class DataSetVariationDomainConfigurationTests
     public void AVariationIsNotYetClassifiedUntilSomeoneClassifiesIt()
     {
         new DataSetVariationDomainConfiguration().ClassificationId.ShouldBe(DataClassifications.NotYetClassified.Id);
-        new ScopedDataSetVariationConfiguration().ClassificationId.ShouldBe(DataClassifications.NotYetClassified.Id);
-        new DataViewDataSetVariationConfiguration().ClassificationId.ShouldBe(DataClassifications.NotYetClassified.Id);
+        new VariationDataSetConfiguration().ClassificationId.ShouldBe(DataClassifications.NotYetClassified.Id);
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public void EachKindNamesItselfByTheImplementationItsDomainRowCarries()
+    public void AVariationNamesItselfByTheImplementationItsDataSetRowCarries()
     {
-        ScopedDataSetVariationConfiguration.ImplementationName.ShouldBe("Scoped");
-        DataViewDataSetVariationConfiguration.ImplementationName.ShouldBe("DataView");
+        VariationDataSetConfiguration.ImplementationName.ShouldBe("Variation");
+        VariationKinds.Scoped.ShouldBe("Scoped");
+        VariationKinds.DataView.ShouldBe("DataView");
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public void ListFieldsCarryFromTheDomainRowOntoTheImplementationAndBack()
+    public void TheOwnerTellsAScopedVariationFromADataView()
+    {
+        new VariationDataSetConfiguration { OwnerWorkspaceId = Guid.NewGuid() }.VariationKind.ShouldBe(VariationKinds.Scoped);
+        new VariationDataSetConfiguration { OwnerUserId = Guid.NewGuid() }.VariationKind.ShouldBe(VariationKinds.DataView);
+        new VariationDataSetConfiguration().VariationKind.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Configuration")]
+    public void AVariationIsADataSetThatHoldsNoFieldsOfItsOwn()
+    {
+        var variation = new VariationDataSetConfiguration();
+
+        variation.ShouldBeAssignableTo<IDataSetImplementationConfiguration>();
+        variation.Fields.ShouldBeEmpty();
+        variation.Sources.ShouldBeEmpty();
+        variation.KeyFields.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Configuration")]
+    public void StoredListFieldsCarryFromTheListRecordOntoTheVariationAndBack()
     {
         var owner = Guid.NewGuid();
-        var user = Guid.NewGuid();
         var main = Guid.NewGuid();
         var parent = Guid.NewGuid();
         const string filters = """{"field":"grade","operator":"Equal","value":"07"}""";
@@ -92,43 +110,42 @@ public class DataSetVariationDomainConfigurationTests
             DisplayName = "Students",
             Description = "A workspace's view",
             OwnerWorkspaceId = owner,
-            OwnerUserId = user,
             BaseDataSetId = main,
             ParentVariationId = parent,
-            Filters = filters,
+            StoredFilters = filters,
             ClassificationId = 123456,
             CreatedAt = created,
         };
         var rowMapper = PocoMapperCollection.ByName(nameof(DataSetVariationDomainConfiguration));
-        var implementationMapper = PocoMapperCollection.ByName(nameof(ScopedDataSetVariationConfiguration));
-        var implementation = new ScopedDataSetVariationConfiguration();
+        var implementationMapper = PocoMapperCollection.ByName(nameof(VariationDataSetConfiguration));
+        var implementation = new VariationDataSetConfiguration();
+        var stored = ListFields.Where(field => field != "VariationKind").ToList();
 
         var values = rowMapper.MapToParameters(row);
-        foreach (var field in ListFields)
+        foreach (var field in stored)
             implementationMapper.SetValue(implementation, field, values[field]);
 
         implementation.VariationName.ShouldBe("students");
         implementation.DisplayName.ShouldBe("Students");
         implementation.Description.ShouldBe("A workspace's view");
         implementation.OwnerWorkspaceId.ShouldBe(owner);
-        implementation.OwnerUserId.ShouldBe(user);
         implementation.BaseDataSetId.ShouldBe(main);
         implementation.ParentVariationId.ShouldBe(parent);
-        implementation.Filters.ShouldBe(filters);
+        implementation.StoredFilters.ShouldBe(filters);
         implementation.ClassificationId.ShouldBe(123456);
         implementation.CreatedAt.ShouldBe(created);
+        implementation.VariationKind.ShouldBe(VariationKinds.Scoped);
 
         var taken = new DataSetVariationDomainConfiguration();
         var carried = implementationMapper.MapToParameters(implementation);
-        foreach (var field in ListFields)
+        foreach (var field in stored)
             rowMapper.SetValue(taken, field, carried[field]);
 
         taken.VariationName.ShouldBe("students");
         taken.OwnerWorkspaceId.ShouldBe(owner);
-        taken.OwnerUserId.ShouldBe(user);
         taken.BaseDataSetId.ShouldBe(main);
         taken.ParentVariationId.ShouldBe(parent);
-        taken.Filters.ShouldBe(filters);
+        taken.StoredFilters.ShouldBe(filters);
         taken.ClassificationId.ShouldBe(123456);
         taken.CreatedAt.ShouldBe(created);
     }

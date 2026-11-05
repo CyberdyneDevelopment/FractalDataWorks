@@ -1,4 +1,5 @@
 using Fdw.Collections.Attributes;
+using Fdw.Conventions;
 using Fdw.Roslyn.Commands.Abstractions;
 using static Fdw.Roslyn.Commands.Abstractions.RoslynCommands;
 
@@ -40,4 +41,11 @@ public sealed class GenerateInterfaceCommand : RoslynCommandBase
     /// Gets or sets the file path where the interface should be created.
     /// </summary>
     public string? FilePath { get; set; }
+
+    /// <summary>
+    /// Gets the file the interface is written to under FDW's one-type-per-file convention: the interface name with
+    /// a <c>.cs</c> extension. Used when <see cref="FilePath"/> is not given.
+    /// </summary>
+    [PlatformDefault]
+    public string ConventionalFileName => $"{InterfaceName}.cs";
 }

@@ -35,5 +35,5 @@ public sealed record ClaimSet
     /// does not say what it trusts has not decided, and the default would decide for it.
     /// </remarks>
     public IReadOnlyList<string> Values(string type, params IClaimSource[] sources)
-        => [.. Claims.Where(c => c.Type == type && sources.Contains(c.Source)).Select(c => c.Value)];
+        => [.. Claims.Where(c => string.Equals(c.Type, type, System.StringComparison.Ordinal) && sources.Contains(c.Source)).Select(c => c.Value)];
 }

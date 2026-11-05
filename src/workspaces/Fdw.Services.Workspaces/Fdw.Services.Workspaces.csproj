@@ -33,6 +33,7 @@
     <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\identity\multitenancy\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
     <ProjectReference Include="..\..\data\Fdw.Data\Fdw.Data.csproj" />
+    <ProjectReference Include="..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

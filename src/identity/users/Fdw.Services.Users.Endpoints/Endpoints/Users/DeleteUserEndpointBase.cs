@@ -5,6 +5,7 @@ using FastEndpoints;
 using Fdw.Services.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -78,7 +79,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 
         if (!result.IsSuccess)
         {
-            ThrowError(result.CurrentMessage ?? "Failed to delete user", 500);
+            ThrowError(result.FailureReason().Message, 500);
             return;
         }
 

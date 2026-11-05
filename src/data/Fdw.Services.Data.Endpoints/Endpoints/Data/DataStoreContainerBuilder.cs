@@ -20,6 +20,24 @@ public static class DataStoreContainerBuilder
     private const string ForeignKeyType = "Foreign";
     private const int MaxSeparatorLength = 10;
 
+    // The format families each format choice belongs to (FDW-3823): a choice is stated only for a container whose format reads or writes it.
+    // A choice every reader takes (ContinueOnError) is not listed.
+    private static readonly Dictionary<string, string[]> ChoiceFamilies = new(StringComparer.Ordinal)
+    {
+        [nameof(DataContainerConfiguration.PropertyNameCaseInsensitive)] = ["Json"],
+        [nameof(DataContainerConfiguration.SkipValidation)] = ["Json"],
+        [nameof(DataContainerConfiguration.UseElementContent)] = ["Xml"],
+        [nameof(DataContainerConfiguration.IncludeAttributes)] = ["Xml"],
+        [nameof(DataContainerConfiguration.RootElementName)] = ["Xml"],
+        [nameof(DataContainerConfiguration.RowElementName)] = ["Xml"],
+        [nameof(DataContainerConfiguration.OmitXmlDeclaration)] = ["Xml"],
+        [nameof(DataContainerConfiguration.ContainsQuotedFields)] = ["Delimited"],
+        [nameof(DataContainerConfiguration.Trim)] = ["Delimited", "FixedWidth"],
+        [nameof(DataContainerConfiguration.QuoteChar)] = ["Delimited"],
+        [nameof(DataContainerConfiguration.WriteByteOrderMark)] = ["Delimited"],
+        [nameof(DataContainerConfiguration.NeutralizeFormulas)] = ["Delimited"],
+    };
+
     /// <summary>
     /// Refuses a file option the container's format does not take: HasHeader for a container of the Delimited family
     /// (Delimited, Csv, Tsv) or Xlsx, Separator for the plain Delimited format only (Csv and Tsv define theirs),
@@ -89,6 +107,35 @@ public static class DataStoreContainerBuilder
             DataServiceResultCodes.ByName("ContainerNameCarriesFormatExtension"), logger,
             ResultDetails.Create(
                 "container", containerName, "extension", extension, "expected", containerName[..^extension.Length]));
+    }
+
+    /// <summary>
+    /// Refuses a format choice the container's format does not take (FDW-3823): an XML element name on a JSON container, a quote
+    /// character on an XML one. A choice that is not stated is not refused here; the reader or writer refuses it when its format needs it.
+    /// </summary>
+    /// <param name="containerName">The container, for the refusal.</param>
+    /// <param name="format">The container's serialization format; null when it states none.</param>
+    /// <param name="choices">The choices by name, each with its stated value or null.</param>
+    /// <param name="logger">The logger a refusal is written to.</param>
+    /// <returns>The refusal, or null when every choice stated is one the format takes.</returns>
+    public static IGenericResult? FormatChoicesRefusal(
+        string containerName, string? format, IEnumerable<KeyValuePair<string, object?>> choices, ILogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(choices);
+        var family = FamilyOf(format);
+        var misfit = choices.FirstOrDefault(choice => choice.Value is not null
+            && ChoiceFamilies.TryGetValue(choice.Key, out var families)
+            && !families.Contains(family, StringComparer.Ordinal));
+        return misfit.Key is null ? null : NotForFormat(containerName, misfit.Key, string.Join(" or ", ChoiceFamilies[misfit.Key]), logger);
+    }
+
+    // The family of the format the container names; empty for a container that names none or a format that does not resolve.
+    private static string FamilyOf(string? format)
+    {
+        if (string.IsNullOrEmpty(format))
+            return string.Empty;
+        var formatType = FormatTypes.ByName(format);
+        return ReferenceEquals(formatType, FormatTypes.NotFound) ? string.Empty : formatType.Family;
     }
 
     private static IGenericResult NotForFormat(string containerName, string option, string formats, ILogger logger)

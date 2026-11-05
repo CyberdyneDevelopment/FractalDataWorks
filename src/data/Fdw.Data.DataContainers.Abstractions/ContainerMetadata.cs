@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Collections;
 using Fdw.Data.DataStores.Abstractions;
 using Fdw.Results;
+using System.Collections.Immutable;
 
 namespace Fdw.Data.DataContainers.Abstractions;
 
@@ -34,7 +35,7 @@ public sealed class ContainerMetadata
         SizeBytes = sizeBytes;
         CreatedDate = createdDate;
         ModifiedDate = modifiedDate;
-        AdditionalMetadata = (IReadOnlyDictionary<string, object>)(additionalMetadata ?? new Dictionary<string, object>(StringComparer.Ordinal));
+        AdditionalMetadata = (IReadOnlyDictionary<string, object>)(additionalMetadata ?? ImmutableDictionary<string, object>.Empty);
     }
 
     /// <summary>

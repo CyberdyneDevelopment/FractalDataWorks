@@ -5,6 +5,7 @@ using Fdw.Schema;
 using Fdw.Schema.Properties;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data.DataNodes;
 
@@ -91,6 +92,6 @@ public sealed class DataField : IDataField, IField
         Ordinal = ordinal;
         IsNullable = isNullable;
         _datumType = datumType;
-        _fieldType = new SimpleFieldType { TypeName = dataTypeName ?? "Unknown", ClrType = typeof(object) };
+        _fieldType = new SimpleFieldType { TypeName = dataTypeName ?? LogPlaceholders.NoTypeName, ClrType = typeof(object) };
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.RateLimiting.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.RateLimiting.Handlers;
 
@@ -111,7 +112,7 @@ public static class RateLimitRejectionHandler
         }
 
         // Fall back to the connection's remote IP address
-        return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return context.Connection.RemoteIpAddress?.ToString() ?? LogPlaceholders.NoAddress;
     }
 
     /// <summary>

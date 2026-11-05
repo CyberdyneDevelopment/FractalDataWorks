@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Messaging;
 
@@ -11,6 +12,10 @@ public abstract class MessagingServiceTypeBase :
     ServiceTypeBase<IGenericService, IMessagingFactory, IServiceConfiguration>,
     IMessagingServiceType
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "Messaging";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MessagingServiceTypeBase"/> class.
     /// </summary>
@@ -25,7 +30,7 @@ public abstract class MessagingServiceTypeBase :
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "Messaging")
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory)
     {
     }
 }

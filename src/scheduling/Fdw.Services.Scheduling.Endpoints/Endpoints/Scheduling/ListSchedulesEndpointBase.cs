@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Tags;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.Models;
@@ -19,11 +20,19 @@ namespace Fdw.Services.Scheduling.Endpoints;
 public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSchedulesRequest, ScheduleSummaryDto>
 {
     private readonly IScheduleConfigurationProvider _provider;
+    private readonly ITagService? _tags;
 
-    /// <inheritdoc />
-    protected ListSchedulesEndpointBase(ILogger<ListSchedulesEndpointBase> logger, IScheduleConfigurationProvider provider) : base(logger)
+    /// <summary>Initializes a new instance of the <see cref="ListSchedulesEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="provider">Reads the schedules.</param>
+    /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c> (FDW-3816).</param>
+    protected ListSchedulesEndpointBase(
+        ILogger<ListSchedulesEndpointBase> logger,
+        IScheduleConfigurationProvider provider,
+        ITagService? tags = null) : base(logger)
     {
         _provider = provider;
+        _tags = tags;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -42,8 +51,16 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
             return allResult.ToNewResult<List<ScheduleSummaryDto>>();
         }
 
+        var selection = await TagSelection.Read(TaggedWith, _tags, "Schedule", Logger, ct).ConfigureAwait(false);
+        if (selection.IsFailure || selection.Value is null)
+        {
+            return selection.ToNewResult<List<ScheduleSummaryDto>>();
+        }
+
+        // ?tag= keeps the schedules that carry every tag named (FDW-3816).
+        var tagged = selection.Value;
         var allSchedules = allResult.Value
-            .Where(config => !string.IsNullOrWhiteSpace(config.Name))
+            .Where(config => !string.IsNullOrWhiteSpace(config.Name) && tagged.Keeps(config.Id))
             .ToList();
 
         var filtered = ApplyFilters(allSchedules, request);

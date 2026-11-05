@@ -47,9 +47,19 @@ public abstract class CreateEscalationPolicyEndpointBase : Endpoint<EscalationPo
     {
         OperationsEndpointLog.CreatingEscalationPolicy(_logger, req.Name);
 
+        // The policy's choices and each level's severity and recipient type have no default; a request that leaves one out is refused (FDW-3823).
+        var missing = EscalationMapper.Missing(req);
+        if (missing.Count > 0 || req.IsEnabled is not { } isEnabled || req.MaxEscalationLevel is not { } maxLevel || req.CooldownMinutes is not { } cooldown
+            || req.MaxRetries is not { } maxRetries || req.RetryDelaySeconds is not { } retryDelay)
+        {
+            AddError("Required and not stated: " + string.Join(", ", missing));
+            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            return;
+        }
+
         try
         {
-            var model = EscalationMapper.ToModel(req);
+            var model = EscalationMapper.ToModel(req, isEnabled, maxLevel, cooldown, maxRetries, retryDelay);
             var result = await _escalationService.CreatePolicy(model, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)

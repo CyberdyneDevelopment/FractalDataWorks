@@ -9,6 +9,8 @@ using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Catalog.Clients.Models;
+using Fdw.Services.Tags;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -17,16 +19,20 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
 {
     private readonly IDataSetAnnotationConfigurationProvider _provider;
     private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly ITagService _tags;
 
     /// <summary>Initializes a new instance of the <see cref="ListDataSetAnnotationsEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    /// <param name="dataSets">Used to confirm the named DataSet exists.</param>
+    /// <param name="dataSets">Used to confirm the named DataSet exists and to find its tags.</param>
+    /// <param name="tags">Reads the data set's tags.</param>
     protected ListDataSetAnnotationsEndpointBase(
         IDataSetAnnotationConfigurationProvider provider,
-        IDataSetConfigurationProvider dataSets)
+        IDataSetConfigurationProvider dataSets,
+        ITagService tags)
     {
         _provider = provider;
         _dataSets = dataSets;
+        _tags = tags;
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -73,10 +79,21 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
             return;
         }
 
+        var names = await DataSetAnnotationTags.Read(_tags, _dataSets, req.DataSetName, Logger, ct).ConfigureAwait(false);
+        if (names.IsFailure || names.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(names, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         var annotations = result.Value?
             .Where(a => string.Equals(a.DataSetName, req.DataSetName, System.StringComparison.OrdinalIgnoreCase))
             .Select(MapToDto)
             .ToList() ?? [];
+        foreach (var annotation in annotations)
+        {
+            annotation.Tags = names.Value;
+        }
 
         await Send.OkAsync(annotations, ct).ConfigureAwait(false);
     }

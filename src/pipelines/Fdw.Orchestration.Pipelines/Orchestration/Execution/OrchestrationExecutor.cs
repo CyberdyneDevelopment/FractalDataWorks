@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
 using Fdw.Orchestration.Abstractions.TypeCollections;
+using Fdw.Conventions;
 
 namespace Fdw.Orchestration.Execution;
 
@@ -34,10 +35,15 @@ namespace Fdw.Orchestration.Execution;
 /// </remarks>
 public class OrchestrationExecutor : IOrchestrationExecutor
 {
+    /// <summary>How a step that states no error handling is run when its policy states none either: the execution stops.</summary>
+    [PlatformDefault]
+    private static IErrorHandlingMode DefaultErrorHandling => ErrorHandlingModes.ByName("StopOnError");
+
     /// <summary>
     /// How long a cacheable step's result is kept when the execution policy sets no duration of its
     /// own. A deployment sets this before the host starts.
     /// </summary>
+    [PlatformDefault]
     public static TimeSpan DefaultResultCacheDuration { get; set; } = TimeSpan.FromHours(1);
 
     private readonly IResiliencePipelineFactory _resilienceFactory;
@@ -116,12 +122,9 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         CancellationToken cancellationToken)
     {
         var executionOrder = ResolveExecutionOrder(orchestration);
-        var defaultErrorHandling = context.Policy.DefaultErrorHandling
-            ?? ErrorHandlingModes.ByName("StopOnError");
 
         var stepResults = await ExecuteStepsInOrder(
             executionOrder,
-            defaultErrorHandling,
             state,
             context,
             result,
@@ -217,7 +220,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
 
     private async Task<List<IOrchestrationStepResult>?> ExecuteStepsInOrder(
         List<IOrchestrationStep> executionOrder,
-        IErrorHandlingMode defaultErrorHandling,
         ExecutionState state,
         IOrchestrationContext context,
         OrchestrationResult result,
@@ -238,7 +240,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
 
             UpdateExecutionState(state, context, step, executionOrder.Count, stepResults.Count);
 
-            var errorHandling = step.ErrorHandling ?? defaultErrorHandling;
+            var errorHandling = step.ErrorHandling is { } stepHandling ? stepHandling : context.Policy.DefaultErrorHandling ?? DefaultErrorHandling;
             var stepResult = await ExecuteStepWithErrorHandling(
                 step, context, errorHandling, cancellationToken).ConfigureAwait(false);
 
@@ -355,7 +357,9 @@ public class OrchestrationExecutor : IOrchestrationExecutor
             context.ExecutionId.ToString(),
             result.OrchestrationId,
             step.StepId,
-            stepResult.ErrorMessage ?? "Step failed");
+            // Why UnstatedFailure: a failed step result always carries its message (OrchestrationStepResult.Failure takes one), so one without
+            // it is the producer's defect, named as such instead of given a default message (FDW-3580).
+            stepResult.ErrorMessage is { } reason ? reason : UnstatedFailure.Message().Message);
 
         result.Complete(
             ExecutionStatuses.ByName("Failed"),
@@ -529,7 +533,13 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         if (cachedResult != null)
             return cachedResult;
 
-        var resilienceOptions = BuildResilienceOptions(step, errorHandling);
+        // A step that retries states how many times; one that does not is refused, never given a count (FDW-3931).
+        if (BuildResilienceOptions(step, errorHandling) is not { } resilienceOptions)
+        {
+            return OrchestrationStepResult.Failure(
+                step.StepId, step.Name, startTime,
+                OrchestrationLogger.StepRetryCountNotStated(_logger, context.ExecutionId.ToString(), step.StepId).Message);
+        }
 
         if (resilienceOptions.MaxRetryAttempts > 0)
         {
@@ -681,7 +691,8 @@ public class OrchestrationExecutor : IOrchestrationExecutor
 
         return OrchestrationStepResult.Failure(
             step.StepId, step.Name, startTime,
-            errorResult.CurrentMessage ?? ex.Message, ex, retryAttempts);
+            // Why two sources: the error handler's own failure, when it failed, says why the step failed; otherwise the exception does.
+            errorResult.IsFailure ? errorResult.FailureReason().Message : ex.Message, ex, retryAttempts);
     }
 
     /// <summary>
@@ -723,16 +734,16 @@ public class OrchestrationExecutor : IOrchestrationExecutor
 
         if (!result.IsSuccess)
         {
-            throw new InvalidOperationException(result.CurrentMessage ?? "Step executor returned failure");
+            throw new InvalidOperationException(result.FailureReason().Message);
         }
 
         return result.Value?.Output;
     }
 
     /// <summary>
-    /// Builds resilience options from step configuration.
+    /// Builds resilience options from step configuration; null when the step retries and its configuration states no retry count.
     /// </summary>
-    private static ResilienceOptions BuildResilienceOptions(
+    private static ResilienceOptions? BuildResilienceOptions(
         IOrchestrationStep step,
         IErrorHandlingMode errorHandling)
     {
@@ -744,7 +755,12 @@ public class OrchestrationExecutor : IOrchestrationExecutor
 
         if (errorHandling.SupportsRetry)
         {
-            options.MaxRetryAttempts = (step.Configuration as OrchestrationStepConfiguration)?.MaxRetries ?? 3;
+            if (step.Configuration is not OrchestrationStepConfiguration stated)
+            {
+                return null;
+            }
+
+            options.MaxRetryAttempts = stated.MaxRetries;
 
             // Use exponential backoff by default for retry modes
             options.BackoffStrategy = BackoffStrategies.ByName("Exponential");

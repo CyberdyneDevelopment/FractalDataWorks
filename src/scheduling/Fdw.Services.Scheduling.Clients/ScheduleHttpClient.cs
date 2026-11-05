@@ -33,6 +33,12 @@ public class ScheduleHttpClient : ApiClientBase, IScheduleClient, IResourceQuery
     }
 
     /// <inheritdoc />
+    public Task<IGenericResult<IReadOnlyList<ScheduleInfoDto>>> List(IReadOnlyList<string> tags, CancellationToken cancellationToken = default)
+    {
+        return GetList<ScheduleInfoDto>(WithRepeatedQuery("schedules", "tag", tags), cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<IGenericResult<ScheduleInfoDto>> Get(string name, CancellationToken cancellationToken = default)
     {
         return Get<ScheduleInfoDto>($"schedules/{name}", cancellationToken);

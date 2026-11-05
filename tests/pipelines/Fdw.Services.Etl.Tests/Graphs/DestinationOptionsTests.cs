@@ -46,6 +46,7 @@ public sealed class DestinationOptionsTests
         destination.CurrentFlagColumn = "IsCurrent";
         destination.SoftDeleteMode = "AbsentFromSource";
         destination.DeletedFlagColumn = "IsGone";
+        destination.DeletedFlagValue = true;
         destination.ValueSources.Add(new PipelineComponentValueSourceConfiguration
         {
             Ordinal = 1, ColumnName = "Number", SourceKind = "NextSequenceValue", SequenceName = "OrderNumbers",
@@ -63,6 +64,7 @@ public sealed class DestinationOptionsTests
         row.CurrentFlagColumn.ShouldBe("IsCurrent");
         row.SoftDeleteMode.ShouldBe("AbsentFromSource");
         row.DeletedFlagColumn.ShouldBe("IsGone");
+        row.DeletedFlagValue.ShouldBe(true);
         row.ValueSources.Select(source => source.ColumnName).ShouldBe(["Origin", "Number"]);
         row.ValueSources[1].SequenceOrderColumns.Single().ColumnName.ShouldBe("Id");
         row.Columns.Count(column => column.Role == "Write").ShouldBe(2);
@@ -95,6 +97,7 @@ public sealed class DestinationOptionsTests
         destination.CurrentFlagColumn = "IsCurrent";
         destination.SoftDeleteMode = "AbsentFromSource";
         destination.DeletedFlagColumn = "IsGone";
+        destination.DeletedFlagValue = true;
 
         Paths(destination).ShouldBeEmpty();
     }

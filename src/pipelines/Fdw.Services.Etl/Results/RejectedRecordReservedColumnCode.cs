@@ -24,7 +24,7 @@ public sealed class RejectedRecordReservedColumnCode : EtlResultCodeBase
     public RejectedRecordReservedColumnCode()
         : base(21002, "RejectedRecordReservedColumn",
             ResultSeverities.ByName("Error"),
-            "A record rejected by stage '{StageName}' of pipeline '{PipelineName}' already has a field named '{FieldName}', which the reject step fills in itself; rename or remove the field",
+            "A record rejected by component '{ComponentName}' of pipeline '{PipelineName}' already has a field named '{FieldName}', which the reject step fills in itself; rename or remove the field",
             isRetryable: false)
     {
     }

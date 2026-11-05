@@ -56,7 +56,13 @@ dotnet_diagnostic.CA1841.severity = suggestion  # Prefer Dictionary.Contains
 dotnet_diagnostic.CA1845.severity = suggestion  # Use span-based string.Concat
 dotnet_diagnostic.CA1846.severity = suggestion  # Prefer AsSpan over Substring
 dotnet_diagnostic.CA1847.severity = suggestion  # Use char literal for single char
-dotnet_diagnostic.CA2016.severity = warning      # Forward CancellationToken
+dotnet_diagnostic.CA2016.severity = error        # Forward CancellationToken; tier 1 (FDW-3578)
+# Tier 1 (FDW-3578): string comparison, CancellationToken forwarding and duplicate type names fail the build.
+dotnet_diagnostic.CA1307.severity = error        # Specify StringComparison for clarity
+dotnet_diagnostic.CA1309.severity = error        # Use ordinal StringComparison
+dotnet_diagnostic.CA1310.severity = error        # Specify StringComparison for correctness
+dotnet_diagnostic.MA0040.severity = error        # Forward the CancellationToken parameter
+dotnet_diagnostic.FDW009.severity = error        # Duplicate type name in one assembly (off by default)
 
 # Meziantou Performance - All auto-fixable
 dotnet_diagnostic.MA0029.severity = suggestion  # Combine LINQ methods
@@ -115,7 +121,7 @@ dotnet_diagnostic.SA1309.severity = none  # Field underscore
 dotnet_diagnostic.SA1200.severity = none  # Using directives placement
 dotnet_diagnostic.MA0002.severity = warning  # Use IEqualityComparer or IComparer (perf issue)
 dotnet_diagnostic.MA0004.severity = none  # Use AsyncFixer04 instead
-dotnet_diagnostic.MA0006.severity = suggestion  # Use string.Equals (correctness)
+dotnet_diagnostic.MA0006.severity = error       # Use string.Equals (correctness); tier 1 (FDW-3578)
 dotnet_diagnostic.MA0009.severity = warning  # Regex DoS (real security issue)
 dotnet_diagnostic.MA0016.severity = suggestion  # Prefer abstraction over implementation
 dotnet_diagnostic.MA0048.severity = none  # File name must match type name - replaced by FDW005 (supports generic arity variants)

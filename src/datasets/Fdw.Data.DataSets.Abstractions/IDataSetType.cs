@@ -45,12 +45,6 @@ public interface IDataSetType : ITypeOption<int, DataSetTypeBase>
     string ConfigurationSection { get; }
 
     /// <summary>
-    /// Gets the version of this dataset schema.
-    /// </summary>
-    /// <value>The schema version string for compatibility and migration purposes.</value>
-    string Version { get; }
-
-    /// <summary>
     /// Gets whether this kind applies a query's ordering and paging in the store, so that a page asked
     /// for is the page returned.
     /// </summary>

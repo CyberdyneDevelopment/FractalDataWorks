@@ -48,7 +48,7 @@ public sealed class FindNamespaceMismatchesTranslator
                 RoslynResultCodes.ByName("CommandCannotBeNull"));
         }
 
-        FindNamespaceMismatchesTranslatorLog.Scanning(Logger, command.Scope ?? "(whole solution)", command.IncludeTests);
+        FindNamespaceMismatchesTranslatorLog.Scanning(Logger, command.Scope ?? RoslynReportPlaceholders.WholeSolution, command.IncludeTests);
 
         var projects = SelectProjects(solution, command);
         var mismatches = new List<NamespaceMismatch>();
@@ -83,10 +83,10 @@ public sealed class FindNamespaceMismatchesTranslator
 
         if (kept.Count == 0)
         {
-            FindNamespaceMismatchesTranslatorLog.NamespaceMismatchesNotFound(Logger, command.Scope ?? "(whole solution)");
+            FindNamespaceMismatchesTranslatorLog.NamespaceMismatchesNotFound(Logger, command.Scope ?? RoslynReportPlaceholders.WholeSolution);
             return GenericResult<QueryResult<NamespaceMismatchReport>>.Failure(
                 RoslynResultCodes.ByName("NamespaceMismatchesNotFound"),
-                ResultDetails.Create().With("Scope", command.Scope ?? "(whole solution)"));
+                ResultDetails.Create().With("Scope", command.Scope ?? RoslynReportPlaceholders.WholeSolution));
         }
 
         var report = BuildReport(kept, typesScanned, command.IncludeTests, command.IncludeTypes, command.MaxTypesPerGroup);
@@ -112,7 +112,7 @@ public sealed class FindNamespaceMismatchesTranslator
         if (string.IsNullOrWhiteSpace(scope)) return true;
 
         return project.Name.Contains(scope!, StringComparison.OrdinalIgnoreCase)
-            || (document.FilePath?.Contains(scope!, StringComparison.OrdinalIgnoreCase) ?? false);
+            || (document.FilePath is { } filePath && filePath.Contains(scope!, StringComparison.OrdinalIgnoreCase));
     }
 
     private static NamespaceMismatch? Evaluate(

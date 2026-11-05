@@ -29,19 +29,19 @@ internal static class FamilyTypeResolver
         CancellationToken cancellationToken,
         ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
-        FamilyTypeResolverLog.ResolveStart(logger, typeName);
+        var log = logger ?? NullLogger.Instance;
+        FamilyTypeResolverLog.ResolveStart(log, typeName);
 
         // 1) fully-qualified attempt
         foreach (var project in solution.Projects)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                FamilyTypeResolverLog.Cancelled(logger, typeName);
+                FamilyTypeResolverLog.Cancelled(log, typeName);
                 return null;
             }
 
-            FamilyTypeResolverLog.FqnAttempt(logger, project.Name, typeName);
+            FamilyTypeResolverLog.FqnAttempt(log, project.Name, typeName);
 
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
             if (compilation is null)
@@ -50,24 +50,24 @@ internal static class FamilyTypeResolver
             var direct = compilation.GetTypeByMetadataName(typeName);
             if (direct is not null)
             {
-                FamilyTypeResolverLog.FqnHit(logger, project.Name, typeName);
+                FamilyTypeResolverLog.FqnHit(log, project.Name, typeName);
                 return direct;
             }
         }
 
         // 2) simple-name fallback
-        var simpleName = typeName.Contains('.') ? typeName.Substring(typeName.LastIndexOf('.') + 1) : typeName;
-        FamilyTypeResolverLog.SimpleNameFallback(logger, simpleName);
+        var simpleName = typeName.Contains('.', System.StringComparison.Ordinal) ? typeName.Substring(typeName.LastIndexOf('.') + 1) : typeName;
+        FamilyTypeResolverLog.SimpleNameFallback(log, simpleName);
 
         foreach (var project in solution.Projects)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                FamilyTypeResolverLog.Cancelled(logger, typeName);
+                FamilyTypeResolverLog.Cancelled(log, typeName);
                 return null;
             }
 
-            FamilyTypeResolverLog.SimpleNameAttempt(logger, project.Name, simpleName);
+            FamilyTypeResolverLog.SimpleNameAttempt(log, project.Name, simpleName);
 
             var declarations = await SymbolFinder.FindDeclarationsAsync(
                 project, simpleName, ignoreCase: false, SymbolFilter.Type, cancellationToken).ConfigureAwait(false);
@@ -75,12 +75,12 @@ internal static class FamilyTypeResolver
             var match = declarations.OfType<INamedTypeSymbol>().FirstOrDefault();
             if (match is not null)
             {
-                FamilyTypeResolverLog.SimpleNameHit(logger, project.Name, match.ToDisplayString());
+                FamilyTypeResolverLog.SimpleNameHit(log, project.Name, match.ToDisplayString());
                 return match;
             }
         }
 
-        FamilyTypeResolverLog.NotFound(logger, typeName);
+        FamilyTypeResolverLog.NotFound(log, typeName);
         return null;
     }
 }

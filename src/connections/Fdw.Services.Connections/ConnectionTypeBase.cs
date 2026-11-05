@@ -48,16 +48,16 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// <param name="sectionName">The configuration section name</param>
     /// <param name="displayName">The display name for this service type.</param>
     /// <param name="description">The description of what this service type provides.</param>
-    /// <param name="category">The category for this connection type (defaults to "Connection").</param>
+    /// <param name="category">The category for this connection type. Every connection type names its own (FDW-3580).</param>
     /// <param name="defaultContainerName">The default container name for this connection type.</param>
     protected ConnectionTypeBase(
         string name,
         string sectionName,
         string displayName,
         string description,
-        string? category = null,
+        string category,
         string defaultContainerName = "")
-        : base(name, sectionName, displayName, description, category ?? "Connection",
+        : base(name, sectionName, displayName, description, category,
                defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)
@@ -223,7 +223,7 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// Selected from <see cref="DataStoreTypes.All"/>, so a type this deployment did not register is never offered.
     /// </remarks>
     public IReadOnlyList<string> SupportedDataStoreTypes =>
-        [.. DataStoreTypeNames.Where(n => DataStoreTypes.All().Any(d => d.Name == n))];
+        [.. DataStoreTypeNames.Where(n => DataStoreTypes.All().Any(d => string.Equals(d.Name, n, StringComparison.Ordinal)))];
 
     /// <inheritdoc />
     /// <remarks>

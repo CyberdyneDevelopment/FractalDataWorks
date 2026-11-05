@@ -22,14 +22,12 @@ public abstract class AgentActionTypeBase<TService, TFactory> :
     /// <param name="sectionName">The configuration section name.</param>
     /// <param name="displayName">The display name.</param>
     /// <param name="description">The description.</param>
-    /// <param name="category">The optional category.</param>
     protected AgentActionTypeBase(
         string name,
         string sectionName,
         string displayName,
-        string description,
-        string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "AgentAction")
+        string description)
+        : base(name, sectionName, displayName, description, "AgentAction")
     {
     }
 }

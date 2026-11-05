@@ -127,7 +127,7 @@ public class MessageApiClient
     public virtual async Task<int> GetUnreadCount(CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.GetFromJsonAsync<UnreadCountResponse>("messages/unread-count", cancellationToken).ConfigureAwait(false);
-        return response?.Count ?? 0;
+        return (response ?? throw new InvalidOperationException("The unread-count response had no body.")).Count;
     }
 
 

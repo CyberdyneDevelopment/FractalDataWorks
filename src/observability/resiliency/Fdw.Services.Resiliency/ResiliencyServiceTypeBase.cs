@@ -2,6 +2,7 @@ using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Resiliency;
 
@@ -12,6 +13,10 @@ public abstract class ResiliencyServiceTypeBase :
     ServiceTypeBase<IGenericService, IResiliencyFactory, IServiceConfiguration>,
     IResiliencyServiceType
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "Resiliency";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ResiliencyServiceTypeBase"/> class.
     /// </summary>
@@ -28,7 +33,7 @@ public abstract class ResiliencyServiceTypeBase :
         string description,
         string? category = null,
         string defaultContainerName = "")
-        : base(name, sectionName, displayName, description, category ?? "Resiliency",
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory,
                defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)

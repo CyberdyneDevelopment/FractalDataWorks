@@ -1,6 +1,7 @@
 #pragma warning disable CS1591
 using System;
 using System.Collections.Generic;
+using Fdw.Abstractions;
 using Fdw.Conventions;
 using Fdw.Schema.Properties;
 
@@ -33,7 +34,7 @@ internal static class MsSqlTypeMapper
         }
 
         var clrType = Type.GetType(clrTypeName);
-        var underlyingType = clrType != null ? (Nullable.GetUnderlyingType(clrType) ?? clrType) : null;
+        var underlyingType = clrType?.WithoutNullable();
 
         return underlyingType?.Name switch
         {
@@ -71,7 +72,7 @@ internal static class MsSqlTypeMapper
         }
 
         var clrType = Type.GetType(clrTypeName);
-        var underlyingType = clrType != null ? (Nullable.GetUnderlyingType(clrType) ?? clrType) : null;
+        var underlyingType = clrType?.WithoutNullable();
 
         return underlyingType?.Name switch
         {
@@ -97,7 +98,7 @@ internal static class MsSqlTypeMapper
         }
 
         var clrType = Type.GetType(clrTypeName);
-        var underlyingType = clrType != null ? (Nullable.GetUnderlyingType(clrType) ?? clrType) : null;
+        var underlyingType = clrType?.WithoutNullable();
 
         return underlyingType?.Name switch
         {
@@ -122,7 +123,7 @@ internal static class MsSqlTypeMapper
         }
 
         var clrType = Type.GetType(clrTypeName);
-        var underlyingType = clrType != null ? (Nullable.GetUnderlyingType(clrType) ?? clrType) : null;
+        var underlyingType = clrType?.WithoutNullable();
 
         return underlyingType?.Name switch
         {

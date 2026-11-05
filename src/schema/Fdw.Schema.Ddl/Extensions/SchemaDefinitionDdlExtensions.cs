@@ -20,12 +20,12 @@ public static class SchemaDefinitionDdlExtensions
     /// <typeparam name="TProperty">The property definition type.</typeparam>
     /// <param name="schema">The schema definition.</param>
     /// <param name="generator">The DDL generator to use.</param>
-    /// <param name="options">Optional generation options.</param>
+    /// <param name="options">The generation options; the caller states every one.</param>
     /// <returns>A result containing the list of DDL commands, or an error.</returns>
     public static IGenericResult<IReadOnlyList<IDdlCommand>> ToDdlCommands<TProperty>(
         this ISchemaDefinition<TProperty> schema,
         IDdlGenerator generator,
-        DdlGenerationOptions? options = null)
+        DdlGenerationOptions options)
         where TProperty : IPropertyDefinition
     {
         return generator.GenerateCommands(schema, options);
@@ -37,12 +37,12 @@ public static class SchemaDefinitionDdlExtensions
     /// <typeparam name="TProperty">The property definition type.</typeparam>
     /// <param name="schema">The schema definition.</param>
     /// <param name="generator">The DDL generator to use.</param>
-    /// <param name="options">Optional generation options.</param>
+    /// <param name="options">The generation options; the caller states every one.</param>
     /// <returns>A result containing the SQL script text, or an error.</returns>
     public static IGenericResult<string> ToSqlScript<TProperty>(
         this ISchemaDefinition<TProperty> schema,
         IDdlGenerator generator,
-        DdlGenerationOptions? options = null)
+        DdlGenerationOptions options)
         where TProperty : IPropertyDefinition
     {
         var commandsResult = generator.GenerateCommands(schema, options);

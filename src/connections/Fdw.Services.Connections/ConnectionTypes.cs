@@ -152,11 +152,18 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IDocumentConnectionProvider>(),
                     sp.GetService<ILoggerFactory>(),
                     sp.GetService<ILogger<DocumentStores>>()));
+            builder.Services.TryAddSingleton<Fdw.Documents.Records.Abstractions.IDocumentRecordStores>(sp =>
+                new DocumentRecordStores(
+                    sp.GetRequiredService<IConnectionAssignmentConfigurationProvider>(),
+                    sp.GetRequiredService<IConnectionGrantConfigurationProvider>(),
+                    sp.GetRequiredService<IDocumentRecordConnectionProvider>(),
+                    sp.GetService<ILoggerFactory>(),
+                    sp.GetService<ILogger<DocumentRecordStores>>()));
             builder.Services.TryAddScoped<IConnectionGrants>(sp =>
                 new ConnectionGrants(
                     sp.GetRequiredService<IConnectionGrantConfigurationProvider>(),
                     sp.GetRequiredService<IConnectionAssignmentConfigurationProvider>(),
-                    sp.GetRequiredService<IDocumentConnectionProvider>(),
+                    sp.GetRequiredService<IConnectionProvider>(),
                     sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ITenantProvider>(),
                     sp.GetService<ILogger<ConnectionGrants>>()));
             builder.Services.TryAddScoped<IConnectionAssignments>(sp =>
@@ -185,6 +192,8 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
             builder.Services.TryAddSingleton<IDocumentConnectionProvider>(sp =>
                 (IDocumentConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
+            builder.Services.TryAddSingleton<IDocumentRecordConnectionProvider>(sp =>
+                (IDocumentRecordConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
 
             builder.Services.TryAddSingleton<IServiceConnectionProvider, ServiceConnectionProvider>();
 

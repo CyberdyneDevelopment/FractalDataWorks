@@ -30,6 +30,9 @@ public sealed class CreateDataSetFieldRequest
     /// A name that is not an option, a CLR type name such as <c>System.String</c> included, is refused (FDW-1159).
     /// </summary>
     public string DataType { get; set; } = string.Empty;
+    /// <summary>Gets or sets whether the field allows null. Required: the caller states it (FDW-3823).</summary>
+    public bool? IsNullable { get; set; }
+
     /// <summary>Gets or sets whether the field is a key.</summary>
     public bool IsKey { get; set; }
     /// <summary>Gets or sets whether the field is required.</summary>

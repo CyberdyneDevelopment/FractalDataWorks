@@ -39,7 +39,7 @@ public sealed class GraphPayloadMappingTests
             LinkCapacity = 4,
             MaxParallelRuns = 1,
             OverflowBehavior = "Queue",
-            Components = [source, map, split],
+                Components = [source, map, split],
             Links =
             [
                 new GraphLinkPayload { From = new GraphNodePayload { Component = "src", Node = "output" }, To = new GraphNodePayload { Component = "map", Node = "input" } },
@@ -426,7 +426,7 @@ public sealed class GraphPayloadMappingTests
             LinkCapacity = 4,
             MaxParallelRuns = 1,
             OverflowBehavior = "Queue",
-            Components = [source, load],
+                Components = [source, load],
             Links = [new GraphLinkPayload { From = new GraphNodePayload { Component = "src", Node = "output" }, To = new GraphNodePayload { Component = "load", Node = "input" } }],
         };
     }
@@ -441,6 +441,7 @@ public sealed class GraphPayloadMappingTests
             ("effectiveToColumn", "\"ValidTo\""),
             ("softDeleteMode", "\"AbsentFromSource\""),
             ("deletedFlagColumn", "\"IsGone\""),
+            ("deletedFlagValue", "true"),
             ("valueSources", "[{\"column\":\"Number\",\"source\":{\"kind\":\"NextSequenceValue\",\"sequenceName\":\"OrderNumbers\",\"orderBy\":[\"Id\"]}},{\"column\":\"Origin\",\"source\":{\"kind\":\"Constant\",\"value\":\"orders\",\"valueType\":\"String\"}}]"));
 
         var read = GraphPayloadReader.Read(graph, System.Guid.NewGuid());
@@ -459,6 +460,26 @@ public sealed class GraphPayloadMappingTests
         sources.Select(v => v.Column).ShouldBe(["Number", "Origin"]);
         sources[0].Source!.OrderBy.ShouldBe(["Id"]);
         sources[1].Source!.ValueType.ShouldBe("String");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AUuidV7ValueSourceIsReadAndWrittenBackAndPassesTheShapeCheck()
+    {
+        var graph = WithDestination(("valueSources", "[{\"column\":\"PublicId\",\"source\":{\"kind\":\"UuidV7\"}}]"));
+
+        var read = GraphPayloadReader.Read(graph, System.Guid.NewGuid());
+
+        read.IsSuccess.ShouldBeTrue(read.CurrentMessage);
+        var load = read.Value!.Components.Single(c => c.Name == "load");
+        load.ValueSources.Single().SourceKind.ShouldBe("UuidV7");
+        load.ValueSources.Single().ColumnName.ShouldBe("PublicId");
+        GraphShapeValidator.Problems(read.Value!, NullLogger.Instance).ShouldBeEmpty();
+
+        var written = GraphPayloadWriter.Write(read.Value!).Components.Single(c => c.Name == "load");
+        var sources = (List<PipelineLoadColumnSource>)written.Settings["valueSources"]!;
+        sources.Single().Source!.Kind.ShouldBe("UuidV7");
     }
 
     [Fact]

@@ -185,6 +185,25 @@ public static partial class DefaultConfigurationProviderLog
     public static partial IGenericMessage DomainRowSaved(
         ILogger logger, string typeName, string name, Guid id, string domainRowAction);
 
+    /// <summary>A member was to be placed, but the host registers no placement, so it is not made (FDW-3692).</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="kind">What the member is.</param>
+    /// <param name="name">The member's name.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 21711, Level = LogLevel.Error,
+        Message = "{kind} '{name}' was not made: its members are placed in a workspace when they are made, and this host registers no placement")]
+    public static partial IGenericMessage PlacementUnavailable(ILogger logger, string kind, string name);
+
+    /// <summary>A newly made member was placed, in the same unit of work that made it (FDW-3692).</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="typeName">The domain's implementation contract.</param>
+    /// <param name="name">The member's name.</param>
+    /// <param name="kind">What the member was placed as.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 11710, Level = LogLevel.Information,
+        Message = "Placed {typeName} '{name}' as a {kind}")]
+    public static partial IGenericMessage MemberPlaced(ILogger logger, string typeName, string name, string kind);
+
     /// <summary>A domain row and its implementation were deleted.</summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The implementation contract this provider composes.</param>
@@ -786,6 +805,11 @@ public static partial class DefaultConfigurationProviderLog
         Message = "Cannot load the '{childType}' children of '{ownerType}': no POCO mapper is registered for the child type")]
     public static partial IGenericMessage ChildMapperMissing(ILogger logger, string childType, string ownerType);
 
+    /// <summary>Reports a write that cannot cascade to an owner's children because the owner type has no mapper.</summary>
+    [MessageLogging(EventId = 61033, Level = LogLevel.Error,
+        Message = "Cannot {operation} the children of '{ownerType}': no POCO mapper is registered for it, so its child collections are unknown and nothing is written")]
+    public static partial IGenericMessage CascadeMapperMissing(ILogger logger, string ownerType, string operation);
+
     /// <summary>
     /// Reports a child query the gateway answered as a success with no result set -- a contract
     /// breach, since an empty collection is an empty list, not an absent one.
@@ -999,4 +1023,55 @@ public static partial class DefaultConfigurationProviderLog
     [MessageLogging(EventId = 11024, Level = LogLevel.Trace,
         Message = "Read {typeName} page at {skip} (size {take}): {returned} row(s), total {total}")]
     public static partial IGenericMessage DomainPageRead(ILogger logger, string typeName, int skip, int take, int returned, string total);
+
+    // ── Reading a set of owners at once (FDW-3906) ──
+
+    /// <summary>A child table's rows were read for a set of owners in the statements it takes, not one owner at a time.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The child container read.</param>
+    /// <param name="ownerCount">How many owners the rows were read for.</param>
+    /// <param name="rowCount">How many rows came back in all.</param>
+    [MessageLogging(EventId = 11951, Level = LogLevel.Trace,
+        Message = "Read {rowCount} row(s) of child container {container} for {ownerCount} owner(s)")]
+    public static partial IGenericMessage SetChildrenRead(ILogger logger, string container, int ownerCount, int rowCount);
+
+    /// <summary>A set of implementations was read and composed.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation record read.</param>
+    /// <param name="requested">How many domain rows were asked for.</param>
+    /// <param name="found">How many of them have a current implementation.</param>
+    [MessageLogging(EventId = 11952, Level = LogLevel.Debug,
+        Message = "Read the {typeName} of {requested} domain row(s) as a set: {found} found")]
+    public static partial IGenericMessage SetComposed(ILogger logger, string typeName, int requested, int found);
+
+    /// <summary>Two owners of one set hold the same key, so a child row could not be told apart between them.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The owners' container.</param>
+    /// <param name="key">The key both hold.</param>
+    [MessageLogging(EventId = 21064, Level = LogLevel.Error,
+        Message = "Two owners in container '{container}' hold the key {key}, so their children cannot be told apart")]
+    public static partial IGenericMessage SetOwnerKeyRepeated(ILogger logger, string container, string key);
+
+    /// <summary>A row read for a set has no value in the column that says which owner it hangs from.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The container the row was read from.</param>
+    /// <param name="column">The column that holds the owner's key.</param>
+    [MessageLogging(EventId = 21065, Level = LogLevel.Error,
+        Message = "A row of container '{container}' has no value in '{column}', so the owner it hangs from is not known")]
+    public static partial IGenericMessage SetChildKeyUnreadable(ILogger logger, string container, string column);
+
+    /// <summary>A row read for a set names an owner that is not in the set.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The container the row was read from.</param>
+    /// <param name="key">The owner key the row holds.</param>
+    [MessageLogging(EventId = 21066, Level = LogLevel.Error,
+        Message = "A row of container '{container}' hangs from the owner key {key}, which is not one the read asked for")]
+    public static partial IGenericMessage SetChildOrphaned(ILogger logger, string container, string key);
+
+    /// <summary>A row was read for a set but the mapper built no record from it.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The container the row was read from.</param>
+    [MessageLogging(EventId = 91066, Level = LogLevel.Error,
+        Message = "A row of container '{container}' was read and the mapper built no record from it")]
+    public static partial IGenericMessage SetRowNotBuilt(ILogger logger, string container);
 }

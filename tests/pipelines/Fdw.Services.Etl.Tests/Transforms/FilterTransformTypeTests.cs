@@ -513,7 +513,7 @@ public sealed class FilterTransformTypeTests
     {
         // Arrange
         var spec = new FakeTransformOperationSpec { Name = "Filter1", OperationType = "Filter", FilterExpression = "garbage expression" };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -531,7 +531,7 @@ public sealed class FilterTransformTypeTests
     {
         // Arrange
         var spec = new FakeTransformOperationSpec { Name = "Filter1", OperationType = "Filter", FilterExpression = "Points >= {{MinPoints}}" };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -550,7 +550,7 @@ public sealed class FilterTransformTypeTests
     {
         // Arrange
         var spec = new FakeTransformOperationSpec { Name = "Filter1", OperationType = "Filter", FilterExpression = "Age >= 18" };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
@@ -567,7 +567,7 @@ public sealed class FilterTransformTypeTests
     {
         // Arrange
         var spec = new FakeTransformOperationSpec { Name = "Filter1", OperationType = "Filter", FilterExpression = null };
-        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
+        var target = new PipelineTransformConfiguration { IsEnabled = true, Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
 
         // Act
         var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);

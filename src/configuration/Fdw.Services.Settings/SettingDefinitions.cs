@@ -166,13 +166,88 @@ public static class SettingDefinitions
     public const string MaxQueuedPipelineTriggers = "MaxQueuedPipelineTriggers";
 
     /// <summary>
+    /// How often the console reads the run queue again while the queue tab is open, in seconds (FDW-3382). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required, with no number assumed: while the setting is not set, or is not positive, the run queue answers no refresh interval and the tab does not read again
+    /// by itself (its Read again button still works). A tenant may set its own value; the answer carries the value that applies to the caller.
+    /// </remarks>
+    public const string LiveViewRefreshSeconds = "LiveViewRefreshSeconds";
+
+    /// <summary>
+    /// The most pipelines one line of the lineage groups names (FDW-3824). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: <c>GET /lineage/groups</c> fails when it resolves to nothing positive, so an absent setting never reads as no limit. A line
+    /// always says how many pipelines run along it; this only limits how many it names. It resolves server, then tenant, so a tenant can raise or lower it.
+    /// </remarks>
+    public const string LineageLinePipelines = "LineageLinePipelines";
+
+    /// <summary>
+    /// Whether a host that serves no real-time hub relays its pipeline events to the host that does (FDW-3773). DataType: Boolean.
+    /// </summary>
+    /// <remarks>
+    /// Required on a host that serves no hub: an absent value is logged as a missing setting and the host publishes nothing, and no
+    /// value is assumed. False means the host publishes no pipeline events and says so once. A host that serves the hub broadcasts
+    /// through SignalR and does not read it. It is read each time an event is sent, so a change takes effect without a restart.
+    /// </remarks>
+    public const string PipelineEventRelayEnabled = "PipelineEventRelayEnabled";
+
+    /// <summary>
+    /// How often, in seconds, the ETL host publishes the components of the runs in flight (FDW-3778). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: when the setting is absent or not positive the host logs it once and publishes no components, and no number is assumed.
+    /// It is read once, at host start; a change takes effect at the next start. A run's list is sent only when it changed since the last
+    /// one sent.
+    /// </remarks>
+    public const string PipelineComponentsPublishSeconds = "PipelineComponentsPublishSeconds";
+
+    /// <summary>
+    /// How often, in seconds, the console reads the escalation alerts again while the alerts page is open (FDW-3863). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Not set, or not positive for the caller's scope: the list answers no interval and the page does not read again by itself. No number is assumed.
+    /// </remarks>
+    public const string EscalationAlertsRefreshSeconds = "EscalationAlertsRefreshSeconds";
+
+    /// <summary>
+    /// How often, in seconds, a host looks at its open escalation alerts and sends the levels that have fallen due (FDW-3863). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required on a host that runs the escalation timer: it is read when the host starts, and a value that is absent or not positive keeps the timer from starting and says so,
+    /// with no number assumed.
+    /// </remarks>
+    public const string EscalationAdvanceIntervalSeconds = "EscalationAdvanceIntervalSeconds";
+
+    /// <summary>
+    /// The notification priority an escalation level is sent with, the name of a notification priority such as Normal, High or Critical (FDW-3863). DataType: String.
+    /// </summary>
+    /// <remarks>
+    /// Required where a level is sent: a value that is not set or names no priority keeps the level from being sent, says so naming the setting, and is tried again on the next pass.
+    /// No priority is assumed. It is read for the alert's tenant.
+    /// </remarks>
+    public const string EscalationNotificationPriority = "EscalationNotificationPriority";
+
+    /// <summary>
     /// How many times the ETL host starts the same pipeline run again after the host stopped while it ran (FDW-3236). DataType: Int32. Zero or more.
     /// </summary>
     /// <remarks>
-    /// Required, with no number assumed: while the setting is not set, the host starts no cut-off run again. It closes each as failed, naming the setting.
+    /// Required, with no number assumed: while the setting is not set, the host starts no cut-off run again. It closes each, and the records under it, as Interrupted, naming the setting (FDW-3787).
     /// Read when the host starts. Zero is a number someone sets and means a cut-off run is never started again.
     /// </remarks>
     public const string MaxPipelineRunRestarts = "MaxPipelineRunRestarts";
+
+    /// <summary>
+    /// How long a stopping ETL host lets the pipeline runs in flight go on before it stops them, in seconds (FDW-3786). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: the host does not start when the setting is absent or not positive, and no number is assumed. It is read once, at host start; a change
+    /// takes effect at the next start. When the host is told to stop it takes no new runs, waits up to this time for the runs in flight to finish, then
+    /// stops the rest and marks each Interrupted. The host's shutdown timeout is twice this time (the time to wait and as long again to close the records),
+    /// and the service unit's stop timeout must be longer than that.
+    /// </remarks>
+    public const string PipelineStopGraceSeconds = "PipelineStopGraceSeconds";
 
     /// <summary>
     /// How often a host looks at its configuration databases to see whether one was dropped and created again, in seconds (FDW-3207).
@@ -196,6 +271,16 @@ public static class SettingDefinitions
     /// <c>configurationSchema.json</c>) state their own.
     /// </remarks>
     public const string DefaultCommandTimeoutSeconds = "DefaultCommandTimeoutSeconds";
+
+    /// <summary>
+    /// The connect timeout, in seconds, of a connection that states none of its own (FDW-3580).
+    /// </summary>
+    /// <remarks>
+    /// Required, with no number assumed in code or in a column: a connection that states no connect timeout and finds no positive row is not
+    /// built, and the failure names it and this setting. A connection that states its own timeout never reads it. The connections a host needs
+    /// before it can read its settings (the platform configuration and the auth database in <c>configurationSchema.json</c>) state their own.
+    /// </remarks>
+    public const string DefaultConnectionTimeoutSeconds = "DefaultConnectionTimeoutSeconds";
 
     /// <summary>
     /// Maximum number of rows returned by data preview endpoints.
@@ -274,9 +359,18 @@ public static class SettingDefinitions
             [MaxConcurrentPipelineRunsPerServer] = new("Int32", "The most pipeline runs in flight on the whole ETL host at once."),
             [MaxConcurrentPipelineRunsPerTenant] = new("Int32", "The most pipeline runs in flight for one tenant at once; a tenant may override the server's value."),
             [MaxQueuedPipelineTriggers] = new("Int32", "The most pipeline triggers the ETL host holds before it starts them; a trigger past that is dropped. Read at host start."),
-            [MaxPipelineRunRestarts] = new("Int32", "How many times the ETL host starts the same pipeline run again after the host stopped while it ran. Not set: a cut-off run is closed as failed and not started again. Read at host start."),
+            [LineageLinePipelines] = new("Int32", "The most pipelines one line of the lineage groups names; the line still counts all of them."),
+            [LiveViewRefreshSeconds] = new("Int32", "How often, in seconds, the console reads the run queue again while the queue tab is open. Not set: the tab does not read again by itself."),
+            [PipelineEventRelayEnabled] = new("Boolean", "Whether a host that serves no real-time hub relays its pipeline events to the host that does."),
+            [EscalationAlertsRefreshSeconds] = new("Int32", "How often, in seconds, the console reads the escalation alerts again while the alerts page is open. Not set: the page does not read again by itself."),
+            [EscalationAdvanceIntervalSeconds] = new("Int32", "How often, in seconds, the host looks at its open escalation alerts and sends the levels that have fallen due. Not set: the host does not start the escalation timer and says so."),
+            [EscalationNotificationPriority] = new("String", "The notification priority an escalation level is sent with: the name of a notification priority such as Normal, High or Critical. Not set, or naming no priority: the level is not sent, and the next pass tries again."),
+            [PipelineStopGraceSeconds] = new("Int32", "How long, in seconds, a stopping ETL host lets the pipeline runs in flight go on before it stops them and marks each Interrupted. Not set or not positive: the host does not start. Read at host start. The service unit's stop timeout must be longer than twice this."),
+            [MaxPipelineRunRestarts] = new("Int32", "How many times the ETL host starts the same pipeline run again after the host stopped while it ran. Not set: a cut-off run is left Interrupted and not started again; 0 does the same. Read at host start."),
+            [PipelineComponentsPublishSeconds] = new("Int32", "How often, in seconds, the ETL host publishes the components of the runs in flight; read at host start."),
             [ResetWatchIntervalSeconds] = new("Int32", "How often, in seconds, a host looks at its configuration databases to see whether one was reset; the host then empties its result cache. Read at host start."),
             [DefaultCommandTimeoutSeconds] = new("Int32", "The command timeout, in seconds, of a connection or secret manager that states none of its own. Not set: such a connection is not built."),
+            [DefaultConnectionTimeoutSeconds] = new("Int32", "The connect timeout, in seconds, of a connection that states none of its own. Not set: such a connection is not built."),
             [MaxPreviewRows] = new("Int32", "Maximum number of rows returned by data preview endpoints."),
             [DefaultTimeoutMs] = new("Int32", "Default timeout in milliseconds for data operations."),
             [EnableLineageTracking] = new("Boolean", "Whether data lineage tracking is enabled."),
@@ -303,5 +397,6 @@ public static class SettingDefinitions
     /// listed.
     /// </remarks>
     public static bool TryGet(string name, out SettingDefinition definition)
-        => KnownSettings.TryGetValue(name, out definition!) || RateLimitSettingDefinitions.TryGet(name, out definition);
+        => KnownSettings.TryGetValue(name, out definition!) || RateLimitSettingDefinitions.TryGet(name, out definition) ||
+           DefaultValueSettings.TryGet(name, out definition);
 }

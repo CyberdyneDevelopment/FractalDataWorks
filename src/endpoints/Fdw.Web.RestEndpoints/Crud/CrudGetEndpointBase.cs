@@ -218,7 +218,7 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
             await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
-                Code = msg.Code ?? "INTERNAL_ERROR",
+                Code = msg.Code ?? EndpointPlaceholders.InternalErrorCode,
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,

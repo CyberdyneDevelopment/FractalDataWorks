@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -9,6 +8,7 @@ using Fdw.Services.Messaging.Endpoints.Models;
 using Fdw.Web.RestEndpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -73,9 +73,7 @@ public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, P
     /// <inheritdoc/>
     public override async Task HandleAsync(ListMessagesRequest req, CancellationToken ct)
     {
-        var userIdClaim = HttpContext.User.FindFirst("sub")?.Value
-            ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
             await Send.UnauthorizedAsync(ct).ConfigureAwait(false);

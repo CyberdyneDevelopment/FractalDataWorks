@@ -10,7 +10,6 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `ForeignKeyActions` | class | TypeCollection for foreign key referential actions. |
 | `MsSqlAuthenticationTypes` | class | TypeCollection of MsSql authentication configurations. Each entry is both a TypeOption (identity +… |
 | `MsSqlConnectionLimitTypes` | class | TypeCollection of outbound connection limit options for MsSql connections. Mirrors the… |
 | `MsSqlConnectionResultCodes` | class | TypeCollection for MsSql Connection result codes. EventId range: 5200-5299 (within… |

@@ -69,7 +69,7 @@ public sealed class AuthenticationContextData
     /// <param name="logger">The logger.</param>
     public IGenericResult<AuthenticationContext> ToContext(ILogger<AuthenticationContextData>? logger = null)
     {
-        logger ??= NullLogger<AuthenticationContextData>.Instance;
+        var log = logger ?? NullLogger<AuthenticationContextData>.Instance;
 
         var claims = new Claim[Claims.Length];
         for (var i = 0; i < Claims.Length; i++)
@@ -77,7 +77,7 @@ public sealed class AuthenticationContextData
             var source = ClaimSources.ByName(Claims[i].Source);
             if (source == ClaimSources.NotFound)
                 return GenericResult<AuthenticationContext>.Failure(
-                    ExecutionStoreLog.UnknownClaimSource(logger, Claims[i].Source));
+                    ExecutionStoreLog.UnknownClaimSource(log, Claims[i].Source));
 
             claims[i] = new Claim
             {

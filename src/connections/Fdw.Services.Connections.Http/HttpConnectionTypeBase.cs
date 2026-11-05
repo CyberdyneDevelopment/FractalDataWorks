@@ -28,14 +28,14 @@ public abstract class HttpConnectionTypeBase<TService, TConfiguration, TFactory>
     /// <param name="sectionName">The configuration section name for appsettings.json.</param>
     /// <param name="displayName">The display name for this service type.</param>
     /// <param name="description">The description of what this service type provides.</param>
-    /// <param name="category">The category for this HTTP connection type (defaults to "HTTP Connection").</param>
+    /// <param name="category">The category for this HTTP connection type. Every connection type names its own (FDW-3580).</param>
     protected HttpConnectionTypeBase(
         string name,
         string sectionName,
         string displayName,
         string description,
-        string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "HTTP Connection")
+        string category)
+        : base(name, sectionName, displayName, description, category)
     {
     }
 }

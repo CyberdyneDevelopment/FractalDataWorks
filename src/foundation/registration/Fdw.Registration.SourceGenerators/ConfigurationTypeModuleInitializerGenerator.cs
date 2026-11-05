@@ -177,7 +177,7 @@ public sealed class ConfigurationTypeModuleInitializerGenerator : IIncrementalGe
             types.Add(new ConfigurationTypeModel(
                 TypeName: type.Name,
                 FullTypeName: type.ToDisplayString(),
-                Namespace: type.ContainingNamespace?.ToDisplayString() ?? "",
+                Namespace: type.ContainingNamespace?.ToDisplayString() ?? string.Empty,
                 ConfigurationName: name
             ));
         }

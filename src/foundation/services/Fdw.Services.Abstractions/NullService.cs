@@ -7,6 +7,7 @@ using Fdw.ServiceTypes.Logging;
 using Fdw.ServiceTypes.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Abstractions;
 
@@ -90,7 +91,7 @@ public sealed class NullService : IGenericService
 
     private ResultDetails Details(IGenericCommand? command)
     {
-        var commandType = command?.GetType().Name ?? "unknown";
+        var commandType = command?.GetType().Name ?? LogPlaceholders.NullName;
         ServiceTypeLog.NoServiceToExecute(_logger, commandType, nameof(NullService));
         return ResultDetails.Create("CommandType", commandType)
             .With("ServiceTypeName", nameof(NullService));

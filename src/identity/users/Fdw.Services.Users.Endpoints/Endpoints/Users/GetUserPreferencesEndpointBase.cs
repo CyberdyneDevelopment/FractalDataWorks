@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Users;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -72,7 +73,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
 
             if (!result.IsSuccess)
             {
-                AddError(result.CurrentMessage ?? "Failed to get preferences.");
+                AddError(result.FailureReason().Message);
                 await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
                 return;
             }

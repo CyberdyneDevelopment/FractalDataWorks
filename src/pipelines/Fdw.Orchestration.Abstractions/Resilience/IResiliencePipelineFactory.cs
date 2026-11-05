@@ -26,19 +26,4 @@ public interface IResiliencePipelineFactory
     /// <param name="options">The resilience options.</param>
     /// <returns>A configured Polly resilience pipeline.</returns>
     ResiliencePipeline<TResult> Create<TResult>(ResilienceOptions options);
-
-    /// <summary>
-    /// Creates a resilience pipeline from step configuration.
-    /// </summary>
-    /// <param name="step">The orchestration step.</param>
-    /// <returns>A configured Polly resilience pipeline.</returns>
-    ResiliencePipeline Create(IOrchestrationStep step);
-
-    /// <summary>
-    /// Creates a resilience pipeline from step configuration with typed result.
-    /// </summary>
-    /// <typeparam name="TResult">The result type.</typeparam>
-    /// <param name="step">The orchestration step.</param>
-    /// <returns>A configured Polly resilience pipeline.</returns>
-    ResiliencePipeline<TResult> CreateForStep<TResult>(IOrchestrationStep step);
 }

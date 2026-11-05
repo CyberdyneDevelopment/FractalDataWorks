@@ -197,7 +197,13 @@ public sealed class ValidateTransformType : TransformTypeBase
     private static string Rejection(string stageName, string checkName) =>
         string.Concat("Record rejected by check '", checkName, "' of stage '", stageName, "'");
 
-    private static string? FirstProblem(ITransformCheckingSpec checking) => ActionProblem(checking) ?? ChecksProblem(checking);
+    private static string? FirstProblem(ITransformCheckingSpec checking)
+    {
+        if (ActionProblem(checking) is { } action)
+            return action;
+
+        return ChecksProblem(checking);
+    }
 
     private static string? ActionProblem(ITransformCheckingSpec checking)
     {

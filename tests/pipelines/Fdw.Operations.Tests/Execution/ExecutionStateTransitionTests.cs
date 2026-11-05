@@ -100,4 +100,44 @@ public sealed class ExecutionStateTransitionTests
     {
         ExecutionStateTypes.Paused.CanTransitionTo(target).ShouldBeFalse();
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void InterruptedIsATerminalStateThatIsNeitherASuccessNorAFailure()
+    {
+        var state = ExecutionStateTypes.Interrupted;
+
+        ReferenceEquals(state, ExecutionStateTypes.NotFound).ShouldBeFalse();
+        state.Name.ShouldBe("Interrupted");
+        state.IsTerminal.ShouldBeTrue();
+        state.IsSuccess.ShouldBeFalse();
+        state.IsFailure.ShouldBeFalse();
+        state.CanTransitionTo("Scheduled").ShouldBeFalse();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    [InlineData("Triggered")]
+    [InlineData("Initialized")]
+    [InlineData("Running")]
+    [InlineData("Paused")]
+    [InlineData("Retrying")]
+    [InlineData("Compensating")]
+    public void AnOpenRunTheHostStoppedCanBeInterrupted(string from)
+    {
+        ExecutionStateTypes.ByName(from).CanTransitionTo("Interrupted").ShouldBeTrue();
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    [InlineData("Completed")]
+    [InlineData("Failed")]
+    [InlineData("Cancelled")]
+    public void ARunThatAlreadyEndedCannotBeInterrupted(string from)
+    {
+        ExecutionStateTypes.ByName(from).CanTransitionTo("Interrupted").ShouldBeFalse();
+    }
 }

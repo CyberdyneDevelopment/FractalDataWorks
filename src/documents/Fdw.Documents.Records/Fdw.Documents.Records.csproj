@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Fdw.Documents.Records</RootNamespace>
+    <PackageId>Fdw.Documents.Records</PackageId>
+    <Title>Fdw Documents Records</Title>
+    <Description>FDW's one document record store (FDW-3673): the record seams carried out as document record commands on the DocumentRecord connection an organization was assigned. Storage belongs to the connection; FDW names no table.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Documents.Records.Abstractions\Fdw.Documents.Records.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\results\Fdw.Results\Fdw.Results.csproj" />
+
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\connections\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

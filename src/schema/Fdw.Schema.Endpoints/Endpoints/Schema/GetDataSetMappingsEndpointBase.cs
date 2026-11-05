@@ -23,6 +23,7 @@ using Fdw.Data.DataSets.Abstractions;
 
 using Fdw.Data.DataSets;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Schema.Endpoints;
 
@@ -114,7 +115,7 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
         await Send.ResultAsync(TypedResults.Json(new
         {
             errorCode = "ReadFailed",
-            messages = new[] { $"Reading {what} failed: {reason ?? "no reason given"}" }
+            messages = new[] { $"Reading {what} failed: {reason ?? LogPlaceholders.NoReason}" }
         }, statusCode: 500)).ConfigureAwait(false);
     }
 

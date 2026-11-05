@@ -97,7 +97,7 @@ public sealed class FlowComponentTests
     [Trait("Category", "Etl")]
     public async Task AnExistingStreamingStageKindRunsBehindInputAndOutputNodes()
     {
-        var stage = new PipelineTransformConfiguration { Name = "Big", OperationType = "Filter", FilterExpression = "Id > 7" };
+        var stage = new PipelineTransformConfiguration { IsEnabled = true, Name = "Big", OperationType = "Filter", FilterExpression = "Id > 7" };
         var adapter = new FlowStageAdapter("filter", new FilterTransformType(), stage, Context(), batchSize: 4);
         var (sink, rows) = Sink("dst");
         var graph = Graph([Source("src", 10), adapter, sink], [Link("src", "filter"), Link("filter", "dst")]);
@@ -114,7 +114,7 @@ public sealed class FlowComponentTests
     public async Task AWholeInputStageKindIsGivenEveryRowOnceWhenTheInputHasEnded()
     {
         var stage = new PipelineTransformConfiguration
-        {
+        { IsEnabled = true,
             Name = "Order",
             OperationType = "Sort",
             SortFields = [new PipelineTransformSortFieldConfiguration { Name = "Id", FieldName = "Id", Direction = "Descending", Ordinal = 0 }]

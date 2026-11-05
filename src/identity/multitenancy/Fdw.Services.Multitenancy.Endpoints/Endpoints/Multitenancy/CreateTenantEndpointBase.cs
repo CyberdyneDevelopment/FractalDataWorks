@@ -75,8 +75,16 @@ public abstract class CreateTenantEndpointBase : Endpoint<CreateTenantRequest, T
             return;
         }
 
+        // Whether people can switch into the tenant is the caller's choice; there is no default (FDW-3823).
+        if (req.IsSelectable is not { } isSelectable)
+        {
+            AddError("IsSelectable is required");
+            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            return;
+        }
+
         var founded = await _founding
-            .Found(new NewTenant(req.Name, req.Slug, req.OrgPrefix, req.ConnectionName), administratorId, req.AdministratorRole, ct)
+            .Found(new NewTenant(req.Name, req.Slug, req.OrgPrefix, req.ConnectionName, isSelectable, req.OrganizationName, req.OrganizationSlug), administratorId, req.AdministratorRole, ct)
             .ConfigureAwait(false);
         if (founded.IsFailure)
         {

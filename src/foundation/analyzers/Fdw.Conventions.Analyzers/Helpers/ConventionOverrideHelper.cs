@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -12,6 +13,25 @@ namespace Fdw.Conventions.Analyzers.Helpers;
 /// </summary>
 internal static class ConventionOverrideHelper
 {
+    /// <summary>
+    /// The diagnostic property that carries the measured line count (FDW006) or complexity (FDW007).
+    /// </summary>
+    /// <remarks>
+    /// Why on the diagnostic: the [ConventionOverride] code fix writes this exact value, and it has no other way to
+    /// learn it. SuppressWithConventionOverrideCodeFixProvider reads the same name (FDW-3504).
+    /// </remarks>
+    internal const string ActualValueProperty = "ActualValue";
+
+    /// <summary>
+    /// The properties of an FDW006 or FDW007 diagnostic: the measured value, in the invariant culture.
+    /// </summary>
+    internal static ImmutableDictionary<string, string?> MeasuredValueProperties(int measuredValue)
+    {
+        return ImmutableDictionary<string, string?>.Empty.Add(
+            ActualValueProperty,
+            measuredValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     /// <summary>
     /// Gets the override value for a property from [ConventionOverride] on the method or containing class.
     /// </summary>
@@ -42,9 +62,15 @@ internal static class ConventionOverrideHelper
     private static int? GetAttributeValue(SyntaxNode node, string propertyName)
     {
         // Get attribute lists from the node
+        // Why a local function and a parenthesized lambda read their own attributes: FDW006 measures each as a unit of
+        // its own, apart from the method that declares it, so its override is its own too (FDW-3504).
         SyntaxList<AttributeListSyntax> attributeLists;
         if (node is BaseMethodDeclarationSyntax method)
             attributeLists = method.AttributeLists;
+        else if (node is LocalFunctionStatementSyntax localFunction)
+            attributeLists = localFunction.AttributeLists;
+        else if (node is ParenthesizedLambdaExpressionSyntax lambda)
+            attributeLists = lambda.AttributeLists;
         else if (node is TypeDeclarationSyntax type)
             attributeLists = type.AttributeLists;
         else

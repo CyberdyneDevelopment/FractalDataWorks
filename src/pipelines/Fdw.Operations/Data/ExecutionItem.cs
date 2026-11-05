@@ -92,7 +92,7 @@ public sealed class ExecutionItem
     /// </summary>
     /// <value>
     /// States from ExecutionStateTypes: "Scheduled", "Triggered", "Initialized",
-    /// "Running", "Paused", "Retrying", "Compensating", "Completed", "Failed", "Cancelled".
+    /// "Running", "Paused", "Retrying", "Compensating", "Completed", "Failed", "Cancelled", "Interrupted".
     /// </value>
     /// <remarks>
     /// State transitions are validated against ExecutionStateTypes.

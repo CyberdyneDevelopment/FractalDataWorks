@@ -1,3 +1,6 @@
+using Fdw.Results;
+using Fdw.Data.Abstractions;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.IO;
@@ -22,7 +25,12 @@ public sealed class JsonRowWriterType : RecordWriterTypeBase
     /// </summary>
     public JsonRowWriterType() : base("Json")
     {
+        BufferSize = 16 * 1024;
+        WriteIndented = false;
     }
+
+    /// <summary>Gets or sets whether the writer indents its output. Declared here as this format's own value (FDW-3823); a host may change it at registration.</summary>
+    public bool WriteIndented { get; set; }
 
     /// <inheritdoc />
     public override string Format => "Json";
@@ -34,10 +42,20 @@ public sealed class JsonRowWriterType : RecordWriterTypeBase
     public override string FileExtension => "json";
 
     /// <inheritdoc />
-    public override RowWriterOptions CreateOptions(IReadOnlyList<string> columns)
-        => new JsonRowWriterOptions { Columns = [.. columns] };
+    public override IGenericResult<RowWriterOptions> CreateOptions(IReadOnlyList<string> columns, IReadOnlyDictionary<string, object> stated, string owner)
+    {
+        var choices = new RowFormatChoices(stated, owner, Format);
+        return choices.Result<RowWriterOptions>(new JsonRowWriterOptions
+        {
+            Columns = [.. columns],
+            WriteIndented = WriteIndented,
+            SkipValidation = choices.Flag("SkipValidation"),
+            BufferSize = BufferSize,
+        });
+    }
+
 
     /// <inheritdoc />
-    public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)
-        => new JsonStreamRowWriter(target, options as JsonRowWriterOptions);
+    public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions options)
+        => new JsonStreamRowWriter(target, options as JsonRowWriterOptions ?? throw new ArgumentException("The Json format writes with JsonRowWriterOptions.", nameof(options)));
 }

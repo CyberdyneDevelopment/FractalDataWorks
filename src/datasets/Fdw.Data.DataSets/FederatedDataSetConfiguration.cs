@@ -68,7 +68,7 @@ public sealed partial class FederatedDataSetConfiguration : IFederatedDataSetCon
     public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
     /// <summary>Gets or sets the version.</summary>
-    public string Version { get; set; } = "1.0";
+    public string Version { get; set; } = string.Empty;
 
     /// <inheritdoc />
     public Guid? CategoryId { get; set; }

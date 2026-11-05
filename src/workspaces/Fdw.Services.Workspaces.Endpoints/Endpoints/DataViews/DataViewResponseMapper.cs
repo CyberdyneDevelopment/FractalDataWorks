@@ -9,17 +9,17 @@ internal static class DataViewResponseMapper
     /// <summary>Projects a data view onto its whole shape.</summary>
     /// <param name="config">The data view.</param>
     /// <param name="parentName">The name of the view it is a view of, or null when it is a view of a data set.</param>
-    internal static DataViewResponse ToResponse(IDataViewDataSetVariationConfiguration config, string? parentName) => new()
+    internal static DataViewResponse ToResponse(IDataSetVariationImplementationConfiguration config, string? parentName) => new()
     {
         Id = config.Id,
         Name = config.Name,
-        Kind = config.Implementation,
+        Kind = config.VariationKind,
         ParentName = parentName,
         DisplayName = config.DisplayName,
         Description = config.Description,
         SubjectDataSetId = config.BaseDataSetId,
         Encoding = config.Encoding,
-        Filters = config.Filters,
+        Filters = config.StoredFilters,
         ChartType = config.ChartType,
         OwnerUserId = config.OwnerUserId,
         CreatedAt = config.CreatedAt,
@@ -32,7 +32,7 @@ internal static class DataViewResponseMapper
     {
         Id = row.Id,
         Name = row.Name,
-        Kind = row.Implementation,
+        Kind = row.VariationKind,
         ParentName = parentName,
         DisplayName = row.DisplayName,
         Description = row.Description,

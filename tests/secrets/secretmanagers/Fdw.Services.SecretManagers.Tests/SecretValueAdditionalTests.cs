@@ -59,17 +59,14 @@ public sealed class SecretValueAdditionalTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void BinaryConstructorWithDefaultsUsesUtcNow()
+    public void BinaryConstructorWithNoDatesLeavesThemUnknown()
     {
         // Arrange & Act
-        var before = DateTimeOffset.UtcNow;
         using var sut = new SecretValue("key", new byte[] { 1, 2 });
-        var after = DateTimeOffset.UtcNow;
 
-        // Assert
-        sut.CreatedAt.ShouldBeGreaterThanOrEqualTo(before);
-        sut.CreatedAt.ShouldBeLessThanOrEqualTo(after);
-        sut.ModifiedAt.ShouldBeGreaterThanOrEqualTo(before);
+        // Assert: a store that records no date leaves it null (FDW-3646)
+        sut.CreatedAt.ShouldBeNull();
+        sut.ModifiedAt.ShouldBeNull();
         sut.Version.ShouldBeNull();
         sut.ExpiresAt.ShouldBeNull();
         sut.Metadata.ShouldBeEmpty();

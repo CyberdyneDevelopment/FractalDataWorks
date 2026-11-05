@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data.Configuration;
 
@@ -70,7 +71,7 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<IConnec
         {
             throw new JsonException(
                 $"Connection '{name}' resolved implementation '{implementation}' "
-                + $"to configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
+                + $"to configuration type '{settingsType?.FullName ?? LogPlaceholders.Null}', which does not implement "
                 + $"{nameof(IConnectionImplementationConfiguration)}.");
         }
 

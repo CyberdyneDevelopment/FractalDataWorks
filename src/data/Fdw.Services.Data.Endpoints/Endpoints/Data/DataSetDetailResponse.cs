@@ -41,7 +41,7 @@ public class DataSetDetailResponse : ResourceDetail
     public string? CategoryPath { get; set; }
 
     /// <summary>
-    /// Gets or sets the dataset strategy discriminator: "Simple", "Compound", or "Federated"
+    /// Gets or sets the dataset strategy discriminator: "Simple", "Compound", "Federated" or "Variation"
     /// (a registered <c>DataSetTypes</c> member).
     /// </summary>
     public string? Implementation { get; set; }
@@ -51,6 +51,24 @@ public class DataSetDetailResponse : ResourceDetail
     /// registered <c>FederationStrategies</c> member). Null for Standard and Compound datasets.
     /// </summary>
     public string? FederationStrategy { get; set; }
+
+    /// <summary>Gets or sets what kind of variation this data set is: "Scoped" (a workspace owns it) or "DataView" (a user does); null for a data set that is not a variation.</summary>
+    public string? VariationKind { get; set; }
+
+    /// <summary>Gets or sets the logical id of the root data set a variation varies; null for a data set that is not a variation.</summary>
+    public Guid? BaseDataSetId { get; set; }
+
+    /// <summary>Gets or sets the logical id of the view a variation narrows, or null when it varies the data set itself or is not a variation.</summary>
+    public Guid? ParentVariationId { get; set; }
+
+    /// <summary>Gets or sets the logical id of the workspace that owns a Scoped variation; null otherwise.</summary>
+    public Guid? OwnerWorkspaceId { get; set; }
+
+    /// <summary>Gets or sets the logical id of the user that owns a data view; null otherwise.</summary>
+    public Guid? OwnerUserId { get; set; }
+
+    /// <summary>Gets or sets a variation's stored filter tree, in the body shape of the data route's filter; null when it has none or is not a variation.</summary>
+    public string? VariationFilters { get; set; }
 
     /// <summary>Gets or sets the name of the source dataset this Compound dataset is derived from.</summary>
     public string? SourceDataSetName { get; set; }

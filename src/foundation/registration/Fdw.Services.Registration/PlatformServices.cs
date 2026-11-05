@@ -141,11 +141,11 @@ public static class PlatformServices
                 ServiceTypeLog.PlatformPhaseDomainFailed(
                 _log, "Configure", entry.CategoryName,
                 _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
-                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                (result.CurrentMessage ?? throw new InvalidOperationException("A failed phase result carries no message; GenericResult refuses that.")).ToString());
                 continue;
             }
 
-            builder = result.Value ?? builder;
+            builder = result.Value ?? throw new InvalidOperationException($"{entry.CategoryName} Configure succeeded with no builder.");
         }
 
         if (_failed.Count > 0)
@@ -199,7 +199,7 @@ public static class PlatformServices
                 ServiceTypeLog.PlatformPhaseDomainFailed(
                 _log, "Register", entry.CategoryName,
                 _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
-                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                (result.CurrentMessage ?? throw new InvalidOperationException("A failed phase result carries no message; GenericResult refuses that.")).ToString());
                 continue;
             }
 
@@ -256,7 +256,7 @@ public static class PlatformServices
                 ServiceTypeLog.PlatformPhaseDomainFailed(
                 _log, "Initialize", entry.CategoryName,
                 _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
-                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                (result.CurrentMessage ?? throw new InvalidOperationException("A failed phase result carries no message; GenericResult refuses that.")).ToString());
                 continue;
             }
 

@@ -6,40 +6,40 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 public sealed class TenantTheme : ITenantTheme
 {
     /// <inheritdoc />
-    public string PrimaryColor { get; set; } = "221 83% 53%"; // Default Blue
+    public string PrimaryColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string SecondaryColor { get; set; } = "215 16% 47%";
+    public string SecondaryColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string AccentColor { get; set; } = "262 83% 58%";
+    public string AccentColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string BackgroundColor { get; set; } = "222 47% 11%";
+    public string BackgroundColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string SurfaceColor { get; set; } = "217 33% 17%";
+    public string SurfaceColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string OverlayColor { get; set; } = "215 28% 23%";
+    public string OverlayColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string SuccessColor { get; set; } = "142 71% 45%";
+    public string SuccessColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string WarningColor { get; set; } = "38 92% 50%";
+    public string WarningColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string ErrorColor { get; set; } = "0 84% 60%";
+    public string ErrorColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string InfoColor { get; set; } = "199 89% 48%";
+    public string InfoColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string TextMainColor { get; set; } = "210 40% 98%";
+    public string TextMainColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string TextMutedColor { get; set; } = "215 20% 65%";
+    public string TextMutedColor { get; set; } = string.Empty;
 
     /// <inheritdoc />
     public string? LogoUrl { get; set; }
@@ -51,10 +51,5 @@ public sealed class TenantTheme : ITenantTheme
     public string? CustomCssUrl { get; set; }
 
     /// <inheritdoc />
-    public bool DarkModeDefault { get; set; } = true;
-
-    /// <summary>
-    /// Gets the default theme.
-    /// </summary>
-    public static TenantTheme Default { get; } = new();
+    public bool DarkModeDefault { get; set; }
 }

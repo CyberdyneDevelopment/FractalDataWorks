@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
     <ProjectReference Include="..\..\datasets\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
     <ProjectReference Include="..\Fdw.Data.Sqlite\Fdw.Data.Sqlite.csproj" />
+    <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -245,7 +245,7 @@ public static class ConfigurationFormModelGenerator
         }
         if (property.ValidationRules.TryGetValue("pattern", out var pattern))
         {
-            builder.AppendLine($"            , Pattern = \"{EscapeString(pattern?.ToString() ?? "")}\"");
+            builder.AppendLine($"            , Pattern = \"{EscapeString(pattern?.ToString() ?? string.Empty)}\"");
         }
     }
 

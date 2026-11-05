@@ -113,7 +113,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 GenericResult.Failure(FlowProviderLog.FlowDisabled(_logger, flowName)));
 
         return GenericResult<AuthenticationFlow>.Failure(
-            FlowProviderLog.FlowKnownInvalid(_logger, flowName, cached.InvalidReason ?? "unknown reason"));
+            FlowProviderLog.FlowKnownInvalid(_logger, flowName, cached.InvalidReason ?? LogPlaceholders.NoReason));
     }
 
     /// <inheritdoc />
@@ -251,7 +251,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
             // StepConfigurationRejected) as a side effect of building this failure. Stashing
             // CurrentMessage here is so Get() can report it again to whoever asked for THIS flow by
             // name, without this row's problem stopping any other row from loading.
-            return new CachedFlow(null, valid.CurrentMessage ?? "failed validation");
+            return new CachedFlow(null, valid.FailureReason().Message);
         }
 
         var flow = new AuthenticationFlow
@@ -312,7 +312,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 var accepted = configured.ValidateConfiguration(entry.Configuration);
                 if (accepted.IsFailure)
                     return GenericResult<IReadOnlyList<string>>.Failure(FlowProviderLog.StepConfigurationRejected(
-                        _logger, flowName, entry.Name, accepted.CurrentMessage ?? "the step gave no reason"));
+                        _logger, flowName, entry.Name, accepted.FailureReason().Message));
             }
 
             if (step is IPermissionGatedAuthenticationStep gated)
@@ -320,7 +320,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 var permission = gated.RequiredPermission(entry.Configuration);
                 if (permission.IsFailure || permission.Value is not { Length: > 0 } name)
                     return GenericResult<IReadOnlyList<string>>.Failure(FlowProviderLog.StepConfigurationRejected(
-                        _logger, flowName, entry.Name, permission.CurrentMessage ?? "the step names no permission"));
+                        _logger, flowName, entry.Name, permission.IsFailure ? permission.FailureReason().Message : "the step names no permission"));
 
                 required.Add(name);
             }

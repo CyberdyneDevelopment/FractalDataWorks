@@ -31,11 +31,28 @@ public sealed class FlowGraph
         IReadOnlyList<FlowLink> links,
         IReadOnlyList<FlowDroppedOutput> dropped,
         IReadOnlyList<FlowStage> stages)
+        : this(components, links, dropped, stages, [])
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="FlowGraph"/> class with components that wait for others to complete (FDW-3640).</summary>
+    /// <param name="components">The components.</param>
+    /// <param name="links">The links between their nodes, which carry rows.</param>
+    /// <param name="dropped">The output nodes that are deliberately linked to nothing.</param>
+    /// <param name="stages">The stage of each component that has one; a component not listed has none.</param>
+    /// <param name="completions">The completion lines: a component that starts only when the one at the start of the line has finished.</param>
+    public FlowGraph(
+        IReadOnlyList<IFlowComponent> components,
+        IReadOnlyList<FlowLink> links,
+        IReadOnlyList<FlowDroppedOutput> dropped,
+        IReadOnlyList<FlowStage> stages,
+        IReadOnlyList<FlowCompletion> completions)
     {
         Components = components ?? throw new ArgumentNullException(nameof(components));
         Links = links ?? throw new ArgumentNullException(nameof(links));
         Dropped = dropped ?? throw new ArgumentNullException(nameof(dropped));
         Stages = stages ?? throw new ArgumentNullException(nameof(stages));
+        Completions = completions ?? throw new ArgumentNullException(nameof(completions));
     }
 
     /// <summary>
@@ -49,8 +66,7 @@ public sealed class FlowGraph
     /// </summary>
     /// <param name="component">The component's name.</param>
     /// <returns>The rank; a link from a higher rank to a lower one could never be read in time.</returns>
-    public int RankOf(string component) =>
-        Stages.FirstOrDefault(stage => string.Equals(stage.Component, component, StringComparison.OrdinalIgnoreCase))?.Stage ?? 0;
+    public int RankOf(string component) => FlowStage.RankIn(Stages, component);
 
     /// <summary>Gets the components.</summary>
     public IReadOnlyList<IFlowComponent> Components { get; }
@@ -60,4 +76,10 @@ public sealed class FlowGraph
 
     /// <summary>Gets the output nodes that are deliberately linked to nothing.</summary>
     public IReadOnlyList<FlowDroppedOutput> Dropped { get; }
+
+    /// <summary>
+    /// Gets the completion lines (FDW-3640). They carry no rows: a component with one starts when the component at its start has finished, besides waiting for
+    /// every component of a lower stage.
+    /// </summary>
+    public IReadOnlyList<FlowCompletion> Completions { get; }
 }

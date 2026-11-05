@@ -10,7 +10,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// Returns the schema information for a connection. If no schema has been discovered yet,
 /// discovers it on-demand and persists the results before returning.
 /// </summary>
-public abstract class GetConnectionSchemaEndpointBase : Endpoint<ConnectionNameRequest, SchemaInformationDto>
+public abstract class GetConnectionSchemaEndpointBase : Endpoint<ConnectionSchemaRequest, SchemaInformationDto>
 {
     private readonly ISchemaInformationService _schemaService;
 
@@ -47,9 +47,20 @@ public abstract class GetConnectionSchemaEndpointBase : Endpoint<ConnectionNameR
     }
 
     /// <inheritdoc />
-    public override async Task HandleAsync(ConnectionNameRequest req, CancellationToken ct)
+    public override async Task HandleAsync(ConnectionSchemaRequest req, CancellationToken ct)
     {
-        var result = await _schemaService.GetSchema(req.Name, ct).ConfigureAwait(false);
+        // The discovery's choices come from the request (FDW-3823); one left out is refused, naming it, before anything is read.
+        var options = DataStoreDiscoveryChoices.FromRequest(
+            req.ExcludedSchemas, req.IncludeOnlySchemas, req.DiscoverViews, req.DiscoverIndexes, req.DiscoverForeignKeys, req.DiscoverDescriptions,
+            req.Name, Logger);
+        if (options.IsFailure)
+        {
+            AddError(options.CurrentMessage ?? string.Empty);
+            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var result = await _schemaService.GetSchema(req.Name, options.Value!, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess || result.Value == null)
         {

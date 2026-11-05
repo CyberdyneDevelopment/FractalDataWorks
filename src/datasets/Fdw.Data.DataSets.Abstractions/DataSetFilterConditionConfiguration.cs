@@ -22,13 +22,13 @@ public sealed class DataSetFilterConditionConfiguration
     /// Valid values: Equals, NotEquals, Contains, StartsWith, EndsWith,
     /// GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual, IsNull, IsNotNull.
     /// </summary>
-    public string Operator { get; set; } = "Equals";
+    public string Operator { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the comparison value. Null for IsNull/IsNotNull operators.</summary>
     public string? Value { get; set; }
 
     /// <summary>Gets or sets the data type of the field, used to build the correctly-typed filter at query time.</summary>
-    public string DataType { get; set; } = "String";
+    public string DataType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the ordinal position (order of application).</summary>
     public int Ordinal { get; set; }

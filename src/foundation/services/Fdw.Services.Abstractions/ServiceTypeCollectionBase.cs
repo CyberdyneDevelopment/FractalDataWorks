@@ -216,7 +216,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         IGenericResult failure)
     {
         ServiceTypeLog.CollectionPhaseStopped(
-            loggerFactory?.CreateLogger(typeof(TInterface).FullName ?? CollectionName) ?? (ILogger)NullLogger.Instance,
+            loggerFactory?.CreateLogger(typeof(TInterface)) ?? (ILogger)NullLogger.Instance,
             CollectionName, phase, option.Name, failure.CurrentMessage ?? string.Empty);
 
         return failure.ToNewResult<T>();
@@ -529,7 +529,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         ServiceTypePhaseSequence sequence,
         Func<T, ILoggerFactory?, IGenericResult<T>> body)
     {
-        var logger = loggerFactory?.CreateLogger(typeof(TInterface).FullName ?? CollectionName)
+        var logger = loggerFactory?.CreateLogger(typeof(TInterface))
             ?? (ILogger)NullLogger.Instance;
         var position = sequence.BeginCollection(CollectionName);
         var implementation = isCustom ? "custom" : "default";

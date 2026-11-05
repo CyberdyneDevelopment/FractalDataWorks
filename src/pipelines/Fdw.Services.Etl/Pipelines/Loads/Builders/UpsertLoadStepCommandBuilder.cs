@@ -63,7 +63,7 @@ public sealed class UpsertLoadStepCommandBuilder : LoadStepCommandBuilderBase
         var problem = options.FirstProblem();
         return problem is null
             ? GenericResult<Fdw.Commands.Data.Upserts.UpsertOptions>.Success(options)
-            : GenericResult<Fdw.Commands.Data.Upserts.UpsertOptions>.Failure(PipelineRunLog.LoadOptionsRefused(input.Logger, input.Owner, LoadKind, problem));
+            : GenericResult<Fdw.Commands.Data.Upserts.UpsertOptions>.Failure(PipelineRunLog.LoadOptionsRefused(input.Logger, input.Owner, LoadKind, problem.Message));
     }
 
     // The command layer's upsert carries no soft delete, so the engine follows it with a delete that flags the keys the

@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Multitenancy.Endpoints.Tests;
 
@@ -35,7 +36,7 @@ public sealed class ListTenantsEndpointTests
     }
 
     private static Action<DefaultHttpContext> Caller()
-        => ctx => ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())], "test"));
+        => ctx => ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimDefinitions.sub.Name, Guid.NewGuid().ToString())], "test"));
 
     private static ISystemRoleConfiguration Roles(bool platformAdmin)
     {

@@ -748,7 +748,7 @@ namespace Fdw.MessageLogging.Generators
 
                 IEnumerable<IMethodSymbol> primaryConstructors = classType!.InstanceConstructors
                     .Where(ic => ic.DeclaringSyntaxReferences
-                        .Any(ds => ds.GetSyntax() is ClassDeclarationSyntax));
+                        .Any(ds => ds.GetSyntax(_cancellationToken) is ClassDeclarationSyntax));
 
                 foreach (IMethodSymbol primaryConstructor in primaryConstructors)
                 {

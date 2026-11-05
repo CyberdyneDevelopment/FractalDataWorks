@@ -57,9 +57,9 @@ public sealed class SchemaImporterOptions
     public bool IncludeRowCounts { get; init; }
 
     /// <summary>
-    /// Include extended properties (MS_Description, etc.) during SQL Server schema import (default: true).
+    /// Include extended properties (MS_Description, etc.) during SQL Server schema import. Required: the caller that asks for the import states it (FDW-3823).
     /// </summary>
-    public bool IncludeExtendedProperties { get; init; } = true;
+    public required bool IncludeExtendedProperties { get; init; }
 
     /// <summary>
     /// Preferred format for REST/OData imports (defaults to JSON).
@@ -70,11 +70,6 @@ public sealed class SchemaImporterOptions
     /// Include deprecated endpoints in OpenAPI imports (default: false).
     /// </summary>
     public bool IncludeDeprecatedEndpoints { get; init; }
-
-    /// <summary>
-    /// Maximum number of concurrent discovery operations (default: 10).
-    /// </summary>
-    public int MaxConcurrentDiscoveries { get; init; } = 10;
 
     /// <summary>
     /// Timeout for schema import operations.

@@ -7,6 +7,7 @@ using Fdw.WebMcp.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.WebMcp.Hosting;
 
@@ -51,7 +52,7 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
 
         foreach (var declaration in declarations)
         {
-            var typeName = declaration.EndpointType.FullName ?? declaration.EndpointType.Name;
+            var typeName = declaration.EndpointType.ToString();
             WebMcpLog.DiscoveringTool(logger, typeName);
 
             if (!routesByEndpointType.TryGetValue(declaration.EndpointType, out var candidates))
@@ -76,8 +77,8 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
             WebMcpLog.EndpointTypesResolved(
                 logger,
                 typeName,
-                selected.Value.RequestType?.FullName ?? "none",
-                selected.Value.ResponseType?.FullName ?? "none");
+                selected.Value.RequestType?.ToString() ?? LogPlaceholders.Null,
+                selected.Value.ResponseType?.ToString() ?? LogPlaceholders.Null);
 
             var unbindable = FirstUnbindableParameter(selected.Value.Route, selected.Value.RequestType);
             if (unbindable is not null)

@@ -39,7 +39,7 @@ public sealed class HttpRowSourceType : RecordSourceTypeBase
     public override string Format => "Json";
 
     /// <inheritdoc />
-    public override IRowSourceReader CreateReader(Stream content, RowSourceOptions? options)
+    public override IRowSourceReader CreateReader(Stream content, RowSourceOptions options)
         => throw new NotSupportedException(
             "HTTP row sources wrap a paginated response enumerator and cannot be created from a single content stream.");
 

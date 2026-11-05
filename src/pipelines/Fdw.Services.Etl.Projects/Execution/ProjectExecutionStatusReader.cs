@@ -23,7 +23,7 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
 
     private static readonly HashSet<string> TerminalStates = new HashSet<string>(StringComparer.Ordinal)
     {
-        "Completed", "Failed", "Cancelled"
+        "Completed", "Failed", "Cancelled", "Interrupted"
     };
 
     private static readonly HashSet<string> FailureStates = new HashSet<string>(StringComparer.Ordinal)
@@ -71,7 +71,7 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
         {
             ExecutionItem = item,
             Depth = depth,
-            RollupState = item.State?.Name ?? "Unknown"
+            RollupState = item.State.Name
         };
 
         var childrenResult = await _tracker.GetChildren(item.Id, cancellationToken).ConfigureAwait(false);

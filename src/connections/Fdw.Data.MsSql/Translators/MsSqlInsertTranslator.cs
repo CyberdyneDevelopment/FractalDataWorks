@@ -38,23 +38,22 @@ public sealed partial class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBa
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
-        MsSqlInsertTranslatorLog.Translating(
-            NullLogger<MsSqlInsertTranslator>.Instance, container?.Name ?? "<null>");
-
         try
         {
             var source = Source(command, container);
             if (source.IsFailure)
                 return Task.FromResult(source.ToNewResult<SqlCommand>());
 
+            MsSqlInsertTranslatorLog.Translating(NullLogger<MsSqlInsertTranslator>.Instance, container.Name);
+
             var (dbPath, rows) = source.Value!;
             return Task.FromResult(GenericResult<SqlCommand>.Success(
-                BuildBatchedInsertStatements(container!, dbPath, rows, ReturnedColumnsOf(command, container!))));
+                BuildBatchedInsertStatements(container, dbPath, rows, ReturnedColumnsOf(command, container))));
         }
         catch (Exception ex)
         {
             MsSqlInsertTranslatorLog.InsertTranslationFailed(
-                NullLogger<MsSqlInsertTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
+                NullLogger<MsSqlInsertTranslator>.Instance, ex, container.Name, ex.Message);
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
                     MsSqlDataResultCodes.ByName("InsertTranslationFailed"),

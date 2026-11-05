@@ -59,7 +59,7 @@ public static class PipelineRunClaims
         ArgumentNullException.ThrowIfNull(limits);
         ArgumentNullException.ThrowIfNull(logger);
 
-        var run = new PipelineRunIdentity(request.ExecutionId, request.PipelineId, request.PipelineName, request.TenantId);
+        var run = new PipelineRunIdentity(request.ExecutionId, request.PipelineId, request.PipelineName, request.TenantId, request.ScheduleName, request.ScheduleId);
         var graph = configuration as GraphPipelineConfiguration;
         PipelineRunCap? cap = null;
         if (graph is not null)

@@ -31,10 +31,10 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
     /// </summary>
     /// <param name="target">The destination text writer.</param>
     /// <param name="options">XML writer options.</param>
-    public XmlStreamRowWriter(TextWriter target, XmlRowWriterOptions? options = null)
+    public XmlStreamRowWriter(TextWriter target, XmlRowWriterOptions options)
     {
         if (target is null) throw new ArgumentNullException(nameof(target));
-        _options = options ?? new XmlRowWriterOptions();
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         _writer = XmlWriter.Create(target, new XmlWriterSettings
         {
             Indent = _options.Indent,

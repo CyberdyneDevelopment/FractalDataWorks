@@ -30,9 +30,9 @@ public sealed partial class HttpConnectionConfiguration : HttpConnectionConfigur
             result.Errors.Add(new FluentValidation.Results.ValidationFailure(nameof(BaseUrl), "BaseUrl is required"));
         }
 
-        if (TimeoutSeconds <= 0)
+        if (TimeoutSeconds is <= 0)
         {
-            result.Errors.Add(new FluentValidation.Results.ValidationFailure(nameof(TimeoutSeconds), "TimeoutSeconds must be greater than 0"));
+            result.Errors.Add(new FluentValidation.Results.ValidationFailure(nameof(TimeoutSeconds), "TimeoutSeconds must be greater than 0 when it is stated"));
         }
 
         if (string.IsNullOrWhiteSpace(Protocol))

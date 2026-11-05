@@ -41,7 +41,7 @@ public sealed class XlsxRowSourceTests
     private static string Sheet(string rows) => $"<worksheet xmlns=\"{Main}\"><sheetData>{rows}</sheetData></worksheet>";
 
     private static XlsxRowSourceOptions Options(int columns, bool header = false, string? sheetName = null)
-        => new() { Columns = [.. Enumerable.Range(0, columns).Select(n => "c" + n)], HasHeader = header, SheetName = sheetName };
+        => new() { Columns = [.. Enumerable.Range(0, columns).Select(n => "c" + n)], HasHeader = header, SheetName = sheetName, ContinueOnError = true, BufferSize = 16 * 1024 };
 
     private static List<object?[]> ReadAll(MemoryStream workbook, XlsxRowSourceOptions options)
     {
@@ -77,7 +77,7 @@ public sealed class XlsxRowSourceTests
     public void WhatTheXlsxWriterWritesIsReadBackWithItsTypes()
     {
         var body = new MemoryStream();
-        using (var writer = new XlsxRowWriter(body, new XlsxRowWriterOptions { Columns = ["id", "name", "n", "when", "flag", "time"] }))
+        using (var writer = new XlsxRowWriter(body, new XlsxRowWriterOptions { Columns = ["id", "name", "n", "when", "flag", "time"], SheetName = "Data", BufferSize = 16 * 1024, RowsPerSheet = XlsxRowWriterOptions.MaxRowsPerSheet }))
         {
             writer.Write(new Dictionary<string, object?>
             {
@@ -165,13 +165,13 @@ public sealed class XlsxRowSourceTests
     [Fact]
     public void TheReaderNeedsColumnsAndTheTypeIsBinaryAndRegistered()
     {
-        Should.Throw<ArgumentException>(() => new XlsxRowSource(new MemoryStream(), new XlsxRowSourceOptions()));
+        Should.Throw<ArgumentException>(() => new XlsxRowSource(new MemoryStream(), new XlsxRowSourceOptions() { ContinueOnError = true, HasHeader = false, BufferSize = 16 * 1024 }));
 
         var type = RecordSourceTypes.ByName("Xlsx");
         type.ReadsBinary.ShouldBeTrue();
         type.Format.ShouldBe("Xlsx");
         RecordSourceTypes.ByName("Delimited").ReadsBinary.ShouldBeFalse();
-        Should.Throw<ArgumentException>(() => type.CreateReader(new MemoryStream(), null));
+        Should.Throw<ArgumentException>(() => type.CreateReader(new MemoryStream(), null!));
         using var reader = type.CreateReader(ExcelShaped(), Options(3, header: true));
         reader.Read().ShouldBeTrue();
     }

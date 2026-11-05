@@ -139,7 +139,7 @@ public sealed class ConnectionEndpointBehaviorTests
     [Trait("Priority", "P1")]
     public void BindAcceptsAConnectionThatStatesMaxSerialInsert()
     {
-        var bound = MsSqlBehaviorWithItsValidator().Bind(Json("""{ "server": "db", "database": "Ops", "maxSerialInsert": 1000 }"""), Logger);
+        var bound = MsSqlBehaviorWithItsValidator().Bind(Json("""{ "server": "db", "database": "Ops", "port": 1433, "defaultSchema": "dbo", "maxSerialInsert": 1000 }"""), Logger);
 
         bound.IsSuccess.ShouldBeTrue();
         bound.Value.ShouldBeOfType<MsSqlConnectionConfiguration>().MaxSerialInsert.ShouldBe(1000);
@@ -184,10 +184,26 @@ public sealed class ConnectionEndpointBehaviorTests
 
     [Fact]
     [Trait("Priority", "P1")]
+    public void AConnectionWithNoAdditionalPropertiesIsRefusedNamingTheMemberNotReadAsOneWithNoValues()
+    {
+        // FDW-3454: the provider read a missing dictionary as an empty one; the type's validator now refuses it where the connection is saved.
+        var stored = new MsSqlConnectionConfiguration { Server = "db", Database = "Ops", MaxSerialInsert = 1000, AdditionalProperties = null! };
+
+        var validated = new MsSqlConnectionConfigurationValidator().Validate(stored);
+        var merged = MsSqlBehaviorWithItsValidator().Merge(Json("""{ "port": 1434 }"""), stored, Logger);
+
+        validated.IsValid.ShouldBeFalse();
+        validated.Errors.ShouldContain(error => error.ErrorMessage.Contains("AdditionalProperties must be stated", StringComparison.Ordinal));
+        merged.IsFailure.ShouldBeTrue();
+        merged.CurrentMessage.ShouldNotBeNull().ShouldContain("AdditionalProperties");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
     public void MergeRefusesAChangeThatLeavesTheConfigurationBrokenAndKeepsAValidOne()
     {
         var behavior = MsSqlBehaviorWithItsValidator();
-        var stored = new MsSqlConnectionConfiguration { Server = "db", Database = "Ops", MaxSerialInsert = 1000, CommandTimeoutSeconds = 30 };
+        var stored = new MsSqlConnectionConfiguration { Server = "db", Database = "Ops", Port = 1433, DefaultSchema = "dbo", MaxSerialInsert = 1000, CommandTimeoutSeconds = 30 };
 
         var refused = behavior.Merge(Json("""{ "commandTimeoutSeconds": 0 }"""), stored, Logger);
         var accepted = behavior.Merge(Json("""{ "commandTimeoutSeconds": 60 }"""), stored, Logger);
@@ -218,7 +234,7 @@ public sealed class ConnectionEndpointBehaviorTests
         var behavior = new ConnectionEndpointBehavior(typeof(MsSqlConnectionConfiguration));
 
         var bound = behavior.Bind(
-            Json("""{ "server": "db", "database": "Ops", "authenticationType": "SqlAuth", "additionalProperties": { "username": "sa" } }"""),
+            Json("""{ "server": "db", "port": 1433, "database": "Ops", "encrypt": true, "trustServerCertificate": false, "authenticationType": "SqlAuth", "additionalProperties": { "username": "sa" } }"""),
             Logger);
 
         var msSql = bound.Value.ShouldBeOfType<MsSqlConnectionConfiguration>();

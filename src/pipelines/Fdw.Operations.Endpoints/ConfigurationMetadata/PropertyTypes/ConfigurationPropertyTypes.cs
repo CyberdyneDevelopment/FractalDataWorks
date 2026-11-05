@@ -3,6 +3,7 @@ using System.Reflection;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Collections.Attributes;
+using Fdw.Abstractions;
 
 namespace Fdw.Operations.Endpoints.ConfigurationMetadata.PropertyTypes;
 
@@ -36,7 +37,7 @@ public abstract partial class ConfigurationPropertyTypes : TypeCollectionBase<Co
     /// </summary>
     public static IConfigurationPropertyTypeDto Convert(Type type)
     {
-        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        var underlyingType = type.WithoutNullable();
 
         if (underlyingType.IsEnum)
             return ConfigurationPropertyTypeDtos.Enum;

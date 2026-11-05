@@ -10,6 +10,7 @@ using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Quality;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.Pagination;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -66,7 +67,7 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
             s.Description = "Finds data sets, data set fields, data stores, paths, containers, container fields, calculations, transformations, " +
                 "pipelines and glossary terms whose name or description contains q (ignoring case), the closest names first. entityTypes " +
                 "narrows the kinds (repeat it per kind); left out, every kind is searched, and q left out lists everything. skip and take page " +
-                "the matches (take is " + CatalogSearchLimits.DefaultTake + " when left out and at most " + CatalogSearchLimits.MaxTake +
+                "the matches (take is the DefaultPaginationSize setting when left out and at most MaxPaginationSize" +
                 ", and skip plus take at most " + CatalogSearchLimits.MaxWindow + "). Each entry carries its kind, name, description and where it sits. A thing the caller may not see is absent. total counts " +
                 "every match before paging.";
         });
@@ -83,14 +84,21 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
             return;
         }
 
-        var skip = req.Skip ?? 0;
-        var take = req.Take ?? CatalogSearchLimits.DefaultTake;
-        if (skip < 0 || take < 1 || take > CatalogSearchLimits.MaxTake)
+        // The one reader every list endpoint pages by: ?skip and ?take, sized by the paging settings, a failure when one is missing.
+        var paging = PaginationQuery.Parse(HttpContext, Logger);
+        if (paging.IsFailure || paging.Value is not { } page)
         {
-            AddError(r => r.Take, $"skip must be 0 or more and take between 1 and {CatalogSearchLimits.MaxTake}");
+            if (paging.CurrentMessage is { } refused)
+            {
+                AddError(refused);
+            }
+
             await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
             return;
         }
+
+        var skip = page.Skip;
+        var take = page.Take;
 
         // Why: the page is chosen from the closest matches each source returns, and a source reads no more than the window.
         if ((long)skip + take > CatalogSearchLimits.MaxWindow)

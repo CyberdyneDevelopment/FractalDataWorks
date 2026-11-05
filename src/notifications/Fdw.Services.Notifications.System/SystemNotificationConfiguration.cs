@@ -45,7 +45,7 @@ public sealed partial class SystemNotificationConfiguration : INotificationImple
     /// <summary>
     /// Gets or sets whether this notification channel is enabled.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the secret manager to use for retrieving secrets.
@@ -65,14 +65,12 @@ public sealed partial class SystemNotificationConfiguration : INotificationImple
     // ========================================
 
     /// <summary>
-    /// Gets or sets the default message severity for system notifications.
-    /// Defaults to Info.
+    /// Gets or sets the message severity the system notifications of this channel carry. A channel states it; none is assumed (FDW-3580).
     /// </summary>
-    public string DefaultSeverity { get; set; } = "Info";
+    public string DefaultSeverity { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the default message type for system notifications.
-    /// Defaults to Notification.
+    /// Gets or sets the message type the system notifications of this channel carry. A channel states it; none is assumed (FDW-3580).
     /// </summary>
-    public string DefaultMessageType { get; set; } = "Notification";
+    public string DefaultMessageType { get; set; } = string.Empty;
 }

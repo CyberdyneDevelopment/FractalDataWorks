@@ -160,8 +160,7 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
             return;
         }
 
-        var byName = target.Paths?.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase)
-            ?? new Dictionary<string, DataPathConfiguration>(StringComparer.OrdinalIgnoreCase);
+        var byName = (target.Paths ?? []).ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
         target.Paths = request.Paths
             .Select(p => new DataPathConfiguration

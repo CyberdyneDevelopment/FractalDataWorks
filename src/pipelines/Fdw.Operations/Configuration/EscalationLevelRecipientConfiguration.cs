@@ -77,5 +77,5 @@ public sealed partial class EscalationLevelRecipientConfiguration : IGenericConf
     /// </para>
     /// Consider using TypeCollection lookup for type validation in future iterations.
     /// </remarks>
-    public string RecipientType { get; set; } = "Email";
+    public string RecipientType { get; set; } = string.Empty;
 }

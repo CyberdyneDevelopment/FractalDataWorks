@@ -5,6 +5,7 @@ using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Results;
+using Fdw.Conventions;
 
 namespace Fdw.Services;
 
@@ -51,7 +52,7 @@ public abstract class ImplementationServiceProviderBase<TService, TConfiguration
                 ResultDetails.Create(
                     "Provider", GetType().Name,
                     "ExpectedType", typeof(TConfiguration).Name,
-                    "ActualType", configuration?.GetType().Name ?? "(null)"));
+                    "ActualType", configuration?.GetType().Name ?? LogPlaceholders.Null));
 
         var created = await Create(typed, cancellationToken).ConfigureAwait(false);
         return created.IsSuccess && created.Value is not null

@@ -1,13 +1,16 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Abstractions.Logging;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Http.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Connections.Http;
 
@@ -63,11 +66,24 @@ public sealed class HttpProtocolTranslatorAdapter : IDataCommandTranslator<HttpR
     public bool Maps(string commandType) => _protocol.Maps(commandType);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A Delete that does not state its rows (no filter, no soft delete, no AllRows) is refused here, before any protocol
+    /// builds a request: every protocol is reached through this adapter, so no HTTP DELETE goes out without a condition by
+    /// accident (FDW-3660).
+    /// </remarks>
     public Task<IGenericResult<HttpRequestMessage>> Translate(
         IDataCommand command,
         IStorageContainer container,
         CancellationToken cancellationToken = default)
     {
+        if (command is IFilterableCommand delete
+            && string.Equals(command.CommandType, "Delete", StringComparison.Ordinal)
+            && DeleteScope.Problem(delete) is { } problem)
+        {
+            return Task.FromResult(GenericResult<HttpRequestMessage>.Failure(
+                DeleteScopeLog.Refused(NullLogger<HttpProtocolTranslatorAdapter>.Instance, container.Name, problem)));
+        }
+
         return _protocol.Translate(command, container, _context, cancellationToken);
     }
 }

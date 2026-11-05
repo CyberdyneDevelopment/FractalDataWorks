@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
+using Fdw.Conventions;
 
 namespace Fdw.Data.DataStores.Rest;
 
@@ -30,6 +31,10 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
 public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfiguration>, ISchemaImporter<RestConfiguration>
 {
+    /// <summary>The name a data store is given when the document describes none of its own.</summary>
+    [PlatformDefault]
+    private const string DefaultStoreName = "OpenAPI DataStore";
+
     private readonly ILogger<RestOpenApiSchemaImporter> _logger;
 
     /// <summary>
@@ -60,12 +65,12 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
     /// Imports schema from an OpenAPI specification.
     /// </summary>
     /// <param name="source">The source URL or file path to the OpenAPI specification.</param>
-    /// <param name="options">Optional import options.</param>
+    /// <param name="options">The import options; the caller states them.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result containing the discovered DataStore configuration or failure information.</returns>
     public override async Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
-        SchemaImporterOptions? options = null,
+        SchemaImporterOptions options,
         CancellationToken cancellationToken = default)
     {
         try
@@ -85,8 +90,8 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
                 return parseResult.ToNewResult<DataStoreImplementationConfiguration>();
 
             var openApiDocument = parseResult.Value!;
-            var baseUrl = openApiDocument.Servers?.FirstOrDefault()?.Url ?? source;
-            var storeName = openApiDocument.Info?.Title ?? "OpenAPI DataStore";
+            var baseUrl = openApiDocument.Servers?.FirstOrDefault()?.Url is { } serverUrl ? serverUrl : source;
+            var storeName = openApiDocument.Info?.Title ?? DefaultStoreName;
 
             var dataStore = new DataStoreImplementationConfiguration
             {
@@ -219,7 +224,7 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
         try
         {
             var method = operationType.ToString().ToUpperInvariant();
-            var operationId = operation.OperationId ?? $"{method}_{pathTemplate.Replace("/", "_")}";
+            var operationId = operation.OperationId is { } declaredId ? declaredId : $"{method}_{pathTemplate.Replace("/", "_", StringComparison.Ordinal)}";
 
             // 1. Build the endpoint container config with its discovered fields
             var container = new DataContainerConfiguration
@@ -316,7 +321,7 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
                     location,
                     prop.Value.Type,
                     prop.Value.Format,
-                    !(schema.Required?.Contains(prop.Key) ?? false),
+                    !(schema.Required is { } required && required.Contains(prop.Key)),
                     prop.Value.Description);
             }
         }

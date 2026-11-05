@@ -35,6 +35,53 @@ internal static class LineageRequests
                 new LineageNeighbourhoodQuery(request.Node!.Trim(), direction, request.Depth!.Value, kinds.Value!));
     }
 
+    /// <summary>Checks a groups request: the grouping is required and must be one of the two, and a limit has to match the grouping.</summary>
+    public static IGenericResult<LineageGroupsAsk> Groups(LineageGroupsRequest request, ILogger logger)
+    {
+        var groupBy = request.GroupBy?.Trim();
+        var valid = $"{LineageGroups.ByCategory}, {LineageGroups.ByTag}";
+        if (string.IsNullOrEmpty(groupBy))
+            return MapRequestRefusals.Invalid<LineageGroupsAsk>(logger, $"groupBy is required: one of {valid}");
+
+        var byCategory = string.Equals(groupBy, LineageGroups.ByCategory, StringComparison.OrdinalIgnoreCase);
+        var byTag = string.Equals(groupBy, LineageGroups.ByTag, StringComparison.OrdinalIgnoreCase);
+        if (!byCategory && !byTag)
+            return MapRequestRefusals.Invalid<LineageGroupsAsk>(logger, $"groupBy '{request.GroupBy}' is not one of {valid}");
+
+        if (byTag && !string.IsNullOrEmpty(request.Category))
+            return MapRequestRefusals.Invalid<LineageGroupsAsk>(logger, "category limits a grouping by category; with groupBy=tag name a tag instead");
+
+        if (byCategory && !string.IsNullOrEmpty(request.Tag))
+            return MapRequestRefusals.Invalid<LineageGroupsAsk>(logger, "tag limits a grouping by tag; with groupBy=category name a category instead");
+
+        var containers = ContainerGroups(request, byTag, logger);
+        return containers.IsFailure
+            ? containers.ToNewResult<LineageGroupsAsk>()
+            : GenericResult<LineageGroupsAsk>.Success(new LineageGroupsAsk(
+                byCategory ? LineageGroups.ByCategory : LineageGroups.ByTag,
+                string.IsNullOrEmpty(request.Category) ? null : request.Category,
+                string.IsNullOrEmpty(request.Tag) ? null : request.Tag,
+                containers.Value));
+    }
+
+    // Grouping by tag needs the caller to say where containers sit; grouping by category has no such choice and refuses one.
+    private static IGenericResult<bool> ContainerGroups(LineageGroupsRequest request, bool byTag, ILogger logger)
+    {
+        var chosen = request.ContainerGroups?.Trim();
+        if (!byTag)
+        {
+            return string.IsNullOrEmpty(chosen)
+                ? GenericResult<bool>.Success(false)
+                : MapRequestRefusals.Invalid<bool>(logger, "containerGroups chooses where containers sit when grouping by tag; with groupBy=category they sit in their data store path");
+        }
+
+        if (string.Equals(chosen, LineageGroups.ContainersByStorePath, StringComparison.OrdinalIgnoreCase)) return GenericResult<bool>.Success(false);
+        if (string.Equals(chosen, LineageGroups.ContainersByStoreTags, StringComparison.OrdinalIgnoreCase)) return GenericResult<bool>.Success(true);
+
+        return MapRequestRefusals.Invalid<bool>(
+            logger, $"containerGroups is required with groupBy=tag: one of {LineageGroups.ContainersByStorePath}, {LineageGroups.ContainersByStoreTags}");
+    }
+
     /// <summary>Checks a search request: the text is required; the count is held to its maximum.</summary>
     public static IGenericResult<LineageSearchQuery> Search(LineageSearchRequest request, ILogger logger)
     {
@@ -96,13 +143,13 @@ internal static class LineageRequests
     {
         if (string.IsNullOrWhiteSpace(node))
         {
-            return $"{parameter} is required: the id of a data set or data store{(allowPipeline ? ", or a pipeline" : string.Empty)}, as Kind:id";
+            return $"{parameter} is required: the id of a data set, data store or container{(allowPipeline ? ", or a pipeline" : string.Empty)}, as Kind:id";
         }
 
         if (!MapNodeIds.TryParse(node.Trim(), out var kind, out _))
             return $"{parameter} '{node}' is not a node id (Kind:id)";
 
-        var traced = kind is MapKinds.DataSet or MapKinds.DataStore || (allowPipeline && kind == MapKinds.Pipeline);
+        var traced = kind is MapKinds.DataSet or MapKinds.DataStore or MapKinds.Container || (allowPipeline && string.Equals(kind, MapKinds.Pipeline, StringComparison.Ordinal));
         return traced ? null : $"{parameter} '{node}' is a {kind}, which the lineage does not trace";
     }
 

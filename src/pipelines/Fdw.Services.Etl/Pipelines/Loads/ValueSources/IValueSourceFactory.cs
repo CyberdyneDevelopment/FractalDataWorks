@@ -15,6 +15,9 @@ public interface IValueSourceFactory : ITypeOption<int, IValueSourceFactory>
     /// <summary>Gets whether the engine can give a column its value in the rows themselves, before a load that takes rows.</summary>
     bool SuppliesRowValue { get; }
 
+    /// <summary>Gets whether the kind gives a new value that must never replace the value a row already has, so a load that updates rows refuses it.</summary>
+    bool InsertOnly { get; }
+
     /// <summary>Builds the value source of this kind from its row.</summary>
     /// <param name="source">The configuration row.</param>
     /// <param name="owner">What the value source belongs to, for refusal messages.</param>
@@ -22,9 +25,9 @@ public interface IValueSourceFactory : ITypeOption<int, IValueSourceFactory>
     /// <returns>The value source, or a failure saying why the row cannot be built.</returns>
     IGenericResult<ColumnValueSource> Create(PipelineLoadValueSourceConfiguration source, string owner, ILogger logger);
 
-    /// <summary>Gives the value a row-supplying kind puts in its column.</summary>
+    /// <summary>Gives the producer of the value a row-supplying kind puts in its column; the load calls it once for each row.</summary>
     /// <param name="source">The built value source.</param>
     /// <param name="now">The moment the load began, the same for every row.</param>
-    /// <returns>The value.</returns>
-    object? RowValue(ColumnValueSource source, DateTimeOffset now);
+    /// <returns>The producer, which gives the value for one row.</returns>
+    Func<object?> RowValueProducer(ColumnValueSource source, DateTimeOffset now);
 }

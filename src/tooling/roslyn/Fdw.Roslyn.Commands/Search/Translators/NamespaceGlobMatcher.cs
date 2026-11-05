@@ -32,10 +32,10 @@ internal sealed class NamespaceGlobMatcher
     /// <param name="logger">Optional logger; defaults to <see cref="NullLogger.Instance"/>.</param>
     public static NamespaceGlobMatcher Create(string? pattern, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
+        var log = logger ?? NullLogger.Instance;
         if (string.IsNullOrEmpty(pattern))
         {
-            NamespaceGlobMatcherLog.CreateAcceptAll(logger);
+            NamespaceGlobMatcherLog.CreateAcceptAll(log);
             return AcceptAll;
         }
 
@@ -51,8 +51,8 @@ internal sealed class NamespaceGlobMatcher
         sb.Append('$');
 
         var regexPattern = sb.ToString();
-        NamespaceGlobMatcherLog.CompiledRegex(logger, pattern, regexPattern);
-        return new NamespaceGlobMatcher(new Regex(regexPattern, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)), logger);
+        NamespaceGlobMatcherLog.CompiledRegex(log, pattern, regexPattern);
+        return new NamespaceGlobMatcher(new Regex(regexPattern, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)), log);
     }
 #pragma warning restore MA0009
 

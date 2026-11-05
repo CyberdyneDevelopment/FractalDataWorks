@@ -11,6 +11,7 @@ using Fdw.Workspace.Roslyn;
 using Fdw.Workspace.Roslyn.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Workspace.Management;
 
@@ -20,6 +21,10 @@ namespace Fdw.Workspace.Management;
 /// </summary>
 public sealed class WorkspaceManager : IWorkspaceManager
 {
+    /// <summary>The workspace factory of a manager that is given none: the Roslyn MSBuild workspace factory.</summary>
+    [PlatformDefault]
+    public static IRoslynWorkspaceFactory DefaultWorkspaceFactory => new RoslynWorkspaceFactory();
+
     private readonly ConcurrentDictionary<Guid, ManagedWorkspace> _workspaces = new();
     private readonly IWorkspaceSessionStore _sessionStore;
     private readonly IRoslynWorkspaceFactory _workspaceFactory;
@@ -39,7 +44,7 @@ public sealed class WorkspaceManager : IWorkspaceManager
         ILogger<WorkspaceManager>? logger = null)
     {
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
-        _workspaceFactory = workspaceFactory ?? new RoslynWorkspaceFactory();
+        _workspaceFactory = workspaceFactory ?? DefaultWorkspaceFactory;
         _logger = logger ?? NullLogger<WorkspaceManager>.Instance;
     }
 

@@ -25,7 +25,8 @@ public sealed class PrimaryBackupResiliencyConfiguration : ResiliencyConfigurati
     public Guid RefreshScheduleId { get; set; }
 
     /// <summary>
-    /// Gets or sets whether data served from the backup source is annotated in the lineage graph.
+    /// Gets or sets whether data served from the backup source is annotated in the lineage graph. Nothing reads it yet, so it has no
+    /// default and may be unstated (FDW-3931).
     /// </summary>
-    public bool FlagBackupDataInLineage { get; set; } = true;
+    public bool? FlagBackupDataInLineage { get; set; }
 }

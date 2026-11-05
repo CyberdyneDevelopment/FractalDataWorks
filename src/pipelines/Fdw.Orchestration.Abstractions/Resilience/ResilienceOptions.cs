@@ -11,9 +11,10 @@ namespace Fdw.Orchestration.Abstractions.Resilience;
 public sealed class ResilienceOptions
 {
     /// <summary>
-    /// Gets or sets the maximum number of retry attempts.
+    /// Gets or sets the maximum number of retry attempts. The builder states it from the step's configuration; nothing assumes one
+    /// (FDW-3931: "you are defining a resilience policy. why in the fuck would you have a default?").
     /// </summary>
-    public int MaxRetryAttempts { get; set; } = 3;
+    public int MaxRetryAttempts { get; set; }
 
     /// <summary>
     /// Gets or sets the backoff strategy for retries.
@@ -31,24 +32,9 @@ public sealed class ResilienceOptions
     public TimeSpan? Timeout { get; set; }
 
     /// <summary>
-    /// Gets or sets whether to enable circuit breaker.
+    /// Gets or sets the circuit breaker, every value of which its definer states; null for none (FDW-3931).
     /// </summary>
-    public bool EnableCircuitBreaker { get; set; }
-
-    /// <summary>
-    /// Gets or sets the circuit breaker failure threshold.
-    /// </summary>
-    public double CircuitBreakerFailureRatio { get; set; } = 0.5;
-
-    /// <summary>
-    /// Gets or sets the minimum throughput before circuit breaker activates.
-    /// </summary>
-    public int CircuitBreakerMinimumThroughput { get; set; } = 10;
-
-    /// <summary>
-    /// Gets or sets how long the circuit stays open before testing again.
-    /// </summary>
-    public TimeSpan CircuitBreakerBreakDuration { get; set; } = TimeSpan.FromSeconds(30);
+    public CircuitBreakerOptions? CircuitBreaker { get; set; }
 
     /// <summary>
     /// Gets or sets the predicate to determine if an exception should trigger retry.
@@ -61,11 +47,6 @@ public sealed class ResilienceOptions
     public Action<Exception, int, TimeSpan>? OnRetry { get; set; }
 
     /// <summary>
-    /// Creates default resilience options.
-    /// </summary>
-    public static ResilienceOptions Default => new();
-
-    /// <summary>
     /// Creates resilience options with no retries.
     /// </summary>
     public static ResilienceOptions NoRetry => new() { MaxRetryAttempts = 0 };
@@ -74,8 +55,7 @@ public sealed class ResilienceOptions
     /// Creates resilience options with exponential backoff.
     /// </summary>
     /// <param name="maxAttempts">Maximum retry attempts.</param>
-    /// <param name="initialDelay">Initial delay before first retry.</param>
-    public static ResilienceOptions ExponentialBackoff(int maxAttempts = 3, TimeSpan? initialDelay = null) =>
+    public static ResilienceOptions ExponentialBackoff(int maxAttempts) =>
         new()
         {
             MaxRetryAttempts = maxAttempts,

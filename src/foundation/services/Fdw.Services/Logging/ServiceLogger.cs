@@ -105,6 +105,12 @@ public static partial class ServiceLogger
     [MessageLogging(EventId = 61003, Level = LogLevel.Warning, Message = "No factory registered for service type '{serviceType}'")]
     public static partial IGenericMessage NoFactoryRegistered(ILogger logger, string serviceType);
 
+    /// <summary>Logs a configuration read that failed while a service was being resolved; its own failure is returned.</summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="identifier">The name or id being resolved.</param>
+    [MessageLogging(EventId = 61032, Level = LogLevel.Warning, Message = "Configuration read for '{identifier}' failed; the read's own failure is returned")]
+    public static partial IGenericMessage ConfigurationReadFailed(ILogger logger, string identifier);
+
     /// <summary>
     /// Logs when configuration is not found.
     /// </summary>
@@ -155,6 +161,26 @@ public static partial class ServiceLogger
     /// </summary>
     [MessageLogging(EventId = 11023, Level = LogLevel.Debug, Message = "Getting service by name: '{name}'")]
     public static partial IGenericMessage GettingServiceByName(ILogger logger, string name);
+
+    /// <summary>Logs the start of a read of every member of a domain.</summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="providerType">The domain service provider reading.</param>
+    [MessageLogging(EventId = 11042, Level = LogLevel.Debug, Message = "{providerType}: getting every service of the domain")]
+    public static partial IGenericMessage GettingAllServices(ILogger logger, string providerType);
+
+    /// <summary>Logs a completed read of every member of a domain.</summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="providerType">The domain service provider that read.</param>
+    /// <param name="count">How many services were built.</param>
+    [MessageLogging(EventId = 11043, Level = LogLevel.Debug, Message = "{providerType}: built {count} service(s) of the domain")]
+    public static partial IGenericMessage AllServicesBuilt(ILogger logger, string providerType, int count);
+
+    /// <summary>Logs a domain member that failed to build while every member was being read.</summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="providerType">The domain service provider reading.</param>
+    /// <param name="name">The member that failed.</param>
+    [MessageLogging(EventId = 61031, Level = LogLevel.Error, Message = "{providerType}: member '{name}' failed to build, so the domain's service list fails with that member's failure")]
+    public static partial IGenericMessage DomainMemberBuildFailed(ILogger logger, string providerType, string name);
 
     /// <summary>
     /// Logs when Get by ID starts.

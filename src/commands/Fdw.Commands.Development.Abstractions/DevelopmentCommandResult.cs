@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Fdw.Commands.Development.Abstractions;
 
@@ -22,7 +23,7 @@ public class DevelopmentCommandResult : IDevelopmentCommandResult
     public DevelopmentCommandResult(string summary, IReadOnlyDictionary<string, object>? data = null)
     {
         Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-        Data = data ?? new Dictionary<string, object>(StringComparer.Ordinal);
+        Data = data ?? ImmutableDictionary<string, object>.Empty;
     }
 
     /// <summary>

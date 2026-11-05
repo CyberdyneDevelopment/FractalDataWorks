@@ -18,7 +18,8 @@ namespace Fdw.Services.Connections;
 /// <remarks>
 /// The assignment names a grant; the grant names a connection and a folder; the store is the connection narrowed to the grant's folder
 /// plus the assignment's base folder. Every step that finds nothing is a clear refusal: there is no default connection, no default
-/// folder and no other organization's store to fall back to.
+/// folder and no other organization's store to fall back to. New files go to the assignment in force; a file already written is read
+/// through the assignment it was stored under, in force or superseded (FDW-3396).
 /// </remarks>
 public sealed class DocumentStores : IDocumentStores
 {
@@ -56,7 +57,7 @@ public sealed class DocumentStores : IDocumentStores
             return GenericResult<IDocumentStore>.Failure(DocumentStoreLog.PurposeRequired(_logger, organizationId));
         }
 
-        var assignment = await FindAssignment(organizationId, purpose, cancellationToken).ConfigureAwait(false);
+        var assignment = await AssignmentsInForce.For(_assignments, organizationId, purpose, _logger, cancellationToken).ConfigureAwait(false);
         if (assignment.IsFailure || assignment.Value is null)
         {
             return assignment.IsFailure
@@ -64,38 +65,69 @@ public sealed class DocumentStores : IDocumentStores
                 : GenericResult<IDocumentStore>.Failure(DocumentStoreLog.NothingAssigned(_logger, organizationId, purpose));
         }
 
-        var grant = await _grants.Get(assignment.Value.GrantId, cancellationToken).ConfigureAwait(false);
-        if (grant.IsFailure || grant.Value is null)
+        var store = await Open(organizationId, assignment.Value, cancellationToken).ConfigureAwait(false);
+        if (store.IsFailure || store.Value is not { } opened)
         {
-            return GenericResult<IDocumentStore>.Failure(DocumentStoreLog.GrantMissing(_logger, organizationId, purpose, assignment.Value.GrantId));
+            return store.ToNewResult<IDocumentStore>();
         }
 
-        var folder = Folder(organizationId, grant.Value, assignment.Value);
+        DocumentStoreLog.StoreFound(_logger, organizationId, opened.ConnectionName, purpose, opened.Root);
+        return GenericResult<IDocumentStore>.Success(opened.Store);
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IDocumentStore>> Stored(Guid organizationId, Guid storedUnder, CancellationToken cancellationToken = default)
+    {
+        var assignment = await _assignments.Get(storedUnder, cancellationToken).ConfigureAwait(false);
+        if (assignment.IsFailure || assignment.Value is null || assignment.Value.IsDeleted)
+        {
+            return GenericResult<IDocumentStore>.Failure(DocumentStoreLog.StoredUnderNotFound(_logger, organizationId, storedUnder));
+        }
+
+        if (assignment.Value.OrganizationId != organizationId)
+        {
+            return GenericResult<IDocumentStore>.Failure(
+                DocumentStoreLog.StoredUnderOtherOrganization(_logger, organizationId, storedUnder, assignment.Value.OrganizationId));
+        }
+
+        var store = await Open(organizationId, assignment.Value, cancellationToken).ConfigureAwait(false);
+        if (store.IsFailure || store.Value is not { } opened)
+        {
+            return store.ToNewResult<IDocumentStore>();
+        }
+
+        DocumentStoreLog.StoredUnderFound(_logger, organizationId, storedUnder, opened.ConnectionName, assignment.Value.Purpose, opened.Root);
+        return GenericResult<IDocumentStore>.Success(opened.Store);
+    }
+
+    // The store an assignment leads to: its grant's connection, narrowed to the grant's folder plus the assignment's base folder, and
+    // named by the assignment so a file written through it can be read through it again.
+    private async Task<IGenericResult<OpenedStore>> Open(
+        Guid organizationId, IConnectionAssignmentImplementationConfiguration assignment, CancellationToken cancellationToken)
+    {
+        var grant = await _grants.Get(assignment.GrantId, cancellationToken).ConfigureAwait(false);
+        if (grant.IsFailure || grant.Value is null)
+        {
+            return GenericResult<OpenedStore>.Failure(DocumentStoreLog.GrantMissing(_logger, organizationId, assignment.Purpose, assignment.GrantId));
+        }
+
+        var folder = Folder(organizationId, grant.Value, assignment);
         if (folder.IsFailure)
         {
-            return folder.ToNewResult<IDocumentStore>();
+            return folder.ToNewResult<OpenedStore>();
         }
 
         var connection = await _connections.Get(grant.Value.ConnectionName, cancellationToken).ConfigureAwait(false);
         if (connection.IsFailure || connection.Value is null)
         {
-            return GenericResult<IDocumentStore>.Failure(DocumentStoreLog.ConnectionNotOpened(_logger, grant.Value.ConnectionName, purpose, connection.CurrentMessage));
+            return GenericResult<OpenedStore>.Failure(
+                DocumentStoreLog.ConnectionNotOpened(_logger, grant.Value.ConnectionName, assignment.Purpose, connection.CurrentMessage));
         }
 
-        DocumentStoreLog.StoreFound(_logger, organizationId, grant.Value.ConnectionName, purpose, folder.Value.Value);
-        return GenericResult<IDocumentStore>.Success(
-            new NarrowedDocumentStore(connection.Value, folder.Value, _loggerFactory?.CreateLogger<NarrowedDocumentStore>()));
-    }
-
-    private async Task<IGenericResult<IConnectionAssignmentImplementationConfiguration?>> FindAssignment(Guid organizationId, string purpose, CancellationToken cancellationToken)
-    {
-        var found = await _assignments.Find<ConnectionAssignmentImplementationConfiguration>(
-            assignment => assignment.OrganizationId == organizationId && assignment.IsCurrent && !assignment.IsDeleted
-                && string.Equals(assignment.Purpose, purpose, StringComparison.OrdinalIgnoreCase), cancellationToken).ConfigureAwait(false);
-        return found.IsSuccess && found.Value is { } rows
-            ? GenericResult<IConnectionAssignmentImplementationConfiguration?>.Success(rows.Count > 0 ? rows[0] : null)
-            : GenericResult<IConnectionAssignmentImplementationConfiguration?>.Failure(
-                DocumentStoreLog.ReadFailed(_logger, $"The connection assigned to organization '{organizationId}'", found.CurrentMessage));
+        return GenericResult<OpenedStore>.Success(new OpenedStore(
+            new NarrowedDocumentStore(connection.Value, folder.Value, assignment.Id, _loggerFactory?.CreateLogger<NarrowedDocumentStore>()),
+            grant.Value.ConnectionName,
+            folder.Value.Value));
     }
 
     // The grant's folder with the assignment's base folder inside it. Both are parsed as document paths, so a separator or a parent

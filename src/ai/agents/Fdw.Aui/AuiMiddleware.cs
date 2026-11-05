@@ -34,17 +34,17 @@ public sealed class AuiMiddleware
     /// </summary>
     public async Task Invoke(HttpContext context, AuiService auiService)
     {
-        var path = context.Request.Path.Value ?? "/";
+        var path = context.Request.Path.Value ?? string.Empty;
         
         // Detect if the request is for the AUI facet
-        var isAuiRequest = context.Request.Headers["Accept"].ToString().Contains("application/vnd.fdw.aui+json") ||
+        var isAuiRequest = context.Request.Headers["Accept"].ToString().Contains("application/vnd.fdw.aui+json", StringComparison.Ordinal) ||
                            path.EndsWith(".aui", StringComparison.OrdinalIgnoreCase);
 
         if (isAuiRequest)
         {
             AuiLog.AgentDetected(_logger, path);
 
-            var route = path.Replace(".aui", string.Empty);
+            var route = path.Replace(".aui", string.Empty, StringComparison.Ordinal);
 
             var caller = new ClaimsPrincipalAuthenticationContext(context.User);
             if (!caller.IsAuthenticated || !Guid.TryParse(caller.UserId, out var userId))
@@ -58,7 +58,7 @@ public sealed class AuiMiddleware
             if (result.IsSuccess)
             {
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(result.Value)).ConfigureAwait(false);
+                await context.Response.WriteAsync(JsonSerializer.Serialize(result.Value), context.RequestAborted).ConfigureAwait(false);
                 return;
             }
 

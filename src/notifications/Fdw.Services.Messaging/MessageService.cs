@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using CmdBuilders = Fdw.Commands.Data.Extensions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Messaging;
 
@@ -139,7 +140,7 @@ public sealed class MessageService : IMessageService, IAlertSource
             await InsertRecipientIfDirect(request, messageId, now, location.Value, cancellationToken).ConfigureAwait(false);
             await NotifyRecipientViaSignalR(payload).ConfigureAwait(false);
 
-            var recipientId = request.RecipientUserId?.ToString("D") ?? "broadcast";
+            var recipientId = request.RecipientUserId?.ToString("D") ?? LogPlaceholders.Broadcast;
             MessagingLog.MessageCreated(_logger, request.Subject, recipientId);
 
             return GenericResult<MessagePayload>.Success(payload);
@@ -177,7 +178,8 @@ public sealed class MessageService : IMessageService, IAlertSource
             // not over the id — "everything after (CreatedAt, Id)". The caller names a message, so
             // its own CreatedAt has to be in hand before the predicate can be written at all.
             // An absent cursor fails here rather than degrading to an unwindowed read.
-            var cursorId = query.After ?? query.Before;
+            // After and Before are the two directions of one cursor; whichever the caller named is the cursor.
+            var cursorId = query.After.HasValue ? query.After : query.Before;
             MessagePayload? cursor = null;
 
             if (cursorId.HasValue)
@@ -391,8 +393,13 @@ public sealed class MessageService : IMessageService, IAlertSource
                         MessagingLog.MessageQueryFailed(_logger, "Unread count query failed"));
             }
 
-            var count = result.Value?.Count() ?? 0;
-            return GenericResult<int>.Success(count);
+            if (result.Value is null)
+            {
+                return GenericResult<int>.Failure(
+                    MessagingLog.MessageQueryFailed(_logger, "Unread count query returned no rows"));
+            }
+
+            return GenericResult<int>.Success(result.Value.Count());
         }
         catch (Exception ex)
         {

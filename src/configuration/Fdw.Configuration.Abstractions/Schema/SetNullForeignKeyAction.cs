@@ -9,5 +9,5 @@ namespace Fdw.Configuration.Persistence.Schema;
 public sealed class SetNullForeignKeyAction : ForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="SetNullForeignKeyAction"/>.</summary>
-    public SetNullForeignKeyAction() : base("SetNull") { }
+    public SetNullForeignKeyAction() : base("SetNull", "SET NULL") { }
 }

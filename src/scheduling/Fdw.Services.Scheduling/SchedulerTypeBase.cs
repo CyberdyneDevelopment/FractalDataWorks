@@ -5,6 +5,7 @@ using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
 using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Scheduling;
 
@@ -30,6 +31,10 @@ public abstract class SchedulerTypeBase<TService, TConfiguration, TFactory> :
     where TConfiguration : class, IGenericConfiguration
     where TFactory : ISchedulingFactory<TService, TConfiguration>
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "Scheduling";
+
     /// <summary>
     /// Gets the scheduling engine used by this service type.
     /// </summary>
@@ -153,7 +158,7 @@ public abstract class SchedulerTypeBase<TService, TConfiguration, TFactory> :
         bool supportsDelayed,
         string? category = null,
         string defaultContainerName = "")
-        : base(name, $"Schedulings:{name}", $"{name} Scheduling Service", $"Scheduling service using {schedulingEngine} engine", category ?? "Scheduling",
+        : base(name, $"Schedulings:{name}", $"{name} Scheduling Service", $"Scheduling service using {schedulingEngine} engine", category ?? DefaultCategory,
                defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sched",
                defaultContainerName: defaultContainerName)

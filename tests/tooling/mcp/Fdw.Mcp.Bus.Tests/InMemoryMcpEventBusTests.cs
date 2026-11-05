@@ -20,7 +20,7 @@ public class InMemoryMcpEventBusTests
     [Fact]
     public async Task PublishAssignsMonotonicEventIds()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         var id1 = await bus.Publish(Draft("a/1"));
         var id2 = await bus.Publish(Draft("a/2"));
         var id3 = await bus.Publish(Draft("a/3"));
@@ -33,7 +33,7 @@ public class InMemoryMcpEventBusTests
     [Fact]
     public async Task SubscribeDeliversEventsMatchingPattern()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var received = new List<McpEvent>();
 
@@ -61,7 +61,7 @@ public class InMemoryMcpEventBusTests
     [Fact]
     public async Task ReplayReturnsEventsFromGivenIdMatchingPattern()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         await bus.Publish(Draft("a/1"));
         await bus.Publish(Draft("a/2"));
         await bus.Publish(Draft("b/3"));
@@ -77,7 +77,7 @@ public class InMemoryMcpEventBusTests
     [Fact]
     public async Task ReplayCausationFollowsTheChain()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         var root = await bus.Publish(Draft("root"));
         var child = await bus.Publish(Draft("child", causation: root));
         await bus.Publish(Draft("unrelated"));

@@ -258,7 +258,7 @@ public class CommandEndpointTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public async Task ExecuteCommandAsync_WrapsVoidCommand_FailureWithNullMessage()
+    public async Task ExecuteCommandAsync_WrapsVoidCommand_FailureWithNullMessageCarriesTheUnstatedFailure()
     {
         // Arrange
         var endpoint = new TestVoidCommandEndpoint(
@@ -271,8 +271,8 @@ public class CommandEndpointTests
         // Assert
         result.ShouldNotBeNull();
         result.IsSuccess.ShouldBeFalse();
-        // When the source result has null message, the wrapped result uses it or defaults
-        (result.CurrentMessage == null || result.CurrentMessage == "Command execution failed").ShouldBeTrue();
+        // A failure built with no message carries the named UnstatedFailure, and the wrapped result keeps it (FDW-3580).
+        result.FailureReason().Code.ShouldBe(UnstatedFailure.Code);
     }
 
     [Fact]

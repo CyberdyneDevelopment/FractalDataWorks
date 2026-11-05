@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
+using Fdw.Roslyn.Commands.Symbols;
 
 namespace Fdw.Roslyn.Commands.Refactoring.Translators;
 
@@ -70,8 +71,7 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
-        var symbol = semanticModel.GetSymbolInfo(token.Parent!, cancellationToken).Symbol
-                  ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
+        var symbol = TokenSymbols.Resolve(semanticModel, token, cancellationToken);
 
         if (symbol is not IFieldSymbol fieldSymbol)
         {
@@ -81,7 +81,7 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
         }
 
         var fieldName = fieldSymbol.Name;
-        var propertyName = command.PropertyName ?? GeneratePropertyName(fieldName);
+        var propertyName = command.PropertyName ?? new EncapsulatedField(fieldName).ConventionalPropertyName;
 
         var oldFqn = SymbolFqn.Of(fieldSymbol);
         var newFqn = SymbolFqn.OfRenamed(fieldSymbol, propertyName);
@@ -187,17 +187,6 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
                 fileChanges,
                 symbolChanges,
                 Array.Empty<PathChange>()));
-    }
-
-    private static string GeneratePropertyName(string fieldName)
-    {
-        if (fieldName.Length > 1 && fieldName[0] == '_')
-            return char.ToUpperInvariant(fieldName[1]) + fieldName.Substring(2);
-
-        if (fieldName.Length > 2 && fieldName.StartsWith("m_", StringComparison.Ordinal))
-            return char.ToUpperInvariant(fieldName[2]) + fieldName.Substring(3);
-
-        return char.ToUpperInvariant(fieldName[0]) + fieldName.Substring(1);
     }
 
     private static PropertyDeclarationSyntax BuildAutoPropertyDeclaration(

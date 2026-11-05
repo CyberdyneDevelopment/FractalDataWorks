@@ -24,19 +24,19 @@ internal static class FamilyMemberHelpers
     /// </summary>
     public static IEnumerable<ISymbol> GetDeclaredPublicMembers(INamedTypeSymbol type, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
-        FamilyMemberHelpersLog.GetDeclaredPublicMembersStart(logger, type.ToDisplayString());
+        var log = logger ?? NullLogger.Instance;
+        FamilyMemberHelpersLog.GetDeclaredPublicMembersStart(log, type.ToDisplayString());
 
         foreach (var member in type.GetMembers())
         {
             if (member.IsImplicitlyDeclared)
             {
-                FamilyMemberHelpersLog.MemberSkipped(logger, type.Name, member.Name, "implicitly-declared");
+                FamilyMemberHelpersLog.MemberSkipped(log, type.Name, member.Name, "implicitly-declared");
                 continue;
             }
             if (member.DeclaredAccessibility != Accessibility.Public)
             {
-                FamilyMemberHelpersLog.MemberSkipped(logger, type.Name, member.Name, "not-public");
+                FamilyMemberHelpersLog.MemberSkipped(log, type.Name, member.Name, "not-public");
                 continue;
             }
 
@@ -45,41 +45,41 @@ internal static class FamilyMemberHelpers
                 case IMethodSymbol method:
                     if (method.MethodKind is MethodKind.Constructor or MethodKind.StaticConstructor)
                     {
-                        FamilyMemberHelpersLog.MemberSkipped(logger, type.Name, member.Name, "constructor");
+                        FamilyMemberHelpersLog.MemberSkipped(log, type.Name, member.Name, "constructor");
                         continue;
                     }
                     if (method.MethodKind is MethodKind.PropertyGet or MethodKind.PropertySet)
                     {
-                        FamilyMemberHelpersLog.MemberSkipped(logger, type.Name, member.Name, "property-accessor");
+                        FamilyMemberHelpersLog.MemberSkipped(log, type.Name, member.Name, "property-accessor");
                         continue;
                     }
                     if (method.MethodKind is MethodKind.EventAdd or MethodKind.EventRemove or MethodKind.EventRaise)
                     {
-                        FamilyMemberHelpersLog.MemberSkipped(logger, type.Name, member.Name, "event-accessor");
+                        FamilyMemberHelpersLog.MemberSkipped(log, type.Name, member.Name, "event-accessor");
                         continue;
                     }
                     if (method.AssociatedSymbol is not null)
                     {
-                        FamilyMemberHelpersLog.MemberSkipped(logger, type.Name, member.Name, "associated-symbol");
+                        FamilyMemberHelpersLog.MemberSkipped(log, type.Name, member.Name, "associated-symbol");
                         continue;
                     }
-                    FamilyMemberHelpersLog.MemberIncluded(logger, type.Name, member.Name, "Method");
+                    FamilyMemberHelpersLog.MemberIncluded(log, type.Name, member.Name, "Method");
                     yield return method;
                     break;
                 case IPropertySymbol:
-                    FamilyMemberHelpersLog.MemberIncluded(logger, type.Name, member.Name, "Property");
+                    FamilyMemberHelpersLog.MemberIncluded(log, type.Name, member.Name, "Property");
                     yield return member;
                     break;
                 case IEventSymbol:
-                    FamilyMemberHelpersLog.MemberIncluded(logger, type.Name, member.Name, "Event");
+                    FamilyMemberHelpersLog.MemberIncluded(log, type.Name, member.Name, "Event");
                     yield return member;
                     break;
                 case IFieldSymbol:
-                    FamilyMemberHelpersLog.MemberIncluded(logger, type.Name, member.Name, "Field");
+                    FamilyMemberHelpersLog.MemberIncluded(log, type.Name, member.Name, "Field");
                     yield return member;
                     break;
                 default:
-                    FamilyMemberHelpersLog.MemberSkipped(logger, type.Name, member.Name, "unhandled-kind");
+                    FamilyMemberHelpersLog.MemberSkipped(log, type.Name, member.Name, "unhandled-kind");
                     break;
             }
         }
@@ -91,7 +91,7 @@ internal static class FamilyMemberHelpers
     /// </summary>
     public static string GetMemberKey(ISymbol member, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
+        var log = logger ?? NullLogger.Instance;
         switch (member)
         {
             case IMethodSymbol method:
@@ -105,10 +105,10 @@ internal static class FamilyMemberHelpers
                 }
                 sb.Append(')');
                 var key = sb.ToString();
-                FamilyMemberHelpersLog.GetMemberKeyMethod(logger, method.Name, method.Parameters.Length, key);
+                FamilyMemberHelpersLog.GetMemberKeyMethod(log, method.Name, method.Parameters.Length, key);
                 return key;
             default:
-                FamilyMemberHelpersLog.GetMemberKeyOther(logger, member.Name);
+                FamilyMemberHelpersLog.GetMemberKeyOther(log, member.Name);
                 return member.Name;
         }
     }
@@ -118,7 +118,7 @@ internal static class FamilyMemberHelpers
     /// </summary>
     public static FamilyContractMember ToContractMember(ISymbol member, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
+        var log = logger ?? NullLogger.Instance;
         bool isStatic = member.IsStatic;
         bool isAbstract = member is IMethodSymbol m1 && m1.IsAbstract
                        || member is IPropertySymbol p1 && p1.IsAbstract
@@ -130,7 +130,7 @@ internal static class FamilyMemberHelpers
                        || member is IPropertySymbol p3 && p3.IsOverride
                        || member is IEventSymbol e3 && e3.IsOverride;
 
-        FamilyMemberHelpersLog.ToContractMemberCalled(logger, member.Name, isAbstract, isVirtual, isStatic, isOverride);
+        FamilyMemberHelpersLog.ToContractMemberCalled(log, member.Name, isAbstract, isVirtual, isStatic, isOverride);
 
         return new FamilyContractMember(
             member.Name,
@@ -149,7 +149,7 @@ internal static class FamilyMemberHelpers
     /// </summary>
     public static string DescribeTypeParameter(ITypeParameterSymbol param, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
+        var log = logger ?? NullLogger.Instance;
         var constraints = new List<string>();
         if (param.HasReferenceTypeConstraint) constraints.Add("class");
         if (param.HasValueTypeConstraint) constraints.Add("struct");
@@ -159,7 +159,7 @@ internal static class FamilyMemberHelpers
             constraints.Add(t.ToDisplayString());
         if (param.HasConstructorConstraint) constraints.Add("new()");
 
-        FamilyMemberHelpersLog.DescribeTypeParameterCalled(logger, param.Name, constraints.Count);
+        FamilyMemberHelpersLog.DescribeTypeParameterCalled(log, param.Name, constraints.Count);
 
         return constraints.Count == 0
             ? param.Name
@@ -171,7 +171,7 @@ internal static class FamilyMemberHelpers
     /// </summary>
     public static string DescribeTypeKind(INamedTypeSymbol type, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
+        var log = logger ?? NullLogger.Instance;
         string kind;
         if (type.TypeKind == TypeKind.Interface) kind = "Interface";
         else if (type.TypeKind == TypeKind.Struct) kind = "Struct";
@@ -180,7 +180,7 @@ internal static class FamilyMemberHelpers
         else if (type.IsAbstract) kind = "AbstractClass";
         else kind = type.IsSealed ? "SealedClass" : "Class";
 
-        FamilyMemberHelpersLog.DescribeTypeKindResult(logger, type.Name, kind);
+        FamilyMemberHelpersLog.DescribeTypeKindResult(log, type.Name, kind);
         return kind;
     }
 
@@ -189,46 +189,46 @@ internal static class FamilyMemberHelpers
     /// </summary>
     public static bool DerivesFrom(INamedTypeSymbol type, INamedTypeSymbol root, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
+        var log = logger ?? NullLogger.Instance;
         // Interface root: check all interfaces of the candidate
         if (root.TypeKind == TypeKind.Interface)
         {
-            FamilyMemberHelpersLog.DerivesFromInterfaceCheck(logger, type.Name, root.Name);
+            FamilyMemberHelpersLog.DerivesFromInterfaceCheck(log, type.Name, root.Name);
             foreach (var iface in type.AllInterfaces)
             {
                 if (SymbolEqualityComparer.Default.Equals(iface, root))
                 {
-                    FamilyMemberHelpersLog.DerivesFromResult(logger, type.Name, root.Name, true);
+                    FamilyMemberHelpersLog.DerivesFromResult(log, type.Name, root.Name, true);
                     return true;
                 }
                 if (iface.ConstructedFrom is not null
                     && SymbolEqualityComparer.Default.Equals(iface.ConstructedFrom, root))
                 {
-                    FamilyMemberHelpersLog.DerivesFromResult(logger, type.Name, root.Name, true);
+                    FamilyMemberHelpersLog.DerivesFromResult(log, type.Name, root.Name, true);
                     return true;
                 }
             }
-            FamilyMemberHelpersLog.DerivesFromResult(logger, type.Name, root.Name, false);
+            FamilyMemberHelpersLog.DerivesFromResult(log, type.Name, root.Name, false);
             return false;
         }
 
         // Class root: walk base chain
-        FamilyMemberHelpersLog.DerivesFromClassChain(logger, type.Name, root.Name);
+        FamilyMemberHelpersLog.DerivesFromClassChain(log, type.Name, root.Name);
         for (var current = type.BaseType; current is not null; current = current.BaseType)
         {
             if (SymbolEqualityComparer.Default.Equals(current, root))
             {
-                FamilyMemberHelpersLog.DerivesFromResult(logger, type.Name, root.Name, true);
+                FamilyMemberHelpersLog.DerivesFromResult(log, type.Name, root.Name, true);
                 return true;
             }
             if (current.ConstructedFrom is not null
                 && SymbolEqualityComparer.Default.Equals(current.ConstructedFrom, root))
             {
-                FamilyMemberHelpersLog.DerivesFromResult(logger, type.Name, root.Name, true);
+                FamilyMemberHelpersLog.DerivesFromResult(log, type.Name, root.Name, true);
                 return true;
             }
         }
-        FamilyMemberHelpersLog.DerivesFromResult(logger, type.Name, root.Name, false);
+        FamilyMemberHelpersLog.DerivesFromResult(log, type.Name, root.Name, false);
         return false;
     }
 
@@ -237,9 +237,9 @@ internal static class FamilyMemberHelpers
     /// </summary>
     public static IEnumerable<INamedTypeSymbol> EnumerateAllNamedTypes(MsCompilation compilation, ILogger? logger = null)
     {
-        logger ??= NullLogger.Instance;
-        var assemblyName = compilation.AssemblyName ?? "<unknown>";
-        FamilyMemberHelpersLog.EnumerateAllNamedTypesStart(logger, assemblyName);
+        var log = logger ?? NullLogger.Instance;
+        var assemblyName = compilation.AssemblyName ?? RoslynReportPlaceholders.UnknownAssembly;
+        FamilyMemberHelpersLog.EnumerateAllNamedTypesStart(log, assemblyName);
         var yielded = 0;
         var queue = new Queue<INamespaceOrTypeSymbol>();
         queue.Enqueue(compilation.GlobalNamespace);
@@ -261,6 +261,6 @@ internal static class FamilyMemberHelpers
                 }
             }
         }
-        FamilyMemberHelpersLog.EnumerateAllNamedTypesDone(logger, assemblyName, yielded);
+        FamilyMemberHelpersLog.EnumerateAllNamedTypesDone(log, assemblyName, yielded);
     }
 }

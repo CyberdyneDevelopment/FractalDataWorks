@@ -35,6 +35,12 @@ public static partial class OperationsLog
     public static partial IGenericMessage InvalidStateTransition(ILogger logger, Guid executionItemId, string currentState, string newState);
 
     /// <summary>
+    /// Logs when an execution item is asked to end in a state that does not end an execution (FDW-3787).
+    /// </summary>
+    [MessageLogging(EventId = 41004, Level = LogLevel.Warning, Message = "Execution item '{executionItemId}' cannot be closed in state '{state}': it is not a terminal state")]
+    public static partial IGenericMessage StateIsNotTerminal(ILogger logger, Guid executionItemId, string state);
+
+    /// <summary>
     /// Logs when a state transition is recorded.
     /// </summary>
     [MessageLogging(EventId = 11001, Level = LogLevel.Debug, Message = "State transition recorded: {executionItemId} {previousState} -> {newState}")]

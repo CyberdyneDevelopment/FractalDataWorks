@@ -1,10 +1,9 @@
-using System.Linq;
 using Fdw.Services.Catalog.Clients.Models;
 using Fdw.Services.Quality.Configuration;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
-/// <summary>Builds the payload a DataSet annotation is answered as; the one mapping every annotation read shares.</summary>
+/// <summary>Builds the payload a DataSet annotation is answered as; the one mapping every annotation read shares. Its tags are the data set's, read by <see cref="DataSetAnnotationTags"/>.</summary>
 internal static class DataSetAnnotationPayloadMapper
 {
     /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its payload.</summary>
@@ -17,7 +16,6 @@ internal static class DataSetAnnotationPayloadMapper
             Owner = config.BusinessOwner,
             Steward = config.TechnicalOwner,
             Classification = config.DataClassification,
-            Tags = config.Tags.Select(t => t.Tag).ToList(),
             IsResolved = config.IsResolved,
             ResolvedAt = config.ResolvedDate,
             ResolvedBy = config.ResolvedBy

@@ -56,7 +56,7 @@ public sealed class RoslynWorkspaceConnectionProvider
         var workspace = await _workspaceFactory
             .CreateFromSolution(
                 typed.SolutionPath,
-                typed.ExcludePatterns?.ToList() ?? new List<string>(),
+                typed.ExcludePatterns?.ToList() ?? [],
                 cancellationToken)
             .ConfigureAwait(false);
 

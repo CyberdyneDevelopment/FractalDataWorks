@@ -32,7 +32,7 @@ public sealed class PipelineHubOptionTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void RegisterServicesRegistersPipelineStatusBroadcasterAsScoped()
+    public void RegisterServicesRegistersTheRoutingBroadcasterAsTheBroadcasterAndTheSignalRBroadcasterAsItself()
     {
         // Arrange
         var option = new PipelineHubOption();
@@ -44,7 +44,11 @@ public sealed class PipelineHubOptionTests
         // Assert
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPipelineStatusBroadcaster));
         descriptor.ShouldNotBeNull();
-        descriptor!.ImplementationType.ShouldBe(typeof(PipelineStatusBroadcaster));
+        descriptor!.ImplementationFactory.ShouldNotBeNull();
         descriptor.Lifetime.ShouldBe(ServiceLifetime.Scoped);
+        var hub = services.SingleOrDefault(d => d.ServiceType == typeof(PipelineStatusBroadcaster));
+        hub.ShouldNotBeNull();
+        hub!.ImplementationType.ShouldBe(typeof(PipelineStatusBroadcaster));
+        hub.Lifetime.ShouldBe(ServiceLifetime.Scoped);
     }
 }

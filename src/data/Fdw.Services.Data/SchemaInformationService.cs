@@ -67,6 +67,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     /// <inheritdoc/>
     public async Task<IGenericResult<SchemaInformation>> GetSchema(
         string connectionName,
+        DataStoreDiscoveryOptions options,
         CancellationToken cancellationToken = default)
     {
         SchemaInformationLog.GetSchemaStarted(_logger, connectionName);
@@ -88,12 +89,13 @@ public sealed class SchemaInformationService : ISchemaInformationService
         }
 
         SchemaInformationLog.CacheMiss(_logger, connectionName);
-        return await DiscoverAndPersist(connection, refresh: false, cancellationToken).ConfigureAwait(false);
+        return await DiscoverAndPersist(connection, options, refresh: false, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     public async Task<IGenericResult<SchemaInformation>> RefreshSchema(
         string connectionName,
+        DataStoreDiscoveryOptions options,
         CancellationToken cancellationToken = default)
     {
         SchemaInformationLog.RefreshStarted(_logger, connectionName);
@@ -102,7 +104,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         if (config.IsFailure || config.Value is not { } connection)
             return config.ToNewResult<SchemaInformation>();
 
-        return await DiscoverAndPersist(connection, refresh: true, cancellationToken).ConfigureAwait(false);
+        return await DiscoverAndPersist(connection, options, refresh: true, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -170,6 +172,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
 
     private async Task<IGenericResult<SchemaInformation>> DiscoverAndPersist(
         IConnectionImplementationConfiguration connection,
+        DataStoreDiscoveryOptions options,
         bool refresh,
         CancellationToken cancellationToken)
     {
@@ -178,7 +181,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
             return store.ToNewResult<SchemaInformation>();
 
         var merged = await DiscoverIntoStore(
-            target, connection, DataStoreDiscoveryOptions.Default, refresh, cancellationToken).ConfigureAwait(false);
+            target, connection, options, refresh, cancellationToken).ConfigureAwait(false);
         if (merged.IsFailure || merged.Value is not { } added)
             return merged.ToNewResult<SchemaInformation>();
 

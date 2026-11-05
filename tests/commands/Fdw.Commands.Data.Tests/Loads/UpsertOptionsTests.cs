@@ -26,7 +26,7 @@ public sealed class UpsertOptionsTests
 
     [Fact]
     public void KeyAndCompareColumnsMustBeWriteColumns() =>
-        new UpsertOptions(["Code"], ["Name"], ["Code"]).FirstProblem()!.ShouldContain("Name");
+        new UpsertOptions(["Code"], ["Name"], ["Code"]).FirstProblem()!.Message.ShouldContain("Name");
 
     [Fact]
     public void ADuplicateColumnIsRefused() =>
@@ -40,7 +40,7 @@ public sealed class UpsertOptionsTests
             Versioning = new VersioningOptions("EffectiveFrom", "EffectiveTo"),
         };
 
-        options.FirstProblem()!.ShouldContain("versioning");
+        options.FirstProblem()!.Message.ShouldContain("versioning");
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class UpsertOptionsTests
             Versioning = new VersioningOptions("From", "To") { InsertOnlyRule = new InsertOnlyRule("", "x") },
         };
 
-        options.FirstProblem()!.ShouldContain("insert-only");
+        options.FirstProblem()!.Message.ShouldContain("insert-only");
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class UpsertOptionsTests
             ValueSources = [new ColumnValueBinding("Alias", new ColumnReferenceValueSource("Name"))],
         };
 
-        options.FirstProblem()!.ShouldContain("Alias");
+        options.FirstProblem()!.Message.ShouldContain("Alias");
     }
 
     [Fact]

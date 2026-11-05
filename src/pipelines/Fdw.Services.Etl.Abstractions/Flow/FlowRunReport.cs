@@ -9,12 +9,18 @@ namespace Fdw.Services.Etl.Abstractions.Flow;
 /// <param name="Components">What each component did; empty for a report that was not measured per component.</param>
 /// <param name="FailedComponent">The component whose failure stopped the run (FDW-1691); none when the run did not fail.</param>
 /// <param name="Rejections">How many rows each error output carried and the reasons they gave, never the rows (FDW-1720); none for a run that rejected nothing.</param>
+/// <param name="Arriving">
+/// For the report of one stage of a run (FDW-3381): the lines that arrive at its components from components of other stages. They are not in <paramref name="Links"/>, which holds
+/// the lines that leave this stage's components, so each line is recorded once, but a component's rows in and the flow's sources are worked out with them. None for a report of
+/// a whole run.
+/// </param>
 public sealed record FlowRunReport(
     IReadOnlyList<FlowLinkCount> Links,
     TimeSpan Elapsed,
     IReadOnlyList<FlowComponentReport> Components,
     string? FailedComponent = null,
-    IReadOnlyList<FlowRejection>? Rejections = null)
+    IReadOnlyList<FlowRejection>? Rejections = null,
+    IReadOnlyList<FlowLinkCount>? Arriving = null)
 {
     /// <summary>Initializes a report with no per-component measures.</summary>
     /// <param name="links">The count of each link.</param>

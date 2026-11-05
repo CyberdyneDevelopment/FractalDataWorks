@@ -71,7 +71,7 @@ public static class InMemoryQuery
                 : (descending ? ordered.ThenByDescending(Key, ValueOrder) : ordered.ThenBy(Key, ValueOrder));
         }
 
-        return ordered ?? rows;
+        return ordered is null ? rows : ordered;
     }
 
     // A missing value sorts first when ascending and last when descending, as SQL Server sorts a null. The comparison of two

@@ -66,8 +66,9 @@ public static class GraphFlowBuilder
         }
 
         var inLevel = new HashSet<string>(members.Select(member => member.Name), StringComparer.OrdinalIgnoreCase);
-        var links = graph.Links.Where(link => inLevel.Contains(link.FromComponent) && inLevel.Contains(link.ToComponent)).ToList();
-        var flowContext = context.ForLinks(links);
+        var levelLinks = graph.Links.Where(link => inLevel.Contains(link.FromComponent) && inLevel.Contains(link.ToComponent)).ToList();
+        var links = CompletionLines.Rows(levelLinks);
+        var flowContext = context.ForLinks([.. links]);
         var built = new List<IFlowComponent>();
         foreach (var stored in members)
         {
@@ -84,7 +85,8 @@ public static class GraphFlowBuilder
             built,
             [.. links.Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
             [.. graph.DroppedOutputs.Where(output => inLevel.Contains(output.ComponentName)).Select(output => new FlowDroppedOutput(output.ComponentName, output.OutputName))],
-            ComponentStages.Of(members));
+            ComponentStages.Of(members),
+            [.. CompletionLines.Completions(levelLinks).Select(CompletionLines.ToCompletion)]);
         return GenericResult<IFlowStep>.Success(new FlowStageStep(name, flow, context.Logger));
     }
 

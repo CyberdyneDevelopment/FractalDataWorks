@@ -34,6 +34,9 @@ public sealed class ValueBindingsTests
             ],
         };
 
+    private static PipelineLoadValueSourceConfiguration Uuid(string column) =>
+        new() { Name = column, ColumnName = column, SourceKind = "UuidV7" };
+
     private static PipelineLoadValueSourceConfiguration FromField(string column, string field) =>
         new() { Name = column, ColumnName = column, SourceKind = "Column", SourceField = field };
 
@@ -101,11 +104,11 @@ public sealed class ValueBindingsTests
         var now = new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero);
 
         // Act
-        var result = ValueBindings.RowValues(bindings, "test", "Insert", now, NullLogger.Instance);
+        var result = ValueBindings.RowValues(bindings, "test", "Insert", replacesRows: false, now, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Select(p => (p.Key, p.Value)).ShouldBe(new[] { ("Batch", (object?)7L), ("LoadedAt", now) });
+        result.Value!.Select(p => (p.Key, p.Value())).ShouldBe(new[] { ("Batch", (object?)7L), ("LoadedAt", now) });
     }
 
     [Theory]
@@ -120,12 +123,75 @@ public sealed class ValueBindingsTests
         var bindings = ValueBindings.Build([source], "test", NullLogger.Instance).Value!;
 
         // Act
-        var result = ValueBindings.RowValues(bindings, "load step 'x'", "Insert", DateTimeOffset.UtcNow, NullLogger.Instance);
+        var result = ValueBindings.RowValues(bindings, "load step 'x'", "Insert", replacesRows: false, DateTimeOffset.UtcNow, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("PIPELINERUN-20213");
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("Insert");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void BuildMakesAUuidV7ValueSourceThatStatesNothingElse()
+    {
+        // Act
+        var result = ValueBindings.Build([Uuid("PublicId")], "test", NullLogger.Instance);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Single().Column.ShouldBe("PublicId");
+        result.Value!.Single().Source.ShouldBeOfType<UuidV7ValueSource>().Kind.ShouldBe("UuidV7");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void RowValuesGivesAUuidV7ProducerThatMintsANewVersionSevenGuidForEachCall()
+    {
+        // Arrange
+        var bindings = ValueBindings.Build([Uuid("PublicId")], "test", NullLogger.Instance).Value!;
+
+        // Act
+        var result = ValueBindings.RowValues(bindings, "test", "Insert", replacesRows: false, DateTimeOffset.UtcNow, NullLogger.Instance);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        var produce = result.Value!.Single().Value;
+        var ids = Enumerable.Range(0, 200).Select(_ => produce().ShouldBeOfType<Guid>()).ToList();
+        ids.Distinct().Count().ShouldBe(200);
+        ids.ShouldAllBe(id => id.Version == 7);
+        ids.ShouldAllBe(id => id != Guid.Empty);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void RowValuesRefusesAUuidV7ForALoadThatReplacesRowsThatExist()
+    {
+        // Arrange
+        var bindings = ValueBindings.Build([Uuid("PublicId")], "test", NullLogger.Instance).Value!;
+
+        // Act
+        var result = ValueBindings.RowValues(bindings, "load step 'x'", "Update", replacesRows: true, DateTimeOffset.UtcNow, NullLogger.Instance);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("PIPELINERUN-20213");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("PublicId");
+        result.CurrentMessage.ShouldContain("UuidV7");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void OnlyAUuidV7FactoryIsInsertOnly()
+    {
+        foreach (var factory in ValueSourceFactories.All())
+        {
+            factory.InsertOnly.ShouldBe(factory.Name == "UuidV7", factory.Name);
+        }
     }
 
     [Fact]

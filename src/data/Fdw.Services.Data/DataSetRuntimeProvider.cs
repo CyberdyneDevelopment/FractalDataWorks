@@ -106,7 +106,7 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
             return buildResult.Messages.Any()
                 ? buildResult
                 : GenericResult<IDataSet>.Failure(
-                    DataSetRuntimeProviderLog.BuildFailed(_logger, configResult.Value?.Name ?? id.ToString()));
+                    DataSetRuntimeProviderLog.BuildFailed(_logger, configResult.Value is { } built ? built.Name : id.ToString()));
         }
 
         DataSetRuntimeProviderLog.RetrievedById(_logger, id);

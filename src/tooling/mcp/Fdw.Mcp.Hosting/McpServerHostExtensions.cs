@@ -48,7 +48,7 @@ public static class McpServerHostExtensions
         foreach (var toolType in McpToolTypes.All())
         {
             toolClasses.Add(toolType.ToolClass);
-            McpHostingLog.ToolTypeRegistered(resolvedLogger, toolType.Name, toolType.ToolClass.FullName ?? toolType.ToolClass.Name);
+            McpHostingLog.ToolTypeRegistered(resolvedLogger, toolType.Name, toolType.ToolClass.ToString());
         }
 
         if (toolClasses.Count == 0)

@@ -9,32 +9,6 @@ public class TenantThemeConfigurationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void ConstructorSetsDefaultHSLColors()
-    {
-        // Act
-        var result = new TenantThemeConfiguration();
-
-        // Assert
-        result.PrimaryColor.ShouldBe("221 83% 53%");
-        result.SecondaryColor.ShouldBe("215 16% 47%");
-        result.AccentColor.ShouldBe("262 83% 58%");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void DarkModeDefaultDefaultsToTrue()
-    {
-        // Act
-        var result = new TenantThemeConfiguration();
-
-        // Assert
-        result.DarkModeDefault.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
     public void ColorsCanBeSet()
     {
         // Arrange

@@ -255,21 +255,6 @@ public sealed class DatabasePathGapTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void TwoPartConstructorSetsCorrectProperties()
-    {
-        // Arrange & Act
-        var sut = new DatabasePath("MyDb", "Products");
-
-        // Assert
-        sut.Database.ShouldBe("MyDb");
-        sut.Schema.ShouldBe("dbo");
-        sut.ObjectName.ShouldBe("Products");
-        sut.PathValue.ShouldBe("MyDb.dbo.Products");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void NullDatabaseSetToEmptyString()
     {
         // Arrange & Act

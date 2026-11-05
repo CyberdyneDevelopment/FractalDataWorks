@@ -50,7 +50,7 @@ public sealed class ManualGenericMessageAnalyzer : DiagnosticAnalyzer
         var objectCreation = (ObjectCreationExpressionSyntax)context.Node;
 
         // Check the type being created
-        var typeInfo = context.SemanticModel.GetTypeInfo(objectCreation);
+        var typeInfo = context.SemanticModel.GetTypeInfo(objectCreation, context.CancellationToken);
         if (!IsGenericMessageType(typeInfo.Type))
             return;
 
@@ -78,7 +78,7 @@ public sealed class ManualGenericMessageAnalyzer : DiagnosticAnalyzer
         var objectCreation = (ImplicitObjectCreationExpressionSyntax)context.Node;
 
         // Check the type being created
-        var typeInfo = context.SemanticModel.GetTypeInfo(objectCreation);
+        var typeInfo = context.SemanticModel.GetTypeInfo(objectCreation, context.CancellationToken);
         if (!IsGenericMessageType(typeInfo.Type))
             return;
 

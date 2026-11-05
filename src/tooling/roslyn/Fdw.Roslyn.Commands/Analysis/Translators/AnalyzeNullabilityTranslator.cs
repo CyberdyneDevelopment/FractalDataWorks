@@ -146,13 +146,13 @@ public sealed class AnalyzeNullabilityTranslator
         };
 
         var isNullable = typeSymbol?.NullableAnnotation == NullableAnnotation.Annotated;
-        var nullableFlow = typeSymbol?.NullableAnnotation.ToString() ?? "Unknown";
+        var nullableFlow = typeSymbol?.NullableAnnotation.ToString() ?? RoslynReportPlaceholders.Unknown;
 
         return new NullabilitySymbol
         {
             Name = symbol.Name,
             MemberKind = memberKind,
-            TypeName = typeSymbol?.ToDisplayString() ?? "unknown",
+            TypeName = typeSymbol?.ToDisplayString() ?? RoslynReportPlaceholders.UnknownLowerCase,
             IsNullable = isNullable,
             NullableAnnotation = nullableFlow,
             Line = lineSpan.StartLinePosition.Line + 1,

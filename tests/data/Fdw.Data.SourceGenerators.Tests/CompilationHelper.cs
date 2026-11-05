@@ -101,6 +101,6 @@ internal static class CompilationHelper
     {
         return compilation.SyntaxTrees
             .Select(t => Path.GetFileName(t.FilePath))
-            .Where(name => name.EndsWith(".g.cs"));
+            .Where(name => name.EndsWith(".g.cs", StringComparison.Ordinal));
     }
 }

@@ -28,6 +28,7 @@
     <ProjectReference Include="..\..\pipelines\Fdw.Operations\Fdw.Operations.csproj" />
     <ProjectReference Include="..\..\identity\authentication\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
     <ProjectReference Include="..\..\identity\authorization\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

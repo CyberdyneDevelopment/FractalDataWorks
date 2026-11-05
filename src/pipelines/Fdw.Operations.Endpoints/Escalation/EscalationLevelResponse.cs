@@ -11,7 +11,7 @@ public class EscalationLevelResponse
     public int Level { get; set; }
 
     /// <summary>Gets or sets the delay in minutes.</summary>
-    public int DelayMinutes { get; set; }
+    public int? DelayMinutes { get; set; }
 
     /// <summary>Gets or sets the notification channel.</summary>
     public string NotificationChannel { get; set; } = string.Empty;
@@ -21,4 +21,10 @@ public class EscalationLevelResponse
 
     /// <summary>Gets or sets the message template.</summary>
     public string? MessageTemplate { get; set; }
+
+    /// <summary>Gets or sets the severity of the notification at this level. Required on a request.</summary>
+    public string Severity { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the type of this level's recipients. Required on a request.</summary>
+    public string RecipientType { get; set; } = string.Empty;
 }

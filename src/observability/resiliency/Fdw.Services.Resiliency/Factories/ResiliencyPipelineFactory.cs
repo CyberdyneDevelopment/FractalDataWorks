@@ -48,7 +48,7 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
     /// <inheritdoc />
     public IGenericResult<ResiliencePipeline> GetOrCreate(
         IResiliencyPolicy policy,
-        string? operationName = null)
+        string operationName)
     {
         if (policy == null)
         {
@@ -57,8 +57,6 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
         }
 
         var cacheKey = policy.Name;
-        operationName ??= policy.Name;
-
         if (_pipelineCache.TryGetValue(cacheKey, out var cachedPipeline))
         {
             ResiliencyLog.PipelineRetrievedFromCache(_logger, cacheKey);
@@ -89,7 +87,7 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
     /// <inheritdoc />
     public IGenericResult<ResiliencePipeline> GetOrCreate(
         string policyName,
-        string? operationName = null)
+        string operationName)
     {
         if (string.IsNullOrEmpty(policyName))
         {
@@ -104,13 +102,13 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
                 ResiliencyLog.PolicyNotFound(_logger, policyName));
         }
 
-        return GetOrCreate(policy, operationName ?? policyName);
+        return GetOrCreate(policy, operationName);
     }
 
     /// <inheritdoc />
     public IGenericResult<ResiliencePipeline<TResult>> GetOrCreatePipeline<TResult>(
         IResiliencyPolicy policy,
-        string? operationName = null)
+        string operationName)
     {
         if (policy == null)
         {
@@ -119,8 +117,6 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
         }
 
         var cacheKey = $"{policy.Name}_{typeof(TResult).FullName}";
-        operationName ??= policy.Name;
-
         if (_genericPipelineCache.TryGetValue(cacheKey, out var cached) && cached is ResiliencePipeline<TResult> cachedPipeline)
         {
             ResiliencyLog.PipelineRetrievedFromCache(_logger, cacheKey);
@@ -151,7 +147,7 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
     /// <inheritdoc />
     public IGenericResult<ResiliencePipeline<TResult>> GetOrCreatePipeline<TResult>(
         string policyName,
-        string? operationName = null)
+        string operationName)
     {
         if (string.IsNullOrEmpty(policyName))
         {
@@ -166,7 +162,7 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
                 ResiliencyLog.PolicyNotFound(_logger, policyName));
         }
 
-        return GetOrCreatePipeline<TResult>(policy, operationName ?? policyName);
+        return GetOrCreatePipeline<TResult>(policy, operationName);
     }
 
     /// <inheritdoc />

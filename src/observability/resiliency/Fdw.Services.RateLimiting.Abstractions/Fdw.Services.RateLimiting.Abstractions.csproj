@@ -20,6 +20,7 @@
     <!-- Collections.SourceGenerators for processing [TypeCollection] and [TypeOption] attributes -->
     <!-- PrivateAssets="all" means the generator runs during THIS package's build but doesn't flow to consumers -->
     <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\foundation\security\Fdw.Claims.Abstractions\Fdw.Claims.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -33,7 +33,7 @@ public sealed class MutableTypeCollectionAttribute(Type baseType, Type defaultRe
     /// <summary>
     /// Gets the fully qualified name of the base type (for generator compatibility).
     /// </summary>
-    public string BaseTypeName => BaseType.FullName ?? BaseType.Name;
+    public string BaseTypeName => BaseType.FullName ?? throw new InvalidOperationException("The base type has no full name; only an open generic parameter lacks one.");
 
     /// <summary>
     /// Gets the collection name (for generator compatibility).

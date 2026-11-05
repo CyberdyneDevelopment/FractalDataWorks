@@ -9,7 +9,7 @@ and abstract bases its .Abstractions projects declare, most used first), the rul
 the command that runs each, and which domains it depends on and which depend on it.
 
 Projects and references are read from git with tools/versioning/fdwprojects.py; the domain and group of every project
-are the rules in domains.py, so reference-servicetypes is matched to the same domains. Source text is read from the
+are each repository's own domains.json (read by domains.py), so reference-servicetypes is matched to the same domains. Source text is read from the
 checkouts' working trees. Also keeps the block in public/.gitignore that un-ignores exactly these CLAUDE.md files
 (the repository root .gitignore ignores every CLAUDE.md). Writes nothing else. A domain with no summary below is an
 error: add one.
@@ -67,7 +67,7 @@ SUMMARY = {
  "workspaces": "Workspaces: the workspace service and endpoints, and the TDS protocol and endpoints that serve them over SQL Server's wire protocol.",
 }
 RULES = [
- "No fallbacks: a missing value fails with a MessageLogging error and a failed result. The only `??` allowed is `logger ?? NullLogger<T>.Instance` in a constructor.",
+ "No fallbacks: a `??` never falls back to a value that could be a real one, and a missing value fails with a MessageLogging error and a failed result. Allowed: a null logger, `?? string.Empty`, `?? []`, `??=` on a field or local, a chain of failure results or messages, a `[PlaceholderText]` constant, a `[PlatformDefault]` member, and a member Mike approved with `[ApprovedFallback]`. Never a default message. FDW055 enforces it.",
  "Log through MessageLogging (source-generated messages), never raw `ILogger` calls.",
  "Return `IGenericResult` with a ResultCode; a failure never carries a plain string.",
  "All data access goes through `IDataGateway.Execute()` with command objects. No `SqlConnection`, `SqlCommand` or connection string outside the connection projects.",
@@ -111,12 +111,12 @@ BEGIN, END = "# BEGIN domain guides (written by tools/reorg/gen_domain_guides.py
 DECL = re.compile(r"^\s*public\s+(?:sealed\s+|static\s+|partial\s+)*(?:(interface)\s+(I[A-Z]\w*)|abstract\s+(?:partial\s+)?class\s+(\w+Base)\b)", re.M)
 
 
-def place(repo_key, name, kind):
-    d = domains.domain_of(repo_key, name)
+def place(repo, name, kind):
+    d = domains.domain_of(repo, name)
     if d is None and kind == "tests":
         d = "_cross"
     if d is None:
-        raise SystemExit(f"no domain rule for {name}: add one to domains.py")
+        raise SystemExit(f"no domain rule for {name}: add one to {repo}/domains.json")
     return d
 
 
@@ -149,7 +149,7 @@ def seams(root, projects, count):
                     with open(os.path.join(dp, fn), encoding="utf-8-sig", errors="replace") as f:
                         for m in DECL.finditer(f.read()):
                             found.append((m.group(2) or m.group(3), p.name))
-    return sorted(set(found), key=lambda x: (-count[x[0]], x[0]))
+    return sorted(set(found), key=lambda x: (-count[x[0]], x[0], x[1]))
 
 
 def gitignore_block(path, folders):
@@ -171,8 +171,8 @@ def main():
     args = a.parse_args()
     repo, rst_root = os.path.realpath(args.repo), os.path.realpath(args.rst)
     fdw, rst = snapshot(repo), snapshot(rst_root)
-    dom = {n: place("fdw", n, p.kind) for n, p in fdw.projects.items()}
-    rdom = {n: place("rst", n, p.kind) for n, p in rst.projects.items()}
+    dom = {n: place(repo, n, p.kind) for n, p in fdw.projects.items()}
+    rdom = {n: place(rst_root, n, p.kind) for n, p in rst.projects.items()}
     count = uses(repo)
     rdeps = collections.defaultdict(set)
     for n, p in fdw.projects.items():

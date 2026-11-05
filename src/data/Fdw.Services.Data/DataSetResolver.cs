@@ -14,12 +14,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Data;
 
 /// <summary>
-/// The default <see cref="IDataSetResolver"/>: the data set of that name, else the variation of that name (FDW-2390).
+/// The default <see cref="IDataSetResolver"/>: the data set of that name, which is a variation when it is of kind Variation (FDW-2390, FDW-3638).
 /// </summary>
 /// <remarks>
-/// Both providers are asked, so a name held by a data set and by a variation is refused instead of resolved by picking one.
-/// A variation is read through the variation domain provider, which finds the implementation its row names, so a kind a developer
-/// registers resolves with no change here.
+/// A variation is a data set, so the data set provider answers for both and a name cannot mean two things. A variation's parent views
+/// are read through the variation provider.
 /// </remarks>
 public sealed class DataSetResolver : IDataSetResolver
 {
@@ -51,23 +50,17 @@ public sealed class DataSetResolver : IDataSetResolver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var dataSet = await _dataSets.Get(name, levels, cancellationToken).ConfigureAwait(false);
-        if (dataSet.IsFailure)
-            return dataSet.ToNewResult<ResolvedDataSet?>();
+        var read = await _dataSets.Get(name, levels, cancellationToken).ConfigureAwait(false);
+        if (read.IsFailure)
+            return read.ToNewResult<ResolvedDataSet?>();
 
-        var variation = await _variations.Get(name, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
-        if (variation.IsFailure)
-            return variation.ToNewResult<ResolvedDataSet?>();
+        if (read.Value is null)
+            return GenericResult<ResolvedDataSet?>.Success(null);
 
-        if (dataSet.Value is not null && variation.Value is { } held)
-            return GenericResult<ResolvedDataSet?>.Failure(DataSetResolverLog.Ambiguous(_logger, name, held.Implementation));
-
-        if (dataSet.Value is { } found)
-            return Resolved(name, new ResolvedDataSet(found, null, null, []));
-
-        return variation.Value is { } view
+        // A variation is a data set of kind Variation (FDW-3638), so one read answers for both and a name cannot mean two things.
+        return read.Value is IDataSetVariationImplementationConfiguration view
             ? await ResolveVariation(name, view, levels, cancellationToken).ConfigureAwait(false)
-            : GenericResult<ResolvedDataSet?>.Success(null);
+            : Resolved(name, new ResolvedDataSet(read.Value, null, null, []));
     }
 
     private async Task<IGenericResult<ResolvedDataSet?>> ResolveVariation(
@@ -79,7 +72,7 @@ public sealed class DataSetResolver : IDataSetResolver
 
         if (root.Value is not { } dataSet)
             return GenericResult<ResolvedDataSet?>.Failure(
-                DataSetResolverLog.RootMissing(_logger, name, view.Implementation, view.BaseDataSetId.ToString("D", CultureInfo.InvariantCulture)));
+                DataSetResolverLog.RootMissing(_logger, name, view.VariationKind, view.BaseDataSetId.ToString("D", CultureInfo.InvariantCulture)));
 
         var parents = await Parents(name, view, cancellationToken).ConfigureAwait(false);
         if (parents.IsFailure)
@@ -87,7 +80,7 @@ public sealed class DataSetResolver : IDataSetResolver
 
         // The nearest parent is first; a view of the data set itself has none, so it varies the data set.
         var chain = parents.Value!;
-        var filters = chain.Reverse().Append(view).Select(link => link.Filters).Where(text => !string.IsNullOrWhiteSpace(text)).Select(text => text!).ToList();
+        var filters = chain.Reverse().Append(view).Select(link => link.StoredFilters).Where(text => !string.IsNullOrWhiteSpace(text)).Select(text => text!).ToList();
         return Resolved(name, new ResolvedDataSet(dataSet, view, chain.Count == 0 ? dataSet.Name : chain[0].Name, filters));
     }
 
@@ -102,7 +95,7 @@ public sealed class DataSetResolver : IDataSetResolver
         {
             if (parents.Count + 1 >= MaxChainDepth)
                 return GenericResult<IReadOnlyList<IDataSetVariationImplementationConfiguration>>.Failure(
-                    DataSetResolverLog.ChainTooDeep(_logger, name, view.Implementation, MaxChainDepth));
+                    DataSetResolverLog.ChainTooDeep(_logger, name, view.VariationKind, MaxChainDepth));
 
             var parent = await _variations.Get(parentId, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
             if (parent.IsFailure)
@@ -110,7 +103,7 @@ public sealed class DataSetResolver : IDataSetResolver
 
             if (parent.Value is not { } link)
                 return GenericResult<IReadOnlyList<IDataSetVariationImplementationConfiguration>>.Failure(
-                    DataSetResolverLog.ParentMissing(_logger, name, view.Implementation, parentId.ToString("D", CultureInfo.InvariantCulture)));
+                    DataSetResolverLog.ParentMissing(_logger, name, view.VariationKind, parentId.ToString("D", CultureInfo.InvariantCulture)));
 
             parents.Add(link);
             next = link.ParentVariationId;

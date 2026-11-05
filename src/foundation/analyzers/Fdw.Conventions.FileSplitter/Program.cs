@@ -88,7 +88,7 @@ internal static class Program
 
             if (path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
             {
-                var dir = Path.GetDirectoryName(path) ?? ".";
+                var dir = Path.GetDirectoryName(path) ?? throw new ArgumentException($"'{path}' names no directory.", nameof(path));
                 return Directory.GetFiles(dir, "*.cs", SearchOption.AllDirectories)
                     .Where(f => !IsInObjOrBin(f, dir))
                     .ToList();
@@ -129,7 +129,7 @@ internal static class Program
 
         var fileName = Path.GetFileName(filePath);
         var primaryName = GetPrimaryFileName(fileName);
-        var directory = Path.GetDirectoryName(filePath) ?? ".";
+        var directory = Path.GetDirectoryName(filePath) ?? throw new ArgumentException($"'{filePath}' names no directory.", nameof(filePath));
 
         // Determine which types don't match the file name
         var typesToExtract = new List<BaseTypeDeclarationSyntax>();
@@ -300,12 +300,12 @@ internal static class Program
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (var u in existing)
-            names.Add(u.Name?.ToString() ?? u.ToString());
+            names.Add(u.ToString());
 
         var merged = new List<UsingDirectiveSyntax>(existing);
         foreach (var u in incoming)
         {
-            var name = u.Name?.ToString() ?? u.ToString();
+            var name = u.ToString();
             if (names.Add(name))
                 merged.Add(u);
         }
@@ -368,7 +368,7 @@ internal static class Program
         if (string.IsNullOrEmpty(withoutExtension))
             return string.Empty;
 
-        var dotIndex = withoutExtension.IndexOf('.');
+        var dotIndex = withoutExtension.IndexOf('.', StringComparison.Ordinal);
         return dotIndex >= 0 ? withoutExtension[..dotIndex] : withoutExtension;
     }
 

@@ -73,6 +73,40 @@ public static class DataSetCategoryLinks
         CategoryConfigurationProvider categories, string? name, ILogger logger, CancellationToken ct) =>
         CategoryLinks.Requested(categories, DataSetCategoryConfiguration.ImplementationName, name, logger, ct);
 
+    /// <summary>Lists the data sets of the kinds asked for that sit under any of the categories asked about; a missing limit leaves that side unlimited.</summary>
+    /// <param name="dataSets">The data sets.</param>
+    /// <param name="categoryIds">The categories asked about; null for any, or none at all.</param>
+    /// <param name="kinds">The kinds asked for, as names <c>DataSetTypes</c> holds; empty for any.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The data sets, read without their children, or the failure.</returns>
+    public static async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Matching(
+        DataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid>? categoryIds, IReadOnlyList<string> kinds, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(dataSets);
+        ArgumentNullException.ThrowIfNull(kinds);
+        var implementations = RequestedDataSetKinds.ImplementationNames(kinds);
+        var page = await dataSets.Get(0, AllRows, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        if (page.IsFailure || page.Value is null)
+        {
+            return page.ToNewResult<IReadOnlyList<IDataSetImplementationConfiguration>>();
+        }
+
+        List<IDataSetImplementationConfiguration> found = [];
+        await foreach (var dataSet in page.Value.Items.WithCancellation(ct).ConfigureAwait(false))
+        {
+            var inCategory = categoryIds is null || (dataSet.CategoryId is { } cited && categoryIds.Contains(cited));
+            var ofKind = implementations.Count == 0 || implementations.Contains(dataSet.Implementation, StringComparer.OrdinalIgnoreCase);
+            if (inCategory && ofKind)
+            {
+                found.Add(dataSet);
+            }
+        }
+
+        return page.Value.Outcome.IsFailure
+            ? page.Value.Outcome.ToNewResult<IReadOnlyList<IDataSetImplementationConfiguration>>()
+            : GenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>.Success(found);
+    }
+
     /// <summary>Lists the data sets that sit under any of the categories, in name order.</summary>
     /// <param name="dataSets">The data sets.</param>
     /// <param name="categoryIds">The categories asked about.</param>

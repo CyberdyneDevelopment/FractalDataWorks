@@ -65,7 +65,15 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
         
         OnCreatingRole(req.Name);
 
-        var config = BuildConfiguration(req);
+        // Whether a role belongs to one tenant is the caller's choice; there is no default (FDW-3823).
+        if (req.IsTenantScoped is not { } isTenantScoped)
+        {
+            AddError(r => r.IsTenantScoped, "IsTenantScoped is required");
+            ThrowIfAnyErrors();
+            return;
+        }
+
+        var config = BuildConfiguration(req, isTenantScoped);
 
         var result = await _roleProvider.Create(config, RoleDomain, RoleImplementation, req.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
@@ -94,14 +102,16 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
     /// Builds the RoleImplementationConfiguration from the create request.
     /// Override to customize configuration creation.
     /// </summary>
-    protected virtual RoleImplementationConfiguration BuildConfiguration(CreateRoleRequest request)
+    /// <param name="request">The create request.</param>
+    /// <param name="isTenantScoped">The flag the request states.</param>
+    protected virtual RoleImplementationConfiguration BuildConfiguration(CreateRoleRequest request, bool isTenantScoped)
     {
         return new RoleImplementationConfiguration
         {
             Name = request.Name,
             DisplayName = request.DisplayName,
             Description = request.Description,
-            IsTenantScoped = request.IsTenantScoped,
+            IsTenantScoped = isTenantScoped,
             CreatedAt = DateTimeOffset.UtcNow,
         };
     }

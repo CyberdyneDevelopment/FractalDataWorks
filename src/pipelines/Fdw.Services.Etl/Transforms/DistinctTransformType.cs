@@ -61,7 +61,7 @@ public sealed class DistinctTransformType : TransformTypeBase
         ITransformContext context,
         CancellationToken cancellationToken = default)
     {
-        var name = (configuration as PipelineTransformConfiguration)?.Name ?? Kind;
+        var name = configuration is PipelineTransformConfiguration { Name: { } named } ? named : Kind;
         return Task.FromResult(GenericResult<IDictionary<string, object?>>.Failure(
             EtlLog.TransformRequiresBatchExecution(context.Logger, name)));
     }

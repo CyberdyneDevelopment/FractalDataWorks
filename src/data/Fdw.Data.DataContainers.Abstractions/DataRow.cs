@@ -263,7 +263,7 @@ public class DataRow : IDataRow
 
         var schema = DataSchema.FromFields(
             rows[0].Select((kvp, index) =>
-                (ISchemaField)new SchemaField(kvp.Key, kvp.Value?.GetType() ?? typeof(object), index)).ToList());
+                (ISchemaField)new SchemaField(kvp.Key, kvp.Value?.GetType() ?? UntypedValue.ClrType, index)).ToList());
 
         var result = new List<IDataRow>(rows.Count);
         foreach (var row in rows)
@@ -277,7 +277,7 @@ public class DataRow : IDataRow
     /// </summary>
     public static DataRow SingleField(string fieldName, object? value)
     {
-        var schema = DataSchema.FromFields([new SchemaField(fieldName, value?.GetType() ?? typeof(object), 0)]);
+        var schema = DataSchema.FromFields([new SchemaField(fieldName, value?.GetType() ?? UntypedValue.ClrType, 0)]);
         return new DataRow(schema, [value]);
     }
 }

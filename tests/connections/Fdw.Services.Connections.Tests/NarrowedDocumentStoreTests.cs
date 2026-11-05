@@ -27,13 +27,15 @@ public sealed class NarrowedDocumentStoreTests
 
     private static readonly DocumentPath Folder = Path("rayburn/finance");
 
+    private static readonly Guid StoredUnder = new("66666666-0000-0000-0000-000000000001");
+
     private static DocumentInfo Info(string path) =>
         new(Path(path), 3, "text/plain", DateTimeOffset.UnixEpoch, null, null, new Dictionary<string, string>());
 
     private sealed class UnknownCommand() : DocumentCommandBase<bool>("Unknown");
 
     private static NarrowedDocumentStore Store(Mock<IDocumentConnection> connection) =>
-        new(connection.Object, Folder, NullLogger<NarrowedDocumentStore>.Instance);
+        new(connection.Object, Folder, StoredUnder, NullLogger<NarrowedDocumentStore>.Instance);
 
     [Fact]
     [Trait("Priority", "P0")]

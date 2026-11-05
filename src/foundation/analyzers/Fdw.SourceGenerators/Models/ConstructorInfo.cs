@@ -70,7 +70,7 @@ public sealed class ConstructorInfo : IEquatable<ConstructorInfo>
             hash = hash * 31 + IsPrimary.GetHashCode();
             foreach (var param in Parameters)
             {
-                hash = hash * 31 + (param?.GetHashCode() ?? 0);
+                hash = hash * 31 + EqualityComparer<ParameterInfo>.Default.GetHashCode(param);
             }
             return hash;
         }

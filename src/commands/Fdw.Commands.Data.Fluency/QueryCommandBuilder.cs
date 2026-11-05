@@ -346,8 +346,14 @@ public class QueryCommandBuilder<T>
     /// Builds and returns a <see cref="DataGatewayCall"/> containing the completed query command
     /// and its <see cref="DataStoreTarget"/> address.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when a filter group is still open.</exception>
     public DataGatewayCall Build()
     {
+        // A condition written inside a group reaches the filter only when EndGroup() closes that group, so building with a group still
+        // open would drop its conditions: a Delete or Update would reach every row and a Query would return every row (FDW-3598).
+        if (_groupStack.Count > 0)
+            throw new InvalidOperationException($"{_groupStack.Count} filter group(s) still open. Call EndGroup() for each BeginAndGroup() or BeginOrGroup() before Build().");
+
         var command = _command;
 
         // Apply filter if we have a root group

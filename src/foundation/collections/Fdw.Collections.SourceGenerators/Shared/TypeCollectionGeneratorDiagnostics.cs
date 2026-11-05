@@ -155,13 +155,22 @@ internal static class TypeCollectionGeneratorDiagnostics
         isEnabledByDefault: true,
         description: "Each TypeOption gets a static accessor named after it, which would collide with a member the collection generates for itself (All, ByName, ById, ByCategory, Categories, GetMetadata, NotFound, RegisterMember). Reported here rather than left to the C# compiler, which would report a duplicate member inside generated code the author cannot open.");
 
-    // Empty sentinel diagnostics
+    public static readonly DiagnosticDescriptor DeclaredIdUnreadable = new(
+        id: "TC013",
+        title: "TypeOption Id Cannot Be Read",
+        messageFormat: "Collection '{0}': the Id TypeOption '{1}' declares cannot be read at compile time ({2}), so it is not checked against the other options' Ids",
+        category: "TypeCollection",
+        defaultSeverity: DiagnosticSeverity.Info,
+        isEnabledByDefault: true,
+        description: "TC008 refuses two options of one collection that declare the same Id (FDW-4045). It reads the Id by following the option's constructor chain to the parameter marked [TypeOptionId], passing constants through. An Id computed at run time, or passed through a base compiled into another assembly that marks no parameter, cannot be read; such a duplicate still throws when the collection freezes at first use.");
+
+    // NotFound sentinel diagnostics
     public static readonly DiagnosticDescriptor UnknownConstructorParameterType = new(
         id: "TC009",
-        title: "Unknown Constructor Parameter Type",
-        messageFormat: "TypeCollection '{0}' base class has constructor parameter '{1}' of type '{2}' which cannot be safely defaulted for the Empty sentinel. Consider adding a protected parameterless constructor or using a nullable type.",
+        title: "NotFound Sentinel Cannot Build A Constructor Parameter",
+        messageFormat: "Collection '{0}': the option base constructor the NotFound sentinel calls has parameter '{1}' of type '{2}', which the sentinel can only pass null to. Use a type the sentinel can build (a string, number, array, read-only collection, enum or struct), declare it nullable, or make it an abstract member the options override.",
         category: "TypeCollection",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "The Empty sentinel class needs to call the base constructor, but reference types without known defaults will be passed as null, which may cause runtime errors if the constructor validates for null.");
+        description: "Every collection kind generates a NotFound sentinel that derives from the option base and calls its protected constructor with the fewest parameters, in the collection's static initializer. A parameter it cannot build is passed null; a base that rejects null throws there and stops every host that touches the collection (FDW-2931). Release builds treat this warning as an error.");
 }

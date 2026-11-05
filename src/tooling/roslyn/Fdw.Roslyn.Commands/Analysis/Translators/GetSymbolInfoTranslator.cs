@@ -12,6 +12,7 @@ using Fdw.Roslyn.Commands.Analysis.Results;
 using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using Fdw.Roslyn.Commands.Symbols;
 
 namespace Fdw.Roslyn.Commands.Analysis.Translators;
 
@@ -68,8 +69,7 @@ public sealed class GetSymbolInfoTranslator
 
         var position = text.Lines.GetPosition(new LinePosition(command.Line - 1, command.Column - 1));
         var token = syntaxRoot.FindToken(position);
-        var symbol = semanticModel.GetSymbolInfo(token.Parent!, cancellationToken).Symbol
-                  ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
+        var symbol = TokenSymbols.Resolve(semanticModel, token, cancellationToken);
 
         if (symbol is null)
         {
@@ -138,7 +138,7 @@ public sealed class GetSymbolInfoTranslator
             additionalInfo["isReadOnly"] = fieldSymbol.IsReadOnly;
             additionalInfo["isVolatile"] = fieldSymbol.IsVolatile;
             if (fieldSymbol.HasConstantValue)
-                additionalInfo["constantValue"] = fieldSymbol.ConstantValue?.ToString() ?? "null";
+                additionalInfo["constantValue"] = fieldSymbol.ConstantValue?.ToString() ?? RoslynReportPlaceholders.NullConstant;
         }
 
         if (additionalInfo.Count > 0)

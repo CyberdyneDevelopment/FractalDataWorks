@@ -19,7 +19,7 @@ internal sealed class FakeTransformOperationSpec : ITransformOperationSpec, ITra
     /// <inheritdoc />
     public int ExecutionOrder { get; set; }
 
-    public bool IsEnabled { get; set; } = true;
+    public bool? IsEnabled { get; set; } = true;
 
     /// <inheritdoc />
     public IReadOnlyList<string> GroupByFields { get; set; } = [];

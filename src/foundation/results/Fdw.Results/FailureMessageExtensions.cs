@@ -53,4 +53,60 @@ public static class FailureMessageExtensions
 
         return null;
     }
+
+    /// <summary>
+    /// Gets the message a failed result carries: its most recent one, the same message
+    /// <see cref="IGenericResult.CurrentMessage"/> names. A failed <c>GenericResult</c> always has one, so a reader never supplies
+    /// a default message (FDW-3580).
+    /// </summary>
+    /// <param name="result">A failed result.</param>
+    /// <returns>The message; read <see cref="Fdw.Messages.IGenericMessage.Message"/> for its text and Code for its code.</returns>
+    /// <exception cref="InvalidOperationException">The result succeeded.</exception>
+    /// <remarks>
+    /// Why the most recent message: it is what every reader read through CurrentMessage before, so the text each one reports does
+    /// not change. <see cref="FirstFailureMessage"/> is the reader that picks the coded reason the HTTP answer reports.
+    /// </remarks>
+    public static Fdw.Messages.IGenericMessage FailureReason(this IGenericResult result)
+    {
+        if (result == null)
+        {
+            throw new ArgumentNullException(nameof(result));
+        }
+
+        if (result.IsSuccess)
+        {
+            throw new InvalidOperationException("A successful result has no failure reason.");
+        }
+
+        // Why UnstatedFailure: GenericResult never fails without a message, but another IGenericResult implementer can, and a
+        // reader on a failure path must not throw (Mike, ee99604a).
+        return result.Messages.Count > 0
+            ? result.Messages[result.Messages.Count - 1]
+            : UnstatedFailure.Message();
+    }
+
+    /// <summary>
+    /// Gets why a result has no value to read: its failure reason when it failed, or the named <see cref="MissingValue"/> failure
+    /// when it succeeded with a null value. The reader for a guard of the form <c>!result.IsSuccess || result.Value is null</c>.
+    /// </summary>
+    /// <typeparam name="T">The value's type.</typeparam>
+    /// <param name="result">A result that failed or carries no value.</param>
+    /// <returns>The message; read <see cref="Fdw.Messages.IGenericMessage.Message"/> for its text and Code for its code.</returns>
+    /// <exception cref="InvalidOperationException">The result succeeded with a value.</exception>
+    public static Fdw.Messages.IGenericMessage NoValueReason<T>(this IGenericResult<T> result)
+    {
+        if (result == null)
+        {
+            throw new ArgumentNullException(nameof(result));
+        }
+
+        if (!result.IsSuccess)
+        {
+            return result.FailureReason();
+        }
+
+        return result.Value is null
+            ? MissingValue.Message(typeof(T).Name)
+            : throw new InvalidOperationException("The result succeeded with a value: it has no reason to give.");
+    }
 }

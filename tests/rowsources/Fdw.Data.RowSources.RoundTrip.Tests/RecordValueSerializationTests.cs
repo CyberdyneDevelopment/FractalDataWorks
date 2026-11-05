@@ -27,7 +27,7 @@ public class RecordValueSerializationTests
     private static string WriteJson(IReadOnlyDictionary<string, object?> row)
     {
         var text = new StringWriter();
-        using (var writer = new JsonStreamRowWriter(text))
+        using (var writer = new JsonStreamRowWriter(text, new JsonRowWriterOptions() { SkipValidation = false, BufferSize = 16 * 1024 }))
         {
             writer.Write(row);
             writer.Flush();
@@ -40,7 +40,7 @@ public class RecordValueSerializationTests
     {
         var text = new StringWriter();
         using (var writer = new DelimitedStreamRowWriter(
-                   text, new DelimitedRowWriterOptions { Columns = [.. columns] }))
+                   text, new DelimitedRowWriterOptions { Columns = [.. columns], Separator = ",", QuoteChar = '"', WriteHeader = false, WriteByteOrderMark = false, NeutralizeFormulas = false, BufferSize = 16 * 1024 }))
         {
             writer.Write(row);
             writer.Flush();

@@ -51,6 +51,7 @@ public sealed class ComputeRowFailureTests
     {
         Id = Guid.NewGuid(),
         Name = "PerUnit",
+        IsEnabled = true,
         OperationType = "Compute",
         ComputeTransformationId = BuiltId,
         ComputeOnRowFailure = onRowFailure,
@@ -118,7 +119,7 @@ public sealed class ComputeRowFailureTests
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value!.Select(row => row["TradeId"]).ShouldBe(["T1", "T3"]);
         context.Rejections.Count.ShouldBe(1);
-        context.Rejections[0].Stage.ShouldBe("PerUnit");
+        context.Rejections[0].Component.ShouldBe("PerUnit");
         context.Rejections[0].Record["TradeId"].ShouldBe("T2");
     }
 

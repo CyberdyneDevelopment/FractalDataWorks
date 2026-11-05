@@ -1,3 +1,5 @@
+using Fdw.Data.RowSources.Abstractions;
+using System.IO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -93,7 +95,12 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
 
             // GraphQL always uses POST
             var endpoint = GetRequestPath(command, container, context);
-            var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            if (!endpoint.IsSuccess)
+            {
+                return endpoint.ToNewResult<HttpRequestMessage>();
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Post, endpoint.Value!);
 
             // Build GraphQL request body
             var bodyResult = await BuildGraphQLRequestBody(command, container, context, cancellationToken).ConfigureAwait(false);
@@ -138,7 +145,7 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
                     HttpResultCodes.ByName("GraphQLHttpError"),
                     ResultDetails.Create()
                         .With("StatusCode", (int)response.StatusCode)
-                        .With("ReasonPhrase", response.ReasonPhrase ?? "Unknown"));
+                        .With("ReasonPhrase", response.ReasonPhrase ?? HttpPlaceholders.NoReasonPhrase));
             }
             return GenericResult<object?>.Success(null);
         }
@@ -181,7 +188,7 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
                 HttpResultCodes.ByName("GraphQLHttpError"),
                 ResultDetails.Create()
                     .With("StatusCode", (int)response.StatusCode)
-                    .With("ReasonPhrase", response.ReasonPhrase ?? "Unknown"));
+                    .With("ReasonPhrase", response.ReasonPhrase ?? HttpPlaceholders.NoReasonPhrase));
         }
 
         // Extract data
@@ -674,7 +681,7 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     /// <returns>A formatted error message.</returns>
     protected virtual string FormatGraphQLError(GraphQLError error)
     {
-        var message = error.Message ?? "Unknown error";
+        var message = error.Message ?? string.Empty;
 
         if (error.Locations is not null && error.Locations.Count > 0)
         {
@@ -706,8 +713,13 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
 
     /// <inheritdoc />
     public override bool CanExpressPaging(IPagingExpression paging) => true;
+
+    // Why (FDW-3823): the protocol base knows no format; every protocol that reads a response as rows reads through the format types.
+    /// <inheritdoc />
+    protected override bool HasRowReaderForFormat(IStorageContainer container)
+        => FormatRowReaders.Has(container);
+
+    /// <inheritdoc />
+    protected override IGenericResult<IRowSourceReader?> TryCreateRowReader(IStorageContainer container, Stream content)
+        => FormatRowReaders.Create(container, content);
 }
-
-#region GraphQL Types
-
-#endregion

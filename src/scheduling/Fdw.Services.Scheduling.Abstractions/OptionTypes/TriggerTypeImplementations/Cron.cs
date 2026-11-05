@@ -180,7 +180,7 @@ public sealed class Cron : TriggerTypeBase
             try
             {
                 var cronExpr = CronExpression.Parse(cronExpression);
-                var referenceTime = lastExecution ?? DateTime.UtcNow;
+                var referenceTime = lastExecution is { } last ? last : DateTime.UtcNow;
                 return cronExpr.GetNextOccurrence(referenceTime, TimeZoneInfo.Utc);
             }
             catch (Exception fallbackEx)
@@ -242,7 +242,7 @@ public sealed class Cron : TriggerTypeBase
 
             // Next occurrence strictly after the last run (or one minute ago for a never-run schedule);
             // due once that occurrence is at or before now.
-            var fromUtc = lastExecution ?? now.UtcDateTime.AddMinutes(-1);
+            var fromUtc = lastExecution is { } lastRun ? lastRun : now.UtcDateTime.AddMinutes(-1);
             var fromInZone = TimeZoneInfo.ConvertTimeFromUtc(fromUtc, timeZone);
             var nextOccurrence = cronExpr.GetNextOccurrence(fromInZone, timeZone)?.ToUniversalTime();
 

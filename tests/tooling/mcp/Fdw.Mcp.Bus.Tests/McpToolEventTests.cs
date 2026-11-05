@@ -28,7 +28,7 @@ public class McpToolEventTests
     [Fact]
     public async Task PublishToolInvocationAndResultCarryCorrelationAndCausation()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         var update = ViewIntents.ByName("Update");
         var corr = Guid.NewGuid();
 
@@ -52,7 +52,7 @@ public class McpToolEventTests
     [Fact]
     public async Task InvokeAndAwaitReturnsMatchingResult()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         var silent = ViewIntents.ByName("Silent");
 
         var invokes = bus.Subscribe("mcp/mssql/echo/invoke", TestContext.Current.CancellationToken);
@@ -82,7 +82,7 @@ public class McpToolEventTests
     [Fact]
     public async Task InvokeAndAwaitReturnsFailureOnErrorEvent()
     {
-        var bus = new InMemoryMcpEventBus();
+        var bus = new InMemoryMcpEventBus(ringCapacity: 100);
         var silent = ViewIntents.ByName("Silent");
 
         // Subscribed here rather than inside the task, for the reason given above.

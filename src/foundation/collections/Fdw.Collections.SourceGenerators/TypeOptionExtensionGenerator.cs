@@ -124,7 +124,7 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
             return null;
 
         var collectionType = attribute.ConstructorArguments[0].Value as ITypeSymbol;
-        var optionName = attribute.ConstructorArguments[1].Value?.ToString() ?? "";
+        var optionName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
 
         // Third argument is optional methodReturnType
         ITypeSymbol? methodReturnType = null;

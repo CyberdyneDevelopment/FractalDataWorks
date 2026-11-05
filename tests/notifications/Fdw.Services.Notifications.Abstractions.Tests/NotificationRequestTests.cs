@@ -52,7 +52,7 @@ public class NotificationRequestTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "CoreFramework")]
-    public void ConstructorWithDefaultsUsesNormalPriority()
+    public void ConstructorLeavesTheOptionalFieldsNull()
     {
         // Arrange
         var channelName = "Email";
@@ -61,7 +61,7 @@ public class NotificationRequestTests
         var message = "Message";
 
         // Act
-        var request = new NotificationRequest(channelName, recipients, subject, message);
+        var request = new NotificationRequest(channelName, recipients, subject, message, NotificationPriorities.Normal);
 
         // Assert
         request.Priority.Name.ShouldBe("Normal");
@@ -79,7 +79,8 @@ public class NotificationRequestTests
             "Email",
             new List<string> { "user@example.com" },
             "Subject",
-            "Message");
+            "Message",
+            NotificationPriorities.Normal);
 
         // Act
         var createdAt = ((IGenericCommand)request).CreatedAt;

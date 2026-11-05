@@ -15,7 +15,7 @@ namespace Fdw.Web.Api.Tests.Endpoints.Pipelines;
 public sealed class PipelineTransformConfigurationMapperTests
 {
     private static CreatePipelineTransformRequest FilterRequest(string name) =>
-        new() { Name = name, OperationType = "Filter", FilterExpression = "B == 1" };
+        new() { Name = name, OperationType = "Filter", FilterExpression = "B == 1", IsEnabled = true };
 
     // ── Aggregate dispatch ───────────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     {
         // Arrange
         var request = new CreatePipelineTransformRequest
-        {
+        { IsEnabled = true,
             Name = "Agg1",
             OperationType = "Aggregate",
             Aggregation = new AggregationRequest
@@ -56,7 +56,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapFailsLoudWhenAggregatePostedWithoutParams()
     {
         // Arrange — the whole point of FDW-556: a param-less Aggregate must be rejected at create time.
-        var request = new CreatePipelineTransformRequest { Name = "Agg1", OperationType = "Aggregate" };
+        var request = new CreatePipelineTransformRequest { IsEnabled = true, Name = "Agg1", OperationType = "Aggregate" };
 
         // Act
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
@@ -77,7 +77,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     {
         // Arrange
         var request = new CreatePipelineTransformRequest
-        {
+        { IsEnabled = true,
             Name = "Lookup1",
             OperationType = "Lookup",
             Lookup = new LookupRequest
@@ -109,7 +109,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapFailsLoudWhenLookupPostedWithoutParams()
     {
         // Arrange
-        var request = new CreatePipelineTransformRequest { Name = "Lookup1", OperationType = "Lookup" };
+        var request = new CreatePipelineTransformRequest { IsEnabled = true, Name = "Lookup1", OperationType = "Lookup" };
 
         // Act
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
@@ -128,7 +128,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     {
         // Arrange
         var request = new CreatePipelineTransformRequest
-        {
+        { IsEnabled = true,
             Name = "Lookup1",
             OperationType = "Lookup",
             Lookup = new LookupRequest
@@ -160,7 +160,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     {
         // Arrange
         var request = new CreatePipelineTransformRequest
-        {
+        { IsEnabled = true,
             Name = "Calc1",
             OperationType = "Calculate",
             Calculation = new CalculationRequest
@@ -186,7 +186,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapFailsLoudWhenCalculatePostedWithoutParams()
     {
         // Arrange
-        var request = new CreatePipelineTransformRequest { Name = "Calc1", OperationType = "Calculate" };
+        var request = new CreatePipelineTransformRequest { IsEnabled = true, Name = "Calc1", OperationType = "Calculate" };
 
         // Act
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
@@ -206,7 +206,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapDispatchesToFilterTransformTypeAndPopulatesFilterExpression()
     {
         // Arrange
-        var request = new CreatePipelineTransformRequest { Name = "Filter1", OperationType = "Filter", FilterExpression = "Age >= 18" };
+        var request = new CreatePipelineTransformRequest { IsEnabled = true, Name = "Filter1", OperationType = "Filter", FilterExpression = "Age >= 18" };
 
         // Act
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
@@ -222,7 +222,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapFailsLoudWhenFilterPostedWithoutExpression()
     {
         // Arrange
-        var request = new CreatePipelineTransformRequest { Name = "Filter1", OperationType = "Filter" };
+        var request = new CreatePipelineTransformRequest { IsEnabled = true, Name = "Filter1", OperationType = "Filter" };
 
         // Act
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
@@ -242,7 +242,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapFailsLoudWhenOperationTypeUnknown()
     {
         // Arrange
-        var request = new CreatePipelineTransformRequest { Name = "Weird1", OperationType = "Median" };
+        var request = new CreatePipelineTransformRequest { IsEnabled = true, Name = "Weird1", OperationType = "Median" };
 
         // Act
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
@@ -259,7 +259,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     [Trait("Category", "DataIntegrity")]
     public void ARefusedStepShowsItsCallerWhichStepAndWhy()
     {
-        var request = new CreatePipelineTransformRequest { Name = "Weird1", OperationType = "Median" };
+        var request = new CreatePipelineTransformRequest { IsEnabled = true, Name = "Weird1", OperationType = "Median" };
 
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
@@ -299,7 +299,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         // Arrange — second step is a valid Filter, but the first (Aggregate, param-less) must short-circuit.
         var requests = new List<CreatePipelineTransformRequest>
         {
-            new CreatePipelineTransformRequest { Name = "Agg1", OperationType = "Aggregate" },
+            new CreatePipelineTransformRequest { IsEnabled = true, Name = "Agg1", OperationType = "Aggregate" },
             FilterRequest("Filter0"),
         };
 
@@ -335,16 +335,17 @@ public sealed class PipelineTransformConfigurationMapperTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void MapEnablesAStepThatDoesNotSay()
+    public void MapRefusesAStepThatDoesNotSayWhetherItRuns()
     {
-        // Arrange
+        // Arrange: whether a stage runs is its caller's choice, never assumed (FDW-3931).
         var request = FilterRequest("Filter0");
+        request.IsEnabled = null;
 
         // Act
         var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
-        result.IsSuccess.ShouldBeTrue();
-        result.Value![0].IsEnabled.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.Details!.GetValue<string>("Reason")!.ShouldContain("isEnabled");
     }
 }

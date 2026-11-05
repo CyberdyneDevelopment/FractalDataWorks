@@ -118,7 +118,7 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
         RecordsTransformed = dbRecord.RecordsTransformed,
         RecordsLoaded = dbRecord.RecordsLoaded,
         RecordsFailed = dbRecord.RecordsFailed,
-        TotalDurationMs = dbRecord.DurationMs ?? 0,
+        TotalDurationMs = dbRecord.DurationMs,
         ExecutedBy = dbRecord.ExecutedBy
     };
 

@@ -279,7 +279,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
             : await _pipelines.Get(start.PipelineName!, ct).ConfigureAwait(false);
         if (found.IsFailure || found.Value is null)
         {
-            var label = start.PipelineName ?? start.PipelineId!.Value.ToString("D", CultureInfo.InvariantCulture);
+            var label = start.PipelineName is { } named ? named : start.PipelineId!.Value.ToString("D", CultureInfo.InvariantCulture);
             return GenericResult<IPipelineImplementationConfiguration>.Failure(
                 PipelineRunStartLog.PipelineNotStartable(_logger, label, NotFoundReason(found)));
         }

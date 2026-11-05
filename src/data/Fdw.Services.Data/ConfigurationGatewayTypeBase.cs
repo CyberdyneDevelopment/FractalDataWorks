@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data;
 
@@ -15,6 +16,10 @@ public abstract class ConfigurationGatewayTypeBase<TService, TFactory> :
     where TService : IGenericService
     where TFactory : IServiceFactory<TService, IServiceConfiguration>
 {
+    /// <summary>The category a type option states none of its own sits under.</summary>
+    [PlatformDefault]
+    private const string DefaultCategory = "ConfigurationGateway";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationGatewayTypeBase{TService, TFactory}"/> class.
     /// </summary>
@@ -29,7 +34,7 @@ public abstract class ConfigurationGatewayTypeBase<TService, TFactory> :
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "ConfigurationGateway")
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory)
     {
     }
 }

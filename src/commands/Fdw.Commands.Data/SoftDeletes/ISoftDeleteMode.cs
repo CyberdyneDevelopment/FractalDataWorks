@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fdw.Collections;
+using Fdw.Messages;
 
 namespace Fdw.Commands.Data.SoftDeletes;
 
@@ -20,8 +21,8 @@ public interface ISoftDeleteMode : ITypeOption<int, SoftDeleteModeBase>
 
     /// <summary>Describes the first thing wrong with the options for this mode, or returns <see langword="null"/> when they suit it.</summary>
     /// <param name="options">The options being checked.</param>
-    /// <returns>A plain-language reason, or <see langword="null"/>.</returns>
-    string? Problem(SoftDeleteOptions options);
+    /// <returns>The reason, as a message, or <see langword="null"/>.</returns>
+    IGenericMessage? Problem(SoftDeleteOptions options);
 
     /// <summary>
     /// Gets the column-equals-value conditions this mode adds to the rows the command's own filter selects: a marker mode adds its

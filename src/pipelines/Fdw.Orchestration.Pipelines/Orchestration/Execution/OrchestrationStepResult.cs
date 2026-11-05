@@ -192,7 +192,7 @@ public class OrchestrationStepResult : IOrchestrationStepResult
             now,
             now)
         {
-            ErrorMessage = reason ?? "Step was skipped"
+            ErrorMessage = reason ?? string.Empty
         };
     }
 

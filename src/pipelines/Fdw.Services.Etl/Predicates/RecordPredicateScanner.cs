@@ -154,10 +154,10 @@ internal sealed class RecordPredicateScanner
             return null;
         }
 
-        var isEquality = comparator == RecordPredicateKeywords.Equal || comparator == RecordPredicateKeywords.NotEqual;
+        var isEquality = string.Equals(comparator, RecordPredicateKeywords.Equal, StringComparison.Ordinal) || string.Equals(comparator, RecordPredicateKeywords.NotEqual, StringComparison.Ordinal);
         if (isEquality && !quoted && string.Equals(value, RecordPredicateKeywords.NullWord, StringComparison.OrdinalIgnoreCase))
         {
-            return new NullCheckRecordPredicate(fieldName, wantsNull: comparator == RecordPredicateKeywords.Equal);
+            return new NullCheckRecordPredicate(fieldName, wantsNull: string.Equals(comparator, RecordPredicateKeywords.Equal, StringComparison.Ordinal));
         }
 
         return new ComparisonRecordPredicate(fieldName, comparator, value);
@@ -302,7 +302,7 @@ internal sealed class RecordPredicateScanner
     private string ReadWord()
     {
         var start = _position;
-        while (_position < _text.Length && !char.IsWhiteSpace(_text[_position]) && WordBreaks.IndexOf(_text[_position]) < 0)
+        while (_position < _text.Length && !char.IsWhiteSpace(_text[_position]) && WordBreaks.IndexOf(_text[_position], StringComparison.Ordinal) < 0)
         {
             _position++;
         }

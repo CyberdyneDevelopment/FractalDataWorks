@@ -25,6 +25,12 @@ public interface IResultCategory : ITypeOption<int, ResultCategoryBase>
     bool IsRetryable { get; }
 
     /// <summary>
+    /// Gets whether a failure in this category counts toward a failure threshold (FDW-4005). A category is false when its failures are a refusal by the state of something
+    /// the run uses and not a fault of the thing that ran, so counting them would act on the wrong thing; a non-failure category is false because it fails nothing.
+    /// </summary>
+    bool CountsTowardFailureThresholds { get; }
+
+    /// <summary>
     /// Gets the suggested HTTP status for codes in this category (a hint for the HTTP mapper).
     /// </summary>
     int HttpStatus { get; }

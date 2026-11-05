@@ -38,5 +38,5 @@ public sealed class ConstantValueSourceFactory : ValueSourceFactoryBase
     }
 
     /// <inheritdoc/>
-    public override object? RowValue(ColumnValueSource source, DateTimeOffset now) => ((ConstantValueSource)source).Value;
+    public override Func<object?> RowValueProducer(ColumnValueSource source, DateTimeOffset now) => () => ((ConstantValueSource)source).Value;
 }

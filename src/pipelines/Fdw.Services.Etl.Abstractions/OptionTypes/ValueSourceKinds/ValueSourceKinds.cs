@@ -5,7 +5,7 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 
 /// <summary>
-/// Where a loaded column gets its value: a column of the source row, the next value of a sequence, the current time or a constant (FDW-1108).
+/// Where a loaded column gets its value: a column of the source row, the next value of a sequence, the current time, a constant (FDW-1108) or a new UUIDv7 (FDW-3400).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeCollection(typeof(ValueSourceKindBase), typeof(IValueSourceKind), typeof(ValueSourceKinds))]

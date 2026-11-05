@@ -5,6 +5,7 @@ using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql;
+using Fdw.Data.MsSql.Tests.TestSupport;
 
 namespace Fdw.Data.MsSql.Tests.Translators;
 
@@ -34,6 +35,7 @@ public sealed class MsSqlNearestTranslatorTests
         fieldType.Setup(t => t.TypeName).Returns(typeName);
 
         var field = new Mock<IField>();
+        field.Setup(f => f.FieldType).Returns(TestFieldTypes.Text);
         field.Setup(f => f.Name).Returns(name);
         field.Setup(f => f.FieldType).Returns(fieldType.Object);
         return field.Object;

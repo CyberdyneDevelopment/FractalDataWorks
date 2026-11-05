@@ -20,7 +20,8 @@ public sealed class PipelineExecutionBackgroundServiceTests
 {
     private static PipelineExecutionBackgroundService CreateSut() =>
         new(new PipelineExecutionQueue(100, Mock.Of<IPipelineRunRequestStore>(), Mock.Of<IPipelineRunStopCheck>()), new PipelineRunScheduler(TimeProvider.System), new PipelineRunControl(),
-            Mock.Of<IPipelineRunRequestStore>(), Mock.Of<IPipelineRunHolds>(), Mock.Of<IServiceScopeFactory>(), NullLogger<PipelineExecutionBackgroundService>.Instance);
+            Mock.Of<IPipelineRunRequestStore>(), Mock.Of<IPipelineRunHolds>(), Mock.Of<IServiceScopeFactory>(),
+            PipelineStopGrace.Of(TimeSpan.FromSeconds(1)), NullLogger<PipelineExecutionBackgroundService>.Instance);
 
     private static PipelineExecutionRequest CreateRequest(Guid? tenantId) => new()
     {

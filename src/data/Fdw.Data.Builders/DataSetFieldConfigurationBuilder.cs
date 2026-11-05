@@ -20,6 +20,8 @@ public sealed class DataSetFieldConfigurationBuilder
     private string? _typeName;
     private bool _isKey;
     private bool _isRequired;
+    // Whether the field may hold no value: stated by AsKey, AsRequired or AsOptional, and never assumed (FDW-3931).
+    private bool? _isNullable;
     private bool _isIndexed;
     private int? _maxLength;
     private string? _defaultValue;
@@ -105,6 +107,7 @@ public sealed class DataSetFieldConfigurationBuilder
     {
         _isKey = true;
         _isRequired = true;
+        _isNullable = false;
         return this;
     }
 
@@ -115,6 +118,7 @@ public sealed class DataSetFieldConfigurationBuilder
     public DataSetFieldConfigurationBuilder AsRequired()
     {
         _isRequired = true;
+        _isNullable = false;
         return this;
     }
 
@@ -130,6 +134,7 @@ public sealed class DataSetFieldConfigurationBuilder
         if (!_isKey)
         {
             _isRequired = false;
+            _isNullable = true;
         }
         return this;
     }
@@ -210,6 +215,13 @@ public sealed class DataSetFieldConfigurationBuilder
                 ResultDetails.Create().With("FieldName", _name));
         }
 
+        if (_isNullable is not { } isNullable)
+        {
+            return GenericResult<DataSetFieldConfiguration>.Failure(
+                BuilderResultCodes.ByName("FieldNullabilityRequired"),
+                ResultDetails.Create().With("FieldName", _name));
+        }
+
         var config = new DataSetFieldConfiguration
         {
             Name = _name,
@@ -217,6 +229,7 @@ public sealed class DataSetFieldConfigurationBuilder
             TypeName = _typeName,
             IsKey = _isKey,
             IsRequired = _isRequired,
+            IsNullable = isNullable,
             IsIndexed = _isIndexed,
             MaxLength = _maxLength,
             DefaultValue = _defaultValue
@@ -236,6 +249,7 @@ public sealed class DataSetFieldConfigurationBuilder
         _typeName = null;
         _isKey = false;
         _isRequired = false;
+        _isNullable = null;
         _isIndexed = false;
         _maxLength = null;
         _defaultValue = null;

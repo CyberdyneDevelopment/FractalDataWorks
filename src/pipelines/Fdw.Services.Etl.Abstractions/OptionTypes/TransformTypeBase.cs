@@ -110,7 +110,7 @@ public abstract class TransformTypeBase : TypeOptionBase<TransformTypeBase>, ITy
                 if (configuration is { } config)
                 {
                     // Continue on error behavior can be determined by the pipeline
-                    context.ReportError(result.CurrentMessage ?? "Transform failed", input);
+                    context.ReportError(result.FailureReason().Message, input);
                     continue;
                 }
                 return result.ToNewResult<IEnumerable<IDictionary<string, object?>>>();

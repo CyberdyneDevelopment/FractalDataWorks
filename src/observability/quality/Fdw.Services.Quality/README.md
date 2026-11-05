@@ -27,7 +27,6 @@ Configuration classes are `[ManagedConfiguration]`: they generate their own DDL,
 | `DataSetAnnotationConfiguration` | class | Configuration for DataSet metadata annotations. Stored in catalog.DataSetAnnotation table. |
 | `DataSetAnnotationFieldBusinessNameConfiguration` | class | Configuration for a data set annotation field business name. Child of DataSetAnnotationConfiguration. |
 | `DataSetAnnotationFieldDescriptionConfiguration` | class | Configuration for a data set annotation field description. Child of DataSetAnnotationConfiguration. |
-| `DataSetAnnotationTagConfiguration` | class | Configuration for a data set annotation tag. Child of DataSetAnnotationConfiguration. |
 | `GlossaryTermConfiguration` | class | Configuration for business glossary terms. Stored in catalog.GlossaryTerm table. |
 | `GlossaryTermLinkedDataSetConfiguration` | class | Configuration for a glossary term linked data set. Child of GlossaryTermConfiguration. |
 | `GlossaryTermRelationConfiguration` | class | Configuration for a glossary term relation. Child of GlossaryTermConfiguration. |

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.SignalR;
 
@@ -114,7 +115,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
             return;
         }
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, scopeKey).ConfigureAwait(false);
+        await Groups.AddToGroupAsync(Context.ConnectionId, scopeKey, Context.ConnectionAborted).ConfigureAwait(false);
         SignalRLog.ClientJoinedGroup(Logger, Context.ConnectionId, scopeKey);
     }
 
@@ -131,7 +132,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
             return;
         }
 
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, scopeKey).ConfigureAwait(false);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, scopeKey, Context.ConnectionAborted).ConfigureAwait(false);
         SignalRLog.ClientLeftGroup(Logger, Context.ConnectionId, scopeKey);
     }
 
@@ -201,7 +202,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
     /// <returns>A task representing the join operation.</returns>
     protected async Task JoinScope(string scopeKey)
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, scopeKey).ConfigureAwait(false);
+        await Groups.AddToGroupAsync(Context.ConnectionId, scopeKey, Context.ConnectionAborted).ConfigureAwait(false);
         SignalRLog.ClientJoinedGroup(Logger, Context.ConnectionId, scopeKey);
     }
 
@@ -262,14 +263,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
     {
         get
         {
-            var sub = Context.User?.FindFirst("sub")?.Value;
-            if (!string.IsNullOrEmpty(sub))
-            {
-                return sub;
-            }
-
-            var nameIdentifier = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return string.IsNullOrEmpty(nameIdentifier) ? null : nameIdentifier;
+            return Context.User is { } user ? CallerClaims.UserId(user) : null;
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Services.Pipelines.Abstractions.WriteMode;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Pipelines.Abstractions.DataDestination;
 
@@ -10,6 +11,10 @@ namespace Fdw.Services.Pipelines.Abstractions.DataDestination;
 /// </summary>
 public sealed class DataDestinationReference : IEquatable<DataDestinationReference>
 {
+    /// <summary>How a destination is written when its reference states no mode: rows are inserted.</summary>
+    [PlatformDefault]
+    private static IWriteMode DefaultWriteMode => WriteModes.ByName("Insert");
+
     /// <summary>
     /// Gets or sets the kind of data destination.
     /// </summary>
@@ -46,7 +51,7 @@ public sealed class DataDestinationReference : IEquatable<DataDestinationReferen
             Kind = DataDestinationKinds.ByName("Connection"),
             Name = connectionName,
             ContainerPath = containerPath,
-            WriteMode = writeMode ?? WriteModes.ByName("Insert")
+            WriteMode = writeMode ?? DefaultWriteMode
         };
     }
 

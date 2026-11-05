@@ -175,7 +175,7 @@ public class SchemaImporterBaseTests
             CancellationToken cancellationToken = default)
         {
             LastImportSource = source;
-            return Task.FromResult(ImportResult ?? GenericResult<DataStoreImplementationConfiguration>.Failure());
+            return Task.FromResult(ImportResult ?? throw new InvalidOperationException("Set ImportResult before calling Import."));
         }
     }
 }

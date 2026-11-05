@@ -19,6 +19,13 @@ public interface IConnectionAssignmentImplementationConfiguration : IImplementat
     /// <summary>Gets or sets the folder inside the grant's folder the organization is narrowed to; <see langword="null"/> uses the grant as it is.</summary>
     string? BaseFolder { get; set; }
 
+    /// <summary>
+    /// Gets or sets when a later assignment for the same organization and purpose replaced this one, or it was unassigned (FDW-3396);
+    /// <see langword="null"/> while it is the assignment in force. A superseded assignment takes no new files but still reads the files
+    /// stored under it.
+    /// </summary>
+    DateTimeOffset? SupersededAt { get; set; }
+
     /// <summary>Gets or sets whether this is the live version of the row.</summary>
     bool IsCurrent { get; set; }
 

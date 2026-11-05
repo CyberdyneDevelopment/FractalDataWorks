@@ -31,6 +31,12 @@ public class TriggerPipelineRequest
     public string? ScheduleName { get; set; }
 
     /// <summary>
+    /// Gets or sets the Id of the schedule that triggered this execution (FDW-3975): the schedule's domain Id, the one the thresholds attached to the schedule name it by.
+    /// The scheduler reads the schedule before it triggers, so it has the Id in hand. Null for an execution no schedule started.
+    /// </summary>
+    public Guid? ScheduleId { get; set; }
+
+    /// <summary>
     /// Gets or sets the tenant the triggering schedule belongs to, if known
     /// (<c>ScheduleConfiguration.TenantId</c>). Relayed to the ETL server so the dispatched execution's
     /// RLS SESSION_CONTEXT is scoped correctly for background runs with no caller ClaimsPrincipal.
@@ -62,4 +68,10 @@ public class TriggerPipelineRequest
     /// after this many rows, no destination is written and no step with an outside effect runs. When null, the run is a real run.
     /// </summary>
     public int? TestRowsPerSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the run may take once it starts running, in seconds (FDW-3805): the triggering schedule's stated timeout. When the time has passed the run is
+    /// cancelled and ends with the result code TimedOut. Null means the caller states no time limit and the run has none; a number stated must be positive.
+    /// </summary>
+    public int? TimeoutSeconds { get; set; }
 }

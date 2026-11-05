@@ -1,10 +1,10 @@
-using System.Security.Claims;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Web.RestEndpoints.Security;
 
@@ -22,9 +22,7 @@ internal static class PermissionRefusal
         ResultHttpStatusMapper.Map(
             GenericResult.Failure(EndpointLogger.PermissionDeniedByPreProcessor(
                 logger,
-                httpContext.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
-                    ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                    ?? "(unknown)",
+                CallerClaims.UserId(httpContext.User) ?? string.Empty,
                 requiredPermission,
                 httpContext.TraceIdentifier)),
             httpContext);

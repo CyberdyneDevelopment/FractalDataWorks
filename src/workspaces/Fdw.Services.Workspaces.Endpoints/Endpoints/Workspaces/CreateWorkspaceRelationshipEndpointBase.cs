@@ -111,13 +111,14 @@ public abstract class CreateWorkspaceRelationshipEndpointBase
             _dataSets, Logger, request.Name, "right", request.RightDataSetId, request.RightFieldId, ct).ConfigureAwait(false);
         if (rightField.IsFailure) return rightField.ToNewResult<WorkspaceMapEdgeDto>();
 
+        var identity = new NewWorkspaceRelationship(Guid.CreateVersion7());
         var relationship = new WorkspaceRelationshipConfiguration
         {
-            Id = Guid.CreateVersion7(),
+            Id = identity.Id,
             // Why the id rather than a derived string: two data sets can be related more than one
             // way, so no deterministic name is unique, and the label is what Name IS for — an
-            // unlabelled relationship is the id, not a fabricated title.
-            Name = request.Label ?? Guid.CreateVersion7().ToString(),
+            // unlabelled relationship is named by its own id, not a fabricated title.
+            Name = request.Label ?? identity.ConventionalName,
             LeftDataSetId = request.LeftDataSetId,
             LeftFieldId = request.LeftFieldId,
             RightDataSetId = request.RightDataSetId,

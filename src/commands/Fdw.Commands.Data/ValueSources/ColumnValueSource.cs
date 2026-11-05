@@ -4,7 +4,7 @@ namespace Fdw.Commands.Data.ValueSources;
 
 /// <summary>
 /// Where a column's value comes from when it is not read from a source row: a source field, a constant, the
-/// current timestamp, or the next value of a sequence. Usable wherever a command supplies a column value.
+/// current timestamp, the next value of a sequence, or a new UUIDv7. Usable wherever a command supplies a column value.
 /// </summary>
 /// <remarks>
 /// A value source is a description, not SQL. Each connection type renders it in its own dialect through its
@@ -23,6 +23,6 @@ public abstract class ColumnValueSource
             : kind;
     }
 
-    /// <summary>Gets the kind name: <c>Column</c>, <c>Constant</c>, <c>CurrentTimestamp</c> or <c>NextSequenceValue</c>.</summary>
+    /// <summary>Gets the kind name: <c>Column</c>, <c>Constant</c>, <c>CurrentTimestamp</c>, <c>NextSequenceValue</c> or <c>UuidV7</c>.</summary>
     public string Kind { get; }
 }

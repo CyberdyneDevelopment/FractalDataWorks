@@ -18,10 +18,10 @@ public sealed class DynamicStructMapperConfiguration : EtlRowMapperConfiguration
     /// When true, uses compiled delegates for faster access.
     /// When false, uses reflection (slower but simpler).
     /// </summary>
-    public bool UseCompiledExpressions { get; set; } = true;
+    public bool? UseCompiledExpressions { get; set; }
 
     /// <summary>
     /// Gets or sets whether to cache compiled delegates.
     /// </summary>
-    public bool CacheCompiledDelegates { get; set; } = true;
+    public bool? CacheCompiledDelegates { get; set; }
 }

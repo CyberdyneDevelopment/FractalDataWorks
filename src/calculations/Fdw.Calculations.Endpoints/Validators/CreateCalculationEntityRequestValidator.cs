@@ -24,6 +24,11 @@ public sealed class CreateCalculationEntityRequestValidator : FdwEndpointValidat
             .NotEmpty()
             .WithMessage("ResultDataTypeName is required");
 
+        // Whether the calculation runs is the caller's choice; there is no default (FDW-3823).
+        RuleFor(x => x.IsEnabled)
+            .NotNull()
+            .WithMessage("IsEnabled is required");
+
         RuleFor(x => x.Configuration)
             .NotNull()
             .WithMessage("Configuration is required: the calculation type's own settings, e.g. TargetField and WindowFunction for Windowed");

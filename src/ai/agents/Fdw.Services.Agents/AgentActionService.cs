@@ -12,6 +12,7 @@ using Fdw.Services.Agents.Logging;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Agents;
 
@@ -47,7 +48,7 @@ public sealed class AgentActionService : IAgentActionService
         string? status = null,
         CancellationToken cancellationToken = default)
     {
-        AgentActionLog.ListingAgentActions(_logger, status ?? "all");
+        AgentActionLog.ListingAgentActions(_logger, status ?? LogPlaceholders.Null);
 
         var builder = DataQuery.From<AgentActionRecord>(PlatformConfigurationConnection, "agent", "AgentAction");
 
@@ -63,7 +64,7 @@ public sealed class AgentActionService : IAgentActionService
         if (!result.IsSuccess)
         {
             return GenericResult<IReadOnlyList<AgentActionRecord>>.Failure(
-                AgentActionLog.ListFailed(_logger, result.CurrentMessage ?? "Unknown error"));
+                AgentActionLog.ListFailed(_logger, result.FailureReason().Message));
         }
 
         var actions = result.Value!.ToList();
@@ -88,7 +89,7 @@ public sealed class AgentActionService : IAgentActionService
         if (!result.IsSuccess)
         {
             return GenericResult<AgentActionRecord>.Failure(
-                AgentActionLog.FetchFailed(_logger, actionId, result.CurrentMessage ?? "Unknown error"));
+                AgentActionLog.FetchFailed(_logger, actionId, result.FailureReason().Message));
         }
 
         var action = result.Value!.FirstOrDefault();
@@ -157,7 +158,7 @@ public sealed class AgentActionService : IAgentActionService
         if (!result.IsSuccess)
         {
             return GenericResult.Failure(
-                AgentActionLog.ReviewFailed(_logger, actionId, newStatus, result.CurrentMessage ?? "Unknown error"));
+                AgentActionLog.ReviewFailed(_logger, actionId, newStatus, result.FailureReason().Message));
         }
 
         AgentActionLog.AgentActionReviewed(_logger, actionId, newStatus, reviewedBy);

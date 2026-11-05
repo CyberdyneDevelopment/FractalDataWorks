@@ -42,7 +42,7 @@ public sealed class ListProjectsTranslator : RoslynCommandTranslatorBase<ListPro
                 filePath: p.FilePath ?? string.Empty,
                 language: p.Language,
                 documentCount: p.Documents.Count(),
-                outputKind: p.CompilationOptions?.OutputKind.ToString() ?? "Unknown"))
+                outputKind: p.CompilationOptions?.OutputKind.ToString() ?? RoslynReportPlaceholders.Unknown))
             .ToList();
 
         var result = new ProjectListResult(projects.Count, projects);

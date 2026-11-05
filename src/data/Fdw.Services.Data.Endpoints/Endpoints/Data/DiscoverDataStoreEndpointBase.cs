@@ -7,6 +7,7 @@ using FastEndpoints;
 using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
@@ -102,7 +103,16 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
             return GenericResult<DiscoveryResultPayload>.Failure(DataStoreEndpointLog.DataStoreNotFound(_logger, request.Name));
         }
 
-        var imported = await _schema.DiscoverInto(found, OptionsFrom(request), request.Refresh, ct).ConfigureAwait(false);
+        // The discovery's choices come from the request (FDW-3823); one left out is refused, naming it.
+        var options = DataStoreDiscoveryChoices.FromRequest(
+            request.ExcludedSchemas, request.IncludeOnlySchemas, request.DiscoverViews, request.DiscoverIndexes, request.DiscoverForeignKeys,
+            request.DiscoverDescriptions, request.Name, _logger);
+        if (options.IsFailure)
+        {
+            return options.ToNewResult<DiscoveryResultPayload>();
+        }
+
+        var imported = await _schema.DiscoverInto(found, options.Value!, request.Refresh, ct).ConfigureAwait(false);
         if (imported.IsFailure || imported.Value is not { } result)
         {
             return imported.ToNewResult<DiscoveryResultPayload>();
@@ -116,19 +126,6 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
         }
 
         return GenericResult<DiscoveryResultPayload>.Success(PayloadFor(found, result, request.Refresh));
-    }
-
-    // A schema list the caller did not send leaves discovery's own defaults in place.
-    private static DataStoreDiscoveryOptions OptionsFrom(DiscoverDataStoreRequest request)
-    {
-        var options = DataStoreDiscoveryOptions.Default;
-        if (request.ExcludedSchemas is { } excluded)
-            options.ExcludedSchemas = [.. excluded];
-        if (request.IncludeOnlySchemas is { } includeOnly)
-            options.IncludeOnlySchemas = [.. includeOnly];
-        options.DiscoverViews = request.DiscoverViews;
-        options.DiscoverIndexes = request.DiscoverIndexes;
-        return options;
     }
 
     private static DiscoveryResultPayload PayloadFor(

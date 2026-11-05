@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Fdw.Results;
 using Fdw.Services.Etl.Graphs;
+using Fdw.Services.Etl.Results;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines.Endpoints;
@@ -37,10 +38,17 @@ public sealed record PipelineReach(
     /// <param name="graph">The pipeline, read whole.</param>
     /// <param name="parameters">The run's typed values by parameter name.</param>
     /// <param name="logger">The logger the failures are written to.</param>
-    /// <returns>The pipeline's reach, or the failure that names the parameter the run was not given.</returns>
+    /// <returns>The pipeline's reach, or the failure that names the parameter the run was not given, or that says the pipeline is a template.</returns>
     public static IGenericResult<PipelineReach> Of(GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(graph);
+
+        // Why here: a trigger and a schedule's firing both judge what a run reaches before they queue it, so a template is refused once, for both (FDW-3379).
+        if (graph.IsTemplate)
+        {
+            return GenericResult.Failure(EtlResultCodes.ByName("PipelineIsTemplate"), logger, ResultDetails.Create("PipelineName", graph.Name)).ToNewResult<PipelineReach>();
+        }
+
         var found = GraphPipelineUses.Of(graph, parameters, logger);
         if (found.IsFailure || found.Value is null)
         {

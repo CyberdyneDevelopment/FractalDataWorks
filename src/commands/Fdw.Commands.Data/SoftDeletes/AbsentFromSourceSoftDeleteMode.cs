@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Messages;
 
 namespace Fdw.Commands.Data.SoftDeletes;
 
@@ -20,14 +21,14 @@ public sealed class AbsentFromSourceSoftDeleteMode : SoftDeleteModeBase
     public override bool NeedsSourceSet => true;
 
     /// <inheritdoc />
-    public override string? Problem(SoftDeleteOptions options)
+    public override IGenericMessage? Problem(SoftDeleteOptions options)
     {
         if (options.Marker is not null)
-            return "an absent-from-source soft delete takes no marker";
+            return Problem("an absent-from-source soft delete takes no marker");
         if (options.AbsentFromSource is null)
-            return "an absent-from-source soft delete names the source set";
+            return Problem("an absent-from-source soft delete names the source set");
         return options.AbsentFromSource.KeyColumns.Count == 0
-            ? "the absent-key set names at least one key column"
+            ? Problem("the absent-key set names at least one key column")
             : null;
     }
 }

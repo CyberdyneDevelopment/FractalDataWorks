@@ -5,6 +5,7 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Escalation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -46,14 +47,32 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
     {
         OperationsEndpointLog.UpdatingEscalationPolicy(_logger, req.Id);
 
+        // Levels a request sends state their severity and recipient type; there is no default (FDW-3823).
+        var missing = EscalationMapper.MissingOnLevels(req.Levels);
+        if (missing.Count > 0)
+        {
+            AddError("Required and not stated: " + string.Join(", ", missing));
+            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            return;
+        }
+
         try
         {
             var existing = await _escalationService.GetPolicy(req.Id, ct).ConfigureAwait(false);
-            if (!existing.IsSuccess || existing.Value is null)
+            if (existing.IsFailure)
             {
-                OperationsEndpointLog.UpdateEscalationPolicyFailed(_logger, req.Id, existing.CurrentMessage ?? "Policy not found");
+                OperationsEndpointLog.UpdateEscalationPolicyFailed(_logger, req.Id, existing.FailureReason().Message);
                 AddError("Failed to update escalation policy");
-                await Send.ErrorsAsync(existing.IsSuccess ? 404 : 500, ct).ConfigureAwait(false);
+                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                return;
+            }
+
+            // Why its own branch: the service answers a policy it does not hold with a success and no value, which is a not-found.
+            if (existing.Value is null)
+            {
+                OperationsEndpointLog.EscalationPolicyNotFound(_logger, req.Id);
+                AddError("Failed to update escalation policy");
+                await Send.ErrorsAsync(404, ct).ConfigureAwait(false);
                 return;
             }
 

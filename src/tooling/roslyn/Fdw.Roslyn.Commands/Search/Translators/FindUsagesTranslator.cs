@@ -12,6 +12,7 @@ using Fdw.Roslyn.Commands.Search.Commands;
 using Fdw.Roslyn.Commands.Search.Results;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
+using Fdw.Roslyn.Commands.Symbols;
 
 namespace Fdw.Roslyn.Commands.Search.Translators;
 
@@ -72,8 +73,7 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
         }
 
         var token = syntaxRoot.FindToken(command.Position);
-        var symbol = semanticModel.GetSymbolInfo(token.Parent!, cancellationToken).Symbol
-                  ?? semanticModel.GetDeclaredSymbol(token.Parent!, cancellationToken);
+        var symbol = TokenSymbols.Resolve(semanticModel, token, cancellationToken);
 
         if (symbol is null)
         {

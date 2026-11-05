@@ -109,7 +109,7 @@ public abstract class MsSqlUpsertTranslatorBase : MsSqlDataCommandTranslatorBase
         var dialect = path.Dialect;
         var problem = MsSqlUpsertStatement.Problem(options, container, dialect);
         if (problem is not null)
-            return Refused(containerName, problem);
+            return Refused(containerName, problem.Message);
 
         var json = MsSqlRowStaging.Serialize(rows, options.WriteColumns, out var rowsProblem);
         if (rowsProblem is not null)

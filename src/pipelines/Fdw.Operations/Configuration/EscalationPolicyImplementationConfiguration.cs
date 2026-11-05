@@ -89,7 +89,7 @@ public sealed partial class EscalationPolicyImplementationConfiguration
     /// Disabled policies are not evaluated during execution monitoring.
     /// Use for temporary suspension without deletion (e.g., during maintenance windows).
     /// </remarks>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the item type this policy applies to.
@@ -132,7 +132,7 @@ public sealed partial class EscalationPolicyImplementationConfiguration
     /// Typical values: 2-4 levels.
     /// Level 1 = initial notification, higher levels = more urgent channels/recipients.
     /// </remarks>
-    public int MaxEscalationLevel { get; set; } = 3;
+    public int MaxEscalationLevel { get; set; }
 
     /// <summary>
     /// Gets or sets the cooldown period in minutes between escalation cycles.
@@ -149,7 +149,7 @@ public sealed partial class EscalationPolicyImplementationConfiguration
     /// </para>
     /// Typical values: 30-120 minutes.
     /// </remarks>
-    public int CooldownMinutes { get; set; } = 60;
+    public int CooldownMinutes { get; set; }
 
     /// <summary>
     /// Gets or sets an optional condition expression for policy triggering.

@@ -7,26 +7,10 @@ public class DataStoreDiscoveryOptionsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsDefaultExcludedSchemas()
-    {
-        // Arrange & Act
-        var result = new DataStoreDiscoveryOptions();
-
-        // Assert
-        result.ExcludedSchemas.ShouldNotBeNull();
-        result.ExcludedSchemas.Count.ShouldBe(3);
-        result.ExcludedSchemas.ShouldContain("sys");
-        result.ExcludedSchemas.ShouldContain("INFORMATION_SCHEMA");
-        result.ExcludedSchemas.ShouldContain("guest");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ExcludedSchemasCanBeSet()
     {
         // Arrange
-        var options = new DataStoreDiscoveryOptions();
+        var options = new DataStoreDiscoveryOptions() { ExcludedSchemas = ["sys", "INFORMATION_SCHEMA", "guest"], DiscoverViews = true, DiscoverIndexes = true, DiscoverForeignKeys = true, DiscoverDescriptions = true };
         var customSchemas = new List<string> { "custom1", "custom2" };
 
         // Act
@@ -42,7 +26,7 @@ public class DataStoreDiscoveryOptionsTests
     public void IncludeOnlySchemasDefaultsToNull()
     {
         // Arrange & Act
-        var result = new DataStoreDiscoveryOptions();
+        var result = new DataStoreDiscoveryOptions() { ExcludedSchemas = ["sys", "INFORMATION_SCHEMA", "guest"], DiscoverViews = true, DiscoverIndexes = true, DiscoverForeignKeys = true, DiscoverDescriptions = true };
 
         // Assert
         result.IncludeOnlySchemas.ShouldBeNull();
@@ -54,7 +38,7 @@ public class DataStoreDiscoveryOptionsTests
     public void IncludeOnlySchemasCanBeSet()
     {
         // Arrange
-        var options = new DataStoreDiscoveryOptions();
+        var options = new DataStoreDiscoveryOptions() { ExcludedSchemas = ["sys", "INFORMATION_SCHEMA", "guest"], DiscoverViews = true, DiscoverIndexes = true, DiscoverForeignKeys = true, DiscoverDescriptions = true };
         var schemas = new List<string> { "schema1", "schema2" };
 
         // Act
@@ -67,22 +51,10 @@ public class DataStoreDiscoveryOptionsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DiscoverViewsDefaultsToTrue()
-    {
-        // Arrange & Act
-        var result = new DataStoreDiscoveryOptions();
-
-        // Assert
-        result.DiscoverViews.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DiscoverViewsCanBeSet()
     {
         // Arrange
-        var options = new DataStoreDiscoveryOptions();
+        var options = new DataStoreDiscoveryOptions() { ExcludedSchemas = ["sys", "INFORMATION_SCHEMA", "guest"], DiscoverViews = true, DiscoverIndexes = true, DiscoverForeignKeys = true, DiscoverDescriptions = true };
 
         // Act
         options.DiscoverViews = false;
@@ -94,22 +66,10 @@ public class DataStoreDiscoveryOptionsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DiscoverIndexesDefaultsToTrue()
-    {
-        // Arrange & Act
-        var result = new DataStoreDiscoveryOptions();
-
-        // Assert
-        result.DiscoverIndexes.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DiscoverIndexesCanBeSet()
     {
         // Arrange
-        var options = new DataStoreDiscoveryOptions();
+        var options = new DataStoreDiscoveryOptions() { ExcludedSchemas = ["sys", "INFORMATION_SCHEMA", "guest"], DiscoverViews = true, DiscoverIndexes = true, DiscoverForeignKeys = true, DiscoverDescriptions = true };
 
         // Act
         options.DiscoverIndexes = false;
@@ -121,22 +81,10 @@ public class DataStoreDiscoveryOptionsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DiscoverForeignKeysDefaultsToTrue()
-    {
-        // Arrange & Act
-        var result = new DataStoreDiscoveryOptions();
-
-        // Assert
-        result.DiscoverForeignKeys.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DiscoverForeignKeysCanBeSet()
     {
         // Arrange
-        var options = new DataStoreDiscoveryOptions();
+        var options = new DataStoreDiscoveryOptions() { ExcludedSchemas = ["sys", "INFORMATION_SCHEMA", "guest"], DiscoverViews = true, DiscoverIndexes = true, DiscoverForeignKeys = true, DiscoverDescriptions = true };
 
         // Act
         options.DiscoverForeignKeys = false;
@@ -148,22 +96,10 @@ public class DataStoreDiscoveryOptionsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DiscoverDescriptionsDefaultsToTrue()
-    {
-        // Arrange & Act
-        var result = new DataStoreDiscoveryOptions();
-
-        // Assert
-        result.DiscoverDescriptions.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DiscoverDescriptionsCanBeSet()
     {
         // Arrange
-        var options = new DataStoreDiscoveryOptions();
+        var options = new DataStoreDiscoveryOptions() { ExcludedSchemas = ["sys", "INFORMATION_SCHEMA", "guest"], DiscoverViews = true, DiscoverIndexes = true, DiscoverForeignKeys = true, DiscoverDescriptions = true };
 
         // Act
         options.DiscoverDescriptions = false;
@@ -172,45 +108,4 @@ public class DataStoreDiscoveryOptionsTests
         options.DiscoverDescriptions.ShouldBeFalse();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void DefaultPropertyReturnsNewInstance()
-    {
-        // Arrange & Act
-        var result = DataStoreDiscoveryOptions.Default;
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldBeOfType<DataStoreDiscoveryOptions>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void DefaultPropertyReturnsNewInstanceEachTime()
-    {
-        // Arrange & Act
-        var result1 = DataStoreDiscoveryOptions.Default;
-        var result2 = DataStoreDiscoveryOptions.Default;
-
-        // Assert
-        result1.ShouldNotBeSameAs(result2);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void DefaultPropertyReturnsInstanceWithDefaultValues()
-    {
-        // Arrange & Act
-        var result = DataStoreDiscoveryOptions.Default;
-
-        // Assert
-        result.DiscoverViews.ShouldBeTrue();
-        result.DiscoverIndexes.ShouldBeTrue();
-        result.DiscoverForeignKeys.ShouldBeTrue();
-        result.DiscoverDescriptions.ShouldBeTrue();
-        result.ExcludedSchemas.Count.ShouldBe(3);
-    }
 }

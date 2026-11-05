@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Fdw.Commands.Data.Abstractions.Logging;
+using Fdw.Messages;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data.Abstractions;
@@ -55,22 +56,28 @@ public abstract class ScriptedDataCommandBase : IScriptedDataCommand
     public IReadOnlyList<ScriptParameter> Parameters { get; }
 
     /// <inheritdoc />
-    public virtual string? FirstProblem()
+    public virtual IGenericMessage? FirstProblem()
     {
         if (string.IsNullOrWhiteSpace(Text))
         {
-            return "the script has no text";
+            return Problem("the script has no text");
         }
 
         var unsafeName = Parameters.FirstOrDefault(parameter => !ParameterName.IsMatch(parameter.Name));
         if (unsafeName is not null)
         {
-            return $"'{unsafeName.Name}' is not a parameter name (a letter or underscore, then letters, digits and underscores)";
+            return Problem($"'{unsafeName.Name}' is not a parameter name (a letter or underscore, then letters, digits and underscores)");
         }
 
         var twice = Parameters.GroupBy(parameter => parameter.Name, StringComparer.OrdinalIgnoreCase).FirstOrDefault(group => group.Count() > 1);
-        return twice is null ? null : $"the parameter '{twice.Key}' is given twice";
+        return twice is null ? null : Problem($"the parameter '{twice.Key}' is given twice");
     }
+
+    /// <summary>Answers <paramref name="reason"/> as the command's problem message.</summary>
+    /// <param name="reason">What is wrong with the command, in words.</param>
+    /// <returns>The message.</returns>
+    protected static IGenericMessage Problem(string reason)
+        => ScriptedDataCommandBaseLog.CommandUnsound(NullLogger.Instance, reason);
 }
 
 /// <summary>A scripted command that answers with a stated type.</summary>

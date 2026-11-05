@@ -237,7 +237,7 @@ public class IExpressionEvaluatorTests
                 return GenericResult.Failure(new GenericMessage("Expression is empty"));
             }
 
-            if (expression.Contains("invalid"))
+            if (expression.Contains("invalid", System.StringComparison.Ordinal))
             {
                 return GenericResult.Failure(new GenericMessage("Invalid expression syntax"));
             }

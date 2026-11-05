@@ -45,7 +45,7 @@ public sealed partial class PipelineTransformConfiguration : IGenericConfigurati
     /// <summary>
     /// Gets or sets whether this transform is enabled.
     /// </summary>
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     /// <summary>
     /// Gets or sets the filter expression (for Filter transforms).

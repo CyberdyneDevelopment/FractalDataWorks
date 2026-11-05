@@ -54,7 +54,7 @@ public sealed class AsyncSuffixAnalyzer : DiagnosticAnalyzer
             return;
 
         // Skip interface implementations from external assemblies (like IHostedService.StartAsync)
-        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclaration);
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclaration, context.CancellationToken);
         if (methodSymbol == null)
             return;
 

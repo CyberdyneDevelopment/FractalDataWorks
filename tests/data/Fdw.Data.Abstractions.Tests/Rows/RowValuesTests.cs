@@ -17,6 +17,43 @@ public sealed class RowValuesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
+    public void AnEntityRowBindsAsItsPropertyType()
+    {
+        RowValues.TryReadForBinding(new Brewery { Hash = null }, "Hash", typeof(string), out var value, out var bindingType).ShouldBeTrue();
+
+        value.ShouldBeNull();
+        bindingType.ShouldBe(typeof(byte[]));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void ADictionaryRowBindsANullAsTheColumnTypeAndAValueAsItself()
+    {
+        var row = new Dictionary<string, object?> { ["Hash"] = null, ["BreweryId"] = "b-1" };
+
+        RowValues.TryReadForBinding(row, "Hash", typeof(byte[]), out _, out var nullType).ShouldBeTrue();
+        RowValues.TryReadForBinding(row, "BreweryId", typeof(string), out var value, out var valueType).ShouldBeTrue();
+
+        nullType.ShouldBe(typeof(byte[]));
+        value.ShouldBe("b-1");
+        valueType.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnAbsentColumnHasNoBindingType()
+    {
+        RowValues.TryReadForBinding(new Dictionary<string, object?>(), "Hash", typeof(byte[]), out var value, out var bindingType).ShouldBeFalse();
+
+        value.ShouldBeNull();
+        bindingType.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
     public void ADictionaryRowIsReadByColumnName()
     {
         var row = new Dictionary<string, object?> { ["BreweryId"] = "b-1" };

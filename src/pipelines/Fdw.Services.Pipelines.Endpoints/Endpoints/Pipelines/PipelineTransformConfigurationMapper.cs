@@ -74,7 +74,8 @@ public static class PipelineTransformConfigurationMapper
                 Name = spec.Name,
                 OperationType = spec.OperationType,
                 ExecutionOrder = spec.ExecutionOrder,
-                IsEnabled = spec.IsEnabled,
+                // StageProblem has refused a stage that does not say whether it runs.
+                IsEnabled = spec.IsEnabled!.Value,
             };
 
             var mapResult = option.MapSpecToConfiguration(spec, config, logger);
@@ -136,6 +137,12 @@ public static class PipelineTransformConfigurationMapper
         if (!names.Add(spec.Name))
         {
             return $"the stage name '{spec.Name}' is used by more than one stage";
+        }
+
+        // Whether a stage runs is its caller's choice: one that does not say is refused, never given an answer (FDW-3931).
+        if (spec.IsEnabled is null)
+        {
+            return $"the stage '{spec.Name}' does not say whether it runs: send isEnabled";
         }
 
         return MemberProblem(spec, option);

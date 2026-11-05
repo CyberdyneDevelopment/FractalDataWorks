@@ -40,8 +40,8 @@ public partial class Tests : TypeCollectionBase<TestBase, TestBase>
         // Should generate Tests.g.cs
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("partial class Tests", generated);
-        Assert.Contains("NotFound", generated);
+        Assert.Contains("partial class Tests", generated, System.StringComparison.Ordinal);
+        Assert.Contains("NotFound", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -86,10 +86,10 @@ public class Option2 : TestBase
         Assert.NotNull(generated);
 
         // Should generate static properties for both options
-        Assert.Contains("Option1", generated);
-        Assert.Contains("Option2", generated);
-        Assert.Contains("ByName", generated);
-        Assert.Contains("ById", generated);
+        Assert.Contains("Option1", generated, System.StringComparison.Ordinal);
+        Assert.Contains("Option2", generated, System.StringComparison.Ordinal);
+        Assert.Contains("ByName", generated, System.StringComparison.Ordinal);
+        Assert.Contains("ById", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public partial class ChildCollection : ParentBase
         Assert.NotNull(generated);
 
         // Parent should have property for child
-        Assert.Contains("Child1", generated);
+        Assert.Contains("Child1", generated, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -222,6 +222,6 @@ public class LocalOption : TestBase
 
         var generated = CompilationHelper.GetGeneratedOutput(compilation, "Tests.TypeCollection.g.cs");
         Assert.NotNull(generated);
-        Assert.Contains("LocalOption", generated);
+        Assert.Contains("LocalOption", generated, System.StringComparison.Ordinal);
     }
 }

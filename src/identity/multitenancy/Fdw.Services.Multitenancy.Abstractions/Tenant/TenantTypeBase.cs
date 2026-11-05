@@ -37,13 +37,13 @@ public abstract class TenantTypeBase : TypeOptionBase<Guid, TenantTypeBase>, ITe
         Guid id,
         string name,
         string slug,
+        ITenantTheme theme,
+        bool isSelectable,
         string? orgPrefix = null,
         string? connectionName = null,
-        ITenantTheme? theme = null,
         ITenantOptions? options = null,
         IEnumerable<string>? availableRoles = null,
-        bool isGlobal = false,
-        bool isSelectable = true)
+        bool isGlobal = false)
         : base(id, name)
     {
         Slug = slug;
@@ -53,9 +53,9 @@ public abstract class TenantTypeBase : TypeOptionBase<Guid, TenantTypeBase>, ITe
         IsSelectable = isSelectable;
         DisplayName = name;
         ConnectionName = connectionName;
-        Theme = theme ?? TenantTheme.Default;
-        Options = options ?? TenantOptions.Default;
-        AvailableRoles = availableRoles ?? new[] { "Admin", "User" };
+        Theme = theme ?? throw new ArgumentNullException(nameof(theme));
+        Options = options ?? throw new ArgumentNullException(nameof(options));
+        AvailableRoles = availableRoles ?? throw new ArgumentNullException(nameof(availableRoles));
         ConfigurationSection = $"Tenants:{slug}";
     }
 

@@ -6,6 +6,7 @@ using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.SecretManagers;
 
@@ -28,6 +29,10 @@ public abstract class SecretManagerTypeBase<TService, TFactory, TConfiguration> 
     where TFactory : ISecretManagerServiceFactory<TService, TConfiguration>
     where TConfiguration : class, IGenericConfiguration
 {
+    /// <summary>The category this kind of type is listed under when a type states none of its own.</summary>
+    [PlatformDefault]
+    public const string DefaultCategory = "Secret Management";
+
     /// <summary>
     /// Gets the secret store types supported by this provider.
     /// </summary>
@@ -196,7 +201,7 @@ public abstract class SecretManagerTypeBase<TService, TFactory, TConfiguration> 
         int priority = 50,
         string? category = null,
         string defaultContainerName = "")
-        : base(name, sectionName, displayName, description, category ?? "Secret Management",
+        : base(name, sectionName, displayName, description, category ?? DefaultCategory,
                defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)

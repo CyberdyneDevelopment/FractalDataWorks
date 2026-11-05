@@ -50,4 +50,25 @@ public sealed class AsciiIconSet : IconSetBase
 
     /// <inheritdoc />
     public override string LoadingIcon => "[...]";
+
+    /// <inheritdoc />
+    public override string NodeIcon(string nodeType)
+    {
+        return nodeType.ToLowerInvariant() switch
+        {
+            "dataset" => "[DS]",
+            "field" => "[F]",
+            "mapping" => "[M]",
+            "source" => "[S]",
+            "join" => "[J]",
+            "pipeline" => "[P]",
+            "stage" => ">",
+            "workflow" => "[W]",
+            "step" => "-",
+            "folder" => "[D]",
+            "file" => "[f]",
+            "connection" => "[C]",
+            _ => "o"
+        };
+    }
 }

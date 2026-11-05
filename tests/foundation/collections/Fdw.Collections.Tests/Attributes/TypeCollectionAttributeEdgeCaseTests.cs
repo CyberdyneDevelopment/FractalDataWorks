@@ -7,7 +7,7 @@ public class TypeCollectionAttributeEdgeCaseTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void BaseTypeName_WithTypeWithoutFullName_ReturnsName()
+    public void BaseTypeName_WithTypeWithoutFullName_IsRefused()
     {
         // Create a generic type parameter which doesn't have a FullName
         var genericType = typeof(List<>).GetGenericArguments()[0];
@@ -16,7 +16,7 @@ public class TypeCollectionAttributeEdgeCaseTests
             typeof(object),
             typeof(TypeCollectionAttributeEdgeCaseTests));
 
-        // For generic type parameters, FullName is null, so it should fallback to Name
-        attribute.BaseTypeName.ShouldBe(genericType.Name);
+        // For generic type parameters, FullName is null; the attribute refuses rather than substituting the short name (FDW-3580).
+        Should.Throw<InvalidOperationException>(() => attribute.BaseTypeName);
     }
 }

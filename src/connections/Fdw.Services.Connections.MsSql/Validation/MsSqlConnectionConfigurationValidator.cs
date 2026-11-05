@@ -28,6 +28,11 @@ public sealed class MsSqlConnectionConfigurationValidator : FdwConfigurationVali
             .InclusiveBetween(1, 65535)
             .WithMessage("Port must be between 1 and 65535");
 
+        // The authentication method's values live here; a connection without the dictionary is refused, not read as one with no values (FDW-3454).
+        RuleFor(x => x.AdditionalProperties)
+            .NotNull()
+            .WithMessage("AdditionalProperties must be stated: it holds the values the authentication method requires (an empty object when it requires none)");
+
         RuleFor(x => x.CommandTimeoutSeconds)
             .GreaterThan(0)
             .When(x => x.CommandTimeoutSeconds.HasValue)
@@ -39,7 +44,8 @@ public sealed class MsSqlConnectionConfigurationValidator : FdwConfigurationVali
 
         RuleFor(x => x.ConnectionTimeoutSeconds)
             .GreaterThan(0)
-            .WithMessage("ConnectionTimeoutSeconds must be greater than 0");
+            .When(x => x.ConnectionTimeoutSeconds is not null)
+            .WithMessage("ConnectionTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the instance's DefaultConnectionTimeoutSeconds");
 
         When(x => x.EnableConnectionPooling, () =>
         {

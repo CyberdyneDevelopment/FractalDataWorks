@@ -69,7 +69,7 @@ public sealed class AlertKindSettingsServiceTests
                 {
                     Writes.Add(target.Container);
                     return Task.FromResult<IGenericResult<int>>(
-                        Writes.Count == FailWrite ? GenericResult<int>.Failure(Array.Empty<IGenericMessage>()) : GenericResult<int>.Success(1));
+                        Writes.Count == FailWrite ? GenericResult<int>.Failure(new Fdw.Messages.GenericMessage("the stand-in call failed")) : GenericResult<int>.Success(1));
                 });
 
             var messaging = new Mock<IMessagingConfigurationProvider>(MockBehavior.Loose);
@@ -266,7 +266,7 @@ public sealed class AlertKindSettingsServiceTests
         var saved = await fixture.Service.Save("Alpha", ["Dismiss", "Snooze"], Ct);
 
         saved.IsFailure.ShouldBeTrue();
-        saved.Messages.ShouldContain(m => m.Code == "MESSAGING-71010");
+        saved.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
         fixture.Writes.ShouldBe(["AlertKindSettingAction", "AlertKindSetting", "AlertKindSetting", "AlertKindSettingAction", "AlertKindSettingAction", "AlertKindSetting"]);
     }
 

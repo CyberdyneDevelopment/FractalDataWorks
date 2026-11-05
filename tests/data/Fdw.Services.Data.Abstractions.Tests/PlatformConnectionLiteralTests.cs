@@ -26,8 +26,8 @@ public partial class PlatformConnectionLiteralTests
     public void EveryDefaultDataStoreNameReadsAHolderWhenAsked()
     {
         var offenders = SourceFiles()
-            .Where(file => !file.EndsWith("ServiceTypeBase.cs", StringComparison.Ordinal))
-            .SelectMany(file => File.ReadLines(file).Where(line => IsCode(line) && line.Contains("defaultDataStoreName:", StringComparison.Ordinal) && !LazyHolderRead().IsMatch(line)).Select(line => $"{Path.GetFileName(file)}: {line.Trim()}"))
+            .Where(file => !file.EndsWith("ServiceTypeBase.cs", System.StringComparison.Ordinal))
+            .SelectMany(file => File.ReadLines(file).Where(line => IsCode(line) && line.Contains("defaultDataStoreName:", System.StringComparison.Ordinal) && !LazyHolderRead().IsMatch(line)).Select(line => $"{Path.GetFileName(file)}: {line.Trim()}"))
             .ToList();
 
         offenders.ShouldBeEmpty("a type option is built before the host reads its schema, so defaultDataStoreName must be () => <holder>.Name, read when asked, never a string captured at construction");
@@ -56,13 +56,13 @@ public partial class PlatformConnectionLiteralTests
     {
         var src = SourceRoot();
         return SourceFiles()
-            .Where(file => File.ReadLines(file).Any(line => IsCode(line) && Literals.Any(literal => line.Contains(literal, StringComparison.Ordinal))))
+            .Where(file => File.ReadLines(file).Any(line => IsCode(line) && Literals.Any(literal => line.Contains(literal, System.StringComparison.Ordinal))))
             .Select(file => Path.GetRelativePath(src, file).Replace('\\', '/'));
     }
 
     private static IEnumerable<string> SourceFiles() =>
         Directory.EnumerateFiles(SourceRoot(), "*.cs", SearchOption.AllDirectories)
-            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"));
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", System.StringComparison.Ordinal) && !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", System.StringComparison.Ordinal));
 
     private static bool IsCode(string line) => !Regex.IsMatch(line, @"^\s*//");
 

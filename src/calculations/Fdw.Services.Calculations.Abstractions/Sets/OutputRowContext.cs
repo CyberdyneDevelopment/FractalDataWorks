@@ -38,7 +38,8 @@ public sealed class OutputRowContext
             return value;
         }
 
-        Failure ??= SetFailure.Of("SetColumnMissing", _output, $"the row has no value '{column}' to copy");
+        if (Failure is null)
+            Failure = SetFailure.Of("SetColumnMissing", _output, $"the row has no value '{column}' to copy");
         return null;
     }
 }

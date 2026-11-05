@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Mappers.PocoMappers;
 
 namespace Fdw.Services.Connections.RowQuery;
 

@@ -140,9 +140,9 @@ public class DataSetVariationScopeTests
     private void Stored(Guid id, Guid? parent, string? filters)
         => _variations
             .Setup(v => v.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IDataSetVariationImplementationConfiguration>.Success(
-                new ScopedDataSetVariationConfiguration { Id = id, VariationName = $"view-{id:N}", ParentVariationId = parent, Filters = filters }));
+            .ReturnsAsync(GenericResult<IDataSetVariationImplementationConfiguration?>.Success(
+                new VariationDataSetConfiguration { Id = id, VariationName = $"view-{id:N}", OwnerWorkspaceId = Guid.NewGuid(), ParentVariationId = parent, StoredFilters = filters }));
 
     private static DataSetVariationDomainConfiguration Leaf(Guid? parent, string? filters)
-        => new() { VariationName = "leaf", ParentVariationId = parent, Filters = filters };
+        => new() { VariationName = "leaf", ParentVariationId = parent, StoredFilters = filters };
 }

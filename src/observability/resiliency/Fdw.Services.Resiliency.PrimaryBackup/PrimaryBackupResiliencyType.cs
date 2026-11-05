@@ -81,7 +81,7 @@ public sealed class PrimaryBackupResiliencyType : ResiliencyTypeBase
                 pbCtx.Logger,
                 ctx.ExecutionId,
                 2,
-                backupResult.CurrentMessage ?? "Backup stage failed");
+                backupResult.FailureReason().Message);
         }
 
         // Schedule the refresh pipeline to re-sync primary, regardless of backup result.
@@ -95,7 +95,7 @@ public sealed class PrimaryBackupResiliencyType : ResiliencyTypeBase
                 pbCtx.Logger,
                 ctx.ExecutionId,
                 pbConfig.RefreshScheduleId,
-                scheduleResult.CurrentMessage ?? "unknown");
+                scheduleResult.FailureReason().Message);
         }
 
         return backupResult;

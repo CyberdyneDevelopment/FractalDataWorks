@@ -52,6 +52,45 @@ public class CreateDataStorePathContainerRequest
     /// </summary>
     public string? SheetName { get; set; }
 
+    /// <summary>Gets or sets whether a reader of the container goes on after a row it cannot read, for any format. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? ContinueOnError { get; set; }
+
+    /// <summary>Gets or sets whether a JSON reader matches property names without regard to case, for a Json container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? PropertyNameCaseInsensitive { get; set; }
+
+    /// <summary>Gets or sets whether a JSON writer skips its structure validation, for a Json container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? SkipValidation { get; set; }
+
+    /// <summary>Gets or sets whether an XML reader reads child elements as fields, for a Xml container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? UseElementContent { get; set; }
+
+    /// <summary>Gets or sets whether an XML reader reads attributes as fields, for a Xml container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? IncludeAttributes { get; set; }
+
+    /// <summary>Gets or sets the root element an XML writer writes, for a Xml container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public string? RootElementName { get; set; }
+
+    /// <summary>Gets or sets the element of each row an XML reader reads and an XML writer writes, for a Xml container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public string? RowElementName { get; set; }
+
+    /// <summary>Gets or sets whether an XML writer leaves out the XML declaration, for a Xml container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? OmitXmlDeclaration { get; set; }
+
+    /// <summary>Gets or sets whether a delimited reader reads quoted fields, for a Delimited container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? ContainsQuotedFields { get; set; }
+
+    /// <summary>Gets or sets whether a delimited or fixed-width reader trims its fields, for a Delimited or FixedWidth container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? Trim { get; set; }
+
+    /// <summary>Gets or sets the one character a delimited writer quotes a field with, for a Delimited container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public string? QuoteChar { get; set; }
+
+    /// <summary>Gets or sets whether a delimited writer starts the file with a byte order mark, for a Delimited container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? WriteByteOrderMark { get; set; }
+
+    /// <summary>Gets or sets whether a delimited writer prefixes a text value that starts like a formula with an apostrophe, for a Delimited container. A choice: required where the format reads or writes it, never defaulted (FDW-3823).</summary>
+    public bool? NeutralizeFormulas { get; set; }
+
     /// <summary>
     /// Gets or sets the path, after the connection's address, that the rows are sent to when this container is the destination of
     /// an HTTP connection, for example <c>/api/v1/ingest</c>. A full web address is refused. Left out, a destination that needs it

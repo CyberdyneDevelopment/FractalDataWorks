@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
+using Fdw.Services.Etl.Thresholds;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -56,6 +57,36 @@ public sealed class PipelineRunControl : IExecutionRunControl
         }
 
         PipelineRunControlLog.CancelRequested(_logger, executionId);
+        return GenericResult.Success();
+    }
+
+    /// <inheritdoc />
+    /// <summary>
+    /// Stops a run because a threshold fired (FDW-3865). The run ends the way a cancelled one does (FDW-3784): its records close Cancelled, with the code
+    /// <c>ThresholdStopped</c> and the reason as the run's message. A run that is already ending is left as it is, and the stop succeeds without changing it.
+    /// </summary>
+    /// <param name="executionId">The run.</param>
+    /// <param name="reason">Why the threshold stopped it.</param>
+    /// <returns>Success, or a failure when the host does not hold the run.</returns>
+    public IGenericResult StopForThreshold(Guid executionId, string reason)
+    {
+        if (!_runs.TryGetValue(executionId, out var run))
+        {
+            return GenericResult.Failure(PipelineRunControlLog.RunNotHeld(_logger, executionId, "stop for a threshold"));
+        }
+
+        try
+        {
+            if (run.StopForThreshold(reason))
+            {
+                RunThresholdLog.RunStoppedByThreshold(_logger, executionId, reason);
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            return GenericResult.Failure(PipelineRunControlLog.RunNotHeld(_logger, executionId, "stop for a threshold"));
+        }
+
         return GenericResult.Success();
     }
 
