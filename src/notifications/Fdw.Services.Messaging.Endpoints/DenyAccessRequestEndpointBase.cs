@@ -11,7 +11,7 @@ using Fdw.Claims.Abstractions;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for denying an access request (PUT /access-requests/{Id}/deny).
+/// Abstract base class for denying an access request (POST /access-requests/{Id}/deny).
 /// </summary>
 public abstract class DenyAccessRequestEndpointBase : Endpoint<ReviewAccessRequestRequest>
 {

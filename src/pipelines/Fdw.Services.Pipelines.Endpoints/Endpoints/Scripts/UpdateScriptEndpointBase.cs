@@ -28,8 +28,6 @@ public abstract class UpdateScriptEndpointBase : CrudUpdateEndpointBase<ScriptPa
     /// <inheritdoc />
     protected override string Route => "/scripts/{Name}";
 
-    /// <inheritdoc />
-    protected override HttpVerb UpdateVerb => HttpVerb.PUT;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Replace a stored SQL script";

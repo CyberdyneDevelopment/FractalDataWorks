@@ -32,8 +32,6 @@ public abstract class UpdateCategoryEndpointBase : CrudUpdateEndpointBase<Catego
     /// <inheritdoc />
     protected override string Route => "/categories/{Name}";
 
-    /// <inheritdoc />
-    protected override HttpVerb UpdateVerb => HttpVerb.PUT;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Rename, describe or move a category";

@@ -16,7 +16,7 @@ public sealed class CrudEndpoint : EndpointTypeBase
     public CrudEndpoint() : base(
         name: "CrudEndpoint",
         description: "Get, Read, Update, Delete operations for data management",
-        defaultHttpMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+        defaultHttpMethods: ["GET", "POST", "DELETE", "PATCH"],
         requiresAuthentication: true,
         cachingStrategy: "NoCache",
         isReadOnly: false,

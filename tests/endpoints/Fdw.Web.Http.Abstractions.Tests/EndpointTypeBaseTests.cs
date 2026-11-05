@@ -86,7 +86,7 @@ public sealed class EndpointTypeBaseTests
     {
         var sut = new CrudEndpoint();
 
-        sut.DefaultHttpMethods.ShouldBe(["GET", "POST", "PUT", "DELETE", "PATCH"]);
+        sut.DefaultHttpMethods.ShouldBe(["GET", "POST", "DELETE", "PATCH"]);
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public sealed class EndpointTypeBaseTests
     {
         var sut = new CommandEndpointBase();
 
-        sut.DefaultHttpMethods.ShouldBe(["POST", "PUT", "PATCH"]);
+        sut.DefaultHttpMethods.ShouldBe(["POST", "PATCH"]);
     }
 
     [Fact]
@@ -286,7 +286,7 @@ public sealed class EndpointTypeBaseTests
     {
         var sut = new FileEndpoint();
 
-        sut.DefaultHttpMethods.ShouldBe(["GET", "POST", "PUT", "DELETE"]);
+        sut.DefaultHttpMethods.ShouldBe(["GET", "POST", "DELETE"]);
     }
 
     [Fact]

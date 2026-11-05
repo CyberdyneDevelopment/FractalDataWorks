@@ -45,8 +45,6 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
     /// <inheritdoc />
     protected override string Route => "/pipelines/{Name}/graph";
 
-    /// <inheritdoc />
-    protected override HttpVerb UpdateVerb => HttpVerb.PUT;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Replace a graph pipeline";

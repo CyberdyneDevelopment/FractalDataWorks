@@ -35,7 +35,7 @@ public abstract class GiveOrganizationMemberRoleEndpointBase : Endpoint<Organiza
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/organizations/{OrganizationId}/members/{UserId}");
+        Post("/organizations/{OrganizationId}/members/{UserId}");
         ConfigureEndpoint();
     }
 

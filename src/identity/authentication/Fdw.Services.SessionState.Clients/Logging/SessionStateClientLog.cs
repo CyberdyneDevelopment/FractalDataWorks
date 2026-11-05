@@ -15,8 +15,8 @@ public static partial class SessionStateClientLog
     [MessageLogging(EventId = 71000, Level = LogLevel.Error, Message = "Session state GET failed for key '{key}' with status {statusCode}")]
     public static partial IGenericMessage GetFailed(ILogger logger, string key, int statusCode);
 
-    /// <summary>Logs a session state PUT failure for the given key.</summary>
-    [MessageLogging(EventId = 71001, Level = LogLevel.Error, Message = "Session state PUT failed for key '{key}' with status {statusCode}")]
+    /// <summary>Logs a session state PATCH failure for the given key.</summary>
+    [MessageLogging(EventId = 71001, Level = LogLevel.Error, Message = "Session state PATCH failed for key '{key}' with status {statusCode}")]
     public static partial IGenericMessage SaveFailed(ILogger logger, string key, int statusCode);
 
     /// <summary>Logs a session state DELETE failure for the given key.</summary>

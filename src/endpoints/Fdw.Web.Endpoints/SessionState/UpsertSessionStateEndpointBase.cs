@@ -11,7 +11,7 @@ namespace Fdw.Web.Endpoints.SessionState;
 
 /// <summary>
 /// Base endpoint for upserting a session state value for the authenticated user.
-/// Route: PUT /session-state/{Key}
+/// Route: PATCH /session-state/{Key}
 /// </summary>
 public abstract class UpsertSessionStateEndpointBase : Endpoint<UpsertSessionStateRequest>
 {

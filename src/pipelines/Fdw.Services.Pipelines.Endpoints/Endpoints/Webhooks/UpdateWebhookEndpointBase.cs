@@ -36,8 +36,6 @@ public abstract class UpdateWebhookEndpointBase : CrudUpdateEndpointBase<Webhook
     /// <inheritdoc />
     protected override string Route => "/webhooks/{Name}";
 
-    /// <inheritdoc />
-    protected override HttpVerb UpdateVerb => HttpVerb.PUT;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Replace a webhook trigger";

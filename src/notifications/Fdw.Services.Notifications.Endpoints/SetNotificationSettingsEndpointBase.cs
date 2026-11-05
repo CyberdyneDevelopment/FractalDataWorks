@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Notifications.Endpoints;
 
 /// <summary>
-/// Base endpoint setting the settings of an existing notification of any type: <c>PUT /notifications/{Name}/settings</c> (FDW-2931).
+/// Base endpoint setting the settings of an existing notification of any type: <c>PATCH /notifications/{Name}/settings</c> (FDW-2931).
 /// </summary>
 /// <remarks>
 /// 204 when saved; 404 when there is no such notification; 400 naming a setting the type does not have, a value that does not read as the
@@ -35,7 +35,7 @@ public abstract class SetNotificationSettingsEndpointBase : Endpoint<SetNotifica
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/notifications/{Name}/settings");
+        Patch("/notifications/{Name}/settings");
         Policies("notifications:write");
         Summary(s =>
         {

@@ -34,7 +34,7 @@ public abstract class SetTenantInheritedSettingEndpointBase : Endpoint<SetTenant
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/tenants/{TenantId}/settings/{SettingName}");
+        Patch("/tenants/{TenantId}/settings/{SettingName}");
         ConfigureEndpoint();
     }
 

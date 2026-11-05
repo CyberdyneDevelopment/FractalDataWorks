@@ -30,7 +30,7 @@ public abstract class SetOrganizationInheritedSettingEndpointBase : Endpoint<Set
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/organizations/{OrganizationId}/settings/{SettingName}");
+        Patch("/organizations/{OrganizationId}/settings/{SettingName}");
         ConfigureEndpoint();
     }
 

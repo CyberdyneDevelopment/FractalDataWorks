@@ -11,7 +11,7 @@ using Fdw.Results;
 namespace Fdw.Services.Users.Endpoints;
 
 /// <summary>
-/// Abstract base class for updating user preferences (PUT /users/me/preferences).
+/// Abstract base class for updating user preferences (PATCH /users/me/preferences).
 /// </summary>
 public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPreferencesRequest>
 {

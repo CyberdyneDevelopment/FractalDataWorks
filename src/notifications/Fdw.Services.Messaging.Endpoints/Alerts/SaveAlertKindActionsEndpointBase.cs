@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Chooses the actions a kind of alert offers the caller's company (PUT /alerts/kinds/{Kind}/actions), replacing its choice whole and answering the kind (FDW-2430). An empty list is a choice: the kind then offers nothing.
+/// Chooses the actions a kind of alert offers the caller's company (POST /alerts/kinds/{Kind}/actions), replacing its choice whole and answering the kind (FDW-2430). An empty list is a choice: the kind then offers nothing.
 /// </summary>
 public abstract class SaveAlertKindActionsEndpointBase : Endpoint<SaveAlertKindActionsEndpointRequest, AlertKindResponse>
 {
@@ -31,7 +31,7 @@ public abstract class SaveAlertKindActionsEndpointBase : Endpoint<SaveAlertKindA
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put("/alerts/kinds/{Kind}/actions");
+        Post("/alerts/kinds/{Kind}/actions");
         Policies("alerts:configure");
         Summary(s => s.Summary = "Choose the actions a kind of alert offers the company");
         ConfigureEndpoint();

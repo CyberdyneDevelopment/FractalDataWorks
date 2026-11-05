@@ -14,3 +14,4 @@ FDW016 | Usage | Warning | UncheckedResultValueAccessAnalyzer - IGenericResult<T
 FDW022 | Usage | Warning | SwallowedExceptionAnalyzer - Caught exception is neither observed nor rethrown
 FDW023 | Usage | Info | SwallowedExceptionAnalyzer - Broad System.Exception catch with no specific catch clauses
 FDW057 | Usage | Error | UncheckedFailureReasonAnalyzer - FailureReason() read where the result may have succeeded
+FDW058 | Usage | Error | PutRouteAnalyzer - An endpoint declares PUT; creating or attaching is POST, changing is PATCH

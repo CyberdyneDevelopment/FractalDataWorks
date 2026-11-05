@@ -9,7 +9,7 @@ using Fdw.Claims.Abstractions;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for marking all messages as read (PUT /messages/mark-all-read).
+/// Abstract base class for marking all messages as read (POST /messages/mark-all-read).
 /// </summary>
 public abstract class MarkAllReadEndpointBase : EndpointWithoutRequest
 {

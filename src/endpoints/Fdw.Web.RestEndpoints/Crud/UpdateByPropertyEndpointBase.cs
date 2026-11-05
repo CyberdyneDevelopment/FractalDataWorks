@@ -8,7 +8,7 @@ using Fdw.Results;
 namespace Fdw.Web.RestEndpoints.Crud;
 
 /// <summary>
-/// Generic base for PUT-by-key endpoints. The key is taken from the route (<c>{Key}</c>)
+/// Generic base for PATCH-by-key endpoints. The key is taken from the route (<c>{Key}</c>)
 /// and the update payload from the request body, exposed as <see cref="UpdateByPropertyRequest{TKey,TBody}"/>.
 /// </summary>
 /// <typeparam name="TBody">The update payload type (mutable fields only).</typeparam>

@@ -16,7 +16,7 @@ public sealed class FileEndpoint : EndpointTypeBase
     public FileEndpoint() : base(
         name: "FileEndpoint",
         description: "File upload, download, and manipulation operations",
-        defaultHttpMethods: ["GET", "POST", "PUT", "DELETE"],
+        defaultHttpMethods: ["GET", "POST", "DELETE"],
         requiresAuthentication: true,
         cachingStrategy: "NoCache",
         isReadOnly: false,
