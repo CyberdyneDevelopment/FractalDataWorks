@@ -11,7 +11,7 @@ using Fdw.Claims.Abstractions;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for approving an access request (PUT /access-requests/{Id}/approve).
+/// Abstract base class for approving an access request (POST /access-requests/{Id}/approve).
 /// </summary>
 public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRequestRequest>
 {

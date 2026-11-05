@@ -31,7 +31,7 @@ public abstract class AssignOrganizationConnectionEndpointBase : Endpoint<Organi
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/organizations/{OrganizationId}/connections/{Purpose}");
+        Post("/organizations/{OrganizationId}/connections/{Purpose}");
         ConfigureEndpoint();
     }
 

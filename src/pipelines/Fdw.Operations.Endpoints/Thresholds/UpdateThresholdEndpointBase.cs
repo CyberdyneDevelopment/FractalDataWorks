@@ -28,8 +28,6 @@ public abstract class UpdateThresholdEndpointBase : CrudUpdateEndpointBase<Thres
     /// <inheritdoc />
     protected override string ResourceName => "thresholds";
 
-    /// <inheritdoc />
-    protected override HttpVerb UpdateVerb => HttpVerb.PUT;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Replace a threshold";

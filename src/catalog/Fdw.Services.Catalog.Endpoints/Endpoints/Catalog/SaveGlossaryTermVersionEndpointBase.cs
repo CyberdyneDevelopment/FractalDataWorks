@@ -40,7 +40,7 @@ public abstract class SaveGlossaryTermVersionEndpointBase : Endpoint<SaveGlossar
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put("/catalog/glossary/{Id}/versions/{PlaceKind}/{PlaceId}");
+        Post("/catalog/glossary/{Id}/versions/{PlaceKind}/{PlaceId}");
         Policies(WritePolicy);
         Summary(s => s.Summary = "Save a version of a glossary term at an organization or workspace");
     }

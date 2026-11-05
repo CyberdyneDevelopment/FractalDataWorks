@@ -31,7 +31,7 @@ public abstract class SaveTenantHomePageDraftEndpointBase : Endpoint<SaveTenantH
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/tenants/{TenantId}/home-page/draft");
+        Post("/tenants/{TenantId}/home-page/draft");
         ConfigureEndpoint();
     }
 

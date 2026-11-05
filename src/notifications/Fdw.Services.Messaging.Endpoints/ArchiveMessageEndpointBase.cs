@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for archiving a message (PUT /messages/{Id}/archive).
+/// Abstract base class for archiving a message (POST /messages/{Id}/archive).
 /// </summary>
 public abstract class ArchiveMessageEndpointBase : Endpoint<MessageIdRequest>
 {

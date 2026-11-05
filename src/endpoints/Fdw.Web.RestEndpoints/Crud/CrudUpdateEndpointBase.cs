@@ -63,15 +63,6 @@ public abstract class CrudUpdateEndpointBase<TUpdateRequest, TDetail> : Endpoint
     /// </summary>
     protected virtual string Route => $"/{ResourceName}/{{Name}}";
 
-    /// <summary>
-    /// Gets the HTTP method for updates.
-    /// </summary>
-    /// <remarks>
-    /// PATCH, because an update here names what is changing rather than replacing a resource
-    /// whole — this surface has no PUT. An endpoint that performs a named action rather than
-    /// changing fields is a POST and does not derive from this base at all.
-    /// </remarks>
-    protected virtual HttpVerb UpdateVerb => HttpVerb.PATCH;
 
     /// <summary>
     /// Gets the endpoint summary for OpenAPI documentation.
@@ -91,7 +82,8 @@ public abstract class CrudUpdateEndpointBase<TUpdateRequest, TDetail> : Endpoint
     /// <inheritdoc/>
     public override void Configure()
     {
-        Verbs(UpdateVerb.ToString().ToUpperInvariant());
+        // PATCH, always: an update names what changes, and the API takes no PUT (Mike, 2026-11-05: "we always always always use post and patch definitely not put"; FDW058).
+        Verbs(FastEndpoints.Http.PATCH);
         Routes(Route);
 #if DEVELOP
         AllowAnonymous();
@@ -240,18 +232,6 @@ public abstract class CrudUpdateEndpointBase<TUpdateRequest, TDetail> : Endpoint
         return Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode));
     }
 
-    /// <summary>
-    /// HTTP verbs for update operations.
-    /// </summary>
-#pragma warning disable FDW017
-    protected enum HttpVerb
-    {
-        /// <summary>Full replacement update.</summary>
-        PUT,
-        /// <summary>Partial update.</summary>
-        PATCH
-    }
-#pragma warning restore FDW017
 
     /// <summary>Builds the RFC 7807 body for a resource that does not exist.</summary>
     /// <param name="detail">What was looked for.</param>

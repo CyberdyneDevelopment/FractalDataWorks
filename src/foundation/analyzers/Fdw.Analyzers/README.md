@@ -8,7 +8,7 @@ Roslyn analyzers that enforce FDW conventions at compile time.
 
 ## Diagnostics
 
-`FDW001` · `FDW002` · `FDW003` · `FDW004` · `FDW012` · `FDW013` · `FDW014` · `FDW015` · `FDW016` · `FDW022` · `FDW023`
+`FDW001` · `FDW002` · `FDW003` · `FDW004` · `FDW012` · `FDW013` · `FDW014` · `FDW015` · `FDW016` · `FDW022` · `FDW023` · `FDW057` · `FDW058`
 
 ## Analyzers
 

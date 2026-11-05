@@ -24,12 +24,6 @@ internal sealed class TestApiClient : ApiClientBase
     public new Task<IGenericResult<TResponse>> PostWithResponse<TResponse>(string path, CancellationToken ct = default)
         => base.PostWithResponse<TResponse>(path, ct);
 
-    public new Task<IGenericResult<TResponse>> Put<TRequest, TResponse>(string path, TRequest request, CancellationToken ct = default)
-        => base.Put<TRequest, TResponse>(path, request, ct);
-
-    public new Task<IGenericResult> Put<TRequest>(string path, TRequest request, CancellationToken ct = default)
-        => base.Put<TRequest>(path, request, ct);
-
     public new Task<IGenericResult<TResponse>> Patch<TRequest, TResponse>(string path, TRequest request, CancellationToken ct = default)
         => base.Patch<TRequest, TResponse>(path, request, ct);
 

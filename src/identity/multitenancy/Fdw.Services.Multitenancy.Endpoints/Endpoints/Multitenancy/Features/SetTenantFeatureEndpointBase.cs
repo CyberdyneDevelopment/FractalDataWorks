@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Multitenancy.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for switching a feature on or off for a tenant: <c>PUT /tenants/{TenantId}/features/{Feature}</c> (FDW-1580).
+/// Generic base endpoint for switching a feature on or off for a tenant: <c>PATCH /tenants/{TenantId}/features/{Feature}</c> (FDW-1580).
 /// Who may is decided by the feature service (FDW-2478); the switch is recorded in the administrative audit at the platform level.
 /// </summary>
 public abstract class SetTenantFeatureEndpointBase : Endpoint<SetTenantFeatureRequest, FeatureResponse>
@@ -31,7 +31,7 @@ public abstract class SetTenantFeatureEndpointBase : Endpoint<SetTenantFeatureRe
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/tenants/{TenantId}/features/{Feature}");
+        Patch("/tenants/{TenantId}/features/{Feature}");
         ConfigureEndpoint();
     }
 

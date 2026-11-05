@@ -33,7 +33,7 @@ public abstract class SetPlatformInheritedSettingEndpointBase : Endpoint<SetPlat
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/platform/settings/{SettingName}");
+        Patch("/platform/settings/{SettingName}");
         ConfigureEndpoint();
     }
 

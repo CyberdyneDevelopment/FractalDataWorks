@@ -41,7 +41,7 @@ public abstract class SaveCalculationVersionEndpointBase : Endpoint<SaveCalculat
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put("/calculation-entities/{Id}/versions/{PlaceKind}/{PlaceId}");
+        Post("/calculation-entities/{Id}/versions/{PlaceKind}/{PlaceId}");
         Policies(WritePolicy);
         Summary(s => s.Summary = "Save a version of a calculation at an organization or workspace");
     }

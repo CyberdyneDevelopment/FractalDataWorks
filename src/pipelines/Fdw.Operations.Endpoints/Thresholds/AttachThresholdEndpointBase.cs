@@ -30,7 +30,7 @@ public abstract class AttachThresholdEndpointBase : Endpoint<ThresholdSubjectReq
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/thresholds/{Name}/subjects/{Kind}/{SubjectId}");
+        Post("/thresholds/{Name}/subjects/{Kind}/{SubjectId}");
         Policies(WritePolicy);
         Description(x => x.WithTags("thresholds"));
         Summary(s => s.Summary = "Attach a threshold to a subject");

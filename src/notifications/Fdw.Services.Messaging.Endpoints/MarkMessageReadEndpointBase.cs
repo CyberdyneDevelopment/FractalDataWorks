@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for marking a message as read (PUT /messages/{Id}/read).
+/// Abstract base class for marking a message as read (POST /messages/{Id}/read).
 /// </summary>
 public abstract class MarkMessageReadEndpointBase : Endpoint<MessageIdRequest>
 {

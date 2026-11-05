@@ -32,7 +32,7 @@ public abstract class UpdateOrganizationRoleEndpointBase : Endpoint<Organization
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/organizations/{OrganizationId}/roles/{RoleName}");
+        Patch("/organizations/{OrganizationId}/roles/{RoleName}");
         ConfigureEndpoint();
     }
 
