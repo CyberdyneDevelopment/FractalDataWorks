@@ -88,31 +88,31 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // Defaults are set HERE, in the declaration, so a func is never null and the invoker never guards.
     //
 
-    private PhaseState _configure;
-    private PhaseState _register;
-    private PhaseState _initialize;
+    private IPhaseState _configure = PhaseStates.NotRun;
+    private IPhaseState _register = PhaseStates.NotRun;
+    private IPhaseState _initialize = PhaseStates.NotRun;
 
     /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
     /// <remarks>
     /// A phase runs once. Idempotence is what makes chaining safe: a body appended by one contributor
     /// cannot re-run what an earlier one already did, however many times a phase is invoked.
     /// </remarks>
-    public PhaseState ConfigureState => _configure;
+    public IPhaseState ConfigureState => _configure;
 
     /// <summary>Gets whether Register has not run, is deferred, or has run.</summary>
-    public PhaseState RegisterState => _register;
+    public IPhaseState RegisterState => _register;
 
     /// <summary>Gets whether Initialize has not run, is deferred, or has run.</summary>
-    public PhaseState InitializeState => _initialize;
+    public IPhaseState InitializeState => _initialize;
 
     /// <summary>Gets a value indicating whether Configure has run.</summary>
-    public bool Configured => _configure == PhaseState.Ran;
+    public bool Configured => _configure.HasRun;
 
     /// <summary>Gets a value indicating whether Register has run.</summary>
-    public bool Registered => _register == PhaseState.Ran;
+    public bool Registered => _register.HasRun;
 
     /// <summary>Gets a value indicating whether Initialize has run.</summary>
-    public bool Initialized => _initialize == PhaseState.Ran;
+    public bool Initialized => _initialize.HasRun;
 
 
     /// <summary>
@@ -493,14 +493,14 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _configure == PhaseState.Ran)
+        if (!force && _configure.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _configure = PhaseState.Deferred;
+            _configure = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -511,7 +511,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        _configure = PhaseState.Ran;
+        _configure = PhaseStates.Ran;
         return result;
     }
 
@@ -526,14 +526,14 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         bool force = false,
         bool defer = false)
     {
-        if (!force && _register == PhaseState.Ran)
+        if (!force && _register.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _register = PhaseState.Deferred;
+            _register = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -545,7 +545,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        _register = PhaseState.Ran;
+        _register = PhaseStates.Ran;
         return result;
     }
 
@@ -555,14 +555,14 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _initialize == PhaseState.Ran)
+        if (!force && _initialize.HasRun)
         {
             return GenericResult<IHost>.Success(host);
         }
 
         if (defer)
         {
-            _initialize = PhaseState.Deferred;
+            _initialize = PhaseStates.Deferred;
             return GenericResult<IHost>.Success(host);
         }
 
@@ -574,7 +574,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        _initialize = PhaseState.Ran;
+        _initialize = PhaseStates.Ran;
         return result;
     }
 

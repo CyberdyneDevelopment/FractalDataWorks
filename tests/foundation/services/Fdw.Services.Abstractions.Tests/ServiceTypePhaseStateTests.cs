@@ -18,8 +18,8 @@ public sealed class ServiceTypePhaseStateTests
     {
         var scope = new object();
 
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Register).ShouldBeFalse();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Register).ShouldBeFalse();
     }
 
     [Fact]
@@ -27,10 +27,10 @@ public sealed class ServiceTypePhaseStateTests
     {
         var scope = new object();
 
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Configure).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Configure).ShouldBeTrue();
         // Marking Configure must NOT mark Register/Initialize.
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Initialize).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Initialize).ShouldBeTrue();
     }
 
     [Fact]
@@ -39,9 +39,9 @@ public sealed class ServiceTypePhaseStateTests
         var scopeA = new object();
         var scopeB = new object();
 
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scopeA, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scopeA, ServiceTypePhases.Register).ShouldBeTrue();
         // A different scope (e.g. a second host/test container) gets a full run.
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scopeB, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scopeB, ServiceTypePhases.Register).ShouldBeTrue();
     }
 
     [Fact]
@@ -49,8 +49,8 @@ public sealed class ServiceTypePhaseStateTests
     {
         var scope = new object();
 
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
-        ServiceTypePhaseState.TryMarkCollection("Gadgets", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Gadgets", scope, ServiceTypePhases.Register).ShouldBeTrue();
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public sealed class ServiceTypePhaseStateTests
     {
         var scope = new object();
 
-        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
-        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhaseState.Phase.Register).ShouldBeFalse();
+        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhases.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhases.Register).ShouldBeFalse();
     }
 
     [Fact]
@@ -67,8 +67,8 @@ public sealed class ServiceTypePhaseStateTests
     {
         var scope = new object();
 
-        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
-        ServiceTypePhaseState.TryMarkOption("Widgets", "Bar", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhases.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkOption("Widgets", "Bar", scope, ServiceTypePhases.Register).ShouldBeTrue();
     }
 
     [Fact]
@@ -77,8 +77,8 @@ public sealed class ServiceTypePhaseStateTests
         var scope = new object();
 
         // The collection's whole-phase mark (option == null) and an option mark are distinct keys.
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
-        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhaseState.Phase.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Register).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkOption("Widgets", "Foo", scope, ServiceTypePhases.Register).ShouldBeTrue();
     }
 
     [Fact]
@@ -87,32 +87,32 @@ public sealed class ServiceTypePhaseStateTests
         var scope = new object();
 
         // A caller runs a collection's phase early (to control order) → marks it.
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Initialize).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Initialize).ShouldBeTrue();
 
         // The later pass sees it already ran and skips.
-        ServiceTypePhaseState.HasCollectionRun("Widgets", scope, ServiceTypePhaseState.Phase.Initialize).ShouldBeTrue();
-        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Initialize).ShouldBeFalse();
+        ServiceTypePhaseState.HasCollectionRun("Widgets", scope, ServiceTypePhases.Initialize).ShouldBeTrue();
+        ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhases.Initialize).ShouldBeFalse();
     }
 
     [Fact]
     public void HasCollectionRunIsFalseBeforeAnyMark()
     {
         var scope = new object();
-        ServiceTypePhaseState.HasCollectionRun("Widgets", scope, ServiceTypePhaseState.Phase.Configure).ShouldBeFalse();
+        ServiceTypePhaseState.HasCollectionRun("Widgets", scope, ServiceTypePhases.Configure).ShouldBeFalse();
     }
 
     [Fact]
     public void TryMarkCollectionFailsLoudOnNullScope()
         => Should.Throw<ArgumentNullException>(() =>
-            ServiceTypePhaseState.TryMarkCollection("Widgets", null!, ServiceTypePhaseState.Phase.Register));
+            ServiceTypePhaseState.TryMarkCollection("Widgets", null!, ServiceTypePhases.Register));
 
     [Fact]
     public void TryMarkCollectionFailsLoudOnEmptyCategory()
         => Should.Throw<ArgumentException>(() =>
-            ServiceTypePhaseState.TryMarkCollection("", new object(), ServiceTypePhaseState.Phase.Register));
+            ServiceTypePhaseState.TryMarkCollection("", new object(), ServiceTypePhases.Register));
 
     [Fact]
     public void TryMarkOptionFailsLoudOnEmptyOptionName()
         => Should.Throw<ArgumentException>(() =>
-            ServiceTypePhaseState.TryMarkOption("Widgets", "", new object(), ServiceTypePhaseState.Phase.Register));
+            ServiceTypePhaseState.TryMarkOption("Widgets", "", new object(), ServiceTypePhases.Register));
 }

@@ -33,6 +33,19 @@ internal static class DataDomainRegistrations
         return FirstFailure(steps);
     }
 
+    /// <summary>
+    /// Attaches the implementation provider to the data store domain provider for each data store kind (FDW-3863), so a data store composed from its rows finds its kind. Called by the
+    /// DataStore domain's own Initialize before it loads the stores: the category order puts "DataStore" before "DataStoreService", whose Initialize runs <see cref="Attach"/>, so the
+    /// kinds were not yet attached when the stores were loaded. Attaching a kind again replaces the provider with the same one, so <see cref="Attach"/> repeating it is harmless.
+    /// </summary>
+    /// <param name="services">The built host's services.</param>
+    /// <returns>Success, or the first failed attachment.</returns>
+    public static IGenericResult AttachDataStoreKinds(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        return FirstFailure(DataStoreKinds(services));
+    }
+
     /// <summary>Runs the steps in order and stops at the first that fails.</summary>
     /// <param name="steps">The attachments, each answering its own result.</param>
     /// <returns>Success when every step succeeded; otherwise the first failed result, with the steps after it not run.</returns>

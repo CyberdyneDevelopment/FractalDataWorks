@@ -87,10 +87,10 @@ public sealed class FlowStageStep : IFlowStep, IFlowFailureHook
     }
 
     // Why the run's gate decides (FDW-3880): the run's token ends for a person's cancel and for a host shutdown alike, and the two close the records differently.
-    private static FlowStopKind StopOf(FlowStepContext context, CancellationToken cancellationToken) =>
-        !cancellationToken.IsCancellationRequested ? FlowStopKind.None
-        : context.PauseGate?.StoppedWithHost == true ? FlowStopKind.HostStopped
-        : FlowStopKind.Cancelled;
+    private static IFlowStopKind StopOf(FlowStepContext context, CancellationToken cancellationToken) =>
+        !cancellationToken.IsCancellationRequested ? FlowStopKinds.None
+        : context.PauseGate?.StoppedWithHost == true ? FlowStopKinds.HostStopped
+        : FlowStopKinds.Cancelled;
 
     /// <inheritdoc />
     /// <remarks>The hooks of the actions this level holds directly; a loop's body is not reached, as a Notify on failure sits at the top of the pipeline.</remarks>

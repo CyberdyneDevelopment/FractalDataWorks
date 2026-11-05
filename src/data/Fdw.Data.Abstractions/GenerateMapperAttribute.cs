@@ -40,13 +40,17 @@ namespace Fdw.Data;
 public sealed class GenerateMapperAttribute : Attribute
 {
     /// <summary>
-    /// Gets or sets the mapping direction(s) to generate.
+    /// Gets or sets the mapping direction(s) to generate, as the option type of <see cref="MapperDirections"/> that names it.
     /// </summary>
     /// <value>
-    /// <see cref="MapperDirection.Input"/> (default) generates read-side mapping only, preserving
+    /// <c>typeof(<see cref="InputMapperDirection"/>)</c> (default) generates read-side mapping only, preserving
     /// backward compatibility with all existing <c>[GenerateMapper]</c> sites.
-    /// <see cref="MapperDirection.Output"/> generates write-side mapping only.
-    /// <see cref="MapperDirection.Both"/> generates both directions.
+    /// <c>typeof(<see cref="OutputMapperDirection"/>)</c> generates write-side mapping only.
+    /// <c>typeof(<see cref="BothMapperDirection"/>)</c> generates both directions.
+    /// Any other type is refused by the generator (FDW050).
     /// </value>
-    public MapperDirection Direction { get; set; } = MapperDirection.Input;
+    /// <remarks>
+    /// A type, not an option: an attribute argument must be a constant, and an option of a TypeCollection is an object.
+    /// </remarks>
+    public Type Direction { get; set; } = typeof(InputMapperDirection);
 }

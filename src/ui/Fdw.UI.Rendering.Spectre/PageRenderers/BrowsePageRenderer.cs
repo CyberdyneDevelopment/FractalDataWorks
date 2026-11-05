@@ -178,15 +178,18 @@ public static class BrowsePageRenderer
         var active = Math.Clamp(page.ActiveColumnIndex, 0, Math.Max(0, page.Columns.Count - 1));
         var activeColumn = page.Columns.Count > 0 ? page.Columns[active] : null;
 
+        var menuActions = BrowseActions.All()
+            .Where(action => action.MenuLabel is not null)
+            .OrderBy(action => action.Id)
+            .ToList();
+
         var choices = new List<string>();
         if (activeColumn is not null && activeColumn.Items.Count > 0)
         {
             foreach (var item in activeColumn.Items)
                 choices.Add(item.Label);
         }
-        choices.Add("← Back");
-        choices.Add("Refresh");
-        choices.Add("Quit");
+        choices.AddRange(menuActions.Select(action => action.MenuLabel).OfType<string>());
 
         var selection = console.Prompt(
             new SelectionPrompt<string>()
@@ -195,26 +198,23 @@ public static class BrowsePageRenderer
                 .AddChoices(choices)
                 .HighlightStyle(new Style(theme.Colors.Selected)));
 
-        return selection switch
-        {
-            "Quit" => new BrowsePageResult(BrowseAction.Quit, -1, null),
-            "Refresh" => new BrowsePageResult(BrowseAction.Refresh, -1, null),
-            "← Back" => new BrowsePageResult(BrowseAction.Back, -1, null),
-            _ => ResolveItemSelection(activeColumn, selection),
-        };
+        var chosen = menuActions.Find(action => string.Equals(action.MenuLabel, selection, StringComparison.Ordinal));
+        return chosen is not null
+            ? new BrowsePageResult(chosen, -1, null)
+            : ResolveItemSelection(activeColumn, selection);
     }
 
     private static BrowsePageResult ResolveItemSelection(IBrowseColumnModel? column, string label)
     {
         if (column is null)
-            return new BrowsePageResult(BrowseAction.Quit, -1, null);
+            return new BrowsePageResult(BrowseActions.Quit, -1, null);
 
         for (var i = 0; i < column.Items.Count; i++)
         {
             if (string.Equals(column.Items[i].Label, label, StringComparison.Ordinal))
-                return new BrowsePageResult(BrowseAction.DrillDown, i, column.Items[i].Payload);
+                return new BrowsePageResult(BrowseActions.DrillDown, i, column.Items[i].Payload);
         }
 
-        return new BrowsePageResult(BrowseAction.Quit, -1, null);
+        return new BrowsePageResult(BrowseActions.Quit, -1, null);
     }
 }

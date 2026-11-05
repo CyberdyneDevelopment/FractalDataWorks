@@ -106,32 +106,32 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// Three states rather than a flag per phase because a phase has three positions, not two: it
     /// has not run, it has been claimed by a host that will run it itself, or it has run. A bool
     /// cannot hold the middle one, and <c>defer</c> is exactly the middle one - which is why the
-    /// parameter sat unread here while <see cref="Fdw.Services.Abstractions.PhaseState"/> already
+    /// parameter sat unread here while <see cref="Fdw.Services.Abstractions.IPhaseState"/> already
     /// existed for the collections that do honour it.
     /// </remarks>
-    private PhaseState _configure;
-    private PhaseState _register;
-    private PhaseState _initialize;
+    private IPhaseState _configure = PhaseStates.NotRun;
+    private IPhaseState _register = PhaseStates.NotRun;
+    private IPhaseState _initialize = PhaseStates.NotRun;
 
     /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
-    public PhaseState ConfigureState => _configure;
+    public IPhaseState ConfigureState => _configure;
 
     /// <summary>Gets whether Register has not run, is deferred, or has run.</summary>
-    public PhaseState RegisterState => _register;
+    public IPhaseState RegisterState => _register;
 
     /// <summary>Gets whether Initialize has not run, is deferred, or has run.</summary>
-    public PhaseState InitializeState => _initialize;
+    public IPhaseState InitializeState => _initialize;
 
     /// <summary>Gets a value indicating whether Configure has run.</summary>
     /// <remarks>A phase runs once, so a chained body cannot re-cycle members an earlier one
     /// already drove. A deferred phase reads false here: it has been claimed, not run.</remarks>
-    public bool Configured => _configure == PhaseState.Ran;
+    public bool Configured => _configure.HasRun;
 
     /// <summary>Gets a value indicating whether Register has run.</summary>
-    public bool Registered => _register == PhaseState.Ran;
+    public bool Registered => _register.HasRun;
 
     /// <summary>Gets a value indicating whether Initialize has run.</summary>
-    public bool Initialized => _initialize == PhaseState.Ran;
+    public bool Initialized => _initialize.HasRun;
 
     /// <summary>Sets the body run during Configure.</summary>
     /// <param name="method">The body.</param>
@@ -312,11 +312,11 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
 
         if (defer)
         {
-            _configure = PhaseState.Deferred;
+            _configure = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        _configure = PhaseState.Ran;
+        _configure = PhaseStates.Ran;
 
         if (ConfigurationMethod is not null)
         {
@@ -369,12 +369,12 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
 
         if (defer)
         {
-            _register = PhaseState.Deferred;
+            _register = PhaseStates.Deferred;
             EndpointRegistrationLog.GroupDeferred(logger, Name, "Register");
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        _register = PhaseState.Ran;
+        _register = PhaseStates.Ran;
 
         var groupServiceCount = 0;
         if (RegistrationMethod is not null)
@@ -440,11 +440,11 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
 
         if (defer)
         {
-            _initialize = PhaseState.Deferred;
+            _initialize = PhaseStates.Deferred;
             return GenericResult<IHost>.Success(host);
         }
 
-        _initialize = PhaseState.Ran;
+        _initialize = PhaseStates.Ran;
 
         if (InitializationMethod is not null)
         {

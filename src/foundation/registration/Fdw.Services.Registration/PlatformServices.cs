@@ -115,8 +115,8 @@ public static class PlatformServices
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">
-    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>.
+    /// Run every domain even if its phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>.
     /// </param>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -127,7 +127,7 @@ public static class PlatformServices
 
         foreach (var entry in _frozenOrder)
         {
-            if (!force && entry.ConfigureState == PhaseState.Deferred) continue;
+            if (!force && entry.ConfigureState.IsDeferred) continue;
 
             var result = entry.Configure(builder, loggerFactory, force: force);
             if (result.IsFailure)
@@ -173,8 +173,8 @@ public static class PlatformServices
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">
-    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>.
+    /// Run every domain even if its phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>.
     /// </param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -185,7 +185,7 @@ public static class PlatformServices
 
         foreach (var entry in _frozenOrder)
         {
-            if (!force && entry.RegisterState == PhaseState.Deferred) continue;
+            if (!force && entry.RegisterState.IsDeferred) continue;
 
             var result = entry.Register(builder, loggerFactory, force: force);
             if (result.IsFailure)
@@ -230,8 +230,8 @@ public static class PlatformServices
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">
-    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>.
+    /// Run every domain even if its phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>.
     /// </param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -242,7 +242,7 @@ public static class PlatformServices
 
         foreach (var entry in _frozenOrder)
         {
-            if (!force && entry.InitializeState == PhaseState.Deferred) continue;
+            if (!force && entry.InitializeState.IsDeferred) continue;
 
             var result = entry.Initialize(host, loggerFactory, force: force);
             if (result.IsFailure)

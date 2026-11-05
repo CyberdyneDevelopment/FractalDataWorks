@@ -143,8 +143,18 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         }
 
         using var scope = host.Services.CreateScope();
-        var provider = scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
+        // Resolved so the provider is built at startup and a registration fault in it stops the host here.
+        scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConfigurationGatewayDataStoreProvider>>();
+
+        // Why the kinds are attached here (FDW-3863): a data store row names its kind, and composing the store needs the kind's implementation provider on the domain provider. The
+        // DataStoreService domain attaches them in its own Initialize, but "DataStore" sorts before "DataStoreService" in the generated category order, so that had not run yet when the
+        // stores were loaded and every store failed to compose. The attach is idempotent, so the later one is harmless.
+        var attached = DataDomainRegistrations.AttachDataStoreKinds(scope.ServiceProvider);
+        if (attached.IsFailure)
+        {
+            return attached.ToNewResult<IHost>();
+        }
 
         // The elevation is opened and closed around this read, by the domain that needs it: a
         // boot-time load has no ClaimsPrincipal and no TenantId, so under the RLS predicates it
@@ -154,17 +164,20 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>()))
         {
 #pragma warning disable VSTHRD002
-            LoadStores(scope.ServiceProvider, provider, logger).GetAwaiter().GetResult();
+            var loaded = LoadStores(scope.ServiceProvider, logger).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+            if (loaded.IsFailure)
+            {
+                return loaded.ToNewResult<IHost>();
+            }
         }
-    
+
         return GenericResult<IHost>.Success(host);
     }
 
     [ConventionOverride(MaxCyclomaticComplexity = 25)]
-    private static async Task LoadStores(
+    internal static async Task<IGenericResult> LoadStores(
         IServiceProvider services,
-        IDataStoreProvider provider,
         ILogger<ConfigurationGatewayDataStoreProvider> logger)
     {
         var configProvider = services.GetRequiredService<DataStoreConfigurationProvider>();
@@ -172,16 +185,26 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         if (!configResult.IsSuccess)
         {
             DataStoreTypesLog.OptionsBindingSummary(logger, 0, 0, 0, 0);
-            DataStoreProviderLog.ContainerCreationFailed(logger, "all", "Initialize", configResult.FailureReason().Message);
-            return;
+            return GenericResult.Failure(DataStoreProviderLog.ContainerCreationFailed(logger, "all", "Initialize", configResult.FailureReason().Message));
         }
 
+        // A data store that cannot be composed from its rows fails the load: the header row alone has no paths or containers, so keeping it would list a store that nothing can use.
         var dataStores = new List<Fdw.Services.Connections.IDataStoreImplementationConfiguration>();
         foreach (var shallow in configResult.Value!)
         {
             if (string.IsNullOrWhiteSpace(shallow.Name)) continue;
             var composed = await configProvider.Get(shallow.Name).ConfigureAwait(false);
-            dataStores.Add(composed.IsSuccess && composed.Value is not null ? composed.Value : shallow);
+            if (composed.IsFailure)
+            {
+                return GenericResult.Failure(DataStoreProviderLog.ContainerCreationFailed(logger, shallow.Name, "Initialize", composed.FailureReason().Message));
+            }
+
+            if (composed.Value is null)
+            {
+                return GenericResult.Failure(DataStoreProviderLog.DataStoreComposedNothing(logger, shallow.Name));
+            }
+
+            dataStores.Add(composed.Value);
         }
 
         var dataPaths = dataStores.SelectMany(ds => ds.Paths ?? []).ToList();
@@ -240,6 +263,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         }
 
         DataStoreTypesLog.DataStoreTypesInitialized(logger, DataStoreTypes.All().Count, dataStores.Count(c => !string.IsNullOrWhiteSpace(c.Name)));
+        return GenericResult.Success();
     }
 
     // ============================================================

@@ -242,27 +242,27 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// Per closed generic, like everything else static here: each collection tracks its own phases,
     /// and a phase runs once so that a chained body cannot re-cycle members an earlier one already did.
     /// </remarks>
-    private static PhaseState _configure;
-    private static PhaseState _register;
-    private static PhaseState _initialize;
+    private static IPhaseState _configure = PhaseStates.NotRun;
+    private static IPhaseState _register = PhaseStates.NotRun;
+    private static IPhaseState _initialize = PhaseStates.NotRun;
 
     /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
-    public static PhaseState ConfigureState => _configure;
+    public static IPhaseState ConfigureState => _configure;
 
     /// <summary>Gets whether Register has not run, is deferred, or has run.</summary>
-    public static PhaseState RegisterState => _register;
+    public static IPhaseState RegisterState => _register;
 
     /// <summary>Gets whether Initialize has not run, is deferred, or has run.</summary>
-    public static PhaseState InitializeState => _initialize;
+    public static IPhaseState InitializeState => _initialize;
 
     /// <summary>Gets a value indicating whether Configure has run.</summary>
-    public static bool Configured => _configure == PhaseState.Ran;
+    public static bool Configured => _configure.HasRun;
 
     /// <summary>Gets a value indicating whether Register has run.</summary>
-    public static bool Registered => _register == PhaseState.Ran;
+    public static bool Registered => _register.HasRun;
 
     /// <summary>Gets a value indicating whether Initialize has run.</summary>
-    public static bool Initialized => _initialize == PhaseState.Ran;
+    public static bool Initialized => _initialize.HasRun;
 
     /// <summary>Gets this collection's Configure body.</summary>
     protected static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> ConfigurationFunc => _configurationFunc;
@@ -429,14 +429,14 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _configure == PhaseState.Ran)
+        if (!force && _configure.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _configure = PhaseState.Deferred;
+            _configure = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -447,7 +447,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return phaseResult;
         }
 
-        _configure = PhaseState.Ran;
+        _configure = PhaseStates.Ran;
         return phaseResult;
     }
 
@@ -465,14 +465,14 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _register == PhaseState.Ran)
+        if (!force && _register.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _register = PhaseState.Deferred;
+            _register = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -483,7 +483,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return phaseResult;
         }
 
-        _register = PhaseState.Ran;
+        _register = PhaseStates.Ran;
         return phaseResult;
     }
 
@@ -499,14 +499,14 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _initialize == PhaseState.Ran)
+        if (!force && _initialize.HasRun)
         {
             return GenericResult<IHost>.Success(host);
         }
 
         if (defer)
         {
-            _initialize = PhaseState.Deferred;
+            _initialize = PhaseStates.Deferred;
             return GenericResult<IHost>.Success(host);
         }
 
@@ -517,7 +517,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return phaseResult;
         }
 
-        _initialize = PhaseState.Ran;
+        _initialize = PhaseStates.Ran;
         return phaseResult;
     }
 
