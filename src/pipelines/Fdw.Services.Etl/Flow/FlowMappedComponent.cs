@@ -103,7 +103,7 @@ public sealed class FlowMappedComponent : IFlowComponent, IFlowErrorOutputs
 
             var mapped = await FlowRowMapper.Apply(maps, batch, component, Name, logger, cancellationToken).ConfigureAwait(false);
             return mapped.IsFailure
-                ? throw new FlowMappingRefusedException(mapped.CurrentMessage)
+                ? throw new FlowMappingRefusedException(mapped.CurrentMessage, mapped)
                 : mapped.Value;
         }
     }

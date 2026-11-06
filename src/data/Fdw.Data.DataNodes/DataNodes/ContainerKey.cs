@@ -26,6 +26,9 @@ public sealed class ContainerKey : IContainerKey
     public bool IsPhysical { get; }
 
     /// <inheritdoc />
+    public bool IsOwner { get; }
+
+    /// <inheritdoc />
     public IDataContainer? ReferencedContainer { get; }
 
     /// <inheritdoc />
@@ -37,6 +40,7 @@ public sealed class ContainerKey : IContainerKey
         string? description,
         KeyTypeBase keyType,
         bool isPhysical,
+        bool isOwner,
         IDataContainer? referencedContainer,
         IReadOnlyList<IContainerKeyField> keyFields)
     {
@@ -44,6 +48,7 @@ public sealed class ContainerKey : IContainerKey
         Description = description;
         KeyType = keyType;
         IsPhysical = isPhysical;
+        IsOwner = isOwner;
         ReferencedContainer = referencedContainer;
         KeyFields = keyFields;
     }

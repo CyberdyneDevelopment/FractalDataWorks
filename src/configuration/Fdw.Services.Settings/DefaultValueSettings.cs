@@ -34,9 +34,6 @@ public static partial class DefaultValueSettings
     /// <summary>The setting that holds the threads of a Quartz scheduler that states none.</summary>
     public const string DefaultQuartzThreadCount = "DefaultQuartzThreadCount";
 
-    /// <summary>The setting that holds whether a Quartz scheduler that states none clusters.</summary>
-    public const string DefaultQuartzEnableClustering = "DefaultQuartzEnableClustering";
-
     /// <summary>The setting that holds whether a notification rule created without saying is enabled.</summary>
     public const string DefaultNotificationRuleIsEnabled = "DefaultNotificationRuleIsEnabled";
 
@@ -107,7 +104,6 @@ public static partial class DefaultValueSettings
             [DefaultScheduleRetryDelaySeconds] = new("Int32", "The seconds a schedule that states none waits before a retry."),
             [DefaultQuartzInstanceName] = new("String", "The instance name of a Quartz scheduler that states none."),
             [DefaultQuartzThreadCount] = new("Int32", "The threads of a Quartz scheduler that states none."),
-            [DefaultQuartzEnableClustering] = new("Boolean", "Whether a Quartz scheduler that states none clusters."),
             [DefaultNotificationRuleIsEnabled] = new("Boolean", "Whether a notification rule created without saying is enabled."),
             [DefaultNotificationRuleSeverity] = new("String", "The severity of a notification rule that states none."),
             [DefaultNotificationRuleConditionOperator] = new("String", "How the conditions of a notification rule that states none combine."),

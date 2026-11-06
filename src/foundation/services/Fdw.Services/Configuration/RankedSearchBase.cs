@@ -17,6 +17,7 @@ namespace Fdw.Services.Configuration;
 public abstract class RankedSearchBase : IRankedSearch
 {
     private readonly string _container;
+    private readonly IConfigurationGatewayProvider _gateways;
     private readonly Func<string, ConfigurationRowReader> _readers;
     private readonly RankedRowSearch _ranked;
     private readonly ILogger _logger;
@@ -31,6 +32,7 @@ public abstract class RankedSearchBase : IRankedSearch
     {
         _container = container;
         _logger = logger;
+        _gateways = gateways;
         _readers = name => new ConfigurationRowReader(gateways, dataStoreName, pathName, name, logger);
         _ranked = new RankedRowSearch(_readers(container), "Name", "Description", "RowId", logger);
     }
@@ -39,7 +41,7 @@ public abstract class RankedSearchBase : IRankedSearch
     public abstract string Kind { get; }
 
     /// <inheritdoc />
-    public int MaxWindow => ParentChain.MaxKeys;
+    public int MaxWindow => _gateways.KeyChunkSize;
 
     /// <inheritdoc />
     public async Task<IGenericResult<SearchPage>> Search(string text, int window, CancellationToken cancellationToken = default)
@@ -73,7 +75,7 @@ public abstract class RankedSearchBase : IRankedSearch
         var names = new Dictionary<string, IReadOnlyDictionary<long, IReadOnlyList<string>>>(StringComparer.Ordinal);
         foreach (var parents in hits.GroupBy(hit => hit.ParentTable, StringComparer.Ordinal))
         {
-            var chain = new ParentChain(_readers, HopsFrom(parents.Key), _logger);
+            var chain = new ParentChain(_readers, HopsFrom(parents.Key), _gateways.KeyChunkSize, _logger);
             var read = await chain.Names(parents.Select(hit => hit.ParentKey).ToList(), cancellationToken).ConfigureAwait(false);
             if (read.IsFailure)
             {

@@ -98,15 +98,28 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             return GenericResult<TConfiguration>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TConfiguration).Name, nameof(levels), levels));
 
-        var rows = await Read(domainId, null, levels, cancellationToken).ConfigureAwait(false);
-        if (!rows.IsSuccess) return rows.ToNewResult<TConfiguration>();
-
-        var found = rows.Value?.FirstOrDefault();
-        if (found is null)
+        // Why the set read and not Read/Compose (FDW-4254): composing one owner row by row read each child table once per row above it, so a
+        // datastore of 500 containers made ~2470 requests (fields, keys and key fields of every container, FDW-4252). The set read is one statement
+        // per child table per level whatever the number of rows, and an owner set of one is the same cascade. It reads the current rows, which is
+        // what this overload always read; an as-of read and a read inside a unit of work keep Read, which can say which version or which connection.
+        // An empty id names no row, as it did on the per-row path: nothing is read and nothing is found.
+        if (domainId == Guid.Empty)
+        {
             DefaultConfigurationProviderLog.ImplementationNotFound(_logger, typeof(TConfiguration).Name, domainId);
-        else
-            DefaultConfigurationProviderLog.ImplementationComposed(_logger, typeof(TConfiguration).Name, domainId);
-        return GenericResult<TConfiguration>.Success(found!);
+            return GenericResult<TConfiguration>.Success(default!);
+        }
+
+        var set = await GetSet([domainId], levels, cancellationToken).ConfigureAwait(false);
+        if (!set.IsSuccess) return set.ToNewResult<TConfiguration>();
+
+        if (!set.Value!.TryGetValue(domainId, out var found))
+        {
+            DefaultConfigurationProviderLog.ImplementationNotFound(_logger, typeof(TConfiguration).Name, domainId);
+            return GenericResult<TConfiguration>.Success(default!);
+        }
+
+        DefaultConfigurationProviderLog.ImplementationComposed(_logger, typeof(TConfiguration).Name, domainId);
+        return GenericResult<TConfiguration>.Success(found);
     }
 
     /// <inheritdoc/>
@@ -214,24 +227,28 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     /// AuthenticationService/ResponseBuffering/ForwardedHeaders/AuthChallenge domains all read as
     /// "no row configured" despite the row existing, some via a thrown Guid-cast exception, some via
     /// a swallowed IndexOutOfRangeException that silently returned false/absent instead).
-    /// Reverted to the pre-FDW-811 per-id loop below, which routes through the single-id
-    /// <see cref="Read"/>/<see cref="Compose"/> path -- proven correct, no relational-batch
-    /// assumptions, identical to what every connection type ran before FDW-811. The native-batching
-    /// optimization FDW-811 was going for is still worth having for MsSql/PostgreSql specifically;
-    /// it belongs in their own command translators, not as a ConnectionBase default every connection
-    /// inherits whether it has a concept of relationships or not. See FDW-811 for the redesign.
+    /// Reverted to a per-id loop through the single-id <see cref="Read"/>/<see cref="Compose"/> path. FDW-4254 replaced that loop (and the
+    /// single-id current read, <see cref="Get(Guid, int, CancellationToken)"/>) with <see cref="GetSet"/>: FDW-3906's set read reads through
+    /// <see cref="ConfigurationRowReader"/> and the coercing reader, not the ConnectionBase default that FDW-811 broke, and it makes a statement per
+    /// table per level instead of one per row. <see cref="Read"/> remains for an as-of read and a read inside a unit of work, which the set read
+    /// (current rows, its own connection) does not give.
     /// </remarks>
     public async Task<IGenericResult<IReadOnlyList<TConfiguration>>> Get(
         IEnumerable<Guid> domainIds, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(domainIds);
 
-        var found = new List<TConfiguration>();
-        foreach (var domainId in domainIds)
+        // FDW-4254: the ids go to the set read in one call (a statement per table per level) and come back in the order asked, those with no
+        // row left out, as the per-id loop gave them. The FDW-811 fault above was in a ConnectionBase default; the set read goes through
+        // ConfigurationRowReader and the coercing reader, as every other FileSystem-safe read does.
+        var asked = domainIds.ToList();
+        var set = await GetSet(asked, ConfigurationLevels.WholeAggregate, cancellationToken).ConfigureAwait(false);
+        if (!set.IsSuccess) return set.ToNewResult<IReadOnlyList<TConfiguration>>();
+
+        var found = new List<TConfiguration>(set.Value!.Count);
+        foreach (var domainId in asked)
         {
-            var one = await Get(domainId, cancellationToken).ConfigureAwait(false);
-            if (!one.IsSuccess) return one.ToNewResult<IReadOnlyList<TConfiguration>>();
-            if (one.Value is not null) found.Add(one.Value);
+            if (set.Value.TryGetValue(domainId, out var one)) found.Add(one);
         }
 
         return GenericResult<IReadOnlyList<TConfiguration>>.Success(found);
@@ -241,7 +258,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     /// <remarks>
     /// The domain rows are read by their durable Ids, then the implementation rows by the physical keys of those domain rows, then each child table
     /// by the physical keys of the rows above it (see <see cref="ChildSetLoader"/>): a statement for each table at each level, a chunk of
-    /// <see cref="ParentChain.MaxKeys"/> keys to a statement. What it reads is what <see cref="Get(Guid, int, CancellationToken)"/> reads for each id
+    /// <see cref="IConfigurationGatewayProvider.KeyChunkSize"/> keys to a statement. What it reads is what <see cref="Get(Guid, int, CancellationToken)"/> reads for each id
     /// (current, not deleted, the domain row current and not deleted too), and the rows are built the same way.
     /// </remarks>
     public async Task<IGenericResult<IReadOnlyDictionary<Guid, TConfiguration>>> GetSet(
@@ -252,12 +269,16 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             return GenericResult<IReadOnlyDictionary<Guid, TConfiguration>>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TConfiguration).Name, nameof(levels), levels));
 
+        if (_gatewayProvider.KeyChunkSize < 1)
+            return GenericResult<IReadOnlyDictionary<Guid, TConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.KeyChunkSizeNotStated(_logger, _commands.TableName, _gatewayProvider.KeyChunkSize));
+
         var plan = SetPlanFor();
         if (plan.IsFailure) return plan.ToNewResult<IReadOnlyDictionary<Guid, TConfiguration>>();
 
         var wanted = domainIds.Where(id => id != Guid.Empty).Distinct().ToList();
         var found = new Dictionary<Guid, TConfiguration>();
-        foreach (var chunk in wanted.Chunk(ParentChain.MaxKeys))
+        foreach (var chunk in wanted.Chunk(_gatewayProvider.KeyChunkSize))
         {
             var read = await ReadSet(plan.Value!, chunk, levels, cancellationToken).ConfigureAwait(false);
             if (read.IsFailure) return read.ToNewResult<IReadOnlyDictionary<Guid, TConfiguration>>();
@@ -1042,26 +1063,75 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         var descriptors = mapper.CascadeChildren.Where(d => !ConfigurationTrees.IsTree(d, owner.GetType())).ToList();
         for (var c = 0; c < descriptors.Count; c++)
         {
+            var treatment = TreatmentOf(owner, descriptors[c], ownerContainer);
+            if (treatment.IsFailure) return treatment;
+
             var result = descriptors[c].IsPropertyCollection
-                ? await SaveKvpChild(owner, descriptors[c], ownerContainer, ownerKeyValues, unit, ct).ConfigureAwait(false)
-                : await SaveListChildren(owner, descriptors[c], ownerContainer, ownerKeyValues, unit, ct).ConfigureAwait(false);
+                ? await SaveKvpChild(owner, descriptors[c], ownerContainer, ownerKeyValues, treatment.Value, unit, ct).ConfigureAwait(false)
+                : await SaveListChildren(owner, descriptors[c], ownerContainer, ownerKeyValues, treatment.Value, unit, ct).ConfigureAwait(false);
             if (!result.IsSuccess) return result;
         }
 
         return GenericResult.Success();
     }
 
+    // How a save treats one child collection. A collection whose container hangs from the owner's row is retired with the replaced version and
+    // written again, and has no mode. A collection whose container hangs from the owner's durable Id outlives the owner's versions, so it
+    // declares how a save treats it (FDW-4240): there is no default, and one that declares none, or one the modes do not know, is refused.
+    private IGenericResult<IChildCascadeMode?> TreatmentOf(IGenericConfiguration owner, IChildCascadeDescriptor descriptor, IDataContainer ownerContainer)
+    {
+        var ownerType = owner.GetType();
+        var holds = HoldsDurableId(ownerType, descriptor, ownerContainer, NothingToSave(owner, descriptor));
+        if (holds.IsFailure) return holds.ToNewResult<IChildCascadeMode?>();
+        if (!holds.Value.Durable) return GenericResult<IChildCascadeMode?>.Success(null);
+
+        if (string.IsNullOrEmpty(descriptor.CascadeModeName))
+            return GenericResult<IChildCascadeMode?>.Failure(
+                DefaultConfigurationProviderLog.ChildCascadeModeNotDeclared(_logger, ownerType.Name, descriptor.BoundPropertyName, holds.Value.Container));
+
+        var mode = ChildCascadeModes.ByName(descriptor.CascadeModeName);
+        return ReferenceEquals(mode, ChildCascadeModes.NotFound)
+            ? GenericResult<IChildCascadeMode?>.Failure(
+                DefaultConfigurationProviderLog.ChildCascadeModeUnknown(_logger, ownerType.Name, descriptor.BoundPropertyName, descriptor.CascadeModeName))
+            : GenericResult<IChildCascadeMode?>.Success(mode);
+    }
+
+    // Whether a collection's container hangs from the owner's durable Id, and the container it is written to. A container that declares no link to
+    // its owner can hold no children, so an empty collection of it has nothing to write or retire and is not an error; a collection with rows is.
+    private IGenericResult<(bool Durable, string Container)> HoldsDurableId(
+        Type ownerType, IChildCascadeDescriptor descriptor, IDataContainer ownerContainer, bool nothingToSave)
+    {
+        var childName = ChildContainer(descriptor, ownerType.Name);
+        if (childName.IsFailure) return childName.ToNewResult<(bool, string)>();
+
+        var binding = ConfigurationWriteScope.OwnerBinding(_logger, ownerContainer, childName.Value!);
+        if (binding.IsFailure)
+            return nothingToSave
+                ? GenericResult<(bool, string)>.Success((false, childName.Value!))
+                : binding.ToNewResult<(bool, string)>();
+
+        return GenericResult<(bool, string)>.Success((ConfigurationWriteScope.HoldsDurableId(ownerContainer, binding.Value!.Key), childName.Value!));
+    }
+
+    // Whether the owner carries no row of a collection: unset, or empty.
+    private static bool NothingToSave(IGenericConfiguration owner, IChildCascadeDescriptor descriptor)
+        => descriptor.IsPropertyCollection
+            ? descriptor.ReadDictionary(owner) is not { Count: > 0 }
+            : descriptor.GetCollection(owner) is not IEnumerable items || !items.Cast<object>().Any();
+
     private async Task<IGenericResult> SaveListChildren(
         IGenericConfiguration owner,
         IChildCascadeDescriptor descriptor,
         IDataContainer ownerContainer,
         IReadOnlyDictionary<string, object?> ownerKeyValues,
+        IChildCascadeMode? mode,
         ConfigurationWriteScope unit,
         CancellationToken ct)
     {
         if (descriptor.GetCollection(owner) is not System.Collections.IEnumerable items)
             return GenericResult.Success();
 
+        var kept = new List<Guid>();
         foreach (var item in items)
         {
             // Why this is logged rather than skipped quietly: a type-test `continue` treats
@@ -1076,11 +1146,81 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
                 continue;
             }
 
-            var itemResult = await SaveOneChild(childCfg, ownerContainer, ownerKeyValues, unit, ct).ConfigureAwait(false);
+            var itemResult = await SaveOneChild(childCfg, ownerContainer, ownerKeyValues, mode is not null, unit, ct).ConfigureAwait(false);
             if (!itemResult.IsSuccess) return itemResult;
+            kept.Add(childCfg.Id);
         }
 
+        // Only a collection that declares its list the full set retires the children the list no longer carries.
+        return mode is { RetiresAbsentChildren: true }
+            ? await RetireAbsent(owner, descriptor, ownerContainer, ownerKeyValues, kept, unit, ct).ConfigureAwait(false)
+            : GenericResult.Success();
+    }
+
+    // Retires, under the owner's durable Id, the current children the saved list does not carry, then their own children.
+    private async Task<IGenericResult> RetireAbsent(
+        IGenericConfiguration owner,
+        IChildCascadeDescriptor descriptor,
+        IDataContainer ownerContainer,
+        IReadOnlyDictionary<string, object?> ownerKeyValues,
+        IReadOnlyList<Guid> kept,
+        ConfigurationWriteScope unit,
+        CancellationToken ct)
+    {
+        var childName = ChildContainer(descriptor, owner.GetType().Name);
+        if (childName.IsFailure) return childName;
+
+        var child = LookupContainer(childName.Value!);
+        if (child.IsFailure) return child;
+
+        var logical = ConfigurationKeys.FieldOf(child.Value!.Keys, "Logical");
+        if (logical is null)
+            return GenericResult.Failure(DefaultConfigurationProviderLog.ChildLogicalKeyNotDeclared(_logger, childName.Value!));
+
+        var foreignKey = unit.ForeignKeyValues(ownerContainer, childName.Value!, ownerKeyValues);
+        if (foreignKey.IsFailure) return foreignKey;
+
+        var current = await unit.Read<IEnumerable<Dictionary<string, object?>>>(
+            CurrentChildren(child.Value!, foreignKey.Value!), ContainerTarget(child.Value!), ct).ConfigureAwait(false);
+        if (!current.IsSuccess) return current;
+
+        var absent = (current.Value ?? []).Select(row => row.TryGetValue(logical, out var id) ? id : null).OfType<Guid>().Where(id => !kept.Contains(id)).ToList();
+        foreach (var childId in absent)
+        {
+            var retired = await RetireAbsentOne(descriptor, child.Value!, logical, childId, foreignKey.Value!, unit, ct).ConfigureAwait(false);
+            if (!retired.IsSuccess) return retired;
+        }
+
+        DefaultConfigurationProviderLog.AbsentChildrenRetired(
+            _logger, childName.Value!, ConfigurationWriteScope.Describe(foreignKey.Value!), absent.Count);
         return GenericResult.Success();
+    }
+
+    // Retires one child by its own Id under the owner's Id, then the children that hang from it.
+    private async Task<IGenericResult> RetireAbsentOne(
+        IChildCascadeDescriptor descriptor,
+        IDataContainer child,
+        string logical,
+        Guid childId,
+        IReadOnlyDictionary<string, object?> foreignKey,
+        ConfigurationWriteScope unit,
+        CancellationToken ct)
+    {
+        var match = new Dictionary<string, object?>(foreignKey, StringComparer.Ordinal) { [logical] = childId };
+        var result = await unit.Write(new ConfigurationRetireCommand(match, markDeleted: false), ContainerTarget(child), ct).ConfigureAwait(false);
+        return result.IsFailure
+            ? result
+            : await RetireCollections(descriptor.ChildType, child, result.Value!.Retired, markDeleted: false, unit, ct).ConfigureAwait(false);
+    }
+
+    // The current, undeleted rows of a child container that hang from one owner.
+    private IDataCommand CurrentChildren(IDataContainer child, IReadOnlyDictionary<string, object?> foreignKey)
+    {
+        var query = new QueryCommandBuilder<Dictionary<string, object?>>(DataStoreName, child.Parent.Name, child.Name);
+        foreach (var field in foreignKey)
+            query = query.Where(field.Key, field.Value);
+
+        return query.Where("IsCurrent", true).Where("IsDeleted", false).Build().Command;
     }
 
     // Saves a single composed child via its per-type ConfigurationCommand, looked up by config-TYPE
@@ -1090,6 +1230,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         IGenericConfiguration childCfg,
         IDataContainer ownerContainer,
         IReadOnlyDictionary<string, object?> ownerKeyValues,
+        bool replacesCurrent,
         ConfigurationWriteScope unit,
         CancellationToken ct)
     {
@@ -1110,9 +1251,12 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         if (childCfg.Id == Guid.Empty)
             childCfg.Id = Guid.CreateVersion7();
 
-        var written = await unit.Write(
-            command.Insert(DataStoreName, childContainer.Value!.Parent.Name, childCfg, foreignKey.Value!),
-            ContainerTarget(childContainer.Value!), ct).ConfigureAwait(false);
+        // A child under the owner's durable Id replaces its own current version (matched on its Id), because the owner's versions do not
+        // retire it; a child under the owner's row replaces nothing, because the replaced version's children were retired with it.
+        var write = replacesCurrent
+            ? command.Create(DataStoreName, childContainer.Value!.Parent.Name, childCfg, foreignKey.Value!)
+            : command.Insert(DataStoreName, childContainer.Value!.Parent.Name, childCfg, foreignKey.Value!);
+        var written = await unit.Write(write, ContainerTarget(childContainer.Value!), ct).ConfigureAwait(false);
         if (written.IsFailure) return written;
         if (written.Value?.Written is not { } keys)
             return GenericResult.Failure(DefaultConfigurationProviderLog.WriteReturnedNoRow(_logger, command.ContainerName));
@@ -1127,6 +1271,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         IChildCascadeDescriptor descriptor,
         IDataContainer ownerContainer,
         IReadOnlyDictionary<string, object?> ownerKeyValues,
+        IChildCascadeMode? mode,
         ConfigurationWriteScope unit,
         CancellationToken ct)
     {
@@ -1144,6 +1289,13 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         if (container.IsFailure) return container;
 
         var target = ContainerTarget(container.Value!);
+        if (mode is { RetiresAbsentChildren: true })
+        {
+            // The bag is the full set and its rows are not versioned one by one: those the owner's Id holds are closed and the bag written again.
+            var closed = await unit.Write(new ConfigurationRetireCommand(foreignKey.Value!, markDeleted: false), target, ct).ConfigureAwait(false);
+            if (closed.IsFailure) return closed;
+        }
+
         foreach (var entry in bag)
         {
             var result = await unit.Write(
@@ -1200,6 +1352,16 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     {
         var childContainer = LookupContainer(childContainerName);
         if (childContainer.IsFailure) return childContainer;
+
+        // Rows that hang from the owner's durable Id are not the replaced version's: a replace leaves them current, and the save that
+        // follows treats them by the mode their collection declares. Only a delete of the owner retires them (FDW-4240).
+        var binding = ConfigurationWriteScope.OwnerBinding(_logger, ownerContainer, childContainerName);
+        if (binding.IsFailure) return binding;
+        if (!markDeleted && ConfigurationWriteScope.HoldsDurableId(ownerContainer, binding.Value!.Key))
+        {
+            DefaultConfigurationProviderLog.ChildrenKeptUnderDurableId(_logger, childContainerName, ownerContainer.Name);
+            return GenericResult.Success();
+        }
 
         foreach (var owner in retiredOwners)
         {

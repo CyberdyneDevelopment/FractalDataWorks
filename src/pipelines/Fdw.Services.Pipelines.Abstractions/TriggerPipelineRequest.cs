@@ -26,6 +26,18 @@ public class TriggerPipelineRequest
     public string? TriggerSource { get; set; }
 
     /// <summary>
+    /// Gets or sets the key of one fire (FDW-4317): the schedule's Id and the time the fire was due, the same on every retry of that fire, so the ETL host answers a retry with the run the
+    /// first call started. Required when the trigger source is one that requires it (a scheduled fire); a source that does not must send none.
+    /// </summary>
+    public string? TriggerKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the time the fire was due (FDW-4317), the time <see cref="TriggerKey"/> names. The ETL host remembers a key only for the retention its setting gives and
+    /// refuses a fire due before that. Sent with the key.
+    /// </summary>
+    public DateTimeOffset? TriggerKeyFireTime { get; set; }
+
+    /// <summary>
     /// Gets or sets the schedule name that triggered this execution.
     /// </summary>
     public string? ScheduleName { get; set; }

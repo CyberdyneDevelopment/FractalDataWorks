@@ -11,6 +11,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
@@ -370,8 +371,8 @@ public sealed class SimpleDataSetType : DataSetTypeBase
 
         var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.NoValueReason().Message));
+            return ConnectionFailures.Caused<T>(
+                connectionResult, DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.NoValueReason().Message));
 
         return await RunOnConnection<T>(ctx, connectionResult.Value, containerResult.Value, command, sourceConfig, ct).ConfigureAwait(false);
     }

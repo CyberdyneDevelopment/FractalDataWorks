@@ -136,6 +136,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
         // What the host keeps of each run it accepts, so a restart can take the runs that were held or waiting up again (FDW-3216). The queue takes the
         // request of every run it accepts into it.
         services.TryAddSingleton<IPipelineRunRequestStore, PipelineRunRequestStore>();
+        services.TryAddSingleton<IPipelineTriggerKeys, PipelineTriggerKeys>();
 
         // The thresholds on waiting runs (FDW-3161, FDW-3975): one monitor is the observer the scheduler tells, the check a trigger asks before it takes a run (the gate asks
         // the evaluator which HoldNewRuns rules hold), and the loop that has the evaluator judge the thresholds attached to pipelines, schedules and the server.

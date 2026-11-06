@@ -133,7 +133,7 @@ public sealed class ConfigurationRowReader
     /// <returns>The rows, in the order the store answers them, or the failure of the read.</returns>
     /// <remarks>
     /// For the rows that hang from a set of owners already read: the condition names the owners (<c>IN</c> their keys), so the answer is
-    /// the set's own and not a window over the container. The caller keeps the set under <see cref="ParentChain.MaxKeys"/>.
+    /// the set's own and not a window over the container. The caller keeps the set under <see cref="IConfigurationGatewayProvider.KeyChunkSize"/>.
     /// </remarks>
     public async Task<IGenericResult<IReadOnlyList<ConfigurationRow>>> All(IFilterNode? condition, CancellationToken cancellationToken = default)
     {

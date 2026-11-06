@@ -27,7 +27,7 @@ public static class OperationTags
     /// <summary>The group the sign-in routes are listed under, whichever path they sit on.</summary>
     public const string Authentication = "Authentication";
 
-    private static readonly string[] AuthenticationSegments = ["auth", "connect"];
+    private static readonly string[] AuthenticationSegments = ["auth"];
 
     /// <summary>The group an operation is listed under.</summary>
     /// <param name="path">The operation's path as the document lists it.</param>

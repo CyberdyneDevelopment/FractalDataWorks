@@ -21,26 +21,26 @@ public sealed class EtlGatewayService : IEtlGateway
 {
     private readonly IDomainConfigurationProvider<IDataStoreImplementationConfiguration> _dataStores;
     private readonly IDataConnectionProvider _connections;
-    private readonly IDataStoreProvider? _dataStoreProvider;
+    private readonly IDataStoreProvider _dataStoreProvider;
     private readonly IAuthenticationContextAccessor? _authentication;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="EtlGatewayService"/> class.</summary>
     /// <param name="dataStores">The data store configurations, read by name.</param>
     /// <param name="connections">Supplies the connection a data store reaches its data by.</param>
-    /// <param name="dataStoreProvider">Says whether a data store is declared by the host.</param>
+    /// <param name="dataStoreProvider">Says whether a data store is declared by the host. Required: a guard that can be left out is no guard.</param>
     /// <param name="authentication">Supplies the caller whose roles are checked.</param>
     /// <param name="logger">The logger.</param>
     public EtlGatewayService(
         IDomainConfigurationProvider<IDataStoreImplementationConfiguration> dataStores,
         IDataConnectionProvider connections,
-        IDataStoreProvider? dataStoreProvider = null,
+        IDataStoreProvider dataStoreProvider,
         IAuthenticationContextAccessor? authentication = null,
         ILogger<EtlGatewayService>? logger = null)
     {
         _dataStores = dataStores ?? throw new ArgumentNullException(nameof(dataStores));
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));
-        _dataStoreProvider = dataStoreProvider;
+        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
         _authentication = authentication;
         _logger = logger ?? NullLogger<EtlGatewayService>.Instance;
     }
@@ -69,7 +69,13 @@ public sealed class EtlGatewayService : IEtlGateway
 
         // Why a host store is refused: it holds the configuration, identity and operations the host runs on, and a script is
         // arbitrary text. A script runs against a store the data store configuration holds, never one the host declares.
-        if (await IsHostDeclared(dataStore, cancellationToken).ConfigureAwait(false))
+        var declaration = await HostDeclaration(dataStore, cancellationToken).ConfigureAwait(false);
+        if (declaration.IsFailure)
+        {
+            return GenericResult<T>.Failure(EtlGatewayLog.StoreLookupFailed(_logger, dataStore, command.CommandType, declaration.CurrentMessage));
+        }
+
+        if (declaration.Value)
         {
             return GenericResult<T>.Failure(EtlGatewayLog.HostStoreRefused(_logger, dataStore, command.CommandType));
         }
@@ -115,7 +121,8 @@ public sealed class EtlGatewayService : IEtlGateway
         var connection = await _connections.Get(store.Value.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (connection.IsFailure || connection.Value is null)
         {
-            return GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, connection.NoValueReason().Message));
+            return ConnectionFailures.Caused<IScriptedDataConnection>(
+                connection, EtlGatewayLog.StoreNotResolved(_logger, dataStore, connection.NoValueReason().Message));
         }
 
         var scripted = connection.Value as IScriptedDataConnection;
@@ -126,15 +133,21 @@ public sealed class EtlGatewayService : IEtlGateway
             : GenericResult<IScriptedDataConnection>.Success(scripted);
     }
 
-    private async Task<bool> IsHostDeclared(string dataStore, CancellationToken cancellationToken)
+    // Whether the host declared the store. A store that does not exist is not the host's (Resolve refuses it next); a lookup that broke
+    // says nothing, so it is a failure and the script is refused, never read as "not the host's" (FDW-4281).
+    private async Task<IGenericResult<bool>> HostDeclaration(string dataStore, CancellationToken cancellationToken)
     {
-        if (_dataStoreProvider is null)
+        var store = await _dataStoreProvider.GetReference(dataStore, cancellationToken).ConfigureAwait(false);
+        if (store.IsFailure)
         {
-            return false;
+            return FailureCategory.IsMissing(store)
+                ? GenericResult<bool>.Success(false)
+                : store.ToNewResult<bool>();
         }
 
-        var store = await _dataStoreProvider.Get(dataStore, cancellationToken).ConfigureAwait(false);
-        return store is { IsSuccess: true, Value.DeclaredByHost: true };
+        return store.Value is { } found
+            ? GenericResult<bool>.Success(found.DeclaredByHost)
+            : GenericResult<bool>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, "the data store provider answered with no store"));
     }
 
     private bool MayRunScripts() =>

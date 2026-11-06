@@ -182,6 +182,14 @@ public static partial class ServiceLogger
     [MessageLogging(EventId = 61031, Level = LogLevel.Error, Message = "{providerType}: member '{name}' failed to build, so the domain's service list fails with that member's failure")]
     public static partial IGenericMessage DomainMemberBuildFailed(ILogger logger, string providerType, string name);
 
+    /// <summary>Logs a domain member the provider refused to admit, left out of the list of every member (FDW-3951).</summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="providerType">The domain service provider reading.</param>
+    /// <param name="name">The member left out.</param>
+    /// <param name="reason">Why it was refused.</param>
+    [MessageLogging(EventId = 61038, Level = LogLevel.Information, Message = "{providerType}: member '{name}' is not admitted and is left out of the list of every member: {reason}")]
+    public static partial IGenericMessage DomainMemberNotAdmitted(ILogger logger, string providerType, string name, string reason);
+
     /// <summary>
     /// Logs when Get by ID starts.
     /// </summary>

@@ -563,7 +563,7 @@ internal static class CodeGeneration
         return ctor.Parameters
             .Select(p => new ParameterModel(
                 Name: p.Name,
-                Type: p.Type.ToDisplayString(),
+                Type: CodeTypeNames.Of(p.Type),
                 HasDefaultValue: p.HasExplicitDefaultValue,
                 DefaultValue: string.Empty,
                 IsValueType: p.Type.IsValueType))
@@ -591,7 +591,9 @@ internal static class CodeGeneration
         if (TryGetReadOnlyCollectionArgument(typeName, out var collectionArgument))
             return (collectionArgument, true);
 
-        if (KnownTypeArguments.TryGetValue(typeName, out var knownArgument))
+        // Why the prefix is dropped for the lookup: parameter types are written fully qualified (FDW-4171), and the table names them as
+        // C# spells them without global::.
+        if (KnownTypeArguments.TryGetValue(WithoutGlobal(typeName), out var knownArgument))
             return (knownArgument, true);
 
         if (parameter.IsValueType)
@@ -610,11 +612,15 @@ internal static class CodeGeneration
     /// <summary>
     /// An empty value for a read-only collection interface: an empty array, or an empty dictionary.
     /// </summary>
+    private static string WithoutGlobal(string typeName) =>
+        typeName.StartsWith("global::", StringComparison.Ordinal) ? typeName.Substring("global::".Length) : typeName;
+
     private static bool TryGetReadOnlyCollectionArgument(string typeName, out string argument)
     {
-        var shortName = typeName.StartsWith("System.Collections.Generic.", StringComparison.Ordinal)
-            ? typeName.Substring("System.Collections.Generic.".Length)
-            : typeName;
+        var bareName = WithoutGlobal(typeName);
+        var shortName = bareName.StartsWith("System.Collections.Generic.", StringComparison.Ordinal)
+            ? bareName.Substring("System.Collections.Generic.".Length)
+            : bareName;
 
         var start = typeName.IndexOf('<') + 1;
         var typeArgs = start > 0 ? typeName.Substring(start, typeName.LastIndexOf('>') - start) : string.Empty;
@@ -1049,7 +1055,7 @@ internal static class CodeGeneration
         var returnType = method.ReturnType.ToDisplayString();
         var parameters = method.Parameters.Select(p => new ParameterModel(
             Name: p.Name,
-            Type: p.Type.ToDisplayString(),
+            Type: CodeTypeNames.Of(p.Type),
             HasDefaultValue: p.HasExplicitDefaultValue,
             DefaultValue: p.HasExplicitDefaultValue ? p.ExplicitDefaultValue?.ToString() ?? "default" : string.Empty,
             IsValueType: p.Type.IsValueType

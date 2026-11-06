@@ -10,4 +10,7 @@ public sealed class ScheduledJobTriggerSource : JobTriggerSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="ScheduledJobTriggerSource"/> class.</summary>
     public ScheduledJobTriggerSource() : base("Scheduled") { }
+
+    /// <inheritdoc />
+    public override bool RequiresTriggerKey => true;
 }

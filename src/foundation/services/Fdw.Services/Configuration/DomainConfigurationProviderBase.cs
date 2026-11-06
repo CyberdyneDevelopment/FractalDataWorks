@@ -97,10 +97,6 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     // same answer every time.
     private IReadOnlyList<string>? _listFields;
 
-    // SQL Server allows 2,100 parameters per statement and every id is one; a thousand leaves room for the
-    // rest of the statement, and is the same ceiling a query's In operator has.
-    private const int MaxIds = 1000;
-
     // How many of the rows an ambiguous name matched are listed in the refusal: enough to address each by id.
     private const int MaxAmbiguousIds = 10;
 
@@ -295,7 +291,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var wanted = ids.Distinct().ToList();
         if (wanted.Count == 0)
             return GenericResult<IReadOnlyList<TDomain>>.Success(Array.Empty<TDomain>());
-        if (wanted.Count > MaxIds)
+        if (wanted.Count > _gatewayProvider.KeyChunkSize)
             return GenericResult<IReadOnlyList<TDomain>>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TDomain).Name, nameof(ids), wanted.Count));
 

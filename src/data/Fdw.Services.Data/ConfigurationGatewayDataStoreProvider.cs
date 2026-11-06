@@ -296,6 +296,28 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A store the host declared is answered from the gateway's own stores, as <see cref="Get(string, CancellationToken)"/> does. Any other is its
+    /// row, read as the caller, so one the caller cannot see is not found (FDW-4253): the tree is not built to say so.
+    /// </remarks>
+    public async Task<IGenericResult<DataStoreReference>> GetReference(string name, CancellationToken cancellationToken = default)
+    {
+        DataStoreProviderLog.TraceGetDataStoreEntry(_logger, name);
+
+        if (_gatewayProvider is not null)
+        {
+            var gw = _gatewayProvider.Get(ConfigurationConnectionName);
+            var gwStore = gw.IsSuccess
+                ? gw.Value!.DataStores.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase))
+                : null;
+            if (gwStore is not null)
+                return GenericResult<DataStoreReference>.Success(new DataStoreReference(gwStore.Name, gwStore.ConnectionId, gwStore.DeclaredByHost));
+        }
+
+        return await _coreProvider.GetReference(name, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async Task<IGenericResult<IDataStore>> Get(string name, CancellationToken cancellationToken = default)
     {
         DataStoreProviderLog.TraceGetDataStoreEntry(_logger, name);

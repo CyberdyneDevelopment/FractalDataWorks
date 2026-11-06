@@ -55,6 +55,30 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The store's own row, read at the record level (no paths, containers or fields), so a store of any size costs one statement. This core
+    /// provider merges in no host-declared store, so what it answers is never declared by the host.
+    /// </remarks>
+    public async Task<IGenericResult<DataStoreReference>> GetReference(string name, CancellationToken cancellationToken = default)
+    {
+        ConfiguredDataStoreProviderLog.TraceGetByNameEntry(_logger, name);
+        if (string.IsNullOrWhiteSpace(name))
+            return GenericResult<DataStoreReference>.Failure(ConfiguredDataStoreProviderLog.StoreNameRequired(_logger));
+
+        var cfgResult = await _configurationProvider.Get(name, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+
+        // As Get(name) does (FDW-4281): a read that failed for a reason other than the row being absent is not "no such store", and a caller
+        // that asks whether a store is the host's (the ETL gateway's guard) must not read a broken lookup as a negative answer.
+        if (cfgResult.IsFailure && !FailureCategory.IsMissing(cfgResult))
+            return cfgResult.ToNewResult<DataStoreReference>();
+
+        if (!cfgResult.IsSuccess || cfgResult.Value is null)
+            return GenericResult<DataStoreReference>.Failure(ConfiguredDataStoreProviderLog.StoreNotFound(_logger, name));
+
+        return GenericResult<DataStoreReference>.Success(new DataStoreReference(cfgResult.Value.Name, cfgResult.Value.ConnectionId, false));
+    }
+
+    /// <inheritdoc/>
     public async Task<IGenericResult<IDataStore>> Get(string name, CancellationToken cancellationToken = default)
     {
         ConfiguredDataStoreProviderLog.TraceGetByNameEntry(_logger, name);
@@ -62,6 +86,12 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
             return GenericResult<IDataStore>.Failure(ConfiguredDataStoreProviderLog.StoreNameRequired(_logger));
 
         var cfgResult = await _configurationProvider.Get(name, cancellationToken).ConfigureAwait(false);
+
+        // A read that failed for a reason other than the row being absent is not "no such store": answering StoreNotFound would let a
+        // caller that asks whether a store is the host's (the ETL gateway's guard) read a broken lookup as a negative answer (FDW-4281).
+        if (cfgResult.IsFailure && !FailureCategory.IsMissing(cfgResult))
+            return cfgResult.ToNewResult<IDataStore>();
+
         if (!cfgResult.IsSuccess || cfgResult.Value is null)
             return GenericResult<IDataStore>.Failure(ConfiguredDataStoreProviderLog.StoreNotFound(_logger, name));
 

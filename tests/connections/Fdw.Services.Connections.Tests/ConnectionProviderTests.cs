@@ -36,7 +36,7 @@ public class ConnectionProviderTests
         _configurations = [];
         _configProvider = new TestConnectionConfigurationProvider(_configurations);
 
-        _provider = new ConnectionProvider(_mockLogger.Object);
+        _provider = new ConnectionProvider(new DisabledStatesDouble(), _mockLogger.Object);
         _provider.Register(_configProvider);
     }
 
@@ -185,7 +185,7 @@ public class ConnectionProviderTests
     public void ConstructorWithValidParametersCreatesInstance()
     {
         // Arrange & Act
-        var provider = new ConnectionProvider(NullLogger<ConnectionProvider>.Instance);
+        var provider = new ConnectionProvider(new DisabledStatesDouble(), NullLogger<ConnectionProvider>.Instance);
 
         // Assert
         provider.ShouldNotBeNull();
@@ -761,7 +761,7 @@ public class ConnectionProviderTests
     public async Task GetByNameWithNoParentProviderReturnsFailure()
     {
         // Arrange - a provider whose phase-3 wiring never ran has no configuration source
-        var unwired = new ConnectionProvider(NullLogger<ConnectionProvider>.Instance);
+        var unwired = new ConnectionProvider(new DisabledStatesDouble(), NullLogger<ConnectionProvider>.Instance);
 
         // Act
         var result = await unwired.Get("TestConnection");

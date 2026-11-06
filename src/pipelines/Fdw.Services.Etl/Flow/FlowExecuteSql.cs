@@ -92,7 +92,7 @@ public sealed class FlowExecuteSql : IFlowStep
             .ConfigureAwait(false);
         if (ran.IsFailure)
         {
-            return GenericResult.Failure(FlowScriptLog.RunFailed(_logger, Name, _dataStore, FlowFailureReason.Of(ran, _logger, Name, _dataStore)));
+            return FlowFailures.Caused(FlowScriptLog.RunFailed(_logger, Name, _dataStore, FlowFailureReason.Of(ran, _logger, Name, _dataStore)), ran);
         }
 
         FlowScriptLog.RunFinished(_logger, Name, _dataStore, ran.Value);

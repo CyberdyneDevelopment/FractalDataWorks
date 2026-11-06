@@ -21,12 +21,15 @@ public sealed class UserRolesHeldTests
     private static readonly Guid Admin = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000001");
     private static readonly Guid Viewer = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000002");
 
+    // An assignment names its domain row by the row's durable Id (FDW-4240), which every version of the row keeps.
+    private static Guid DomainId(int domain) => new(domain, 0, 0, [0, 0, 0, 0, 0, 0, 0, 1]);
+
     private static Dictionary<string, object?> Assignment(int key, int domain, string user, Guid role, DateTimeOffset? expires = null, bool deleted = false)
         => InMemoryConfigurationStore.Row(
-            ("RowId", key), ("UserRoleRowId", domain), ("UserId", user), ("RoleId", role), ("TenantId", Tenant), ("ExpiresAt", expires), ("IsDeleted", deleted));
+            ("RowId", key), ("UserRoleId", DomainId(domain)), ("UserId", user), ("RoleId", role), ("TenantId", Tenant), ("ExpiresAt", expires), ("IsDeleted", deleted));
 
     private static Dictionary<string, object?> Domain(int key, bool current = true)
-        => InMemoryConfigurationStore.Row(("RowId", key), ("IsCurrent", current));
+        => InMemoryConfigurationStore.Row(("RowId", key + 1000), ("Id", DomainId(key)), ("IsCurrent", current));
 
     private static UserRolesHeld Reader(InMemoryConfigurationStore store) => new(store.Gateways, "PlatformConfiguration", "authz", NullLogger<UserRolesHeld>.Instance);
 
@@ -55,7 +58,7 @@ public sealed class UserRolesHeldTests
         var others = Enumerable.Range(100, 5000).Select(key => Assignment(key, key, Guid.NewGuid().ToString("D"), Admin)).ToList();
         var store = new InMemoryConfigurationStore()
             .Holds("UserRoleConfiguration", [Assignment(1, 11, Person.ToString("D"), Admin), Assignment(2, 12, Person.ToString("D"), Viewer), .. others])
-            .Holds("UserRole", [Domain(11), Domain(12), .. others.Select(row => Domain(Convert.ToInt32(row["UserRoleRowId"])))]);
+            .Holds("UserRole", [Domain(11), Domain(12), .. others.Select(row => Domain(Convert.ToInt32(row["RowId"])))]);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
 
@@ -144,7 +147,7 @@ public sealed class UserRolesHeldTests
     [Fact]
     public async Task AnAssignmentWithoutARoleFailsTheReadInsteadOfBeingSkipped()
     {
-        var withoutRole = InMemoryConfigurationStore.Row(("RowId", 1), ("UserRoleRowId", 11), ("UserId", Person.ToString("D")), ("TenantId", Tenant), ("ExpiresAt", null));
+        var withoutRole = InMemoryConfigurationStore.Row(("RowId", 1), ("UserRoleId", DomainId(11)), ("UserId", Person.ToString("D")), ("TenantId", Tenant), ("ExpiresAt", null));
         var store = new InMemoryConfigurationStore().Holds("UserRoleConfiguration", [withoutRole]).Holds("UserRole", [Domain(11)]);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);

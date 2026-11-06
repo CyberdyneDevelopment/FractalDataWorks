@@ -84,7 +84,7 @@ public abstract class CreateTenantEndpointBase : Endpoint<CreateTenantRequest, T
         }
 
         var founded = await _founding
-            .Found(new NewTenant(req.Name, req.Slug, req.OrgPrefix, req.ConnectionName, isSelectable, req.OrganizationName, req.OrganizationSlug), administratorId, req.AdministratorRole, ct)
+            .Found(new NewTenant(req.Name, req.Slug, req.OrgPrefix, req.ConnectionName, isSelectable, req.OrganizationSlug), administratorId, req.AdministratorRole, ct)
             .ConfigureAwait(false);
         if (founded.IsFailure)
         {

@@ -100,7 +100,7 @@ public sealed class FlowVariableCalculation
         }
 
         return transformed.IsFailure
-            ? GenericResult<object?>.Failure(FlowLog.CalculateFailed(_logger, step, _transformation, transformed.CurrentMessage))
+            ? FlowFailures.Caused<object?>(FlowLog.CalculateFailed(_logger, step, _transformation, FlowFailures.ReasonOf(transformed)), transformed)
             : GenericResult<object?>.Success(transformed.Value);
     }
 }

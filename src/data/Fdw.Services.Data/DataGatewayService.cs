@@ -166,9 +166,9 @@ public sealed partial class DataGatewayService : IDataGateway
             .ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
         {
-            return GenericResult<IDataGatewayTransaction>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(_logger, connectionName,
-                    connectionResult.NoValueReason().Message));
+            return ConnectionFailures.Caused<IDataGatewayTransaction>(
+                connectionResult,
+                DataGatewayLogger.ConnectionRetrievalFailed(_logger, connectionName, connectionResult.NoValueReason().Message));
         }
 
         if (connectionResult.Value is not ITransactionalDataConnection transactional)
@@ -365,52 +365,53 @@ public sealed partial class DataGatewayService : IDataGateway
         if (!resolved.IsSuccess)
             return resolved.ToNewResult<T>();
 
-        var (dataContainer, connection) = resolved.Value;
-        return await RunOnContainer(command, target, ct => connection.Execute<T>(command, dataContainer, ct), cancellationToken).ConfigureAwait(false);
+        var (dataContainer, connection, connectionId) = resolved.Value;
+        return await RunOnContainer(command, target, connectionId, ct => connection.Execute<T>(command, dataContainer, ct), cancellationToken).ConfigureAwait(false);
     }
 
     // The container a target names and the connection its store reaches it by: what every command run on a store needs
     // before it runs, a data command and a vectorized one alike.
-    private async Task<IGenericResult<(IDataContainer Container, IDataConnection Connection)>> ResolveTargetConnection(
+    private async Task<IGenericResult<(IDataContainer Container, IDataConnection Connection, Guid ConnectionId)>> ResolveTargetConnection(
         DataStoreTarget target, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(target.DataStore))
-            return GenericResult<(IDataContainer, IDataConnection)>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
+            return GenericResult<(IDataContainer, IDataConnection, Guid)>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
 
         DataGatewayLogger.ExecuteContainerEntering(_logger, target.DataStore, target.Path, target.Container);
 
         var containerResult = await ResolveContainerResult(target, cancellationToken).ConfigureAwait(false);
         if (!containerResult.IsSuccess)
-            return containerResult.ToNewResult<(IDataContainer, IDataConnection)>();
+            return containerResult.ToNewResult<(IDataContainer, IDataConnection, Guid)>();
 
         var dataContainer = containerResult.Value;
         if (dataContainer is null)
-            return GenericResult<(IDataContainer, IDataConnection)>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
+            return GenericResult<(IDataContainer, IDataConnection, Guid)>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
 
         var connectionResult = await ResolveStoreConnection(target.DataStore, cancellationToken).ConfigureAwait(false);
-        if (!connectionResult.IsSuccess || connectionResult.Value is null)
-            return connectionResult.ToNewResult<(IDataContainer, IDataConnection)>();
+        if (!connectionResult.IsSuccess || connectionResult.Value.Connection is null)
+            return connectionResult.ToNewResult<(IDataContainer, IDataConnection, Guid)>();
 
-        return GenericResult<(IDataContainer, IDataConnection)>.Success((dataContainer, connectionResult.Value));
+        return GenericResult<(IDataContainer, IDataConnection, Guid)>.Success(
+            (dataContainer, connectionResult.Value.Connection, connectionResult.Value.ConnectionId));
     }
 
     // The connection a data store reaches its data by: what a command needs whether or not it names a container, a scripted
     // command naming none.
-    private async Task<IGenericResult<IDataConnection>> ResolveStoreConnection(string dataStore, CancellationToken cancellationToken)
+    private async Task<IGenericResult<(Guid ConnectionId, IDataConnection Connection)>> ResolveStoreConnection(string dataStore, CancellationToken cancellationToken)
     {
         // The store's row alone: ConnectionId is a field of it. Reading it whole composed every path,
         // container, field and key under it, a query per collection per row, on every command (FDW-970).
         var storeResult = await _dataStoreConfigProvider.Get(dataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
-            return GenericResult<IDataConnection>.Failure(
+            return GenericResult<(Guid, IDataConnection)>.Failure(
                 DataGatewayLogger.DataStoreNotFoundForSource(_logger, dataStore));
         }
 
         var store = storeResult.Value;
         if (store.ConnectionId == Guid.Empty)
         {
-            return GenericResult<IDataConnection>.Failure(
+            return GenericResult<(Guid, IDataConnection)>.Failure(
                 DataGatewayLogger.DataStoreHasNoConnectionId(_logger, dataStore));
         }
 
@@ -418,16 +419,20 @@ public sealed partial class DataGatewayService : IDataGateway
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
         {
             var reason = connectionResult.NoValueReason().Message;
-            return GenericResult<IDataConnection>.Failure(
-                DataGatewayLogger.DataStoreConnectionNotResolved(_logger, dataStore, store.ConnectionId.ToString(), reason));
+            // The connection provider refused or could not give this connection, so it raised the failure (FDW-4279).
+            return ConnectionFailures.RaisedBy<(Guid, IDataConnection)>(
+                ConnectionFailures.Caused<IDataConnection>(
+                    connectionResult,
+                    DataGatewayLogger.DataStoreConnectionNotResolved(_logger, dataStore, store.ConnectionId.ToString(), reason)),
+                store.ConnectionId);
         }
 
-        return GenericResult<IDataConnection>.Success(connectionResult.Value);
+        return GenericResult<(Guid, IDataConnection)>.Success((store.ConnectionId, connectionResult.Value));
     }
 
     // Runs one command's work on the container, timed and logged the same for every command.
     private async Task<IGenericResult<T>> RunOnContainer<T>(
-        IGenericCommand command, DataStoreTarget target, Func<CancellationToken, Task<IGenericResult<T>>> run, CancellationToken cancellationToken)
+        IGenericCommand command, DataStoreTarget target, Guid connectionId, Func<CancellationToken, Task<IGenericResult<T>>> run, CancellationToken cancellationToken)
     {
         DataGatewayLogger.ExecutingContainerCommand(_logger, command.GetType().Name, target.Container, target.DataStore);
 
@@ -440,7 +445,8 @@ public sealed partial class DataGatewayService : IDataGateway
         else
             DataGatewayLogger.ContainerCommandFailed(_logger, target.Container, result.FailureReason().Message);
 
-        return result;
+        // A failure the connection returned names the connection that raised it, so a run that stops on it can say which connection it came from (FDW-4279).
+        return result.IsSuccess ? result : ConnectionFailures.RaisedBy<T>(result, connectionId);
     }
 
     private async Task<IGenericResult<IConnectionType>> ResolveConnectionType(
@@ -587,7 +593,8 @@ public sealed partial class DataGatewayService : IDataGateway
 
         var connectionResult = await _connectionProvider.Get(store.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
-            return GenericResult<IRecordSource<DataRecord>>.Failure(
+            return ConnectionFailures.Caused<IRecordSource<DataRecord>>(
+                connectionResult,
                 DataGatewayLogger.DataStoreConnectionNotResolved(_logger, target.DataStore, store.ConnectionId.ToString(), connectionResult.NoValueReason().Message));
 
         if (connectionResult.Value is not IRecordSourceConnection recordSourceConnection)
@@ -650,7 +657,9 @@ public sealed partial class DataGatewayService : IDataGateway
         if (_dataStoreProvider is null || string.IsNullOrWhiteSpace(dataStoreName))
             return false;
 
-        var store = await _dataStoreProvider.Get(dataStoreName, cancellationToken).ConfigureAwait(false);
+        // The store's row and not its tree (FDW-4253): this runs for every command, and building a 500-container store to read one flag was the
+        // first thing a command waited for.
+        var store = await _dataStoreProvider.GetReference(dataStoreName, cancellationToken).ConfigureAwait(false);
         return store is { IsSuccess: true, Value.DeclaredByHost: true };
     }
 

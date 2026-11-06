@@ -10,6 +10,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Logging;
+using Fdw.Services.Connections.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -284,6 +285,13 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             var getResult = await services.GetRequiredService<IConnectionProvider>().Get(connection.Id, ct).ConfigureAwait(false);
             if (!getResult.IsSuccess)
             {
+                // A disabled connection is not unhealthy and is not probed: there is nothing to record for it (FDW-3951).
+                if (string.Equals(getResult.Code?.Name, ConnectionsResultCodes.ByName("ConnectionDisabled").Name, StringComparison.Ordinal))
+                {
+                    ConnectionDisabledLog.ProbeSkipped(_logger, connection.Name);
+                    return null;
+                }
+
                 var reason = getResult.FailureReason().Message;
                 ConnectionHealthMonitorWorkerLog.ConnectionResolutionFailed(_logger, connection.Name, reason);
                 return (false, reason, null);

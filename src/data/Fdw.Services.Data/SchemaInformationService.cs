@@ -281,7 +281,8 @@ public sealed class SchemaInformationService : ISchemaInformationService
         var live = await _connectionProvider.Get(connection.Name, cancellationToken).ConfigureAwait(false);
         if (!live.IsSuccess || live.Value is null)
         {
-            return GenericResult<IReadOnlyList<IStorageContainer>>.Failure(
+            return ConnectionFailures.Caused<IReadOnlyList<IStorageContainer>>(
+                live,
                 live.CurrentMessage is { } buildError
                     ? SchemaInformationLog.ConnectionBuildFailed(_logger, connection.Name, buildError)
                     : SchemaInformationLog.ConnectionBuildFailedNoDetails(_logger, connection.Name));

@@ -28,6 +28,7 @@ internal sealed class DataStoreContainerPages : IDataStoreContainerPages
 
     private static readonly string[] ByName = ["Name", "RowId"];
 
+    private readonly IConfigurationGatewayProvider _gateways;
     private readonly Func<string, ConfigurationRowReader> _readers;
     private readonly ILogger _logger;
 
@@ -35,10 +36,11 @@ internal sealed class DataStoreContainerPages : IDataStoreContainerPages
     {
         ArgumentNullException.ThrowIfNull(gateways);
         _logger = logger ?? NullLogger<DataStoreContainerPages>.Instance;
+        _gateways = gateways;
         _readers = name => new ConfigurationRowReader(gateways, dataStoreName, pathName, name, _logger);
     }
 
-    public int MaxTake => ParentChain.MaxKeys;
+    public int MaxTake => _gateways.KeyChunkSize;
 
     public async Task<IGenericResult<DataStoreContainerPage>> Page(
         IFilterNode? condition, int skip, int take, bool includeTotal, CancellationToken cancellationToken = default)
@@ -56,7 +58,7 @@ internal sealed class DataStoreContainerPages : IDataStoreContainerPages
         }
 
         var page = rows.Value!.Take(take).ToList();
-        var chain = new ParentChain(_readers, Above, _logger);
+        var chain = new ParentChain(_readers, Above, _gateways.KeyChunkSize, _logger);
         var paths = page.Select(row => row.Number("DataPathRowId")).Where(key => key is not null).Select(key => key!.Value).ToList();
         var names = await chain.Names(paths, cancellationToken).ConfigureAwait(false);
         if (names.IsFailure)

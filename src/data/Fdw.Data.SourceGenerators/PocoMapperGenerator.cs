@@ -128,7 +128,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                     if (hasPublicSetter)
                         children.Add(new ChildInfo(ChildKind.PropertyCollection, p.Name,
                             p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                            null, null, kvpValueNullable, ChildTableAttributeValue(p)));
+                            null, null, kvpValueNullable, ChildTableAttributeValue(p), ChildCascadeModeName(p)));
                     continue;
                 }
 
@@ -143,7 +143,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             elem.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                             elem.Name,
                             false,
-                            null));
+                            null,
+                            ChildCascadeModeName(p)));
                     }
                     // Collections never become scalar columns (cannot bind as SQL parameters).
                     continue;
@@ -480,6 +481,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             public string ChildTypeName => "";
                             public bool IsPropertyCollection => true;
                             public string ChildContainerName => "{{c.ChildContainerName}}";
+                            public string CascadeModeName => "{{c.CascadeModeName}}";
                             public global::System.Collections.IEnumerable? GetCollection(object parent) => null;
                             public void SetCollection(object parent, object? collection) { }
                             public void FillDictionary(object parent, global::System.Collections.Generic.IDictionary<string, string?> values)
@@ -512,6 +514,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                         public string ChildTypeName => "{{c.ElementShortName}}";
                         public bool IsPropertyCollection => false;
                         public string ChildContainerName => "";
+                        public string CascadeModeName => "{{c.CascadeModeName}}";
                         public global::System.Collections.IEnumerable? GetCollection(object parent) => (({{parentFqn}})parent).{{c.BoundPropertyName}} as global::System.Collections.IEnumerable;
                         public void SetCollection(object parent, object? collection) => (({{parentFqn}})parent).{{c.BoundPropertyName}} = ({{c.PropertyTypeFqn}})collection!;
                         public void FillDictionary(object parent, global::System.Collections.Generic.IDictionary<string, string?> values) { }
@@ -742,11 +745,39 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         string? ElementFqn,
         string? ElementShortName,
         bool KvpValueNullable,
-        string? ChildContainerName);
+        string? ChildContainerName,
+        string? CascadeModeName);
 
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
     private const string NotStoredAttributeFullName = "Fdw.Data.NotStoredAttribute";
+    private const string ChildCascadeAttributeFullName = "Fdw.Data.ConfigurationChildCascadeAttribute";
+
+    // The option types of the runtime ChildCascadeModes collection, by full name, and the mode name each stands for.
+    private static readonly System.Collections.Generic.Dictionary<string, string> ChildCascadeModeOptions =
+        new(System.StringComparer.Ordinal)
+        {
+            ["Fdw.Data.AuthoritativeChildCascade"] = "Authoritative",
+            ["Fdw.Data.UpsertOnlyChildCascade"] = "UpsertOnly",
+        };
+
+    // The cascade mode a child collection's [ConfigurationChildCascade] names, or null when it declares none. An option type
+    // the collection does not know is kept by its full name, so the runtime lookup by name finds nothing and refuses it.
+    private static string? ChildCascadeModeName(IPropertySymbol prop)
+    {
+        foreach (var attr in prop.GetAttributes())
+        {
+            if (attr.AttributeClass is null)
+                continue;
+            if (!string.Equals(attr.AttributeClass.ToDisplayString(), ChildCascadeAttributeFullName, System.StringComparison.Ordinal))
+                continue;
+            if (attr.ConstructorArguments.Length == 0 || attr.ConstructorArguments[0].Value is not ITypeSymbol modeType)
+                continue;
+            var full = modeType.ToDisplayString();
+            return ChildCascadeModeOptions.TryGetValue(full, out var name) ? name : full;
+        }
+        return null;
+    }
 
     private static bool HasAttribute(IPropertySymbol prop, string fullName)
         => prop.GetAttributes().Any(attr => attr.AttributeClass is not null

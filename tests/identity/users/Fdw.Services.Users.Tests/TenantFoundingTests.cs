@@ -25,7 +25,7 @@ public sealed class TenantFoundingTests
     private static readonly Guid NewTenantId = new("11111111-0000-0000-0000-000000000009");
     private static readonly Guid DefaultOrganizationId = new("44444444-0000-0000-0000-000000000009");
     private static readonly Guid DefaultWorkspaceId = new("66666666-0000-0000-0000-000000000009");
-    private static readonly NewTenant Beta = new("Beta", "beta", null, null, true, "Main", "main");
+    private static readonly NewTenant Beta = new("Beta", "beta", null, null, true, "main");
 
     private static IGenericResult Failed(string reason) => GenericResult.Failure(new GenericMessage(reason));
 
@@ -52,7 +52,7 @@ public sealed class TenantFoundingTests
             OrganizationReader.Setup(o => o.Get(DefaultOrganizationId, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(
                 new OrganizationConfiguration
                 {
-                    Id = DefaultOrganizationId, TenantId = NewTenantId, Name = "Default Organization", Slug = "default", IsDefault = true,
+                    Id = DefaultOrganizationId, TenantId = NewTenantId, Name = "Beta", Slug = "main", IsDefault = true,
                     DefaultWorkspaceId = DefaultWorkspaceId,
                 }));
             DefaultWorkspaces.Setup(w => w.Found(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(DefaultWorkspaceId));
@@ -100,27 +100,25 @@ public sealed class TenantFoundingTests
 
         result.IsSuccess.ShouldBeTrue();
         rig.Organizations.Verify(o => o.Create(
-            It.Is<NewOrganization>(n => n.TenantId == NewTenantId && n.Name == "Main" && n.Slug == "main" && n.IsDefault),
+            It.Is<NewOrganization>(n => n.TenantId == NewTenantId && n.Name == "Beta" && n.Slug == "main" && n.IsDefault),
             It.IsAny<CancellationToken>()), Times.Once);
         rig.DefaultWorkspaces.Verify(w => w.Found(
-            It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == DefaultWorkspaceId && n.TenantId == NewTenantId && n.TenantSlug == "beta"
-                && n.OrganizationId == DefaultOrganizationId && n.OrganizationIsDefault && n.OwnerUserId == Administrator),
+            It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == DefaultWorkspaceId && n.TenantId == NewTenantId && n.OwnerName == "Beta"
+                && n.OrganizationId == DefaultOrganizationId && n.OwnerUserId == Administrator),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]
-    [InlineData("", "main")]
-    [InlineData("  ", "main")]
-    [InlineData("Main", "")]
-    [InlineData("Main", "  ")]
+    [InlineData("")]
+    [InlineData("  ")]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public async Task AFounderWhoNamesNoOrganizationOrNoSlugMakesNothing(string organizationName, string organizationSlug)
+    public async Task AFounderWhoNamesNoOrganizationSlugMakesNothing(string organizationSlug)
     {
         var rig = new Rig();
 
         var result = await rig.Founding().Found(
-            new NewTenant("Beta", "beta", null, null, true, organizationName, organizationSlug), Administrator, "Admin", TestContext.Current.CancellationToken);
+            new NewTenant("Beta", "beta", null, null, true, organizationSlug), Administrator, "Admin", TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
         rig.NothingMade();

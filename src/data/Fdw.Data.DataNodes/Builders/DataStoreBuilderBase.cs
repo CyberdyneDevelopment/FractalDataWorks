@@ -279,6 +279,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
                 description: keyCfg.Description,
                 keyType: (KeyTypeBase)keyType,
                 isPhysical: isPhysical,
+                isOwner: keyCfg.IsOwner,
                 referencedContainer: referencedContainerNode,
                 keyFields: keyFields));
         }

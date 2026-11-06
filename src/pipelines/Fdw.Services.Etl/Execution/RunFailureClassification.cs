@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Fdw.Results;
 using Fdw.Results.Abstractions;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Etl.Execution;
 
@@ -24,22 +25,24 @@ namespace Fdw.Services.Etl.Execution;
 /// <param name="Code">The failure message's code, in the "PREFIX-NNNNN" form; none when the failure is unclassified.</param>
 /// <param name="Transient">Whether the category is one the platform retries; false when the failure is unclassified.</param>
 /// <param name="Refused">Whether the failure's category does not count toward a failure threshold (<see cref="IResultCategory.CountsTowardFailureThresholds"/>): a refusal by the state of something the run uses, such as a connection that is disabled. It is not the pipeline's own fault, so a threshold neither counts it nor resets on it (FDW-4005).</param>
-public sealed record RunFailureClassification(bool Classified, string? Category, string? Code, bool Transient, bool Refused)
+/// <param name="ConnectionId">The Id of the connection that raised the failure (FDW-4192, FDW-4279), read from the failure itself; none when no connection raised it.</param>
+public sealed record RunFailureClassification(bool Classified, string? Category, string? Code, bool Transient, bool Refused, Guid? ConnectionId)
 {
-    /// <summary>The type of the event a failed run records, with the keys <c>classified</c>, <c>category</c>, <c>code</c>, <c>transient</c> and <c>refused</c>.</summary>
+    /// <summary>The type of the event a failed run records, with the keys <c>classified</c>, <c>category</c>, <c>code</c>, <c>transient</c>, <c>refused</c> and <c>connectionId</c>.</summary>
     public const string Event = "run.failed";
 
     /// <summary>Classifies a failed result.</summary>
     /// <param name="failure">The failed result.</param>
-    /// <returns>The classification.</returns>
+    /// <returns>The classification. Its connection is the one the failure names as its raiser (<see cref="ConnectionFailures.ConnectionOf"/>); a failure that names none was not raised by a connection, so it attributes to none (FDW-4279).</returns>
     public static RunFailureClassification Of(IGenericResult failure)
     {
         ArgumentNullException.ThrowIfNull(failure);
+        var connectionId = ConnectionFailures.ConnectionOf(failure);
         var category = FailureCategory.Of(failure);
         var code = CodeText(failure);
         return category is null || ReferenceEquals(category, ResultCategories.NotFound) || !category.IsFailure
-            ? new RunFailureClassification(false, null, code, false, false)
-            : new RunFailureClassification(true, category.Name, code, category.IsRetryable, !category.CountsTowardFailureThresholds);
+            ? new RunFailureClassification(false, null, code, false, false, connectionId)
+            : new RunFailureClassification(true, category.Name, code, category.IsRetryable, !category.CountsTowardFailureThresholds, connectionId);
     }
 
     // The code of the failure the category was read from, in the "PREFIX-NNNNN" form: the result's own code when it is a failure code, else the first failure message's.
@@ -55,6 +58,7 @@ public sealed record RunFailureClassification(bool Classified, string? Category,
         ["code"] = Code,
         ["transient"] = Transient,
         ["refused"] = Refused,
+        ["connectionId"] = ConnectionId?.ToString(),
     };
 
     /// <summary>Words the classification for the event's message.</summary>

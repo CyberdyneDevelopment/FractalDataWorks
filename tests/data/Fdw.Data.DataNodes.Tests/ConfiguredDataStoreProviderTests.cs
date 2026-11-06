@@ -109,6 +109,41 @@ public sealed class ConfiguredDataStoreProviderTests
     }
 
     [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task GetByNameKeepsTheCauseOfAReadThatBrokeAndDoesNotAnswerStoreNotFound()
+    {
+        // Why: a caller that asks whether a store is the host's (the ETL gateway's guard) must tell a store that does not exist from a lookup that
+        // failed; folding the second into StoreNotFound read a broken lookup as a negative answer (FDW-4281).
+        _configurationProvider
+            .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(new GenericMessage("the configuration read broke")));
+        var sut = CreateSut();
+
+        var result = await sut.Get("Store1", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("the configuration read broke");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task GetByNameAnswersStoreNotFoundInTheMissingCategoryForAStoreThatDoesNotExist()
+    {
+        _configurationProvider
+            .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(default!));
+        var sut = CreateSut();
+
+        var result = await sut.Get("Store1", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+    }
+
+    [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
     public async Task GetByNameReturnsFailureWhenConfigurationProviderReturnsNullValue()

@@ -1,7 +1,7 @@
 # 12-10 Secret Management
 
-This guide covers configuring secret managers for FDW services, with focus on the OpenIddict RS256
-signing key resolution and Azure Key Vault integration.
+This guide covers configuring secret managers for FDW services, with focus on the token signing key
+(the Jwt token manager's RS256 key) and Azure Key Vault integration.
 
 ## Overview
 
@@ -19,8 +19,8 @@ encode this via each domain's `Group` number — SecretManagers run first so dow
 **The platform's primary secret manager is `MsSqlSecrets`** (`Implementation = 'MsSql'`), not
 `EnvSecrets`. `EnvSecrets` (env var `FDW_SECRET_CONFIG_PASSWORD`) resolves **only** the ConfigurationDb
 bootstrap login password — the one secret needed before any database read is possible. `MsSqlSecrets`
-reads the `sec.Secret` table in ConfigurationDb and resolves every other secret in the system: OpenIddict's
-signing key, connection passwords, credential pepper, PAT/HMAC keys, OAuth client secrets, etc. Its own
+reads the `sec.Secret` table in ConfigurationDb and resolves every other secret in the system: the token
+signing key (`TokenSigningKey`), connection passwords, credential pepper, PAT/HMAC keys, OAuth client secrets, etc. Its own
 bootstrap connection is itself resolved via `EnvSecrets`/`CONFIG_PASSWORD` — this is the one deliberate,
 documented exception to "everything through MsSqlSecrets" (it has to reach `sec.Secret` before any
 `sec.Secret` row is resolvable). See `databases-seed/ConfigurationDb/seed/16b-seed-mssql-secretmanager.sql`.
@@ -55,7 +55,7 @@ Every secret manager has a row in the parent table:
 
 `sec.Secret` holds `SecretKey` / `SecretValue` / `SecretType` / `Description` rows. **Values are never
 seeded from source-controlled SQL** — `databases-seed/scripts/populate-dev-secrets.sh` generates/derives
-each value at deploy time (e.g. `openssl genpkey` for the OpenIddict RSA key) and writes it directly into
+each value at deploy time (e.g. `openssl genpkey` for the `TokenSigningKey` RSA key) and writes it directly into
 the database, idempotently (an existing current secret is left untouched so keys stay stable across
 redeploys). The script never prints a secret value.
 
@@ -90,40 +90,37 @@ redeploys). The script never prints a secret value.
 | `MaxSecretsPerPage` | `int` | Pagination limit for list operations (max 25) |
 | `IncludeDeletedByDefault` | `bit` | Include soft-deleted secrets in list operations |
 
-## How OpenIddict Signing Key Resolution Works
+## How Token Signing Key Resolution Works
 
-The current auth server is OpenIddict, configured through **`auth.TokenManager`** (parent header,
-`[ManagedConfiguration(ServiceCategory = "TokenManager")]`) + **`auth.OpenIddictTokenManager`** (typed
-body: `Authority`, `TokenEndpoint`). The header carries `SecretManagerName` / `SecretKeyName` — the same
-two columns every other secret-backed config row uses.
+A host signs its tokens as the **Jwt token manager**: an `auth.TokenManager` header with
+`Implementation = 'Jwt'` plus its `auth.JwtTokenManagerConfiguration` body (`Issuer`, `AccessTokenLifetime`,
+`SecretManagerName`, `SecretKeyName`). The body carries `SecretManagerName` / `SecretKeyName`, the same two
+columns every other secret-backed configuration row uses. (FDW-672 deleted the OpenIddict server, its
+`auth.OpenIddictTokenManager` body, `OpenIddictSigningKeyConfigurator` and the `OPENIDDICT_SIGNING_KEY` secret.)
 
-`OpenIddictSigningKeyConfigurator` (`Fdw.Services.Authentication.OpenIddict/Hosting/`, an
-`IConfigureOptions<OpenIddictServerOptions>`) resolves the key once, when OpenIddict first builds its
-server options:
+`JwtIssuanceResolver` (`Fdw.Services.TokenManagers`) resolves it on first use, the first time anything mints or
+validates a token, not at startup:
 
 ```
-1. Load the enabled auth.TokenManager row where Implementation = 'OpenIddict'.
-   Missing → throw (OpenIddict is registered, so a config MUST exist; never fall open to
-   OpenIddict's unsigned defaults).
-2. Pin options.Issuer from the typed body's Authority (must be an absolute URI).
-3. header.SecretManagerName / header.SecretKeyName missing → throw.
-4. Resolve the secret manager by name via IFdwServiceProvider<ISecretManager, SecretManagerConfiguration>.
-5. Execute GetSecretManagerCommand.Latest(container: null, secretKey: header.SecretKeyName)
-   against that manager.
-   Failure or missing value → throw (never register unsigned OpenIddict options).
-6. RSA.ImportFromPem the resolved PEM value; register it as BOTH the signing credential (RS256)
-   and the encryption credential (RSA-OAEP + AES-256-CBC-HMAC-SHA512 — OpenIddict requires at
-   least one encryption key even with access-token encryption disabled).
+1. Read the enabled auth.TokenManager row where Implementation = 'Jwt'.
+   None → TOKENMANAGER-91188, and every login fails.
+2. Read its auth.JwtTokenManagerConfiguration body. Issuer, AccessTokenLifetime, SecretManagerName and
+   SecretKeyName are all required; a missing or unreadable one is a Critical failure (91189-91194).
+3. SecretManagerSigningCredentialProvider resolves the secret manager named by SecretManagerName and reads
+   the secret named by SecretKeyName from it.
+4. RSA.ImportFromPem the value; sign RS256 with KeyId = the key name. A value that is not a PEM private key
+   is TOKENMANAGER-91184, carried as a failed result, never swallowed.
+5. Cache the key for TokenManagerTypes.SigningCredentialCacheLifetime (10 minutes as declared), then read it
+   again, so a rotation in the secret manager takes effect without a restart.
 ```
 
-**There is no direct-key/no-secret-manager bypass.** `SecretManagerName`/`SecretKeyName` are required —
-a `TokenManager` row without them fails loud at startup, consistent with the platform's no-fallback rule.
-This is a sync-over-async seam (mirrors `MsSqlConnectionFactory.ResolvePasswordSync`) resolved once via a
-short-lived DI scope, not a hosted service or mutable singleton.
+**There is no direct-key or no-secret-manager bypass.** A token manager without `SecretManagerName` /
+`SecretKeyName` fails loud, consistent with the platform's no-fallback rule. The key never appears in
+configuration, appsettings or the host's environment.
 
 ## Deployment Scenarios
 
-### Reference deployment: MsSqlSecrets + OpenIddict (the default)
+### Reference deployment: MsSqlSecrets + the Jwt token manager (the default)
 
 **Seed** (`databases-seed/ConfigurationDb/seed/16b-seed-mssql-secretmanager.sql`):
 
@@ -143,20 +140,25 @@ WHERE sm.Name = 'MsSqlSecrets' AND sm.IsCurrent = 1 AND sm.IsDeleted = 0
   AND NOT EXISTS (SELECT 1 FROM sec.MsSqlSecretManager x WHERE x.SecretManagerId = sm.Id AND x.IsCurrent = 1 AND x.IsDeleted = 0);
 ```
 
-**Seed** (`06b-seed-openiddict-server.sql`) — wires the `auth.TokenManager` header to that manager by
-name, with the OPENIDDICT_SIGNING_KEY lookup key (a name, not a value):
+**Seed** (`29-seed-jwt-token-manager.sql`) wires the Jwt token manager to that manager by name, with the
+`TokenSigningKey` lookup key (a name, not a value):
 
 ```sql
-INSERT INTO auth.TokenManager (Id, Name, SectionName, ServiceType, Implementation, SecretManagerName, SecretKeyName)
-SELECT NEWID(), 'ApiOpenIddictServer', 'TokenManagers', 'TokenManager', 'OpenIddict', 'MsSqlSecrets', 'OPENIDDICT_SIGNING_KEY'
-WHERE NOT EXISTS (SELECT 1 FROM auth.TokenManager WHERE Implementation = 'OpenIddict' AND IsCurrent = 1 AND IsDeleted = 0);
+INSERT INTO auth.TokenManager (Id, Name, Domain, Implementation)
+SELECT NEWID(), 'ApiTokenIssuer', 'TokenManager', 'Jwt'
+WHERE NOT EXISTS (SELECT 1 FROM auth.TokenManager WHERE Implementation = 'Jwt' AND IsCurrent = 1 AND IsDeleted = 0);
 
-INSERT INTO auth.OpenIddictTokenManager (Id, TokenManagerId, TokenManagerRowId, Authority, TokenEndpoint)
-SELECT NEWID(), h.Id, h.RowId, '$(AuthAuthority)', '/connect/token'
+INSERT INTO auth.JwtTokenManagerConfiguration
+    (TokenManagerRowId, Issuer, AccessTokenLifetime, SecretManagerName, SecretKeyName)
+SELECT h.RowId, '$(AuthAuthority)', 'PT15M', 'MsSqlSecrets', 'TokenSigningKey'
 FROM auth.TokenManager h
-WHERE h.Implementation = 'OpenIddict' AND h.IsCurrent = 1 AND h.IsDeleted = 0
-  AND NOT EXISTS (SELECT 1 FROM auth.OpenIddictTokenManager x WHERE x.TokenManagerRowId = h.RowId AND x.IsCurrent = 1 AND x.IsDeleted = 0);
+WHERE h.Implementation = 'Jwt' AND h.IsCurrent = 1 AND h.IsDeleted = 0
+  AND NOT EXISTS (SELECT 1 FROM auth.JwtTokenManagerConfiguration x WHERE x.TokenManagerRowId = h.RowId AND x.IsCurrent = 1 AND x.IsDeleted = 0);
 ```
+
+The `Issuer` must equal the validating host's LocalKey authority in its `server-config/auth`, byte for byte:
+minting does not check it and validation does, so a mismatch makes the host refuse the tokens it just issued
+(FDW-751).
 
 `$(AuthAuthority)` has no default — a hardcoded preview-slot value goes stale the moment that slot is
 destroyed. `deploy-seeds.sh` fails loud if it isn't supplied.
@@ -196,20 +198,23 @@ INSERT INTO sec.AzureKeyVaultSecretManager (SecretManagerId, VaultUri, Authentic
 VALUES (@AkvId, 'https://your-vault.vault.azure.net/', 'ManagedIdentity', 1);
 ```
 
-**Key Vault secret:** create a secret named `openiddict-signing-key` in the vault holding the PEM RSA key.
+**Key Vault secret:** create a secret named `token-signing-key` in the vault holding the PEM RSA key.
 
 **Wire the TokenManager to AKV:**
 
 ```sql
-UPDATE auth.TokenManager
-SET SecretManagerName = 'ProductionKeyVault',
-    SecretKeyName = 'openiddict-signing-key'
-WHERE Implementation = 'OpenIddict' AND IsCurrent = 1 AND IsDeleted = 0;
+UPDATE b
+SET b.SecretManagerName = 'ProductionKeyVault',
+    b.SecretKeyName = 'token-signing-key'
+FROM auth.JwtTokenManagerConfiguration b
+JOIN auth.TokenManager h ON h.RowId = b.TokenManagerRowId
+WHERE h.Implementation = 'Jwt' AND h.IsCurrent = 1 AND h.IsDeleted = 0
+  AND b.IsCurrent = 1 AND b.IsDeleted = 0;
 ```
 
 Since the ConfigDb connection uses Entra auth in Azure (no password), there is no chicken-and-egg problem
 — the AKV secret manager is configured through the database like any other service, and it is resolved by
-`OpenIddictSigningKeyConfigurator` before the auth server accepts requests.
+`SecretManagerSigningCredentialProvider` the first time the host mints a token.
 
 ### Azure with User-Assigned Managed Identity
 
@@ -236,8 +241,9 @@ VALUES (@AkvId, 'https://your-vault.vault.azure.net/', 'ServicePrincipal',
 Secret managers can also be configured through the Management UI (reference-ui) using the Configuration
 pages, which write to the same `sec.SecretManager` and child tables through the domain configuration
 provider's `Save()`/`Delete()`. Navigate to **Configuration > Secret Managers**. A change to which secret
-manager/key an OpenIddict `TokenManager` row points at takes effect on the **next service restart** — the
-signing key is resolved once, at `OpenIddictServerOptions` build time, not re-read per request.
+manager/key the Jwt token manager points at takes effect on the **next service restart**:
+`JwtIssuanceResolver` reads the token manager rows once, on first use. A new value under the same key (a
+rotation) needs no restart; the signing key is re-read when `SigningCredentialCacheLifetime` lapses.
 
 ## Consumers of Secret Managers
 
@@ -246,7 +252,7 @@ through this mechanism. Current consumers:
 
 | Service | Configuration Table | Secret Purpose |
 |---------|-------------------|----------------|
-| **OpenIddict TokenManager** | `auth.TokenManager` (header) | RS256 signing/encryption key |
+| **Jwt token manager** | `auth.JwtTokenManagerConfiguration` (typed body) | RS256 signing key (`TokenSigningKey`) |
 | **MsSql Connections** | `conn.ConnectionAuthentication` (header) | SQL Server passwords |
 | **PostgreSql Connections** | `conn.ConnectionAuthentication` (header) | PostgreSQL passwords |
 | **MsSqlSecrets itself** | `sec.MsSqlSecretManager` | Its own bootstrap password (via `EnvSecrets`) |
@@ -255,45 +261,45 @@ through this mechanism. Current consumers:
 
 ### Secret manager not found
 
-```
-[Critical] OPENIDDICT-61001: Secret manager 'ProductionKeyVault' not found. Cannot load RS256 signing key.
-```
+The token manager's `SecretManagerName` names a manager that does not exist in `sec.SecretManager` with
+`IsCurrent=1 AND IsDeleted=0`, or its `Implementation` matches no registered secret manager type. The secret
+manager's own failure is carried up as the signing-key failure.
 
-The named secret manager doesn't exist in `sec.SecretManager` with `IsCurrent=1 AND IsDeleted=0`, or the
-`Implementation` doesn't match a registered secret manager type.
+**Check:** `SELECT * FROM sec.SecretManager WHERE Name='MsSqlSecrets' AND IsCurrent=1 AND IsDeleted=0;`
 
-**Check:** `SELECT * FROM sec.SecretManager WHERE Name='ProductionKeyVault' AND IsCurrent=1 AND IsDeleted=0;`
-
-### No enabled OpenIddict TokenManager configuration
+### No enabled Jwt token manager
 
 ```
-InvalidOperationException: OpenIddict is registered but no enabled OpenIddict token manager
-configuration exists in ConfigurationDb (auth.TokenManager with Implementation='OpenIddict').
+[Critical] TOKENMANAGER-91188: No enabled auth.TokenManager row declares Implementation 'Jwt' (found: {declared})
 ```
 
-`06b-seed-openiddict-server.sql` was not run, or the row was soft-deleted. This is the same failure mode
-described in that seed script's own comments — it has recurred twice in practice on preview slots after a
-DB nuke+rebuild dropped the row.
+`29-seed-jwt-token-manager.sql` was not run, or the row was soft-deleted. The host starts, then every login
+fails at issuance.
 
-### Signing key missing / load failed
+### Token manager incomplete
 
 ```
-[Critical] OPENIDDICT-61000: Signing key missing: secret manager 'MsSqlSecrets' key 'OPENIDDICT_SIGNING_KEY' returned no value.
-[Error]    OPENIDDICT-71000: Signing key load failed: secret manager 'MsSqlSecrets' key 'OPENIDDICT_SIGNING_KEY'. {reason}
+[Critical] TOKENMANAGER-91189: Token manager '{name}' names no SecretManagerName/SecretKeyName, so its signing key cannot be located
+[Critical] TOKENMANAGER-91191: Token manager '{name}' names no Issuer, and a token minted without one matches no validator
+[Critical] TOKENMANAGER-91194: Token manager '{name}' names no AccessTokenLifetime, and a token with no expiry never stops being usable
 ```
 
-`sec.Secret` has no current row for `SecretKey = 'OPENIDDICT_SIGNING_KEY'` (or the secret manager itself
-failed to resolve). Run `populate-dev-secrets.sh` against the target environment — it is idempotent and
-will not disturb an already-present key.
+The `auth.JwtTokenManagerConfiguration` body is missing a required column. Each is required, with no default.
+
+### Signing key missing
+
+`sec.Secret` has no current row for `SecretKey = 'TokenSigningKey'` (or the secret manager itself failed to
+resolve). Run `populate-dev-secrets.sh` against the target environment; it is idempotent and will not disturb an
+already-present key.
 
 ### Signing key PEM parse failed
 
 ```
-[Error] OPENIDDICT-91000: Signing key PEM parse failed for key 'OPENIDDICT_SIGNING_KEY': {reason}
+[Critical] TOKENMANAGER-91184: Signing key '{keyName}' is not a readable PEM private key
 ```
 
-The stored `sec.Secret` value is not a valid PEM-encoded RSA private key (`CryptographicException` /
-`ArgumentException` from `RSA.ImportFromPem`). Regenerate with `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048`.
+The stored `sec.Secret` value is not a PEM-encoded RSA private key (`RSA.ImportFromPem` failed). Regenerate with
+`openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048`.
 
 ### AKV connectivity failure at startup
 
@@ -307,6 +313,7 @@ check:
 
 ## See Also
 
-- [12-11 JWT Authentication Architecture](12-11-JWT-Authentication-Architecture.md) — the full OpenIddict token-issuance architecture
+- [12-11 JWT Authentication Architecture](12-11-JWT-Authentication-Architecture.md) — server and client token flow
+- [10-03 Token Issuance](10-03-Building-Authentication-Service.md) — the Jwt token manager, issuer and revocation
 - [10-03 Building Authentication Service](10-03-Building-Authentication-Service.md) — `TokenManagerTypes` / swapping providers
 - [12-01 Creating a Server](12-01-Creating-A-Server.md) — `PlatformServices.Configure`/`Register`/`Initialize`

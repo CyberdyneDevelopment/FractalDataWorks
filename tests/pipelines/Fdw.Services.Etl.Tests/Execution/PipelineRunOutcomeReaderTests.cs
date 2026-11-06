@@ -155,4 +155,20 @@ public sealed class PipelineRunOutcomeReaderTests
 
         read.IsFailure.ShouldBeTrue();
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ARunThatTimedOutIsReadAsTimedOutWithoutAFailureEventAndDoesNotCountByItself()
+    {
+        var id = Guid.NewGuid();
+
+        var read = await Read(Gateway(Row(id, "TimedOut", Done)), Tracker(id));
+
+        var outcome = read.Value.ShouldNotBeNull().ShouldHaveSingleItem();
+        outcome.TimedOut.ShouldBeTrue();
+        outcome.Succeeded.ShouldBeFalse();
+        outcome.Counts.ShouldBeFalse();
+        outcome.Code.ShouldBe("TimedOut");
+    }
 }

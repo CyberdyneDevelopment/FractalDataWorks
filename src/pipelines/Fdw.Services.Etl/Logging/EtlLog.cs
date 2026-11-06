@@ -1168,4 +1168,15 @@ public static partial class EtlLog
         string pipelineName,
         string components,
         string permission);
+
+    /// <summary>Logs a run whose owning organization could not be read: its live events go to no firehose group.</summary>
+    [MessageLogging(
+        EventId = 71314,
+        Level = LogLevel.Error,
+        Message = "The organization that owns pipeline {pipelineId} could not be read for execution {executionId}, so its live events go to no organization group: {reason}")]
+    public static partial IGenericMessage OwningOrgNotRead(
+        ILogger logger,
+        Guid pipelineId,
+        Guid executionId,
+        string? reason);
 }

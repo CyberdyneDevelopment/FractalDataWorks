@@ -33,6 +33,7 @@ internal sealed class InMemoryConfigurationStore
             .ReturnsAsync((IDataCommand command, DataStoreTarget target, CancellationToken _) =>
                 GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(Answer((QueryCommand<Dictionary<string, object?>>)command, target)));
         var gateways = new Mock<IConfigurationGatewayProvider>();
+        gateways.SetupGet(p => p.KeyChunkSize).Returns(1000);
         gateways.Setup(p => p.Get(It.IsAny<string>())).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
         Gateways = gateways.Object;
     }

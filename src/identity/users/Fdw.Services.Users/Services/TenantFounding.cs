@@ -74,8 +74,9 @@ public sealed class TenantFounding : ITenantFounding
         ArgumentNullException.ThrowIfNull(tenant);
         ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
 
-        // The founder names the tenant's first organization; there is no default (FDW-3838). Refused before anything is made.
-        if (string.IsNullOrWhiteSpace(tenant.OrganizationName) || string.IsNullOrWhiteSpace(tenant.OrganizationSlug))
+        // The founder names the slug of the tenant's first organization; there is no default (FDW-3838). The organization itself is named after the
+        // tenant (FDW-4225). Refused before anything is made.
+        if (string.IsNullOrWhiteSpace(tenant.OrganizationSlug))
         {
             return GenericResult<Guid>.Failure(TenantFoundingLog.OrganizationNotStated(_logger, tenant.Slug));
         }
@@ -134,7 +135,7 @@ public sealed class TenantFounding : ITenantFounding
     private async Task<IGenericResult<NewDefaultWorkspace>> FoundDefaults(NewTenant tenant, Guid tenantId, Guid administratorId, CancellationToken cancellationToken)
     {
         var made = await _organizations.Create(
-            new NewOrganization(tenantId, tenant.OrganizationName, tenant.OrganizationSlug, IsDefault: true), cancellationToken).ConfigureAwait(false);
+            new NewOrganization(tenantId, tenant.Name, tenant.OrganizationSlug, IsDefault: true), cancellationToken).ConfigureAwait(false);
         if (made.IsFailure)
         {
             TenantFoundingLog.DefaultsNotMade(_logger, tenantId, "default organization", made.CurrentMessage);
@@ -148,7 +149,7 @@ public sealed class TenantFounding : ITenantFounding
         }
 
         var request = new NewDefaultWorkspace(
-            organization.DefaultWorkspaceId, tenantId, tenant.Slug, organization.Id, organization.Name, organization.Slug, organization.IsDefault, administratorId);
+            organization.DefaultWorkspaceId, tenantId, tenant.Name, organization.Id, administratorId);
         var founded = await _defaultWorkspaces.Found(request, cancellationToken).ConfigureAwait(false);
         if (founded.IsFailure)
         {

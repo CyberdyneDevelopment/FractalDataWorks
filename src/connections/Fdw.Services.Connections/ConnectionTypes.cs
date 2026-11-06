@@ -178,6 +178,21 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddScoped<IConnectionHealthService, ConnectionHealthService>();
 
+            // The disabled state of a connection (FDW-3951): the provider below reads it before it builds any connection, and the
+            // threshold consequence DisableConnection writes it through the disabler, which takes it from here.
+            builder.Services.TryAddSingleton<IConnectionDisabledStates>(sp =>
+                new ConnectionDisabledStates(
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConnectionTypes.ConfigurationConnection,
+                    TimeProvider.System,
+                    sp.GetService<ILogger<ConnectionDisabledStates>>()));
+            builder.Services.TryAddScoped<Fdw.Operations.Abstractions.Thresholds.IConnectionDisabler>(sp =>
+                new ConnectionDisabler(
+                    sp.GetRequiredService<IConnectionDisabledStates>(),
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ITenantProvider>(),
+                    ConnectionDisablingOption.Instance,
+                    sp.GetService<ILogger<ConnectionDisabler>>()));
+
             // The health monitor's scan bounds are stated here, where it is registered, and a host that
             // wants others replaces this body. After each check it waits until the soonest enabled
             // connection falls due, never less than the first and never more than the second, which is
@@ -215,6 +230,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.AddSingleton<IConnectionProvider>(sp =>
             {
                 var provider = new ConnectionProvider(
+                    sp.GetRequiredService<IConnectionDisabledStates>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionProvider>()
                     ?? NullLogger<ConnectionProvider>.Instance);
 

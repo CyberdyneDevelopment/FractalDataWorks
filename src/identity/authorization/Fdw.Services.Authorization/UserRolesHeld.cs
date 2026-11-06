@@ -72,16 +72,17 @@ public sealed class UserRolesHeld : IUserRolesHeld
                 return GenericResult<IReadOnlyList<HeldRole>>.Success([]);
             }
 
-            var keys = named.Select(row => row.Number("UserRoleRowId") ?? throw new InvalidOperationException("an assignment has no domain row")).Distinct().ToList();
-            var current = await _domains.Page(In("RowId", keys.Cast<object>().ToList()), ByRowId, 0, keys.Count, true, cancellationToken).ConfigureAwait(false);
+            // An assignment names its domain row by the row's durable Id, which every version of it keeps (FDW-4240): it stays attached through a re-save of the row.
+            var keys = named.Select(row => row.Identifier("UserRoleId") ?? throw new InvalidOperationException("an assignment has no domain row")).Distinct().ToList();
+            var current = await _domains.Page(In("Id", keys.Cast<object>().ToList()), ByRowId, 0, keys.Count, true, cancellationToken).ConfigureAwait(false);
             if (current.IsFailure)
             {
                 return current.ToNewResult<IReadOnlyList<HeldRole>>();
             }
 
-            var present = current.Value!.Select(row => row.Number("RowId")).ToHashSet();
+            var present = current.Value!.Select(row => row.Identifier("Id")).ToHashSet();
             var held = named
-                .Where(row => present.Contains(row.Number("UserRoleRowId")))
+                .Where(row => present.Contains(row.Identifier("UserRoleId")))
                 .Select(row => new HeldRole(
                     row.Identifier("RoleId") ?? throw new InvalidOperationException("an assignment has no role"),
                     row.Identifier("TenantId") ?? throw new InvalidOperationException("an assignment has no tenant"),

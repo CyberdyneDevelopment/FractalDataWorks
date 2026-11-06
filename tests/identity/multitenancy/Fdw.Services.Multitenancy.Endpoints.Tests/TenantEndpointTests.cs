@@ -99,7 +99,7 @@ public sealed class TenantEndpointTests
 
     private static CreateTenantRequest Request(string administrator = "22222222-0000-0000-0000-000000000001") => new()
     {
-        Name = "Beta", Slug = "beta", IsSelectable = true, OrganizationName = "Main", OrganizationSlug = "main", FirstAdministrator = administrator, AdministratorRole = "Admin",
+        Name = "Beta", Slug = "beta", IsSelectable = true, OrganizationSlug = "main", FirstAdministrator = administrator, AdministratorRole = "Admin",
     };
 
     private static Mock<ITenantFounding> Founding(IGenericResult<Guid> outcome)

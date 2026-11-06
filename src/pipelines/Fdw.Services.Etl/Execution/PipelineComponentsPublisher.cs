@@ -76,11 +76,11 @@ public sealed class PipelineComponentsPublisher : BackgroundService
         var broadcaster = scope.ServiceProvider.GetRequiredService<IPipelineStatusBroadcaster>();
         foreach (var entry in inFlight)
         {
-            await PublishRun(broadcaster, entry, sent).ConfigureAwait(false);
+            await PublishRun(scope.ServiceProvider, broadcaster, entry, sent).ConfigureAwait(false);
         }
     }
 
-    private async Task PublishRun(IPipelineStatusBroadcaster broadcaster, PipelineRunQueueEntry entry, Dictionary<Guid, string> sent)
+    private async Task PublishRun(IServiceProvider services, IPipelineStatusBroadcaster broadcaster, PipelineRunQueueEntry entry, Dictionary<Guid, string> sent)
     {
         var executionId = entry.Run.ExecutionId;
         if (_running.Components(executionId) is not { } components || _running.Links(executionId) is not { } links)
@@ -101,9 +101,18 @@ public sealed class PipelineComponentsPublisher : BackgroundService
             return;
         }
 
+        // The group a run's events go to is its pipeline's organization, never its tenant (FDW-4276). A read that failed skips this run this tick and records no
+        // fingerprint, so the next tick tries again.
+        var owner = await OwningOrg.Of(services, entry.Run.PipelineId, CancellationToken.None).ConfigureAwait(false);
+        if (owner.IsFailure)
+        {
+            PipelineComponentsPublisherLog.OwnerNotRead(_logger, executionId, owner.CurrentMessage);
+            return;
+        }
+
         try
         {
-            await broadcaster.BroadcastComponents(update, entry.Run.TenantId).ConfigureAwait(false);
+            await broadcaster.BroadcastComponents(update, owner.Value).ConfigureAwait(false);
             sent[executionId] = fingerprint;
         }
         catch (Exception exception)

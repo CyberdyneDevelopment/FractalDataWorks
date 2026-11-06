@@ -178,7 +178,7 @@ internal static class TypeOptionDiscovery
                     Parameters: c.Parameters
                         .Select(p => new ParameterModel(
                             Name: p.Name,
-                            Type: p.Type.ToDisplayString(),
+                            Type: CodeTypeNames.Of(p.Type),
                             HasDefaultValue: p.HasExplicitDefaultValue,
                             DefaultValue: FormatDefaultValue(p),
                             IsValueType: p.Type.IsValueType
@@ -245,7 +245,7 @@ internal static class TypeOptionDiscovery
                             if (!propertyDefs.Any(r => string.Equals(r.PropertyName, property.Name, StringComparison.Ordinal) &&
                                                        string.Equals(r.MethodName, methodName, StringComparison.Ordinal)))
                             {
-                                propertyDefs.Add((property.Name, property.Type.ToDisplayString(), methodName, isUnique));
+                                propertyDefs.Add((property.Name, CodeTypeNames.Of(property.Type), methodName, isUnique));
                             }
                         }
                     }
