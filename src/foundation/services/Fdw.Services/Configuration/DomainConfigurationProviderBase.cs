@@ -1096,8 +1096,8 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <summary>Refuses a record that is one member saved under the name of another.</summary>
     /// <remarks>
     /// A record carrying the Id of a current member is that member. The row that carries the name is the row the save writes into, so a record
-    /// that is member A saved under member B's name would overwrite B and leave A as it was. A record whose Id names no member (a create mints a
-    /// fresh Id) is a new record and saves into the row that carries the name, as it always did.
+    /// that is member A saved under member B's name would overwrite B and leave A as it was. A record whose Id names no member (a create that
+    /// states no Id is given a fresh one, a create that states one keeps it) is a new record and saves into the row that carries the name, as it always did.
     /// </remarks>
     private async Task<IGenericResult> RefuseOtherMembersName(
         TDomain holder, Guid recordId, string name, ConfigurationWriteScope unit, CancellationToken ct)
@@ -1117,8 +1117,8 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <summary>The domain row a record with no row under its name hangs from: the member its Id names, renamed, or a new member.</summary>
     /// <remarks>
     /// A member's durable identity is its Id and its name is an attribute of it, so a loaded member saved under another name is the
-    /// same member renamed. Reading it as a new member left the old one current beside it. A record whose Id names no member (a
-    /// create mints a fresh Id) is a new member.
+    /// same member renamed. Reading it as a new member left the old one current beside it. A record whose Id names no member is a new
+    /// member and keeps the Id it states; a record that states none is given a fresh one.
     /// </remarks>
     private async Task<IGenericResult<(Guid Id, IReadOnlyDictionary<string, object?> Keys, string Action)>> RenamedOrMintedDomainRow(
         string name,
@@ -1199,7 +1199,10 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <summary>Writes the domain row a new record hangs from, inside the record's unit of work.</summary>
     /// <remarks>
     /// The row is minted and written in one step because it exists only to own the implementation that
-    /// follows it in the same unit; neither is ever written without the other. It carries the list
+    /// follows it in the same unit; neither is ever written without the other. The row takes the Id the record
+    /// states, because a caller that names a new member's Id before it is saved (an organization naming its default
+    /// workspace, FDW-4266) must find the member under that Id; a record that states none is given a version-7 Id.
+    /// A stated Id a row already holds is refused by the table's unique index, never replaced. It carries the list
     /// fields the implementation holds. The write returns the row's key values, which the
     /// implementation's Foreign key is filled from.
     /// </remarks>
@@ -1213,7 +1216,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     {
         var record = new TDomain
         {
-            Id = Guid.CreateVersion7(),
+            Id = implementation.Id == Guid.Empty ? Guid.CreateVersion7() : implementation.Id,
             Name = name,
             Domain = domain,
             Implementation = implementationName,

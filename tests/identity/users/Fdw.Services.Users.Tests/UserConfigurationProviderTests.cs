@@ -342,6 +342,42 @@ public class UserConfigurationProviderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
+    public async Task ANewUserUnderANewNameKeepsTheIdItStatesInItsDomainRowAndOnTheRecord()
+    {
+        // Why: a caller that names a new member's Id before the save (an organization naming its default workspace,
+        // FDW-4266) must find the member under that Id; minting a different one left the organization naming nothing.
+        var store = ConfigurationStore.Users(User("alice", "alice@example.com"));
+        var fresh = User("dave", "dave@example.com");
+        var stated = fresh.Id;
+
+        var result = await store.Provider.Save(fresh, UsersDomain, store.ImplementationName, "dave", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        fresh.Id.ShouldBe(stated);
+        var domainWrite = store.Writes.Single(write => write.Target.Container == "Users").Command;
+        ((UserDomainConfiguration)((IDataCommandWithInput)domainWrite).InputData!).Id.ShouldBe(stated);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task ANewUserThatStatesNoIdIsGivenAFreshOneInItsDomainRowAndOnTheRecord()
+    {
+        var store = ConfigurationStore.Users(User("alice", "alice@example.com"));
+        var fresh = User("dave", "dave@example.com");
+        fresh.Id = Guid.Empty;
+
+        var result = await store.Provider.Save(fresh, UsersDomain, store.ImplementationName, "dave", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        fresh.Id.ShouldNotBe(Guid.Empty);
+        var domainWrite = store.Writes.Single(write => write.Target.Container == "Users").Command;
+        ((UserDomainConfiguration)((IDataCommandWithInput)domainWrite).InputData!).Id.ShouldBe(fresh.Id);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
     public async Task SavingOneUserUnderTheNameOfAnotherIsRefusedAndWritesNothing()
     {
         var store = ConfigurationStore.Users(User("alice", "alice@example.com"), User("bob", "bob@example.com"));
