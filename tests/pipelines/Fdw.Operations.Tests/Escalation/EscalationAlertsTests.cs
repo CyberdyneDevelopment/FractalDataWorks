@@ -139,7 +139,7 @@ public sealed class EscalationAlertsTests
         var opened = await Sut(null, Ops()).Open(Fired(), TestContext.Current.CancellationToken);
 
         opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
-        opened.Value!.Outcome.ShouldBe(EscalationOpenOutcome.Opened);
+        opened.Value!.Outcome.ShouldBe(EscalationOpenOutcomes.Opened);
         var alert = opened.Value.Alert.ShouldNotBeNull();
         alert.State.ShouldBe(EscalationAlertStates.Firing);
         alert.CurrentLevel.ShouldBe(0);
@@ -158,7 +158,7 @@ public sealed class EscalationAlertsTests
 
         var again = await sut.Open(Fired(), TestContext.Current.CancellationToken);
 
-        again.Value!.Outcome.ShouldBe(EscalationOpenOutcome.AlreadyOpen);
+        again.Value!.Outcome.ShouldBe(EscalationOpenOutcomes.AlreadyOpen);
         again.Value.Alert!.Id.ShouldBe(first.Value!.Alert!.Id);
         _store.Rows.ShouldHaveSingleItem();
     }
@@ -173,10 +173,10 @@ public sealed class EscalationAlertsTests
         (await sut.Resolve(first.Value!.Alert!.Id, "mike", TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
         _clock.Now = Start.AddMinutes(29);
-        (await sut.Open(Fired(), TestContext.Current.CancellationToken)).Value!.Outcome.ShouldBe(EscalationOpenOutcome.CoolingDown);
+        (await sut.Open(Fired(), TestContext.Current.CancellationToken)).Value!.Outcome.ShouldBe(EscalationOpenOutcomes.CoolingDown);
 
         _clock.Now = Start.AddMinutes(30);
-        (await sut.Open(Fired(), TestContext.Current.CancellationToken)).Value!.Outcome.ShouldBe(EscalationOpenOutcome.Opened);
+        (await sut.Open(Fired(), TestContext.Current.CancellationToken)).Value!.Outcome.ShouldBe(EscalationOpenOutcomes.Opened);
         _store.Rows.Count.ShouldBe(2);
     }
 

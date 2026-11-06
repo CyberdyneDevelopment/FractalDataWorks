@@ -88,9 +88,13 @@ public class CalculationBuildRefusalTests
     {
         var unknownMode = CalculationArray.Named("r10").Result("a", Field("x").Round(2, "Banker")).Build(Limits);
         var tooManyPlaces = CalculationArray.Named("r11").Result("a", Field("x").Round(29, "ToEven")).Build(Limits);
+        var wrongCase = CalculationArray.Named("r11b").Result("a", Field("x").Round(2, "toeven")).Build(Limits);
+        var noMode = CalculationArray.Named("r11c").Result("a", new CalculationNode("Round", null, null, null, 2, null, [Field("x")])).Build(Limits);
 
         RefusalOf(unknownMode).ShouldBe("NodeMemberInvalid");
         RefusalOf(tooManyPlaces).ShouldBe("NodeMemberInvalid");
+        RefusalOf(wrongCase).ShouldBe("NodeMemberInvalid");
+        RefusalOf(noMode).ShouldBe("NodeMemberInvalid");
     }
 
     [Fact]

@@ -53,7 +53,7 @@ using Fdw.Data;
 
 namespace Test;
 
-[GenerateMapper(Direction = MapperDirection.Input)]
+[GenerateMapper(Direction = typeof(InputMapperDirection))]
 public class ExplicitInputDto
 {
     public int Id { get; set; }
@@ -87,7 +87,7 @@ using Fdw.Data;
 
 namespace Test;
 
-[GenerateMapper(Direction = MapperDirection.Output)]
+[GenerateMapper(Direction = typeof(OutputMapperDirection))]
 public class OutputDto
 {
     public int Id { get; set; }
@@ -117,7 +117,7 @@ using Fdw.Data;
 
 namespace Test;
 
-[GenerateMapper(Direction = MapperDirection.Output)]
+[GenerateMapper(Direction = typeof(OutputMapperDirection))]
 public class WriteOnlyDto
 {
     public int Ordinal { get; set; }
@@ -147,7 +147,7 @@ using Fdw.Data;
 
 namespace Test;
 
-[GenerateMapper(Direction = MapperDirection.Both)]
+[GenerateMapper(Direction = typeof(BothMapperDirection))]
 public class BidirectionalDto
 {
     public int Id { get; set; }
@@ -177,7 +177,7 @@ using Fdw.Data;
 
 namespace Test;
 
-[GenerateMapper(Direction = MapperDirection.Both)]
+[GenerateMapper(Direction = typeof(BothMapperDirection))]
 public class FullDto
 {
     public int Id { get; set; }
@@ -194,6 +194,35 @@ public class FullDto
 
     #endregion
 
+    #region A direction that is not an option of MapperDirections
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public void ADirectionThatNamesNoMapperDirectionIsRefusedAndNoMapperIsGenerated()
+    {
+        var source = @"
+using Fdw.Data;
+
+namespace Test;
+
+[GenerateMapper(Direction = typeof(string))]
+public class WrongDirectionDto
+{
+    public int Id { get; set; }
+}
+";
+        var (compilation, diagnostics) = CompilationHelper.RunGenerator(source);
+
+        var refusal = diagnostics.Where(d => d.Id == "FDW050").ShouldHaveSingleItem();
+        refusal.Severity.ShouldBe(DiagnosticSeverity.Error);
+        refusal.GetMessage().ShouldContain("WrongDirectionDto");
+        refusal.GetMessage().ShouldContain("string");
+        CompilationHelper.GetGeneratedOutput(compilation, "WrongDirectionDtoPocoMapper.g.cs").ShouldBeNull();
+    }
+
+    #endregion
+
     #region Direction annotation in emitted comment
 
     [Fact]
@@ -206,7 +235,7 @@ using Fdw.Data;
 
 namespace Test;
 
-[GenerateMapper(Direction = MapperDirection.Output)]
+[GenerateMapper(Direction = typeof(OutputMapperDirection))]
 public class AnnotatedDto
 {
     public string Value { get; set; } = string.Empty;

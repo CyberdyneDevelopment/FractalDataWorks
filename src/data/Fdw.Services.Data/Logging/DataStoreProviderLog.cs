@@ -47,6 +47,10 @@ public static partial class DataStoreProviderLog
     [MessageLogging(EventId = 91017, Level = LogLevel.Error, Message = "Failed to create container for DataStore '{dataStoreId}' at path '{path}': {error}")]
     public static partial IGenericMessage ContainerCreationFailed(ILogger logger, string dataStoreId, string path, string error);
 
+    /// <summary>Logs a data store whose rows were read with success and answered no configuration, so the store cannot be listed.</summary>
+    [MessageLogging(EventId = 61045, Level = LogLevel.Error, Message = "DataStore '{dataStoreName}' was read from its rows with success but answered no configuration, so it cannot be loaded")]
+    public static partial IGenericMessage DataStoreComposedNothing(ILogger logger, string dataStoreName);
+
     /// <summary>Logs when schema discovery starts.</summary>
     [MessageLogging(EventId = 11142, Level = LogLevel.Information, Message = "Discovering schema for DataStore '{dataStoreId}' at path '{path}'")]
     public static partial IGenericMessage DiscoveringSchema(ILogger logger, string dataStoreId, string path);

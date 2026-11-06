@@ -59,20 +59,29 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
             return null;
 
-        // Read the Direction property from [GenerateMapper(Direction = ...)].
-        // Default is 0 (MapperDirection.Input) when the property is absent, which preserves
-        // backward compat for all existing [GenerateMapper] sites.
+        // Read the Direction property from [GenerateMapper(Direction = typeof(...))]: the option type of the runtime
+        // MapperDirections collection (Fdw.Data.Abstractions), which this generator cannot reference, so it reads the
+        // type by its full name. Input is what a [GenerateMapper] with no Direction means, which preserves backward
+        // compat for all existing sites. A type that names none of the three directions is not read as Input: it is
+        // kept in UnknownDirection and GenerateMapper refuses it (FDW050).
         var direction = MapperDirection.Input;
+        string? unknownDirection = null;
         if (context.Attributes.Length > 0)
         {
             var attr = context.Attributes[0];
             foreach (var namedArg in attr.NamedArguments)
             {
-                if (string.Equals(namedArg.Key, "Direction", System.StringComparison.Ordinal) &&
-                    namedArg.Value.Value is int directionValue)
-                {
-                    direction = (MapperDirection)directionValue;
-                }
+                if (!string.Equals(namedArg.Key, "Direction", System.StringComparison.Ordinal))
+                    continue;
+
+                var named = namedArg.Value.Value is INamedTypeSymbol directionType
+                    && DirectionOptions.TryGetValue(directionType.ToDisplayString(), out var option)
+                        ? option
+                        : (MapperDirection?)null;
+                if (named is { } known)
+                    direction = known;
+                else
+                    unknownDirection = namedArg.Value.Value?.ToString() ?? string.Empty;
             }
         }
 
@@ -169,8 +178,18 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             properties,
             children.ToImmutableArray(),
             typedBodyTypeFqn,
-            direction);
+            direction,
+            unknownDirection);
     }
+
+    // The option types of the runtime MapperDirections collection, by full name, and the direction each stands for.
+    private static readonly System.Collections.Generic.Dictionary<string, MapperDirection> DirectionOptions =
+        new(System.StringComparer.Ordinal)
+        {
+            ["Fdw.Data.InputMapperDirection"] = MapperDirection.Input,
+            ["Fdw.Data.OutputMapperDirection"] = MapperDirection.Output,
+            ["Fdw.Data.BothMapperDirection"] = MapperDirection.Both,
+        };
 
 #pragma warning disable FDW017
     private enum MapperDirection
@@ -189,6 +208,12 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
 
     private static void GenerateMapper(SourceProductionContext context, TypeInfo typeInfo)
     {
+        if (typeInfo.UnknownDirection is { } unknownDirection)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(DirectionNotKnown, Location.None, typeInfo.Name, unknownDirection));
+            return;
+        }
+
         foreach (var child in typeInfo.Children)
         {
             if (child.Kind == ChildKind.PropertyCollection && child.ChildContainerName is null)
@@ -698,7 +723,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         ImmutableArray<PropertyInfo> Properties,
         ImmutableArray<ChildInfo> Children,
         string? TypedBodyTypeFqn,
-        MapperDirection Direction);
+        MapperDirection Direction,
+        string? UnknownDirection);
 
     private readonly record struct PropertyInfo(
         string Name,
@@ -746,6 +772,14 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         }
         return null;
     }
+
+    private static readonly DiagnosticDescriptor DirectionNotKnown = new(
+        id: "FDW050",
+        title: "Mapper direction names no option of MapperDirections",
+        messageFormat: "'{0}' has [GenerateMapper(Direction = ...)] naming '{1}', which is not InputMapperDirection, OutputMapperDirection or BothMapperDirection; no mapper is generated",
+        category: "Configuration",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor ChildTableNotDeclared = new(
         id: "FDW049",
