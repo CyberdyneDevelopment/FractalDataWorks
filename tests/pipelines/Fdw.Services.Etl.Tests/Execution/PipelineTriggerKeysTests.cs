@@ -97,7 +97,7 @@ public sealed class PipelineTriggerKeysTests : IDisposable
         var claim = await _keys.Claim(Tenant, Key, Now.AddMinutes(-1), TestContext.Current.CancellationToken);
 
         claim.IsFailure.ShouldBeTrue();
-        claim.CurrentMessage.ShouldNotBeNull().ShouldContain("has not finished");
+        claim.CurrentMessage.ShouldNotBeNull().ShouldContain("has not made its run yet");
     }
 
     [Fact]
