@@ -79,20 +79,19 @@ public sealed class DefaultWorkspaceFounding : IDefaultWorkspaceFounding
         return retired.IsFailure ? retired : deleted;
     }
 
-    // A tenant's default organization has the slug 'default', and a workspace name is unique per tenant, so the tenant's slug starts every
-    // name and the default organization's workspace is '<tenant>-default' (FDW-1101). Another organization adds its own slug.
+    // The workspace is named after the thing that owns it, exactly: no slug, no 'Default' and no 'Workspace' (FDW-4186, Mike: "workspace adds
+    // nothing since we will be dealing with a workspace, and default doesn't help any since they won't have another primary workspace").
+    // A name another workspace of the tenant already has is refused by the unique index on (Name, TenantId), not renamed here.
     private static WorkspaceImplementationConfiguration ToConfiguration(NewDefaultWorkspace workspace) => new()
     {
         Id = workspace.WorkspaceId,
         Implementation = DomainName,
         CreateDate = DateTimeOffset.UtcNow,
         OwnerUserId = workspace.OwnerUserId,
-        Name = workspace.OrganizationIsDefault
-            ? string.Concat(workspace.TenantSlug, "-default")
-            : string.Concat(workspace.TenantSlug, "-", workspace.OrganizationSlug, "-default"),
-        DisplayName = string.Concat(workspace.OrganizationName, " default workspace"),
-        Description = string.Concat("The default workspace of the organization '", workspace.OrganizationName, "'."),
-        Purpose = "Where this organization's data sets are found by default.",
+        Name = workspace.OwnerName,
+        DisplayName = workspace.OwnerName,
+        Description = string.Concat("The data sets, pipelines and data stores that ", workspace.OwnerName, " owns."),
+        Purpose = string.Concat("Where the things that ", workspace.OwnerName, " owns are found."),
         Status = StatusActive,
         Visibility = VisibilityPrivate,
         JoinPolicy = JoinPolicyClosed,

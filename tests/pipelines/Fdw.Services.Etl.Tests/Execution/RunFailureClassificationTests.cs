@@ -1,6 +1,7 @@
 using System;
 using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Execution;
 
 namespace Fdw.Services.Etl.Tests.Execution;
@@ -44,6 +45,39 @@ public sealed class RunFailureClassificationTests
 
         kind.Category.ShouldBe("Validation");
         kind.Transient.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void TheConnectionThatRaisedTheFailureIsRecordedWithTheKindAsText()
+    {
+        var connection = new Guid("cccccccc-0000-0000-0000-000000000001");
+
+        var data = RunFailureClassification.Of(ConnectionFailures.RaisedBy<int>(Failure("x", "ETL-90001"), connection)).ToEventData();
+
+        data["connectionId"].ShouldBe(connection.ToString());
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void AFailureARaisedByConnectionKeepsItsCategoryAndCode()
+    {
+        var kind = RunFailureClassification.Of(ConnectionFailures.RaisedBy<int>(Failure("x", "ETL-70001"), Guid.NewGuid()));
+
+        kind.Category.ShouldBe("Dependency");
+        kind.Code.ShouldBe("ETL-70001");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void AFailureNoConnectionRaisedRecordsNoConnection()
+    {
+        var data = RunFailureClassification.Of(Failure("x", "ETL-20001")).ToEventData();
+
+        data["connectionId"].ShouldBeNull();
     }
 
     [Theory]

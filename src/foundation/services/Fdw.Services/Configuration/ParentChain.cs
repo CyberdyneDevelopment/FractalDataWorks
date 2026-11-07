@@ -7,6 +7,7 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Configuration.Logging;
+using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Configuration;
@@ -21,23 +22,23 @@ namespace Fdw.Services.Configuration;
 /// </remarks>
 public sealed class ParentChain
 {
-    /// <summary>The most keys one lookup carries: each is a parameter of the statement.</summary>
-    public const int MaxKeys = 1000;
-
     private static readonly string[] ByRowId = ["RowId"];
 
     private readonly Func<string, ConfigurationRowReader> _readers;
     private readonly IReadOnlyList<RowHop> _hops;
+    private readonly int _maxKeys;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ParentChain"/> class.</summary>
     /// <param name="readers">Gives the reader of a configuration container by its name.</param>
     /// <param name="hops">The steps from a row up to the rows it hangs from, in order.</param>
+    /// <param name="maxKeys">The most keys one lookup carries, each a parameter of the statement: <see cref="IConfigurationGatewayProvider.KeyChunkSize"/>.</param>
     /// <param name="logger">The logger.</param>
-    public ParentChain(Func<string, ConfigurationRowReader> readers, IReadOnlyList<RowHop> hops, ILogger logger)
+    public ParentChain(Func<string, ConfigurationRowReader> readers, IReadOnlyList<RowHop> hops, int maxKeys, ILogger logger)
     {
         _readers = readers;
         _hops = hops;
+        _maxKeys = maxKeys;
         _logger = logger;
     }
 
@@ -60,10 +61,10 @@ public sealed class ParentChain
                 break;
             }
 
-            if (wanted.Count > MaxKeys)
+            if (wanted.Count > _maxKeys)
             {
                 return GenericResult<IReadOnlyDictionary<long, IReadOnlyList<string>>>.Failure(
-                    ConfigurationRowReaderLog.LookupRefused(_logger, hop.Container, wanted.Count, MaxKeys));
+                    ConfigurationRowReaderLog.LookupRefused(_logger, hop.Container, wanted.Count, _maxKeys));
             }
 
             var read = await _readers(hop.Container).Page(

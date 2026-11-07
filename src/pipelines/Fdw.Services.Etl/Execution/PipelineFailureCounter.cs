@@ -11,11 +11,19 @@ namespace Fdw.Services.Etl.Execution;
 /// </summary>
 public static class PipelineFailureCounter
 {
-    /// <summary>Counts the failures.</summary>
+    /// <summary>Counts the failures, passing over every run that timed out.</summary>
     /// <param name="newestFirst">The pipeline's runs, newest first.</param>
     /// <param name="notBefore">Runs that ended before this are not looked at; null looks at every run.</param>
     /// <returns>The count, the failures that counted, and whether a success or the boundary ended it.</returns>
-    public static PipelineFailureCount Count(IReadOnlyList<PipelineRunOutcome> newestFirst, DateTimeOffset? notBefore)
+    public static PipelineFailureCount Count(IReadOnlyList<PipelineRunOutcome> newestFirst, DateTimeOffset? notBefore) =>
+        Count(newestFirst, notBefore, false);
+
+    /// <summary>Counts the failures, and the runs that timed out when the threshold counts them.</summary>
+    /// <param name="newestFirst">The pipeline's runs, newest first.</param>
+    /// <param name="notBefore">Runs that ended before this are not looked at; null looks at every run.</param>
+    /// <param name="countTimedOut">Whether a run that passed its time limit counts as a failure (the threshold's <see cref="PipelineRunThresholdType.CountedOutcomes"/> names TimedOut); when false it is passed over, as a cancel is.</param>
+    /// <returns>The count, the failures that counted, and whether a success or the boundary ended it.</returns>
+    public static PipelineFailureCount Count(IReadOnlyList<PipelineRunOutcome> newestFirst, DateTimeOffset? notBefore, bool countTimedOut)
     {
         ArgumentNullException.ThrowIfNull(newestFirst);
 
@@ -29,7 +37,7 @@ public static class PipelineFailureCounter
                 break;
             }
 
-            if (run.Counts)
+            if (run.TimedOut ? countTimedOut : run.Counts)
             {
                 counted.Add(run);
             }

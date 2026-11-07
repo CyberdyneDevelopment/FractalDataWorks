@@ -239,6 +239,15 @@ public static class SettingDefinitions
     public const string MaxPipelineRunRestarts = "MaxPipelineRunRestarts";
 
     /// <summary>
+    /// How long the ETL host remembers the key of a scheduled fire, in seconds (FDW-4317). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required, with no number assumed: while the setting is absent or not positive, a scheduled fire is refused naming it. A repeat of a fire within that time answers the run the
+    /// first call started; a fire whose time is older than it is refused as expired. It must be longer than the scheduler's longest retry of one fire.
+    /// </remarks>
+    public const string PipelineTriggerKeyRetentionSeconds = "PipelineTriggerKeyRetentionSeconds";
+
+    /// <summary>
     /// How long a stopping ETL host lets the pipeline runs in flight go on before it stops them, in seconds (FDW-3786). DataType: Int32. Must be positive.
     /// </summary>
     /// <remarks>
@@ -366,6 +375,7 @@ public static class SettingDefinitions
             [EscalationAdvanceIntervalSeconds] = new("Int32", "How often, in seconds, the host looks at its open escalation alerts and sends the levels that have fallen due. Not set: the host does not start the escalation timer and says so."),
             [EscalationNotificationPriority] = new("String", "The notification priority an escalation level is sent with: the name of a notification priority such as Normal, High or Critical. Not set, or naming no priority: the level is not sent, and the next pass tries again."),
             [PipelineStopGraceSeconds] = new("Int32", "How long, in seconds, a stopping ETL host lets the pipeline runs in flight go on before it stops them and marks each Interrupted. Not set or not positive: the host does not start. Read at host start. The service unit's stop timeout must be longer than twice this."),
+            [PipelineTriggerKeyRetentionSeconds] = new("Int32", "How long the ETL host remembers the key of a scheduled fire, in seconds. A retry of the same fire within that time gets the run the first call started instead of a second run; a fire older than it is refused as expired. Required: a scheduled fire is refused while it is not set."),
             [MaxPipelineRunRestarts] = new("Int32", "How many times the ETL host starts the same pipeline run again after the host stopped while it ran. Not set: a cut-off run is left Interrupted and not started again; 0 does the same. Read at host start."),
             [PipelineComponentsPublishSeconds] = new("Int32", "How often, in seconds, the ETL host publishes the components of the runs in flight; read at host start."),
             [ResetWatchIntervalSeconds] = new("Int32", "How often, in seconds, a host looks at its configuration databases to see whether one was reset; the host then empties its result cache. Read at host start."),

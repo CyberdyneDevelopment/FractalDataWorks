@@ -75,7 +75,7 @@ output. "~" marks an approximate count.
 
 105 `Fdw.Services.*` source directories; 27 are full ServiceTypeCollection domains. Notable:
 **Connections, SecretManagers** (MsSql/Sqlite/AzureKeyVault/EnvironmentVariable/UserSecrets),
-**Authentication** (OpenIddict), **Authorization** (org-scoped 3-tier RBAC), **Multitenancy**,
+**Authentication** (the step pipeline and Jwt token issuance), **Authorization** (org-scoped 3-tier RBAC), **Multitenancy**,
 **Health monitoring, Users/Credentials, DataVault, Scheduling** (Cron/Interval/Once/Manual triggers),
 **Etl** + **Etl.Projects**, **Pipelines, Transformations** (+ DataCleaning), **Calculations**
 (formula/windowed/aggregation), **Quality, Workflows, Notifications** (Console/Email/Webhook/System),
@@ -84,7 +84,7 @@ output. "~" marks an approximate count.
 
 | Capability | What it is | Anchor |
 |---|---|---|
-| **Auth — OpenIddict stack** | Full OAuth2/OIDC authorization server: RS256 access tokens via `OpenIddictSigningKeyLoader`, DataGateway-backed stores, `{resource}:{action}` permission claims baked at issuance, client-credentials for service-to-service. | `Fdw.Services.Authentication.OpenIddict/` |
+| **Auth — token issuance** | The step pipeline signs users in; `AuthenticationRunner` hands the completed flow to `JwtTokenIssuer`, which mints RS256 JWTs (RFC 9068 profile) with the key `SecretManagerSigningCredentialProvider` reads from the Jwt token manager's secret manager. `{resource}:{action}` permission claims are baked at issuance; revocation is a `jti`/per-user deny-list (`ITokenRevocationStore`). FDW-672 replaced the OpenIddict server. | `Fdw.Services.TokenManagers/`, `Fdw.Services.Authentication/` |
 | **Authorization (org-scoped RBAC)** | `FdwPermissionRequirement` + `FrameworkPermissionHandler` over baked `{resource}:{action}` claims; `DefaultAuthorizationService` (HasRole/GetRoles/guards); `UserPermissions`; org-scoped 3-tier model. | `Fdw.Services.Authorization/` |
 | **Multitenancy — a service domain, not middleware** | `MultitenancyTypes` `[ServiceTypeCollection]` with two mutually-exclusive `[Implementation]`s: `SingleTenant` (no-op provider) and `Sql` (real Tenant→Org isolation). It's a "declared choice" domain — exactly one option is active per host, selected by the host's `Multitenancy` appsettings row and wired directly via `ByName(...).Configure/RegisterRequiredServices` (not the blanket iterate-every-option path other domains use), because both options register the same `ITenantProvider`/`IOrganizationProvider` interfaces and running both would leave the winner to discovery order. `TenantResolutionMiddleware` (JWT-claim / header GUID-or-slug) sits on top; tenant-discriminated cache keys + connection routing flow from the resolved tenant. | `Fdw.Services.Multitenancy/MultitenancyTypes.cs`, `Fdw.Services.Multitenancy.Sql/Middleware/TenantResolutionMiddleware.cs` |
 | **Health monitoring** | `HealthMonitorTypes` `[ServiceTypeCollection]` (`GenerateProvider = true`) — a full service domain, not ASP.NET's built-in health-check middleware: `Local` (in-process) and `HttpClient` (remote-probe) options register factories with `DefaultHealthMonitorProvider`/`IHealthMonitorProvider`; consumers depend on the provider, and which implementation runs is the host's `HealthMonitors` config row (`Implementation`), resolved at first use. | `Fdw.Services.HealthChecks.Monitoring/HealthMonitorTypes.cs`, `Fdw.Services.HealthChecks.Monitoring/DefaultHealthMonitorProvider.cs` |

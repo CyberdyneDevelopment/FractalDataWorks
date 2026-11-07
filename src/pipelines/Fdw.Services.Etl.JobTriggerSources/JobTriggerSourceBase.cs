@@ -10,4 +10,7 @@ public abstract class JobTriggerSourceBase : TypeOptionBase<JobTriggerSourceBase
     /// <summary>Initializes a new instance of the <see cref="JobTriggerSourceBase"/> class.</summary>
     /// <param name="name">The option's name.</param>
     protected JobTriggerSourceBase(string name) : base(name) { }
+
+    /// <inheritdoc />
+    public virtual bool RequiresTriggerKey => false;
 }

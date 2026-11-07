@@ -182,6 +182,40 @@ public class GenericResult : IGenericResult
         RequireMessageOnFailure();
     }
 
+    /// <summary>
+    /// Constructor that copies an existing result and adds details to it (FDW-4279). Code, InnerResult, Messages and the outcome carry over; the details are the
+    /// source's with the given ones merged over them.
+    /// </summary>
+    /// <param name="source">The source result to copy.</param>
+    /// <param name="details">The details to add; a key the source already holds takes this value.</param>
+    protected GenericResult(IGenericResult source, IResultDetails details)
+        : this(source)
+    {
+        Details = MergeDetails(source.Details, details);
+    }
+
+    // The source's details with the added ones over them. The merged bag is never disposed here: a pooled instance is recycled only when someone disposes it.
+    private static IResultDetails MergeDetails(IResultDetails? existing, IResultDetails added)
+    {
+        if (existing is null)
+        {
+            return added;
+        }
+
+        var merged = ResultDetails.Create();
+        foreach (var pair in existing.Data)
+        {
+            _ = merged.With(pair.Key, pair.Value);
+        }
+
+        foreach (var pair in added.Data)
+        {
+            _ = merged.With(pair.Key, pair.Value);
+        }
+
+        return merged;
+    }
+
 
     /// <inheritdoc/>
     public virtual bool IsSuccess { get; }
@@ -449,6 +483,28 @@ public class GenericResult : IGenericResult
         return new GenericResult(code, innerResult, false, details);
     }
 
+    /// <summary>
+    /// Copies a result and adds details to it, keeping its Code, CodeChain, InnerResult and Messages (FDW-4279). A result is immutable, so this is how a caller
+    /// that knows more about a failure than the code that raised it (which connection it came from) states it without rebuilding the failure.
+    /// </summary>
+    /// <param name="source">The result to copy.</param>
+    /// <param name="details">The details to add; a key the source already holds takes this value.</param>
+    /// <returns>A result with the source's outcome, code, messages and chain, and its details with the given ones merged over them.</returns>
+    public static IGenericResult WithDetails(IGenericResult source, IResultDetails details)
+    {
+        if (source is null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (details is null)
+        {
+            throw new ArgumentNullException(nameof(details));
+        }
+
+        return new GenericResult(source, details);
+    }
+
     /// <inheritdoc/>
     public IGenericResult<TNew> ToNewResult<TNew>(TNew value)
     {
@@ -539,6 +595,34 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     {
         _value = value;
         _hasValue = source.IsSuccess;
+    }
+
+    private GenericResult(IGenericResult source, IResultDetails details) : base(source, details)
+    {
+        _value = default!;
+        _hasValue = false;
+    }
+
+    /// <summary>
+    /// Copies a failed result into a typed one and adds details to it, keeping its Code, CodeChain, InnerResult and Messages (FDW-4279). The value is
+    /// <c>default</c>; use this for a failure, never for a success whose value matters.
+    /// </summary>
+    /// <param name="source">The failed result to copy.</param>
+    /// <param name="details">The details to add; a key the source already holds takes this value.</param>
+    /// <returns>A typed failure with the source's code, messages and chain, and its details with the given ones merged over them.</returns>
+    public new static IGenericResult<TResult> WithDetails(IGenericResult source, IResultDetails details)
+    {
+        if (source is null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (details is null)
+        {
+            throw new ArgumentNullException(nameof(details));
+        }
+
+        return new GenericResult<TResult>(source, details);
     }
 
 

@@ -25,7 +25,7 @@ public sealed class UnavailableWritersTests
     {
         var writer = new UnavailableTenantWriter();
 
-        (await writer.Create(new NewTenant("Beta", "beta", null, null, true, "Main", "main"))).IsFailure.ShouldBeTrue();
+        (await writer.Create(new NewTenant("Beta", "beta", null, null, true, "main"))).IsFailure.ShouldBeTrue();
         (await writer.Update(Id, new TenantChange("Beta", true, null))).IsFailure.ShouldBeTrue();
         (await writer.Delete(Id)).IsFailure.ShouldBeTrue();
         (await writer.SetDeleted(Id, true)).IsFailure.ShouldBeTrue();

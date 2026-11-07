@@ -37,11 +37,11 @@ public class DefaultConfigurationProviderGetByIdTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task GetByIdUsesPhysicalForeignKeyFilterWhenContainerHasParentFK()
+    public async Task GetByIdFailsLoudWhenTheContainerDeclaresNoPhysicalKey()
     {
-        // Arrange: container with Foreign key only (no Primary, no Natural). Models the
-        // sec.AzureKeyVaultSecretManager case — the physical FK column (SecretManagerRowId)
-        // is returned directly from the metadata; the caller passes the parent's RowId.
+        // Arrange: container with Foreign key only (no Primary, no Natural). Read by durable id, a row is found through its domain row's
+        // physical key and its children hang from its own (FDW-4254: one read of the set of one); a container that declares no
+        // Physical key has nothing for its children to hang from, and the read says so instead of guessing one.
         var fakeGateway = BuildChildConfigFixture(
             storeName: "PlatformConfiguration",
             pathName: "sec",
@@ -55,63 +55,16 @@ public class DefaultConfigurationProviderGetByIdTests
         // A domain provider names its container when it registers an implementation provider; the
         // implementation joins to that container and no other.
         ((IConfigurationWriteParticipant<ITestChildConfigImplementationConfiguration>)provider).AttachDomain("SecretManager");
-        await provider.Get(domainConfigurationId, TestContext.Current.CancellationToken);
+        var result = await provider.Get(domainConfigurationId, TestContext.Current.CancellationToken);
 
-        // Assert: the FK join filters by the PARENT's durable Logical key ("SecretManager.Id"); the
-        // caller passes the parent's Id as the value. The join column itself (SecretManagerRowId →
-        // SecretManager.RowId) is on the JOIN clause, not the WHERE filter.
-        fakeGateway.LastCommand.ShouldNotBeNull();
-        fakeGateway.LastCommand.ShouldBeAssignableTo<QueryCommand<TestChildConfig>>();
-        var qc = (QueryCommand<TestChildConfig>)fakeGateway.LastCommand!;
-        var filterNode = ExtractKeyPredicate(qc.Filter);
-        filterNode.ShouldNotBeNull();
-        filterNode!.PropertyName.ShouldBe("SecretManager.Id");
-        filterNode.Value.ShouldBe(domainConfigurationId);
+        // Assert: refused, and nothing was read for a container whose children could not be keyed.
+        result.IsSuccess.ShouldBeFalse();
+        fakeGateway.LastCommand.ShouldBeNull();
     }
 
     // ========================================================================
     // Helpers
     // ========================================================================
-
-    private static FilterCondition? ExtractKeyPredicate(IFilterExpression? filter)
-    {
-        if (filter?.Root is null) return null;
-
-        if (filter.Root is FilterCondition single)
-            return single;
-
-        // Root is a FilterGroup — key predicate is the last node (IsCurrent and IsDeleted
-        // come first from the base query builder).
-        if (filter.Root is Fdw.Data.FilterGroup group && group.Nodes.Count > 0)
-        {
-            // The merged filter has IsCurrent+IsDeleted in the baseFilter group, and the
-            // key condition is the second child of the outer AND group.
-            // Walk all nodes to find the FilterCondition that is NOT IsCurrent or IsDeleted.
-            return FindKeyNode(group);
-        }
-
-        return null;
-    }
-
-    private static FilterCondition? FindKeyNode(Fdw.Data.FilterGroup group)
-    {
-        foreach (var node in group.Nodes)
-        {
-            if (node is FilterCondition fc)
-            {
-                var prop = fc.PropertyName;
-                if (!string.Equals(prop, "IsCurrent", StringComparison.Ordinal) &&
-                    !string.Equals(prop, "IsDeleted", StringComparison.Ordinal))
-                    return fc;
-            }
-            else if (node is Fdw.Data.FilterGroup nested)
-            {
-                var found = FindKeyNode(nested);
-                if (found is not null) return found;
-            }
-        }
-        return null;
-    }
 
     /// <summary>
     /// Builds a minimal in-memory IDataStore tree and a capturing fake gateway.
@@ -356,6 +309,8 @@ public class DefaultConfigurationProviderGetByIdTests
         private readonly IConfigurationGateway _gateway;
 
         public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public int KeyChunkSize => 1000;
 
         public IGenericResult<IConfigurationGateway> Get(string connectionName)
             => GenericResult<IConfigurationGateway>.Success(_gateway);

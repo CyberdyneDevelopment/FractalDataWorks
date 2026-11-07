@@ -1,5 +1,7 @@
 # FDW Hosts — Final Design (docs/FDW-HOSTS-DESIGN.md)
 
+> **FDW-672:** the OpenIddict server this document plans around (`OpenIddictServer` / `OpenIddictValidation`, `/connect/token`, `OpenIddictSigningKeyLoader`/`Configurator`, `OpenIddictClientSecretProvisioner`, `ProcessSignInClaimsHandler`) was deleted and replaced by the step pipeline. A host now signs its own tokens with `JwtTokenIssuer` and validates them with `LocalKeyAuthenticationHandler`; see `public/wiki/10-03-Building-Authentication-Service.md`. Read the OpenIddict parts below, §3 above all, as the design record, not as the current mechanism.
+
 > **FDW-872 (2026-09-22):** the Blazor packages this document names (`Fdw.UI.Components.Blazor`, the `*.razor` components, `Fdw.Web.Http.Authentication.Blazor`, the Blazor skins and renderers) were removed. The web console is now the separate `reference-react-ui` repository. Read the Blazor parts below as history.
 
 **Status:** APPROVED FOR IMPLEMENTATION (synthesized from the design tournament: *builder* won 2 of 3 judge lenses — consumer experience + migration reality, and mechanism soundness — and its doctrine gaps are closed here by grafts from *typecollection* and *minimalist*. Every judge criticism of the winning design is resolved in §9; one policy decision requires explicit user sign-off, §10.)
@@ -311,6 +313,8 @@ The UI stops being a hosting orphan: it gains `AddFrameworkSerilog`, the try/cat
 ---
 
 ## 3. Where the auth server (OpenIddict issuer) lives
+
+> **Superseded (FDW-672):** OpenIddict is gone; there is no separate issuer to place. Every host that signs users in mints as the one Jwt token manager its database names, and validates with its LocalKey authority. This section is kept as the design record.
 
 **The mechanism splits now; the deployment stays in reference-api for now.**
 

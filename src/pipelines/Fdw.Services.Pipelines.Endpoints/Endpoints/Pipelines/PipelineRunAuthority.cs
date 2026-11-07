@@ -191,7 +191,7 @@ public sealed class PipelineRunAuthority
     private async Task<IGenericResult> ReachDataStore(
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, string name, bool writes, ILogger logger, CancellationToken ct)
     {
-        var store = await _dataStores.Get(name, ct).ConfigureAwait(false);
+        var store = await _dataStores.GetReference(name, ct).ConfigureAwait(false);
         if (!store.IsSuccess || store.Value is null)
             return Refuse(logger, reach, roles, $"data store '{name}' is not visible to the caller");
 
@@ -223,7 +223,7 @@ public sealed class PipelineRunAuthority
             return Refuse(logger, reach, roles,
                 $"container '{reached.Container}' must name its data store, path and container together (store '{reached.DataStore}', path '{reached.Path}')");
 
-        var store = await _dataStores.Get(reached.DataStore, ct).ConfigureAwait(false);
+        var store = await _dataStores.GetReference(reached.DataStore, ct).ConfigureAwait(false);
         if (!store.IsSuccess || store.Value is null)
             return Refuse(logger, reach, roles, $"data store '{reached.DataStore}' is not visible to the caller");
         if (store.Value.DeclaredByHost)

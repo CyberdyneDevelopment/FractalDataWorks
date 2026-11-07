@@ -394,6 +394,17 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage SqlUniqueViolation(ILogger logger, Exception ex, string commandText);
 
     /// <summary>
+    /// Logs when a row-level security block predicate refused a write (error 33504): the caller's tenant may not write that row (FDW-4193).
+    /// The number is in the Forbidden band (category 10), so the failure is read as forbidden and never as a fault of the server or a dependency.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="ex">The SQL exception.</param>
+    /// <param name="commandText">The SQL command text that failed.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(EventId = 100011, Level = LogLevel.Warning, Message = "SQL refused a write on '{commandText}': the row-level security policy of the target does not allow it for the caller")]
+    public static partial IGenericMessage SqlBlockPredicateViolation(ILogger logger, Exception ex, string commandText);
+
+    /// <summary>
     /// Logs when a foreign key constraint refused a statement (error 547): a referenced row is missing, or the row is still referenced.
     /// </summary>
     /// <param name="logger">The logger instance.</param>

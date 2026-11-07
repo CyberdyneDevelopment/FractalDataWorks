@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Transformations;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Flow;
@@ -43,9 +44,9 @@ internal static class FlowRowMapper
             var mapped = await MapRow(maps, row, cancellationToken).ConfigureAwait(false);
             if (mapped.Row is null)
             {
-                return GenericResult<FlowBatch>.Failure(mapped.MissingField is not null
-                    ? FlowLog.FieldMissing(logger, component, input, mapped.MissingField)
-                    : FlowLog.MappingRefused(logger, component, input, mapped.Reason!));
+                return mapped.MissingField is not null
+                    ? GenericResult<FlowBatch>.Failure(FlowLog.FieldMissing(logger, component, input, mapped.MissingField))
+                    : RefusedBy(FlowLog.MappingRefused(logger, component, input, mapped.Reason!), mapped.Cause);
             }
 
             good.Add(mapped.Row);
@@ -53,6 +54,11 @@ internal static class FlowRowMapper
 
         return GenericResult<FlowBatch>.Success(new FlowBatch(good));
     }
+
+    // A mapping a field transformation refused keeps the transformation's failure first (FDW-4197), so the run is classified by what the transformation said; a refusal the
+    // mapping makes itself (a missing required value, a type that cannot be converted) has no cause and is the mapping's own event.
+    private static IGenericResult<FlowBatch> RefusedBy(IGenericMessage refusal, IGenericResult? cause) =>
+        cause is null ? GenericResult<FlowBatch>.Failure(refusal) : FlowFailures.Caused<FlowBatch>(refusal, cause);
 
     /// <summary>Makes the row an error output sends: a copy of the row with the component and the reason added.</summary>
     /// <param name="row">The row that was refused.</param>
@@ -66,7 +72,7 @@ internal static class FlowRowMapper
             [ErrorReasonField] = reason
         };
 
-    private static async ValueTask<(Dictionary<string, object?>? Row, string? Reason, string? MissingField)> MapRow(
+    private static async ValueTask<(Dictionary<string, object?>? Row, string? Reason, string? MissingField, IGenericResult? Cause)> MapRow(
         IReadOnlyList<FlowFieldMap> maps, IDictionary<string, object?> row, CancellationToken cancellationToken)
     {
         var built = new Dictionary<string, object?>(maps.Count, StringComparer.OrdinalIgnoreCase);
@@ -83,7 +89,7 @@ internal static class FlowRowMapper
             }
             else if (map.Conversion?.DefaultValue is null)
             {
-                return (null, $"the row has no field '{map.Source}'", map.Source);
+                return (null, $"the row has no field '{map.Source}'", map.Source, null);
             }
 
             if (map.Conversion is null)
@@ -95,18 +101,18 @@ internal static class FlowRowMapper
             var converted = await Convert(map, value, row, cancellationToken).ConfigureAwait(false);
             if (converted.Reason is not null)
             {
-                return (null, converted.Reason, null);
+                return (null, converted.Reason, null, converted.Cause);
             }
 
             built[map.Target] = converted.Value;
         }
 
-        return (built, null, null);
+        return (built, null, null, null);
     }
 
     // A null value takes the default; one that is still null is refused when the mapping is required and otherwise stays null; any other value goes
     // through the chain and is converted. Returns the reason the row is refused, or the value.
-    private static async ValueTask<(object? Value, string? Reason)> Convert(
+    private static async ValueTask<(object? Value, string? Reason, IGenericResult? Cause)> Convert(
         FlowFieldMap map, object? value, IDictionary<string, object?> row, CancellationToken cancellationToken)
     {
         var conversion = map.Conversion!;
@@ -114,7 +120,7 @@ internal static class FlowRowMapper
         object? current = value ?? conversion.DefaultValue;
         if (current is null)
         {
-            return conversion.IsRequired ? (null, $"the field '{label}' is required and has no value") : (null, null);
+            return conversion.IsRequired ? (null, $"the field '{label}' is required and has no value", null) : (null, null, null);
         }
 
         foreach (var step in conversion.Chain.OrderBy(step => step.Ordinal))
@@ -122,12 +128,12 @@ internal static class FlowRowMapper
             var applied = await Chain(step, current, label, row, cancellationToken).ConfigureAwait(false);
             if (applied.Reason is not null)
             {
-                return (null, applied.Reason);
+                return (null, applied.Reason, applied.Cause);
             }
 
             if (applied.Value is null)
             {
-                return (null, null);
+                return (null, null, null);
             }
 
             current = applied.Value;
@@ -135,20 +141,20 @@ internal static class FlowRowMapper
 
         if (conversion.TargetType is { } targetType && !FieldTypeConversion.TryConvert(current, targetType, out current, out var failure))
         {
-            return (null, $"the field '{label}' could not be converted to {targetType}: {failure}");
+            return (null, $"the field '{label}' could not be converted to {targetType}: {failure}", null);
         }
 
-        return (current, null);
+        return (current, null, null);
     }
 
     // One step of a chain: the named field transformation, with the parameters the Transformation states. A transformation that is not
     // registered, that lacks a required parameter or that fails refuses the row, naming the step.
-    private static async ValueTask<(object? Value, string? Reason)> Chain(
+    private static async ValueTask<(object? Value, string? Reason, IGenericResult? Cause)> Chain(
         IFieldMappingTransformation step, object value, string label, IDictionary<string, object?> row, CancellationToken cancellationToken)
     {
         if (TransformationTypes.ByName(step.TransformType) is not FieldTransformationBase transformer)
         {
-            return (null, $"the transformation '{step.TransformType}' of the field '{label}' is not a registered field transformation");
+            return (null, $"the transformation '{step.TransformType}' of the field '{label}' is not a registered field transformation", null);
         }
 
         var missing = transformer.ExpectedParameters
@@ -157,7 +163,7 @@ internal static class FlowRowMapper
             .ToList();
         if (missing.Count > 0)
         {
-            return (null, $"the transformation '{step.TransformType}' of the field '{label}' is missing the required parameter(s) {string.Join(", ", missing)}");
+            return (null, $"the transformation '{step.TransformType}' of the field '{label}' is missing the required parameter(s) {string.Join(", ", missing)}", null);
         }
 
         var result = await transformer.Transform(
@@ -172,7 +178,7 @@ internal static class FlowRowMapper
             },
             cancellationToken).ConfigureAwait(false);
         return result.IsSuccess
-            ? (result.Value, null)
-            : (null, $"the transformation '{step.TransformType}' failed for the field '{label}': {result.CurrentMessage}");
+            ? (result.Value, null, null)
+            : (null, $"the transformation '{step.TransformType}' failed for the field '{label}': {FlowFailures.ReasonOf(result)}", result);
     }
 }

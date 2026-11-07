@@ -81,7 +81,7 @@ public sealed class ConnectionProviderGetAllTests
                     ? GenericResult<IGenericConnection>.Success(service)
                     : GenericResult<IGenericConnection>.Failure(new Fdw.Messages.GenericMessage("cannot build")));
 
-        var provider = new ConnectionProvider(NullLogger<ConnectionProvider>.Instance);
+        var provider = new ConnectionProvider(new DisabledStatesDouble(), NullLogger<ConnectionProvider>.Instance);
         provider.Register(store.Object).IsSuccess.ShouldBeTrue();
         provider.Register(Implementation, () => implementation.Object).IsSuccess.ShouldBeTrue();
         return provider;

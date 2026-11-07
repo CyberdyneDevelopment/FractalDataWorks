@@ -19,10 +19,11 @@ public static class PipelineFailureHistory
     /// <param name="history">Reads the pipeline's runs.</param>
     /// <param name="pipelineName">The pipeline.</param>
     /// <param name="notBefore">Runs that ended before this are not looked at; null looks at every run.</param>
+    /// <param name="countTimedOut">Whether a run that timed out counts as a failure (FDW-4278).</param>
     /// <param name="cancellationToken">Cancels the reads.</param>
     /// <returns>The count; the failure when the history cannot be read.</returns>
     public static async Task<IGenericResult<PipelineFailureCount>> Count(
-        IPipelineRunHistory history, string pipelineName, DateTimeOffset? notBefore, CancellationToken cancellationToken = default)
+        IPipelineRunHistory history, string pipelineName, DateTimeOffset? notBefore, bool countTimedOut, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(history);
         var runs = new List<PipelineRunOutcome>();
@@ -36,7 +37,7 @@ public static class PipelineFailureHistory
             }
 
             runs.AddRange(page.Value);
-            var count = PipelineFailureCounter.Count(runs, notBefore);
+            var count = PipelineFailureCounter.Count(runs, notBefore, countTimedOut);
             if (count.Ended || page.Value.Count == 0)
             {
                 return GenericResult<PipelineFailureCount>.Success(count);

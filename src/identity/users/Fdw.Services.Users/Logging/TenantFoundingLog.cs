@@ -23,7 +23,7 @@ public static partial class TenantFoundingLog
     public static partial IGenericMessage DefaultsNotMade(ILogger logger, Guid tenantId, string what, string? reason);
 
     /// <summary>Logs that a tenant was made with its first administrator.</summary>
-    [MessageLogging(EventId = 22736, Level = LogLevel.Warning, Message = "A tenant '{tenantSlug}' was not made: the founder named no organization name or slug for its first organization")]
+    [MessageLogging(EventId = 22736, Level = LogLevel.Warning, Message = "A tenant '{tenantSlug}' was not made: the founder named no slug for its first organization")]
     public static partial IGenericMessage OrganizationNotStated(ILogger logger, string tenantSlug);
 
     [MessageLogging(EventId = 12730, Level = LogLevel.Information, Message = "Tenant '{tenantId}' was made with user '{administratorId}' as its first administrator, holding role '{roleName}'")]

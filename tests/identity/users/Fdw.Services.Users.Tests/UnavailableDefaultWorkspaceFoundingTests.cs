@@ -18,8 +18,8 @@ namespace Fdw.Services.Users.Tests;
 public sealed class UnavailableDefaultWorkspaceFoundingTests
 {
     private static readonly NewDefaultWorkspace Workspace = new(
-        new Guid("66666666-0000-0000-0000-000000000001"), new Guid("11111111-0000-0000-0000-000000000001"), "beta",
-        new Guid("44444444-0000-0000-0000-000000000001"), "Main", "main", true, new Guid("22222222-0000-0000-0000-000000000001"));
+        new Guid("66666666-0000-0000-0000-000000000001"), new Guid("11111111-0000-0000-0000-000000000001"), "Beta",
+        new Guid("44444444-0000-0000-0000-000000000001"), new Guid("22222222-0000-0000-0000-000000000001"));
 
     [Fact]
     [Trait("Priority", "P0")]

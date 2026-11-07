@@ -20,11 +20,14 @@ public sealed class UserTenantsHeldTests
     private static readonly Guid Acme = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
     private static readonly Guid Globex = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000002");
 
+    // A membership names its domain row by the row's durable Id (FDW-4239), which every version of the row keeps.
+    private static Guid DomainId(int domain) => new(domain, 0, 0, [0, 0, 0, 0, 0, 0, 0, 1]);
+
     private static Dictionary<string, object?> Membership(int key, int domain, Guid user, Guid tenant, bool deleted = false, bool isDefault = false, Guid? organization = null)
-        => InMemoryConfigurationStore.Row(("RowId", key), ("UserTenantsRowId", domain), ("UserId", user), ("TenantId", tenant), ("IsDefault", isDefault), ("DefaultOrganizationId", organization), ("IsDeleted", deleted));
+        => InMemoryConfigurationStore.Row(("RowId", key), ("UserTenantsId", DomainId(domain)), ("UserId", user), ("TenantId", tenant), ("IsDefault", isDefault), ("DefaultOrganizationId", organization), ("IsDeleted", deleted));
 
     private static Dictionary<string, object?> Domain(int key, bool current = true)
-        => InMemoryConfigurationStore.Row(("RowId", key), ("IsCurrent", current));
+        => InMemoryConfigurationStore.Row(("RowId", key + 1000), ("Id", DomainId(key)), ("IsCurrent", current));
 
     private static UserTenantsHeld Reader(InMemoryConfigurationStore store) => new(store.Gateways, "PlatformConfiguration", "tenant", NullLogger<UserTenantsHeld>.Instance);
 
@@ -61,7 +64,7 @@ public sealed class UserTenantsHeldTests
         var others = Enumerable.Range(100, 5000).Select(key => Membership(key, key, Guid.NewGuid(), Acme)).ToList();
         var store = new InMemoryConfigurationStore()
             .Holds("UserTenantsConfiguration", [Membership(1, 11, Person, Acme), Membership(2, 12, Person, Globex), .. others])
-            .Holds("UserTenants", [Domain(11), Domain(12), .. others.Select(row => Domain(Convert.ToInt32(row["UserTenantsRowId"])))]);
+            .Holds("UserTenants", [Domain(11), Domain(12), .. others.Select(row => Domain(Convert.ToInt32(row["RowId"])))]);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
 
@@ -122,7 +125,7 @@ public sealed class UserTenantsHeldTests
     [Fact]
     public async Task AMembershipWithoutATenantFailsTheReadInsteadOfBeingSkipped()
     {
-        var withoutTenant = InMemoryConfigurationStore.Row(("RowId", 1), ("UserTenantsRowId", 11), ("UserId", Person));
+        var withoutTenant = InMemoryConfigurationStore.Row(("RowId", 1), ("UserTenantsId", DomainId(11)), ("UserId", Person));
         var store = new InMemoryConfigurationStore().Holds("UserTenantsConfiguration", [withoutTenant]).Holds("UserTenants", [Domain(11)]);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);

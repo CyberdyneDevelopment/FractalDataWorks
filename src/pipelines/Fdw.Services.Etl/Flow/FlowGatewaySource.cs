@@ -216,7 +216,7 @@ public sealed class FlowGatewaySource : IFlowComponent
             var read = await target.Read(_gateway, command, cancellationToken).ConfigureAwait(false);
             if (read.IsFailure)
             {
-                return GenericResult.Failure(FlowLog.SourceReadFailed(_logger, _name, skipped, read.CurrentMessage));
+                return FlowFailures.Caused(FlowLog.SourceReadFailed(_logger, _name, skipped, FlowFailures.ReasonOf(read)), read);
             }
 
             if (read.Value is not { } page)

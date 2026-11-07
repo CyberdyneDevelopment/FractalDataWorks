@@ -41,10 +41,10 @@ public sealed partial class DataGatewayService
         if (!resolved.IsSuccess)
             return resolved.ToNewResult<T>();
 
-        var (container, connection) = resolved.Value;
+        var (container, connection, connectionId) = resolved.Value;
         if (connection is not IVectorizedDataConnection vectorized)
             return GenericResult<T>.Failure(DataGatewayLogger.VectorizedNotSupported(_logger, target.DataStore, command.CommandType));
 
-        return await RunOnContainer(command, target, ct => vectorized.Execute(command, container, ct), cancellationToken).ConfigureAwait(false);
+        return await RunOnContainer(command, target, connectionId, ct => vectorized.Execute(command, container, ct), cancellationToken).ConfigureAwait(false);
     }
 }

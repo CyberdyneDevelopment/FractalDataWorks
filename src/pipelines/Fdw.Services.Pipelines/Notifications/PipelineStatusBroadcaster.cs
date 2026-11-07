@@ -250,6 +250,7 @@ public sealed class PipelineStatusBroadcaster
         => string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase)
         || string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase)
         || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(status, "Interrupted", StringComparison.OrdinalIgnoreCase);
+        || string.Equals(status, "Interrupted", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(status, "TimedOut", StringComparison.OrdinalIgnoreCase);
 }
 

@@ -73,6 +73,8 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         public List<string> Asked { get; } = [];
 
+        public int KeyChunkSize => 1000;
+
         public IGenericResult<IConfigurationGateway> Get(string connectionName)
         {
             Asked.Add(connectionName);

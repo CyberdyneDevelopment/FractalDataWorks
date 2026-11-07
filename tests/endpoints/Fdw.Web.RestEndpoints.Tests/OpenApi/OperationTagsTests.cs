@@ -18,7 +18,6 @@ public sealed class OperationTagsTests
         { "/api/v1/field-mappings/{fieldMappingId}/transformations/{transformationName}", ["field-mapping-transformations"], "Field Mappings" },
         { "/api/v1/connection-types/{name}/capabilities", ["Connection-Types"], "Connection Types" },
         { "/api/v1/auth/logout", ["Authentication", "Auth"], OperationTags.Authentication },
-        { "/connect/token", [], OperationTags.Authentication },
         { "/endpoints/status", [], "Endpoints" },
     };
 

@@ -7,12 +7,14 @@ using Fdw.Validation;
 namespace Fdw.Services.Authorization.Validation;
 
 /// <summary>
-/// Validator for <see cref="PermissionImplementationConfiguration"/>.
+/// Validator for <see cref="PermissionImplementationConfiguration"/>. The grammar is the one the platform's permissions are stored in (FDW-4241): a name
+/// is <c>resource:action</c>; a resource is <c>*</c> or slash-separated segments (<c>settings/role</c>, <c>workspaces/{guid}</c>); an action is a lowercase
+/// token that the domain that owns the permission declares (<c>read</c>, <c>delegate</c>, <c>members</c>, <c>view</c>, <c>query</c> ...), so no closed list
+/// of actions lives here; the permission's own domain is <c>PermissionDomain</c>, and <c>Domain</c> is the record kind (<c>Permission</c>).
+/// Checked against every current permission of TechComConfigurationDb (157 rows) when it was written.
 /// </summary>
 public sealed class PermissionConfigurationValidator : FdwConfigurationValidator<PermissionImplementationConfiguration>
 {
-    private static readonly string[] ValidActions = ["read", "write", "execute", "delete", "admin"];
-
     private static readonly string[] ValidScopes = ["tenant", "system", "global"];
 
     /// <summary>
@@ -21,31 +23,36 @@ public sealed class PermissionConfigurationValidator : FdwConfigurationValidator
     public PermissionConfigurationValidator()
     {
         RuleFor(x => x.Name)
-            .IsValidName(200);
-
-        RuleFor(x => x.Domain)
             .NotEmpty()
-            .WithMessage("Domain is required")
+            .WithMessage("Name is required")
+            .MaximumLength(200)
+            .WithMessage("Name must not exceed 200 characters")
+            .Matches(@"^[a-zA-Z*][a-zA-Z0-9_/:*-]*$")
+            .WithMessage("Name must start with a letter or '*' and contain only letters, numbers, underscores, hyphens, '/', ':' or '*'");
+
+        RuleFor(x => x.PermissionDomain)
+            .NotEmpty()
+            .WithMessage("PermissionDomain is required")
             .MaximumLength(100)
-            .WithMessage("Domain must not exceed 100 characters")
+            .WithMessage("PermissionDomain must not exceed 100 characters")
             .Matches(@"^[a-z][a-z0-9_-]*$")
-            .WithMessage("Domain must start with a lowercase letter and contain only lowercase letters, numbers, underscores, or hyphens");
+            .WithMessage("PermissionDomain must start with a lowercase letter and contain only lowercase letters, numbers, underscores, or hyphens");
 
         RuleFor(x => x.Resource)
             .NotEmpty()
             .WithMessage("Resource is required")
             .MaximumLength(100)
             .WithMessage("Resource must not exceed 100 characters")
-            .Matches(@"^(\*|[a-z][a-z0-9_-]*)$")
-            .WithMessage("Resource must be '*' or start with a lowercase letter and contain only lowercase letters, numbers, underscores, or hyphens");
+            .Matches(@"^(\*|[a-z][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*)$")
+            .WithMessage("Resource must be '*' or slash-separated segments: the first starts with a lowercase letter, each other starts with a lowercase letter or a number, and they contain only lowercase letters, numbers, underscores, or hyphens");
 
         RuleFor(x => x.Action)
             .NotEmpty()
             .WithMessage("Action is required")
             .MaximumLength(50)
             .WithMessage("Action must not exceed 50 characters")
-            .Must(action => ValidActions.Contains(action, StringComparer.OrdinalIgnoreCase))
-            .WithMessage($"Action must be one of: {string.Join(", ", ValidActions)}");
+            .Matches(@"^[a-zA-Z][a-zA-Z0-9_-]*$")
+            .WithMessage("Action must start with a letter and contain only letters, numbers, underscores, or hyphens");
 
         RuleFor(x => x.Scope)
             .NotEmpty()

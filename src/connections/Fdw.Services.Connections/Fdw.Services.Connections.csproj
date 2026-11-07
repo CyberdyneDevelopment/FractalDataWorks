@@ -55,6 +55,8 @@
     <ProjectReference Include="..\..\identity\authorization\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
 
     <ProjectReference Include="..\..\documents\Fdw.Documents.Records\Fdw.Documents.Records.csproj" />
+
+    <ProjectReference Include="..\..\pipelines\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -44,7 +44,7 @@ public sealed class PipelineDisablerTests
         public override DateTimeOffset GetUtcNow() => now;
     }
 
-    private static PipelineRunOutcome Failure(int minutes) => new(Guid.NewGuid(), Now.AddMinutes(-minutes), false, true, "Validation", "FDW-20000");
+    private static PipelineRunOutcome Failure(int minutes) => new(Guid.NewGuid(), Now.AddMinutes(-minutes), false, true, "Validation", "FDW-20000", null);
 
     private static EscalationFiring Firing(Guid? runId, params PipelineRunOutcome[] failures)
     {

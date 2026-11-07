@@ -104,9 +104,27 @@ public sealed class OrganizationFoundingTests
 
         result.IsSuccess.ShouldBeTrue();
         rig.DefaultWorkspaces.Verify(w => w.Found(
-            It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == LegalWorkspace && n.TenantId == Tenant && n.TenantSlug == "afc"
-                && n.OrganizationId == Legal && n.OrganizationSlug == "legal" && !n.OrganizationIsDefault && n.OwnerUserId == Administrator),
+            It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == LegalWorkspace && n.TenantId == Tenant && n.OwnerName == "Legal"
+                && n.OrganizationId == Legal && n.OwnerUserId == Administrator),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ATenantsDefaultOrganizationsWorkspaceTakesTheTenantsNameNotTheOrganizationsOwn()
+    {
+        var rig = new Rig();
+        rig.Provider.Setup(p => p.Get(Legal, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(
+                new OrganizationConfiguration { Id = Legal, TenantId = Tenant, Name = "Default Organization", Slug = "default", IsDefault = true, DefaultWorkspaceId = LegalWorkspace }));
+        rig.Tenants.Setup(t => t.GetTenant(Tenant, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ITenant>.Success(Mock.Of<ITenant>(t => t.Slug == "afc" && t.DisplayName == "AFC")));
+
+        var result = await rig.Founding().Found(NewLegal, Finance, Administrator, "Administrator", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        rig.DefaultWorkspaces.Verify(w => w.Found(It.Is<NewDefaultWorkspace>(n => n.OwnerName == "AFC"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

@@ -23,7 +23,7 @@ namespace Fdw.Services.Configuration;
 /// collections that has collections of its own. A list of a few thousand rows took minutes (FDW-3906). Here the owners' physical keys go in one
 /// <c>IN</c> condition on the child's Foreign key, the rows come back as the columns the store returned, and each is built into its record through
 /// the mapper's coercing reader and handed to the owner whose key it holds. The same chunk of keys is the most one statement carries
-/// (<see cref="ParentChain.MaxKeys"/>); a larger set is read in chunks.
+/// (<see cref="IConfigurationGatewayProvider.KeyChunkSize"/>); a larger set is read in chunks.
 /// </para>
 /// <para>
 /// What a level is, which rows are current, and the depth-first rule are the single-owner cascade's: a collection goes to its owner whole, grandchildren
@@ -202,9 +202,13 @@ internal sealed class ChildSetLoader
     private async Task<IGenericResult<List<ConfigurationRow>>> Read(
         ChildPlan plan, Dictionary<string, KeyedOwner> keyed, CancellationToken cancellationToken)
     {
+        if (_gateways.KeyChunkSize < 1)
+            return GenericResult<List<ConfigurationRow>>.Failure(
+                DefaultConfigurationProviderLog.KeyChunkSizeNotStated(_logger, plan.ChildName, _gateways.KeyChunkSize));
+
         var reader = new ConfigurationRowReader(_gateways, _dataStoreName, plan.Child.Parent.Name, plan.Child.Name, _logger);
         var rows = new List<ConfigurationRow>();
-        foreach (var chunk in keyed.Values.Select(entry => entry.Value).Chunk(ParentChain.MaxKeys))
+        foreach (var chunk in keyed.Values.Select(entry => entry.Value).Chunk(_gateways.KeyChunkSize))
         {
             var read = await reader.All(
                 new FilterCondition { PropertyName = plan.ChildColumn, Operator = FilterOperators.ByName("In"), Value = chunk.ToList() },

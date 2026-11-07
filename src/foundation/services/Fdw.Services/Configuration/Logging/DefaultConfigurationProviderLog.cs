@@ -1052,6 +1052,14 @@ public static partial class DefaultConfigurationProviderLog
         Message = "Two owners in container '{container}' hold the key {key}, so their children cannot be told apart")]
     public static partial IGenericMessage SetOwnerKeyRepeated(ILogger logger, string container, string key);
 
+    /// <summary>The gateway provider states a key chunk size below one, so a set cannot be read in chunks of keys (FDW-4254).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="container">The container the set was read from.</param>
+    /// <param name="keyChunkSize">The value the gateway provider states.</param>
+    [MessageLogging(EventId = 21067, Level = LogLevel.Error,
+        Message = "The configuration gateway provider states a key chunk size of {keyChunkSize} for a read of container '{container}'; a set read carries at least one key to a statement")]
+    public static partial IGenericMessage KeyChunkSizeNotStated(ILogger logger, string container, int keyChunkSize);
+
     /// <summary>A row read for a set has no value in the column that says which owner it hangs from.</summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="container">The container the row was read from.</param>
@@ -1074,4 +1082,46 @@ public static partial class DefaultConfigurationProviderLog
     [MessageLogging(EventId = 91066, Level = LogLevel.Error,
         Message = "A row of container '{container}' was read and the mapper built no record from it")]
     public static partial IGenericMessage SetRowNotBuilt(ILogger logger, string container);
+
+    /// <summary>A child collection hangs from its owner's durable Id and declares no cascade mode, so a save cannot tell whether the list is the full set (FDW-4240).</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="ownerType">The owner's configuration type.</param>
+    /// <param name="property">The owner's collection property.</param>
+    /// <param name="container">The child container the collection is written to.</param>
+    [MessageLogging(EventId = 21067, Level = LogLevel.Error,
+        Message = "{ownerType}.{property} is written to '{container}', which hangs from its owner's durable Id, and declares no [ConfigurationChildCascade]; whether its list is the full set is not known")]
+    public static partial IGenericMessage ChildCascadeModeNotDeclared(ILogger logger, string ownerType, string property, string container);
+
+    /// <summary>A child collection's declared cascade mode names no option of the cascade modes (FDW-4240).</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="ownerType">The owner's configuration type.</param>
+    /// <param name="property">The owner's collection property.</param>
+    /// <param name="mode">The mode the collection names.</param>
+    [MessageLogging(EventId = 21068, Level = LogLevel.Error,
+        Message = "{ownerType}.{property} declares the cascade mode '{mode}', which is not Authoritative or UpsertOnly")]
+    public static partial IGenericMessage ChildCascadeModeUnknown(ILogger logger, string ownerType, string property, string mode);
+
+    /// <summary>A child container that hangs from its owner's durable Id declares no Logical key of its own, so a child absent from the saved list cannot be named (FDW-4240).</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The child container.</param>
+    [MessageLogging(EventId = 21069, Level = LogLevel.Error,
+        Message = "Container '{container}' hangs from its owner's durable Id and declares no Logical key of its own, so a child absent from a saved list cannot be named")]
+    public static partial IGenericMessage ChildLogicalKeyNotDeclared(ILogger logger, string container);
+
+    /// <summary>A child collection that hangs from its owner's durable Id was left as it is when the owner's version was replaced (FDW-4240).</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The child container.</param>
+    /// <param name="owner">The owner's container.</param>
+    [MessageLogging(EventId = 11953, Level = LogLevel.Debug,
+        Message = "Rows of '{container}' hang from the durable Id of '{owner}' and stay current when its version is replaced")]
+    public static partial IGenericMessage ChildrenKeptUnderDurableId(ILogger logger, string container, string owner);
+
+    /// <summary>The children of an authoritative collection that the saved list no longer carries were retired (FDW-4240).</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="container">The child container.</param>
+    /// <param name="owner">The owner's key values.</param>
+    /// <param name="count">How many children were retired.</param>
+    [MessageLogging(EventId = 11954, Level = LogLevel.Debug,
+        Message = "Retired {count} row(s) of '{container}' under {owner} that the saved list no longer carries")]
+    public static partial IGenericMessage AbsentChildrenRetired(ILogger logger, string container, string owner, int count);
 }

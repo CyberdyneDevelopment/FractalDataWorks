@@ -65,6 +65,14 @@ public sealed partial class DataContainerKeyConfiguration : IGenericConfiguratio
     public string? ReferencedKeyName { get; set; }
 
     /// <summary>
+    /// JSON-bound: whether this Foreign key states that the referenced container's row OWNS the row that holds the key (FDW-4240). An owner key
+    /// may reference the owner's Physical key (the child hangs from one version) or its Logical key (the child hangs from the owner's durable
+    /// Id and is read under the owner's current version). Absent in the schema JSON means false: only a key a container declares as owner is one.
+    /// </summary>
+    [NotMapped]
+    public bool IsOwner { get; set; }
+
+    /// <summary>
     /// JSON-bound: nested key fields. The flat <c>data.DataContainerKeyField</c> rows map onto this
     /// list when binding from the configuration JSON. Loader fills the Guid Id columns at startup.
     /// </summary>

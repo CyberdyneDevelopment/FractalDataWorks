@@ -22,6 +22,14 @@ public sealed record PipelineEnqueueResult(bool IsAccepted, string Code, string 
     /// <returns>The result.</returns>
     public static PipelineEnqueueResult Full(string reason) => new(false, QueueFullCode, reason);
 
+    /// <summary>The result code of a run the queue refused whose stored request could not be removed; the run's record is closed with it so the stored request is stale.</summary>
+    public const string RefusalNotRecordedCode = "RefusalNotRecorded";
+
+    /// <summary>Gets the result for a run the queue refused and could not forget (FDW-4277).</summary>
+    /// <param name="reason">Why, naming the pipeline and the failure to remove the request.</param>
+    /// <returns>The result.</returns>
+    public static PipelineEnqueueResult NotForgotten(string reason) => new(false, RefusalNotRecordedCode, reason);
+
     /// <summary>Gets the result for a run a threshold on waiting runs stopped.</summary>
     /// <param name="reason">Why, naming the threshold.</param>
     /// <returns>The result.</returns>

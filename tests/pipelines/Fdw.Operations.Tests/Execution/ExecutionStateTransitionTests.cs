@@ -140,4 +140,46 @@ public sealed class ExecutionStateTransitionTests
     {
         ExecutionStateTypes.ByName(from).CanTransitionTo("Interrupted").ShouldBeFalse();
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void TimedOutIsATerminalStateThatIsNeitherASuccessNorAFailureNorACancel()
+    {
+        var state = ExecutionStateTypes.TimedOut;
+
+        ReferenceEquals(state, ExecutionStateTypes.NotFound).ShouldBeFalse();
+        state.Name.ShouldBe("TimedOut");
+        state.IsTerminal.ShouldBeTrue();
+        state.IsSuccess.ShouldBeFalse();
+        state.IsFailure.ShouldBeFalse();
+        state.CanTransitionTo("Scheduled").ShouldBeFalse();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    [InlineData("Triggered")]
+    [InlineData("Initialized")]
+    [InlineData("Running")]
+    [InlineData("Paused")]
+    [InlineData("Retrying")]
+    [InlineData("Compensating")]
+    public void AnOpenRunThatPassedItsTimeLimitCanTimeOut(string from)
+    {
+        ExecutionStateTypes.ByName(from).CanTransitionTo("TimedOut").ShouldBeTrue();
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    [InlineData("Completed")]
+    [InlineData("Failed")]
+    [InlineData("Cancelled")]
+    [InlineData("Interrupted")]
+    [InlineData("Scheduled")]
+    public void ARunThatEndedOrHasNotStartedCannotTimeOut(string from)
+    {
+        ExecutionStateTypes.ByName(from).CanTransitionTo("TimedOut").ShouldBeFalse();
+    }
 }

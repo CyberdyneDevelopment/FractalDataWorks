@@ -56,4 +56,9 @@ public static class FailureCategory
     /// <param name="result">The result.</param>
     /// <returns>True when the failure is in the missing category.</returns>
     public static bool IsMissing(IGenericResult result) => ReferenceEquals(Of(result), ResultCategories.Missing);
+
+    /// <summary>Says whether a failed result is a "forbidden": the caller may not do this to this thing (FDW-4193).</summary>
+    /// <param name="result">The result.</param>
+    /// <returns>True when the failure is in the forbidden category.</returns>
+    public static bool IsForbidden(IGenericResult result) => ReferenceEquals(Of(result), ResultCategories.Forbidden);
 }

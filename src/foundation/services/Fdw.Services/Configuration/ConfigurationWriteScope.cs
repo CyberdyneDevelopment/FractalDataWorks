@@ -124,29 +124,39 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
     /// <summary>The Foreign key by which rows of <paramref name="childContainer"/> hang from <paramref name="parent"/>.</summary>
     /// <remarks>
     /// It is the one key the parent's configuration lists among the keys referencing it
-    /// (<see cref="IDataContainer.ReferencingKeys"/>) whose owner is the child's container and which
-    /// references the parent's Physical key. A child joins its owner on the owner's Physical key; a key
-    /// that references the parent's Logical key cites that record (a node's parent node, say) and does
-    /// not hold the child. None, or more than one, is a failure: which key holds the owner is
-    /// configuration, never a choice made here.
+    /// (<see cref="IDataContainer.ReferencingKeys"/>) whose owner is the child's container and which the
+    /// container DECLARES as its owner key (<see cref="IContainerKey.IsOwner"/>, FDW-4240): such a key may
+    /// reference the parent's Physical key (the child hangs from one version) or its Logical key (the child
+    /// hangs from the parent's durable Id and is read under the parent's current version). A container that
+    /// declares no owner key keeps the earlier rule: the key that references the parent's Physical key. A key
+    /// that references the parent's Logical key without being declared the owner cites that record (a node's
+    /// parent node, say) and does not hold the child. None, or more than one, is a failure: which key holds
+    /// the owner is configuration, never a choice made here.
     /// </remarks>
     internal static IGenericResult<ReferencingKeyBinding> OwnerBinding(ILogger logger, IDataContainer parent, string childContainer)
     {
-        var physical = parent.Keys
-            .FirstOrDefault(k => string.Equals(k.KeyType.Name, "Physical", StringComparison.Ordinal) && k.KeyFields.Count > 0)?
-            .KeyFields[0].LocalField.Name;
-        if (physical is null)
-            return GenericResult<ReferencingKeyBinding>.Failure(
-                DefaultConfigurationProviderLog.PhysicalKeyNotDeclared(logger, parent.Name, childContainer));
-
         var referencing = parent.ReferencingKeys;
         if (referencing.IsFailure) return referencing.ToNewResult<ReferencingKeyBinding>();
 
-        var bindings = referencing.Value!
-            .Where(b => string.Equals(b.Owner.Name, childContainer, StringComparison.Ordinal)
-                        && b.Key.KeyFields.Count > 0
-                        && string.Equals(b.Key.KeyFields[0].ReferencedField?.Name, physical, StringComparison.Ordinal))
+        var ofChild = referencing.Value!
+            .Where(b => string.Equals(b.Owner.Name, childContainer, StringComparison.Ordinal) && b.Key.KeyFields.Count > 0)
             .ToList();
+
+        // A declared owner key decides, whichever key of the parent it references.
+        var bindings = ofChild.Where(b => b.Key.IsOwner).ToList();
+        if (bindings.Count == 0)
+        {
+            var physical = parent.Keys
+                .FirstOrDefault(k => string.Equals(k.KeyType.Name, "Physical", StringComparison.Ordinal) && k.KeyFields.Count > 0)?
+                .KeyFields[0].LocalField.Name;
+            if (physical is null)
+                return GenericResult<ReferencingKeyBinding>.Failure(
+                    DefaultConfigurationProviderLog.PhysicalKeyNotDeclared(logger, parent.Name, childContainer));
+
+            bindings = ofChild
+                .Where(b => string.Equals(b.Key.KeyFields[0].ReferencedField?.Name, physical, StringComparison.Ordinal))
+                .ToList();
+        }
         if (bindings.Count == 0)
             return GenericResult<ReferencingKeyBinding>.Failure(
                 DefaultConfigurationProviderLog.NoForeignKeyToParent(logger, childContainer, parent.Name));
@@ -156,6 +166,15 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
 
         return GenericResult<ReferencingKeyBinding>.Success(bindings[0]);
     }
+
+    /// <summary>Whether the owner key holds the parent's durable Id rather than the key of the parent's own row.</summary>
+    /// <param name="parent">The parent container.</param>
+    /// <param name="ownerKey">The child's owner key to the parent, from <see cref="OwnerBinding"/>.</param>
+    /// <returns>True when the key references a field of the parent other than its Physical key field: the children then outlive the parent's versions.</returns>
+    internal static bool HoldsDurableId(IDataContainer parent, IContainerKey ownerKey)
+        => ownerKey.KeyFields.Count > 0
+            && ownerKey.KeyFields[0].ReferencedField is { } referenced
+            && !string.Equals(referenced.Name, ConfigurationKeys.FieldOf(parent.Keys, "Physical"), StringComparison.Ordinal);
 
     /// <summary>Field=value pairs for a trace line.</summary>
     internal static string Describe(IReadOnlyDictionary<string, object?> values)

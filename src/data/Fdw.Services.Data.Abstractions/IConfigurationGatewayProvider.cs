@@ -21,6 +21,17 @@ namespace Fdw.Services.Data.Abstractions;
 /// </remarks>
 public interface IConfigurationGatewayProvider
 {
+    /// <summary>
+    /// Gets the most keys one statement carries when configuration rows are read by the keys of the rows above them, and so the size of
+    /// the chunks a larger set is read in (FDW-4254).
+    /// </summary>
+    /// <remarks>
+    /// Declared once, as a setting on the configuration gateway collection with its default there, and changed by a host at registration.
+    /// It is a number of requests against a number of keys: a read of a set makes one statement per table per level for each chunk, so a
+    /// larger value makes fewer requests. Registration refuses a value below one.
+    /// </remarks>
+    int KeyChunkSize { get; }
+
     /// <summary>Gets the gateway onto <paramref name="connectionName"/>.</summary>
     /// <param name="connectionName">The configuration connection, e.g. <c>PlatformConfiguration</c>.</param>
     /// <returns>The gateway, or a failure naming the connections that are registered.</returns>

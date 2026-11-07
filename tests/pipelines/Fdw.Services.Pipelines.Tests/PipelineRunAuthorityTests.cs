@@ -89,11 +89,9 @@ public sealed class PipelineRunAuthorityTests
 
     private void StoreVisible(string name, bool declaredByHost = false)
     {
-        var store = new Mock<IDataStore>();
-        store.SetupGet(s => s.DeclaredByHost).Returns(declaredByHost);
         _dataStores
-            .Setup(p => p.Get(name, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IDataStore>.Success(store.Object));
+            .Setup(p => p.GetReference(name, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreReference>.Success(new DataStoreReference(name, Guid.NewGuid(), declaredByHost)));
     }
 
     private void ContainerVisible(string store, string path, string container, bool visible)
@@ -246,8 +244,8 @@ public sealed class PipelineRunAuthorityTests
         Visible("Orders", "OrdersCopy");
         ConnectionsVisible("Main");
         _dataStores
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IDataStore>.Failure(Mock.Of<IGenericMessage>()));
+            .Setup(p => p.GetReference(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreReference>.Failure(Mock.Of<IGenericMessage>()));
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), Reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);

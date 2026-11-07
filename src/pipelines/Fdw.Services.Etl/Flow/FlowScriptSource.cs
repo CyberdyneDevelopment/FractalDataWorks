@@ -94,7 +94,7 @@ public sealed class FlowScriptSource : IFlowComponent
             .ConfigureAwait(false);
         if (read.IsFailure)
         {
-            return GenericResult.Failure(FlowScriptLog.ReadFailed(_logger, Name, _dataStore, FlowFailureReason.Of(read, _logger, Name, _dataStore)));
+            return FlowFailures.Caused(FlowScriptLog.ReadFailed(_logger, Name, _dataStore, FlowFailureReason.Of(read, _logger, Name, _dataStore)), read);
         }
 
         if (read.Value is not { } rows)

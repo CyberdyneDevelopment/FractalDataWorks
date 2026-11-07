@@ -62,7 +62,8 @@ public sealed class PipelineExecutionQueue : IPipelineExecutionQueue
     /// <inheritdoc/>
     /// <remarks>
     /// A request that cannot be recorded throws: answering that the queue is full would tell the caller something that is not why the run was not taken. So does a
-    /// threshold configuration that cannot be read: a server whose thresholds are stated wrongly does not take runs it cannot judge.
+    /// threshold configuration that cannot be read: a server whose thresholds are stated wrongly does not take runs it cannot judge. A request the full queue refuses
+    /// is forgotten before the answer, so a restart does not start it; one that cannot be forgotten is answered <see cref="PipelineEnqueueResult.NotForgotten"/>.
     /// </remarks>
     public async ValueTask<PipelineEnqueueResult> Enqueue(
         PipelineExecutionRequest request,
@@ -92,6 +93,16 @@ public sealed class PipelineExecutionQueue : IPipelineExecutionQueue
         }
 
         PipelineRunSchedulerLog.TriggerDropped(_logger, _capacity, SettingDefinitions.MaxQueuedPipelineTriggers, request.PipelineName);
+
+        // A trigger the queue refuses is not started later (FDW-4277): its stored request would be found at the next host start and run. One that cannot be forgotten
+        // is a coded refusal the trigger closes the run's record on, which makes the stored request stale, instead of an answer that the queue is plainly full.
+        var forgotten = await _store.Forget(request.ExecutionId, cancellationToken).ConfigureAwait(false);
+        if (forgotten.IsFailure)
+        {
+            return PipelineEnqueueResult.NotForgotten(
+                PipelineRunSchedulerLog.RefusedRequestNotForgotten(_logger, request.PipelineName, forgotten.CurrentMessage).Message);
+        }
+
         return PipelineEnqueueResult.Full($"The queue of pipeline triggers holds {_capacity} and is full");
     }
 

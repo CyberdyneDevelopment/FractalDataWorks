@@ -26,6 +26,7 @@ public sealed class FlowRunTally : IFlowExecutor, IFlowRunCounts
     private long _extracted;
     private long _transformed;
     private long _rejected;
+    private string? _failedComponent;
 
     /// <summary>Initializes a new instance of the <see cref="FlowRunTally"/> class.</summary>
     /// <param name="inner">The executor that runs each graph.</param>
@@ -39,6 +40,9 @@ public sealed class FlowRunTally : IFlowExecutor, IFlowRunCounts
 
     /// <summary>Gets the rows that reached a component with no outputs, across the run, including those of the graphs running now.</summary>
     public long Transformed => Interlocked.Read(ref _transformed) + Running(pending => pending.Transformed);
+
+    /// <summary>Gets the name of the component whose failure stopped the first graph that failed in this run; none while no graph has failed (FDW-4192).</summary>
+    public string? FailedComponent => Volatile.Read(ref _failedComponent);
 
     /// <inheritdoc />
     public long Rejected => Interlocked.Read(ref _rejected) + Running(pending => pending.Rejected);
@@ -82,6 +86,12 @@ public sealed class FlowRunTally : IFlowExecutor, IFlowRunCounts
             Interlocked.Add(ref _extracted, pending.Extracted);
             Interlocked.Add(ref _transformed, pending.Transformed);
             Interlocked.Add(ref _rejected, pending.Rejected);
+        }
+
+        if (outcome.Result.IsFailure && outcome.Report?.FailedComponent is { } failed)
+        {
+            // Why only the first: the first failure is the one that ended the run; a later graph's failure is a consequence of it.
+            Interlocked.CompareExchange(ref _failedComponent, failed, null);
         }
 
         return outcome;

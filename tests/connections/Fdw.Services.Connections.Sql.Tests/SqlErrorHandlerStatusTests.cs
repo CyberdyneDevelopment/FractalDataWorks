@@ -33,6 +33,7 @@ public sealed class SqlErrorHandlerStatusTests
     [InlineData(2601, 409)]
     [InlineData(2627, 409)]
     [InlineData(547, 409)]
+    [InlineData(33504, 403)]
     [InlineData(515, 500)]
     [InlineData(8003, 500)]
     public void A_constraint_or_statement_error_answers_with_its_own_status(int sqlErrorNumber, int expectedStatus)
@@ -57,6 +58,7 @@ public sealed class SqlErrorHandlerStatusTests
     [InlineData(547)]
     [InlineData(515)]
     [InlineData(8003)]
+    [InlineData(33504)]
     public void Sending_the_same_statement_again_fails_the_same_way(int sqlErrorNumber)
         => SqlErrorHandlers.ByErrorNumber(sqlErrorNumber).IsRetryable.ShouldBeFalse();
 
@@ -77,5 +79,16 @@ public sealed class SqlErrorHandlerStatusTests
         var claimed = SqlErrorHandlers.All().SelectMany(handler => handler.SqlErrorNumbers).ToList();
 
         claimed.Count.ShouldBe(claimed.Distinct().Count());
+    }
+
+    [Fact]
+    public void A_write_refused_by_row_level_security_is_forbidden_and_does_not_carry_the_server_text()
+    {
+        var message = SqlErrorHandlers.ByErrorNumber(33504)
+            .CreateFailureMessage(NullLogger.Instance, new InvalidOperationException("The attempted operation failed because the target object 'devConfigurationDb.conn.ConnectionDisabled' has a block predicate"), "INSERT INTO t");
+
+        FailureCategory.IsForbidden(GenericResult.Failure(message)).ShouldBeTrue();
+        message.Message.ShouldNotContain("devConfigurationDb");
+        message.Message.ShouldNotContain("block predicate");
     }
 }

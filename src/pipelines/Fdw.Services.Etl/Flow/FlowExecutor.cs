@@ -130,7 +130,7 @@ public sealed class FlowExecutor : IFlowExecutor
             succeeded = result.IsSuccess;
             if (result.IsFailure)
             {
-                Stop(run, stop, component.Name, GenericResult.Failure(FlowLog.ComponentFailed(_logger, component.Name, result.CurrentMessage)));
+                Stop(run, stop, component.Name, FlowFailures.Caused(FlowLog.ComponentFailed(_logger, component.Name, FlowFailures.ReasonOf(result)), result));
             }
         }
         catch (OperationCanceledException ex) when (stop.IsCancellationRequested)
@@ -140,7 +140,7 @@ public sealed class FlowExecutor : IFlowExecutor
         }
         catch (Exception ex)
         {
-            Stop(run, stop, component.Name, GenericResult.Failure(FlowLog.ComponentThrew(_logger, component.Name, ex.GetType().Name, ex.Message)));
+            Stop(run, stop, component.Name, Threw(component.Name, ex));
         }
         finally
         {
@@ -213,6 +213,14 @@ public sealed class FlowExecutor : IFlowExecutor
             // The run is being stopped; the channels are abandoned with it.
             FlowLog.ReleaseCancelled(_logger, ex, component);
         }
+    }
+
+    // A component that throws ends the run with the exception's message. A mapping refusal carries the failed result of the mapping, so its cause stays first (FDW-4197);
+    // any other exception has no result and is the flow's own event.
+    private IGenericResult Threw(string component, Exception ex)
+    {
+        var threw = FlowLog.ComponentThrew(_logger, component, ex.GetType().Name, ex.Message);
+        return ex is FlowMappingRefusedException { Failure: { } failure } ? FlowFailures.Caused(threw, failure) : GenericResult.Failure(threw);
     }
 
     private static void Stop(FlowRun run, CancellationTokenSource stop, string component, IGenericResult failure)
