@@ -144,9 +144,9 @@ public class CalculationConfigurationProviderTests
 
         private static string Text(object? value) => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
 
-        private static IEnumerable<global::Fdw.Data.FilterCondition> Conditions(global::Fdw.Data.IFilterNode node)
+        private static IEnumerable<global::Fdw.Data.Abstractions.FilterCondition> Conditions(global::Fdw.Data.Abstractions.IFilterNode node)
         {
-            if (node is global::Fdw.Data.FilterCondition condition)
+            if (node is global::Fdw.Data.Abstractions.FilterCondition condition)
             {
                 yield return condition;
                 yield break;
