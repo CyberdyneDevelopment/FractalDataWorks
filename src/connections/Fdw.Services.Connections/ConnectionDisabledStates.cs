@@ -69,6 +69,57 @@ public sealed class ConnectionDisabledStates : IConnectionDisabledStates
     }
 
     /// <inheritdoc/>
+    public async Task<IGenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>> ReadMany(
+        IReadOnlyCollection<Guid> connectionIds, CancellationToken cancellationToken = default)
+    {
+        if (connectionIds is null)
+        {
+            throw new ArgumentNullException(nameof(connectionIds));
+        }
+
+        if (connectionIds.Count == 0)
+        {
+            return GenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>.Success(new Dictionary<Guid, ConnectionDisabledRecord>());
+        }
+
+        var gateway = Gateway();
+        if (gateway.IsFailure)
+        {
+            return gateway.ToNewResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>();
+        }
+
+        var command = new QueryCommand<ConnectionDisabledConfiguration>
+        {
+            Filter = new FilterExpression
+            {
+                Root = new FilterGroup
+                {
+                    Operator = LogicalOperator.And,
+                    Nodes =
+                    [
+                        new FilterCondition { PropertyName = "ConnectionId", Operator = FilterOperators.ByName("In"), Value = connectionIds.Cast<object>().ToList() },
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
+                        new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
+                    ]
+                }
+            }
+        };
+
+        var rows = await gateway.Value!.Execute<IEnumerable<ConnectionDisabledConfiguration>>(command, Target(), useCache: false, cancellationToken).ConfigureAwait(false);
+        if (rows.IsFailure)
+        {
+            return GenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>.Failure(
+                ConnectionDisabledLog.ReadManyFailed(_logger, connectionIds.Count, rows.FailureReason().Message));
+        }
+
+        // One current row per connection; a row with an EnabledAt is a connection enabled again.
+        IReadOnlyDictionary<Guid, ConnectionDisabledRecord> disabled = (rows.Value ?? [])
+            .Where(row => row.EnabledAt is null)
+            .ToDictionary(row => row.ConnectionId, Record);
+        return GenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>.Success(disabled);
+    }
+
+    /// <inheritdoc/>
     public async Task<IGenericResult<ConnectionDisabledRecord>> Disable(
         Guid connectionId, Guid requestingTenantId, bool requesterMayDisableOtherTenants, string reason, string disabledBy, CancellationToken cancellationToken = default)
     {

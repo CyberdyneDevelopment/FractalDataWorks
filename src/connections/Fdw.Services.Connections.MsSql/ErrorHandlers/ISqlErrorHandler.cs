@@ -18,6 +18,12 @@ public interface ISqlErrorHandler : ITypeOption<int, SqlErrorHandlerBase>
     IReadOnlyList<int> SqlErrorNumbers { get; }
 
     /// <summary>
+    /// Gets the severity classes (<c>SqlException.Class</c>) that this handler claims for an error whose number no handler claims (FDW-4361).
+    /// Empty for a handler that claims numbers only.
+    /// </summary>
+    IReadOnlyList<int> SqlErrorClasses { get; }
+
+    /// <summary>
     /// Gets a value indicating whether the error condition is retryable.
     /// </summary>
     bool IsRetryable { get; }

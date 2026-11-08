@@ -357,6 +357,53 @@ public sealed class ConnectionDisabledStatesTests
         fixture.Saves.ShouldBeEmpty();
     }
 
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public async Task ManyConnectionsStatesAreReadWithOneReadOfTheStoreAndOnlyTheDisabledOnesAreReturned()
+    {
+        var other = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var enabledAgain = Row();
+        enabledAgain.ConnectionId = other;
+        enabledAgain.EnabledAt = Now;
+        enabledAgain.EnabledReason = "fixed";
+        var fixture = new Fixture(Row(), enabledAgain);
+
+        var result = await fixture.States.ReadMany([ConnectionId, other, Guid.NewGuid()], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var states = result.Value.ShouldNotBeNull();
+        states.Keys.ShouldBe([ConnectionId]);
+        states[ConnectionId].Reason.ShouldBe("three failed runs in a row");
+        fixture.ReadsThroughTheCache.ShouldBe([false]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "CoreFramework")]
+    public async Task NoConnectionsReadNothingFromTheStore()
+    {
+        var fixture = new Fixture(Row());
+
+        var result = await fixture.States.ReadMany([], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull().ShouldBeEmpty();
+        fixture.ReadsThroughTheCache.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public async Task StatesThatCannotBeReadForManyConnectionsAreAFailureAndNotAnEmptyAnswer()
+    {
+        var fixture = new Fixture { ReadFailure = GenericResult<IEnumerable<ConnectionDisabledConfiguration>>.Failure(new Fdw.Messages.GenericMessage("store down")) };
+
+        var result = await fixture.States.ReadMany([ConnectionId], TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+    }
+
     private static ConnectionDisabledConfiguration Row() => new()
     {
         Id = Guid.Parse("55555555-5555-5555-5555-555555555555"),
@@ -370,9 +417,9 @@ public sealed class ConnectionDisabledStatesTests
     // The store holds at most one current row of the connection; saves are recorded with whether they replace it.
     private sealed class Fixture
     {
-        private readonly ConnectionDisabledConfiguration? _current;
+        private readonly ConnectionDisabledConfiguration[] _current;
 
-        public Fixture(ConnectionDisabledConfiguration? current = null)
+        public Fixture(params ConnectionDisabledConfiguration[] current)
         {
             _current = current;
 
@@ -384,7 +431,7 @@ public sealed class ConnectionDisabledStatesTests
                 {
                     ReadsThroughTheCache.Add(useCache);
                     return ReadFailure ?? GenericResult<IEnumerable<ConnectionDisabledConfiguration>>.Success(
-                        _current is null ? [] : [_current]);
+                        [.. _current]);
                 });
             gateway
                 .Setup(g => g.Execute<IEnumerable<ConnectionTenantConfiguration>>(

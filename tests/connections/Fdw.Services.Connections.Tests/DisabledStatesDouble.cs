@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -36,6 +37,15 @@ internal sealed class DisabledStatesDouble : IConnectionDisabledStates
         return Task.FromResult(_readFailure is { } failure
             ? failure.ToNewResult<ConnectionDisabledRecord?>()
             : GenericResult<ConnectionDisabledRecord?>.Success(_disabled.TryGetValue(connectionId, out var record) ? record : null));
+    }
+
+    public Task<IGenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>> ReadMany(IReadOnlyCollection<Guid> connectionIds, CancellationToken cancellationToken = default)
+    {
+        Reads.AddRange(connectionIds);
+        return Task.FromResult(_readFailure is { } failure
+            ? failure.ToNewResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>()
+            : GenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>.Success(
+                connectionIds.Where(_disabled.ContainsKey).ToDictionary(id => id, id => _disabled[id])));
     }
 
     public Task<IGenericResult<ConnectionDisabledRecord>> Disable(

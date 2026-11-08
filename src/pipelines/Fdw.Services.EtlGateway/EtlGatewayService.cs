@@ -81,14 +81,14 @@ public sealed class EtlGatewayService : IEtlGateway
         }
 
         var scripted = await Resolve(dataStore, cancellationToken).ConfigureAwait(false);
-        if (scripted.IsFailure || scripted.Value is null)
+        if (scripted.IsFailure || scripted.Value.Connection is null)
         {
             return scripted.ToNewResult<T>();
         }
 
         EtlGatewayLog.Running(_logger, command.CommandType, dataStore);
         var stopwatch = Stopwatch.StartNew();
-        var result = await scripted.Value.Execute(command, cancellationToken).ConfigureAwait(false);
+        var result = await scripted.Value.Connection.Execute(command, cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();
         if (result.IsSuccess)
         {
@@ -99,38 +99,42 @@ public sealed class EtlGatewayService : IEtlGateway
             EtlGatewayLog.Failed(_logger, command.CommandType, dataStore, result.CurrentMessage);
         }
 
-        return result;
+        // A failure the store's connection returned names that connection, so a run that stops on it can say which connection it came from (FDW-4334, as FDW-4279 does in the data gateways).
+        return result.IsSuccess ? result : ConnectionFailures.RaisedBy<T>(result, scripted.Value.ConnectionId);
     }
 
     // The store's connection, wrapped by the script extension this host references for it (a connection that takes scripts itself
     // needs no wrapper). A host that references no extension for that kind of connection finds none and refuses.
-    private async Task<IGenericResult<IScriptedDataConnection>> Resolve(string dataStore, CancellationToken cancellationToken)
+    private async Task<IGenericResult<(Guid ConnectionId, IScriptedDataConnection? Connection)>> Resolve(string dataStore, CancellationToken cancellationToken)
     {
         // The store's row alone: ConnectionId is a field of it, and reading it whole would compose everything under it.
         var store = await _dataStores.Get(dataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (store.IsFailure || store.Value is null)
         {
-            return GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, store.NoValueReason().Message));
+            return GenericResult<(Guid, IScriptedDataConnection?)>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, store.NoValueReason().Message));
         }
 
         if (store.Value.ConnectionId == Guid.Empty)
         {
-            return GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, "it names no connection"));
+            return GenericResult<(Guid, IScriptedDataConnection?)>.Failure(EtlGatewayLog.StoreNotResolved(_logger, dataStore, "it names no connection"));
         }
 
         var connection = await _connections.Get(store.Value.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (connection.IsFailure || connection.Value is null)
         {
-            return ConnectionFailures.Caused<IScriptedDataConnection>(
-                connection, EtlGatewayLog.StoreNotResolved(_logger, dataStore, connection.NoValueReason().Message));
+            // The connection provider refused or could not give this connection, so it raised the failure (FDW-4334).
+            return ConnectionFailures.RaisedBy<(Guid, IScriptedDataConnection?)>(
+                ConnectionFailures.Caused<(Guid, IScriptedDataConnection?)>(
+                    connection, EtlGatewayLog.StoreNotResolved(_logger, dataStore, connection.NoValueReason().Message)),
+                store.Value.ConnectionId);
         }
 
         var scripted = connection.Value as IScriptedDataConnection;
         if (scripted is null)
             scripted = ScriptedConnectionTypes.All().Select(type => type.Adapt(connection.Value)).FirstOrDefault(adapted => adapted is not null);
         return scripted is null
-            ? GenericResult<IScriptedDataConnection>.Failure(EtlGatewayLog.NotSupported(_logger, dataStore, nameof(IScriptedDataCommand)))
-            : GenericResult<IScriptedDataConnection>.Success(scripted);
+            ? GenericResult<(Guid, IScriptedDataConnection?)>.Failure(EtlGatewayLog.NotSupported(_logger, dataStore, nameof(IScriptedDataCommand)))
+            : GenericResult<(Guid, IScriptedDataConnection?)>.Success((store.Value.ConnectionId, scripted));
     }
 
     // Whether the host declared the store. A store that does not exist is not the host's (Resolve refuses it next); a lookup that broke

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Operations.Abstractions.Execution;
+using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Workspaces.Endpoints;
@@ -173,6 +175,126 @@ public class OverviewMapStreamTests
 
         nodes.ShouldHaveSingleItem().Kind.ShouldBe(MapKinds.Pipeline);
         stream.State.Outcome.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ADataSetNodeNamesTheWorkspaceItSitsInAndOneInNoneNamesNone()
+    {
+        // FDW-4345: the console groups the Data map by workspace and reads workspaceId and workspace off the data set node.
+        var workspaceId = Guid.Parse("00000000-0000-0000-0000-0000000000d1");
+        var selection = new FixedSelection([], [DataSet(OrdersId, "Orders", []), DataSet(CustomersId, "Customers", [])], [], NoVariations);
+        var inWorkspaces = new Dictionary<Guid, MapWorkspaceRef> { [OrdersId] = new(workspaceId, "Sales") };
+        var stream = new OverviewMapStream(selection, Sources(), await Editing(), NullLogger.Instance, dataSetWorkspaces: inWorkspaces);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        var orders = nodes.Single(node => node.Label == "Orders");
+        orders.Metadata["workspaceId"].ShouldBe(workspaceId.ToString("D"));
+        orders.Metadata["workspace"].ShouldBe("Sales");
+        var customers = nodes.Single(node => node.Label == "Customers");
+        customers.Metadata.ContainsKey("workspaceId").ShouldBeFalse();
+        customers.Metadata.ContainsKey("workspace").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task AStreamGivenNoWorkspacesPutsNoWorkspaceOnAnyNode()
+    {
+        var selection = new FixedSelection([], [DataSet(OrdersId, "Orders", [])], [], NoVariations);
+        var stream = new OverviewMapStream(selection, Sources(), await Editing(), NullLogger.Instance);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        nodes.Single().Metadata.ContainsKey("workspace").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task APipelineNodeNamesItsLatestRunsStateAndOneThatNeverRanNamesNone()
+    {
+        // FDW-4345: the console marks a pipeline whose latest run Failed; a pipeline with no run is not marked as one that did not fail.
+        var runs = new Mock<IExecutionTracker>();
+        runs.Setup(r => r.GetLatestRuns(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Success(
+                new Dictionary<string, IExecutionItem> { ["Load"] = Run(ExecutionStateTypes.Failed), ["Nightly"] = Run(ExecutionStateTypes.Completed) }));
+        var selection = new FixedSelection(
+            [Pipeline(LoadId, "Load", "Orders", "Customers"), Pipeline(Guid.Parse("00000000-0000-0000-0000-0000000000c2"), "Nightly", "Orders", "Customers"),
+             Pipeline(Guid.Parse("00000000-0000-0000-0000-0000000000c3"), "NeverRan", "Orders", "Customers")],
+            [], [], NoVariations);
+        var stream = new OverviewMapStream(selection, Sources(), await Editing(), NullLogger.Instance, runs: runs.Object);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        var load = nodes.Single(node => node.Label == "Load");
+        load.Metadata["lastRunState"].ShouldBe("Failed");
+        load.Metadata["failed"].ShouldBe(true);
+        var nightly = nodes.Single(node => node.Label == "Nightly");
+        nightly.Metadata["lastRunState"].ShouldBe("Completed");
+        nightly.Metadata["failed"].ShouldBe(false);
+        var neverRan = nodes.Single(node => node.Label == "NeverRan");
+        neverRan.Metadata.ContainsKey("lastRunState").ShouldBeFalse();
+        neverRan.Metadata.ContainsKey("failed").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task TheLatestRunsOfAllThePipelinesAreReadOnceNotOncePerPipeline()
+    {
+        var runs = new Mock<IExecutionTracker>();
+        runs.Setup(r => r.GetLatestRuns(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Success(new Dictionary<string, IExecutionItem>()));
+        var pipelines = Enumerable.Range(1, 30)
+            .Select(i => Pipeline(Guid.Parse($"00000000-0000-0000-0000-{i:D12}"), "P" + i, "Orders", "Customers"))
+            .ToArray();
+        var stream = new OverviewMapStream(new FixedSelection(pipelines, [], [], NoVariations), Sources(), await Editing(), NullLogger.Instance, runs: runs.Object);
+
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+        {
+            node.ShouldNotBeNull();
+        }
+
+        runs.Verify(r => r.GetLatestRuns(It.Is<IReadOnlyCollection<string>>(names => names.Count == 30), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ALatestRunsReadThatFailsFailsTheMap()
+    {
+        var runs = new Mock<IExecutionTracker>();
+        runs.Setup(r => r.GetLatestRuns(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult.Failure(WorkspacesResultCodes.ByName("MapRequestInvalid"), ResultDetails.Create("reason", "the runs could not be read")).ToNewResult<IReadOnlyDictionary<string, IExecutionItem>>());
+        var stream = new OverviewMapStream(
+            new FixedSelection([Pipeline(LoadId, "Load", "Orders", "Customers")], [], [], NoVariations), Sources(), await Editing(), NullLogger.Instance, runs: runs.Object);
+
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+        {
+            node.ShouldNotBeNull();
+        }
+
+        stream.State.Outcome.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task AStreamGivenNoTrackerPutsNoRunStateOnAnyPipeline()
+    {
+        var selection = new FixedSelection([Pipeline(LoadId, "Load", "Orders", "Customers")], [], [], NoVariations);
+        var stream = new OverviewMapStream(selection, Sources(), await Editing(), NullLogger.Instance);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        nodes.Single().Metadata.ContainsKey("failed").ShouldBeFalse();
+    }
+
+    private static IExecutionItem Run(IExecutionStateType state)
+    {
+        var run = new Mock<IExecutionItem>();
+        run.SetupGet(r => r.Id).Returns(Guid.NewGuid());
+        run.SetupGet(r => r.State).Returns(state);
+        return run.Object;
     }
 
     private static MapSources Sources(ICategoryConfigurationProvider? categories = null)

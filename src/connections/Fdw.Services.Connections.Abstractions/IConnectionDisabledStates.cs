@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -21,6 +22,12 @@ public interface IConnectionDisabledStates
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The record when the connection is disabled, or a successful result carrying nothing when it is not.</returns>
     Task<IGenericResult<ConnectionDisabledRecord?>> Read(Guid connectionId, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads the states of many connections with one read of the store, from the store and not from a cache (FDW-4290).</summary>
+    /// <param name="connectionIds">The Ids of the connections' domain rows.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The records of the connections that are disabled, by connection Id; a connection that is not disabled has no entry. An empty set of Ids reads nothing and answers an empty result.</returns>
+    Task<IGenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>> ReadMany(IReadOnlyCollection<Guid> connectionIds, CancellationToken cancellationToken = default);
 
     /// <summary>Disables a connection and records why. The state is stamped with the connection's own tenant, read from its row, so that tenant's reads see it.</summary>
     /// <param name="connectionId">The Id of the connection's domain row.</param>

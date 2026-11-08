@@ -84,6 +84,43 @@ public sealed class ConfigurationSetReadTests
 
     [Fact]
     [Trait("Priority", "P0")]
+    [Trait("Category", "Performance")]
+    public async Task ANarrowedReadLoadsOnlyTheNamedRowsAndTheChildrenOfThose()
+    {
+        // FDW-4328: a command that names two containers of a store of 500 reads those and what hangs from them, not the other 498.
+        var store = new SetStore().WithRoots(1);
+        store.Gateway.Add("TestOp", Row(21, "TestRootRowId", 11, "op1a"), Row(22, "TestRootRowId", 11, "op1b"), Row(23, "TestRootRowId", 11, "op1c"));
+        store.Gateway.Add("TestMap", Row(31, "TestOpRowId", 21, "m1a"), Row(32, "TestOpRowId", 22, "m1b"), Row(33, "TestOpRowId", 23, "m1c"));
+        var narrowing = new ChildNarrowing(typeof(TestOpConfiguration), "Name", ["op1a", "op1c"]);
+
+        var result = await store.Domain.Get("root1", Levels, narrowing, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var root = result.Value.ShouldBeOfType<TestRootConfiguration>();
+        root.Operations.Select(op => op.Name).OrderBy(name => name, StringComparer.Ordinal).ShouldBe(["op1a", "op1c"]);
+        root.Operations.SelectMany(op => op.Mappings).Select(map => map.Name).OrderBy(name => name, StringComparer.Ordinal).ShouldBe(["m1a", "m1c"]);
+        store.Gateway.Reads("TestRoot").ShouldBe(1);
+        store.Gateway.Reads("TestOp").ShouldBe(1);
+        store.Gateway.Reads("TestMap").ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ANarrowingOfAnotherKindOfRowNarrowsNothing()
+    {
+        var store = new SetStore().WithRoots(1);
+        store.Gateway.Add("TestOp", Row(21, "TestRootRowId", 11, "op1a"), Row(22, "TestRootRowId", 11, "op1b"));
+        var narrowing = new ChildNarrowing(typeof(TestMapConfiguration), "Name", ["nothing-by-this-name"]);
+
+        var result = await store.Domain.Get("root1", Levels, narrowing, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldBeOfType<TestRootConfiguration>().Operations.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task ASingleReadByIdGivesTheSameRowsAsTheListRead()
     {

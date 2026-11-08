@@ -138,6 +138,18 @@ public interface IDomainConfigurationProvider<TImplementationConfiguration>
     /// <returns>The implementation configured for that member, or a structured failure.</returns>
     Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, CancellationToken ct = default);
 
+    /// <summary>Gets a configured member by name, composed to a depth, reading only the child rows <paramref name="narrowing"/> allows (FDW-4328).</summary>
+    /// <param name="name">The member's name.</param>
+    /// <param name="levels">How many levels of child collections to read; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="narrowing">Which rows of one kind of child collection to read. The collections it narrows hold those rows only, which is not the same as none.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The implementation configured for that member, or a structured failure.</returns>
+    /// <remarks>
+    /// For a caller that needs a few of a member's many children, such as two containers of a datastore of 500. A narrowed member is not the
+    /// member: it is never written back and never kept as the member.
+    /// </remarks>
+    Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default);
+
     /// <summary>Gets a configured member by the domain row's durable id, composed to a depth.</summary>
     /// <param name="id">The member's durable id.</param>
     /// <param name="levels">How many levels of child collections to read; see <see cref="ConfigurationLevels"/>.</param>

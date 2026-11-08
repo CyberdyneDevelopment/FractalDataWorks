@@ -156,7 +156,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
     /// <para>
     /// A <c>user:</c> scope (<see cref="HubScopes.User"/>) is the group of one person and a connection may join only its own: the key must name the
     /// caller's id, and a connection with no id joins no user scope. An <c>org:</c> scope (<see cref="HubScopes.Org"/>) is the group of one
-    /// organization and a connection may join only the organization its <c>org_id</c> claim names. Without this a signed-in person could name
+    /// organization and a connection may join only the organization its <c>orgId</c> claim names. Without this a signed-in person could name
     /// another person's or organization's scope and receive what is published there (FDW-2792).
     /// </para>
     /// <para>
@@ -174,7 +174,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
 
         if (scopeKey.StartsWith(HubScopes.OrgPrefix, StringComparison.Ordinal))
         {
-            return Context.User?.FindFirst("org_id")?.Value is { Length: > 0 } org
+            return CallerOrgId is { } org
                 && scopeKey.StartsWith(string.Concat(HubScopes.OrgPrefix, org, ":"), StringComparison.OrdinalIgnoreCase);
         }
 
@@ -238,6 +238,19 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
     /// must fail loud (log + skip) rather than invent one — there is no <c>?? "anonymous"</c>.
     /// </remarks>
     protected string? AuthenticatedUserId => Context.User?.Identity?.Name;
+
+    /// <summary>
+    /// Gets the organization the connection acts in: the <c>orgId</c> claim (<see cref="ClaimDefinitions.orgId"/>), and nothing else (FDW-4337).
+    /// </summary>
+    /// <remarks><see langword="null"/> when the connection carries no organization (a global-tenant administrator has none). A hub that joins an organization's group refuses or skips on <see langword="null"/>.</remarks>
+    protected string? CallerOrgId
+    {
+        get
+        {
+            var org = Context.User?.FindFirst(ClaimDefinitions.orgId.Name)?.Value;
+            return string.IsNullOrEmpty(org) ? null : org;
+        }
+    }
 
     /// <summary>
     /// Gets the tenant the connection is signed in under: the <c>tenantId</c> claim, and nothing else.

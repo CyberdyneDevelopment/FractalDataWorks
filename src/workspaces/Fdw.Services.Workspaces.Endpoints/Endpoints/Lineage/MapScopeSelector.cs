@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Workspaces.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Workspaces.Endpoints;
@@ -42,6 +46,46 @@ internal sealed class MapScopeSelector
         }
 
         return GenericResult<MapSelection>.Success(new EverythingMapSelection());
+    }
+
+    /// <summary>
+    /// Gets the workspace each data set sits in, by the data set's id (FDW-4345): the workspace that owns it, read from the workspaces the caller may view
+    /// in one paged read, whatever scope the map is drawn for.
+    /// </summary>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>
+    /// The data sets owned by a workspace the caller may view. A workspace that only uses or produces a data set is not its workspace, and a data set owned by
+    /// none, or by one the caller may not view, is absent. A data set owned by several workspaces (the table allows it) is named by the first the read reaches.
+    /// </returns>
+    public async Task<IGenericResult<IReadOnlyDictionary<Guid, MapWorkspaceRef>>> DataSetWorkspaces(CancellationToken ct)
+    {
+        var owns = WorkspaceResourceRelationships.ByName("Owns").Name;
+        var found = new Dictionary<Guid, MapWorkspaceRef>();
+        var skip = 0;
+        while (true)
+        {
+            var page = await _workspaces.Get(skip, MapSources.PageSize, ConfigurationLevels.Children, ct).ConfigureAwait(false);
+            if (page.IsFailure) return page.ToNewResult<IReadOnlyDictionary<Guid, MapWorkspaceRef>>();
+
+            await foreach (var workspace in page.Value!.Items.WithCancellation(ct).ConfigureAwait(false))
+            {
+                var permitted = await _access.MayView(workspace, ct).ConfigureAwait(false);
+                if (permitted.IsFailure)
+                {
+                    if (WorkspaceAccessRefusals.Hides(permitted)) continue;
+                    return permitted.ToNewResult<IReadOnlyDictionary<Guid, MapWorkspaceRef>>();
+                }
+
+                foreach (var resource in workspace.Resources.Where(r =>
+                    string.Equals(r.ResourceType, MapKinds.DataSet, StringComparison.Ordinal) && string.Equals(r.Relationship, owns, StringComparison.Ordinal)))
+                    found.TryAdd(resource.ResourceId, new MapWorkspaceRef(workspace.Id, workspace.Name));
+            }
+
+            if (page.Value.Outcome.IsFailure) return page.Value.Outcome.ToNewResult<IReadOnlyDictionary<Guid, MapWorkspaceRef>>();
+            if (!page.Value.HasMore) return GenericResult<IReadOnlyDictionary<Guid, MapWorkspaceRef>>.Success(found);
+
+            skip += MapSources.PageSize;
+        }
     }
 
     // A workspace the caller may not view answers exactly as one that does not exist, so a name cannot be probed for

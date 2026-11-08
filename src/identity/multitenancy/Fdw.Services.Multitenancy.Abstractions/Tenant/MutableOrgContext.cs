@@ -5,7 +5,7 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 /// <summary>
 /// Request-scoped org context implementation.
 /// Registered as a scoped service; <c>OrgResolutionMiddleware</c> calls <see cref="SetOrg"/>
-/// after resolving the org from JWT <c>org_id</c>, <c>X-Org-Id</c> header, or the tenant's
+/// after resolving the org from JWT <c>orgId</c>, <c>X-Org-Id</c> header, or the tenant's
 /// default org.
 /// </summary>
 public sealed class MutableOrgContext : IMutableOrgContext

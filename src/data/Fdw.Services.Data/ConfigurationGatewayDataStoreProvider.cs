@@ -391,10 +391,53 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<IDataContainer>> Get(string dataStoreName, string pathName, string containerName, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<IDataContainer>> Get(string dataStoreName, string pathName, string containerName, CancellationToken cancellationToken = default)
+        => Get(dataStoreName, pathName, containerName, [], cancellationToken);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A store the host declared is walked from the gateway's own tree. Any other builds the containers named and no others (FDW-4328), kept for the
+    /// caller until a table it read is written, under a key of its own: the result is a container and is never kept as the store, whose tree is the
+    /// complete child set.
+    /// </remarks>
+    public async Task<IGenericResult<IDataContainer>> Get(
+        string dataStoreName, string pathName, string containerName, IReadOnlyCollection<string> joinedContainers, CancellationToken cancellationToken = default)
     {
-        var pathResult = await Get(dataStoreName, pathName, cancellationToken).ConfigureAwait(false);
-        if (!pathResult.IsSuccess || pathResult.Value is null) return pathResult.ToNewResult<IDataContainer>();
+        ArgumentNullException.ThrowIfNull(joinedContainers);
+        DataStoreProviderLog.TraceGetDataStoreEntry(_logger, dataStoreName);
+
+        if (_gatewayProvider is not null)
+        {
+            var gw = _gatewayProvider.Get(ConfigurationConnectionName);
+            var gwStore = gw.IsSuccess
+                ? gw.Value!.DataStores.FirstOrDefault(s => string.Equals(s.Name, dataStoreName, StringComparison.OrdinalIgnoreCase))
+                : null;
+            if (gwStore is not null)
+                return Located(gwStore.Path(pathName), pathName, containerName, dataStoreName);
+
+            if (gw.IsSuccess && gw.Value is IDerivedConfigurationCache derived)
+            {
+                var names = new[] { containerName }.Concat(joinedContainers).Distinct(StringComparer.Ordinal).OrderBy(n => n, StringComparer.Ordinal);
+                var kept = string.Join("|", dataStoreName, pathName, string.Join(",", names));
+                return await derived.Derive(
+                    kept,
+                    () => _coreProvider.Get(dataStoreName, pathName, containerName, joinedContainers, cancellationToken),
+                    _ => true,
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return await _coreProvider.Get(dataStoreName, pathName, containerName, joinedContainers, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The container a store holds in a path, with the failure logged as it is when the whole store is walked.
+    private IGenericResult<IDataContainer> Located(IGenericResult<IDataNodePath> pathResult, string pathName, string containerName, string dataStoreName)
+    {
+        if (!pathResult.IsSuccess || pathResult.Value is null)
+        {
+            DataStoreLoaderLog.PathNotFoundAddressed(_logger, pathName, dataStoreName);
+            return pathResult.ToNewResult<IDataContainer>();
+        }
 
         var containerResult = pathResult.Value.Container(containerName);
         if (!containerResult.IsSuccess)

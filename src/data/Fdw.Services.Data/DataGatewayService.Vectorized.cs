@@ -37,7 +37,7 @@ public sealed partial class DataGatewayService
     // command is refused, naming the store.
     private async Task<IGenericResult<T>> ExecuteVectorized<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken)
     {
-        var resolved = await ResolveTargetConnection(target, cancellationToken).ConfigureAwait(false);
+        var resolved = await ResolveTargetConnection(command, target, cancellationToken).ConfigureAwait(false);
         if (!resolved.IsSuccess)
             return resolved.ToNewResult<T>();
 

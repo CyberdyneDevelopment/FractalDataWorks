@@ -32,6 +32,9 @@ public abstract class SqlErrorHandlerBase : TypeOptionBase<SqlErrorHandlerBase>,
     public abstract IReadOnlyList<int> SqlErrorNumbers { get; }
 
     /// <inheritdoc />
+    public virtual IReadOnlyList<int> SqlErrorClasses => [];
+
+    /// <inheritdoc />
     public abstract bool IsRetryable { get; }
 
     /// <inheritdoc />

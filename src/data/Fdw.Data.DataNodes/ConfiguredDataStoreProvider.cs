@@ -1,6 +1,7 @@
 using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
@@ -157,14 +158,104 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<IDataContainer>> Get(string dataStoreName, string pathName, string containerName, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<IDataContainer>> Get(string dataStoreName, string pathName, string containerName, CancellationToken cancellationToken = default)
+        => Get(dataStoreName, pathName, containerName, [], cancellationToken);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Reads the named containers, then the containers their keys refer to, each with its fields, keys and key fields in a statement per table (FDW-4254), and builds
+    /// those only. Container names are unique within a store, so a name finds its container whatever path it is in.
+    /// </remarks>
+    public async Task<IGenericResult<IDataContainer>> Get(
+        string dataStoreName, string pathName, string containerName, IReadOnlyCollection<string> joinedContainers, CancellationToken cancellationToken = default)
     {
         ConfiguredDataStoreProviderLog.TraceGetContainerEntry(_logger, dataStoreName, pathName, containerName);
-        var pathResult = await Get(dataStoreName, pathName, cancellationToken).ConfigureAwait(false);
-        if (!pathResult.IsSuccess || pathResult.Value is null)
-            return pathResult.ToNewResult<IDataContainer>();
+        ArgumentNullException.ThrowIfNull(joinedContainers);
+        if (string.IsNullOrWhiteSpace(dataStoreName))
+            return GenericResult<IDataContainer>.Failure(ConfiguredDataStoreProviderLog.StoreNameRequired(_logger));
 
-        return pathResult.Value.Container(containerName);
+        var named = new[] { containerName }.Concat(joinedContainers).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.Ordinal).ToList();
+        var slice = await ReadSlice(dataStoreName, named, cancellationToken).ConfigureAwait(false);
+        if (slice.IsFailure)
+            return slice.ToNewResult<IDataContainer>();
+
+        var built = await BuildSlice(slice.Value!, named, cancellationToken).ConfigureAwait(false);
+        if (built.IsFailure || built.Value is null)
+            return built.ToNewResult<IDataContainer>();
+
+        var path = built.Value.Path(pathName);
+        if (path.IsFailure || path.Value is null)
+            return path.ToNewResult<IDataContainer>();
+
+        return path.Value.Container(containerName);
+    }
+
+    // The store as configuration, holding the named containers and the containers their keys refer to, and no other (FDW-4328).
+    private async Task<IGenericResult<IDataStoreImplementationConfiguration>> ReadSlice(
+        string dataStoreName, IReadOnlyList<string> named, CancellationToken cancellationToken)
+    {
+        var first = await ReadNamed(dataStoreName, named, cancellationToken).ConfigureAwait(false);
+        if (first.IsFailure)
+            return first;
+
+        var referenced = first.Value!.Paths
+            .SelectMany(path => path.Containers)
+            .SelectMany(container => container.Keys)
+            .Select(key => key.ReferencedContainerName)
+            .Where(name => !string.IsNullOrEmpty(name) && !named.Contains(name!, StringComparer.Ordinal))
+            .Select(name => name!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (referenced.Count == 0)
+            return first;
+
+        var second = await ReadNamed(dataStoreName, referenced, cancellationToken).ConfigureAwait(false);
+        if (second.IsFailure)
+            return second;
+
+        foreach (var path in second.Value!.Paths.Where(p => p.Containers.Count > 0))
+        {
+            var held = first.Value.Paths.FirstOrDefault(p => string.Equals(p.Name, path.Name, StringComparison.Ordinal));
+            if (held is null)
+                first.Value.Paths.Add(path);
+            else
+                held.Containers.AddRange(path.Containers);
+        }
+
+        return first;
+    }
+
+    // The store with only the containers of these names (in any path) composed under it: a read narrowed on the container's name.
+    private async Task<IGenericResult<IDataStoreImplementationConfiguration>> ReadNamed(
+        string dataStoreName, IReadOnlyList<string> names, CancellationToken cancellationToken)
+    {
+        var cfgResult = await _configurationProvider
+            .Get(dataStoreName, ConfigurationLevels.WholeAggregate, new ChildNarrowing(typeof(DataContainerConfiguration), "Name", names), cancellationToken)
+            .ConfigureAwait(false);
+
+        // As Get(name) does (FDW-4281): a read that failed for a reason other than the row being absent is not "no such store".
+        if (cfgResult.IsFailure && !FailureCategory.IsMissing(cfgResult))
+            return cfgResult;
+
+        if (!cfgResult.IsSuccess || cfgResult.Value is null)
+            return GenericResult<IDataStoreImplementationConfiguration>.Failure(ConfiguredDataStoreProviderLog.StoreNotFound(_logger, dataStoreName));
+
+        return cfgResult;
+    }
+
+    private async Task<IGenericResult<IDataStore>> BuildSlice(
+        IDataStoreImplementationConfiguration slice, IReadOnlyCollection<string> named, CancellationToken cancellationToken)
+    {
+        var selectResult = _builderSelector.Select(slice, _logger);
+        if (!selectResult.IsSuccess || selectResult.Value is null)
+            return selectResult.ToNewResult<IDataStore>();
+
+        var configureResult = selectResult.Value.Configure(slice);
+        if (!configureResult.IsSuccess)
+            return configureResult.ToNewResult<IDataStore>();
+
+        selectResult.Value.DeclareSlice(named);
+        return await selectResult.Value.Build(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IGenericResult<IDataStore>> BuildStore(IDataStoreImplementationConfiguration storeCfg, CancellationToken cancellationToken)

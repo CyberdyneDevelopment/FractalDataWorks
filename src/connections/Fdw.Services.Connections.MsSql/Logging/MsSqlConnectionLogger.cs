@@ -378,6 +378,13 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage SqlQueryTimeout(ILogger logger, Exception ex, string commandText);
 
     /// <summary>
+    /// Logs when SQL Server rejected the statement or its data on a working connection (severity 11 to 16, no handler of its own for the number): a
+    /// syntax error, a divide by zero, a conversion or truncation, an error the script raised (FDW-4361). Retrying the same statement fails the same way.
+    /// </summary>
+    [MessageLogging(EventId = 22007, Level = LogLevel.Error, Message = "SQL Server rejected the statement with error {errorNumber} on '{commandText}': {errorMessage}")]
+    public static partial IGenericMessage SqlStatementFailed(ILogger logger, Exception ex, string commandText, int errorNumber, string errorMessage);
+
+    /// <summary>
     /// Logs an unhandled SQL error with full context for diagnosis.
     /// </summary>
     [MessageLogging(EventId = 71017, Level = LogLevel.Error, Message = "Unhandled SQL error {errorNumber} on '{commandText}': {errorMessage}")]

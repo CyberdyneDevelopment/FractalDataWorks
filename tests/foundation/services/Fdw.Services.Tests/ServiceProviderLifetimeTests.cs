@@ -172,6 +172,9 @@ public class ServiceProviderLifetimeTests
         public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, CancellationToken ct = default)
             => Get(name, ct);
 
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
+            => Get(name, ct);
+
         public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(int levels, CancellationToken ct = default)
             => Get(ct);
 
@@ -262,6 +265,9 @@ public class ServiceProviderLifetimeTests
             => Get(id, ct);
 
         public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, CancellationToken ct = default)
+            => Get(name, ct);
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
             => Get(name, ct);
 
         public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(int levels, CancellationToken ct = default)

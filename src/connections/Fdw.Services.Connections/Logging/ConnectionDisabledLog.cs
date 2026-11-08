@@ -15,6 +15,10 @@ public static partial class ConnectionDisabledLog
     [MessageLogging(EventId = 12230, Level = LogLevel.Error, Message = "The disabled state of connection {connectionId} could not be read: {reason}")]
     public static partial IGenericMessage ReadFailed(ILogger logger, Guid connectionId, string reason);
 
+    /// <summary>Logs that the states of many connections could not be read, so it cannot be told which are disabled (FDW-4290).</summary>
+    [MessageLogging(EventId = 12248, Level = LogLevel.Error, Message = "The disabled states of {count} connection(s) could not be read: {reason}")]
+    public static partial IGenericMessage ReadManyFailed(ILogger logger, int count, string reason);
+
     /// <summary>Logs that a connection was asked for while disabled and was refused.</summary>
     [MessageLogging(EventId = 12231, Level = LogLevel.Warning, Message = "Connection '{connectionName}' ({connectionId}) is disabled since {disabledAt}: {reason}")]
     public static partial IGenericMessage Refused(ILogger logger, string connectionName, Guid connectionId, string disabledAt, string reason);

@@ -52,6 +52,13 @@ public class ConnectionDetailDto : ResourceDetail
     public DateTimeOffset UpdatedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets the state of the connection when it is disabled: since when, why and by whom (FDW-4290). Null when the connection is not
+    /// disabled (including one enabled again). A disabled connection is refused wherever it is resolved until a person enables it
+    /// (<c>POST /connections/{Name}/enable</c>).
+    /// </summary>
+    public ConnectionDisabledDto? Disabled { get; set; }
+
+    /// <summary>
     /// Gets or sets the schema discovery option the connection uses. Set by the connection endpoints
     /// after the connection type maps the rest of the detail.
     /// </summary>
