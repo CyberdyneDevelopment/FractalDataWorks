@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authentication.Endpoints;
 
@@ -43,8 +45,7 @@ public abstract class SetAuthenticationFlowPermissionEndpointBase : Authenticati
     {
         if (string.IsNullOrWhiteSpace(req.Permission))
         {
-            AddError(r => r.Permission, "permission is required.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.SetAuthenticationFlowPermissionPermissionIsRequired(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

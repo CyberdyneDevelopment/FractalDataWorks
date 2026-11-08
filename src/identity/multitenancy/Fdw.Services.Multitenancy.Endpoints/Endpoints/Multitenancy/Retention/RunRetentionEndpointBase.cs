@@ -6,6 +6,8 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -54,7 +56,7 @@ public abstract class RunRetentionEndpointBase : Endpoint<OrganizationRetentionR
 
         if (!await AuditEnded(req.OrganizationId, report, ct).ConfigureAwait(false))
         {
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(RetentionEndpointLog.RunRetentionAuditNotEnded(EndpointLogger, req.OrganizationId)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

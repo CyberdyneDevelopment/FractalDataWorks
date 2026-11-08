@@ -70,7 +70,7 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one would be a captive
     // dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private IDataGateway Gateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     // Null when the host names no operational store; each entry point reports that, so none reaches a gateway without a target.
     private DataStoreTarget? StoreTarget

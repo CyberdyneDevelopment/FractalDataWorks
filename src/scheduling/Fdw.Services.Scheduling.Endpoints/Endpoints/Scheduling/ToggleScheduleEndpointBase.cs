@@ -4,6 +4,8 @@ using FastEndpoints;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
@@ -56,9 +58,15 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
         
         var existingResult = await _provider.Get(req.Name, ct).ConfigureAwait(false);
 
-        if (!existingResult.IsSuccess || existingResult.Value == null)
+        if (existingResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(existingResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (existingResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchedulingAnswerLog.ToggleScheduleTogglescheduleNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -69,7 +77,7 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
         var saveResult = await _provider.Update(updated, "Schedule", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to save schedule" }, statusCode: StatusCodes.Status500InternalServerError)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saveResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 

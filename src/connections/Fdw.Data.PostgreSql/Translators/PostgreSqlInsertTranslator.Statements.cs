@@ -12,8 +12,6 @@ namespace Fdw.Data.PostgreSql;
 
 public sealed partial class PostgreSqlInsertTranslator
 {
-    private const int MaxParametersPerStatement = 32767; // PostgreSQL limit (Int16.MaxValue)
-
     /// <summary>Gets or sets the most rows one INSERT statement carries.</summary>
     public static int MaxRowsPerBatch { get; set; } = 1000;
 
@@ -22,13 +20,14 @@ public sealed partial class PostgreSqlInsertTranslator
             .Where(f => !f.IsIdentity && !f.IsComputed)
             .ToList();
 
-    /// <summary>The most rows of this container one PostgreSQL command carries.</summary>
+    /// <summary>The most rows of this container one PostgreSQL command carries when it may carry at most <paramref name="maxParameters"/> parameters (FDW-4267).</summary>
     /// <param name="container">The container the rows go into.</param>
-    /// <returns>The number of rows that fit within the command's parameter limit.</returns>
-    public static int RowsPerRequest(IStorageContainer container)
+    /// <param name="maxParameters">The most parameters one command may carry: the connection's setting.</param>
+    /// <returns>The number of rows that fit within that limit.</returns>
+    public static int RowsPerRequest(IStorageContainer container, int maxParameters)
     {
         var columns = InsertableFields(container).Count;
-        return columns == 0 ? int.MaxValue : MaxParametersPerStatement / columns;
+        return columns == 0 ? int.MaxValue : maxParameters / columns;
     }
 
     internal static NpgsqlCommand BuildBatchedInsertStatements(
@@ -66,24 +65,9 @@ public sealed partial class PostgreSqlInsertTranslator
             ? string.Empty
             : $" RETURNING {string.Join(", ", returned.Select(c => dialect.QuoteIdentifier(c)))}";
 
-        var columnsPerRow = fieldNames.Count;
-        var maxRowsPerBatch = Math.Min(
-            MaxRowsPerBatch,
-            MaxParametersPerStatement / columnsPerRow);
-        if (maxRowsPerBatch < 1)
-        {
-            maxRowsPerBatch = 1;
-        }
-
-        // One command carries at most MaxParametersPerStatement parameters however many statements it holds, so rows beyond that
-        // cannot be sent as one command. The connection routes an insert of more rows than a command carries to its COPY before it
-        // translates (RowsPerRequest), so only an insert with no such route reaches this.
-        if (entities.Count * columnsPerRow > MaxParametersPerStatement)
-        {
-            throw new InvalidOperationException(
-                $"{entities.Count} rows of {columnsPerRow} columns need {entities.Count * columnsPerRow} parameters; "
-                + $"one PostgreSQL command carries at most {MaxParametersPerStatement}, which is {RowsPerRequest(container)} rows of this container");
-        }
+        // Rows per statement are bounded by MaxRowsPerBatch only. How many parameters a command carries is not decided here: the connection routes an insert of
+        // more rows than its setting allows to its COPY before it translates (RowsPerRequest) (FDW-4267).
+        var maxRowsPerBatch = MaxRowsPerBatch;
 
         var sqlBatches = new List<string>();
         var allParameters = new List<NpgsqlParameter>();

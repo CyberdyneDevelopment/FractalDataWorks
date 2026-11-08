@@ -5,6 +5,7 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -58,7 +59,7 @@ public abstract class SetRetentionPolicyEndpointBase : Endpoint<SetRetentionPoli
         if (audited.IsFailure)
         {
             RetentionEndpointLog.ChangeNotAudited(EndpointLogger, "RetentionPolicySet", itemId, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

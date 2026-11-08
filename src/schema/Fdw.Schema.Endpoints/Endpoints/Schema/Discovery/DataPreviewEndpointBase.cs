@@ -7,6 +7,7 @@ using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.ErrorMapping;
@@ -44,7 +45,7 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     /// </summary>
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
-    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
+    protected IDataGateway DataGateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>
     /// Gets the route for this endpoint. Default is "/data/preview".
@@ -97,7 +98,11 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     /// </remarks>
     public override async Task HandleAsync(DataPreviewRequest req, CancellationToken ct)
     {
-        RequireTarget(req);
+        if (TargetRefusal(req) is { } refusal)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(refusal), HttpContext)).ConfigureAwait(false);
+            return;
+        }
 
         var maxRows = Math.Min(Math.Max(req.MaxRows, 1), MaxRowsLimit);
         var byDataSet = !string.IsNullOrEmpty(req.DataSetName);
@@ -121,29 +126,32 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     }
 
     // Refuses, before anything is read, a request that names neither a data set nor a whole container address
-    // (data store, path and container). Each refusal is a 400 that says which part is missing.
-    private void RequireTarget(DataPreviewRequest req)
+    // (data store, path and container). Each refusal is a 400 that says which part is missing. Returns the refusal's
+    // coded message, or null when the request names a target.
+    private IGenericMessage? TargetRefusal(DataPreviewRequest req)
     {
         if (!string.IsNullOrEmpty(req.DataSetName))
-            return;
+            return null;
 
         if (string.IsNullOrEmpty(req.ContainerName))
         {
             SchemaEndpointLog.PreviewValidationFailed(_logger, "Either DataSetName or ContainerName must be provided");
-            ThrowError("Either DataSetName or ContainerName must be provided", 400);
+            return SchemaEndpointLog.DataPreviewEitherDatasetnameOrContainernameMust(_logger);
         }
 
         if (string.IsNullOrEmpty(req.DataStoreName))
         {
             SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "DataStoreName");
-            ThrowError("DataStoreName is required when ContainerName is provided", 400);
+            return SchemaEndpointLog.DataPreviewDatastorenameIsRequiredWhenContainername(_logger);
         }
 
         if (string.IsNullOrEmpty(req.PathName))
         {
             SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "PathName");
-            ThrowError("PathName is required when ContainerName is provided", 400);
+            return SchemaEndpointLog.DataPreviewPathnameIsRequiredWhenContainername(_logger);
         }
+
+        return null;
     }
 
     /// <summary>

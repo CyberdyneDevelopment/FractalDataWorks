@@ -2,6 +2,7 @@ using System;
 using Fdw.Data.Abstractions;
 using Fdw.Data.PostgreSql;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 using Shouldly;
 using Xunit;
 
@@ -10,6 +11,26 @@ namespace Fdw.Data.PostgreSql.Tests;
 public sealed class PlPgSqlDialectTests
 {
     private readonly PlPgSqlDialect _sut = PlPgSqlDialect.Instance;
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public void AKeyListIsOneJsonParameterReadTypedByTheFilteredTable()
+    {
+        var form = ((IKeyListSpillDialect)_sut).KeyListSpill("abc123", "\"public\".\"orders\"", "id", "@kl0");
+
+        form.Before.ShouldBeEmpty();
+        form.After.ShouldBeEmpty();
+        form.Subquery.ShouldBe("SELECT k.\"id\" FROM json_populate_recordset(null::\"public\".\"orders\", @kl0::json) AS k");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public void AKeyListTravelsAsAJsonArrayOfObjectsKeyedByTheColumn()
+    {
+        ((IKeyListSpillDialect)_sut).KeyListJson("id", [1, 2]).ShouldBe("[{\"id\":1},{\"id\":2}]");
+    }
 
     [Fact]
     [Trait("Priority", "P0")]

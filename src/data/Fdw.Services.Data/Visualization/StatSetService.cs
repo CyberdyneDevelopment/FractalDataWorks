@@ -24,7 +24,7 @@ public sealed class StatSetService : IStatSetService
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private IDataGateway Gateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StatSetService"/> class.

@@ -15,37 +15,20 @@ namespace Fdw.Data.MsSql;
 public sealed partial class MsSqlInsertTranslator
 {
     private const int MaxRowsPerInsert = 1000; // SQL Server hard limit
-    private const int MaxParametersPerStatement = 2100; // SQL Server hard limit
 
     internal static List<IField> InsertableFields(IStorageContainer container)
         => container.Schema.Fields
             .Where(f => !f.IsIdentity && !f.IsComputed && !f.IsSystemProvided)
             .ToList();
 
-    /// <summary>The most rows of this container one SQL Server request carries.</summary>
+    /// <summary>The most rows of this container one request carries when it may carry at most <paramref name="maxParameters"/> parameters (FDW-4267).</summary>
     /// <param name="container">The container the rows go into.</param>
-    /// <returns>The number of rows that fit within the request's parameter limit.</returns>
-    public static int RowsPerRequest(IStorageContainer container)
+    /// <param name="maxParameters">The most parameters one request may carry: the connection's setting.</param>
+    /// <returns>The number of rows that fit within that limit.</returns>
+    public static int RowsPerRequest(IStorageContainer container, int maxParameters)
     {
         var columns = InsertableFields(container).Count;
-        return columns == 0 ? int.MaxValue : MaxParametersPerStatement / columns;
-    }
-
-    // One request carries at most MaxParametersPerStatement parameters however many statements it holds, so rows beyond that
-    // cannot be sent as one command. They are refused here with the reason; the connection routes an insert of more rows than
-    // a request carries to its bulk copy before it translates (RowsPerRequest), so only an insert with no such route reaches this.
-    private static void EnsureWithinParameterLimit(IStorageContainer container, int rowCount, int columnCount)
-    {
-        var parameterCount = rowCount * columnCount;
-        if (parameterCount <= MaxParametersPerStatement)
-            return;
-
-        MsSqlInsertTranslatorLog.TooManyParameters(
-            NullLogger<MsSqlInsertTranslator>.Instance,
-            container.Name, rowCount, columnCount, parameterCount, MaxParametersPerStatement);
-        throw new InvalidOperationException(
-            $"{rowCount} rows of {columnCount} columns need {parameterCount} parameters; one SQL Server request carries at most "
-            + $"{MaxParametersPerStatement}, which is {RowsPerRequest(container)} rows of this container");
+        return columns == 0 ? int.MaxValue : maxParameters / columns;
     }
 
     internal static SqlCommand BuildBatchedInsertStatements(
@@ -92,16 +75,10 @@ public sealed partial class MsSqlInsertTranslator
         var p = dialect.ParameterPrefix;
 
         // Calculate safe batch size
-        var columnsPerRow = fieldNames.Count;
-        var maxRowsPerBatch = Math.Min(
-            MaxRowsPerInsert,
-            MaxParametersPerStatement / columnsPerRow);
-        if (maxRowsPerBatch < 1)
-        {
-            maxRowsPerBatch = 1; // At least 1 row
-        }
-
-        EnsureWithinParameterLimit(container, entities.Count, columnsPerRow);
+        // Rows per statement are bounded by the engine's row-constructor limit only. How many parameters a request carries is not decided here: the connection
+        // routes an insert of more rows than its setting allows to its bulk copy before it translates (RowsPerRequest), and the engine answers a request that is
+        // still too large with a coded failure, instead of a refusal made from a number written in this file (FDW-4267).
+        var maxRowsPerBatch = MaxRowsPerInsert;
 
         // Build multi-statement SQL for all batches
         var sqlBatches = new List<string>();

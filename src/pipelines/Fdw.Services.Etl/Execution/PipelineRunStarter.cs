@@ -298,7 +298,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
             .DataStore(store)
             .Path(RunPath)
             .Value(row);
-        var written = await _dataGateways.ByName("Main").Execute<int>(insert, ct).ConfigureAwait(false);
+        var written = await _dataGateways.ByName(DataGatewayNames.Main).Execute<int>(insert, ct).ConfigureAwait(false);
         return written.IsFailure
             ? GenericResult.Failure(PipelineRunStartLog.RunRowNotWritten(_logger, pipelineName, executionId, written.CurrentMessage))
             : GenericResult.Success();

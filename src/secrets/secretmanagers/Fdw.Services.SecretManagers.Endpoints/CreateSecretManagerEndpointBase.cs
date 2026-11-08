@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -62,15 +63,13 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
 
             if (string.IsNullOrWhiteSpace(req.Name))
             {
-                AddError("Name is required");
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SecretManagerEndpointLog.CreateSecretManagerNameIsRequired(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(req.SecretManagerType))
             {
-                AddError("SecretManagerType is required");
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SecretManagerEndpointLog.CreateSecretManagerSecretmanagertypeIsRequired(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -80,8 +79,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
             if (existing != null)
             {
                 SecretManagerEndpointLog.SecretManagerAlreadyExists(_logger, req.Name);
-                AddError($"A secret manager with name '{req.Name}' already exists");
-                await Send.ErrorsAsync(409, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SecretManagerEndpointLog.CreateSecretManagerNameAlreadyExists(_logger, req.Name)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 

@@ -35,4 +35,12 @@ public static partial class DataSetSampleEndpointLog
     /// <summary>Logs a gateway failure listing samples.</summary>
     [MessageLogging(EventId = 71012, Level = LogLevel.Warning, Message = "Failed to list samples for data set '{dataSetName}'")]
     public static partial IGenericMessage SamplesListFailed(ILogger logger, string dataSetName);
+
+    /// <summary>Logs that Data set samples was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30001, Level = LogLevel.Warning, Message = "Data set samples was not found, or is not visible to the caller", ClientMessage = "Data set samples was not found")]
+    public static partial IGenericMessage ListDataSetSamplesNotFound(ILogger logger);
+
+    /// <summary>Logs that Data set sample was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30002, Level = LogLevel.Warning, Message = "Data set sample was not found, or is not visible to the caller", ClientMessage = "Data set sample was not found")]
+    public static partial IGenericMessage UpsertDataSetSampleNotFound(ILogger logger);
 }

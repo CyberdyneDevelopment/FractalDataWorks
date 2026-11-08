@@ -75,7 +75,7 @@ public abstract class SetDataSetFieldStandInEndpointBase : Endpoint<SetDataSetFi
         if (resolved.Value is not { } found)
         {
             StandInEndpointLog.FieldNotFound(_logger, req.Name, req.Field);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StandInEndpointLog.SetDataSetFieldStandInNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

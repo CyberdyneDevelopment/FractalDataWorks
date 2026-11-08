@@ -95,7 +95,7 @@ public abstract class ReorderFieldMappingTransformationsEndpointBase : Endpoint<
         catch (Exception ex)
         {
             EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(FieldMappingTransformationEndpointLog.ReorderFieldMappingTransformationsFaulted(Logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

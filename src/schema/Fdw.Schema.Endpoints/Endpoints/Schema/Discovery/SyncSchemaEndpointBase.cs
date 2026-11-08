@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Schema.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Schema.Endpoints.Discovery;
 
@@ -82,12 +83,16 @@ public abstract class SyncSchemaEndpointBase : Endpoint<SyncSchemaRequest, SyncS
 
             var result = await SyncSchema(req, ct).ConfigureAwait(false);
 
-            if (!result.IsSuccess || result.Value == null)
+            if (result.IsFailure)
             {
-                var message = result.NoValueReason().Message;
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (result.Value == null)
+            {
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.ConnectionName, "sync");
-                AddError(message);
-                await Send.ErrorsAsync(result.IsSuccess ? 404 : 400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.SyncSchemaConnectionNotFound(_logger, req.ConnectionName)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -105,8 +110,7 @@ public abstract class SyncSchemaEndpointBase : Endpoint<SyncSchemaRequest, SyncS
         catch (Exception ex)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "sync", req.ConnectionName);
-            AddError("Schema sync failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.SyncSchemaFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

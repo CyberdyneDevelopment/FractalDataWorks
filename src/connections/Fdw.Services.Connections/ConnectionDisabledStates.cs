@@ -5,12 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Conventions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Logging;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -32,19 +35,25 @@ public sealed class ConnectionDisabledStates : IConnectionDisabledStates
 
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly string _dataStoreName;
+    private readonly IAuthenticationContextAccessor _accessor;
+    private readonly ICrossTenantChangePolicy _crossTenant;
     private readonly TimeProvider _time;
     private readonly ILogger<ConnectionDisabledStates> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ConnectionDisabledStates"/> class.</summary>
     /// <param name="gateways">The provider of the configuration gateways.</param>
     /// <param name="dataStoreName">The data store the connection tables live in.</param>
+    /// <param name="accessor">The caller's authentication context, which an enable writes under as the tenant the state belongs to (FDW-4385).</param>
+    /// <param name="crossTenant">The policy that decides whether an administrator of another tenant may enable the connection (FDW-4459).</param>
     /// <param name="time">The clock a state is stamped with.</param>
     /// <param name="logger">The logger.</param>
     public ConnectionDisabledStates(
-        IConfigurationGatewayProvider gateways, string dataStoreName, TimeProvider time, ILogger<ConnectionDisabledStates>? logger = null)
+        IConfigurationGatewayProvider gateways, string dataStoreName, IAuthenticationContextAccessor accessor, ICrossTenantChangePolicy crossTenant, TimeProvider time, ILogger<ConnectionDisabledStates>? logger = null)
     {
         _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
         _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
+        _crossTenant = crossTenant ?? throw new ArgumentNullException(nameof(crossTenant));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _logger = logger ?? NullLogger<ConnectionDisabledStates>.Instance;
     }
@@ -231,16 +240,39 @@ public sealed class ConnectionDisabledStates : IConnectionDisabledStates
             CreateDate = _time.GetUtcNow(),
         };
 
-        var saved = await Save(gateway.Value!, row, replacesCurrent: true, cancellationToken).ConfigureAwait(false);
+        // Why written as the tenant the state belongs to (FDW-4385): the state row is the connection's own tenant's (the disabler stamps it), and an administrator of another tenant
+        // who can read the connection may clear it; the row-level security policy refuses a write of another tenant's row by that administrator. The caller has been authorised
+        // (the endpoint's policy, and its read of the connection, which returns only one the caller can see); the scope decides only whose row the write belongs to, as when a
+        // platform administrator changes a role of another tenant. A state that names no tenant cannot be written as one, and is never given a stand-in.
+        if (disabled.TenantId is not { } stateTenant)
+        {
+            return GenericResult.Failure(ConnectionDisabledLog.StateTenantMissing(_logger, connectionId));
+        }
+
+        // Whether the caller's tenant may change another tenant's connection is configuration (FDW-4459): decided here, before the scope below changes whose tenant is in force.
+        var permitted = _crossTenant.Permit(CrossTenantChangeOption.ConnectionEnable, stateTenant, _accessor.Current?.ActiveTenantId);
+        if (permitted.IsFailure)
+        {
+            return permitted;
+        }
+
+        var enabledBy = _accessor.Current?.UserId ?? LogPlaceholders.NullName;
+        IGenericResult<ConfigurationWriteResult> saved;
+        using (new SystemAuthenticationContextScope(_accessor, stateTenant))
+        {
+            saved = await Save(gateway.Value!, row, replacesCurrent: true, cancellationToken).ConfigureAwait(false);
+        }
+
         if (saved.IsFailure)
         {
-            // A write the row-level security policy refuses stays a forbidden failure, with its own code, so the caller can tell it from a fault (FDW-4193).
+            // A write the row-level security policy refuses stays a forbidden failure, with our own code and sentence, so the caller can tell it from a fault and is never
+            // told the database's text (FDW-4193, FDW-4459).
             return FailureCategory.IsForbidden(saved)
-                ? saved
+                ? GenericResult.Failure(ConnectionDisabledLog.EnableRefusedBySecurityPolicy(_logger, connectionId))
                 : GenericResult.Failure(ConnectionDisabledLog.EnableNotSaved(_logger, connectionId, saved.FailureReason().Message));
         }
 
-        ConnectionDisabledLog.Enabled(_logger, connectionId, reason);
+        ConnectionDisabledLog.Enabled(_logger, connectionId, enabledBy, reason);
         return GenericResult.Success();
     }
 

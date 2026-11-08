@@ -75,7 +75,7 @@ public sealed class DataSetQuery
 
     // Why resolved per call rather than held: the gateway is scoped and a caller may not be.
     private IDataGateway Gateway => _dataGateways is { } gateways
-        ? gateways.ByName("Main")
+        ? gateways.ByName(DataGatewayNames.Main)
         : throw new InvalidOperationException("This query was made without a gateway provider; pass the gateway to Run.");
 
     /// <summary>Reads one page of <paramref name="dataSet"/> through the provider's "Main" gateway.</summary>

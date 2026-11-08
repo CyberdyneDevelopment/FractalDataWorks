@@ -18,9 +18,6 @@ public interface IDataSetVariationImplementationConfiguration : IDataSetImplemen
     /// <summary>Gets or sets the logical id of the workspace that owns a Scoped variation; null for a data view.</summary>
     Guid? OwnerWorkspaceId { get; set; }
 
-    /// <summary>Gets or sets the logical id of the user that owns a data view; null for a Scoped variation.</summary>
-    Guid? OwnerUserId { get; set; }
-
     /// <summary>Gets or sets the logical id of the root data set the variation varies.</summary>
     Guid BaseDataSetId { get; set; }
 

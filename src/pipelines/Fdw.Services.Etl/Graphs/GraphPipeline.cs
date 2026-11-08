@@ -247,7 +247,7 @@ public sealed class GraphPipeline : EtlPipelineBase
             Name,
             _configuration.Id,
             result.ExecutionId,
-            dataGateways.ByName("Main"),
+            dataGateways.ByName(DataGatewayNames.Main),
             executor,
             _connectionProvider,
             DateTimeOffset.UtcNow,

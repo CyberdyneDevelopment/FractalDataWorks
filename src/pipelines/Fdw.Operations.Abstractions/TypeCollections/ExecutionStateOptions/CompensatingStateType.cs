@@ -22,6 +22,7 @@ public sealed class CompensatingStateType : ExecutionStateTypeBase
             isTerminal: false,
             isSuccess: false,
             isFailure: false,
+            isExecuting: true,
             canTriggerEscalation: true,
             validTransitions: ValidTransitionsArray)
     {

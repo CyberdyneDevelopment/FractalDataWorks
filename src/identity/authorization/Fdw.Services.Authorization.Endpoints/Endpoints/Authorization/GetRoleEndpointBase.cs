@@ -7,6 +7,7 @@ using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -72,23 +73,29 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
                 roleResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(roleResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (roleResult.Value is null)
         {
             AuthorizationEndpointLog.RoleNotFound(EndpointLogger, req.Name);
-            await Send.ResultAsync(TypedResults.Json(new { errorCode = "NotFound", messages = new[] { $"roles '{req.Name}' was not found." } }, statusCode: 404)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetRoleRoleNotFound2(EndpointLogger, req.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         AuthorizationEndpointLog.RoleResolved(EndpointLogger, req.Name, roleResult.Value.Id);
 
         var response = await MapToDetail(roleResult.Value, ct).ConfigureAwait(false);
-        if (response.IsFailure || response.Value is null)
+        if (response.IsFailure)
         {
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(response, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (response.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetRoleResponseReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

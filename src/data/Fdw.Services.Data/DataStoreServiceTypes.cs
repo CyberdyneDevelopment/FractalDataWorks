@@ -95,7 +95,9 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<ILogger<DataStoreConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data", "DataStore",
-                    ConfigurationPlacementSource.From(sp));
+                    ConfigurationPlacementSource.From(sp),
+                    sp.GetRequiredService<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(),
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>());
                 return domain;
             });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(

@@ -41,8 +41,7 @@ public class WindowedCalculationEntityTypeTests
             TypedConfiguration = new WindowedCalculationConfiguration
             {
                 TargetField = targetField,
-                WindowFunction = windowFunction,
-                OutputFieldName = "Result"
+                WindowFunction = windowFunction
             }
         };
 

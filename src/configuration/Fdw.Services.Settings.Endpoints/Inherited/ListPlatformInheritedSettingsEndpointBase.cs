@@ -4,6 +4,8 @@ using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -42,7 +44,7 @@ public abstract class ListPlatformInheritedSettingsEndpointBase : EndpointWithou
         if (!_systemRoles.IsPlatformAdmin(User))
         {
             InheritedSettingsEndpointLog.PlatformAdministratorRequired(EndpointLogger, SettingScope.PlatformLevel);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(InheritedSettingsEndpointLog.ListPlatformInheritedSettingsForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

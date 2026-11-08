@@ -34,4 +34,60 @@ public static partial class TenantEndpointLog
         Message = "A list of deleted tenants was refused: the caller is not a platform administrator",
         ClientMessage = "Only a platform administrator can list deleted companies")]
     public static partial IGenericMessage DeletedTenantsRequirePlatformAdministrator(ILogger logger);
+
+    /// <summary>Logs that the request failed: IsSelectable is required.</summary>
+    [MessageLogging(EventId = 20001, Level = LogLevel.Warning, Message = "IsSelectable is required", ClientMessage = "IsSelectable is required")]
+    public static partial IGenericMessage CreateTenantIsselectableIsRequired(ILogger logger);
+
+    /// <summary>Logs that Tenant was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30001, Level = LogLevel.Warning, Message = "Tenant was not found, or is not visible to the caller", ClientMessage = "Tenant was not found")]
+    public static partial IGenericMessage UpdateTenantTenantNotFound(ILogger logger);
+
+    /// <summary>Logs that Tenant tenantId was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30002, Level = LogLevel.Warning, Message = "Tenant {tenantIdentifier} was not found, or is not visible to the caller", ClientMessage = "Tenant {tenantIdentifier} was not found")]
+    public static partial IGenericMessage GetTenantTenantNotFound(ILogger logger, string tenantIdentifier);
+
+    /// <summary>Logs that The caller's token carries no usable tenant claim, so there is no current tenant.</summary>
+    [MessageLogging(EventId = 30003, Level = LogLevel.Warning, Message = "The caller's token carries no usable tenant claim, so there is no current tenant", ClientMessage = "You have no current tenant")]
+    public static partial IGenericMessage GetCurrentTenantNoTenantClaim(ILogger logger);
+
+    /// <summary>Logs that The caller's tenant tenantId was not found.</summary>
+    [MessageLogging(EventId = 30004, Level = LogLevel.Warning, Message = "The caller's tenant {tenantId} was not found", ClientMessage = "Your tenant {tenantId} was not found")]
+    public static partial IGenericMessage GetCurrentTenantTenantNotFound(ILogger logger, Guid tenantId);
+
+    /// <summary>Logs that Tenant tenantId to switch into was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30005, Level = LogLevel.Warning, Message = "Tenant {tenantId} to switch into was not found, or is not visible to the caller", ClientMessage = "Tenant {tenantId} was not found")]
+    public static partial IGenericMessage SwitchTenantTenantNotFound(ILogger logger, Guid tenantId);
+
+    /// <summary>Logs that The first administrator 'administrator' of the new tenant was not found.</summary>
+    [MessageLogging(EventId = 30006, Level = LogLevel.Warning, Message = "The first administrator '{administrator}' of the new tenant was not found", ClientMessage = "The first administrator '{administrator}' was not found")]
+    public static partial IGenericMessage CreateTenantFirstAdministratorNotFound(ILogger logger, string administrator);
+
+    /// <summary>Logs that The request to create tenant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102742, Level = LogLevel.Warning, Message = "The request to create tenant was refused: the caller is not allowed", ClientMessage = "You are not allowed to create tenant")]
+    public static partial IGenericMessage CreateTenantForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to update tenant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102743, Level = LogLevel.Warning, Message = "The request to update tenant was refused: the caller is not allowed", ClientMessage = "You are not allowed to update tenant")]
+    public static partial IGenericMessage UpdateTenantForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to switch tenant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102744, Level = LogLevel.Warning, Message = "The request to switch tenant was refused: the caller is not allowed", ClientMessage = "You are not allowed to switch tenant")]
+    public static partial IGenericMessage SwitchTenantForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to switch tenant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102745, Level = LogLevel.Warning, Message = "The request to switch tenant was refused: the caller is not allowed", ClientMessage = "You are not allowed to switch tenant")]
+    public static partial IGenericMessage SwitchTenantForbidden2(ILogger logger);
+
+    /// <summary>Logs that The request to restore tenant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102746, Level = LogLevel.Warning, Message = "The request to restore tenant was refused: the caller is not allowed", ClientMessage = "You are not allowed to restore tenant")]
+    public static partial IGenericMessage RestoreTenantForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to get tenant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102747, Level = LogLevel.Warning, Message = "The request to get tenant was refused: the caller is not allowed", ClientMessage = "You are not allowed to get tenant")]
+    public static partial IGenericMessage GetTenantForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to delete tenant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102748, Level = LogLevel.Warning, Message = "The request to delete tenant was refused: the caller is not allowed", ClientMessage = "You are not allowed to delete tenant")]
+    public static partial IGenericMessage DeleteTenantForbidden(ILogger logger);
 }

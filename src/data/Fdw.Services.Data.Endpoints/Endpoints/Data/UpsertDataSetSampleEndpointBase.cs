@@ -58,7 +58,7 @@ public abstract class UpsertDataSetSampleEndpointBase : Endpoint<DataSetSampleRe
 
         var dataSet = await _dataSets.Get(req.Name, ct).ConfigureAwait(false);
         if (dataSet.IsFailure) { await SendError(dataSet, ct).ConfigureAwait(false); return; }
-        if (dataSet.Value is null) { await Send.NotFoundAsync(ct).ConfigureAwait(false); return; }
+        if (dataSet.Value is null) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(DataSetSampleEndpointLog.UpsertDataSetSampleNotFound(_logger)), HttpContext)).ConfigureAwait(false); return; }
 
         var fieldIdsByName = dataSet.Value.Fields.ToDictionary(f => f.Name, f => f.Id, System.StringComparer.OrdinalIgnoreCase);
 

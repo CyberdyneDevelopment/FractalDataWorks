@@ -519,7 +519,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
                 StartedAt = DateTimeOffset.UtcNow
             });
 
-        var updateResult = await dataGateways.ByName("Main").Execute<int>(updateCommand, stoppingToken).ConfigureAwait(false);
+        var updateResult = await dataGateways.ByName(DataGatewayNames.Main).Execute<int>(updateCommand, stoppingToken).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
             EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);
@@ -689,7 +689,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
 
         return await PipelineWatermarks.Read(
-            dataGateways.ByName("Main"), EtlPipelineTypes.OperationalConnection, request.PipelineId, tenantId, request.PipelineName, _logger, stoppingToken)
+            dataGateways.ByName(DataGatewayNames.Main), EtlPipelineTypes.OperationalConnection, request.PipelineId, tenantId, request.PipelineName, _logger, stoppingToken)
             .ConfigureAwait(false);
     }
 
@@ -709,7 +709,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
 
         return await PipelineWatermarks.Record(
-            dataGateways.ByName("Main"), EtlPipelineTypes.OperationalConnection, existing, request.PipelineId, tenantId, startedAt, request.ExecutionId,
+            dataGateways.ByName(DataGatewayNames.Main), EtlPipelineTypes.OperationalConnection, existing, request.PipelineId, tenantId, startedAt, request.ExecutionId,
             request.PipelineName, _logger, stoppingToken).ConfigureAwait(false);
     }
 
@@ -846,7 +846,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             .Where("Id", executionId)
             .Value(updateRecord);
 
-        var updateResult = await dataGateways.ByName("Main").Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
+        var updateResult = await dataGateways.ByName(DataGatewayNames.Main).Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
             EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);

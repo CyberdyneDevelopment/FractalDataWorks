@@ -71,7 +71,7 @@ public abstract class PreviewStandInEndpointBase : Endpoint<PreviewStandInReques
         if (resolved.Value is null)
         {
             StandInEndpointLog.FieldNotFound(_logger, req.Name, req.Field);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StandInEndpointLog.PreviewStandInStandinNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

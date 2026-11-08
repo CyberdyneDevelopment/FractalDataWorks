@@ -106,4 +106,20 @@ public static partial class ConfigurationEndpointLog
     [MessageLogging(EventId = 71004, Level = LogLevel.Error,
         Message = "Configuration instance '{name}' in '{tableName}' has no valid '{column}' column; the row cannot be returned")]
     public static partial IGenericMessage InstanceRowIncomplete(ILogger logger, string name, string tableName, string column);
+
+    /// <summary>Logs that the request failed: An error occurred while retrieving the configuration instance.</summary>
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "An error occurred while retrieving the configuration instance", ClientMessage = "An error occurred while retrieving the configuration instance")]
+    public static partial IGenericMessage GetConfigurationInstanceFaulted(ILogger logger);
+
+    /// <summary>Logs that the request failed: An error occurred while retrieving configuration instances.</summary>
+    [MessageLogging(EventId = 90002, Level = LogLevel.Error, Message = "An error occurred while retrieving configuration instances", ClientMessage = "An error occurred while retrieving configuration instances")]
+    public static partial IGenericMessage ListConfigurationInstancesFaulted(ILogger logger);
+
+    /// <summary>Logs that Configuration instance was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31004, Level = LogLevel.Warning, Message = "Configuration instance was not found, or is not visible to the caller", ClientMessage = "Configuration instance was not found")]
+    public static partial IGenericMessage GetConfigurationInstanceNotFound(ILogger logger);
+
+    /// <summary>Logs that Configuration instance was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31005, Level = LogLevel.Warning, Message = "Configuration instance was not found, or is not visible to the caller", ClientMessage = "Configuration instance was not found")]
+    public static partial IGenericMessage GetConfigurationInstanceNotFound2(ILogger logger);
 }

@@ -6,6 +6,7 @@ using Fdw.Results;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -50,13 +51,13 @@ public abstract class UpdateGlossaryTermEndpointBase : Endpoint<UpdateGlossaryTe
         var existingResult = await _provider.Get(req.Id, ct).ConfigureAwait(false);
         if (!existingResult.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to load glossary term", Details = existingResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(existingResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (existingResult.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.UpdateGlossaryTermGlossarytermNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -93,7 +94,7 @@ public abstract class UpdateGlossaryTermEndpointBase : Endpoint<UpdateGlossaryTe
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to update glossary term", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

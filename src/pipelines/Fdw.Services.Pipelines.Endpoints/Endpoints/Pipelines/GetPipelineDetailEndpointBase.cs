@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Clients.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -60,8 +62,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineReques
         var byName = !string.IsNullOrWhiteSpace(req.Name);
         if (byName == req.Id.HasValue)
         {
-            AddError("Name exactly one of 'id' or 'name'.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelinesAnswerLog.GetPipelineDetailNameExactlyOneOfId(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -74,7 +75,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineReques
         if (!result.IsSuccess)
         {
             OnPipelineFetchFailed(asked, result.CurrentMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch pipeline", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

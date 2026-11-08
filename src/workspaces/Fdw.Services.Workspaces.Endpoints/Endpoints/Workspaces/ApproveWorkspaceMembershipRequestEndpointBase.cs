@@ -68,10 +68,10 @@ public abstract class ApproveWorkspaceMembershipRequestEndpointBase : Endpoint<A
     {
         var workspace = await _workspaces.Get(req.Name, ct).ConfigureAwait(false);
         if (workspace.IsFailure) { await SendError(workspace, ct).ConfigureAwait(false); return; }
-        if (workspace.Value is null) { await Send.NotFoundAsync(ct).ConfigureAwait(false); return; }
+        if (workspace.Value is null) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.ApproveWorkspaceMembershipRequestNotFound(_logger)), HttpContext)).ConfigureAwait(false); return; }
 
         var manages = await _access.MayManageMembers(workspace.Value, ct).ConfigureAwait(false);
-        if (WorkspaceAccessRefusals.Hides(manages)) { await Send.NotFoundAsync(ct).ConfigureAwait(false); return; }
+        if (WorkspaceAccessRefusals.Hides(manages)) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.ApproveWorkspaceMembershipRequestNotFound2(_logger)), HttpContext)).ConfigureAwait(false); return; }
         if (manages.IsFailure) { await SendError(manages, ct).ConfigureAwait(false); return; }
 
         var granted = await AuthorizeGrant(workspace.Value, req, ct).ConfigureAwait(false);

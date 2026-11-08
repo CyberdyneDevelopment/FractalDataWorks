@@ -76,6 +76,10 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
             // mint or resolve -- pipe.Pipeline already names the implementation.
             services.GetRequiredService<PipelineServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<GraphPipelineConfigurationProvider>());
+
+            // Why resolved here: a host with no registration for the writers read stops in its Initialize phase, with the missing service named (FDW-4488).
+            using (var scope = services.CreateScope())
+                _ = scope.ServiceProvider.GetRequiredService<IDataSetWriters>();
     
             return GenericResult<IHost>.Success(host);
         });
@@ -117,6 +121,9 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
                 typeof(IGraphPipelineProvider),
                 sp => new GraphPipelineProvider(sp.GetRequiredService<IGraphPipelineFactory>()),
                 ServiceLifetime.Scoped));
+
+            // Which pipelines write each data set, read from the pipelines themselves (FDW-4488).
+            builder.Services.TryAddScoped<IDataSetWriters, DataSetWriters>();
 
             builder.Services.TryAddSingleton(sp => new GraphPipelineConfigurationProvider(
                 sp.GetRequiredService<ILogger<GraphPipelineConfigurationProvider>>(),

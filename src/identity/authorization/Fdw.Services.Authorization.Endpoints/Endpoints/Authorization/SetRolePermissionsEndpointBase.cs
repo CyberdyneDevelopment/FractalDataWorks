@@ -16,6 +16,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.TokenManagers.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -93,11 +94,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
         if (_systemRoleConfiguration.IsSystemRole(req.Name))
         {
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "SystemRoleImmutable",
-                messages = new[] { $"Role '{req.Name}' is a built-in system role and its permissions cannot be modified through this endpoint." }
-            }, statusCode: 403)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsSystemRoleImmutable(EndpointLogger, req.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -106,13 +103,13 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
                 roleResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(roleResult, HttpContext)).ConfigureAwait(false);
             return;
         }
         if (roleResult.Value is null)
         {
             AuthorizationEndpointLog.RoleNotFound(EndpointLogger, req.Name);
-            await Send.ResultAsync(TypedResults.Json(new { errorCode = "NotFound", messages = new[] { $"roles '{req.Name}' was not found." } }, statusCode: 404)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsRoleNotFound(EndpointLogger, req.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var role = roleResult.Value;
@@ -150,11 +147,19 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
         var existingMappingsResult = await _rolePermissionProvider
             .Find<IRolePermissionImplementationConfiguration>(rp => rp.RoleId == role.Id, ct).ConfigureAwait(false);
-        if (!existingMappingsResult.IsSuccess || existingMappingsResult.Value is null)
+        if (existingMappingsResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
                 existingMappingsResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(existingMappingsResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (existingMappingsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                existingMappingsResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsExistingMappingsReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -170,7 +175,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         if (audited.IsFailure)
         {
             AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RolePermissionsSet", req.Name, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -185,11 +190,19 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     private async Task<List<PermissionSummaryDto>?> ResolveRequested(string roleName, IList<string> permissionNames, CancellationToken ct)
     {
         var allPermissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
-        if (!allPermissionsResult.IsSuccess || allPermissionsResult.Value is null)
+        if (allPermissionsResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName,
                 allPermissionsResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(allPermissionsResult, HttpContext)).ConfigureAwait(false);
+            return null;
+        }
+
+        if (allPermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName,
+                allPermissionsResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsPermissionCatalogReturnedNothing(EndpointLogger, roleName)), HttpContext)).ConfigureAwait(false);
             return null;
         }
         AuthorizationEndpointLog.PermissionCatalogLoaded(EndpointLogger, allPermissionsResult.Value.Count);
@@ -200,7 +213,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         if (allPermissionsResult.Value.Count == 0)
         {
             AuthorizationEndpointLog.PermissionCatalogEmpty(EndpointLogger, roleName);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsPermissionCatalogEmpty(EndpointLogger, roleName)), HttpContext)).ConfigureAwait(false);
             return null;
         }
 
@@ -213,13 +226,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         {
             AuthorizationEndpointLog.PermissionNamesNotResolved(EndpointLogger, roleName,
                 unresolved.Count, string.Join(", ", unresolved));
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "UnknownPermission",
-                messages = unresolved
-                    .Select(n => $"permission '{n}' was not found.")
-                    .ToArray()
-            }, statusCode: 400)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsUnknownPermission(EndpointLogger, roleName, string.Join(", ", unresolved))), HttpContext)).ConfigureAwait(false);
             return null;
         }
 
@@ -247,7 +254,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         if (role.TenantId is null)
         {
             AuthorizationEndpointLog.RoleTenantNotRecorded(EndpointLogger, role.Name);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsRoleTenantNotRecorded(EndpointLogger, role.Name)), HttpContext)).ConfigureAwait(false);
             return null;
         }
 
@@ -257,11 +264,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
                 return role.TenantId;
 
             AuthorizationEndpointLog.SharedRoleChangeRefused(EndpointLogger, role.Name);
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "SharedRoleChangeRefused",
-                messages = new[] { $"Role '{role.Name}' is shared by every tenant; only a platform administrator may change its permissions." }
-            }, statusCode: 403)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsSharedRoleRoleIsSharedByEvery(EndpointLogger, role.Name)), HttpContext)).ConfigureAwait(false);
             return null;
         }
 
@@ -271,11 +274,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         AuthorizationEndpointLog.TenantRoleChangeRefused(EndpointLogger, role.Name,
             role.TenantId.Value.ToString("D"),
             caller?.ActiveTenantId is { } acting ? acting.ToString("D") : "(none)");
-        await Send.ResultAsync(TypedResults.Json(new
-        {
-            errorCode = "TenantRoleChangeRefused",
-            messages = new[] { $"Role '{role.Name}' belongs to another tenant and cannot be changed from this one." }
-        }, statusCode: 403)).ConfigureAwait(false);
+        await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsOtherTenantRoleRoleBelongsToAnotherTenant(EndpointLogger, role.Name)), HttpContext)).ConfigureAwait(false);
         return null;
     }
 
@@ -300,7 +299,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         var ended = await RoleHolderSessions.End(_userRoles, _revocations, role.Id, req.Name, EndpointLogger, ct).ConfigureAwait(false);
         if (ended.IsFailure)
         {
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(ended, HttpContext)).ConfigureAwait(false);
             return false;
         }
 
@@ -312,18 +311,32 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     {
         var currentResult = await _rolePermissionProvider
             .Find<IRolePermissionImplementationConfiguration>(rp => rp.RoleId == role.Id, ct).ConfigureAwait(false);
-        if (!currentResult.IsSuccess || currentResult.Value is null)
+        if (currentResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName, currentResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(currentResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (currentResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName, currentResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsCurrentReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var currentPermissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
-        if (!currentPermissionsResult.IsSuccess || currentPermissionsResult.Value is null)
+        if (currentPermissionsResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName, currentPermissionsResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(currentPermissionsResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (currentPermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName, currentPermissionsResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.SetRolePermissionsCurrentPermissionsReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -433,7 +446,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         {
             AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, req.Name, replaced.CurrentMessage);
             OnPermissionUpdateFailed(req.Name);
-            await Send.ResponseAsync(new List<PermissionSummaryDto>(), 400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(replaced, HttpContext)).ConfigureAwait(false);
             return replaced;
         }
 

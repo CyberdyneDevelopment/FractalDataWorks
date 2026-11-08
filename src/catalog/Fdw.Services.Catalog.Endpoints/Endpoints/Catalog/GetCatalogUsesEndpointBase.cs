@@ -1,3 +1,4 @@
+using Fdw.Messages;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,8 @@ using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Quality;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -65,11 +68,10 @@ public abstract class GetCatalogUsesEndpointBase : Endpoint<CatalogUsesRequest, 
     /// <summary>Answers one where-used question.</summary>
     public override async Task HandleAsync(CatalogUsesRequest req, CancellationToken ct)
     {
-        var refusal = Refusal(req);
+        var refusal = Refusal(req, Logger);
         if (refusal is not null)
         {
-            AddError(refusal);
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(refusal), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -78,22 +80,22 @@ public abstract class GetCatalogUsesEndpointBase : Endpoint<CatalogUsesRequest, 
         var found = await _uses.Run(kind, req.Name!.Trim(), req.Parents.Where(parent => !string.IsNullOrWhiteSpace(parent)).ToList(), direction, ct).ConfigureAwait(false);
         if (found.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to read where the thing is used", Details = found.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(found, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         await Send.OkAsync(found.Value!, ct).ConfigureAwait(false);
     }
 
-    // What the request got wrong, in words the caller can act on; null when it is complete.
-    private static string? Refusal(CatalogUsesRequest req)
+    // What the request got wrong, as the coded message of its reason; null when it is complete.
+    private static IGenericMessage? Refusal(CatalogUsesRequest req, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(req.Kind) || CatalogKinds.IndexOf(req.Kind) < 0)
-            return $"kind must be one of {string.Join(", ", CatalogKinds.All)}";
+            return CatalogAnswerLog.GetCatalogUsesKindNotOffered(logger, string.Join(", ", CatalogKinds.All));
         if (string.IsNullOrWhiteSpace(req.Name))
-            return "name is required";
+            return CatalogAnswerLog.GetCatalogUsesNameRequired(logger);
         return CatalogUsesDirections.Of(req.Direction) is null
-            ? $"direction must be one of {string.Join(", ", CatalogUsesDirections.All)}"
+            ? CatalogAnswerLog.GetCatalogUsesDirectionNotOffered(logger, string.Join(", ", CatalogUsesDirections.All))
             : null;
     }
 }

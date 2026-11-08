@@ -6,6 +6,7 @@ using FastEndpoints;
 using Fdw.Services.Scheduling.Clients.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
@@ -60,8 +61,7 @@ public abstract class GetSchedulesProxyEndpointBase : EndpointWithoutRequest<IRe
         {
             var errorMessage = result.FailureReason().Message;
             ScheduleProxyEndpointLog.ProxyFailed(EndpointLogger, "Scheduler", errorMessage);
-            AddError("Failed to proxy request to SchedulerServer");
-            await Send.ErrorsAsync(502, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ScheduleProxyEndpointLog.GetSchedulesProxyFailedToProxyRequestTo(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

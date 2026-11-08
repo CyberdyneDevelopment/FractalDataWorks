@@ -9,6 +9,9 @@ using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
+using Fdw.Services.Multitenancy.Endpoints.Logging;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -60,15 +63,21 @@ public abstract class GetCurrentTenantEndpointBase : EndpointWithoutRequest<Tena
         if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
         {
             OnNoTenantClaim();
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.GetCurrentTenantNoTenantClaim(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var tenantResult = await _tenantProvider.GetTenant(tenantId, ct).ConfigureAwait(false);
 
-        if (!tenantResult.IsSuccess || tenantResult.Value is null)
+        if (tenantResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(tenantResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (tenantResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.GetCurrentTenantTenantNotFound(EndpointLogger, tenantId)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -184,6 +184,15 @@ public static class SettingDefinitions
     public const string LineageLinePipelines = "LineageLinePipelines";
 
     /// <summary>
+    /// How many hours a completed run of a pipeline that writes a data set counts as recent (FDW-4488). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required, with no number assumed: the status of a data set in a list fails (DATASETS-90003) when it resolves to nothing positive. A data set whose writers have
+    /// completed a run inside the window is Current; one with writers and no completed run inside it is Idle. It resolves server, then tenant, so a tenant can set its own.
+    /// </remarks>
+    public const string DataSetStatusWindowHours = "DataSetStatusWindowHours";
+
+    /// <summary>
     /// Whether a host that serves no real-time hub relays its pipeline events to the host that does (FDW-3773). DataType: Boolean.
     /// </summary>
     /// <remarks>
@@ -192,6 +201,24 @@ public static class SettingDefinitions
     /// through SignalR and does not read it. It is read each time an event is sent, so a change takes effect without a restart.
     /// </remarks>
     public const string PipelineEventRelayEnabled = "PipelineEventRelayEnabled";
+
+    /// <summary>
+    /// Whether an administrator of one tenant may enable a disabled connection that belongs to another tenant when they can see it (FDW-4459). DataType: Boolean.
+    /// </summary>
+    /// <remarks>
+    /// A server row states it for the server. Where there is none, the value <c>CrossTenantChangeOption</c> declares applies (true), which a host overrides at registration.
+    /// A refused enable answers a failure that names this setting.
+    /// </remarks>
+    public const string CrossTenantConnectionEnable = Fdw.Services.Multitenancy.Abstractions.CrossTenantChangeOption.ConnectionEnable;
+
+    /// <summary>
+    /// Whether an administrator of one tenant may change a data store that belongs to another tenant when they can see it (FDW-4459). DataType: Boolean.
+    /// </summary>
+    /// <remarks>
+    /// A server row states it for the server. Where there is none, the value <c>CrossTenantChangeOption</c> declares applies (false), which a host overrides at registration.
+    /// A refused write answers a failure that names this setting.
+    /// </remarks>
+    public const string CrossTenantDataStoreWrite = Fdw.Services.Multitenancy.Abstractions.CrossTenantChangeOption.DataStoreWrite;
 
     /// <summary>
     /// How often, in seconds, the ETL host publishes the components of the runs in flight (FDW-3778). DataType: Int32. Must be positive.
@@ -369,8 +396,11 @@ public static class SettingDefinitions
             [MaxConcurrentPipelineRunsPerTenant] = new("Int32", "The most pipeline runs in flight for one tenant at once; a tenant may override the server's value."),
             [MaxQueuedPipelineTriggers] = new("Int32", "The most pipeline triggers the ETL host holds before it starts them; a trigger past that is dropped. Read at host start."),
             [LineageLinePipelines] = new("Int32", "The most pipelines one line of the lineage groups names; the line still counts all of them."),
+            [DataSetStatusWindowHours] = new("Int32", "How many hours a completed run of a pipeline that writes a data set counts as recent: inside it the data set is Current, outside it Idle. Not set: the data set list stops and names this setting."),
             [LiveViewRefreshSeconds] = new("Int32", "How often, in seconds, the console reads the run queue again while the queue tab is open. Not set: the tab does not read again by itself."),
             [PipelineEventRelayEnabled] = new("Boolean", "Whether a host that serves no real-time hub relays its pipeline events to the host that does."),
+            [CrossTenantConnectionEnable] = new("Boolean", "Whether an administrator of one tenant may enable a disabled connection that belongs to another tenant when they can see it. Not set: the value the host or the service type declares applies."),
+            [CrossTenantDataStoreWrite] = new("Boolean", "Whether an administrator of one tenant may change a data store that belongs to another tenant when they can see it. Not set: the value the host or the service type declares applies."),
             [EscalationAlertsRefreshSeconds] = new("Int32", "How often, in seconds, the console reads the escalation alerts again while the alerts page is open. Not set: the page does not read again by itself."),
             [EscalationAdvanceIntervalSeconds] = new("Int32", "How often, in seconds, the host looks at its open escalation alerts and sends the levels that have fallen due. Not set: the host does not start the escalation timer and says so."),
             [EscalationNotificationPriority] = new("String", "The notification priority an escalation level is sent with: the name of a notification priority such as Normal, High or Critical. Not set, or naming no priority: the level is not sent, and the next pass tries again."),

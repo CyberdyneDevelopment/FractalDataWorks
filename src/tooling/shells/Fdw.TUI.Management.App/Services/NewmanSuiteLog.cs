@@ -33,9 +33,10 @@ public static partial class NewmanSuiteLog
     /// <param name="directory">The directory that was looked for.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9701,
+        EventId = 60001,
         Level = LogLevel.Error,
-        Message = "No Newman suite at {directory}. Set FDW_NEWMAN_DIR to the newman folder, or run the suite's own scripts once to create it")]
+        Message = "No Newman suite at {directory}. Set FDW_NEWMAN_DIR to the newman folder, or run the suite's own scripts once to create it",
+        ClientMessage = "No Newman suite. Set FDW_NEWMAN_DIR to the newman folder, or run the suite's own scripts once to create it")]
     public static partial IGenericMessage SuiteDirectoryMissing(ILogger logger, string directory);
 
     /// <summary>Logs a collection file that has not been generated yet.</summary>
@@ -43,9 +44,10 @@ public static partial class NewmanSuiteLog
     /// <param name="path">Where the collection was expected.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9702,
+        EventId = 30001,
         Level = LogLevel.Error,
-        Message = "No generated collection at {path}. Refresh the suite to pull the OpenAPI document and generate it")]
+        Message = "No generated collection at {path}. Refresh the suite to pull the OpenAPI document and generate it",
+        ClientMessage = "No generated collection. Refresh the suite to pull the OpenAPI document and generate it")]
     public static partial IGenericMessage CollectionMissing(ILogger logger, string path);
 
     /// <summary>Logs a collection that could not be read as a collection.</summary>
@@ -54,9 +56,10 @@ public static partial class NewmanSuiteLog
     /// <param name="reason">What went wrong.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9703,
+        EventId = 90001,
         Level = LogLevel.Error,
-        Message = "The collection at {path} could not be read: {reason}")]
+        Message = "The collection at {path} could not be read: {reason}",
+        ClientMessage = "The collection at could not be read")]
     public static partial IGenericMessage CollectionUnreadable(ILogger logger, string path, string reason);
 
     /// <summary>Logs the folders read out of the collection.</summary>
@@ -98,18 +101,20 @@ public static partial class NewmanSuiteLog
     /// <param name="reason">Why not.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9707,
+        EventId = 90002,
         Level = LogLevel.Error,
-        Message = "The suite could not be run: {reason}")]
+        Message = "The suite could not be run: {reason}",
+        ClientMessage = "The suite could not be run")]
     public static partial IGenericMessage RunFailed(ILogger logger, string reason);
 
     /// <summary>Logs a missing test credential.</summary>
     /// <param name="logger">The logger.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9708,
+        EventId = 60002,
         Level = LogLevel.Error,
-        Message = "FDW_TEST_PASSWORD is not set. The suite signs in before it runs, and this is not guessed")]
+        Message = "FDW_TEST_PASSWORD is not set. The suite signs in before it runs, and this is not guessed",
+        ClientMessage = "FDW_TEST_PASSWORD is not set. The suite signs in before it runs, and this is not guessed")]
     public static partial IGenericMessage TestPasswordMissing(ILogger logger);
 
     /// <summary>Logs a spec refresh starting.</summary>
@@ -138,9 +143,10 @@ public static partial class NewmanSuiteLog
     /// <param name="reason">Why.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9711,
+        EventId = 90003,
         Level = LogLevel.Error,
-        Message = "The suite could not be refreshed: {reason}")]
+        Message = "The suite could not be refreshed: {reason}",
+        ClientMessage = "The suite could not be refreshed")]
     public static partial IGenericMessage RefreshFailed(ILogger logger, string reason);
 
     /// <summary>Logs an absent run record.</summary>
@@ -148,8 +154,9 @@ public static partial class NewmanSuiteLog
     /// <param name="path">Where the record was expected.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9712,
+        EventId = 30002,
         Level = LogLevel.Warning,
-        Message = "No run record at {path}. Run the suite before asking what failed")]
+        Message = "No run record at {path}. Run the suite before asking what failed",
+        ClientMessage = "No run record. Run the suite before asking what failed")]
     public static partial IGenericMessage NoRunRecord(ILogger logger, string path);
 }

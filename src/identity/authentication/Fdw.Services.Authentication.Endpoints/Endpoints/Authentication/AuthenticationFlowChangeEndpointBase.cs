@@ -75,7 +75,7 @@ public abstract class AuthenticationFlowChangeEndpointBase<TRequest> : Endpoint<
         if (!EndpointUserResolver.TryResolveUserId(User, out var userId))
         {
             AuthenticationEndpointLog.FlowChangeCallerUnknown(EndpointLogger, flowName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.AuthenticationFlowChangeForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -93,7 +93,7 @@ public abstract class AuthenticationFlowChangeEndpointBase<TRequest> : Endpoint<
 
         if (AuthenticationFlowFailure.IsNotFound(result))
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.AuthenticationFlowChangeNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -115,7 +115,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
         path.Containers.Add(container);
 
         var addResult = await _dataStoreProvider
-            .Update(store, store.Domain, store.Implementation, store.Name, ct)
+            .UpdateStore(store, ct)
             .ConfigureAwait(false);
         if (addResult.IsFailure)
             return addResult.ToNewResult<DataStoreContainerResponse>();

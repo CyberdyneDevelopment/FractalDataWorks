@@ -23,4 +23,8 @@ public static partial class DataSetFieldHistoryEndpointLog
     /// <summary>Logs that a field's stored versions could not be read.</summary>
     [MessageLogging(EventId = 71580, Level = LogLevel.Error, Message = "The stored versions of '{dataSetName}.{fieldName}' could not be read")]
     public static partial IGenericMessage HistoryReadFailed(ILogger logger, string dataSetName, string fieldName);
+
+    /// <summary>Logs that Data set field history was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31581, Level = LogLevel.Warning, Message = "Data set field history was not found, or is not visible to the caller", ClientMessage = "Data set field history was not found")]
+    public static partial IGenericMessage GetDataSetFieldHistoryNotFound(ILogger logger);
 }

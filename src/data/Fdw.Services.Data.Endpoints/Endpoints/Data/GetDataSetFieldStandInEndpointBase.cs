@@ -63,7 +63,7 @@ public abstract class GetDataSetFieldStandInEndpointBase : Endpoint<DataSetField
         if (resolved.Value is not { } found)
         {
             StandInEndpointLog.FieldNotFound(_logger, req.Name, req.Field);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StandInEndpointLog.GetDataSetFieldStandInNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -80,7 +80,7 @@ public abstract class GetDataSetFieldStandInEndpointBase : Endpoint<DataSetField
             return;
         }
 
-        if (active.Value is null) { await Send.NotFoundAsync(ct).ConfigureAwait(false); return; }
+        if (active.Value is null) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StandInEndpointLog.GetDataSetFieldStandInNotFound2(_logger)), HttpContext)).ConfigureAwait(false); return; }
 
         await Send.OkAsync(active.Value, ct).ConfigureAwait(false);
     }

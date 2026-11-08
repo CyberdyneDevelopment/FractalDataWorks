@@ -63,7 +63,11 @@ internal static class MapNodes
     /// The pipeline's latest run, or null when it has not run or the map does not read runs. The node then carries <c>lastRunState</c> and <c>failed</c> (true
     /// when that run ended Failed); with no run it carries neither, which means "no run", not "did not fail".
     /// </param>
-    public static MapNodeDto Pipeline(IPipelineImplementationConfiguration pipeline, IExecutionItem? latestRun = null) => new()
+    /// <param name="projects">
+    /// The names of the projects that run the pipeline, sorted, or null when the map does not read projects. The node then carries <c>projects</c>, an empty list when
+    /// no project runs the pipeline; with null it carries none, which means "not read", not "in no project".
+    /// </param>
+    public static MapNodeDto Pipeline(IPipelineImplementationConfiguration pipeline, IExecutionItem? latestRun = null, IReadOnlyList<string>? projects = null) => new()
     {
         Id = MapNodeIds.Pipeline(pipeline.Id),
         Label = pipeline.Name,
@@ -74,7 +78,8 @@ internal static class MapNodes
             ("isEnabled", pipeline is IEnablablePipelineConfiguration enablable ? (object)enablable.IsEnabled : null),
             ("lastRunState", latestRun?.State.Name),
             ("failed", latestRun is null ? null : string.Equals(latestRun.State.Name, ExecutionStateTypes.Failed.Name, StringComparison.Ordinal)),
-            ("organizationId", pipeline.OrgId?.ToString("D", CultureInfo.InvariantCulture))),
+            ("organizationId", pipeline.OrgId?.ToString("D", CultureInfo.InvariantCulture)),
+            ("projects", projects)),
     };
 
     /// <summary>A container node, named within its data store.</summary>

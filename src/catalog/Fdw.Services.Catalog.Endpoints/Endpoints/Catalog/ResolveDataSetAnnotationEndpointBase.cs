@@ -63,7 +63,7 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
 
         if (getResult.Value is not { } annotation)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(DataSetAnnotationLog.ResolveDataSetAnnotationNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

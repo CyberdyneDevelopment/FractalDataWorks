@@ -6,6 +6,7 @@ using Fdw.Services.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -63,11 +64,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
         if (!lookup.IsSuccess || lookup.Value is null)
         {
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "NotFound",
-                messages = new[] { $"User '{req.IdOrName}' was not found." }
-            }, statusCode: 404)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.DeleteUserUserNotFound(EndpointLogger, req.IdOrName)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -79,7 +76,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 
         if (!result.IsSuccess)
         {
-            ThrowError(result.FailureReason().Message, 500);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

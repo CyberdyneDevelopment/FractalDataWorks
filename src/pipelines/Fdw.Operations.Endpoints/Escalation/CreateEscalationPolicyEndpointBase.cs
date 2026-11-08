@@ -6,6 +6,7 @@ using Fdw.Operations.Abstractions.Escalation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -52,8 +53,7 @@ public abstract class CreateEscalationPolicyEndpointBase : Endpoint<EscalationPo
         if (missing.Count > 0 || req.IsEnabled is not { } isEnabled || req.MaxEscalationLevel is not { } maxLevel || req.CooldownMinutes is not { } cooldown
             || req.MaxRetries is not { } maxRetries || req.RetryDelaySeconds is not { } retryDelay)
         {
-            AddError("Required and not stated: " + string.Join(", ", missing));
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.CreateEscalationPolicyFieldsNotStated(_logger, string.Join(", ", missing))), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -71,9 +71,7 @@ public abstract class CreateEscalationPolicyEndpointBase : Endpoint<EscalationPo
 
             if (result.Value is null)
             {
-                OperationsEndpointLog.CreateEscalationPolicyFailed(_logger, "Service returned null");
-                AddError("Failed to create escalation policy");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.CreateEscalationPolicyReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -87,8 +85,7 @@ public abstract class CreateEscalationPolicyEndpointBase : Endpoint<EscalationPo
         catch (Exception ex)
         {
             OperationsEndpointLog.CreateEscalationPolicyFailed(_logger, ex.Message);
-            AddError("Failed to create escalation policy");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.CreateEscalationPolicyFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

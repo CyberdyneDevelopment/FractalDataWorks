@@ -8,6 +8,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.DataSets.Results;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
@@ -23,13 +24,20 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly CategoryConfigurationProvider _categories;
+    private readonly IAuthenticationContextAccessor _authContext;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateDataSetEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="dataSetProvider">Finds and saves the data set.</param>
+    /// <param name="categories">Resolves the category the request names.</param>
+    /// <param name="authContext">Identifies the caller, who owns the new data set (FDW-4346).</param>
     protected CreateDataSetEndpointBase(
-        ILogger<CreateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories) : base(logger)
+        ILogger<CreateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories,
+        IAuthenticationContextAccessor authContext) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
         _categories = categories ?? throw new ArgumentNullException(nameof(categories));
+        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -106,8 +114,23 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
         var category = await DataSetCategoryLinks.Requested(_categories, request.Category, Logger, ct).ConfigureAwait(false);
         if (category.IsFailure) return category.ToNewResult<DataSetDetailResponse>();
 
+        // The caller owns the data set they create; a caller that cannot be named is refused, never stored as no owner (FDW-4346).
+        if (_authContext.Current is not { } caller)
+        {
+            return GenericResult<DataSetDetailResponse>.Failure(
+                DataSetsResultCodes.ByName("OwnerUnresolved"), Logger,
+                ResultDetails.Create("name", request.Name, "reason", "no authentication context"));
+        }
+
+        if (!Guid.TryParse(caller.UserId, out var ownerUserId))
+        {
+            return GenericResult<DataSetDetailResponse>.Failure(
+                DataSetsResultCodes.ByName("OwnerUnresolved"), Logger,
+                ResultDetails.Create("name", request.Name, "reason", "UserId is not a Guid"));
+        }
+
         // A value the caller chooses is refused when left out, never assumed (FDW-3931).
-        var built = DataSetConfigurationFactory.Create(request, category.Value.Id, new DataSetRequestValues(request.Name, Logger), Logger);
+        var built = DataSetConfigurationFactory.Create(request, category.Value.Id, ownerUserId, new DataSetRequestValues(request.Name, Logger), Logger);
         if (built.IsFailure) return built.ToNewResult<DataSetDetailResponse>();
 
         var config = built.Value!;

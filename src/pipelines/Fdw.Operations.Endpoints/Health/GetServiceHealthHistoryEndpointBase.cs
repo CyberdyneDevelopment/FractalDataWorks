@@ -60,8 +60,7 @@ public abstract class GetServiceHealthHistoryEndpointBase : Endpoint<ServiceHeal
         if (!TryParseWindow(req.Window, out var window))
         {
             OperationsEndpointLog.InvalidWindowFormat(_logger, req.Window);
-            AddError("Invalid window format. Use format like '1h', '24h', '7d'.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetServiceHealthHistoryInvalidWindowFormatUseFormat(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -69,11 +68,17 @@ public abstract class GetServiceHealthHistoryEndpointBase : Endpoint<ServiceHeal
         {
             var monitorResult = await ReportingMonitor(ct).ConfigureAwait(false);
 
-            if (!monitorResult.IsSuccess || monitorResult.Value is null)
+            if (monitorResult.IsFailure)
             {
                 OperationsEndpointLog.GetHealthHistoryFailed(_logger, req.Name, monitorResult.NoValueReason().Message);
-                AddError("Failed to retrieve health history");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(monitorResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (monitorResult.Value is null)
+            {
+                OperationsEndpointLog.GetHealthHistoryFailed(_logger, req.Name, monitorResult.NoValueReason().Message);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetServiceHealthHistoryReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -95,8 +100,7 @@ public abstract class GetServiceHealthHistoryEndpointBase : Endpoint<ServiceHeal
         catch (Exception ex)
         {
             OperationsEndpointLog.GetHealthHistoryFailed(_logger, req.Name, ex.Message);
-            AddError("Failed to retrieve health history");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetServiceHealthHistoryFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

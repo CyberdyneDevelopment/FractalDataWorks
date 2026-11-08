@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Operations.Abstractions.Escalation;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -38,19 +40,20 @@ public abstract class AcknowledgeEscalationAlertEndpointBase : Endpoint<Escalati
     {
         if (User.Identity is not { IsAuthenticated: true, Name: { Length: > 0 } actor })
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.AcknowledgeEscalationAlertNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var done = await _alerts.Acknowledge(req.Id, actor, ct).ConfigureAwait(false);
-        if (done.IsFailure || done.Value is null)
+        if (done.IsFailure)
         {
-            if (done.CurrentMessage is { } text)
-            {
-                AddError(text);
-            }
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(done, HttpContext)).ConfigureAwait(false);
+            return;
+        }
 
-            await Send.ErrorsAsync(EscalationAlertFailure.StatusOf(done), ct).ConfigureAwait(false);
+        if (done.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.AcknowledgeEscalationAlertReturnedNothing(Logger, req.Id)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

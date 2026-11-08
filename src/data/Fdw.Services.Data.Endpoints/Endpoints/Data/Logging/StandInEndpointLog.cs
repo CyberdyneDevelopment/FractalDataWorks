@@ -63,4 +63,32 @@ public static partial class StandInEndpointLog
     /// <summary>Logs a stand-in row for which none of the strategy tables has a current row.</summary>
     [MessageLogging(EventId = 71013, Level = LogLevel.Error, Message = "The stand-in of field '{fieldName}' ({standInId}) has no current row in any strategy table")]
     public static partial IGenericMessage StandInHasNoStrategy(ILogger logger, string fieldName, System.Guid standInId);
+
+    /// <summary>Logs that Data set stand ins was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31011, Level = LogLevel.Warning, Message = "Data set stand ins was not found, or is not visible to the caller", ClientMessage = "Data set stand ins was not found")]
+    public static partial IGenericMessage GetDataSetStandInsDatasetstandinsNotFound(ILogger logger);
+
+    /// <summary>Logs that Stand in was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31012, Level = LogLevel.Warning, Message = "Stand in was not found, or is not visible to the caller", ClientMessage = "Stand in was not found")]
+    public static partial IGenericMessage PreviewStandInStandinNotFound(ILogger logger);
+
+    /// <summary>Logs that Data set field stand in was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31013, Level = LogLevel.Warning, Message = "Data set field stand in was not found, or is not visible to the caller", ClientMessage = "Data set field stand in was not found")]
+    public static partial IGenericMessage ClearDataSetFieldStandInNotFound(ILogger logger);
+
+    /// <summary>Logs that Data set field stand in was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31014, Level = LogLevel.Warning, Message = "Data set field stand in was not found, or is not visible to the caller", ClientMessage = "Data set field stand in was not found")]
+    public static partial IGenericMessage ClearDataSetFieldStandInNotFound2(ILogger logger);
+
+    /// <summary>Logs that Data set field stand in was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31015, Level = LogLevel.Warning, Message = "Data set field stand in was not found, or is not visible to the caller", ClientMessage = "Data set field stand in was not found")]
+    public static partial IGenericMessage GetDataSetFieldStandInNotFound(ILogger logger);
+
+    /// <summary>Logs that Data set field stand in was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31016, Level = LogLevel.Warning, Message = "Data set field stand in was not found, or is not visible to the caller", ClientMessage = "Data set field stand in was not found")]
+    public static partial IGenericMessage GetDataSetFieldStandInNotFound2(ILogger logger);
+
+    /// <summary>Logs that Data set field stand in was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31017, Level = LogLevel.Warning, Message = "Data set field stand in was not found, or is not visible to the caller", ClientMessage = "Data set field stand in was not found")]
+    public static partial IGenericMessage SetDataSetFieldStandInNotFound(ILogger logger);
 }

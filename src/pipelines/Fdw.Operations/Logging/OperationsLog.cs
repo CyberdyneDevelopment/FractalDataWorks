@@ -353,6 +353,12 @@ public static partial class OperationsLog
     public static partial IGenericMessage LatestRunTimeUnreadable(ILogger logger, string pipelineName, string valueType);
 
     /// <summary>
+    /// Logs when the id of a run row comes back as something that is not a Guid.
+    /// </summary>
+    [MessageLogging(EventId = 61157, Level = LogLevel.Error, Message = "The id of the latest run row of pipeline '{pipelineName}' came back as {valueType}, which is not a Guid")]
+    public static partial IGenericMessage LatestRunIdUnreadable(ILogger logger, string pipelineName, string valueType);
+
+    /// <summary>
     /// Logs the latest runs read.
     /// </summary>
     [MessageLogging(EventId = 11311, Level = LogLevel.Debug, Message = "Read the latest run of {found} of {asked} pipeline name(s) in {pieces} piece(s) of at most {chunkSize}")]

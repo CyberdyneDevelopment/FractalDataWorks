@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Schema.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Schema.Endpoints.Discovery;
 
@@ -81,12 +82,16 @@ public abstract class DiscoverSchemaEndpointBase : Endpoint<DiscoverSchemaReques
 
             var result = await DiscoverSchema(req.ConnectionName, ct).ConfigureAwait(false);
 
-            if (!result.IsSuccess || result.Value == null)
+            if (result.IsFailure)
             {
-                var message = result.NoValueReason().Message;
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (result.Value == null)
+            {
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.ConnectionName, "discover");
-                AddError(message);
-                await Send.ErrorsAsync(result.IsSuccess ? 404 : 400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.DiscoverSchemaConnectionNotFound(_logger, req.ConnectionName)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -99,8 +104,7 @@ public abstract class DiscoverSchemaEndpointBase : Endpoint<DiscoverSchemaReques
         catch (Exception ex)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "discover", req.ConnectionName);
-            AddError("Schema discovery failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.DiscoverSchemaFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

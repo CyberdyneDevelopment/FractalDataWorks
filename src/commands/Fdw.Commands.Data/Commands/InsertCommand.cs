@@ -82,8 +82,13 @@ public sealed class InsertCommand<T> : DataCommandBase<int, IEnumerable<T>>, IRe
         return batches;
     }
 
+    /// <remarks>
+    /// An insert that asks for columns back (<see cref="ReturnColumns"/>) never reroutes: a bulk copy returns nothing, so a caller that needs the generated keys
+    /// of its rows (a parent whose children reference its RowId) would lose them (FDW-4422).
+    /// </remarks>
     /// <inheritdoc/>
-    public override bool ReroutesToBulk(int maxSerialInsert) => Data is IReadOnlyCollection<T> rows && rows.Count > maxSerialInsert;
+    public override bool ReroutesToBulk(int maxSerialInsert)
+        => ReturnColumns is not { Count: > 0 } && Data is IReadOnlyCollection<T> rows && rows.Count > maxSerialInsert;
 
     // The rows are counted to choose the route, so a lazy sequence is read once, here, and the command holds what it will write.
     // The rows are non-null by type, as for every data command; a command whose input a translator cannot read is refused there with the coded MissingInputData failure.

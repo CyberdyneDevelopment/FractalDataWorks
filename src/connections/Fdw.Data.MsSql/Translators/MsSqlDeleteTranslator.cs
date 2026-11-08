@@ -15,6 +15,7 @@ using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.MsSql;
 

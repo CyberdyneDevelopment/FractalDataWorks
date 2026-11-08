@@ -7,6 +7,8 @@ using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -70,15 +72,14 @@ public abstract class CreateAccessRequestEndpointBase : Endpoint<CreateAccessReq
                 if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.CreateAccessRequestNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var tenantIdClaim = HttpContext.User.FindFirst(ClaimDefinitions.tenantId.Name)?.Value;
         if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
         {
-            AddError("Tenant context required");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.CreateAccessRequestTenantContextRequired(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -101,8 +102,7 @@ public abstract class CreateAccessRequestEndpointBase : Endpoint<CreateAccessReq
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.AccessRequestCreateFailed(_logger, result.CurrentMessage!);
-                AddError("Failed to create access request");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -116,7 +116,7 @@ public abstract class CreateAccessRequestEndpointBase : Endpoint<CreateAccessReq
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "create-access-request");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.CreateAccessRequestFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

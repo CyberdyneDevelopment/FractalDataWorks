@@ -100,8 +100,9 @@ public static partial class ConfigurationGatewayLog
     /// structured Failure result, and the printed record must name the reason instead of staying
     /// silent below the default print threshold.
     /// </remarks>
-    [MessageLogging(EventId = 11015, Level = LogLevel.Error,
-        Message = "ConfigurationGateway.ResolveContainer: returning null — Container is empty")]
+    [MessageLogging(EventId = 61025, Level = LogLevel.Error,
+        Message = "ConfigurationGateway.ResolveContainer: returning null — Container is empty",
+        ClientMessage = "ConfigurationGateway.ResolveContainer: returning null — Container is empty")]
     public static partial IGenericMessage ResolveContainerEmpty(ILogger logger);
 
     /// <summary>

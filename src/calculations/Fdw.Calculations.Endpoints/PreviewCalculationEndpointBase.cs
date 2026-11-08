@@ -8,6 +8,8 @@ using Fdw.Calculations.Abstractions.CalculationTypeOptions;
 using Fdw.Data.DataContainers.Abstractions;
 using Fdw.Web.Calculations.Clients.Models;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Calculations.Endpoints;
 
@@ -52,8 +54,7 @@ public abstract class PreviewCalculationEndpointBase : Endpoint<PreviewCalculati
         if (calculationType.Id == 0)
         {
             CalculationEndpointLog.UnknownCalculationType(EndpointLogger, req.CalculationType);
-            AddError($"Unknown calculation type: {req.CalculationType}");
-            await Send.ErrorsAsync(cancellation: ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CalculationsAnswerLog.PreviewCalculationUnknownCalculationType(EndpointLogger, req.CalculationType)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -81,8 +82,7 @@ public abstract class PreviewCalculationEndpointBase : Endpoint<PreviewCalculati
         catch (Exception ex)
         {
             CalculationEndpointLog.CalculationPreviewFailed(EndpointLogger, ex, req.CalculationType);
-            AddError("An internal error occurred during calculation execution.");
-            await Send.ErrorsAsync(cancellation: ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CalculationEndpointLog.PreviewCalculationFaulted(EndpointLogger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

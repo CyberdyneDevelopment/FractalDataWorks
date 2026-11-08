@@ -20,9 +20,10 @@ public static partial class TuiStartupLog
     /// <param name="logger">The logger.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9760,
+        EventId = 60001,
         Level = LogLevel.Error,
-        Message = "No menu theme is configured. Set Tui:Theme to a MenuThemes name (Dark, Light or HighContrast)")]
+        Message = "No menu theme is configured. Set Tui:Theme to a MenuThemes name (Dark, Light or HighContrast)",
+        ClientMessage = "No menu theme is configured. Set Tui:Theme to a MenuThemes name (Dark, Light or HighContrast)")]
     public static partial IGenericMessage MenuThemeNotConfigured(ILogger logger);
 
     /// <summary>Logs a configured menu theme that names no MenuThemes option.</summary>
@@ -30,8 +31,9 @@ public static partial class TuiStartupLog
     /// <param name="themeName">The configured name.</param>
     /// <returns>The message.</returns>
     [MessageLogging(
-        EventId = 9761,
+        EventId = 20001,
         Level = LogLevel.Error,
-        Message = "Tui:Theme '{themeName}' is not a MenuThemes name (Dark, Light or HighContrast)")]
+        Message = "Tui:Theme '{themeName}' is not a MenuThemes name (Dark, Light or HighContrast)",
+        ClientMessage = "Tui:Theme '{themeName}' is not a MenuThemes name (Dark, Light or HighContrast)")]
     public static partial IGenericMessage MenuThemeNotFound(ILogger logger, string themeName);
 }

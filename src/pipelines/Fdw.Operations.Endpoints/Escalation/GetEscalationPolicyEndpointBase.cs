@@ -5,6 +5,8 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Escalation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -53,15 +55,13 @@ public abstract class GetEscalationPolicyEndpointBase : Endpoint<EscalationPolic
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.GetEscalationPolicyFailed(_logger, req.Id, result.CurrentMessage!);
-                AddError("Failed to get escalation policy");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             if (result.Value is null)
             {
-                OperationsEndpointLog.EscalationPolicyNotFound(_logger, req.Id);
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.EscalationPolicyNotFound(_logger, req.Id)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -74,8 +74,7 @@ public abstract class GetEscalationPolicyEndpointBase : Endpoint<EscalationPolic
         catch (Exception ex)
         {
             OperationsEndpointLog.GetEscalationPolicyFailed(_logger, req.Id, ex.Message);
-            AddError("Failed to get escalation policy");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetEscalationPolicyFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

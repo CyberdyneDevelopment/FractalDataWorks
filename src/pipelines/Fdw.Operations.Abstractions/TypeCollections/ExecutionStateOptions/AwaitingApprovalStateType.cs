@@ -23,6 +23,7 @@ public sealed class AwaitingApprovalStateType : ExecutionStateTypeBase
             isTerminal: false,
             isSuccess: false,
             isFailure: false,
+            isExecuting: false,
             canTriggerEscalation: false,
             validTransitions: ValidTransitionsArray)
     {

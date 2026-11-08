@@ -9,6 +9,7 @@ using Fdw.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Schema.Endpoints.Discovery;
 
@@ -81,11 +82,16 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
         {
             var containersResult = await DiscoverContainers(req.ConnectionName, ct).ConfigureAwait(false);
 
-            if (!containersResult.IsSuccess || containersResult.Value == null)
+            if (containersResult.IsFailure)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(containersResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (containersResult.Value == null)
             {
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.ConnectionName, "schema-graph");
-                AddError(containersResult.NoValueReason().Message);
-                await Send.ErrorsAsync(containersResult.IsSuccess ? 404 : 400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.GetSchemaGraphConnectionNotFound(_logger, req.ConnectionName)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -98,8 +104,7 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
         catch (Exception ex)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "schema-graph", req.ConnectionName);
-            AddError("Schema graph retrieval failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.GetSchemaGraphFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

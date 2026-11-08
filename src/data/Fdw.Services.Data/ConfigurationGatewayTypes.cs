@@ -58,6 +58,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
     /// </remarks>
     public static int KeyChunkSize { get; set; } = 1000;
 
+
     /// <summary>
     /// The connection an endpoint's bare, unnamed <see cref="IConfigurationGateway"/> resolves
     /// through: the one the host declared as <c>ConnectionRoles.Platform</c>.

@@ -95,12 +95,13 @@ internal sealed class LatestPipelineRunReader
         var newest = new Dictionary<string, DateTimeOffset>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in read.Value ?? [])
         {
+            // CreateDate is a datetimeoffset column, and MAX of it is read as the DateTimeOffset it is; any other type is not the column's, and is refused, not read as "no time".
             var name = row.GetValueOrDefault("PipelineName") as string ?? string.Empty;
-            if (AsTime(row.GetValueOrDefault(NewestColumn)) is not { } stamp)
+            var value = row.GetValueOrDefault(NewestColumn);
+            if (value is not DateTimeOffset stamp)
             {
-                var unreadable = row.GetValueOrDefault(NewestColumn);
                 return GenericResult<IReadOnlyDictionary<string, DateTimeOffset>>.Failure(
-                    OperationsLog.LatestRunTimeUnreadable(_logger, name, unreadable is null ? nameof(DBNull) : unreadable.GetType().Name));
+                    OperationsLog.LatestRunTimeUnreadable(_logger, name, TypeNameOf(value)));
             }
 
             newest[name] = stamp;
@@ -127,7 +128,23 @@ internal sealed class LatestPipelineRunReader
         var ids = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         foreach (var row in read.Value ?? [])
         {
-            if (!IsRunAtItsNewest(row, newest, out var name, out var runId))
+            // Id is a uniqueidentifier and CreateDate a datetimeoffset: each is read as the type it is, and a value of any other type is refused naming it.
+            var name = row.GetValueOrDefault("PipelineName") as string ?? string.Empty;
+            var created = row.GetValueOrDefault("CreateDate");
+            if (created is not DateTimeOffset createdAt)
+            {
+                return GenericResult<IReadOnlyDictionary<string, Guid>>.Failure(
+                    OperationsLog.LatestRunTimeUnreadable(_logger, name, TypeNameOf(created)));
+            }
+
+            var id = row.GetValueOrDefault("Id");
+            if (id is not Guid runId)
+            {
+                return GenericResult<IReadOnlyDictionary<string, Guid>>.Failure(
+                    OperationsLog.LatestRunIdUnreadable(_logger, name, TypeNameOf(id)));
+            }
+
+            if (!newest.TryGetValue(name, out var at) || createdAt != at)
                 continue;
 
             // Two runs written at the same instant: the greater id is kept, so the answer does not depend on the order the rows came back in.
@@ -138,12 +155,8 @@ internal sealed class LatestPipelineRunReader
         return GenericResult<IReadOnlyDictionary<string, Guid>>.Success(ids);
     }
 
-    private static bool IsRunAtItsNewest(Dictionary<string, object?> row, IReadOnlyDictionary<string, DateTimeOffset> newest, out string name, out Guid runId)
-    {
-        name = row.GetValueOrDefault("PipelineName") as string ?? string.Empty;
-        runId = row.GetValueOrDefault("Id") is Guid id ? id : Guid.Empty;
-        return runId != Guid.Empty && newest.TryGetValue(name, out var at) && AsTime(row.GetValueOrDefault("CreateDate")) == at;
-    }
+    // The name of a value's type for a refusal; a value that is absent is a null from the store.
+    private static string TypeNameOf(object? value) => value is null ? nameof(DBNull) : value.GetType().Name;
 
     private DataStoreTarget Target() => new(_dataStoreName, RunPath, RunContainer);
 
@@ -173,12 +186,4 @@ internal sealed class LatestPipelineRunReader
             ? new FilterExpression { Root = conditions[0] }
             : new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = conditions.Cast<IFilterNode>().ToList() } };
     }
-
-    // A time as the data gateway hands it back: a DateTimeOffset, or a DateTime from a connection that has no offset.
-    private static DateTimeOffset? AsTime(object? value) => value switch
-    {
-        DateTimeOffset offset => offset,
-        DateTime time => new DateTimeOffset(DateTime.SpecifyKind(time, DateTimeKind.Utc)),
-        _ => null,
-    };
 }

@@ -28,6 +28,6 @@ public sealed class PipelineRunHistory : IPipelineRunHistory
     /// <inheritdoc />
     public Task<IGenericResult<IReadOnlyList<PipelineRunOutcome>>> Page(string pipelineName, int skip, int take, CancellationToken cancellationToken = default) =>
         EtlPipelineTypes.OperationalConnection is { } connection
-            ? PipelineRunOutcomeReader.Page(_dataGateways.ByName("Main"), _tracker, _logger, connection, pipelineName, skip, take, cancellationToken)
+            ? PipelineRunOutcomeReader.Page(_dataGateways.ByName(DataGatewayNames.Main), _tracker, _logger, connection, pipelineName, skip, take, cancellationToken)
             : Task.FromResult(GenericResult<IReadOnlyList<PipelineRunOutcome>>.Failure(PipelineFailureRuleLog.OperationalConnectionNotNamed(_logger, pipelineName)));
 }

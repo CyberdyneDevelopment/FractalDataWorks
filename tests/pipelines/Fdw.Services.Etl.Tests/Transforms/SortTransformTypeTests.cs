@@ -240,7 +240,7 @@ public sealed class SortTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11052");
+        result.Messages[^1].Code.ShouldBe("ETL-61003");
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public sealed class SortTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11056");
+        result.Messages[^1].Code.ShouldBe("ETL-91015");
     }
 
     [Fact]

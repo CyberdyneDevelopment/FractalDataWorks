@@ -2,6 +2,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -35,7 +37,7 @@ public abstract class GetPersonHomePageEndpointBase : EndpointWithoutRequest<Hom
     {
         if (PersonHomePageAccess.Of(_authContext) is not { } held)
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SettingsAnswerLog.GetPersonHomePageNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

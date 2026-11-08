@@ -2,7 +2,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Data;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -54,16 +56,23 @@ public abstract class RefreshConnectionSchemaEndpointBase : Endpoint<ConnectionS
             req.Name, Logger);
         if (options.IsFailure)
         {
-            AddError(options.CurrentMessage ?? string.Empty);
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(options, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var result = await _schemaService.RefreshSchema(req.Name, options.Value!, ct).ConfigureAwait(false);
 
-        if (!result.IsSuccess || result.Value == null)
+        if (result.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Schema discovery failed", Details = result.CurrentMessage ?? string.Empty }, statusCode: StatusCodes.Status500InternalServerError)).ConfigureAwait(false);
+            // Answered as every endpoint answers a failed result: the status is its category's and the reason the client text its message declares, so a refresh the
+            // cross-tenant change setting forbids is a 403 naming the setting and the log's own line (tenant ids, the cause) does not reach the caller (FDW-4459).
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (result.Value == null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConnectionsAnswerLog.RefreshConnectionSchemaSchemaDiscoveryFailed(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

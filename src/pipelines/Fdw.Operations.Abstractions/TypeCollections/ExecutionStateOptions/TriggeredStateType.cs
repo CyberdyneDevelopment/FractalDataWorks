@@ -22,6 +22,7 @@ public sealed class TriggeredStateType : ExecutionStateTypeBase
             isTerminal: false,
             isSuccess: false,
             isFailure: false,
+            isExecuting: true,
             canTriggerEscalation: false,
             validTransitions: ValidTransitionsArray)
     {

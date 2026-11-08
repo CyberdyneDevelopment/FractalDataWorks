@@ -37,6 +37,11 @@ public sealed class PostgreSqlConnectionConfigurationValidator : FdwConfiguratio
             .GreaterThan(0)
             .WithMessage("MaxSerialInsert must be stated and greater than 0: the most rows an insert runs serially before it takes the bulk route");
 
+        RuleFor(x => x.MaxParametersBeforeTempTable)
+            .GreaterThan(0)
+            .When(x => x.MaxParametersBeforeTempTable.HasValue)
+            .WithMessage("MaxParametersBeforeTempTable must be greater than 0 when it is stated; leave it out to take the default of the connection type");
+
         RuleFor(x => x.ConnectionTimeout)
             .GreaterThan(0)
             .When(x => x.ConnectionTimeout is not null)

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -55,11 +57,19 @@ public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutReques
         AuthorizationEndpointLog.ListingPermissions(EndpointLogger);
 
         var allPermissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
-        if (!allPermissionsResult.IsSuccess || allPermissionsResult.Value is null)
+        if (allPermissionsResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(
                 EndpointLogger, "permissions", allPermissionsResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(allPermissionsResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (allPermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(
+                EndpointLogger, "permissions", allPermissionsResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.ListPermissionsGroupedAllPermissionsReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var allPermissions = allPermissionsResult.Value;

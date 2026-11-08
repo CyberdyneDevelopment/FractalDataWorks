@@ -32,4 +32,12 @@ public static partial class OrganizationAdminEndpointLog
     /// <summary>Logs that the organization of another tenant was refused.</summary>
     [MessageLogging(EventId = 102761, Level = LogLevel.Warning, Message = "A change to an organization of tenant '{tenantId}' was refused: the caller does not act in it and is not a platform administrator")]
     public static partial IGenericMessage OtherTenant(ILogger logger, Guid tenantId);
+
+    /// <summary>Logs that The request to create organization was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102762, Level = LogLevel.Warning, Message = "The request to create organization was refused: the caller is not allowed", ClientMessage = "You are not allowed to create organization")]
+    public static partial IGenericMessage CreateOrganizationForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to update organization was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102763, Level = LogLevel.Warning, Message = "The request to update organization was refused: the caller is not allowed", ClientMessage = "You are not allowed to update organization")]
+    public static partial IGenericMessage UpdateOrganizationForbidden(ILogger logger);
 }

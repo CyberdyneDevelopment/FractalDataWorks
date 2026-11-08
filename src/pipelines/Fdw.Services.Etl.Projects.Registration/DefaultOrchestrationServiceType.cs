@@ -53,16 +53,8 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.AddSingleton<IOrchestrationNodeImplementationConfigurationProvider, OrchestrationNodeImplementationConfigurationProvider>(sp => new OrchestrationNodeImplementationConfigurationProvider(sp.GetRequiredService<ILogger<OrchestrationNodeImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "OrchestrationNodeConfiguration"));
-            builder.Services.TryAddSingleton<OrchestrationNodeConfigurationProvider>(sp =>
-            {
-                var domain = new OrchestrationNodeConfigurationProvider(
-                    sp.GetRequiredService<ILogger<OrchestrationNodeConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "OrchestrationNode");
-                domain.Register("OrchestrationNode", sp.GetRequiredService<IOrchestrationNodeImplementationConfigurationProvider>());
-                return domain;
-            });
-            builder.Services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
+            // The read side of the nodes (the providers and the project memberships) is registered by the helper the read-side option also uses, so a host that runs both gets one of each (FDW-4449).
+            OrchestrationNodeReadRegistration.Register(builder.Services);
 
             // The server's policy defaults: configuration in the host's server config, one ServerPolicyDefault domain row
             // naming its implementation row, read through this provider by whatever needs them (FDW-3580).

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Connections.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Schema.Endpoints.Ddl;
 
@@ -85,19 +86,22 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
             var connectionType = await GetConnectionType(req.Name, ct).ConfigureAwait(false);
             if (string.IsNullOrEmpty(connectionType))
             {
-                AddError("Unable to determine connection type");
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.GenerateDdlUnableToDetermineConnectionType(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             var containersResult = await DiscoverContainers(req.Name, ct).ConfigureAwait(false);
 
-            if (!containersResult.IsSuccess || containersResult.Value == null)
+            if (containersResult.IsFailure)
             {
-                var message = containersResult.NoValueReason().Message;
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(containersResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (containersResult.Value == null)
+            {
                 SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.Name, "generate-ddl");
-                AddError(message);
-                await Send.ErrorsAsync(containersResult.IsSuccess ? 404 : 500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.GenerateDdlConnectionNotFound(_logger, req.Name)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -119,8 +123,7 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
         catch (Exception ex)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "generate-ddl", req.Name);
-            AddError("DDL generation failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.GenerateDdlFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

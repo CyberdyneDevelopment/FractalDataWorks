@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -64,7 +65,7 @@ public abstract class SwitchOrganizationEndpointBase : Endpoint<SwitchOrganizati
             || !Guid.TryParse(User.FindFirst(ClaimDefinitions.tenantId.Name)?.Value, out var tenantId))
         {
             OrganizationSwitchEndpointLog.CallerNotIdentified(EndpointLogger);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OrganizationSwitchEndpointLog.SwitchOrganizationForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -78,7 +79,7 @@ public abstract class SwitchOrganizationEndpointBase : Endpoint<SwitchOrganizati
         if (organization.Value.TenantId != tenantId)
         {
             OrganizationSwitchEndpointLog.OtherTenant(EndpointLogger, userId, organization.Value.Id, tenantId);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OrganizationSwitchEndpointLog.SwitchOrganizationForbidden2(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -92,7 +93,7 @@ public abstract class SwitchOrganizationEndpointBase : Endpoint<SwitchOrganizati
         if (!access.Value)
         {
             OrganizationSwitchEndpointLog.AccessDenied(EndpointLogger, userId, organization.Value.Id);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OrganizationSwitchEndpointLog.SwitchOrganizationForbidden3(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -107,7 +108,7 @@ public abstract class SwitchOrganizationEndpointBase : Endpoint<SwitchOrganizati
         if (audited.IsFailure)
         {
             OrganizationSwitchEndpointLog.SwitchNotAudited(EndpointLogger, userId, organization.Value.Id, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

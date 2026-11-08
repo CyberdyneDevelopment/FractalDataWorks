@@ -7,6 +7,8 @@ using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -64,7 +66,7 @@ public abstract class ListAccessRequestsEndpointBase : EndpointWithoutRequest<IR
                 if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ListAccessRequestsNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -89,8 +91,7 @@ public abstract class ListAccessRequestsEndpointBase : EndpointWithoutRequest<IR
                 if (!result.IsSuccess)
                 {
                     MessagingEndpointLog.AccessRequestListFailed(_logger, result.CurrentMessage!);
-                    AddError("Failed to list access requests");
-                    await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                    await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                     return;
                 }
 
@@ -102,8 +103,7 @@ public abstract class ListAccessRequestsEndpointBase : EndpointWithoutRequest<IR
                 if (!result.IsSuccess)
                 {
                     MessagingEndpointLog.AccessRequestListFailed(_logger, result.CurrentMessage!);
-                    AddError("Failed to list access requests");
-                    await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                    await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                     return;
                 }
 
@@ -120,7 +120,7 @@ public abstract class ListAccessRequestsEndpointBase : EndpointWithoutRequest<IR
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "list-access-requests");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ListAccessRequestsFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

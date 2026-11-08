@@ -28,6 +28,12 @@ public interface IDataSetImplementationConfiguration : IImplementationConfigurat
     /// </summary>
     int ClassificationId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the logical id of the user who created the data set, or null for a data set with no owner (every data set made before FDW-4346, which shows as Unowned).
+    /// A Variation that is a data view names its owning user here; a Scoped variation names a workspace in <c>OwnerWorkspaceId</c> and leaves this null.
+    /// </summary>
+    Guid? OwnerUserId { get; set; }
+
     /// <summary>Gets or sets the data set's Fields.</summary>
     IList<DataSetFieldConfiguration> Fields { get; set; }
 

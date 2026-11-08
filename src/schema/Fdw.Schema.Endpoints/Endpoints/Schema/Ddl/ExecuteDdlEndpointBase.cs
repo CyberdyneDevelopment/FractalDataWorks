@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Schema.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Schema.Endpoints.Ddl;
 
@@ -76,15 +77,13 @@ public abstract class ExecuteDdlEndpointBase : Endpoint<ExecuteDdlRequest, Execu
 
         if (string.IsNullOrWhiteSpace(req.TableName))
         {
-            AddError("TableName is required");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.ExecuteDdlTablenameIsRequired(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (req.Columns.Count == 0)
         {
-            AddError("At least one column is required");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.ExecuteDdlAtLeastOneColumnIs(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -116,11 +115,7 @@ public abstract class ExecuteDdlEndpointBase : Endpoint<ExecuteDdlRequest, Execu
         catch (Exception ex)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "execute-ddl", req.Name);
-            await Send.ResponseAsync(new ExecuteDdlResponse
-            {
-                Success = false,
-                Message = "An internal error occurred during DDL execution."
-            }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.ExecuteDdlFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

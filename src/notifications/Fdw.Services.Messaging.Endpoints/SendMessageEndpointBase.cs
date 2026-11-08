@@ -8,6 +8,7 @@ using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -117,15 +118,14 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
                 if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.SendMessageNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var tenantIdClaim = HttpContext.User.FindFirst(ClaimDefinitions.tenantId.Name)?.Value;
         if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
         {
-            AddError("Tenant context required");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.SendMessageTenantContextRequired(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -147,8 +147,7 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
         var validation = Validate(req, derivedType);
         if (validation.IsFailure)
         {
-            AddError(validation.CurrentMessage!);
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(validation, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -178,8 +177,7 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.MessageSendFailed(_logger, referenceId, result.CurrentMessage!);
-                AddError("Failed to send message");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -193,7 +191,7 @@ public abstract class SendMessageEndpointBase : Endpoint<SendMessageRequest, Mes
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "send-message");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.SendMessageFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

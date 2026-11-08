@@ -7,6 +7,7 @@ using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
@@ -62,19 +63,8 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
 
         if (!result.IsSuccess)
         {
-            if (FailureCategory.IsMissing(result))
-            {
-                OnExecutionNotFound(req.Id);
-                await Send.ResultAsync(TypedResults.Json(new
-                {
-                    errorCode = "NotFound",
-                    messages = new[] { $"Execution '{req.Id}' was not found." }
-                }, statusCode: 404)).ConfigureAwait(false);
-                return;
-            }
-
             OnExecutionFetchFailed(req.Id, result.CurrentMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -82,11 +72,7 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
         if (execution == null)
         {
             OnExecutionNotFound(req.Id);
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "NotFound",
-                messages = new[] { $"Execution '{req.Id}' was not found." }
-            }, statusCode: 404)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetExecutionExecutionNotFound(EndpointLogger, req.Id)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

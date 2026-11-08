@@ -21,6 +21,7 @@ internal static class DataSetConfigurationFactory
     /// <summary>Builds the configuration a create request describes.</summary>
     /// <param name="request">The create request; its implementation is already known to be a data set kind.</param>
     /// <param name="categoryId">The identity of the category the request names; null when it names none.</param>
+    /// <param name="ownerUserId">The logical id of the calling user, who owns the new data set (FDW-4346).</param>
     /// <param name="values">Refuses a value the caller must choose and leaves out (FDW-3931).</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <returns>
@@ -28,7 +29,7 @@ internal static class DataSetConfigurationFactory
     /// request must state and leaves out (<c>ValueRequired</c>).
     /// </returns>
     internal static IGenericResult<IDataSetImplementationConfiguration> Create(
-        CreateDataSetRequest request, Guid? categoryId, DataSetRequestValues values, ILogger logger)
+        CreateDataSetRequest request, Guid? categoryId, Guid ownerUserId, DataSetRequestValues values, ILogger logger)
     {
         // A version the request leaves out is the kind's declared one (FDW-3956).
         var version = values.DeclaredText(request.Version, request.Implementation, DataSetDeclaredDefaults.Version, "version");
@@ -66,6 +67,7 @@ internal static class DataSetConfigurationFactory
         config.Description = request.Description ?? string.Empty;
         config.ClassificationId = request.ClassificationId;
         config.CategoryId = categoryId;
+        config.OwnerUserId = ownerUserId;
         config.Version = version.Value!;
         config.RecordTypeName = request.RecordTypeName;
         config.KeyFields = request.KeyFields

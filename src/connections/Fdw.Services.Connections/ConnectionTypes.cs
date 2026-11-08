@@ -184,6 +184,8 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 new ConnectionDisabledStates(
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConnectionTypes.ConfigurationConnection,
+                    sp.GetRequiredService<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(),
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
                     TimeProvider.System,
                     sp.GetService<ILogger<ConnectionDisabledStates>>()));
             builder.Services.TryAddScoped<Fdw.Operations.Abstractions.Thresholds.IConnectionDisabler>(sp =>

@@ -23,4 +23,16 @@ public static partial class ConnectionStoreEndpointLog
     /// <summary>Logs that a read of a tenant's grants was refused because the caller acts in another tenant.</summary>
     [MessageLogging(EventId = 102821, Level = LogLevel.Warning, Message = "Reading the connection grants of tenant '{tenantId}' was refused: the caller does not act in it and is not a platform administrator")]
     public static partial IGenericMessage OtherTenant(ILogger logger, Guid tenantId);
+
+    /// <summary>Logs that The request to grant connection was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102822, Level = LogLevel.Warning, Message = "The request to grant connection was refused: the caller is not allowed", ClientMessage = "You are not allowed to grant connection")]
+    public static partial IGenericMessage GrantConnectionForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to revoke connection grant was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102823, Level = LogLevel.Warning, Message = "The request to revoke connection grant was refused: the caller is not allowed", ClientMessage = "You are not allowed to revoke connection grant")]
+    public static partial IGenericMessage RevokeConnectionGrantForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to list connection grants was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102824, Level = LogLevel.Warning, Message = "The request to list connection grants was refused: the caller is not allowed", ClientMessage = "You are not allowed to list connection grants")]
+    public static partial IGenericMessage ListConnectionGrantsForbidden(ILogger logger);
 }

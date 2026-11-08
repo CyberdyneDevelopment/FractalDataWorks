@@ -1,10 +1,12 @@
 using System.Threading;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -43,7 +45,7 @@ public abstract class DataflowLayerEndpointBase : EndpointWithoutRequest<Dataflo
         var loaded = await DataflowGraphInputsLoader.Load(_provider, _pipelineProvider, _logger, NamesCategories, ct).ConfigureAwait(false);
         if (!loaded.IsSuccess)
         {
-            await WriteReadFailure(loaded.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(loaded, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -69,19 +71,6 @@ public abstract class DataflowLayerEndpointBase : EndpointWithoutRequest<Dataflo
     private async Task WritePipelineNotFound(string pipelineName, CancellationToken ct)
     {
         DataflowGraphConfigurationProviderLog.PipelineNotFound(_logger, pipelineName);
-        await Send.ResultAsync(TypedResults.Json(new
-        {
-            errorCode = "NotFound",
-            messages = new[] { $"Pipeline '{pipelineName}' was not found." }
-        }, statusCode: 404)).ConfigureAwait(false);
-    }
-
-    private async Task WriteReadFailure(string? reason, CancellationToken ct)
-    {
-        await Send.ResultAsync(TypedResults.Json(new
-        {
-            errorCode = "ReadFailed",
-            messages = new[] { $"Reading the dataflow graph failed: {reason}" }
-        }, statusCode: 500)).ConfigureAwait(false);
+        await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DataflowPipelineNotFound(_logger, pipelineName)), HttpContext)).ConfigureAwait(false);
     }
 }

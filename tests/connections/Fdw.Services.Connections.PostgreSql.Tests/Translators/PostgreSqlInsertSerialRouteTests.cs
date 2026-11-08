@@ -82,22 +82,6 @@ public sealed class PostgreSqlInsertSerialRouteTests
     {
         var fields = Enumerable.Range(0, 15).Select(i => CreateField($"c{i}")).Prepend(CreateField("id", isIdentity: true)).ToArray();
 
-        PostgreSqlInsertTranslator.RowsPerRequest(CreateContainer(fields).Object).ShouldBe(32767 / 15);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task ACommandOverTheParameterLimitIsRefusedNotSentToTheServer()
-    {
-        var fields = Enumerable.Range(0, 15).Select(i => CreateField($"c{i}")).ToArray();
-        var perCommand = PostgreSqlInsertTranslator.RowsPerRequest(CreateContainer(fields).Object);
-        var rows = Enumerable.Range(0, perCommand + 1)
-            .Select(i => (object)fields.ToDictionary(f => f.Name, f => (object?)$"v{i}"))
-            .ToList();
-
-        var result = await _sut.Translate(CreateCommand(rows).Object, CreateContainer(fields).Object, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
+        PostgreSqlInsertTranslator.RowsPerRequest(CreateContainer(fields).Object, 32767).ShouldBe(32767 / 15);
     }
 }

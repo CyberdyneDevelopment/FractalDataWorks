@@ -40,6 +40,9 @@ public sealed class ExecutionTrackingServiceLatestRunsTests
     private readonly List<IDataCommand> _commands = [];
     private readonly List<Run> _runs = [];
 
+    // Changes a row the way a store that hands back the wrong type would (FDW-4350): applied to the grouped read and to the row read alike.
+    private Action<Dictionary<string, object?>>? _corrupt;
+
     private void Seed(params Run[] runs) => _runs.AddRange(runs);
 
     // The gateway answers the way the stores do: the grouped newest time of the names asked, the rows at those times, the items by id.
@@ -94,7 +97,7 @@ public sealed class ExecutionTrackingServiceLatestRunsTests
         return _runs
             .Where(r => names.Contains(r.Pipeline))
             .GroupBy(r => r.Pipeline, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new Dictionary<string, object?> { ["PipelineName"] = g.Key, ["NewestAt"] = g.Max(r => r.At) });
+            .Select(g => Corrupted(new Dictionary<string, object?> { ["PipelineName"] = g.Key, ["NewestAt"] = g.Max(r => r.At) }));
     }
 
     private IEnumerable<Dictionary<string, object?>> RowsAsked(QueryCommand<Dictionary<string, object?>> query)
@@ -103,7 +106,13 @@ public sealed class ExecutionTrackingServiceLatestRunsTests
         var times = Values(query.Filter, "CreateDate");
         return _runs
             .Where(r => names.Contains(r.Pipeline) && times.Contains(r.At))
-            .Select(r => new Dictionary<string, object?> { ["Id"] = r.Id, ["PipelineName"] = r.Pipeline, ["CreateDate"] = r.At });
+            .Select(r => Corrupted(new Dictionary<string, object?> { ["Id"] = r.Id, ["PipelineName"] = r.Pipeline, ["CreateDate"] = r.At }));
+    }
+
+    private Dictionary<string, object?> Corrupted(Dictionary<string, object?> row)
+    {
+        _corrupt?.Invoke(row);
+        return row;
     }
 
     private IEnumerable<ExecutionItem> ItemsAsked(QueryCommand<ExecutionItem> query)
@@ -235,6 +244,44 @@ public sealed class ExecutionTrackingServiceLatestRunsTests
 
         result.Value!.Count.ShouldBe(1);
         result.Value["nightly"].Id.ShouldBe(id);
+    }
+
+    [Fact]
+    public async Task ANewestTimeThatIsNotADateTimeOffsetIsRefusedNamingItsTypeNotReadAsNoTime()
+    {
+        Seed(new Run("Nightly", Older, Guid.NewGuid(), "Completed"));
+        _corrupt = row => { if (row.ContainsKey("NewestAt")) row["NewestAt"] = Older.UtcDateTime; };
+
+        var result = await Tracker(500).GetLatestRuns(["Nightly"], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("DateTime");
+        result.CurrentMessage.ShouldContain("Nightly");
+    }
+
+    [Fact]
+    public async Task ARowWhoseCreateDateIsNotADateTimeOffsetIsRefusedNamingItsType()
+    {
+        Seed(new Run("Nightly", Older, Guid.NewGuid(), "Completed"));
+        _corrupt = row => { if (row.ContainsKey("CreateDate")) row["CreateDate"] = "2026-11-07"; };
+
+        var result = await Tracker(500).GetLatestRuns(["Nightly"], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("String");
+    }
+
+    [Fact]
+    public async Task ARowWhoseIdIsNotAGuidIsRefusedNamingItsType()
+    {
+        Seed(new Run("Nightly", Older, Guid.NewGuid(), "Completed"));
+        _corrupt = row => { if (row.ContainsKey("Id")) row["Id"] = "not-a-guid"; };
+
+        var result = await Tracker(500).GetLatestRuns(["Nightly"], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("String");
+        result.CurrentMessage.ShouldContain("Guid");
     }
 
     [Fact]

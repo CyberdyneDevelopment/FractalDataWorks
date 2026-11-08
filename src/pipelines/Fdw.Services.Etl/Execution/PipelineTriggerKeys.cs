@@ -159,14 +159,16 @@ public sealed class PipelineTriggerKeys : IPipelineTriggerKeys
         var store = EtlPipelineTypes.OperationalConnection;
         return string.IsNullOrWhiteSpace(store)
             ? GenericResult<(IDataGateway Gateway, string Store)>.Failure(PipelineTriggerKeyLog.StoreNotNamed(_logger))
-            : GenericResult<(IDataGateway Gateway, string Store)>.Success((services.GetRequiredService<IDataGatewayProvider>().ByName("Main"), store));
+            : GenericResult<(IDataGateway Gateway, string Store)>.Success((services.GetRequiredService<IDataGatewayProvider>().ByName(DataGatewayNames.Main), store));
     }
 
     // The bookkeeping context of the key: its tenant rides on it so the row lands under the fire's tenant.
     private static void Elevate(IServiceProvider services, Guid tenantId)
     {
-        var accessor = services.GetService<IAuthenticationContextAccessor>();
-        if (accessor is null || accessor.Current is not null)
+        // Why required (FDW-4395): every host that runs the pipeline types registers the accessor, so an absent one is a host that is built wrong, and
+        // the bookkeeping row would be written under no tenant context. It is a missing registration to be seen, not a case to step over.
+        var accessor = services.GetRequiredService<IAuthenticationContextAccessor>();
+        if (accessor.Current is not null)
         {
             return;
         }

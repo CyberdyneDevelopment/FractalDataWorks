@@ -12,6 +12,7 @@ using Fdw.Services.Workspaces.Endpoints;
 using Fdw.Services.Workspaces.Results;
 using Fdw.Services.Etl;
 using Fdw.Services.Etl.Graphs;
+using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -209,6 +210,32 @@ public class OverviewMapStreamTests
             nodes.Add(node);
 
         nodes.Single().Metadata.ContainsKey("workspace").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task APipelineNodeNamesItsProjectsAnEmptyListWhenNoProjectRunsItAndNoneWhenProjectsAreNotRead()
+    {
+        // FDW-4449: the console groups pipelines by project; a pipeline in no project says so with an empty list, a map that did not read projects says nothing.
+        var otherId = Guid.Parse("00000000-0000-0000-0000-0000000000c2");
+        var memberships = new Mock<IPipelineProjectMemberships>();
+        memberships.Setup(m => m.ByPipeline(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>>.Success(
+                new Dictionary<Guid, IReadOnlyList<string>> { [LoadId] = ["Nightly", "Weekly"] }));
+        var pipelines = new[] { Pipeline(LoadId, "Load", "Orders", "Customers"), Pipeline(otherId, "Loose", "Orders", "Customers") };
+
+        var read = new List<MapNodeDto>();
+        await foreach (var node in new OverviewMapStream(
+            new FixedSelection(pipelines, [], [], NoVariations), Sources(), await Editing(), NullLogger.Instance, projects: memberships.Object).Nodes(TestContext.Current.CancellationToken))
+            read.Add(node);
+        var notRead = new List<MapNodeDto>();
+        await foreach (var node in new OverviewMapStream(
+            new FixedSelection(pipelines, [], [], NoVariations), Sources(), await Editing(), NullLogger.Instance).Nodes(TestContext.Current.CancellationToken))
+            notRead.Add(node);
+
+        ((IReadOnlyList<string>)read.Single(node => node.Label == "Load").Metadata["projects"]).ShouldBe(["Nightly", "Weekly"]);
+        ((IReadOnlyList<string>)read.Single(node => node.Label == "Loose").Metadata["projects"]).ShouldBeEmpty();
+        notRead.Single(node => node.Label == "Load").Metadata.ContainsKey("projects").ShouldBeFalse();
+        memberships.Verify(m => m.ByPipeline(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

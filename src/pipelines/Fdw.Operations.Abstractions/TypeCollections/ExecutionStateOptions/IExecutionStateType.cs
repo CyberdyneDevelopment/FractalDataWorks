@@ -24,6 +24,16 @@ public interface IExecutionStateType : ITypeOption<int, ExecutionStateTypeBase>
     bool IsFailure { get; }
 
     /// <summary>
+    /// Gets a value indicating whether a run in this state is executing: it has taken its turn and is neither waiting (Scheduled, AwaitingApproval) nor finished (FDW-4488).
+    /// </summary>
+    bool IsExecuting { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether this state is terminal and neither a success nor a failure: the run was cancelled, timed out or interrupted (FDW-4488).
+    /// </summary>
+    bool IsStopped { get; }
+
+    /// <summary>
     /// Gets the valid transitions from this state.
     /// </summary>
     IReadOnlyList<string> ValidTransitions { get; }

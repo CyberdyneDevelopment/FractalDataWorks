@@ -7,6 +7,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Users.Clients.Models;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -67,9 +69,15 @@ public abstract class RevokeApiKeyEndpointBase : Endpoint<RevokeApiKeyRequest>
         var userResult = await UserRouteTarget
             .Resolve(_userProvider, User, req.IdOrName, ct).ConfigureAwait(false);
 
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.RevokeApiKeyUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -78,15 +86,14 @@ public abstract class RevokeApiKeyEndpointBase : Endpoint<RevokeApiKeyRequest>
         if (!AccountAuthority.ManagesKeys(User, user, Resolve<ISystemRoleConfiguration>()))
         {
             UserEndpointLog.ApiKeyOperationNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.RevokeApiKeyForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var isAgent = string.Equals(req.Kind, ApiKeyKinds.Agent, StringComparison.OrdinalIgnoreCase);
         if (!isAgent && !string.Equals(req.Kind, ApiKeyKinds.User, StringComparison.OrdinalIgnoreCase))
         {
-            AddError("API key kind must be 'user' or 'agent'.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.RevokeApiKeyApiKeyKindMustBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -96,8 +103,7 @@ public abstract class RevokeApiKeyEndpointBase : Endpoint<RevokeApiKeyRequest>
 
         if (!result.IsSuccess)
         {
-            AddError("The key could not be revoked.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.RevokeApiKeyTheKeyCouldNotBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

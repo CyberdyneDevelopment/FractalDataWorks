@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -70,14 +72,14 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
         if (!existing.IsSuccess)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name, existing.CurrentMessage);
-            await Send.ResponseAsync(null, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(existing, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (existing.Value is null)
         {
             AuthorizationEndpointLog.RoleNotFound(EndpointLogger, req.Name);
-            await Send.ResultAsync(TypedResults.Json(new { errorCode = "NotFound", messages = new[] { $"roles \u0027{req.Name}\u0027 was not found." } }, statusCode: 404)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.UpdateRoleRoleNotFound(EndpointLogger, req.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -92,7 +94,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
         if (!result.IsSuccess)
         {
             AuthorizationEndpointLog.RoleWriteFailed(EndpointLogger, "update", req.Name, result.CurrentMessage);
-            await Send.ResponseAsync(null, 400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -101,7 +103,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
         if (audited.IsFailure)
         {
             AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RoleUpdated", req.Name, audited.CurrentMessage);
-            await Send.ResponseAsync(null, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

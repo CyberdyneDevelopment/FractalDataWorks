@@ -53,8 +53,9 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The implementation contract this provider composes.</param>
     /// <param name="key">The name or id that was looked up.</param>
-    [MessageLogging(EventId = 11014, Level = LogLevel.Trace,
-        Message = "No {typeName} domain row found for '{key}'")]
+    [MessageLogging(EventId = 31062, Level = LogLevel.Trace,
+        Message = "No {typeName} domain row found for '{key}'",
+        ClientMessage = "No {typeName} domain row found for '{key}'")]
     public static partial IGenericMessage DomainRowNotFound(ILogger logger, string typeName, string key);
 
     /// <summary>Logs a record that is one member saved under the name of another.</summary>

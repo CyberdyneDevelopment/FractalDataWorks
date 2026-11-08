@@ -1,3 +1,4 @@
+using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
@@ -18,4 +19,16 @@ public static partial class RetentionEndpointLog
     /// <summary>Logs that a hold was refused because the caller's token names no user.</summary>
     [MessageLogging(EventId = 103111, Level = LogLevel.Warning, Message = "A legal hold change was refused: the caller's token names no user")]
     public static partial IGenericMessage CallerNotIdentified(ILogger logger);
+
+    /// <summary>Logs that The retention run for organization organizationId could not record its end in the audit log.</summary>
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "The retention run for organization {organizationId} could not record its end in the audit log", ClientMessage = "The retention run finished but its end could not be recorded")]
+    public static partial IGenericMessage RunRetentionAuditNotEnded(ILogger logger, Guid organizationId);
+
+    /// <summary>Logs that The request to lift legal hold was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 103112, Level = LogLevel.Warning, Message = "The request to lift legal hold was refused: the caller is not allowed", ClientMessage = "You are not allowed to lift legal hold")]
+    public static partial IGenericMessage LiftLegalHoldForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to place legal hold was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 103113, Level = LogLevel.Warning, Message = "The request to place legal hold was refused: the caller is not allowed", ClientMessage = "You are not allowed to place legal hold")]
+    public static partial IGenericMessage PlaceLegalHoldForbidden(ILogger logger);
 }

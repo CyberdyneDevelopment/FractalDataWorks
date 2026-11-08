@@ -71,7 +71,7 @@ public abstract class GetDataSetFieldHistoryEndpointBase : Endpoint<DataSetField
         if (resolved.Value is not { } found)
         {
             DataSetFieldHistoryEndpointLog.FieldNotFound(_logger, req.Name, req.Field);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(DataSetFieldHistoryEndpointLog.GetDataSetFieldHistoryNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

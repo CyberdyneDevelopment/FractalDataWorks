@@ -5,6 +5,8 @@ using FastEndpoints;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -42,13 +44,13 @@ public abstract class GetQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to get quality rule", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (result.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(QualityAnswerLog.GetQualityRuleQualityruleNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
