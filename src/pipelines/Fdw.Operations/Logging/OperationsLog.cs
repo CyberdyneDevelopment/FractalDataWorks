@@ -323,4 +323,38 @@ public static partial class OperationsLog
     /// </summary>
     [MessageLogging(EventId = 91002, Level = LogLevel.Warning, Message = "Unexpected error during notification emission for item '{executionItemId}'; execution result is unaffected")]
     public static partial IGenericMessage NotificationEmissionError(ILogger logger, Guid executionItemId, Exception exception);
+
+    // =============================================================================
+    // Latest run of each pipeline (FDW-4350)
+    // =============================================================================
+
+    /// <summary>
+    /// Logs when the chunk size the latest runs are read in is less than 1.
+    /// </summary>
+    [MessageLogging(EventId = 61150, Level = LogLevel.Critical, Message = "OperationsServiceTypes.LatestRunsChunkSize is {chunkSize}; the pieces the latest runs of pipelines are read in must hold at least 1 name, and the host states the size at registration")]
+    public static partial IGenericMessage LatestRunsChunkSizeInvalid(ILogger logger, int chunkSize);
+
+    /// <summary>
+    /// Logs when the tracker was built without a chunk size to read the latest runs in.
+    /// </summary>
+    [MessageLogging(EventId = 61151, Level = LogLevel.Error, Message = "The execution tracker was built without the chunk size the latest runs of pipelines are read in (OperationsServiceTypes.LatestRunsChunkSize); none is chosen for it")]
+    public static partial IGenericMessage LatestRunsChunkSizeNotStated(ILogger logger);
+
+    /// <summary>
+    /// Logs when a pipeline name given for the latest runs is blank.
+    /// </summary>
+    [MessageLogging(EventId = 61152, Level = LogLevel.Error, Message = "A pipeline name given for the latest runs is blank; every name must be stated")]
+    public static partial IGenericMessage LatestRunsNameBlank(ILogger logger);
+
+    /// <summary>
+    /// Logs when the newest run time of a pipeline comes back as something that is not a time.
+    /// </summary>
+    [MessageLogging(EventId = 61153, Level = LogLevel.Error, Message = "The newest run time of pipeline '{pipelineName}' came back as {valueType}, which is not a time")]
+    public static partial IGenericMessage LatestRunTimeUnreadable(ILogger logger, string pipelineName, string valueType);
+
+    /// <summary>
+    /// Logs the latest runs read.
+    /// </summary>
+    [MessageLogging(EventId = 11311, Level = LogLevel.Debug, Message = "Read the latest run of {found} of {asked} pipeline name(s) in {pieces} piece(s) of at most {chunkSize}")]
+    public static partial IGenericMessage LatestRunsRead(ILogger logger, int found, int asked, int pieces, int chunkSize);
 }

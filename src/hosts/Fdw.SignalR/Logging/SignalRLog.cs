@@ -305,13 +305,13 @@ public static partial class SignalRLog
         string hubName);
 
     /// <summary>
-    /// Logs when a hub connection carries no <c>org_id</c> claim, so the org-scoped firehose auto-join
+    /// Logs when a hub connection carries no <c>orgId</c> claim, so the org-scoped firehose auto-join
     /// is skipped — the connection joins no global (cross-org) firehose and no placeholder org is used.
     /// </summary>
     [MessageLogging(
         EventId = 71006,
         Level = LogLevel.Warning,
-        Message = "Connection {connectionId} on hub {hubName} has no org_id claim; skipping org firehose auto-join")]
+        Message = "Connection {connectionId} on hub {hubName} has no orgId claim; skipping org firehose auto-join")]
     public static partial IGenericMessage HubOrgClaimMissing(
         ILogger logger,
         string connectionId,

@@ -128,6 +128,9 @@ public class ConnectionProviderTests
         public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(string name, int levels, CancellationToken ct = default)
             => Get(name, ct);
 
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
+            => Get(name, ct);
+
         public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(Guid id, int levels, CancellationToken ct = default)
             => Get(id, ct);
 

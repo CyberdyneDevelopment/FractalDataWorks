@@ -174,7 +174,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
                 _logger, name, start.ParentExecutionId, created.CurrentMessage));
 
         var executionId = created.Value.Id;
-        var written = await WriteRunRow(planned.Store, executionId, name, created.Value.State.Name, ct).ConfigureAwait(false);
+        var written = await WriteRunRow(planned.Store, executionId, name, start.TenantId, created.Value.State.Name, ct).ConfigureAwait(false);
         return written.IsFailure
             ? await Refuse(executionId, "RunRowNotWritten", written).ConfigureAwait(false)
             : GenericResult<Guid>.Success(executionId);
@@ -291,9 +291,9 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
     private static string NotFoundReason(IGenericResult found) =>
         found.CurrentMessage is { Length: > 0 } message ? message : "no pipeline of that name is visible to the run";
 
-    private async Task<IGenericResult> WriteRunRow(string store, Guid executionId, string pipelineName, string state, CancellationToken ct)
+    private async Task<IGenericResult> WriteRunRow(string store, Guid executionId, string pipelineName, Guid tenantId, string state, CancellationToken ct)
     {
-        var row = new EtlPipelineExecutionRecord { Id = executionId, PipelineName = pipelineName, Status = state };
+        var row = new EtlPipelineExecutionRecord { Id = executionId, PipelineName = pipelineName, TenantId = tenantId, Status = state };
         var insert = Insert.Into<EtlPipelineExecutionRecord>(RunContainerName)
             .DataStore(store)
             .Path(RunPath)

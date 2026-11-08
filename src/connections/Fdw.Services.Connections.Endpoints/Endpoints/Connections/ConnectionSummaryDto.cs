@@ -21,6 +21,9 @@ public class ConnectionSummaryDto : ResourceSummary
     /// <summary>Gets or sets whether the last connection test succeeded, false if it failed, or null if never tested.</summary>
     public bool? LastTestSuccess { get; set; }
 
+    /// <summary>Gets or sets the state of the connection when it is disabled: since when, why and by whom (FDW-4290). Null when it is not disabled.</summary>
+    public ConnectionDisabledDto? Disabled { get; set; }
+
     /// <summary>
     /// Gets or sets the schema discovery option the connection uses. A client asks whether to discover
     /// only when it discovers (<see cref="SchemaDiscoveryTypeInfo.DiscoversSchema"/>).

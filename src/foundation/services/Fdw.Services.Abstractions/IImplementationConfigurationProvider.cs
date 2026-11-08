@@ -46,6 +46,14 @@ public interface IImplementationConfigurationProvider<TConfiguration>
     /// <returns>The implementation configuration, or a structured failure.</returns>
     Task<IGenericResult<TConfiguration>> Get(Guid domainId, int levels, CancellationToken cancellationToken = default);
 
+    /// <summary>Gets the implementation under a domain row, composed to a depth, reading only the child rows <paramref name="narrowing"/> allows (FDW-4328).</summary>
+    /// <param name="domainId">The owning domain row's durable id.</param>
+    /// <param name="levels">How many levels of child collections to read; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="narrowing">Which rows of one kind of child collection to read.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The implementation configuration, or a structured failure.</returns>
+    Task<IGenericResult<TConfiguration>> Get(Guid domainId, int levels, ChildNarrowing narrowing, CancellationToken cancellationToken = default);
+
     /// <summary>Gets one child collection of one owner row, without reading the rest of the aggregate.</summary>
     /// <typeparam name="TOwner">
     /// The owner's type: this implementation's contract or configuration for its direct children, or a

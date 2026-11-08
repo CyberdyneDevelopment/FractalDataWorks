@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\data\Fdw.Services.Data.Endpoints\Fdw.Services.Data.Endpoints.csproj" />
     <ProjectReference Include="..\..\tags\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
     <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

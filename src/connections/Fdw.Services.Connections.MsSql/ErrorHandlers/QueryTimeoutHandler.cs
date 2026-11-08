@@ -22,7 +22,7 @@ public sealed class QueryTimeoutHandler : SqlErrorHandlerBase
     public QueryTimeoutHandler() : base("QueryTimeout") { }
 
     /// <inheritdoc />
-    public override IReadOnlyList<int> SqlErrorNumbers => [-2];
+    public override IReadOnlyList<int> SqlErrorNumbers => [-2, 1222];
 
     /// <inheritdoc />
     public override bool IsRetryable => true;

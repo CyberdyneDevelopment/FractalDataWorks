@@ -46,4 +46,21 @@ public interface IDataStoreProvider
     /// (dot-walk of <c>Get(store).Path(path).Container(container)</c>).
     /// </summary>
     Task<IGenericResult<IDataContainer>> Get(string dataStoreName, string pathName, string containerName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets one container for a command that also names others (the containers it joins), building those and the containers their keys refer to, and no
+    /// other container of the store (FDW-4328).
+    /// </summary>
+    /// <param name="dataStoreName">The store's name.</param>
+    /// <param name="pathName">The path the container is in.</param>
+    /// <param name="containerName">The container the command is run on.</param>
+    /// <param name="joinedContainers">The other containers the command names, by name; container names are unique within a store.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The container, or the structured failure of the store, path or container that is not there.</returns>
+    /// <remarks>
+    /// The container's parent path and store list the containers named here and no others, so they are not the store: a store is got by
+    /// <see cref="Get(string, CancellationToken)"/>. The inbound keys of the container are not resolved (its <c>ReferencingKeys</c> is a failure that says so).
+    /// </remarks>
+    Task<IGenericResult<IDataContainer>> Get(
+        string dataStoreName, string pathName, string containerName, IReadOnlyCollection<string> joinedContainers, CancellationToken cancellationToken = default);
 }

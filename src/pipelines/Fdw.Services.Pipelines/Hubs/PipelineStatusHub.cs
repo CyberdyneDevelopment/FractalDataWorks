@@ -19,11 +19,11 @@ namespace Fdw.Services.Pipelines.Hubs;
 /// </para>
 /// <para>
 /// Per-org firehose: on connect the hub joins the caller's org group
-/// <c>org:{orgId}:pipeline-updates</c>, read from the authenticated principal's <c>org_id</c> claim, so
+/// <c>org:{orgId}:pipeline-updates</c>, read from the authenticated principal's <c>orgId</c> claim, so
 /// an "all my pipelines" view receives only its own org's pipeline lifecycle events. The broadcaster
 /// targets the same group using the pipeline's owning <c>OrgId</c>
 /// (the pipe.Pipeline row's OrgId). There is <b>no</b> global (cross-org) firehose: a
-/// connection with no <c>org_id</c> claim joins no firehose (logged; no placeholder org), and a
+/// connection with no <c>orgId</c> claim joins no firehose (logged; no placeholder org), and a
 /// pipeline with no owning org is broadcast to no firehose. Clients can additionally opt in to
 /// <c>pipeline:{name}</c> / <c>execution:{id}</c> via <see cref="SubscribeToPipeline"/> /
 /// <see cref="SubscribeToExecution"/> (FDW-545).
@@ -98,13 +98,12 @@ public class PipelineStatusHub : RealTimeHubBase<IPipelineStatusHubClient>
     /// <inheritdoc/>
     /// <remarks>
     /// Joins the caller's org firehose <c>org:{orgId}:pipeline-updates</c> from the authenticated
-    /// <c>org_id</c> claim. When the connection carries no org claim the join is skipped and logged —
+    /// <c>orgId</c> claim. When the connection carries no org claim the join is skipped and logged —
     /// never a global firehose (there is none) and never a substituted placeholder org (NO FALLBACKS).
     /// </remarks>
     protected override Task OnJoin()
     {
-        var orgId = Context.User?.FindFirst("org_id")?.Value;
-        if (string.IsNullOrEmpty(orgId))
+        if (CallerOrgId is not { } orgId)
         {
             SignalRLog.HubOrgClaimMissing(Logger, Context.ConnectionId, HubName);
             return Task.CompletedTask;

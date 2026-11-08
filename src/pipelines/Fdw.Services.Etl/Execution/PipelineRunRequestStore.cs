@@ -173,7 +173,7 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 TestRowsPerSource = old.TestRowsPerSource,
                 TimeoutSeconds = old.TimeoutSeconds
             };
-            await OpenMetrics(open.Value.Gateway, open.Value.Store, again, created.Value.State.Name, cancellationToken).ConfigureAwait(false);
+            await OpenMetrics(open.Value.Gateway, open.Value.Store, again, tenantId, created.Value.State.Name, cancellationToken).ConfigureAwait(false);
             return await Replace(tracker, open.Value.Gateway, open.Value.Store, new Stamp(again.ExecutionId, tenantId, host.Value), run, again, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -231,11 +231,11 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     }
 
     // The metrics row the engine updates as the run goes (the trigger writes it when it accepts a run); a failed write is logged, not fatal, as it is there.
-    private async Task OpenMetrics(IDataGateway gateway, string store, PipelineExecutionRequest request, string state, CancellationToken cancellationToken)
+    private async Task OpenMetrics(IDataGateway gateway, string store, PipelineExecutionRequest request, Guid tenantId, string state, CancellationToken cancellationToken)
     {
         var inserted = await gateway.Execute<int>(
             Insert.Into<EtlPipelineExecutionRecord>(MetricsContainerName).DataStore(store).Path(PathName)
-                .Value(new EtlPipelineExecutionRecord { Id = request.ExecutionId, PipelineName = request.PipelineName, ScheduleName = request.ScheduleName, Status = state }),
+                .Value(new EtlPipelineExecutionRecord { Id = request.ExecutionId, PipelineName = request.PipelineName, TenantId = tenantId, ScheduleName = request.ScheduleName, Status = state }),
             cancellationToken).ConfigureAwait(false);
         if (inserted.IsFailure)
         {

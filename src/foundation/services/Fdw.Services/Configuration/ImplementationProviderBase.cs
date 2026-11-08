@@ -92,7 +92,18 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         => Get(domainId, ConfigurationLevels.WholeAggregate, cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<TConfiguration>> Get(Guid domainId, int levels, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<TConfiguration>> Get(Guid domainId, int levels, CancellationToken cancellationToken = default)
+        => ReadCurrent(domainId, levels, null, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<IGenericResult<TConfiguration>> Get(Guid domainId, int levels, ChildNarrowing narrowing, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(narrowing);
+        return ReadCurrent(domainId, levels, narrowing, cancellationToken);
+    }
+
+    // The current row of one domain member, as the set read of a set of one (FDW-4254), narrowed when asked (FDW-4328).
+    private async Task<IGenericResult<TConfiguration>> ReadCurrent(Guid domainId, int levels, ChildNarrowing? narrowing, CancellationToken cancellationToken)
     {
         if (levels < 0)
             return GenericResult<TConfiguration>.Failure(
@@ -109,7 +120,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             return GenericResult<TConfiguration>.Success(default!);
         }
 
-        var set = await GetSet([domainId], levels, cancellationToken).ConfigureAwait(false);
+        var set = await ReadSets([domainId], levels, narrowing, cancellationToken).ConfigureAwait(false);
         if (!set.IsSuccess) return set.ToNewResult<TConfiguration>();
 
         if (!set.Value!.TryGetValue(domainId, out var found))
@@ -261,8 +272,12 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     /// <see cref="IConfigurationGatewayProvider.KeyChunkSize"/> keys to a statement. What it reads is what <see cref="Get(Guid, int, CancellationToken)"/> reads for each id
     /// (current, not deleted, the domain row current and not deleted too), and the rows are built the same way.
     /// </remarks>
-    public async Task<IGenericResult<IReadOnlyDictionary<Guid, TConfiguration>>> GetSet(
+    public Task<IGenericResult<IReadOnlyDictionary<Guid, TConfiguration>>> GetSet(
         IEnumerable<Guid> domainIds, int levels, CancellationToken cancellationToken = default)
+        => ReadSets(domainIds, levels, null, cancellationToken);
+
+    private async Task<IGenericResult<IReadOnlyDictionary<Guid, TConfiguration>>> ReadSets(
+        IEnumerable<Guid> domainIds, int levels, ChildNarrowing? narrowing, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(domainIds);
         if (levels < 0)
@@ -280,7 +295,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         var found = new Dictionary<Guid, TConfiguration>();
         foreach (var chunk in wanted.Chunk(_gatewayProvider.KeyChunkSize))
         {
-            var read = await ReadSet(plan.Value!, chunk, levels, cancellationToken).ConfigureAwait(false);
+            var read = await ReadSet(plan.Value!, chunk, levels, narrowing, cancellationToken).ConfigureAwait(false);
             if (read.IsFailure) return read.ToNewResult<IReadOnlyDictionary<Guid, TConfiguration>>();
 
             foreach (var pair in read.Value!)
@@ -327,7 +342,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
 
     // One chunk of domain Ids: their domain rows, the implementation rows hanging from those, the children of those rows. Keyed by domain Id.
     private async Task<IGenericResult<Dictionary<Guid, TConfiguration>>> ReadSet(
-        SetPlan plan, Guid[] domainIds, int levels, CancellationToken ct)
+        SetPlan plan, Guid[] domainIds, int levels, ChildNarrowing? narrowing, CancellationToken ct)
     {
         var domainRows = await RowsOf(plan.Domain).All(In(plan.KeyColumn, [.. domainIds.Cast<object>()]), ct).ConfigureAwait(false);
         if (domainRows.IsFailure) return domainRows.ToNewResult<Dictionary<Guid, TConfiguration>>();
@@ -345,7 +360,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         var owned = OwnedBy(plan, domainByKey.Value, ownRows.Value!, built.Value!);
         if (owned.IsFailure) return owned.ToNewResult<Dictionary<Guid, TConfiguration>>();
 
-        var children = await _children.Load(owned.Value!.Owners, plan.Mapper, _commands.TableName, levels, ct).ConfigureAwait(false);
+        var children = await _children.Load(owned.Value!.Owners, plan.Mapper, _commands.TableName, levels, narrowing, ct).ConfigureAwait(false);
         return children.IsFailure
             ? children.ToNewResult<Dictionary<Guid, TConfiguration>>()
             : GenericResult<Dictionary<Guid, TConfiguration>>.Success(owned.Value.ByDomain);
@@ -583,6 +598,15 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         Guid domainId, int levels, CancellationToken cancellationToken)
     {
         var found = await Get(domainId, levels, cancellationToken).ConfigureAwait(false);
+        return found.IsSuccess
+            ? GenericResult<TContract>.Success(found.Value!)
+            : found.ToNewResult<TContract>();
+    }
+
+    async Task<IGenericResult<TContract>> IImplementationConfigurationProvider<TContract>.Get(
+        Guid domainId, int levels, ChildNarrowing narrowing, CancellationToken cancellationToken)
+    {
+        var found = await Get(domainId, levels, narrowing, cancellationToken).ConfigureAwait(false);
         return found.IsSuccess
             ? GenericResult<TContract>.Success(found.Value!)
             : found.ToNewResult<TContract>();
@@ -1131,30 +1155,46 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         if (descriptor.GetCollection(owner) is not System.Collections.IEnumerable items)
             return GenericResult.Success();
 
-        var kept = new List<Guid>();
+        var children = ConfigurationChildren(owner, items);
+
+        // Only a collection that declares its list the full set retires the children the list no longer carries, and it does so BEFORE the list is
+        // written (FDW-4363): a child the caller lists again under a new Id replaces its predecessor, and a unique key on what names the child
+        // (a role and its permission) refuses the new row while the old one is still current. The Ids are known up front, and both steps run in
+        // the one unit, so a save that fails part way leaves nothing retired.
+        if (mode is { RetiresAbsentChildren: true })
+        {
+            var retired = await RetireAbsent(owner, descriptor, ownerContainer, ownerKeyValues, [.. children.Select(child => child.Id)], unit, ct).ConfigureAwait(false);
+            if (!retired.IsSuccess) return retired;
+        }
+
+        foreach (var childCfg in children)
+        {
+            var itemResult = await SaveOneChild(childCfg, ownerContainer, ownerKeyValues, mode is not null, unit, ct).ConfigureAwait(false);
+            if (!itemResult.IsSuccess) return itemResult;
+        }
+
+        return GenericResult.Success();
+    }
+
+    // The items of a child collection that are configurations. Why one that is not is logged rather than skipped quietly: a type-test `continue`
+    // treats "did not match" as "nothing to do", so the row is dropped and NOTHING reports it -- not the build, not the save result, not an audit
+    // trail. That silence is why the Workspace children were discarded unnoticed. A skip at least leaves evidence.
+    private List<IGenericConfiguration> ConfigurationChildren(IGenericConfiguration owner, System.Collections.IEnumerable items)
+    {
+        var children = new List<IGenericConfiguration>();
         foreach (var item in items)
         {
-            // Why this is logged rather than skipped quietly: a type-test `continue` treats
-            // "did not match" as "nothing to do", so the row is dropped and NOTHING reports
-            // it — not the build, not the save result, not an audit trail. That silence is
-            // why the Workspace children were discarded unnoticed. A rewrite at least leaves
-            // evidence; a silent skip leaves none, so it has to announce itself.
-            if (item is not IGenericConfiguration childCfg)
+            if (item is IGenericConfiguration childCfg)
             {
-                DefaultConfigurationProviderLog.ChildSkippedNotConfiguration(
-                    _logger, owner.GetType().Name, item?.GetType().Name ?? LogPlaceholders.NullName);
+                children.Add(childCfg);
                 continue;
             }
 
-            var itemResult = await SaveOneChild(childCfg, ownerContainer, ownerKeyValues, mode is not null, unit, ct).ConfigureAwait(false);
-            if (!itemResult.IsSuccess) return itemResult;
-            kept.Add(childCfg.Id);
+            DefaultConfigurationProviderLog.ChildSkippedNotConfiguration(
+                _logger, owner.GetType().Name, item?.GetType().Name ?? LogPlaceholders.NullName);
         }
 
-        // Only a collection that declares its list the full set retires the children the list no longer carries.
-        return mode is { RetiresAbsentChildren: true }
-            ? await RetireAbsent(owner, descriptor, ownerContainer, ownerKeyValues, kept, unit, ct).ConfigureAwait(false)
-            : GenericResult.Success();
+        return children;
     }
 
     // Retires, under the owner's durable Id, the current children the saved list does not carry, then their own children.

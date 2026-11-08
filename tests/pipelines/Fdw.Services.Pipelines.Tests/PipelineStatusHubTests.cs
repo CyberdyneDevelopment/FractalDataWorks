@@ -1,3 +1,4 @@
+using Fdw.Claims.Abstractions;
 using System;
 using System.Security.Claims;
 using System.Threading;
@@ -16,7 +17,7 @@ namespace Fdw.Services.Pipelines.Tests;
 
 /// <summary>
 /// Covers <see cref="PipelineStatusHub"/>'s auto-join branch (<c>OnJoin</c>, invoked via
-/// <c>OnConnectedAsync</c>): a connection whose principal carries an <c>org_id</c> claim joins the
+/// <c>OnConnectedAsync</c>): a connection whose principal carries an <c>orgId</c> claim joins the
 /// org firehose group, while a connection with no principal / no claim joins no group at all (NO
 /// FALLBACKS — never a placeholder org). Also covers the four thin subscribe/unsubscribe verbs.
 /// <see cref="Hub{T}.Context"/> and <see cref="Hub{T}.Groups"/> are publicly settable, so the hub is
@@ -65,7 +66,7 @@ public sealed class PipelineStatusHubTests
     }
 
     private static ClaimsPrincipal PrincipalWithOrgClaim(Guid orgId) =>
-        new(new ClaimsIdentity([new Claim("org_id", orgId.ToString())]));
+        new(new ClaimsIdentity([new Claim(ClaimDefinitions.orgId.Name, orgId.ToString())]));
 
     // ------------------------------------------------------------------
     // OnJoin (via OnConnectedAsync)

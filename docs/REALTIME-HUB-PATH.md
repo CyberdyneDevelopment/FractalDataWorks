@@ -79,8 +79,8 @@ by a per-**org** firehose: `org:{orgId}:pipeline-updates`.
 
 - **Data model.** A pipeline carries an owning org: `pipe.Pipeline.OrgId` (nullable) →
   `PipelineConfiguration.OrgId`. The seed stamps the sample pipeline's owning org.
-- **Connection side.** `PipelineStatusHub.OnJoin` reads the caller's `org_id` claim from the JWT and
-  joins `org:{orgId}:pipeline-updates`. No `org_id` claim ⇒ no firehose join (logged
+- **Connection side.** `PipelineStatusHub.OnJoin` reads the caller's `orgId` claim from the JWT and
+  joins `org:{orgId}:pipeline-updates`. No `orgId` claim ⇒ no firehose join (logged
   `HubOrgClaimMissing`); never a global group, never a placeholder org.
 - **Broadcast side.** The `PipelineExecutionBackgroundService` resolves the pipeline's owning `OrgId`
   once per execution (from the parent `PipelineConfiguration`) and threads it to every lifecycle
@@ -126,7 +126,7 @@ generated TypeCollection and LoggerMessage partials are excluded as generated co
   hub; client token wiring in `Builder.razor`. See *Mandatory authentication*.
 - **Per-org firehose.** The global cross-org firehose is replaced by `org:{orgId}:pipeline-updates`,
   scoped to the pipeline's owning org. See *Per-org firehose*. (`pipe.Pipeline.OrgId` +
-  `PipelineConfiguration.OrgId`; hub `OnJoin` from the `org_id` claim; broadcaster targets the org
+  `PipelineConfiguration.OrgId`; hub `OnJoin` from the `orgId` claim; broadcaster targets the org
   group; seed stamps the sample pipeline's org.)
 - **Reference-app rewiring.** `reference-api` and `reference-etl` `Program.cs` now call
   `RealTimeHubs.Register` + `app.MapRealTimeHubs()`.

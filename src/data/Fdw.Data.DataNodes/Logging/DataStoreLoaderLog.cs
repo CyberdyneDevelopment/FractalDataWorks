@@ -358,4 +358,14 @@ public static partial class DataStoreLoaderLog
     [MessageLogging(EventId = 71099, Level = LogLevel.Error,
         Message = "[DataStoreBuilder] Container '{containerName}' format '{formatName}' is not file-addressable (no canonical file extension) — a FileSystem store cannot resolve a file path for it")]
     public static partial IGenericMessage FormatNotFileAddressable(ILogger logger, string containerName, string formatName);
+
+    /// <summary>
+    /// Logs that the keys pointing at a container were not resolved because the store was built as a slice of the containers a command names (FDW-4328).
+    /// </summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="containerName">The container whose inbound keys were not resolved.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> the container's <c>ReferencingKeys</c> failure carries.</returns>
+    [MessageLogging(EventId = 71133, Level = LogLevel.Debug,
+        Message = "[DataStoreBuilder] The keys that point at container '{containerName}' are not resolved: the store was built as a slice of the containers a command names, and only configuration writes read them")]
+    public static partial IGenericMessage ReferencingKeysNotResolved(ILogger logger, string containerName);
 }

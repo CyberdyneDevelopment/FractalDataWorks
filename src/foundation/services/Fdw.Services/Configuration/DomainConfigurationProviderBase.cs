@@ -174,6 +174,21 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     }
 
     /// <inheritdoc/>
+    public async Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(narrowing);
+        if (levels < 0)
+            return GenericResult<TImplementationConfiguration>.Failure(
+                DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TImplementationConfiguration).Name, nameof(levels), levels));
+
+        var row = await DomainRow(_commands.Get(DataStoreName, PathName, name), name, ct).ConfigureAwait(false);
+        if (row.IsFailure) return row.ToNewResult<TImplementationConfiguration>();
+        return row.Value is not { } member
+            ? GenericResult<TImplementationConfiguration>.Success(default!)
+            : await Compose(member, provider => provider.Get(member.Id, levels, narrowing, ct), levels, null, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public Task<IGenericResult<TImplementationConfiguration>> Get(Guid id, CancellationToken ct = default)
         => Get(id, ConfigurationLevels.WholeAggregate, ct);
 

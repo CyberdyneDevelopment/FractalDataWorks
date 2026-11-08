@@ -46,6 +46,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private readonly string? _dataStoreName;
     private readonly INotificationServiceProvider? _notificationProvider;
     private readonly INotificationRuleConfigurationProvider? _notificationRuleProvider;
+    private readonly int? _latestRunsChunkSize;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionTrackingService"/> class.
@@ -61,13 +62,18 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     /// </param>
     /// <param name="notificationProvider">Optional notification service provider. When null, notification emission is skipped.</param>
     /// <param name="notificationRuleProvider">Optional notification rule configuration provider. When null, notification emission is skipped.</param>
+    /// <param name="latestRunsChunkSize">
+    /// How many pipeline names <see cref="GetLatestRuns"/> reads in one piece (<c>OperationsServiceTypes.LatestRunsChunkSize</c>), or null when the host did not state it;
+    /// <see cref="GetLatestRuns"/> then reports that and reads nothing. Null is accepted here for the reason <paramref name="dataStoreName"/> is.
+    /// </param>
     public ExecutionTrackingService(
         IDataGatewayProvider dataGateways,
         ILoggerFactory loggerFactory,
         IAuthenticationContextAccessor authContext,
         string? dataStoreName,
         INotificationServiceProvider? notificationProvider = null,
-        INotificationRuleConfigurationProvider? notificationRuleProvider = null)
+        INotificationRuleConfigurationProvider? notificationRuleProvider = null,
+        int? latestRunsChunkSize = null)
     {
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = loggerFactory?.CreateLogger<ExecutionTrackingService>()
@@ -76,6 +82,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         _dataStoreName = dataStoreName;
         _notificationProvider = notificationProvider;
         _notificationRuleProvider = notificationRuleProvider;
+        _latestRunsChunkSize = latestRunsChunkSize;
     }
 
     /// <summary>
@@ -569,6 +576,73 @@ public sealed class ExecutionTrackingService : IExecutionTracker
 
         var paged = new PagedResponse<IExecutionItem>(items, page, pageSize, totalEstimate);
         return GenericResult<IPagedResponse<IExecutionItem>>.Success(paged);
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyDictionary<string, IExecutionItem>>> GetLatestRuns(
+        IReadOnlyCollection<string> pipelineNames,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(pipelineNames);
+        if (!StoreIsNamed)
+            return GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+        if (_latestRunsChunkSize is not { } chunkSize)
+            return GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Failure(OperationsLog.LatestRunsChunkSizeNotStated(_logger));
+        if (pipelineNames.Any(string.IsNullOrWhiteSpace))
+            return GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Failure(OperationsLog.LatestRunsNameBlank(_logger));
+
+        var scope = CallerScope();
+        var names = pipelineNames.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (scope.ReachesNothing || names.Count == 0)
+            return GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Success(new Dictionary<string, IExecutionItem>(StringComparer.OrdinalIgnoreCase));
+
+        var ids = await new LatestPipelineRunReader(Gateway, _dataStoreName!, chunkSize, _logger)
+            .LatestIds(names, scope, cancellationToken).ConfigureAwait(false);
+        if (ids.IsFailure)
+            return ids.ToNewResult<IReadOnlyDictionary<string, IExecutionItem>>();
+
+        var items = await ReadItemsById(ids.Value!.Values.ToList(), scope, chunkSize, cancellationToken).ConfigureAwait(false);
+        if (items.IsFailure)
+            return items.ToNewResult<IReadOnlyDictionary<string, IExecutionItem>>();
+
+        // A run row whose item the caller cannot read (purged, or another tenant's) leaves its pipeline without a run: "none", not a failure.
+        var latest = new Dictionary<string, IExecutionItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in names)
+        {
+            if (ids.Value.TryGetValue(name, out var id) && items.Value!.TryGetValue(id, out var item))
+                latest[name] = item;
+        }
+
+        OperationsLog.LatestRunsRead(_logger, latest.Count, names.Count, (names.Count + chunkSize - 1) / chunkSize, chunkSize);
+        return GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Success(latest);
+    }
+
+    // The items of those runs, in pieces, within the caller's tenants.
+    private async Task<IGenericResult<IReadOnlyDictionary<Guid, IExecutionItem>>> ReadItemsById(
+        IReadOnlyList<Guid> runIds, ExecutionTenantScope scope, int chunkSize, CancellationToken cancellationToken)
+    {
+        var items = new Dictionary<Guid, IExecutionItem>();
+        foreach (var piece in runIds.Chunk(chunkSize))
+        {
+            var query = new QueryCommand<ExecutionItem>
+            {
+                Filter = Scoped(new FilterCondition
+                {
+                    PropertyName = "Id",
+                    Operator = FilterOperators.ByName("In"),
+                    Value = piece.Cast<object?>().ToList()
+                }, scope)
+            };
+            var read = await Gateway.Execute<IEnumerable<ExecutionItem>>(
+                query, TargetFor(ContainerNameExecutionItem), cancellationToken).ConfigureAwait(false);
+            if (read.IsFailure)
+                return read.ToNewResult<IReadOnlyDictionary<Guid, IExecutionItem>>();
+
+            foreach (var row in read.Value ?? [])
+                items[row.Id] = new ExecutionItemRecord(row);
+        }
+
+        return GenericResult<IReadOnlyDictionary<Guid, IExecutionItem>>.Success(items);
     }
 
     private static FilterExpression? BuildListFilter(

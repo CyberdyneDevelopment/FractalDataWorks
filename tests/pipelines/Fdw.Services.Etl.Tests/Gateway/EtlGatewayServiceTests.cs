@@ -200,6 +200,58 @@ public sealed class EtlGatewayServiceTests
         => result.Messages.OfType<IClientMessage>().Select(message => message.ClientText).ToList();
 
     [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AFailureTheStoresConnectionReturnsNamesThatConnection()
+    {
+        var (sut, connection, _) = Build(["DataEngineer"]);
+        connection.Mock.As<IScriptedDataConnection>()
+            .Setup(c => c.Execute(It.IsAny<IScriptedDataCommand<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<int>.Failure(new GenericMessage("The server was not found or was not accessible")));
+
+        var ran = await sut.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+
+        ran.IsFailure.ShouldBeTrue();
+        ConnectionFailures.ConnectionOf(ran).ShouldBe(ConnectionId);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AStoreWhoseConnectionTheProviderWillNotGiveNamesThatConnection()
+    {
+        var (sut, _, connections) = Build(["DataEngineer"]);
+        connections.Setup(p => p.Get(ConnectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IDataConnection>.Failure(new GenericMessage("Connection 'Orders' has been disabled")));
+
+        var ran = await sut.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+
+        ran.IsFailure.ShouldBeTrue();
+        ConnectionFailures.ConnectionOf(ran).ShouldBe(ConnectionId);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ARefusalNoConnectionRaisedNamesNone()
+    {
+        var (callerWithoutRole, _, _) = Build(["Reader"]);
+        var (hostStore, _, _) = Build(["DataEngineer"], hostDeclared: true);
+        var (unsound, _, _) = Build(["DataEngineer"]);
+
+        var withoutRole = await callerWithoutRole.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+        var host = await hostStore.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+        var empty = await unsound.Execute(Command(" "), "Warehouse", TestContext.Current.CancellationToken);
+
+        withoutRole.IsFailure.ShouldBeTrue();
+        host.IsFailure.ShouldBeTrue();
+        empty.IsFailure.ShouldBeTrue();
+        ConnectionFailures.ConnectionOf(withoutRole).ShouldBeNull();
+        ConnectionFailures.ConnectionOf(host).ShouldBeNull();
+        ConnectionFailures.ConnectionOf(empty).ShouldBeNull();
+    }
+
+    [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
     public async Task AStoreWhoseConnectionCannotBeResolvedTellsTheCallerWhy()

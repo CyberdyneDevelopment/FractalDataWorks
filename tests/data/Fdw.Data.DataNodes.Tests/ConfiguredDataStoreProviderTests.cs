@@ -598,8 +598,9 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetContainerReturnsFailureWhenPathLookupFails()
     {
         // Arrange
+        // FDW-4328: a container is got by reading the containers named, not by building the store.
         _configurationProvider
-            .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get("Store1", It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(new GenericMessage("not found")));
         var sut = CreateSut();
 
@@ -666,6 +667,11 @@ public sealed class ConfiguredDataStoreProviderTests
         builder.Setup(b => b.Build(It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDataStore>.Success(builtStore));
         _configurationProvider
             .Setup(p => p.Get(storeName, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
+
+        // The read of a container composes only the containers named (FDW-4328).
+        _configurationProvider
+            .Setup(p => p.Get(storeName, It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _builderSelector
             .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))

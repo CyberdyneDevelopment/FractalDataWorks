@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Configuration;
@@ -51,6 +52,17 @@ public interface IDataStoreBuilder
     /// store is the host's is a fact about where it was loaded from, so the code that loads it says so.
     /// </remarks>
     void DeclareByHost();
+
+    /// <summary>
+    /// Declares that the configuration given to <see cref="Configure"/> is a slice of a store: only the containers named here are built whole, with their
+    /// keys; any other container it holds is the bare node a key of a named one refers to (FDW-4328).
+    /// </summary>
+    /// <param name="containerNames">The containers the caller asked for.</param>
+    /// <remarks>
+    /// A slice's store lists only the named containers, so it is never handed out or kept as the store (<c>IDataStore.Paths</c> is the complete child
+    /// set). The inbound keys of a named container are not resolved: its <c>ReferencingKeys</c> is a failure that says so.
+    /// </remarks>
+    void DeclareSlice(IReadOnlyCollection<string> containerNames);
 
     /// <summary>
     /// Builds the assembled <see cref="IDataStore"/> tree. May fetch field/key metadata from the

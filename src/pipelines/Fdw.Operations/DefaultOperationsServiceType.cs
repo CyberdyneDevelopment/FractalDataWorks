@@ -10,6 +10,7 @@ using Fdw.Operations.Commands;
 using Fdw.Operations.Configuration;
 using Fdw.Operations.Escalation;
 using Fdw.Operations.Execution;
+using Fdw.Operations.Logging;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Configuration;
@@ -72,6 +73,12 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
 
         Registration((builder, loggerFactory) =>
         {
+            if (OperationsServiceTypes.LatestRunsChunkSize < 1)
+            {
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    OperationsLog.LatestRunsChunkSizeInvalid((loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DefaultOperationsServiceType>(), OperationsServiceTypes.LatestRunsChunkSize));
+            }
+
             builder.Services.AddSingleton<IEscalationPolicyImplementationConfigurationProvider, EscalationPolicyImplementationConfigurationProvider>(sp => new EscalationPolicyImplementationConfigurationProvider(sp.GetRequiredService<ILogger<EscalationPolicyImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "EscalationPolicyConfiguration"));
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
             {
@@ -109,7 +116,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 var ruleProvider = sp.GetService<INotificationRuleConfigurationProvider>();
                 return new ExecutionTrackingService(
                     sp.GetRequiredService<IDataGatewayProvider>(), lf, sp.GetRequiredService<IAuthenticationContextAccessor>(),
-                    OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
+                    OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider, OperationsServiceTypes.LatestRunsChunkSize);
             });
 
             builder.Services.TryAddScoped<IAdministrativeAudit>(sp => new AdministrativeAuditService(

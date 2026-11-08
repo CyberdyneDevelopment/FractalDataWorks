@@ -280,7 +280,7 @@ public interface IAuthenticationContext
 
     /// <summary>
     /// Gets the active organization identifier for this authenticated request.
-    /// Set from the <c>org_id</c> JWT claim. Null when no org context is present.
+    /// Set from the <c>orgId</c> JWT claim. Null when no org context is present.
     /// </summary>
     Guid? ActiveOrgId { get; }
 

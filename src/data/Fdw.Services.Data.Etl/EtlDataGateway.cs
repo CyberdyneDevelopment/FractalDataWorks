@@ -189,7 +189,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
         IDataGatewayTransaction scope = new DataGatewayTransaction(
             txnResult.Value,
             connectionName,
-            ResolveContainerResult,
+            (address, token) => ResolveContainerResult(address, [], token),
             _logger);
 
         return GenericResult<IDataGatewayTransaction>.Success(scope);
@@ -235,7 +235,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
             async ct =>
             {
                 // The declared container is looked up for its shape; only then are the path and name replaced, just before the read.
-                var resolved = await ResolveTargetConnection(target, ct).ConfigureAwait(false);
+                var resolved = await ResolveTargetConnection(command, target, ct).ConfigureAwait(false);
                 if (!resolved.IsSuccess)
                     return resolved.ToNewResult<T>();
 
@@ -399,7 +399,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
 
     private async Task<IGenericResult<T>> ExecuteCore<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
-        var resolved = await ResolveTargetConnection(target, cancellationToken).ConfigureAwait(false);
+        var resolved = await ResolveTargetConnection(command, target, cancellationToken).ConfigureAwait(false);
         if (!resolved.IsSuccess)
             return resolved.ToNewResult<T>();
 
@@ -410,14 +410,14 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
     // The container a target names and the connection its store reaches it by: what every command run on a store needs
     // before it runs, a data command and a vectorized one alike.
     private async Task<IGenericResult<(IDataContainer Container, IDataConnection Connection, Guid ConnectionId)>> ResolveTargetConnection(
-        DataStoreTarget target, CancellationToken cancellationToken)
+        IGenericCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(target.DataStore))
             return GenericResult<(IDataContainer, IDataConnection, Guid)>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
 
         DataGatewayLogger.ExecuteContainerEntering(_logger, target.DataStore, target.Path, target.Container);
 
-        var containerResult = await ResolveContainerResult(target, cancellationToken).ConfigureAwait(false);
+        var containerResult = await ResolveContainerResult(target, ContainersJoined.By(command, target.Container), cancellationToken).ConfigureAwait(false);
         if (!containerResult.IsSuccess)
             return containerResult.ToNewResult<(IDataContainer, IDataConnection, Guid)>();
 
@@ -612,7 +612,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
 
         DataGatewayLogger.OpeningRecordSource(_logger, target.DataStore, target.Container);
 
-        var containerResult = await ResolveContainerResult(target, cancellationToken).ConfigureAwait(false);
+        var containerResult = await ResolveContainerResult(target, ContainersJoined.By(command, target.Container), cancellationToken).ConfigureAwait(false);
         if (!containerResult.IsSuccess)
             return containerResult.ToNewResult<IRecordSource<DataRecord>>();
 
@@ -763,7 +763,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
         return GenericResult.Success();
     }
 
-    private async Task<IGenericResult<IDataContainer>> ResolveContainerResult(DataStoreTarget target, CancellationToken ct)
+    private async Task<IGenericResult<IDataContainer>> ResolveContainerResult(DataStoreTarget target, IReadOnlyCollection<string> joined, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(target.Container))
             return GenericResult<IDataContainer>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
@@ -774,8 +774,11 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
         if (_dataStoreProvider is null)
             return GenericResult<IDataContainer>.Failure(DataGatewayLogger.DataStoreProviderUnavailable(_logger));
 
-        var containerResult = await _dataStoreProvider
-            .Get(target.DataStore, target.Path ?? string.Empty, target.Container, ct)
+        // A command that joins names more containers than its own, and the translator finds a join target among the containers of the store this one
+        // came from (FDW-4328); a command that joins nothing asks for its container alone.
+        var containerResult = await (joined.Count == 0
+                ? _dataStoreProvider.Get(target.DataStore, target.Path ?? string.Empty, target.Container, ct)
+                : _dataStoreProvider.Get(target.DataStore, target.Path ?? string.Empty, target.Container, joined, ct))
             .ConfigureAwait(false);
 
         if (!containerResult.IsSuccess)
