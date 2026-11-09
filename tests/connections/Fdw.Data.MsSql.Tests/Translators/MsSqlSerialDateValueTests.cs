@@ -107,7 +107,7 @@ public sealed class MsSqlSerialDateValueTests
 
         var result = await new MsSqlInsertTranslator().Translate(InsertOf(new { Day = "secret-not-a-date" }), container.Object, TestContext.Current.CancellationToken);
 
-        result.CurrentMessage.ShouldNotContain("secret-not-a-date");
+        result.CurrentMessage.ShouldNotBeNull().ShouldNotContain("secret-not-a-date");
         result.Details!.Data.Values.ShouldNotContain((object?)"secret-not-a-date");
     }
 

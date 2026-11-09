@@ -174,7 +174,7 @@ public sealed class MsSqlBulkCopyDateColumnTests
     {
         var result = PlanResult(Field("Day", typeof(DateOnly), "Date").Object, new { Day = "secret-not-a-date" });
 
-        result.CurrentMessage.ShouldNotContain("secret-not-a-date");
+        result.CurrentMessage.ShouldNotBeNull().ShouldNotContain("secret-not-a-date");
         result.Details!.Data.Values.ShouldNotContain((object?)"secret-not-a-date");
     }
 

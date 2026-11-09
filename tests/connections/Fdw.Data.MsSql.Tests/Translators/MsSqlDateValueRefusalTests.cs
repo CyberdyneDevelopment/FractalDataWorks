@@ -63,7 +63,7 @@ public sealed class MsSqlDateValueRefusalTests
         return command.As<IDataCommand>().Object;
     }
 
-    private static IFilterExpression Where(IFilterNode node) => new FilterExpression { Root = node };
+    private static FilterExpression Where(IFilterNode node) => new FilterExpression { Root = node };
 
     private static FilterCondition Same(string column, object? value) => new() { PropertyName = column, Operator = new EqualOperator(), Value = value };
 
