@@ -28,7 +28,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class RemovePasswordLoginEndpointBase : Endpoint<UserScopedRequest>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly ILogger _logger;
 
@@ -38,7 +38,7 @@ public abstract class RemovePasswordLoginEndpointBase : Endpoint<UserScopedReque
     /// <param name="credentialService">Removes the password.</param>
     protected RemovePasswordLoginEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IUserCredentialService credentialService)
     {
         _logger = logger;

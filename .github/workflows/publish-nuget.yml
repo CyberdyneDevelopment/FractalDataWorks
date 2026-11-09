@@ -12,6 +12,13 @@
 # A long-lived API key is not the alternative: nuget.org caps new keys at 30 days from
 # 2026-08-17 and expires all existing keys on 2026-11-01.
 #
+# The push survives nuget.org's push quota: scripts/push-nuget.sh pushes one package at a time and,
+# on a 403 (Quota Exceeded), waits the retry-after nuget.org states and retries the same package,
+# signing in again when the one-hour key ages out. The count, the waits, the backoff, the key age
+# and the job timeout are dispatch inputs or repository variables (NUGET_QUOTA_*, NUGET_KEY_MAX_AGE_SECONDS,
+# NUGET_PUBLISH_TIMEOUT_MINUTES) with the defaults declared once in the "Resolve push settings"
+# step. Prerelease versions (the prerelease branch) still publish here, as Mike ruled 2026-11-05.
+#
 # Requires a Trusted Publishing policy on nuget.org (Account -> Trusted Publishing) owned by the
 # `aicolab` account, naming this repository owner, this repository, and this workflow's FILE NAME
 # (`publish-nuget.yml`, no path). Renaming this file invalidates the policy.
@@ -40,6 +47,30 @@ on:
         default: false
       unlist_version:
         description: 'If set (e.g. 1.0.0-rc.7), UNLIST this exact version for every Fdw.* package instead of publishing. Leave empty for a normal publish run.'
+        type: string
+        default: ''
+      quota_max_waits:
+        description: 'Push only: waits allowed per package when nuget.org refuses a push on its quota, before the run fails. Empty = the repository variable NUGET_QUOTA_MAX_WAITS, else the default declared in the "Resolve push settings" step.'
+        type: string
+        default: ''
+      quota_wait_seconds:
+        description: 'Push only: seconds to wait when nuget.org refuses on quota WITHOUT stating a retry-after. Empty = variable NUGET_QUOTA_WAIT_SECONDS, else the declared default.'
+        type: string
+        default: ''
+      quota_backoff_factor:
+        description: 'Push only: that wait is multiplied by this for each further refusal of the same package. Empty = variable NUGET_QUOTA_BACKOFF_FACTOR, else the declared default.'
+        type: string
+        default: ''
+      quota_retry_after_margin_seconds:
+        description: 'Push only: seconds added to the retry-after nuget.org states. Empty = variable NUGET_QUOTA_RETRY_AFTER_MARGIN_SECONDS, else the declared default.'
+        type: string
+        default: ''
+      key_max_age_seconds:
+        description: 'Push only: age at which a sign-in key is replaced by a fresh one (the key lasts about an hour). Empty = variable NUGET_KEY_MAX_AGE_SECONDS, else the declared default.'
+        type: string
+        default: ''
+      publish_timeout_minutes:
+        description: 'Push only: the publish job''s timeout-minutes (GitHub-hosted runners allow at most 360). Empty = variable NUGET_PUBLISH_TIMEOUT_MINUTES, else the declared default.'
         type: string
         default: ''
       package_ids:
@@ -77,6 +108,12 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       should-publish: ${{ steps.exists.outputs.should-publish }}
+      quota-max-waits: ${{ steps.settings.outputs.quota-max-waits }}
+      quota-wait-seconds: ${{ steps.settings.outputs.quota-wait-seconds }}
+      quota-backoff-factor: ${{ steps.settings.outputs.quota-backoff-factor }}
+      quota-retry-after-margin-seconds: ${{ steps.settings.outputs.quota-retry-after-margin-seconds }}
+      key-max-age-seconds: ${{ steps.settings.outputs.key-max-age-seconds }}
+      publish-timeout-minutes: ${{ steps.settings.outputs.publish-timeout-minutes }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,6 +149,63 @@ jobs:
             exit 1
           fi
           echo "Version '$VERSION' matches branch '${{ github.ref_name }}'."
+
+      # The push settings are configuration, never script. Precedence: the dispatch input, then the
+      # repository variable (Settings -> Variables -> Actions), then the default declared HERE and
+      # nowhere else. A push event has no inputs, so it reads the variable or the default. A value
+      # that is not a number fails the run and names the setting.
+      #
+      # Why these defaults: a refusal normally states its own retry-after (about 1700-2000s seen
+      # on the 1.4.0 and 1.5.0 runs), which is what the push waits; QUOTA_WAIT_SECONDS only serves
+      # a refusal that states none. KEY_MAX_AGE is under the hour NuGet/login's key lasts. 345
+      # minutes sits under the 360 a GitHub-hosted job may run.
+      - name: Resolve push settings
+        id: settings
+        env:
+          DEFAULT_QUOTA_MAX_WAITS: '12'
+          DEFAULT_QUOTA_WAIT_SECONDS: '1800'
+          DEFAULT_QUOTA_BACKOFF_FACTOR: '1.5'
+          DEFAULT_QUOTA_RETRY_AFTER_MARGIN_SECONDS: '5'
+          DEFAULT_KEY_MAX_AGE_SECONDS: '3000'
+          DEFAULT_PUBLISH_TIMEOUT_MINUTES: '345'
+          INPUT_QUOTA_MAX_WAITS: ${{ inputs.quota_max_waits }}
+          INPUT_QUOTA_WAIT_SECONDS: ${{ inputs.quota_wait_seconds }}
+          INPUT_QUOTA_BACKOFF_FACTOR: ${{ inputs.quota_backoff_factor }}
+          INPUT_QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ inputs.quota_retry_after_margin_seconds }}
+          INPUT_KEY_MAX_AGE_SECONDS: ${{ inputs.key_max_age_seconds }}
+          INPUT_PUBLISH_TIMEOUT_MINUTES: ${{ inputs.publish_timeout_minutes }}
+          VAR_QUOTA_MAX_WAITS: ${{ vars.NUGET_QUOTA_MAX_WAITS }}
+          VAR_QUOTA_WAIT_SECONDS: ${{ vars.NUGET_QUOTA_WAIT_SECONDS }}
+          VAR_QUOTA_BACKOFF_FACTOR: ${{ vars.NUGET_QUOTA_BACKOFF_FACTOR }}
+          VAR_QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ vars.NUGET_QUOTA_RETRY_AFTER_MARGIN_SECONDS }}
+          VAR_KEY_MAX_AGE_SECONDS: ${{ vars.NUGET_KEY_MAX_AGE_SECONDS }}
+          VAR_PUBLISH_TIMEOUT_MINUTES: ${{ vars.NUGET_PUBLISH_TIMEOUT_MINUTES }}
+        run: |
+          set -euo pipefail
+          resolve() {
+            local name="$1" kind="$2" output="$3" input_var="INPUT_$1" repo_var="VAR_$1" default_var="DEFAULT_$1" value source
+            if [ -n "${!input_var}" ]; then value="${!input_var}"; source="dispatch input"
+            elif [ -n "${!repo_var}" ]; then value="${!repo_var}"; source="repository variable NUGET_$name"
+            else value="${!default_var}"; source="declared default"; fi
+            if [ "$kind" = integer ] && ! [[ "$value" =~ ^[0-9]+$ ]]; then
+              echo "::error::Push setting $name is '$value' (from the $source) but must be a whole number."; exit 1
+            fi
+            if [ "$kind" = number ] && ! [[ "$value" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+              echo "::error::Push setting $name is '$value' (from the $source) but must be a number."; exit 1
+            fi
+            echo "$output=$value" >> "$GITHUB_OUTPUT"
+            echo "  $name = $value ($source)"
+          }
+          resolve QUOTA_MAX_WAITS integer quota-max-waits
+          resolve QUOTA_WAIT_SECONDS integer quota-wait-seconds
+          resolve QUOTA_BACKOFF_FACTOR number quota-backoff-factor
+          resolve QUOTA_RETRY_AFTER_MARGIN_SECONDS integer quota-retry-after-margin-seconds
+          resolve KEY_MAX_AGE_SECONDS integer key-max-age-seconds
+          resolve PUBLISH_TIMEOUT_MINUTES integer publish-timeout-minutes
+          TIMEOUT=$(grep -oP '^publish-timeout-minutes=\K.*' "$GITHUB_OUTPUT")
+          if [ "$TIMEOUT" -lt 1 ] || [ "$TIMEOUT" -gt 360 ]; then
+            echo "::error::Push setting PUBLISH_TIMEOUT_MINUTES is $TIMEOUT but a GitHub-hosted job runs 1 to 360 minutes."; exit 1
+          fi
 
       # Fdw.Abstractions is the probe: it is packable, its id is not overridden, and every release
       # contains it, so its presence at a given version stands for the whole set. A 404 from the
@@ -155,12 +249,20 @@ jobs:
     needs: check
     if: needs.check.outputs.should-publish == 'true'
     runs-on: ubuntu-latest
+    # Set by the "Resolve push settings" step, so it must outlast the longest total wait.
+    timeout-minutes: ${{ fromJSON(needs.check.outputs.publish-timeout-minutes) }}
     env:
       DOTNET_NOLOGO: 'true'
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
       DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
+      # First, so the push can tell how much of the job's timeout-minutes is left: the timeout
+      # counts from the start of the job, not from the push.
+      - name: Note the job start
+        id: clock
+        run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -191,26 +293,167 @@ jobs:
           ls -1 artifacts/*.nupkg | sed 's/^/  /'
           echo "total: $(ls -1 artifacts/*.nupkg | wc -l) packages"
 
-      # Exchanges the OIDC token for a nuget.org API key valid for 1 hour. The key is masked in
-      # logs by the action and never leaves the runner.
-      - name: NuGet login (OIDC to short-lived key)
-        id: login
+      # The push runs in sign-in rounds. NuGet/login exchanges the OIDC token for a nuget.org API
+      # key that lasts about an hour, and a quota wait can outlast it, so scripts/push-nuget.sh
+      # ends a round when the key is KEY_MAX_AGE_SECONDS old and the next round signs in again and
+      # carries on at the package that was waiting. A round that finishes every package sets
+      # complete=true, and the later rounds are skipped. The number of rounds is fixed by the steps
+      # below (6, about 6 x 50 minutes at the default key age); the push fails loudly if they run out.
+      #
+      # The script pushes one package at a time with --skip-duplicate: a version already on
+      # nuget.org is a no-op rather than a hard failure, so a re-run after a partial push finishes
+      # the remaining packages. On nuget.org's 403 (Quota Exceeded) it waits the retry-after the
+      # response states and retries the same package; any other error fails at once, naming the
+      # package. The .snupkg symbol package goes with its .nupkg.
+      - name: NuGet login 1 (OIDC to short-lived key)
+        id: login1
         if: ${{ !inputs.dry_run }}
         uses: NuGet/login@v1
         with:
           user: aicolab
 
-      # --skip-duplicate: a version already on nuget.org is a no-op rather than a hard failure, so
-      # a re-run after a partial push finishes the remaining packages instead of dying on the
-      # first one that already landed. The .snupkg symbol packages are pushed automatically
-      # alongside their .nupkg.
-      - name: Push to nuget.org
+      - name: Push to nuget.org (round 1)
+        id: push1
         if: ${{ !inputs.dry_run }}
+        env:
+          NUGET_API_KEY: ${{ steps.login1.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 2 (OIDC to short-lived key)
+        id: login2
+        if: ${{ !inputs.dry_run && steps.push1.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push to nuget.org (round 2)
+        id: push2
+        if: ${{ !inputs.dry_run && steps.push1.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.login2.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 3 (OIDC to short-lived key)
+        id: login3
+        if: ${{ !inputs.dry_run && steps.push2.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push to nuget.org (round 3)
+        id: push3
+        if: ${{ !inputs.dry_run && steps.push2.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.login3.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 4 (OIDC to short-lived key)
+        id: login4
+        if: ${{ !inputs.dry_run && steps.push3.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push to nuget.org (round 4)
+        id: push4
+        if: ${{ !inputs.dry_run && steps.push3.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.login4.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 5 (OIDC to short-lived key)
+        id: login5
+        if: ${{ !inputs.dry_run && steps.push4.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push to nuget.org (round 5)
+        id: push5
+        if: ${{ !inputs.dry_run && steps.push4.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.login5.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 6 (OIDC to short-lived key)
+        id: login6
+        if: ${{ !inputs.dry_run && steps.push5.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push to nuget.org (round 6)
+        id: push6
+        if: ${{ !inputs.dry_run && steps.push5.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.login6.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: Confirm every package is on nuget.org
+        if: ${{ !inputs.dry_run && steps.push6.outcome != 'skipped' && steps.push6.outputs.complete == 'false' }}
         run: |
-          dotnet nuget push "artifacts/*.nupkg" \
-            --source https://api.nuget.org/v3/index.json \
-            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
-            --skip-duplicate
+          echo "::error::The push used all 6 sign-in rounds and packages are still unpushed. Rerun the workflow: packages already on nuget.org are skipped. Raise NUGET_PUBLISH_TIMEOUT_MINUTES only up to 360; quota waits longer than that need a rerun."
+          exit 1
 
       - name: Dry run summary
         if: ${{ inputs.dry_run }}

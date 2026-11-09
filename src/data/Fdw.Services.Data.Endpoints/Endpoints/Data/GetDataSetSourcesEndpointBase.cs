@@ -14,14 +14,14 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for retrieving sources for a specific data set.
-/// Uses DataSetConfigurationProvider for the dataset lookup; sources are part of the composed aggregate.
+/// Uses IDataSetConfigurationProvider for the dataset lookup; sources are part of the composed aggregate.
 /// </summary>
 public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpointBase<DataSetNameRequest, List<DataSetSourcePayload>>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
 
     /// <inheritdoc />
-    protected GetDataSetSourcesEndpointBase(ILogger<GetDataSetSourcesEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
+    protected GetDataSetSourcesEndpointBase(ILogger<GetDataSetSourcesEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
     }

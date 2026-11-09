@@ -26,14 +26,14 @@ public abstract class BindExternalIdentityEndpointBase : Endpoint<BindExternalId
 {
     private const string ExternalIdentityDomain = "ExternalIdentity";
 
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IExternalIdentityConfigurationProvider _externalIdentities;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="BindExternalIdentityEndpointBase"/> class.</summary>
     protected BindExternalIdentityEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IExternalIdentityConfigurationProvider externalIdentities)
     {
         _logger = logger;

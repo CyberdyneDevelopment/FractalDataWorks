@@ -20,7 +20,7 @@ public static class GraphRead
     /// The graph; success with no value when no pipeline has the name; the failure when the pipeline cannot be read; a refusal
     /// when the pipeline is not a graph, so a linear pipeline is never answered as an empty one.
     /// </returns>
-    public static async Task<IGenericResult<GraphPayload?>> Find(PipelineServiceConfigurationProvider provider, string name, CancellationToken ct)
+    public static async Task<IGenericResult<GraphPayload?>> Find(IPipelineConfigurationProvider provider, string name, CancellationToken ct)
     {
         var read = await provider.Get(name, ct).ConfigureAwait(false);
         if (read.IsFailure)
@@ -43,7 +43,7 @@ public static class GraphRead
     /// <param name="name">The pipeline's name.</param>
     /// <param name="ct">Cancels the read.</param>
     /// <returns>The graph, or the failure to read it back.</returns>
-    public static async Task<IGenericResult<GraphPayload>> Read(PipelineServiceConfigurationProvider provider, string name, CancellationToken ct)
+    public static async Task<IGenericResult<GraphPayload>> Read(IPipelineConfigurationProvider provider, string name, CancellationToken ct)
     {
         var found = await Find(provider, name, ct).ConfigureAwait(false);
         if (found.IsFailure)

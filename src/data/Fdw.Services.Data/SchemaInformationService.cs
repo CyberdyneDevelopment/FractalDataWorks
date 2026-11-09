@@ -42,7 +42,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
 {
     private readonly IConnectionProvider _connectionProvider;
     private readonly ConnectionConfigurationProvider _configProvider;
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
     private readonly ILogger<SchemaInformationService> _logger;
 
     /// <summary>
@@ -55,7 +55,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     public SchemaInformationService(
         IConnectionProvider connectionProvider,
         ConnectionConfigurationProvider configProvider,
-        DataStoreConfigurationProvider dataStoreProvider,
+        IDataStoreConfigurationProvider dataStoreProvider,
         ILogger<SchemaInformationService>? logger = null)
     {
         _connectionProvider = connectionProvider;

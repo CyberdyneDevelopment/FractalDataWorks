@@ -27,11 +27,11 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
     : CrudGetEndpointBase<ConnectionTypeNameRequest, ConnectionTypeCapabilitiesResponse>
 {
     private readonly ILogger<GetConnectionTypeCapabilitiesEndpointBase> _logger;
-    private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionConfigurationProvider _configProvider;
 
     /// <inheritdoc />
     protected GetConnectionTypeCapabilitiesEndpointBase(
-        ConnectionConfigurationProvider configProvider,
+        IConnectionConfigurationProvider configProvider,
         ILogger<GetConnectionTypeCapabilitiesEndpointBase> logger)
         : base(logger)
     {

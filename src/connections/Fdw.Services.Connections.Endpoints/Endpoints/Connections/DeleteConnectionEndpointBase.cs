@@ -23,13 +23,13 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </remarks>
 public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<ConnectionNameRequest>
 {
-    private readonly ConnectionConfigurationProvider _connectionProvider;
+    private readonly IConnectionConfigurationProvider _connectionProvider;
     private readonly IConnectionProvider _connectionLookupProvider;
     private readonly ILogger<DeleteConnectionEndpointBase> _logger;
 
     /// <inheritdoc />
     protected DeleteConnectionEndpointBase(
-        ConnectionConfigurationProvider connectionProvider,
+        IConnectionConfigurationProvider connectionProvider,
         IConnectionProvider connectionLookupProvider,
         ILogger<DeleteConnectionEndpointBase>? logger = null)
         : base(logger ?? NullLogger<DeleteConnectionEndpointBase>.Instance)

@@ -46,6 +46,10 @@ public sealed class MockConnectionType
     }
 
     /// <inheritdoc/>
+    protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration> EndpointAuthenticationDeclaration
+        => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration>.None;
+
+    /// <inheritdoc/>
     /// <remarks>A test double reaches nothing, so it presents no identity at all.</remarks>
     protected override IGenericResult<bool> DecideHostIdentity(MockConnectionConfiguration configuration)
         => GenericResult<bool>.Success(false);

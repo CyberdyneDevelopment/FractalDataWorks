@@ -34,10 +34,10 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     where TRequest : CreateUserRequest
 {
     /// <summary>Initializes a new instance of the <see cref="CreateUserEndpointBase{TRequest}"/> class.</summary>
-        private readonly UserConfigurationProvider _userProvider;
-    private readonly UserTenantConfigurationProvider _tenantProvider;
-    private readonly UserRoleConfigurationProvider _userRoleProvider;
-    private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IUserConfigurationProvider _userProvider;
+    private readonly IUserTenantConfigurationProvider _tenantProvider;
+    private readonly IUserRoleConfigurationProvider _userRoleProvider;
+    private readonly IRoleConfigurationProvider _roleProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly IPersonalAccessTokenService _tokenService;
     private readonly IAgentKeyService _agentKeyService;
@@ -49,10 +49,10 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="CreateUserEndpointBase{TRequest}"/> class.</summary>
-    protected CreateUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider,
-        UserTenantConfigurationProvider tenantProvider,
-        UserRoleConfigurationProvider userRoleProvider,
-        RoleConfigurationProvider roleProvider,
+    protected CreateUserEndpointBase(ILogger logger, IUserConfigurationProvider userProvider,
+        IUserTenantConfigurationProvider tenantProvider,
+        IUserRoleConfigurationProvider userRoleProvider,
+        IRoleConfigurationProvider roleProvider,
         IUserCredentialService credentialService,
         IPersonalAccessTokenService tokenService,
         IAgentKeyService agentKeyService,
@@ -73,22 +73,22 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the tenant provider.
     /// </summary>
-    protected UserTenantConfigurationProvider TenantProvider => _tenantProvider;
+    protected IUserTenantConfigurationProvider TenantProvider => _tenantProvider;
 
     /// <summary>
     /// Gets the user-role configuration provider.
     /// </summary>
-    protected UserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
+    protected IUserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
 
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IRoleConfigurationProvider RoleProvider => _roleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".

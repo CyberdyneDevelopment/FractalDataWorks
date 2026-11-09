@@ -36,7 +36,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </remarks>
 public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<CreateConnectionRequest, ConnectionDetailDto>
 {
-    private readonly ConnectionConfigurationProvider _connectionProvider;
+    private readonly IConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
     /// <remarks>
@@ -44,7 +44,7 @@ public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<Crea
     /// away when a schema service was supplied (no reference host supplied one) and dropped any failure;
     /// discovery is now something a person asks for, when they create or refresh a data store.
     /// </remarks>
-    protected CreateConnectionEndpointBase(ILogger<CreateConnectionEndpointBase> logger, ConnectionConfigurationProvider connectionProvider) : base(logger)
+    protected CreateConnectionEndpointBase(ILogger<CreateConnectionEndpointBase> logger, IConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _connectionProvider = connectionProvider;
     }

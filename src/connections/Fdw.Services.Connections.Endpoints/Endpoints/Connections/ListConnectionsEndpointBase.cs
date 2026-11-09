@@ -24,7 +24,7 @@ namespace Fdw.Services.Connections.Endpoints;
 public abstract class ListConnectionsEndpointBase
     : CrudPageEndpointBase<ConnectionListing, ConnectionSummaryDto>
 {
-    private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionConfigurationProvider _configProvider;
     private readonly IConnectionDisabledStates _states;
     private readonly ITagService? _tags;
 
@@ -35,7 +35,7 @@ public abstract class ListConnectionsEndpointBase
     /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c> (FDW-3816).</param>
     protected ListConnectionsEndpointBase(
         ILogger<ListConnectionsEndpointBase> logger,
-        ConnectionConfigurationProvider configProvider,
+        IConnectionConfigurationProvider configProvider,
         IConnectionDisabledStates states,
         ITagService? tags = null) : base(logger)
     {

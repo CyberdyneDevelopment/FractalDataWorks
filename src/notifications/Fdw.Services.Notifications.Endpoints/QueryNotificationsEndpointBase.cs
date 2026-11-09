@@ -1,3 +1,4 @@
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Notifications.Configuration;
 using Fdw.Web.RestEndpoints.Query;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,7 @@ public abstract class QueryNotificationsEndpointBase : QueryDomainEndpointBase<N
     /// <summary>Initializes a new instance of the <see cref="QueryNotificationsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="notificationProvider">Reads the page from the notifications domain table.</param>
-    protected QueryNotificationsEndpointBase(ILogger logger, NotificationConfigurationProvider notificationProvider)
+    protected QueryNotificationsEndpointBase(ILogger logger, IDomainRecordProvider<NotificationDomainConfiguration> notificationProvider)
         : base(logger, notificationProvider)
     {
     }

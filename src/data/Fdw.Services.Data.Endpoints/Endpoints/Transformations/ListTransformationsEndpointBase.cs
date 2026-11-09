@@ -21,7 +21,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// <remarks>Each transformation on the page is read whole: its payload carries its parameters, and each result of a Built transformation its value type.</remarks>
 public abstract class ListTransformationsEndpointBase : CrudPageEndpointBase<ITransformationImplementationConfiguration, TransformationPayload>
 {
-    private readonly TransformationConfigurationProvider _transformations;
+    private readonly ITransformationConfigurationProvider _transformations;
     private readonly TransformationKindContext _context;
 
     /// <summary>Initializes a new instance of the <see cref="ListTransformationsEndpointBase"/> class.</summary>
@@ -29,7 +29,7 @@ public abstract class ListTransformationsEndpointBase : CrudPageEndpointBase<ITr
     /// <param name="transformations">Reads the Transformation domain.</param>
     /// <param name="settings">Supplies the limits on a calculation, which typing a result needs.</param>
     protected ListTransformationsEndpointBase(ILogger<ListTransformationsEndpointBase> logger,
-        TransformationConfigurationProvider transformations, IEffectiveSettingsProvider settings) : base(logger)
+        ITransformationConfigurationProvider transformations, IEffectiveSettingsProvider settings) : base(logger)
     {
         _transformations = transformations ?? throw new ArgumentNullException(nameof(transformations));
         _context = new TransformationKindContext(settings ?? throw new ArgumentNullException(nameof(settings)), logger);

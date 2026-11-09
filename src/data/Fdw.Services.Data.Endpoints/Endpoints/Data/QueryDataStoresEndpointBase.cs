@@ -21,7 +21,7 @@ public abstract class QueryDataStoresEndpointBase : QueryDomainEndpointBase<Data
     /// <summary>Initializes a new instance of the <see cref="QueryDataStoresEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">Reads the page from the data stores domain table.</param>
-    protected QueryDataStoresEndpointBase(ILogger logger, DataStoreConfigurationProvider dataStoreProvider)
+    protected QueryDataStoresEndpointBase(ILogger logger, IDataStoreConfigurationProvider dataStoreProvider)
         : base(logger, dataStoreProvider)
     {
     }

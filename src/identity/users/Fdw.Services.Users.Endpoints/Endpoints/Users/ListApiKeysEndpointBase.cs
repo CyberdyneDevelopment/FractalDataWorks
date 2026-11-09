@@ -18,7 +18,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </summary>
 public abstract class ListApiKeysEndpointBase : Endpoint<UserScopedRequest, List<ApiKeyState>>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IPersonalAccessTokenService _tokenService;
     private readonly IAgentKeyService _agentKeyService;
     private readonly ILogger _logger;
@@ -26,7 +26,7 @@ public abstract class ListApiKeysEndpointBase : Endpoint<UserScopedRequest, List
     /// <summary>Initializes a new instance of the <see cref="ListApiKeysEndpointBase"/> class.</summary>
     protected ListApiKeysEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IPersonalAccessTokenService tokenService,
         IAgentKeyService agentKeyService)
     {

@@ -113,6 +113,8 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.TryAddSingleton<IEffectiveSettingsProvider, DefaultEffectiveSettingsProvider>();
             // Decides whether an administrator of one tenant may change another tenant's object (FDW-4459); it reads the settings provider above.
             builder.Services.TryAddSingleton<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy, CrossTenantChangePolicy>();
+            // Says whether founding makes a default workspace (FDW-4599); it reads the settings provider above.
+            builder.Services.TryAddSingleton<Fdw.Services.Multitenancy.Abstractions.IWorkspaceFoundingPolicy, WorkspaceFoundingPolicy>();
             // Lazy for the factories that read a setting while they build a connection or secret manager (FDW-3284): the settings are read through
             // connections, so a factory that took the provider itself would wait on the connection it is building.
             builder.Services.TryAddSingleton(sp => new Lazy<IEffectiveSettingsProvider>(() => sp.GetRequiredService<IEffectiveSettingsProvider>()));

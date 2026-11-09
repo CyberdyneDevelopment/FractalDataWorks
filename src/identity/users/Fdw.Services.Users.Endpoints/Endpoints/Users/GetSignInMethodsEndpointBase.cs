@@ -28,7 +28,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class GetSignInMethodsEndpointBase : Endpoint<UserScopedRequest, SignInMethodsResponse>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly IExternalIdentityConfigurationProvider _externalIdentities;
     private readonly IPersonalAccessTokenService _tokenService;
@@ -38,7 +38,7 @@ public abstract class GetSignInMethodsEndpointBase : Endpoint<UserScopedRequest,
     /// <summary>Initializes a new instance of the <see cref="GetSignInMethodsEndpointBase"/> class.</summary>
     protected GetSignInMethodsEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IUserCredentialService credentialService,
         IExternalIdentityConfigurationProvider externalIdentities,
         IPersonalAccessTokenService tokenService,

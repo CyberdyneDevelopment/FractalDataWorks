@@ -2,11 +2,11 @@ using System.Threading;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using System.Threading.Tasks;
 using FastEndpoints;
-using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -17,13 +17,13 @@ namespace Fdw.Operations.Endpoints;
 public abstract class DataflowLayerEndpointBase : EndpointWithoutRequest<DataflowGraphResponse>
 {
     private readonly DataflowGraphConfigurationProvider _provider;
-    private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly IPipelineConfigurationProvider _pipelineProvider;
     private readonly ILogger _logger;
 
     /// <inheritdoc />
     private protected DataflowLayerEndpointBase(
         DataflowGraphConfigurationProvider provider,
-        PipelineServiceConfigurationProvider pipelineProvider,
+        IPipelineConfigurationProvider pipelineProvider,
         ILogger logger)
     {
         _provider = provider;

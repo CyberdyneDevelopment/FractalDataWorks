@@ -138,14 +138,14 @@ public abstract class ListTenantsEndpointBase : Endpoint<ListTenantsRequest, Lis
         }
 
         // Non-admin users get empty list by default.
-        // Override this method to inject UserTenantConfigurationProvider and call GetUserTenants.
+        // Override this method to inject IUserTenantConfigurationProvider and call GetUserTenants.
         return GenericResult<IEnumerable<ITenant>>.Success(Array.Empty<ITenant>());
     }
 
     /// <summary>
     /// Gets the user's default tenant identifier for populating <see cref="TenantDto.IsDefault"/>.
     /// Returns <c>null</c> if the store is not available or the user has no default.
-    /// Override to inject <c>UserTenantConfigurationProvider</c> and resolve the real default.
+    /// Override to inject <c>IUserTenantConfigurationProvider</c> and resolve the real default.
     /// </summary>
     protected virtual Task<Guid?> GetDefaultTenantId(string userId, CancellationToken ct)
         => Task.FromResult<Guid?>(null);

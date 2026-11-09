@@ -22,13 +22,13 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// <see cref="AttachWorkspaceResourceEndpointBase"/> for why.</remarks>
 public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorkspaceResourceRequest>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly ILogger<DetachWorkspaceResourceEndpointBase> _logger;
 
     /// <inheritdoc />
     protected DetachWorkspaceResourceEndpointBase(
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         ILogger<DetachWorkspaceResourceEndpointBase>? logger = null)
     {

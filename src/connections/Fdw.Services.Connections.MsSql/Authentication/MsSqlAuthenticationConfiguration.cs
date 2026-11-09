@@ -47,7 +47,7 @@ public abstract class MsSqlAuthenticationConfiguration
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<string> ExpectedProperties { get; } = [];
+    public override IReadOnlyList<string> ExpectedProperties { get; } = [];
 
     /// <inheritdoc />
     public IReadOnlyList<string> RequiredProperties { get; } = [];

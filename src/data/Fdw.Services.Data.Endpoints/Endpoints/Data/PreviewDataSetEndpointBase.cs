@@ -15,7 +15,7 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for previewing data from a DataSet.
-/// Loads the DataSet configuration via DataSetConfigurationProvider for its columns, then reads sample
+/// Loads the DataSet configuration via IDataSetConfigurationProvider for its columns, then reads sample
 /// rows from the data set itself.
 /// </summary>
 /// <remarks>
@@ -26,7 +26,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDataSetRequest, PreviewDataSetResponse>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly DataSetQuery _query;
 
     /// <summary>Gets the logger.</summary>
@@ -34,7 +34,7 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
 
     /// <inheritdoc />
     protected PreviewDataSetEndpointBase(
-        DataSetConfigurationProvider dataSetProvider,
+        IDataSetConfigurationProvider dataSetProvider,
         IDataGatewayProvider dataGateways,
         ILogger<PreviewDataSetEndpointBase> logger)
         : base(logger)

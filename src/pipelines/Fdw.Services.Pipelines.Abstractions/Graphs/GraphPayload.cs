@@ -15,6 +15,12 @@ public class GraphPayload
     /// <summary>Gets or sets the pipeline's name.</summary>
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the organization the pipeline belongs to (FDW-4573). On a create it names the organization; left out, the organization the caller acts in is used, and a caller
+    /// who acts in none is refused. On an update it must be the organization the pipeline already belongs to, or left out. A read shows it.
+    /// </summary>
+    public System.Guid? OrgId { get; set; }
+
     /// <summary>Gets or sets what the pipeline is for.</summary>
     public string? Description { get; set; }
 

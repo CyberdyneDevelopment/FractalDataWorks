@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -10,12 +11,12 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>Reads one category by name (FDW-1465).</summary>
 public abstract class GetCategoryEndpointBase : CrudGetEndpointBase<CategoryNameRequest, CategoryPayload>
 {
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly ICategoryConfigurationProvider _categories;
 
     /// <summary>Initializes a new instance of the <see cref="GetCategoryEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="categories">The categories.</param>
-    protected GetCategoryEndpointBase(ILogger<GetCategoryEndpointBase> logger, CategoryConfigurationProvider categories)
+    protected GetCategoryEndpointBase(ILogger<GetCategoryEndpointBase> logger, ICategoryConfigurationProvider categories)
         : base(logger)
     {
         _categories = categories;

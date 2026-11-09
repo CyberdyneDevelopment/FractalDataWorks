@@ -23,7 +23,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </remarks>
 public abstract class EnableConnectionEndpointBase : Endpoint<EnableConnectionRequest>
 {
-    private readonly ConnectionConfigurationProvider _connections;
+    private readonly IConnectionConfigurationProvider _connections;
     private readonly IConnectionDisabledStates _states;
     private readonly ILogger<EnableConnectionEndpointBase> _logger;
 
@@ -32,7 +32,7 @@ public abstract class EnableConnectionEndpointBase : Endpoint<EnableConnectionRe
     /// <param name="states">Where the disabled state of a connection is kept.</param>
     /// <param name="logger">The logger.</param>
     protected EnableConnectionEndpointBase(
-        ConnectionConfigurationProvider connections,
+        IConnectionConfigurationProvider connections,
         IConnectionDisabledStates states,
         ILogger<EnableConnectionEndpointBase>? logger = null)
     {

@@ -24,14 +24,14 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRequest>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="SetPasswordLoginEndpointBase"/> class.</summary>
     protected SetPasswordLoginEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IUserCredentialService credentialService)
     {
         _logger = logger;

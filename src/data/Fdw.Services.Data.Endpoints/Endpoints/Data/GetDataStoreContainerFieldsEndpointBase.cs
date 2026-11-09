@@ -15,13 +15,13 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class GetDataStoreContainerFieldsEndpointBase
     : CrudGetEndpointBase<DataStoreContainerRequest, List<DataStoreFieldResponse>>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <summary>Initializes a new instance of the <see cref="GetDataStoreContainerFieldsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">Reads the container's fields.</param>
     protected GetDataStoreContainerFieldsEndpointBase(
-        ILogger<GetDataStoreContainerFieldsEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+        ILogger<GetDataStoreContainerFieldsEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
     }

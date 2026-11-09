@@ -47,11 +47,11 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
     private const string UserTenantsDomain = "UserTenants";
 
     private readonly ClaimMappedExternalIdentityProvisionerConfiguration _configuration;
-    private readonly UserConfigurationProvider _users;
-    private readonly UserRoleConfigurationProvider _userRoles;
-    private readonly RoleConfigurationProvider _roles;
+    private readonly IUserConfigurationProvider _users;
+    private readonly IUserRoleConfigurationProvider _userRoles;
+    private readonly IRoleConfigurationProvider _roles;
     private readonly IExternalIdentityConfigurationProvider _identities;
-    private readonly UserTenantConfigurationProvider _userTenants;
+    private readonly IUserTenantConfigurationProvider _userTenants;
     private readonly IAuthenticationContextAccessor? _authContextAccessor;
     private readonly ILogger<ClaimMappedProvisioner> _logger;
 
@@ -68,11 +68,11 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
     /// <param name="logger">This provisioner's logger.</param>
     public ClaimMappedProvisioner(
         ClaimMappedExternalIdentityProvisionerConfiguration configuration,
-        UserConfigurationProvider users,
-        UserRoleConfigurationProvider userRoles,
-        RoleConfigurationProvider roles,
+        IUserConfigurationProvider users,
+        IUserRoleConfigurationProvider userRoles,
+        IRoleConfigurationProvider roles,
         IExternalIdentityConfigurationProvider identities,
-        UserTenantConfigurationProvider userTenants,
+        IUserTenantConfigurationProvider userTenants,
         IAuthenticationContextAccessor? authContextAccessor,
         ILogger<ClaimMappedProvisioner>? logger = null)
     {

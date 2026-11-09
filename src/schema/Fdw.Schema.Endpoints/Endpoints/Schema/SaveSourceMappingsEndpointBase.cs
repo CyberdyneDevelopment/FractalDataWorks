@@ -34,14 +34,14 @@ namespace Fdw.Schema.Endpoints;
 /// </remarks>
 public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<SaveSourceMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SaveSourceMappingsEndpointBase"/> class.
     /// </summary>
     protected SaveSourceMappingsEndpointBase(
-        DataSetConfigurationProvider dataSetProvider,
+        IDataSetConfigurationProvider dataSetProvider,
         ILogger<SaveSourceMappingsEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;

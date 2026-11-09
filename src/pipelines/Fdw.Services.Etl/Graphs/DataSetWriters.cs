@@ -7,9 +7,9 @@ using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Logging;
-using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Etl.Graphs;
 
@@ -26,13 +26,13 @@ public sealed class DataSetWriters : IDataSetWriters
 {
     private const string Placeholder = "{{";
 
-    private readonly PipelineServiceConfigurationProvider _pipelines;
+    private readonly IPipelineConfigurationProvider _pipelines;
     private readonly ILogger<DataSetWriters> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="DataSetWriters"/> class.</summary>
     /// <param name="pipelines">Reads the pipelines.</param>
     /// <param name="logger">The logger the read reports through.</param>
-    public DataSetWriters(PipelineServiceConfigurationProvider pipelines, ILogger<DataSetWriters>? logger = null)
+    public DataSetWriters(IPipelineConfigurationProvider pipelines, ILogger<DataSetWriters>? logger = null)
     {
         _pipelines = pipelines ?? throw new ArgumentNullException(nameof(pipelines));
         _logger = logger ?? NullLogger<DataSetWriters>.Instance;

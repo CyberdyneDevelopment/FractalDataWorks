@@ -29,7 +29,7 @@ namespace Fdw.Services.Authentication.Flow;
 /// configuration is not a code review — so a hostile or merely careless step must be unable to
 /// elevate, however it behaves.
 /// </remarks>
-public sealed class AuthenticationRunner
+public sealed class AuthenticationRunner : IAuthenticationRunner
 {
     private readonly IAcrPolicy _acrPolicy;
     private readonly ITokenIssuer _issuer;
@@ -225,12 +225,21 @@ public sealed class AuthenticationRunner
     // I2 — what the step observed, kept only where it also declared it may assert it. A step
     // declaring nothing proves nothing; a step declaring methods and observing none is taken to
     // have proved what it declared, which is the ordinary case for a step doing its own checking.
+    //
+    // The ceiling is what the step declares plus what this execution's contribution says its authority permits (FDW-4697): the second is carried with the result because the step is
+    // shared by every login and keeps nothing per login.
     private static IEnumerable<string> Recordable(IAuthenticationStep step, ContextContribution? contribution)
-        => step.AuthenticationMethods.Count == 0
+    {
+        var ceiling = contribution is null
+            ? step.AuthenticationMethods
+            : [.. step.AuthenticationMethods.Union(contribution.AssertableMethods, StringComparer.Ordinal)];
+
+        return ceiling.Count == 0
             ? []
             : contribution is null or { ObservedMethods.Count: 0 }
-                ? step.AuthenticationMethods
-                : contribution.ObservedMethods.Where(step.AuthenticationMethods.Contains);
+                ? ceiling
+                : contribution.ObservedMethods.Where(ceiling.Contains);
+    }
 
     // I1 — a step's output is filtered to what it declared. Anything else is discarded and
     // reported: a declaration nothing checks is a comment, and silence would make this a latent

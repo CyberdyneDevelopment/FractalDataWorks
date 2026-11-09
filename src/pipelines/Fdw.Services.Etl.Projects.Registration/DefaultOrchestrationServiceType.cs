@@ -77,12 +77,13 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
 
             // Node provider (canonical, single-table).
 
-            // Validators.
-            services.TryAddTransient<IValidator<OrchestrationNodeImplementationConfiguration>>(sp =>
+            // Validators: singletons (FDW-4640). They build their rules once, keep no per-call state and read the server defaults provider, itself a singleton, on every validation;
+            // the singleton writer takes one for the life of the process, so a transient registration only hid that.
+            services.TryAddSingleton<IValidator<OrchestrationNodeImplementationConfiguration>>(sp =>
                 new OrchestrationNodeConfigurationValidator(
                     sp.GetRequiredService<IServerPolicyDefaultConfigurationProvider>()));
 
-            services.TryAddTransient<IValidator<ProjectConfiguration>>(sp =>
+            services.TryAddSingleton<IValidator<ProjectConfiguration>>(sp =>
                 new ProjectConfigurationValidator(
                     sp.GetRequiredService<IServerPolicyDefaultConfigurationProvider>()));
 

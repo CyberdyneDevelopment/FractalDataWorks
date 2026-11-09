@@ -18,13 +18,13 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetCategoryTreeEndpointBase : Endpoint<CategoryTreeRequest, CategoryTreePayload>
 {
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly ICategoryConfigurationProvider _categories;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="GetCategoryTreeEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="categories">The categories.</param>
-    protected GetCategoryTreeEndpointBase(ILogger<GetCategoryTreeEndpointBase> logger, CategoryConfigurationProvider categories)
+    protected GetCategoryTreeEndpointBase(ILogger<GetCategoryTreeEndpointBase> logger, ICategoryConfigurationProvider categories)
     {
         _logger = logger ?? NullLogger<GetCategoryTreeEndpointBase>.Instance;
         _categories = categories;

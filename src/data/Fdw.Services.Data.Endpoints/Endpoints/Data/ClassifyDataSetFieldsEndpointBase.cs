@@ -27,13 +27,13 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class ClassifyDataSetFieldsEndpointBase
     : CrudUpdateEndpointBase<ClassifyDataSetFieldsRequest, List<ClassifiedItemResponse>>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
 
     /// <summary>Initializes a new instance of the <see cref="ClassifyDataSetFieldsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataSetProvider">Reads and saves the data set.</param>
     protected ClassifyDataSetFieldsEndpointBase(
-        ILogger<ClassifyDataSetFieldsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
+        ILogger<ClassifyDataSetFieldsEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         _dataSetProvider = dataSetProvider ?? throw new ArgumentNullException(nameof(dataSetProvider));
     }

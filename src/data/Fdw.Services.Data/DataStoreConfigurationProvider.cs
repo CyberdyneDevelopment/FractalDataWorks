@@ -27,7 +27,8 @@ namespace Fdw.Services.Data;
 /// <summary>Supplies the DataStore configuration.</summary>
 public sealed class DataStoreConfigurationProvider
     : DomainConfigurationProviderBase<IDataStoreImplementationConfiguration, DataStoreDomainConfiguration>,
-      IPlacedConfigurationProvider<IDataStoreImplementationConfiguration>
+      IPlacedConfigurationProvider<IDataStoreImplementationConfiguration>,
+      IDataStoreConfigurationProvider
 {
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly DataStoreTarget _target;

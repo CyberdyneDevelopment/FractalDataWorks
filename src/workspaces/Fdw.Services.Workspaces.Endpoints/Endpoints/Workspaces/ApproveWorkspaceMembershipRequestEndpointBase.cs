@@ -28,14 +28,14 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// may grant at most their own rank (FDW-1070, FDW-1071).</remarks>
 public abstract class ApproveWorkspaceMembershipRequestEndpointBase : Endpoint<ApproveWorkspaceMembershipRequestRequest, WorkspaceMembershipRequestDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly ILogger<ApproveWorkspaceMembershipRequestEndpointBase> _logger;
 
     /// <inheritdoc />
     protected ApproveWorkspaceMembershipRequestEndpointBase(
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IAuthenticationContextAccessor authContext,
         ILogger<ApproveWorkspaceMembershipRequestEndpointBase>? logger = null)

@@ -22,7 +22,7 @@ public abstract class LineageEndpointBase<TRequest, TResponse> : Endpoint<TReque
     private protected LineageEndpointBase(
         ILogger logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,

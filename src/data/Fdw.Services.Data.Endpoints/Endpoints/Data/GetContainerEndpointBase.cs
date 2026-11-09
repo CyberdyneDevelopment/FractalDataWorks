@@ -17,10 +17,10 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContainerRequest, DataStoreContainerDetailDto>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected GetContainerEndpointBase(ILogger<GetContainerEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    protected GetContainerEndpointBase(ILogger<GetContainerEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }

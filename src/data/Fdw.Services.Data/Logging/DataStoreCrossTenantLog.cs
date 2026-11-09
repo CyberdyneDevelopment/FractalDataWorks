@@ -31,7 +31,7 @@ public static partial class DataStoreCrossTenantLog
     public static partial IGenericMessage AskingPolicy(ILogger logger, Guid dataStoreId, Guid ownerTenantId);
 
     /// <summary>Logs that the host registered the data store domain but nothing registered the cross-tenant change policy its writes ask.</summary>
-    [MessageLogging(EventId = 72831, Level = LogLevel.Critical,
+    [MessageLogging(EventId = 60341, Level = LogLevel.Critical,
         Message = "The data store domain is registered but nothing registered ICrossTenantChangePolicy, which it asks before a data store is written; register the Settings service type (Fdw.Services.Settings, SettingsServiceTypes), which registers it; the host does not start",
         ClientMessage = "The data store domain needs the Settings service type to be registered, and it is not")]
     public static partial IGenericMessage CrossTenantChangePolicyNotRegistered(ILogger logger);

@@ -5,10 +5,9 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Orchestration.Abstractions;
 using Fdw.Results;
-using Fdw.Services.Data.Abstractions;
-using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
 using FdwErrorResponse = Fdw.Web.RestEndpoints.Models.ErrorResponse;
 using Fdw.Web.RestEndpoints.ErrorMapping;
@@ -17,49 +16,27 @@ namespace Fdw.Web.RestEndpoints.Base;
 
 /// <summary>
 /// Base endpoint class that provides authentication, RBAC, and Fdw service integration.
-/// Inherits from FastEndpoints for natural HTTP handling and adds Fdw service injection.
+/// Inherits from FastEndpoints for natural HTTP handling. It holds no gateway, executor or domain service: an endpoint
+/// built on it takes its own domain's provider in its own constructor (FDW-4618 rule 1, FDW-4628).
 /// </summary>
 /// <typeparam name="TRequest">The request type.</typeparam>
 /// <typeparam name="TResponse">The response type.</typeparam>
 public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TRequest, TResponse>
     where TRequest : notnull
 {
-    private readonly IDataGatewayProvider _dataGateways;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="GenericEndpointBase{TRequest, TResponse}"/> class.
     /// </summary>
     protected GenericEndpointBase(
-        ILogger<GenericEndpointBase<TRequest, TResponse>> logger,
-        IDataGatewayProvider dataGateways,
-        IOrchestrationExecutor? executor = null,
-        ISchedulingService? scheduler = null)
+        ILogger<GenericEndpointBase<TRequest, TResponse>> logger)
     {
-        Logger = logger;
-        _dataGateways = dataGateways;
-        Executor = executor;
-        Scheduler = scheduler;
+        Logger = logger ?? NullLogger<GenericEndpointBase<TRequest, TResponse>>.Instance;
     }
 
     /// <summary>
     /// Gets the logger instance for this endpoint.
     /// </summary>
     protected new ILogger Logger { get; }
-
-    /// <summary>
-    /// Gets the data gateway for database operations.
-    /// </summary>
-    protected IDataGateway DataGateway => _dataGateways.ByName(DataGatewayNames.Main);
-
-    /// <summary>
-    /// Gets the orchestration executor for running orchestrations. Null if not registered.
-    /// </summary>
-    protected IOrchestrationExecutor? Executor { get; }
-
-    /// <summary>
-    /// Gets the scheduling service for scheduling tasks. Null if not registered.
-    /// </summary>
-    protected ISchedulingService? Scheduler { get; }
 
     /// <summary>
     /// Handles the HTTP request with authentication, authorization, and Fdw result patterns.
@@ -163,11 +140,8 @@ public abstract class GenericEndpointBase<TResponse> : GenericEndpointBase<Empty
     /// Initializes a new instance of the <see cref="GenericEndpointBase{TResponse}"/> class.
     /// </summary>
     protected GenericEndpointBase(
-        ILogger<GenericEndpointBase<EmptyRequest, TResponse>> logger,
-        IDataGatewayProvider dataGateways,
-        IOrchestrationExecutor? executor = null,
-        ISchedulingService? scheduler = null)
-        : base(logger, dataGateways, executor, scheduler)
+        ILogger<GenericEndpointBase<EmptyRequest, TResponse>> logger)
+        : base(logger)
     {
     }
 }

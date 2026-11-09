@@ -19,7 +19,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNameRequest, DataStoreDetailResponse>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
     private readonly ConnectionNames _connectionNames;
 
     /// <summary>Initializes a new instance of the <see cref="GetDataStoreEndpointBase"/> class.</summary>
@@ -29,7 +29,7 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
     /// <param name="authorization">Asks whether the caller may read connections, before the response names one.</param>
     protected GetDataStoreEndpointBase(
         ILogger<GetDataStoreEndpointBase> logger,
-        DataStoreConfigurationProvider dataStoreProvider,
+        IDataStoreConfigurationProvider dataStoreProvider,
         ConnectionConfigurationProvider connectionProvider,
         IAuthorizationService authorization)
         : base(logger)

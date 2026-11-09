@@ -206,7 +206,11 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
     /// </remarks>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
     {
-        if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
+        var hostDeclared = await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (hostDeclared.IsFailure)
+            return hostDeclared.ToNewResult<T>();
+
+        if (hostDeclared.Value)
             return await ExecuteOnHostStore<T>(command, target, cancellationToken).ConfigureAwait(false);
 
         return await ExecuteAdmitted(
@@ -226,7 +230,11 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
             return await Execute<T>(command, target, cancellationToken).ConfigureAwait(false);
 
         // A store the host declared is reached through the configuration gateway, which has no address to replace.
-        if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
+        var hostDeclared = await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (hostDeclared.IsFailure)
+            return hostDeclared.ToNewResult<T>();
+
+        if (hostDeclared.Value)
             return GenericResult<T>.Failure(EtlDataGatewayLogger.AddressOverrideRefused(_logger, target.DataStore, "the store is declared by the host"));
 
         return await ExecuteAdmitted(
@@ -544,7 +552,11 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
         if (cancellationToken.IsCancellationRequested)
             return GenericResult<IRecordSource<DataRecord>>.Failure(ConnectionLimitLog.OperationCancelled(_logger, Guid.Empty));
 
-        if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
+        var hostDeclared = await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (hostDeclared.IsFailure)
+            return hostDeclared.ToNewResult<IRecordSource<DataRecord>>();
+
+        if (hostDeclared.Value)
             return await OpenOnHostStore(command, target, cancellationToken).ConfigureAwait(false);
 
         var admitted = Admit(target.DataStore, command, cancellationToken);
@@ -689,16 +701,21 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
 
     // Whether the store a target names is one the host declared in configurationSchema.json. Read off the store
     // itself (IDataStore.DeclaredByHost), which the configuration gateway that built it set; never off its name. A
-    // name that resolves to no store is not a host store: the read goes on and fails where it always did.
-    private async Task<bool> IsHostDeclared(string? dataStoreName, CancellationToken cancellationToken)
+    // name that resolves to no store is not a host store: the read goes on and fails where it always did. A lookup that broke says nothing about
+    // the store, so it is a failure and the command is refused, never read as "not the host's", which would let a caller past the protection of a
+    // host store whose flag could not be read (FDW-4281 fixed this in the ETL gateway; FDW-3630).
+    private async Task<IGenericResult<bool>> IsHostDeclared(string? dataStoreName, CancellationToken cancellationToken)
     {
         if (_dataStoreProvider is null || string.IsNullOrWhiteSpace(dataStoreName))
-            return false;
+            return GenericResult<bool>.Success(false);
 
         // The store's row and not its tree (FDW-4253): this runs for every command, and building a 500-container store to read one flag was the
         // first thing a command waited for.
         var store = await _dataStoreProvider.GetReference(dataStoreName, cancellationToken).ConfigureAwait(false);
-        return store is { IsSuccess: true, Value.DeclaredByHost: true };
+        if (store is { IsFailure: true })
+            return FailureCategory.IsMissing(store) ? GenericResult<bool>.Success(false) : store.ToNewResult<bool>();
+
+        return GenericResult<bool>.Success(store is { Value.DeclaredByHost: true });
     }
 
     // A host store is the platform's own: a request is refused, and the system context reads it through the
@@ -752,7 +769,11 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
 
         foreach (var source in config.Sources)
         {
-            if (await IsHostDeclared(source.DataStoreName, cancellationToken).ConfigureAwait(false))
+            var hostDeclared = await IsHostDeclared(source.DataStoreName, cancellationToken).ConfigureAwait(false);
+            if (hostDeclared.IsFailure)
+                return hostDeclared;
+
+            if (hostDeclared.Value)
             {
                 return GenericResult.Failure(
                     DataServiceResultCodes.ByName("HostDeclaredStoreRefused"), _logger,

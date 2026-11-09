@@ -89,20 +89,9 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     static ConnectionTypes()
     {
         var collectOptions = RegisterFunc;
-        var initializeOptions = InitializationFunc;
-
-        // Why the host is refused here (FDW-4459): the disabled-state service asks the cross-tenant change policy before it enables a connection, and the connection provider is built on it,
-        // so a host without the policy cannot resolve a connection at all. Which registration supplies it is the Settings service type's; the check runs after every registration, so it does not
-        // depend on the order the collections registered in, and it is the first thing an option's Initialization would otherwise meet as a bare container exception.
-        Initialization((host, loggerFactory) =>
-        {
-            if (!host.Services.GetRequiredService<IServiceProviderIsService>().IsService(typeof(Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy)))
-            {
-                return GenericResult<IHost>.Failure(ConnectionRegistrationLog.CrossTenantChangePolicyNotRegistered(loggerFactory?.CreateLogger<ConnectionTypes>() ?? NullLogger<ConnectionTypes>.Instance));
-            }
-
-            return initializeOptions(host, loggerFactory);
-        });
+        // The disabled-state service asks the cross-tenant change policy before it enables a connection, and the connection provider is built on it, so a host without the policy
+        // cannot resolve a connection at all (FDW-4459). The Settings service type registers it; the requirement is checked once at Initialize, after every registration.
+        Requires<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(ConnectionRegistrationLog.CrossTenantChangePolicyNotRegistered);
 
         var providerService = typeof(IConnectionProvider).ToString();
 
@@ -293,6 +282,10 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     // type is not registered says nothing about how it authenticates, so the answer cannot be given.
     private sealed partial class NotFoundConnectionTypes
     {
+        /// <inheritdoc />
+        protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<IConnectionImplementationConfiguration> EndpointAuthenticationDeclaration
+            => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<IConnectionImplementationConfiguration>.None;
+
         /// <inheritdoc />
         protected override IGenericResult<bool> DecideHostIdentity(IConnectionImplementationConfiguration configuration)
             => GenericResult<bool>.Failure(

@@ -7,15 +7,15 @@ using Fdw.Web.RestEndpoints.ErrorMapping;
 namespace Fdw.UI.Themes.Endpoints;
 
 /// <summary>
-/// Base endpoint to delete a UI theme. Delegates deletion to <see cref="ThemeConfigurationProvider.Remove"/>,
+/// Base endpoint to delete a UI theme. Delegates deletion to <see cref="IThemeConfigurationProvider.Remove"/>,
 /// which refuses the default theme and a built-in theme.
 /// </summary>
 public abstract class DeleteThemeEndpointBase : Endpoint<DeleteThemeRequest>
 {
-    private readonly ThemeConfigurationProvider _provider;
+    private readonly IThemeConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected DeleteThemeEndpointBase(ThemeConfigurationProvider provider)
+    protected DeleteThemeEndpointBase(IThemeConfigurationProvider provider)
     {
         _provider = provider;
     }

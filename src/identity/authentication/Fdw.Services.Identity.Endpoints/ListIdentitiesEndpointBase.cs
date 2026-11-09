@@ -1,4 +1,5 @@
 using Fdw.Services.Identity;
+using Fdw.Services.Identity.Abstractions;
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Configuration;
@@ -29,7 +30,7 @@ public abstract class ListIdentitiesEndpointBase : CrudPageEndpointBase<DomainCo
     }
 
     /// <summary>Gets the configuration provider a page of identities is read through.</summary>
-    protected abstract IdentityServiceConfigurationProvider Identities { get; }
+    protected abstract IIdentityServiceConfigurationProvider Identities { get; }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "identities";

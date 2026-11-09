@@ -31,13 +31,13 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class SearchDataStoreContainersEndpointBase : CrudPageEndpointBase<DataStoreContainerListItem, DataStoreContainerListItem>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <summary>Initializes a new instance of the <see cref="SearchDataStoreContainersEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">Reads the store's paths and their containers.</param>
     protected SearchDataStoreContainersEndpointBase(
-        ILogger<SearchDataStoreContainersEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider)
+        ILogger<SearchDataStoreContainersEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider)
         : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;

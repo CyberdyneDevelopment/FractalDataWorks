@@ -3,19 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Messages;
-using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Base;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Web.RestEndpoints.Tests.Base;
-
-// A stub rather than the real provider: these fixtures are about command dispatch, not about how
-// a gateway is supplied. Never exercised.
-file sealed class StubGatewayProvider : IDataGatewayProvider
-{
-    public IDataGateway ByName(string name) => throw new NotSupportedException("Not exercised by these tests.");
-}
 
 // Test implementation for CommandEndpointBase with result
 public class TestCommandEndpoint : CommandEndpointBase<TestCommand, TestCommandResult>
@@ -28,7 +20,7 @@ public class TestCommandEndpoint : CommandEndpointBase<TestCommand, TestCommandR
         Func<TestCommand, CancellationToken, Task<IGenericResult<TestCommandResult>>> executeFunc,
         Func<TestCommand, CancellationToken, Task<IGenericResult>>? authFunc = null,
         string[]? requiredRoles = null)
-        : base(NullLogger<GenericEndpointBase<TestCommand, TestCommandResult>>.Instance, new StubGatewayProvider())
+        : base(NullLogger<GenericEndpointBase<TestCommand, TestCommandResult>>.Instance)
     {
         _executeFunc = executeFunc;
         _authFunc = authFunc;
@@ -64,7 +56,7 @@ public class TestVoidCommandEndpoint : CommandEndpointBase<TestCommand>
     private readonly Func<TestCommand, CancellationToken, Task<IGenericResult>> _executeFunc;
 
     public TestVoidCommandEndpoint(Func<TestCommand, CancellationToken, Task<IGenericResult>> executeFunc)
-        : base(NullLogger<GenericEndpointBase<TestCommand, object>>.Instance, new StubGatewayProvider())
+        : base(NullLogger<GenericEndpointBase<TestCommand, object>>.Instance)
     {
         _executeFunc = executeFunc;
     }

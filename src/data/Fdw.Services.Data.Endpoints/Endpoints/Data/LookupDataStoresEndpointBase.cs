@@ -22,7 +22,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class LookupDataStoresEndpointBase : LookupEndpointBase<DataStoreDomainConfiguration>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
     private readonly IConfigurationGatewayProvider _configurationGateways;
 
     // The names of the stores the host declared, read once per request before its page.
@@ -34,7 +34,7 @@ public abstract class LookupDataStoresEndpointBase : LookupEndpointBase<DataStor
     /// <param name="configurationGateways">Holds the stores the host declared, which are never offered.</param>
     protected LookupDataStoresEndpointBase(
         ILogger<LookupDataStoresEndpointBase> logger,
-        DataStoreConfigurationProvider dataStoreProvider,
+        IDataStoreConfigurationProvider dataStoreProvider,
         IConfigurationGatewayProvider configurationGateways)
         : base(logger)
     {

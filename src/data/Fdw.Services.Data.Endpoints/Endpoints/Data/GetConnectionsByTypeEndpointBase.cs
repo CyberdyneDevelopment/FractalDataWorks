@@ -16,10 +16,10 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<GetConnectionsByTypeRequest, List<ConnectionByTypeDto>>
 {
-    private readonly ConnectionConfigurationProvider _provider;
+    private readonly IConnectionConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected GetConnectionsByTypeEndpointBase(ILogger<GetConnectionsByTypeEndpointBase> logger, ConnectionConfigurationProvider provider) : base(logger)
+    protected GetConnectionsByTypeEndpointBase(ILogger<GetConnectionsByTypeEndpointBase> logger, IConnectionConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

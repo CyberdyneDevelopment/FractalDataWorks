@@ -63,7 +63,15 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
                     ResultDetails.Create().With("DataSetName", name));
         }
 
-        var configured = _factory.Configure(configResult.Value!);
+        // The domain provider answers a row that is not configured with a success that holds nothing; that, and only that, is a data set that is not there.
+        if (configResult.Value is null)
+        {
+            return GenericResult<IDataSet>.Failure(
+                DataServiceResultCodes.ByName("DataSetNotFound"),
+                ResultDetails.Create().With("DataSetName", name));
+        }
+
+        var configured = _factory.Configure(configResult.Value);
         if (!configured.IsSuccess)
             return configured.ToNewResult<IDataSet>();
 
@@ -96,7 +104,15 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
                     ResultDetails.Create().With("DataSetId", id));
         }
 
-        var configured = _factory.Configure(configResult.Value!);
+        // See Get(string): a configuration read that succeeded and holds nothing is a data set that is not there.
+        if (configResult.Value is null)
+        {
+            return GenericResult<IDataSet>.Failure(
+                DataServiceResultCodes.ByName("DataSetNotFound"),
+                ResultDetails.Create().With("DataSetId", id));
+        }
+
+        var configured = _factory.Configure(configResult.Value);
         if (!configured.IsSuccess)
             return configured.ToNewResult<IDataSet>();
 
@@ -106,7 +122,7 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
             return buildResult.Messages.Any()
                 ? buildResult
                 : GenericResult<IDataSet>.Failure(
-                    DataSetRuntimeProviderLog.BuildFailed(_logger, configResult.Value is { } built ? built.Name : id.ToString()));
+                    DataSetRuntimeProviderLog.BuildFailed(_logger, configResult.Value.Name));
         }
 
         DataSetRuntimeProviderLog.RetrievedById(_logger, id);

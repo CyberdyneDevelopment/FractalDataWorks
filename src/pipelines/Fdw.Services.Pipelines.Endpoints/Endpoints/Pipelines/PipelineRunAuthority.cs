@@ -151,7 +151,10 @@ public sealed class PipelineRunAuthority
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ReachedDataSet reached, ILogger logger, CancellationToken ct)
     {
         var dataSet = await _dataSets.Get(reached.Name, ct).ConfigureAwait(false);
-        if (!dataSet.IsSuccess || dataSet.Value is null)
+        if (Broke(dataSet))
+            return dataSet;
+
+        if (dataSet.Value is null)
             return Refuse(logger, reach, roles, $"data set '{reached.Name}' is not visible to the caller");
 
         var needed = reached.Writes ? DataSetWrite : DataSetRead;
@@ -179,7 +182,10 @@ public sealed class PipelineRunAuthority
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ReachedConnection reached, ILogger logger, CancellationToken ct)
     {
         var connection = await _connections.Get(reached.Name, ct).ConfigureAwait(false);
-        if (!connection.IsSuccess || connection.Value is null)
+        if (Broke(connection))
+            return connection;
+
+        if (connection.IsFailure || connection.Value is null)
             return Refuse(logger, reach, roles, $"connection '{reached.Name}' is not visible to the caller");
 
         var needed = reached.Writes ? ConnectionWrite : ConnectionRead;
@@ -192,7 +198,10 @@ public sealed class PipelineRunAuthority
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, string name, bool writes, ILogger logger, CancellationToken ct)
     {
         var store = await _dataStores.GetReference(name, ct).ConfigureAwait(false);
-        if (!store.IsSuccess || store.Value is null)
+        if (Broke(store))
+            return store;
+
+        if (store.IsFailure || store.Value is null)
             return Refuse(logger, reach, roles, $"data store '{name}' is not visible to the caller");
 
         var needed = writes ? DataStoreWrite : DataStoreRead;
@@ -224,13 +233,19 @@ public sealed class PipelineRunAuthority
                 $"container '{reached.Container}' must name its data store, path and container together (store '{reached.DataStore}', path '{reached.Path}')");
 
         var store = await _dataStores.GetReference(reached.DataStore, ct).ConfigureAwait(false);
-        if (!store.IsSuccess || store.Value is null)
+        if (Broke(store))
+            return store;
+
+        if (store.IsFailure || store.Value is null)
             return Refuse(logger, reach, roles, $"data store '{reached.DataStore}' is not visible to the caller");
         if (store.Value.DeclaredByHost)
             return Refuse(logger, reach, roles, $"data store '{reached.DataStore}' belongs to the platform and is not a pipeline {(reached.Writes ? "destination" : "source")}");
 
         var container = await _dataStores.Get(reached.DataStore, reached.Path, reached.Container, ct).ConfigureAwait(false);
-        if (!container.IsSuccess || container.Value is null)
+        if (Broke(container))
+            return container;
+
+        if (container.IsFailure || container.Value is null)
             return Refuse(logger, reach, roles,
                 $"container '{reached.Container}' in path '{reached.Path}' of data store '{reached.DataStore}' is not visible to the caller");
 
@@ -241,6 +256,11 @@ public sealed class PipelineRunAuthority
     }
 
     private static string Verb(bool writes) => writes ? "writing" : "reading";
+
+    // A lookup answers one of three ways: it found the thing, it found nothing (a success that holds nothing, or a failure in the Missing category, which is how the data store
+    // provider says a store or container is not there for this caller), or it broke. Only the first two are the caller's access; a lookup that broke is returned as it is, with
+    // its own messages, and never answered as a refusal of the run (FDW-3630).
+    private static bool Broke(IGenericResult lookup) => lookup.IsFailure && !FailureCategory.IsMissing(lookup);
 
     private static IGenericResult Refuse(ILogger logger, PipelineReach reach, IReadOnlyList<string> roles, string reason)
         => GenericResult.Failure(EtlResultCodes.ByName("PipelineRunRefused"), logger,

@@ -16,7 +16,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     where TRequest : UpdateUserRequest
 {
     /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
-        private readonly UserConfigurationProvider _userProvider;
+        private readonly IUserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -24,7 +24,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
-    protected UpdateUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    protected UpdateUserEndpointBase(ILogger logger, IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
         _userProvider = userProvider;
@@ -34,7 +34,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".

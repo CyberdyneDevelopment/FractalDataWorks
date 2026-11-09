@@ -21,7 +21,11 @@ public sealed partial class EtlDataGateway
     /// </remarks>
     public async Task<IGenericResult<T>> Execute<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken = default)
     {
-        if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
+        var hostDeclared = await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (hostDeclared.IsFailure)
+            return hostDeclared.ToNewResult<T>();
+
+        if (hostDeclared.Value)
         {
             var gateway = HostStoreGateway(target.DataStore, target.Container);
             if (gateway.IsFailure || gateway.Value is not { } hostGateway)

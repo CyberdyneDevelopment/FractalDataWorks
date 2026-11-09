@@ -26,11 +26,11 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 internal sealed class ClaimMappedProvisionerFactory
     : IClaimMappedProvisionerFactory
 {
-    private readonly UserConfigurationProvider _users;
-    private readonly UserRoleConfigurationProvider _userRoles;
-    private readonly RoleConfigurationProvider _roles;
+    private readonly IUserConfigurationProvider _users;
+    private readonly IUserRoleConfigurationProvider _userRoles;
+    private readonly IRoleConfigurationProvider _roles;
     private readonly IExternalIdentityConfigurationProvider _identities;
-    private readonly UserTenantConfigurationProvider _userTenants;
+    private readonly IUserTenantConfigurationProvider _userTenants;
     private readonly IAuthenticationContextAccessor? _authContextAccessor;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ClaimMappedProvisionerFactory> _logger;
@@ -52,11 +52,11 @@ internal sealed class ClaimMappedProvisionerFactory
     /// </param>
     /// <param name="loggerFactory">Builds this factory's and the provisioner's loggers.</param>
     public ClaimMappedProvisionerFactory(
-        UserConfigurationProvider users,
-        UserRoleConfigurationProvider userRoles,
-        RoleConfigurationProvider roles,
+        IUserConfigurationProvider users,
+        IUserRoleConfigurationProvider userRoles,
+        IRoleConfigurationProvider roles,
         IExternalIdentityConfigurationProvider identities,
-        UserTenantConfigurationProvider userTenants,
+        IUserTenantConfigurationProvider userTenants,
         IAuthenticationContextAccessor? authContextAccessor,
         ILoggerFactory? loggerFactory)
     {

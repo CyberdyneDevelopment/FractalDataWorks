@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using FluentValidation;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Abstractions.Authentication;
 using Fdw.Services.Connections.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -99,6 +100,39 @@ public sealed class ConnectionEndpointBehavior : IConnectionEndpointBehavior<ICo
                 : GenericResult.Failure(ConnectionEndpointBehaviorLog.ConfigurationRejected(
                     logger, connectionTypeName, string.Join("; ", validated.Errors.Select(error => error.ErrorMessage))));
         });
+
+    /// <summary>
+    /// Declares which authentication method a connection's authentication dictionary belongs to, once, for both uses
+    /// (FDW-4607): the method masks the dictionary's secret entries and every entry it does not expect when it is shown, and a
+    /// configuration holding a key the method does not expect is refused before it is saved, with its own message that names the
+    /// keys and never their values. A method no option answers to is left to the kind's own rule to refuse.
+    /// </summary>
+    /// <param name="dictionaryProperty">The configuration property holding the authentication dictionary.</param>
+    /// <param name="connectionTypeName">The connection type's name, for the refusal.</param>
+    /// <param name="authentication">Answers the authentication method the configuration names.</param>
+    public void Authentication(
+        string dictionaryProperty,
+        string connectionTypeName,
+        Func<IConnectionImplementationConfiguration, IConnectionAuthenticationType> authentication)
+    {
+        MaskEntries(dictionaryProperty, (configuration, entries) => authentication(configuration).MaskSecrets(entries, ConnectionSecretMask.Value));
+        Validate((configuration, logger) =>
+        {
+            if (ConfigurationType.GetProperty(dictionaryProperty)?.GetValue(configuration) is not IEnumerable<KeyValuePair<string, string?>> entries)
+                return GenericResult.Failure(ConnectionEndpointBehaviorLog.ConfigurationInvalid(
+                    logger, connectionTypeName, $"'{dictionaryProperty}' is not a string dictionary of the configuration"));
+
+            var method = authentication(configuration);
+            if (string.IsNullOrEmpty(method.Name))
+                return GenericResult.Success();
+
+            var unexpected = method.UnexpectedProperties(entries.Select(entry => entry.Key));
+            return unexpected.Count == 0
+                ? GenericResult.Success()
+                : GenericResult.Failure(ConnectionEndpointBehaviorLog.AuthenticationPropertyNotExpected(
+                    logger, connectionTypeName, method.Name, string.Join(", ", unexpected)));
+        });
+    }
 
     /// <inheritdoc />
     public IGenericResult<IConnectionImplementationConfiguration> Bind(JsonElement configuration, ILogger logger)

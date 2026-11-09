@@ -21,14 +21,14 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// a raw POST endpoint rather than a <c>CrudUpdateEndpointBase</c> derivative.</summary>
 public abstract class DenyWorkspaceMembershipRequestEndpointBase : Endpoint<DenyWorkspaceMembershipRequestRequest, WorkspaceMembershipRequestDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly ILogger<DenyWorkspaceMembershipRequestEndpointBase> _logger;
 
     /// <inheritdoc />
     protected DenyWorkspaceMembershipRequestEndpointBase(
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IAuthenticationContextAccessor authContext,
         ILogger<DenyWorkspaceMembershipRequestEndpointBase>? logger = null)

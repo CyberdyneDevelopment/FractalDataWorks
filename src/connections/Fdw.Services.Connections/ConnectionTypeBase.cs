@@ -18,6 +18,7 @@ using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Abstractions.Authentication;
+using Fdw.Services.Connections.Logging;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Validation;
 
@@ -63,9 +64,40 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
                defaultContainerName: defaultContainerName)
     {
         _endpointBehavior = new ConnectionEndpointBehavior(typeof(TConfiguration));
+        _authenticationDeclared = new Lazy<bool>(ApplyAuthenticationDeclaration);
     }
 
     private readonly ConnectionEndpointBehavior _endpointBehavior;
+    private readonly Lazy<bool> _authenticationDeclared;
+
+    /// <summary>
+    /// Gets what this kind states about the authentication values its configuration holds: <see cref="ConnectionAuthentication{TConfiguration}.None"/>
+    /// when it holds none, or <see cref="ConnectionAuthentication{TConfiguration}.Of"/> naming the dictionary and the authentication
+    /// method it belongs to (FDW-4607).
+    /// </summary>
+    /// <remarks>
+    /// Why abstract: a kind that forgot to say would leave its authentication dictionary without the unexpected-key refusal, so every
+    /// kind states its position and one that does not will not compile. Why applied on the first read of <see cref="EndpointBehavior"/>
+    /// and not in the constructor: the member is read after the kind is built, never from this constructor. A kind that declares
+    /// <c>None</c> and has a string dictionary is refused wherever the configuration is created or updated.
+    /// </remarks>
+    protected abstract ConnectionAuthentication<TConfiguration> EndpointAuthenticationDeclaration { get; }
+
+    private bool ApplyAuthenticationDeclaration()
+    {
+        var declaration = EndpointAuthenticationDeclaration;
+        if (declaration.DictionaryProperty is { } property && declaration.Method is { } method)
+        {
+            _endpointBehavior.Authentication(property, Name, configuration => method((TConfiguration)(object)configuration));
+            return true;
+        }
+
+        if (declaration.UndeclaredDictionaries is { Count: > 0 } undeclared)
+            _endpointBehavior.Validate((_, logger) => GenericResult.Failure(
+                ConnectionEndpointBehaviorLog.AuthenticationNotDeclared(logger, Name, string.Join(", ", undeclared))));
+
+        return true;
+    }
 
     /// <summary>
     /// Gets the schema discovery options this connection kind offers. Defaults to
@@ -233,7 +265,15 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// <see cref="EndpointValidation(Func{TConfiguration, ILogger, IGenericResult})"/> or
     /// <see cref="EndpointValidation(FdwConfigurationValidator{TConfiguration})"/>; a kind that needs different handling altogether overrides this.
     /// </remarks>
-    public virtual IConnectionEndpointBehavior<IConnectionImplementationConfiguration> EndpointBehavior => _endpointBehavior;
+    public virtual IConnectionEndpointBehavior<IConnectionImplementationConfiguration> EndpointBehavior
+    {
+        get
+        {
+            // The kind's authentication declaration is applied once, here, after the kind is built (FDW-4607).
+            _ = _authenticationDeclared.Value;
+            return _endpointBehavior;
+        }
+    }
 
     /// <summary>
     /// Accepts a deprecated flat request field for one of this kind's configuration properties, so

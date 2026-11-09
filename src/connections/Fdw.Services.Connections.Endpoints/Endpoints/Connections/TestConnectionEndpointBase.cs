@@ -19,14 +19,14 @@ namespace Fdw.Services.Connections.Endpoints;
 public abstract class TestConnectionEndpointBase : Endpoint<TestConnectionRequest, TestConnectionResponse>
 {
     private readonly IConnectionProvider _connectionProvider;
-    private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionConfigurationProvider _configProvider;
     private readonly IConnectionHealthService _healthService;
     private readonly ILogger<TestConnectionEndpointBase> _logger;
 
     /// <inheritdoc />
     protected TestConnectionEndpointBase(
         IConnectionProvider connectionProvider,
-        ConnectionConfigurationProvider configProvider,
+        IConnectionConfigurationProvider configProvider,
         IConnectionHealthService healthService,
         ILogger<TestConnectionEndpointBase> logger)
     {

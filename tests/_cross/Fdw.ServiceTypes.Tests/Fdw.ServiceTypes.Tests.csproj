@@ -28,4 +28,8 @@
     <ProjectReference Include="..\..\..\src\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
 </Project>

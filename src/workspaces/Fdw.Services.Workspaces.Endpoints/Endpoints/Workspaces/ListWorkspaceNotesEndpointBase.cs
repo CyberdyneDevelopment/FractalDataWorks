@@ -22,8 +22,8 @@ namespace Fdw.Services.Workspaces.Endpoints;
 public abstract class ListWorkspaceNotesEndpointBase : CrudGetEndpointBase<WorkspaceNameRequest, WorkspaceNoteListResponse>
 {
     private readonly IWorkspaceConfigurationProvider _workspaces;
-    private readonly NoteConfigurationProvider _notes;
-    private readonly UserConfigurationProvider _users;
+    private readonly INoteConfigurationProvider _notes;
+    private readonly IUserConfigurationProvider _users;
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IWorkspaceAccessPolicy _access;
 
@@ -31,8 +31,8 @@ public abstract class ListWorkspaceNotesEndpointBase : CrudGetEndpointBase<Works
     protected ListWorkspaceNotesEndpointBase(
         ILogger<ListWorkspaceNotesEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,
-        NoteConfigurationProvider notes,
-        UserConfigurationProvider users,
+        INoteConfigurationProvider notes,
+        IUserConfigurationProvider users,
         IDataSetConfigurationProvider dataSets,
         IWorkspaceAccessPolicy access) : base(logger)
     {
