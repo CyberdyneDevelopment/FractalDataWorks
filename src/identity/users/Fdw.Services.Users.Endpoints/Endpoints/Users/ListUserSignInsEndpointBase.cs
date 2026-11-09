@@ -9,6 +9,7 @@ using Fdw.Services.Users.Configuration;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -60,20 +61,22 @@ public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequ
     {
         if (req.Skip < 0 || req.Take < 1 || req.Take > ListUserSignInsRequest.MaxTake)
         {
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "BadRequest",
-                messages = new[] { $"skip must be 0 or more, and take must be from 1 to {ListUserSignInsRequest.MaxTake}." },
-            }, statusCode: 400)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ListUserSignInsPagingInvalid(_logger, req.Skip, req.Take, ListUserSignInsRequest.MaxTake)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var userResult = await UserRouteTarget
             .Resolve(_userProvider, User, req.IdOrName, ct).ConfigureAwait(false);
 
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ListUserSignInsUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -82,7 +85,7 @@ public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequ
         if (!AccountAuthority.ReadsSignIns(User, user, Resolve<ISystemRoleConfiguration>()))
         {
             UserEndpointLog.SignInsNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ListUserSignInsForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

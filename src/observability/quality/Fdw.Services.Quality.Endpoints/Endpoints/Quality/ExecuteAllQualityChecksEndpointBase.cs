@@ -14,6 +14,7 @@ using Fdw.Services.Quality.Configuration;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -27,7 +28,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private IDataGateway Gateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>Initializes a new instance of the <see cref="ExecuteAllQualityChecksEndpointBase"/> class.</summary>
     protected ExecuteAllQualityChecksEndpointBase(ILogger logger, IQualityRuleConfigurationProvider provider, IDataGatewayProvider dataGateways)
@@ -61,7 +62,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
     {
         if (string.IsNullOrWhiteSpace(req.DataSetName))
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "DataSetName is required" }, statusCode: 400)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(QualityAnswerLog.ExecuteAllQualityChecksDatasetnameIsRequired(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -69,7 +70,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
         var tenant = QualityRuleExecutions.CallerTenant(User, Logger);
         if (tenant.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "No active tenant", Details = tenant.CurrentMessage }, statusCode: 400)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(tenant, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -77,7 +78,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
 
         if (!rulesResult.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch quality rules", Details = rulesResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(rulesResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -95,7 +96,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
         var named = QualityRuleTarget.RequireDataSet("The request", req.DataSetName, Logger);
         if (named.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Request names no data set", Details = named.CurrentMessage }, statusCode: 400)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(named, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -125,7 +126,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
             var kept = await QualityRuleExecutions.Record(Gateway, QualityServiceTypes.OperationalConnection, record, Logger, ct).ConfigureAwait(false);
             if (kept.IsFailure)
             {
-                await Send.ResultAsync(TypedResults.Json(new { Error = "A check ran but its verdict was not recorded", RuleId = rule.Id, Details = kept.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(kept, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

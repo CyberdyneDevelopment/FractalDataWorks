@@ -8,6 +8,7 @@ using Fdw.Services.Users.Clients.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -71,25 +72,42 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
     public override async Task HandleAsync(CancellationToken ct)
     {
         var assignments = await _userRoleProvider.Get(ct).ConfigureAwait(false);
-        if (!assignments.IsSuccess || assignments.Value is null)
+        if (assignments.IsFailure)
         {
             // Why this refuses: an empty list would say "nobody holds any role", which is what the
             // Users screen printed for a year while every user held one. A read that failed and a
             // store that is genuinely empty are opposite facts.
             AuthorizationEndpointLog.UserRoleAssignmentsUnreadable(
                 EndpointLogger, assignments.NoValueReason().Message);
-            await Send.ResponseAsync(
-                new AllUserRolesResponse(), StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(assignments, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (assignments.Value is null)
+        {
+            // Why this refuses: an empty list would say "nobody holds any role", which is what the
+            // Users screen printed for a year while every user held one. A read that failed and a
+            // store that is genuinely empty are opposite facts.
+            AuthorizationEndpointLog.UserRoleAssignmentsUnreadable(
+                EndpointLogger, assignments.NoValueReason().Message);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.ListAllUserRolesAssignmentsReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var rolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
-        if (!rolesResult.IsSuccess || rolesResult.Value is null)
+        if (rolesResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(
                 EndpointLogger, "user-roles", rolesResult.CurrentMessage);
-            await Send.ResponseAsync(
-                new AllUserRolesResponse(), StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(rolesResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (rolesResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(
+                EndpointLogger, "user-roles", rolesResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.ListAllUserRolesRolesReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var roles = rolesResult.Value;

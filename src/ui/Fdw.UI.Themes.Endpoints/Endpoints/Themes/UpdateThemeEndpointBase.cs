@@ -2,6 +2,8 @@
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.UI.Themes.Endpoints;
 
@@ -55,7 +57,7 @@ public abstract class UpdateThemeEndpointBase<TRequest, TDetail> : Endpoint<TReq
         var existing = FindTheme(name);
         if (existing == null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UIThemesAnswerLog.UpdateThemeNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -9,6 +9,8 @@ using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Users.Clients.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -73,19 +75,33 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
             var userResult = Guid.TryParse(req.IdOrName, out var parsedUserId)
                 ? await _userProvider.Get(parsedUserId, ct).ConfigureAwait(false)
                 : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
-            if (!userResult.IsSuccess || userResult.Value is null)
+            if (userResult.IsFailure)
             {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (userResult.Value is null)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetUserRolesUserNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             var userId = userResult.Value.Id;
             var allRolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
-            if (!allRolesResult.IsSuccess || allRolesResult.Value is null)
+            if (allRolesResult.IsFailure)
             {
                 AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.IdOrName,
                     allRolesResult.CurrentMessage);
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(allRolesResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (allRolesResult.Value is null)
+            {
+                AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.IdOrName,
+                    allRolesResult.CurrentMessage);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetUserRolesAllRolesReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
             var allRoles = allRolesResult.Value;
@@ -97,9 +113,15 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
                     // sides are parsed and compared as the Guids they are (FDW-532).
                     ur => Guid.TryParse(ur.UserId, out var assigned) && assigned == userId, ct)
                 .ConfigureAwait(false);
-            if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
+            if (userRolesResult.IsFailure)
             {
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(userRolesResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (userRolesResult.Value is null)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetUserRolesUserRolesReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -117,7 +139,7 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
         catch (Exception ex)
         {
             AuthorizationEndpointLog.OperationFailed(EndpointLogger, ex, "get user roles", req.IdOrName);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = Guid.Empty }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetUserRolesFaulted(EndpointLogger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

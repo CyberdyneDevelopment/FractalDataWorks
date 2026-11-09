@@ -5,6 +5,8 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -46,7 +48,7 @@ public abstract class LiftTenantSettingLockEndpointBase : Endpoint<TenantInherit
         if (!_systemRoles.IsPlatformAdmin(User))
         {
             InheritedSettingsEndpointLog.PlatformAdministratorRequired(EndpointLogger, SettingScope.TenantLevel);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(InheritedSettingsEndpointLog.LiftTenantSettingLockForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -64,7 +66,7 @@ public abstract class LiftTenantSettingLockEndpointBase : Endpoint<TenantInherit
         if (audited.IsFailure)
         {
             InheritedSettingsEndpointLog.ChangeNotAudited(EndpointLogger, "lock lift", InheritedSettingAudit.ItemOf(scope, req.SettingName), audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

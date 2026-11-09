@@ -20,6 +20,7 @@ public sealed class CancelledStateType : ExecutionStateTypeBase
             isTerminal: true,
             isSuccess: false,
             isFailure: false,
+            isExecuting: false,
             canTriggerEscalation: false,
             validTransitions: System.Array.Empty<string>())
     {

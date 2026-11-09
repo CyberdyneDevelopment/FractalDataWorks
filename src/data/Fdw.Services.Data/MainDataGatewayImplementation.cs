@@ -37,7 +37,7 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
     /// </summary>
     public MainDataGatewayImplementation()
         : base(
-            "Main",
+            DataGatewayNames.Main,
             "DataGateway:Main",
             "Main DataGateway",
             "The data gateway this framework ships, with DataStoreProvider, SchemaInformation and DataSetResolver", defaultPathName: "dg", defaultContainerName: "MainDataGatewayConfiguration")

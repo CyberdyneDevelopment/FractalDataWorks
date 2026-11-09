@@ -12,6 +12,8 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Clients.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -79,9 +81,15 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         var lookup = Guid.TryParse(req.IdOrName, out var parsedUserId)
             ? await _userProvider.Get(parsedUserId, ct).ConfigureAwait(false)
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
-        if (!lookup.IsSuccess || lookup.Value is null)
+        if (lookup.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(lookup, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (lookup.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.AssignUserRoleUserNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -94,7 +102,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         if (!Guid.TryParse(User.FindFirst(ClaimDefinitions.tenantId.Name)?.Value, out var tenantId))
         {
             AuthorizationEndpointLog.RoleChangeWithoutTenant(EndpointLogger, userIdString);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.AssignUserRoleForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -107,7 +115,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         catch (Exception ex)
         {
             AuthorizationEndpointLog.OperationFailed(EndpointLogger, ex, "assign role", userIdString);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.AssignUserRoleFaulted(EndpointLogger)), HttpContext)).ConfigureAwait(false);
         }
     }
 
@@ -119,12 +127,12 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName,
                 roleResult.CurrentMessage);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(roleResult, HttpContext)).ConfigureAwait(false);
             return;
         }
         if (roleResult.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.AssignUserRoleRoleNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var role = roleResult.Value;
@@ -153,11 +161,19 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
     {
         var userIdString = userId.ToString();
         var allRolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
-        if (!allRolesResult.IsSuccess || allRolesResult.Value is null)
+        if (allRolesResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, userIdString,
                 allRolesResult.CurrentMessage);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(allRolesResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (allRolesResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, userIdString,
+                allRolesResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.AssignUserRoleAllRolesReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var allRoles = allRolesResult.Value;
@@ -170,9 +186,15 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
                 // tenant's assignments, and a role held elsewhere is not one this change affected.
                 ur => Guid.TryParse(ur.UserId, out var assigned) && assigned == userId && ur.TenantId == tenantId, ct)
             .ConfigureAwait(false);
-        if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
+        if (userRolesResult.IsFailure)
         {
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userRolesResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userRolesResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.AssignUserRoleUserRolesReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -187,7 +209,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         {
             AuthorizationEndpointLog.RoleChangeNotAudited(EndpointLogger, "assignment", roleName, userIdString,
                 audited.CurrentMessage);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -126,7 +126,7 @@ public abstract class LogoutEndpointBase : EndpointWithoutRequest
         catch (Exception ex)
         {
             AuthenticationEndpointLog.AuthenticationException(_logger, ex, "logout");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.LogoutFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

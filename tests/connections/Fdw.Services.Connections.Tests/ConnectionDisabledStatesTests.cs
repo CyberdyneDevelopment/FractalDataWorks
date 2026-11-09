@@ -2,9 +2,12 @@ using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using System;
@@ -287,11 +290,14 @@ public sealed class ConnectionDisabledStatesTests
         var forbidden = await refused.States.Enable(ConnectionId, "a person looked", TestContext.Current.CancellationToken);
         var fault = await broken.States.Enable(ConnectionId, "a person looked", TestContext.Current.CancellationToken);
 
-        Fdw.Services.Connections.Endpoints.EnableConnectionAnswers.StatusOf(forbidden).ShouldBe(403);
-        Fdw.Services.Connections.Endpoints.EnableConnectionAnswers.StatusOf(fault).ShouldBe(500);
-        Fdw.Services.Connections.Endpoints.EnableConnectionAnswers.SentenceOf(forbidden).ShouldContain("another tenant");
-        Fdw.Services.Connections.Endpoints.EnableConnectionAnswers.SentenceOf(fault).ShouldNotContain("devConfigurationDb");
-        Fdw.Services.Connections.Endpoints.EnableConnectionAnswers.SentenceOf(forbidden).ShouldNotContain("devConfigurationDb");
+        var (forbiddenStatus, forbiddenBody) = Fdw.Web.RestEndpoints.ErrorMapping.ResultHttpStatusMapper.Map(forbidden, new Microsoft.AspNetCore.Http.DefaultHttpContext());
+        var (faultStatus, faultBody) = Fdw.Web.RestEndpoints.ErrorMapping.ResultHttpStatusMapper.Map(fault, new Microsoft.AspNetCore.Http.DefaultHttpContext());
+        forbiddenStatus.ShouldBe(403);
+        faultStatus.ShouldBe(500);
+        var forbiddenDetail = forbiddenBody.Detail.ShouldNotBeNull();
+        forbiddenDetail.ShouldContain("another tenant");
+        forbiddenDetail.ShouldNotContain("devConfigurationDb");
+        faultBody.Detail.ShouldNotBeNull().ShouldNotContain("devConfigurationDb");
     }
 
     [Theory]
@@ -329,6 +335,85 @@ public sealed class ConnectionDisabledStatesTests
         saved.Row.DisabledReason.ShouldBe("three failed runs in a row");
         saved.Row.TenantId.ShouldBe(disabled.TenantId);
         saved.ReplacesCurrent.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnotherTenantsAdministratorEnablesTheStateAsTheTenantItBelongsToAndHisOwnContextComesBack()
+    {
+        // FDW-4385: the state row is the connection's own tenant's, and the row-level security policy refuses a write of it by another tenant's administrator.
+        var fixture = new Fixture(Row());
+        var caller = new Mock<IAuthenticationContext>();
+        caller.SetupGet(c => c.UserId).Returns("11111111-1111-1111-1111-111111111111");
+        caller.SetupGet(c => c.IsSystemContext).Returns(false);
+        caller.SetupGet(c => c.ActiveTenantId).Returns(Guid.Parse("99999999-9999-9999-9999-999999999999"));
+        fixture.Accessor.Current = caller.Object;
+
+        var result = await fixture.States.Enable(ConnectionId, "the query was fixed", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var written = fixture.ContextsAtSave.ShouldHaveSingleItem().ShouldNotBeNull();
+        written.IsSystemContext.ShouldBeTrue();
+        written.ActiveTenantId.ShouldBe(TenantId);
+        fixture.Accessor.Current.ShouldBeSameAs(caller.Object);
+        fixture.Policy.Asked.ShouldHaveSingleItem().ShouldBe((CrossTenantChangeOption.ConnectionEnable, TenantId, (Guid?)Guid.Parse("99999999-9999-9999-9999-999999999999")));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnEnableByAnotherTenantsAdministratorTheSettingForbidsIsRefusedNamingTheSettingAndNothingIsWritten()
+    {
+        // FDW-4459: whether an administrator of another tenant may enable the connection is configuration; off, the refusal names the setting and no row is written.
+        var otherTenant = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var fixture = new Fixture(Row());
+        fixture.Policy.Refuses = true;
+        var caller = new Mock<IAuthenticationContext>();
+        caller.SetupGet(c => c.UserId).Returns("11111111-1111-1111-1111-111111111111");
+        caller.SetupGet(c => c.ActiveTenantId).Returns(otherTenant);
+        fixture.Accessor.Current = caller.Object;
+
+        var result = await fixture.States.Enable(ConnectionId, "the query was fixed", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsForbidden(result).ShouldBeTrue();
+        var (status, body) = Fdw.Web.RestEndpoints.ErrorMapping.ResultHttpStatusMapper.Map(result, new Microsoft.AspNetCore.Http.DefaultHttpContext());
+        status.ShouldBe(403);
+        body.Detail.ShouldNotBeNull().ShouldContain(CrossTenantChangeOption.ConnectionEnable);
+        fixture.Saves.ShouldBeEmpty();
+        fixture.Policy.Asked.ShouldHaveSingleItem().ShouldBe((CrossTenantChangeOption.ConnectionEnable, TenantId, (Guid?)otherTenant));
+        fixture.Accessor.Current.ShouldBeSameAs(caller.Object);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AStateThatNamesNoTenantIsRefusedBeforeThePolicyIsAsked()
+    {
+        var row = Row();
+        row.TenantId = null;
+        var fixture = new Fixture(row);
+
+        var result = await fixture.States.Enable(ConnectionId, "the query was fixed", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        fixture.Policy.Asked.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AStateThatNamesNoTenantIsNotEnabledAndNothingIsWritten()
+    {
+        var row = Row();
+        row.TenantId = null;
+        var fixture = new Fixture(row);
+
+        var result = await fixture.States.Enable(ConnectionId, "the query was fixed", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        fixture.Saves.ShouldBeEmpty();
     }
 
     [Fact]
@@ -450,6 +535,7 @@ public sealed class ConnectionDisabledStatesTests
                     }
 
                     var save = (ConfigurationSaveCommand<ConnectionDisabledConfiguration>)command;
+                    ContextsAtSave.Add(Accessor.Current);
                     Saves.Add((save.Data, save.ReplacesCurrent));
                     return GenericResult<ConfigurationWriteResult>.Success(new ConfigurationWriteResult([], new Dictionary<string, object?>()));
                 });
@@ -457,10 +543,19 @@ public sealed class ConnectionDisabledStatesTests
             var gateways = new Mock<IConfigurationGatewayProvider>();
             gateways.Setup(p => p.Get(It.IsAny<string>())).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
 
-            States = new ConnectionDisabledStates(gateways.Object, "ConfigurationDb", new FixedTime(Now), NullLogger<ConnectionDisabledStates>.Instance);
+            States = new ConnectionDisabledStates(gateways.Object, "ConfigurationDb", Accessor, Policy, new FixedTime(Now), NullLogger<ConnectionDisabledStates>.Instance);
         }
 
+        // The cross-tenant change policy; it allows unless a test sets Refuses.
+        public PolicyDouble Policy { get; } = new();
+
         public ConnectionDisabledStates States { get; }
+
+        // The caller's authentication context, which an enable swaps for the state's tenant while it writes (FDW-4385).
+        public TestAccessor Accessor { get; } = new();
+
+        // The context in force at each save of a state.
+        public List<IAuthenticationContext?> ContextsAtSave { get; } = [];
 
         public List<bool> ReadsThroughTheCache { get; } = [];
 
@@ -476,6 +571,27 @@ public sealed class ConnectionDisabledStatesTests
         public IGenericResult<IEnumerable<ConnectionTenantConfiguration>>? ConnectionReadFailure { get; set; }
 
         public IGenericResult<ConfigurationWriteResult>? SaveFailure { get; set; }
+    }
+
+    private sealed class TestAccessor : IAuthenticationContextAccessor
+    {
+        public IAuthenticationContext? Current { get; set; }
+    }
+
+    // Records what the states ask the policy and answers the refusal the real policy gives when the setting is off.
+    private sealed class PolicyDouble : ICrossTenantChangePolicy
+    {
+        public bool Refuses { get; set; }
+
+        public List<(string ChangeName, Guid OwnerTenantId, Guid? ActorTenantId)> Asked { get; } = [];
+
+        public IGenericResult Permit(string changeName, Guid ownerTenantId, Guid? actorTenantId)
+        {
+            Asked.Add((changeName, ownerTenantId, actorTenantId));
+            return Refuses
+                ? GenericResult.Failure(CrossTenantChangeLog.Refused(NullLogger.Instance, changeName, ownerTenantId, actorTenantId ?? Guid.Empty))
+                : GenericResult.Success();
+        }
     }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider

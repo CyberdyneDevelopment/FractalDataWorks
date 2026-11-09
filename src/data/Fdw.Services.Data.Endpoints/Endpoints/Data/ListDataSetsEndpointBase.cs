@@ -6,8 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.Services.Tags;
 using Fdw.Web.RestEndpoints.Crud;
 using Fdw.Web.RestEndpoints.Models;
@@ -27,21 +31,42 @@ public abstract class ListDataSetsEndpointBase
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly CategoryConfigurationProvider _categories;
     private readonly ITagService? _tags;
+    private readonly IDataSetWriters _writers;
+    private readonly IExecutionTracker _runs;
+    private readonly IEffectiveSettingsProvider _settings;
+    private readonly ITenantContext _tenant;
+    private readonly TimeProvider _time;
     private CategoryTree? _tree;
+    private DataSetStatusLookup? _statuses;
 
     /// <summary>Initializes a new instance of the <see cref="ListDataSetsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataSetProvider">Reads the page of data sets.</param>
     /// <param name="categories">Reads the category tree the data sets are organised in.</param>
+    /// <param name="writers">Which pipelines write each data set, for the status (FDW-4488).</param>
+    /// <param name="runs">Where the latest run of each writer is read, for the status.</param>
+    /// <param name="settings">Where the status window is read.</param>
+    /// <param name="tenant">The caller's tenant, whose own status window applies when it has one.</param>
+    /// <param name="time">The clock the status is judged by.</param>
     /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c>.</param>
     protected ListDataSetsEndpointBase(
         ILogger<ListDataSetsEndpointBase> logger,
         DataSetConfigurationProvider dataSetProvider,
         CategoryConfigurationProvider categories,
+        IDataSetWriters writers,
+        IExecutionTracker runs,
+        IEffectiveSettingsProvider settings,
+        ITenantContext tenant,
+        TimeProvider time,
         ITagService? tags = null)
         : base(logger)
     {
         _tags = tags;
+        _writers = writers ?? throw new ArgumentNullException(nameof(writers));
+        _runs = runs ?? throw new ArgumentNullException(nameof(runs));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
+        _time = time ?? throw new ArgumentNullException(nameof(time));
         _dataSetProvider = dataSetProvider ?? throw new ArgumentNullException(nameof(dataSetProvider));
         _categories = categories ?? throw new ArgumentNullException(nameof(categories));
     }
@@ -60,6 +85,15 @@ public abstract class ListDataSetsEndpointBase
         }
 
         _tree = tree.Value;
+
+        // The writers, their latest runs and the window, read once for the whole request, so no data set costs a read of its own (FDW-4488).
+        var statuses = await DataSetStatusLookup.Read(_writers, _runs, _settings, _tenant.TenantId, _time, Logger, ct).ConfigureAwait(false);
+        if (statuses.IsFailure || statuses.Value is null)
+        {
+            return statuses.ToNewResult<ConfigurationPage<IDataSetImplementationConfiguration>>();
+        }
+
+        _statuses = statuses.Value;
         var selection = await TagSelection.Read(TaggedWith, _tags, "DataSet", Logger, ct).ConfigureAwait(false);
         if (selection.IsFailure || selection.Value is null)
         {
@@ -131,6 +165,19 @@ public abstract class ListDataSetsEndpointBase
 
         summary.Category = label.Value.Name;
         summary.CategoryPath = label.Value.Path;
+
+        // A variation holds no data of its own (it runs the data set it points at), so no pipeline writes it and it has no status of its own.
+        if (item is not IDataSetVariationImplementationConfiguration)
+        {
+            var status = (_statuses ?? throw new InvalidOperationException("The statuses are read before a page is.")).StatusOf(item.Name, Logger);
+            if (status.IsFailure || status.Value is null)
+            {
+                return Task.FromResult(status.ToNewResult<DataSetSummaryResponse>());
+            }
+
+            summary.Status = status.Value.Name;
+        }
+
         return Task.FromResult(GenericResult<DataSetSummaryResponse>.Success(summary));
     }
 

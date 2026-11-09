@@ -24,6 +24,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.DataSets;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Conventions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Schema.Endpoints;
 
@@ -74,14 +75,14 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
         var dataSetResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
         if (!dataSetResult.IsSuccess)
         {
-            await SendReadFailure("data set", dataSetResult.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(dataSetResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (dataSetResult.Value is not { } dataSet)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet", req.Name);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaAnswerLog.GetDataSetMappingsNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -109,14 +110,4 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
             PhysicalFieldName = mapping.PhysicalFieldName,
         };
     }
-
-    private async Task SendReadFailure(string what, string? reason, CancellationToken ct)
-    {
-        await Send.ResultAsync(TypedResults.Json(new
-        {
-            errorCode = "ReadFailed",
-            messages = new[] { $"Reading {what} failed: {reason ?? LogPlaceholders.NoReason}" }
-        }, statusCode: 500)).ConfigureAwait(false);
-    }
-
 }

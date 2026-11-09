@@ -73,10 +73,16 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
 
         // Resolve the DataSet and its SourceIds via the provider (AssembleHierarchy runs on Get(name)).
         var dsResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
-        if (dsResult.IsFailure || dsResult.Value is null)
+        if (dsResult.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(dsResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (dsResult.Value is null)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet", req.Name);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaAnswerLog.SaveSourceMappingsSourcemappingsNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -86,7 +92,7 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
         if (source is null)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet source", req.SourceName);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaAnswerLog.SaveSourceMappingsNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

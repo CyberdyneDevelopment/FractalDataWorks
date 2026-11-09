@@ -61,10 +61,10 @@ public abstract class DenyWorkspaceMembershipRequestEndpointBase : Endpoint<Deny
     {
         var workspace = await _workspaces.Get(req.Name, ct).ConfigureAwait(false);
         if (workspace.IsFailure) { await SendError(workspace, ct).ConfigureAwait(false); return; }
-        if (workspace.Value is null) { await Send.NotFoundAsync(ct).ConfigureAwait(false); return; }
+        if (workspace.Value is null) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.DenyWorkspaceMembershipRequestNotFound(_logger)), HttpContext)).ConfigureAwait(false); return; }
 
         var permitted = await _access.MayManageMembers(workspace.Value, ct).ConfigureAwait(false);
-        if (WorkspaceAccessRefusals.Hides(permitted)) { await Send.NotFoundAsync(ct).ConfigureAwait(false); return; }
+        if (WorkspaceAccessRefusals.Hides(permitted)) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.DenyWorkspaceMembershipRequestNotFound2(_logger)), HttpContext)).ConfigureAwait(false); return; }
         if (permitted.IsFailure) { await SendError(permitted, ct).ConfigureAwait(false); return; }
 
         if (_authContext.Current is not { } caller || !Guid.TryParse(caller.UserId, out var reviewedByUserId))

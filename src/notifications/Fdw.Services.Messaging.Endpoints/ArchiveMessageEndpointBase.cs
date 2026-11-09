@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -80,7 +82,7 @@ public abstract class ArchiveMessageEndpointBase : Endpoint<MessageIdRequest>
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "archive-message");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ArchiveMessageFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

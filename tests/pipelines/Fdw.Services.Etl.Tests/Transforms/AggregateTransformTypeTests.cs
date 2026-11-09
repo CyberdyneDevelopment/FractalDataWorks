@@ -55,7 +55,7 @@ public sealed class AggregateTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11052");
+        result.Messages[^1].Code.ShouldBe("ETL-61003");
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class AggregateTransformTypeTests
 
         // Assert — a param-less Aggregate op fails loud, it never silently passes records through
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11045");
+        result.Messages[^1].Code.ShouldBe("ETL-61006");
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public sealed class AggregateTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11045");
+        result.Messages[^1].Code.ShouldBe("ETL-61006");
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public sealed class AggregateTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11050");
+        result.Messages[^1].Code.ShouldBe("ETL-61007");
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class AggregateTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11056");
+        result.Messages[^1].Code.ShouldBe("ETL-91015");
     }
 
     // ── Group-by correctness: N → M dimensional reduction ───────────────────────────────
@@ -310,7 +310,7 @@ public sealed class AggregateTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11045");
+        result.Messages[^1].Code.ShouldBe("ETL-61006");
     }
 
     [Fact]
@@ -333,6 +333,6 @@ public sealed class AggregateTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11050");
+        result.Messages[^1].Code.ShouldBe("ETL-61007");
     }
 }

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.HealthChecks.Monitoring;
 
 using Fdw.Services.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Health;
 
@@ -61,8 +62,7 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
 
             if (!monitorResult.IsSuccess || monitorResult.Value is null)
             {
-                OperationsEndpointLog.ServiceNotFound(_logger, req.Name);
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ServiceNotFound(_logger, req.Name)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -70,8 +70,7 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
 
             if (!result.IsSuccess)
             {
-                OperationsEndpointLog.ServiceNotFound(_logger, req.Name);
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ServiceNotFound(_logger, req.Name)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -84,8 +83,7 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
         catch (Exception ex)
         {
             OperationsEndpointLog.GetSystemHealthFailed(_logger, ex.Message);
-            AddError("Failed to retrieve service health");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetServiceHealthFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

@@ -75,7 +75,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11052");
+        result.Messages[^1].Code.ShouldBe("ETL-61003");
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11046");
+        result.Messages[^1].Code.ShouldBe("ETL-61008");
         gateway.Verify(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
             It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -112,7 +112,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11054");
+        result.Messages[^1].Code.ShouldBe("ETL-61009");
         gateway.Verify(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
             It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -408,7 +408,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11059");
+        result.Messages[^1].Code.ShouldBe("ETL-91016");
         result.Messages[^1].Message.ShouldContain("query rejected");
         result.Messages[^1].Message.ShouldContain("preload from Devices");
         context.Errors.ShouldBeEmpty();
@@ -435,7 +435,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11059");
+        result.Messages[^1].Code.ShouldBe("ETL-91016");
         result.Messages[^1].Message.ShouldContain("Batch lookup operation failed");
         result.Messages[^1].Message.ShouldContain("connection refused");
         context.Errors.ShouldBeEmpty();
@@ -455,7 +455,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11060");
+        result.Messages[^1].Code.ShouldBe("ETL-61010");
         result.Messages[^1].Message.ShouldContain("Lookup1");
     }
 
@@ -475,7 +475,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11059");
+        result.Messages[^1].Code.ShouldBe("ETL-91016");
         gateway.Verify(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
             It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -607,7 +607,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11046");
+        result.Messages[^1].Code.ShouldBe("ETL-61008");
     }
 
     [Fact]
@@ -635,7 +635,7 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11046");
+        result.Messages[^1].Code.ShouldBe("ETL-61008");
     }
 
     [Fact]
@@ -664,6 +664,6 @@ public sealed class LookupTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11054");
+        result.Messages[^1].Code.ShouldBe("ETL-61009");
     }
 }

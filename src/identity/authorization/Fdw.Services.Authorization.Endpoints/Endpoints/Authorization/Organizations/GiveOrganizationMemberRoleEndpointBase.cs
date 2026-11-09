@@ -7,6 +7,8 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Users;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -46,9 +48,15 @@ public abstract class GiveOrganizationMemberRoleEndpointBase : Endpoint<Organiza
     public override async Task HandleAsync(OrganizationMemberRequest req, CancellationToken ct)
     {
         var person = await _users.Get(req.UserId, ct).ConfigureAwait(false);
-        if (!person.IsSuccess || person.Value is null)
+        if (person.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(person, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (person.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GiveOrganizationMemberRoleUserNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -66,7 +74,7 @@ public abstract class GiveOrganizationMemberRoleEndpointBase : Endpoint<Organiza
         if (audited.IsFailure)
         {
             AuthorizationEndpointLog.OrganizationChangeNotAudited(EndpointLogger, "membership", req.UserId.ToString(), req.OrganizationId, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

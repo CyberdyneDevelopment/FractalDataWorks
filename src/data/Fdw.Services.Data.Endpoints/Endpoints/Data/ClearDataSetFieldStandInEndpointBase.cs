@@ -63,7 +63,7 @@ public abstract class ClearDataSetFieldStandInEndpointBase : Endpoint<DataSetFie
         if (resolved.Value is not { } found)
         {
             StandInEndpointLog.FieldNotFound(_logger, req.Name, req.Field);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StandInEndpointLog.ClearDataSetFieldStandInNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -83,7 +83,7 @@ public abstract class ClearDataSetFieldStandInEndpointBase : Endpoint<DataSetFie
         if (!cleared.Value)
         {
             StandInEndpointLog.NoStandInToClear(_logger, req.Name, req.Field);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StandInEndpointLog.ClearDataSetFieldStandInNotFound2(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

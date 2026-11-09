@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.PostgreSql;
 
@@ -12,7 +14,7 @@ namespace Fdw.Data.PostgreSql;
 /// <remarks>
 /// <see cref="PlPgSqlDialect"/> is a stateless singleton — always use <see cref="Instance"/>.
 /// </remarks>
-public sealed class PlPgSqlDialect : ISqlDialect
+public sealed class PlPgSqlDialect : ISqlDialect, IKeyListSpillDialect
 {
     /// <summary>
     /// Gets the singleton instance of <see cref="PlPgSqlDialect"/>.
@@ -37,6 +39,20 @@ public sealed class PlPgSqlDialect : ISqlDialect
 
     /// <inheritdoc/>
     public string ParameterPrefix => "@";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// One JSON parameter and no table to make or drop: <c>json_populate_recordset</c> reads the list typed by the filtered table's own row type, so each value
+    /// takes its column's type. This is the form of a temporary table that needs no round trip and no cleanup.
+    /// </remarks>
+    public KeyListSpillForm KeyListSpill(string uniqueId, string sourceTable, string columnName, string jsonParameter)
+        => new(
+            string.Empty,
+            $"SELECT k.{QuoteIdentifier(columnName)} FROM json_populate_recordset(null::{sourceTable}, {jsonParameter}::json) AS k",
+            string.Empty);
+
+    /// <inheritdoc/>
+    public string KeyListJson(string columnName, IReadOnlyList<object?> values) => KeyListJsonWriter.Objects(columnName, values);
 
     /// <inheritdoc/>
     public char LikeEscapeCharacter => '!';

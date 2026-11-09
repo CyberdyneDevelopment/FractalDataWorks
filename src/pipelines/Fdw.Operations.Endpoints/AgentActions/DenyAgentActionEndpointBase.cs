@@ -7,6 +7,8 @@ using Fdw.Services.Agents.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.AgentActions;
 
@@ -50,7 +52,7 @@ public abstract class DenyAgentActionEndpointBase : Endpoint<AgentActionIdReques
         if (userIdClaim is null)
         {
             OperationsEndpointLog.AgentActionUserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DenyAgentActionNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -63,8 +65,7 @@ public abstract class DenyAgentActionEndpointBase : Endpoint<AgentActionIdReques
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.ReviewAgentActionFailed(_logger, req.ActionId, "Denied", result.CurrentMessage!);
-                AddError(result.CurrentMessage!);
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -78,8 +79,7 @@ public abstract class DenyAgentActionEndpointBase : Endpoint<AgentActionIdReques
         catch (Exception ex)
         {
             OperationsEndpointLog.ReviewAgentActionFailed(_logger, req.ActionId, "Denied", ex.Message);
-            AddError("Failed to deny agent action");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DenyAgentActionFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

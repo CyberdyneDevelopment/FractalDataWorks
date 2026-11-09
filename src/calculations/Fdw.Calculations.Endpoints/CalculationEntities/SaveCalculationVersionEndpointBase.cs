@@ -6,6 +6,7 @@ using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Calculations;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Calculations.Endpoints.CalculationEntities;
 
@@ -51,7 +52,7 @@ public abstract class SaveCalculationVersionEndpointBase : Endpoint<SaveCalculat
     {
         if (_authContext.Current is not { IsAuthenticated: true, ActiveTenantId: { } tenantId })
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CalculationsAnswerLog.SaveCalculationVersionNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

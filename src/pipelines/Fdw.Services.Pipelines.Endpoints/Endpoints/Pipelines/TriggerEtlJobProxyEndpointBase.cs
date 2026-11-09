@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -66,8 +67,7 @@ public abstract class TriggerEtlJobProxyEndpointBase : Endpoint<ProxyTriggerEtlR
         {
             var errorMessage = result.FailureReason().Message;
             ProxyEndpointLog.ProxyFailed(EndpointLogger, "Etl", errorMessage);
-            AddError("Failed to proxy request to EtlServer");
-            await Send.ErrorsAsync(502, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ProxyEndpointLog.TriggerEtlJobProxyFailedToProxyRequestTo(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

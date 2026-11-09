@@ -28,6 +28,6 @@ public static partial class CategoryEndpointLog
     public static partial IGenericMessage TreeRead(ILogger logger, int topLevel);
 
     /// <summary>Logs a category that was saved and cannot be read back.</summary>
-    [MessageLogging(EventId = 14204, Level = LogLevel.Error, Message = "Category '{name}' was saved and cannot be read back")]
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "Category '{name}' was saved and cannot be read back", ClientMessage = "Category '{name}' was saved and cannot be read back")]
     public static partial IGenericMessage SavedButUnreadable(ILogger logger, string name);
 }

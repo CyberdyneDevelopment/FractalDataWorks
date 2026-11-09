@@ -5,9 +5,11 @@ using Fdw.Configuration;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -66,7 +68,7 @@ public abstract class EnableConnectionEndpointBase : Endpoint<EnableConnectionRe
     {
         if (string.IsNullOrWhiteSpace(req.Reason))
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "A reason is required to enable a connection" }, statusCode: StatusCodes.Status400BadRequest)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConnectionEndpointLog.EnableConnectionAReasonIsRequiredTo(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -74,22 +76,23 @@ public abstract class EnableConnectionEndpointBase : Endpoint<EnableConnectionRe
         if (connection.IsFailure)
         {
             // The cause is in the log; the caller gets our sentence and never the database's.
-            await Send.ResultAsync(TypedResults.Json(new { Error = "The connection could not be read" }, statusCode: StatusCodes.Status500InternalServerError)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(connection, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (connection.Value is null)
         {
             ConnectionEndpointLog.ConnectionNotFound(_logger, req.Name);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConnectionEndpointLog.EnableConnectionEnableconnectionNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var enabled = await _states.Enable(connection.Value.Id, req.Reason, ct).ConfigureAwait(false);
         if (enabled.IsFailure)
         {
-            // The answer is ours and never the database's (FDW-4193): 403 for a refusal by the row-level security policy, 500 for any other failure; the log has the cause.
-            await Send.ResultAsync(TypedResults.Json(new { Error = EnableConnectionAnswers.SentenceOf(enabled) }, statusCode: EnableConnectionAnswers.StatusOf(enabled))).ConfigureAwait(false);
+            // Answered as every endpoint answers a failed result: the status is its category's, and the reason is the client text its own message declares, so a refusal by the
+            // cross-tenant change setting names the setting and nothing the log holds reaches the caller (FDW-4193, FDW-4459).
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(enabled, HttpContext)).ConfigureAwait(false);
             return;
         }
 

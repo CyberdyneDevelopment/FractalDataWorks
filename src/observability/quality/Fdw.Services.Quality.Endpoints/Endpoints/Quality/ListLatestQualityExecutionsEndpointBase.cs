@@ -9,6 +9,7 @@ using Fdw.Services.Quality;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -23,7 +24,7 @@ public abstract class ListLatestQualityExecutionsEndpointBase : Endpoint<DataSet
     private readonly IDataGatewayProvider _dataGateways;
 
     // Why resolved here rather than injected: the gateway is scoped and this is not (see ExecuteQualityCheckEndpointBase).
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private IDataGateway Gateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>Initializes a new instance of the <see cref="ListLatestQualityExecutionsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
@@ -64,21 +65,21 @@ public abstract class ListLatestQualityExecutionsEndpointBase : Endpoint<DataSet
         var named = QualityRuleTarget.RequireDataSet("The request", req.DataSetName, Logger);
         if (named.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Request names no data set", Details = named.CurrentMessage }, statusCode: 400)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(named, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var tenant = QualityRuleExecutions.CallerTenant(User, Logger);
         if (tenant.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "No active tenant", Details = tenant.CurrentMessage }, statusCode: 400)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(tenant, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var rulesResult = await _provider.Get(ct).ConfigureAwait(false);
         if (!rulesResult.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch quality rules", Details = rulesResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(rulesResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 

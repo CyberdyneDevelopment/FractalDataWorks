@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Fdw.Services.Etl.Projects.Nodes.Registration</RootNamespace>
+
+    <PackageId>Fdw.Services.Etl.Projects.Nodes.Registration</PackageId>
+    <Description>The ETL orchestration node read-side service-type registration: the [Implementation] only. It registers the node providers and the read of which projects run each pipeline, and not the orchestrator or its hosted service, so a host that only reads the nodes (the API) can reference it.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Why the implementation and not the reverse: referencing the implementation gets you its providers and services with no registration; referencing this package gets
+         you the registration as well. The run side that starts the orchestrator stays in Fdw.Services.Etl.Projects.Registration. -->
+    <ProjectReference Include="..\Fdw.Services.Etl.Projects\Fdw.Services.Etl.Projects.csproj" />
+  </ItemGroup>
+
+</Project>

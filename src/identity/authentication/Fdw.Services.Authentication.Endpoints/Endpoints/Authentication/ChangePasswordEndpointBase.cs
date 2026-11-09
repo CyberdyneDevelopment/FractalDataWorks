@@ -5,6 +5,7 @@ using FastEndpoints;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Authentication.Abstractions.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authentication.Endpoints;
 
@@ -55,7 +56,7 @@ public abstract class ChangePasswordEndpointBase : Endpoint<ChangePasswordReques
         if (string.IsNullOrEmpty(username))
         {
             AuthenticationEndpointLog.UserIdentityNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.ChangePasswordNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -68,8 +69,7 @@ public abstract class ChangePasswordEndpointBase : Endpoint<ChangePasswordReques
             if (!result.IsSuccess)
             {
                 AuthenticationEndpointLog.PasswordChangeFailed(_logger, username);
-                AddError("Password change failed. Verify your current password is correct.");
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.ChangePasswordPasswordChangeFailedVerifyYour(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -83,7 +83,7 @@ public abstract class ChangePasswordEndpointBase : Endpoint<ChangePasswordReques
         catch (Exception ex)
         {
             AuthenticationEndpointLog.AuthenticationException(_logger, ex, "change-password");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.ChangePasswordFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

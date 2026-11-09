@@ -7,6 +7,7 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Results;
 using Fdw.Services.Authorization.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -53,7 +54,7 @@ public abstract class RemoveOrganizationMemberEndpointBase : Endpoint<Organizati
         if (audited.IsFailure)
         {
             AuthorizationEndpointLog.OrganizationChangeNotAudited(EndpointLogger, "removal", req.UserId.ToString(), req.OrganizationId, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Quality;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -62,7 +63,7 @@ public abstract class CreateGlossaryTermEndpointBase : Endpoint<GlossaryTermResp
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to create glossary term", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

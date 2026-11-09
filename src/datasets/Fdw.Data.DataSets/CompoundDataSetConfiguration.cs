@@ -64,6 +64,9 @@ public sealed partial class CompoundDataSetConfiguration : ICompoundDataSetConfi
     /// </summary>
     public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
+    /// <summary>Gets or sets the logical id of the user who created the data set; null when it has no owner (FDW-4346).</summary>
+    public Guid? OwnerUserId { get; set; }
+
     /// <summary>Gets or sets the version.</summary>
     public string Version { get; set; } = string.Empty;
 

@@ -4,6 +4,8 @@ using Fdw.Services.Etl.Scripts;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Fdw.Services.Pipelines.Scripts;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -46,7 +48,7 @@ public abstract class RunScriptEndpointBase : ScriptRunEndpointBase<ScriptRunReq
 
         if (found.Value is not { } script)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelinesAnswerLog.RunScriptNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

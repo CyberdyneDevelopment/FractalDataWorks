@@ -53,7 +53,7 @@ public abstract class ExecuteCalculationEntityEndpointBase : Endpoint<ExecuteCal
         var entityResult = await _service.GetCalculationById(req.Id, ct).ConfigureAwait(false);
         if (entityResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CalculationsAnswerLog.ExecuteCalculationEntityNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

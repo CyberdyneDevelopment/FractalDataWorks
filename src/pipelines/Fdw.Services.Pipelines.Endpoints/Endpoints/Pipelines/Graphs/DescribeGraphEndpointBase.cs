@@ -12,6 +12,7 @@ using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Etl.Graphs.Describing;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -75,9 +76,15 @@ public abstract class DescribeGraphEndpointBase : Endpoint<GraphPayload, GraphDe
 
         var context = new DescribeContext((name, token) => GraphDataSetFields.Read(_dataSets, name, token));
         var described = await GraphDescriber.Describe(graph.Value, context, _logger, ct).ConfigureAwait(false);
-        if (described.IsFailure || described.Value is null)
+        if (described.IsFailure)
         {
-            ThrowError(PipelineProblems.ReasonOf(described.CurrentMessage, "reading the data sets of the graph"), 400);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(described, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (described.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelinesAnswerLog.DescribeGraphDescribeReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

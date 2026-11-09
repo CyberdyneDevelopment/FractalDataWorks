@@ -86,9 +86,10 @@ public static partial class WorktreeEngineLog
         string worktreePath);
 
     [MessageLogging(
-        EventId = 12018,
+        EventId = 40001,
         Level = LogLevel.Trace,
-        Message = "Nothing to commit in {path}")]
+        Message = "Nothing to commit in {path}",
+        ClientMessage = "Nothing to commit")]
     public static partial IGenericMessage NothingToCommit(
         ILogger logger,
         string path);

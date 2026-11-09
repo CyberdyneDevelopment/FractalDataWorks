@@ -28,6 +28,26 @@ public sealed class InsertRoutingTests
         Rows(rows).ReroutesToBulk(maxSerialInsert).ShouldBe(reroutes);
     }
 
+    [Theory]
+    [InlineData(5, 0)]
+    [InlineData(1001, 1000)]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnInsertThatAsksForColumnsBackNeverTakesTheBulkRoute(int rows, int maxSerialInsert)
+    {
+        var command = new InsertCommand<Row>(Enumerable.Range(1, rows).Select(i => new Row(i)).ToList()) { ReturnColumns = ["RowId"] };
+
+        command.ReroutesToBulk(maxSerialInsert).ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnInsertThatListsNoColumnsBackStillTakesTheBulkRouteAboveTheLimit()
+    {
+        new InsertCommand<Row>(Enumerable.Range(1, 5).Select(i => new Row(i)).ToList()) { ReturnColumns = [] }.ReroutesToBulk(2).ShouldBeTrue();
+    }
+
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]

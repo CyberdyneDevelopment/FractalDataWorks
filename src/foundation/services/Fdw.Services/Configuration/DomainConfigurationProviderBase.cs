@@ -462,7 +462,11 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     // within a tenant, and a caller can see several tenants' rows (shared rows from every tenant, every tenant's from
     // the global one), so the first row back is not necessarily the one asked for; acting on it would act on a
     // configuration the caller did not choose (FDW-1101).
-    private IGenericResult<TDomain?> OnlyRow(IEnumerable<TDomain>? rows, string key)
+    //
+    // A write whose record carries the durable Id of the member it changes names that member (FDW-4459): an administrator writing another tenant's member writes under that
+    // tenant's system scope, which sees every tenant's rows, so the name alone can match several. Only when exactly one of them has the record's Id is it the row; an Id that
+    // none carries still leaves the name ambiguous and refused.
+    private IGenericResult<TDomain?> OnlyRow(IEnumerable<TDomain>? rows, string key, Guid memberId = default)
     {
         // A read that answers with no row set has selected nothing, the same answer as an empty one.
         if (rows is null)
@@ -471,6 +475,9 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var found = rows.ToList();
         if (found.Count <= 1)
             return GenericResult<TDomain?>.Success(found.Count == 1 ? found[0] : null);
+
+        if (memberId != Guid.Empty && found.Count(row => row.Id == memberId) == 1)
+            return GenericResult<TDomain?>.Success(found.Single(row => row.Id == memberId));
 
         return GenericResult<TDomain?>.Failure(
             ServicesResultCodes.ByName("ConfigurationNameAmbiguous"), _logger,
@@ -600,6 +607,29 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (members.IsFailure) return members;
 
         return ConfigurationTrees.Attach(root, members.Value!, link.Value!, trees, mapper, levels, _logger);
+    }
+
+    /// <summary>
+    /// Reads every member of the domain composed to the given levels but not hung into trees, in a fixed number of statements (FDW-4449).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Get(int, CancellationToken)"/> hangs a tree domain's members into trees, which re-reads the domain once for each member, so a list of N members
+    /// costs a number of statements that grows with N. This reads the domain's rows once, their implementation rows once and each child collection once, and leaves the
+    /// members flat: the caller rebuilds whatever tree it needs from the parent link in memory. The rows are those the caller may see, as for every read here.
+    /// </remarks>
+    /// <param name="levels">How many levels of child collections to read: <see cref="ConfigurationLevels.RecordOnly"/> for the rows alone, <see cref="ConfigurationLevels.Children"/> for each member's own child collections.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Every member, flat, or the failure of the read.</returns>
+    public async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> GetFlat(int levels, CancellationToken ct = default)
+    {
+        if (levels < 0)
+            return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TImplementationConfiguration).Name, nameof(levels), levels));
+
+        var members = await ComposeMembers(levels, ct).ConfigureAwait(false);
+        return members.IsFailure
+            ? members.ToNewResult<IReadOnlyList<TImplementationConfiguration>>()
+            : GenericResult<IReadOnlyList<TImplementationConfiguration>>.Success([.. members.Value!.OfType<TImplementationConfiguration>()]);
     }
 
     // Every member of the domain, composed to the given levels but not hung into trees.
@@ -914,7 +944,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         // member, unless the record's Id names a member: then the record is that member under a new name.
         // The two rows are never written apart: a domain row naming an implementation that was not
         // written is the record that fails to compose on the next read.
-        var current = OnlyRow(existing.Value, name);
+        var current = OnlyRow(existing.Value, name, implementationConfiguration.Id);
         if (current.IsFailure) return current;
         var target = await CheckTarget(current.Value, implementationConfiguration.Id, name, mayCreate, mayReplace, unit, ct).ConfigureAwait(false);
         if (target.IsFailure) return target;

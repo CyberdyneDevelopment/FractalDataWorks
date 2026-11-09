@@ -130,4 +130,16 @@ public static partial class ConnectionEndpointLog
     // Why Warning: the request is refused; the administrator must fix the name or the secret manager, nothing is stored.
     [MessageLogging(EventId = 21005, Level = LogLevel.Warning, Message = "Connection '{connectionName}' refused: the '{field}' credential in secret manager '{secretManagerName}' cannot be used ({reason})")]
     public static partial IGenericMessage ExternalCredentialUnavailable(ILogger logger, string connectionName, string field, string secretManagerName, string reason);
+
+    /// <summary>Logs that Connection health was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31003, Level = LogLevel.Warning, Message = "Connection health was not found, or is not visible to the caller", ClientMessage = "Connection health was not found")]
+    public static partial IGenericMessage GetConnectionHealthConnectionhealthNotFound(ILogger logger);
+
+    /// <summary>Logs that Enable connection was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31004, Level = LogLevel.Warning, Message = "Enable connection was not found, or is not visible to the caller", ClientMessage = "Enable connection was not found")]
+    public static partial IGenericMessage EnableConnectionEnableconnectionNotFound(ILogger logger);
+
+    /// <summary>Logs that the request failed: A reason is required to enable a connection.</summary>
+    [MessageLogging(EventId = 21006, Level = LogLevel.Warning, Message = "A reason is required to enable a connection", ClientMessage = "A reason is required to enable a connection")]
+    public static partial IGenericMessage EnableConnectionAReasonIsRequiredTo(ILogger logger);
 }

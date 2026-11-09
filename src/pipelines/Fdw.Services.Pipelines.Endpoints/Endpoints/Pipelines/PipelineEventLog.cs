@@ -12,11 +12,11 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public static partial class PipelineEventLog
 {
     /// <summary>Logs a relayed event that names no known kind.</summary>
-    [MessageLogging(EventId = 20810, Level = LogLevel.Warning, Message = "Relayed pipeline event names unknown kind '{kind}'")]
+    [MessageLogging(EventId = 20810, Level = LogLevel.Warning, Message = "Relayed pipeline event names unknown kind '{kind}'", ClientMessage = "'{kind}' is not a pipeline event kind")]
     public static partial IGenericMessage UnknownKind(ILogger logger, string kind);
 
     /// <summary>Logs a relayed event that lacks the body its kind needs.</summary>
-    [MessageLogging(EventId = 20811, Level = LogLevel.Warning, Message = "Relayed pipeline event of kind '{kind}' lacks the body that kind needs")]
+    [MessageLogging(EventId = 20811, Level = LogLevel.Warning, Message = "Relayed pipeline event of kind '{kind}' lacks the body that kind needs", ClientMessage = "An event of kind '{kind}' needs a body")]
     public static partial IGenericMessage BodyMissing(ILogger logger, string kind);
 
     /// <summary>Logs a relayed event that was broadcast.</summary>

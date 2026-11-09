@@ -7,6 +7,8 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Escalation;
 using Fdw.Services.Settings;
 using Fdw.Web.RestEndpoints.Pagination;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -42,34 +44,35 @@ public abstract class ListEscalationAlertsEndpointBase : Endpoint<EscalationAler
     {
         if (req.State is not null && req.Open is not null)
         {
-            AddError("State and Open are not stated together");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ListEscalationAlertsStateAndOpenTogether(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var listed = await _alerts.List(req.State, ct).ConfigureAwait(false);
-        if (listed.IsFailure || listed.Value is null)
+        if (listed.IsFailure)
         {
-            if (listed.CurrentMessage is { } text)
-            {
-                AddError(text);
-            }
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(listed, HttpContext)).ConfigureAwait(false);
+            return;
+        }
 
-            await Send.ErrorsAsync(EscalationAlertFailure.StatusOf(listed), ct).ConfigureAwait(false);
+        if (listed.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ListEscalationAlertsReturnedNothing(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         // Why the shared mechanism: the page the caller asked for, the default and the largest page are the settings every list endpoint reads, and a setting that is not set fails the
         // call and names it, so no page size is assumed here.
         var paging = PaginationQuery.Resolve(HttpContext, Logger, req.Skip.GetValueOrDefault(), req.Take);
-        if (paging.IsFailure || paging.Value is null)
+        if (paging.IsFailure)
         {
-            if (paging.CurrentMessage is { } pagingText)
-            {
-                AddError(pagingText);
-            }
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(paging, HttpContext)).ConfigureAwait(false);
+            return;
+        }
 
-            await Send.ErrorsAsync(EscalationAlertFailure.StatusOf(paging), ct).ConfigureAwait(false);
+        if (paging.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ListEscalationAlertsPagingReturnedNothing(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

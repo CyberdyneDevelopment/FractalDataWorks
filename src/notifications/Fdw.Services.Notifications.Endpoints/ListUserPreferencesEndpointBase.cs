@@ -8,6 +8,8 @@ using FastEndpoints;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Notifications.Endpoints;
 
@@ -66,7 +68,7 @@ public abstract class ListUserPreferencesEndpointBase : Endpoint<UserPreferences
         catch (Exception ex)
         {
             EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(NotificationEndpointLog.ListUserPreferencesFaulted(Logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

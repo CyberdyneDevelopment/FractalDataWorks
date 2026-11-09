@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 
 using Fdw.Services.Pipelines;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -36,7 +37,7 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
     /// <summary>Gets the data gateway.</summary>
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
-    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
+    protected IDataGateway DataGateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
     protected ILogger EndpointLogger { get; }
@@ -94,7 +95,7 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
         if (!result.IsSuccess)
         {
             OnExecutionHistoryFetchFailed(result.FailureReason().Message);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution record", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

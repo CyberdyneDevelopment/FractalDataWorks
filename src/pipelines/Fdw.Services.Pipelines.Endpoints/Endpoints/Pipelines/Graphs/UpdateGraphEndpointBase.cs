@@ -75,6 +75,10 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
             return graph.ToNewResult<GraphPayload>();
         }
 
+        // Why the stored organization is carried over (FDW-4362): the payload never states which organization owns the pipeline (a caller cannot assign one), and the graph is
+        // rebuilt from the payload alone, so without this every save through the API cleared the owner that the run events and the organization's map are keyed on.
+        graph.Value.OrgId = original.Value.OrgId;
+
         return await GraphSave.Update(_provider, graph.Value, _dataSets, GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
     }
 }

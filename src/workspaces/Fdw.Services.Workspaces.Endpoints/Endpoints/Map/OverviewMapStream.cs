@@ -10,6 +10,7 @@ using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
 using Fdw.Services.Workspaces.Logging;
 using Fdw.Services.Etl;
+using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -31,6 +32,7 @@ internal sealed class OverviewMapStream : MapStream
     private readonly bool _readCategories;
     private readonly IReadOnlyDictionary<Guid, MapWorkspaceRef>? _dataSetWorkspaces;
     private readonly IExecutionTracker? _runs;
+    private readonly IPipelineProjectMemberships? _projects;
     private readonly ILogger _logger;
 
     /// <summary>Initializes the stream of a scope.</summary>
@@ -55,6 +57,10 @@ internal sealed class OverviewMapStream : MapStream
     /// Where the latest run of each pipeline is read, once for the whole map, so each pipeline node names its latest run's state without a read of its own
     /// (FDW-4345). A caller that draws no runs (the lineage views) states none, and the nodes then carry no run state.
     /// </param>
+    /// <param name="projects">
+    /// Where the projects that run each pipeline are read, once for the whole map, so each pipeline node names its projects without a read of its own (FDW-4449). A caller that
+    /// draws no projects (the lineage views) states none, and the nodes then carry no <c>projects</c>: "not read", not "in no project".
+    /// </param>
     public OverviewMapStream(
         MapSelection selection,
         MapSources sources,
@@ -63,10 +69,12 @@ internal sealed class OverviewMapStream : MapStream
         bool readVariations = true,
         bool readCategories = true,
         IReadOnlyDictionary<Guid, MapWorkspaceRef>? dataSetWorkspaces = null,
-        IExecutionTracker? runs = null)
+        IExecutionTracker? runs = null,
+        IPipelineProjectMemberships? projects = null)
         : base(selection.Describe(), editing)
     {
         _runs = runs;
+        _projects = projects;
         _dataSetWorkspaces = dataSetWorkspaces;
         _readCategories = readCategories;
         _selection = selection;
@@ -104,7 +112,15 @@ internal sealed class OverviewMapStream : MapStream
             yield break;
         }
 
-        foreach (var node in PipelineNodes(pipelines.Value!, latest.Value!))
+        // The projects that run each pipeline, read once, so no pipeline node costs a read of its own (FDW-4449).
+        var projects = await ReadProjects(ct).ConfigureAwait(false);
+        if (projects.IsFailure)
+        {
+            State.Fail(projects);
+            yield break;
+        }
+
+        foreach (var node in PipelineNodes(pipelines.Value!, latest.Value!, projects.Value))
             yield return node;
 
         // The DataSet category tree is read once for the whole map, so each data set node names its category path without a read of its own.
@@ -182,13 +198,27 @@ internal sealed class OverviewMapStream : MapStream
             ? GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Success(new Dictionary<string, IExecutionItem>(StringComparer.OrdinalIgnoreCase))
             : await _runs.GetLatestRuns(pipelines.Select(p => p.Name).ToList(), ct).ConfigureAwait(false);
 
-    // Each pipeline's node, naming its latest run when it has one.
-    private IEnumerable<MapNodeDto> PipelineNodes(List<IPipelineImplementationConfiguration> pipelines, IReadOnlyDictionary<string, IExecutionItem> latest)
+    // No reader stated (the lineage views): no project is read, and no node names one.
+    private async Task<IGenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>?>> ReadProjects(CancellationToken ct)
+    {
+        if (_projects is null)
+            return GenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>?>.Success(null);
+
+        var read = await _projects.ByPipeline(ct).ConfigureAwait(false);
+        return read.IsFailure
+            ? read.ToNewResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>?>()
+            : GenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>?>.Success(read.Value);
+    }
+
+    // Each pipeline's node, naming its latest run when it has one and its projects when the map reads them (none is an empty list).
+    private IEnumerable<MapNodeDto> PipelineNodes(
+        List<IPipelineImplementationConfiguration> pipelines, IReadOnlyDictionary<string, IExecutionItem> latest, IReadOnlyDictionary<Guid, IReadOnlyList<string>>? projects)
     {
         foreach (var pipeline in pipelines)
         {
             var run = latest.TryGetValue(pipeline.Name, out var found) ? found : null;
-            yield return Editing.Apply(_selection.Place(MapNodes.Pipeline(pipeline, run), pipeline.Id));
+            var named = projects is null ? null : projects.TryGetValue(pipeline.Id, out var inProjects) ? inProjects : [];
+            yield return Editing.Apply(_selection.Place(MapNodes.Pipeline(pipeline, run, named), pipeline.Id));
         }
     }
 

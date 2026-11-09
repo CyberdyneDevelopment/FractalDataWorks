@@ -7,6 +7,8 @@ using Fdw.Services.Agents.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.AgentActions;
 
@@ -50,7 +52,7 @@ public abstract class ApproveAgentActionEndpointBase : Endpoint<AgentActionIdReq
         if (userIdClaim is null)
         {
             OperationsEndpointLog.AgentActionUserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ApproveAgentActionNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -63,8 +65,7 @@ public abstract class ApproveAgentActionEndpointBase : Endpoint<AgentActionIdReq
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.ReviewAgentActionFailed(_logger, req.ActionId, "Approved", result.CurrentMessage!);
-                AddError(result.CurrentMessage!);
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -78,8 +79,7 @@ public abstract class ApproveAgentActionEndpointBase : Endpoint<AgentActionIdReq
         catch (Exception ex)
         {
             OperationsEndpointLog.ReviewAgentActionFailed(_logger, req.ActionId, "Approved", ex.Message);
-            AddError("Failed to approve agent action");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ApproveAgentActionFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

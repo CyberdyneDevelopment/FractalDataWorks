@@ -121,11 +121,7 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
         }
 
         // API-62: structured 404 envelope.
-        await Send.ResultAsync(TypedResults.Json(new
-        {
-            errorCode = "NotFound",
-            messages = new[] { $"User '{req.IdOrName}' was not found." }
-        }, statusCode: 404)).ConfigureAwait(false);
+        await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.GetUserUserNotFound(EndpointLogger, req.IdOrName)), HttpContext)).ConfigureAwait(false);
     }
 
     /// <summary>

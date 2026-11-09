@@ -49,7 +49,7 @@ public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointB
             return GenericResult.Failure(EndpointLogger.ResourceNotFound(Logger, "DataStore", request.Name));
         }
 
-        var deleteResult = await _dataStoreProvider.Delete(config.Id, ct).ConfigureAwait(false);
+        var deleteResult = await _dataStoreProvider.DeleteStore(config.Id, ct).ConfigureAwait(false);
         if (deleteResult.IsFailure)
         {
             return deleteResult;

@@ -42,7 +42,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
 {
     private readonly IConnectionProvider _connectionProvider;
     private readonly ConnectionConfigurationProvider _configProvider;
-    private readonly IDomainConfigurationProvider<IDataStoreImplementationConfiguration> _dataStoreProvider;
+    private readonly DataStoreConfigurationProvider _dataStoreProvider;
     private readonly ILogger<SchemaInformationService> _logger;
 
     /// <summary>
@@ -55,7 +55,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     public SchemaInformationService(
         IConnectionProvider connectionProvider,
         ConnectionConfigurationProvider configProvider,
-        IDomainConfigurationProvider<IDataStoreImplementationConfiguration> dataStoreProvider,
+        DataStoreConfigurationProvider dataStoreProvider,
         ILogger<SchemaInformationService>? logger = null)
     {
         _connectionProvider = connectionProvider;
@@ -177,8 +177,15 @@ public sealed class SchemaInformationService : ISchemaInformationService
         CancellationToken cancellationToken)
     {
         var store = await ResolveOrCreateDataStore(connection, cancellationToken).ConfigureAwait(false);
-        if (store.IsFailure || store.Value is not { } target)
+        if (store.IsFailure)
             return store.ToNewResult<SchemaInformation>();
+
+        var (target, isNew) = store.Value;
+
+        // Refused before the source is opened, not after the work is done (FDW-4459).
+        var permitted = isNew ? GenericResult.Success() : await _dataStoreProvider.PermitWrite(target.Id, cancellationToken).ConfigureAwait(false);
+        if (permitted.IsFailure)
+            return permitted.ToNewResult<SchemaInformation>();
 
         var merged = await DiscoverIntoStore(
             target, connection, options, refresh, cancellationToken).ConfigureAwait(false);
@@ -186,8 +193,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
             return merged.ToNewResult<SchemaInformation>();
 
         SchemaDiscoveryLog.PersistingDataStore(_logger, target.Name, connection.Id);
-        var saved = await _dataStoreProvider.Save(
-            target, target.Domain, target.Implementation, target.Name, cancellationToken).ConfigureAwait(false);
+        var saved = await Persist(target, isNew, cancellationToken).ConfigureAwait(false);
         if (!saved.IsSuccess)
         {
             LogSaveFailure(target.Name, saved.CurrentMessage);
@@ -207,6 +213,13 @@ public sealed class SchemaInformationService : ISchemaInformationService
         return GenericResult<SchemaInformation>.Success(new SchemaInformation(reloaded.Value));
     }
 
+    // A store found for the connection is changed, which asks whether the caller's tenant may change it and never brings back a store deleted since it was read; a store
+    // made for the connection is created in the caller's own tenant, and refused rather than written over a same-named store it did not find (FDW-4459).
+    private Task<IGenericResult> Persist(IDataStoreImplementationConfiguration target, bool isNew, CancellationToken cancellationToken)
+        => isNew
+            ? _dataStoreProvider.Create(target, target.Domain, target.Implementation, target.Name, cancellationToken)
+            : _dataStoreProvider.UpdateStore(target, cancellationToken);
+
     private void LogSaveFailure(string dataStoreName, string? upstreamError)
     {
         if (upstreamError is not null)
@@ -215,29 +228,30 @@ public sealed class SchemaInformationService : ISchemaInformationService
             SchemaDiscoveryLog.DataStoreSaveFailed(_logger, dataStoreName);
     }
 
-    private async Task<IGenericResult<IDataStoreImplementationConfiguration>> ResolveOrCreateDataStore(
+    // The store to discover into and whether it is new: carried out so the save does not infer it from an empty Id.
+    private async Task<IGenericResult<(IDataStoreImplementationConfiguration Store, bool IsNew)>> ResolveOrCreateDataStore(
         IConnectionImplementationConfiguration connection,
         CancellationToken cancellationToken)
     {
         var found = await FindStoreFor(connection, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure)
-            return found.ToNewResult<IDataStoreImplementationConfiguration>();
+            return found.ToNewResult<(IDataStoreImplementationConfiguration Store, bool IsNew)>();
 
         if (found.Value is { } existing)
         {
             SchemaDiscoveryLog.ExistingDataStoreFound(_logger, existing.Name, existing.Id);
-            return GenericResult<IDataStoreImplementationConfiguration>.Success(existing);
+            return GenericResult<(IDataStoreImplementationConfiguration Store, bool IsNew)>.Success((existing, false));
         }
 
         // Why these: the first save writes the domain row from them. The store is named for its
         // connection and is the kind the connection is.
-        return GenericResult<IDataStoreImplementationConfiguration>.Success(new DataStoreImplementationConfiguration
+        return GenericResult<(IDataStoreImplementationConfiguration Store, bool IsNew)>.Success((new DataStoreImplementationConfiguration
         {
             Name = connection.Name,
             Domain = "DataStore",
             Implementation = connection.Implementation,
             ConnectionId = connection.Id,
-        });
+        }, true));
     }
 
     private async Task<IGenericResult<DataStoreSchemaImportResult>> DiscoverIntoStore(

@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Results;
 using Fdw.Services.Users;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -63,7 +64,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
 
         if (!result.IsSuccess)
         {
-            ThrowError(result.FailureReason().Message, 500);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

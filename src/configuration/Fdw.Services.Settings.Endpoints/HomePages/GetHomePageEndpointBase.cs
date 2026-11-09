@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -39,7 +41,7 @@ public abstract class GetHomePageEndpointBase : EndpointWithoutRequest<AppliedHo
         if (_authContext.Current is not { IsAuthenticated: true, ActiveTenantId: { } tenantId } caller
             || !Guid.TryParse(caller.UserId, out var userId))
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SettingsAnswerLog.GetHomePageNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -5,6 +5,8 @@ using FastEndpoints;
 using Fdw.Services.Agents.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.AgentActions;
 
@@ -52,8 +54,7 @@ public abstract class GetAgentActionEndpointBase : Endpoint<AgentActionIdRequest
 
             if (!result.IsSuccess)
             {
-                OperationsEndpointLog.AgentActionNotFound(_logger, req.ActionId);
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.AgentActionNotFound(_logger, req.ActionId)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -66,8 +67,7 @@ public abstract class GetAgentActionEndpointBase : Endpoint<AgentActionIdRequest
         catch (Exception ex)
         {
             OperationsEndpointLog.ReviewAgentActionFailed(_logger, req.ActionId, "Get", ex.Message);
-            AddError("Failed to get agent action");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetAgentActionFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

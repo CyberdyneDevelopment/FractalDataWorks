@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Data.RowSources;
 using Fdw.Data.RowSources.Abstractions;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.Http.Abstractions.EndPoints;
@@ -157,10 +158,10 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     {
         var resource = ResourceIdentifier(req);
 
-        var (format, refusalStatus) = ResolveFormat(resource);
+        var (format, refusal) = ResolveFormat(resource);
         if (format is null)
         {
-            await Send.ErrorsAsync(refusalStatus, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(refusal!), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -168,8 +169,7 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         if (!await slot.WaitAsync(0, ct).ConfigureAwait(false))
         {
             StreamRecordsEndpointLog.ConcurrencyLimitReached(Logger, resource, _streaming.MaxConcurrentStreams, _streaming.MaxConcurrentStreams);
-            AddError($"This endpoint is already streaming its limit of {_streaming.MaxConcurrentStreams} concurrent responses.");
-            await Send.ErrorsAsync(429, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StreamRecordsEndpointLog.StreamRecordsLimitReached(Logger, resource, _streaming.MaxConcurrentStreams)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -347,32 +347,30 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         return null;
     }
 
-    // The format the request names, by ?format= or the Accept header; the refusal's status when it names none (400) or one no writer
-    // serves (406), with the error added. Why no format of the endpoint's own (FDW-3823): the format is the caller's choice, and an
+    // The format the request names, by ?format= or the Accept header; the coded message of the refusal when it names none (400) or one no
+    // writer serves (406). Why no format of the endpoint's own (FDW-3823): the format is the caller's choice, and an
     // endpoint that served one when the caller named none made that selection for it. Mike: "why in the fuck would you make a
     // selection that is a default".
-    private (IRecordWriterType? Format, int RefusalStatus) ResolveFormat(string resource)
+    private (IRecordWriterType? Format, IGenericMessage? Refusal) ResolveFormat(string resource)
     {
         var named = HttpContext.Request.Query["format"].ToString();
         var accept = HttpContext.Request.Headers.Accept.ToString();
         if (string.IsNullOrWhiteSpace(named) && StatesNoPreference(accept))
         {
             StreamRecordsEndpointLog.FormatNotStated(Logger, resource);
-            AddError($"The request names no record format: state it with ?format= or an Accept header. Available: {AvailableFormatNames()}.");
-            return (null, 400);
+            return (null, StreamRecordsEndpointLog.StreamRecordsFormatNotStated(Logger, resource, AvailableFormatNames()));
         }
 
         var format = string.IsNullOrWhiteSpace(named) ? Accepted(accept) : FormatNamed(named);
         if (format is not null)
         {
-            return (format, 0);
+            return (format, null);
         }
 
         StreamRecordsEndpointLog.FormatNotAcceptable(Logger, resource, string.IsNullOrWhiteSpace(named) ? accept : named);
-        AddError(string.IsNullOrWhiteSpace(named)
-            ? $"No available record format satisfies the Accept header. Available: {AvailableMediaTypes()}."
-            : $"No record format is named '{named}'. Available: {AvailableFormatNames()}.");
-        return (null, 406);
+        return (null, string.IsNullOrWhiteSpace(named)
+            ? StreamRecordsEndpointLog.StreamRecordsAcceptNotSatisfied(Logger, resource, accept, AvailableMediaTypes())
+            : StreamRecordsEndpointLog.StreamRecordsFormatNotNamed(Logger, resource, named, AvailableFormatNames()));
     }
 
     private static IRecordWriterType? Accepted(string acceptHeader)

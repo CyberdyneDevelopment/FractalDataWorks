@@ -6,6 +6,7 @@ using Fdw.Operations.Abstractions.Escalation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -51,8 +52,7 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
         var missing = EscalationMapper.MissingOnLevels(req.Levels);
         if (missing.Count > 0)
         {
-            AddError("Required and not stated: " + string.Join(", ", missing));
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.UpdateEscalationPolicyFieldsNotStated(_logger, string.Join(", ", missing))), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -62,8 +62,7 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
             if (existing.IsFailure)
             {
                 OperationsEndpointLog.UpdateEscalationPolicyFailed(_logger, req.Id, existing.FailureReason().Message);
-                AddError("Failed to update escalation policy");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(existing, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -71,8 +70,7 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
             if (existing.Value is null)
             {
                 OperationsEndpointLog.EscalationPolicyNotFound(_logger, req.Id);
-                AddError("Failed to update escalation policy");
-                await Send.ErrorsAsync(404, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.UpdateEscalationPolicyNotFound(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -82,16 +80,13 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.UpdateEscalationPolicyFailed(_logger, req.Id, result.CurrentMessage!);
-                AddError("Failed to update escalation policy");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             if (result.Value is null)
             {
-                OperationsEndpointLog.UpdateEscalationPolicyFailed(_logger, req.Id, "Service returned null");
-                AddError("Failed to update escalation policy");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.UpdateEscalationPolicyReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -105,8 +100,7 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
         catch (Exception ex)
         {
             OperationsEndpointLog.UpdateEscalationPolicyFailed(_logger, req.Id, ex.Message);
-            AddError("Failed to update escalation policy");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.UpdateEscalationPolicyFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

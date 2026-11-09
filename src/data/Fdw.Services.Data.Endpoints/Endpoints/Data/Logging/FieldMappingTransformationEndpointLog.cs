@@ -127,4 +127,8 @@ public static partial class FieldMappingTransformationEndpointLog
     /// <summary>Logs a refused second attachment of the same transformation.</summary>
     [MessageLogging(EventId = 41542, Level = LogLevel.Warning, Message = "Transformation '{name}' is already attached to field mapping '{fieldMappingId}'")]
     public static partial IGenericMessage TransformationAlreadyAttached(ILogger logger, Guid fieldMappingId, string name);
+
+    /// <summary>Logs that Reordering field mapping transformations threw.</summary>
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "Reordering field mapping transformations threw", ClientMessage = "Reorder field mapping transformations failed unexpectedly")]
+    public static partial IGenericMessage ReorderFieldMappingTransformationsFaulted(ILogger logger);
 }

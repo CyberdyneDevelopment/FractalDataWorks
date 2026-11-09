@@ -4,6 +4,8 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -43,7 +45,7 @@ public abstract class PublishPersonHomePageEndpointBase : EndpointWithoutRequest
     {
         if (PersonHomePageAccess.Of(_authContext) is not { } held)
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SettingsAnswerLog.PublishPersonHomePageNotSignedIn(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

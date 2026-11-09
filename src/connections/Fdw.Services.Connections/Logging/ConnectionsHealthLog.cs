@@ -42,7 +42,7 @@ public static partial class ConnectionsHealthLog
     /// <summary>
     /// Logs that loading the connection configurations for the health check failed entirely.
     /// </summary>
-    [MessageLogging(EventId = 12003, Level = LogLevel.Error, Message = "Failed to load connection configurations for health check: {reason}")]
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "Failed to load connection configurations for health check: {reason}", ClientMessage = "Failed to load connection configurations for health check")]
     public static partial IGenericMessage AllConnectionsLoadFailed(ILogger logger, string reason);
 
     /// <summary>

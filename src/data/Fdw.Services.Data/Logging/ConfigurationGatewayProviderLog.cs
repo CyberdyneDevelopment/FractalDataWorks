@@ -121,4 +121,5 @@ public static partial class ConfigurationGatewayProviderLog
         Message = "The configuration gateway key chunk size is {keyChunkSize}; it is the most keys one read carries and must be at least 1")]
     public static partial IGenericMessage KeyChunkSizeInvalid(ILogger logger, int keyChunkSize);
 
+
 }

@@ -9,6 +9,7 @@ using Fdw.Operations.Abstractions.Execution;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
@@ -62,10 +63,17 @@ public abstract class GetExecutionChildrenEndpointBase : Endpoint<ExecutionIdReq
 
         // First verify the execution exists
         var itemResult = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);
-        if (!itemResult.IsSuccess || itemResult.Value == null)
+        if (itemResult.IsFailure)
         {
             OnExecutionNotFound(req.Id);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(itemResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (itemResult.Value == null)
+        {
+            OnExecutionNotFound(req.Id);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ExecutionChildrenExecutionNotFound(EndpointLogger, req.Id)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,7 +83,7 @@ public abstract class GetExecutionChildrenEndpointBase : Endpoint<ExecutionIdReq
         {
             var errorMessage = childrenResult.FailureReason().Message;
             OnChildrenFetchFailed(req.Id, errorMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch children", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(childrenResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 

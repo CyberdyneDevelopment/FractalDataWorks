@@ -5,6 +5,8 @@ using FastEndpoints;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Schema.Endpoints.Discovery;
 
@@ -78,8 +80,7 @@ public abstract class ListSchemaCapableConnectionsEndpointBase : EndpointWithout
         catch (System.Exception ex)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "list connections", "all");
-            AddError("Failed to list schema-capable connections");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.ListSchemaCapableConnectionsFailedToListSchemaCapable(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

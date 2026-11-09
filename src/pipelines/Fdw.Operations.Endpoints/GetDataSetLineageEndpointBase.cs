@@ -22,6 +22,7 @@ using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -72,7 +73,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         var dataSet = await FindDataSet(req.Name, ct).ConfigureAwait(false);
         if (dataSet == null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DataSetLineageDataSetNotFound(_logger, req.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

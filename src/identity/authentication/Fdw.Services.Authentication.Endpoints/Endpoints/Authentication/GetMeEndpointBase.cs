@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Authentication.Abstractions.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authentication.Endpoints;
 
@@ -108,7 +109,7 @@ public abstract class GetMeEndpointBase<TResponse> : EndpointWithoutRequest<TRes
         if (string.IsNullOrEmpty(username))
         {
             AuthenticationEndpointLog.UserIdentityNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.GetMeNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -119,7 +120,7 @@ public abstract class GetMeEndpointBase<TResponse> : EndpointWithoutRequest<TRes
             var result = await GetUserInfo(username, ct).ConfigureAwait(false);
             if (!result.IsSuccess)
             {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.GetMeNotFound(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -129,7 +130,7 @@ public abstract class GetMeEndpointBase<TResponse> : EndpointWithoutRequest<TRes
         catch (Exception ex)
         {
             AuthenticationEndpointLog.AuthenticationException(_logger, ex, "get-user-info");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.GetMeFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

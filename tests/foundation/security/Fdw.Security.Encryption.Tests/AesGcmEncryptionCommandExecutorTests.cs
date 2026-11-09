@@ -87,7 +87,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var back = await executor.Execute(Decrypt(blob), TestContext.Current.CancellationToken);
 
         back.IsFailure.ShouldBeTrue();
-        back.Messages[^1].Code.ShouldBe("ENCRYPT-7005");
+        back.Messages[^1].Code.ShouldBe("ENCRYPT-90001");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var back = await second.Execute(Decrypt(blob), TestContext.Current.CancellationToken);
 
         back.IsFailure.ShouldBeTrue();
-        back.Messages[^1].Code.ShouldBe("ENCRYPT-7005");
+        back.Messages[^1].Code.ShouldBe("ENCRYPT-90001");
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var back = await executor.Execute(Decrypt(new byte[27]), TestContext.Current.CancellationToken);
 
         back.IsFailure.ShouldBeTrue();
-        back.Messages[^1].Code.ShouldBe("ENCRYPT-7006");
+        back.Messages[^1].Code.ShouldBe("ENCRYPT-20002");
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var result = await executor.Execute(Encrypt([1]), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages[^1].Code.ShouldBe("ENCRYPT-7009");
+        result.Messages[^1].Code.ShouldBe("ENCRYPT-60002");
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var result = await executor.Execute(Encrypt([1]), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages[^1].Code.ShouldBe("ENCRYPT-7004");
+        result.Messages[^1].Code.ShouldBe("ENCRYPT-60003");
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var result = await executor.Execute(Encrypt([1]), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages[^1].Code.ShouldBe("ENCRYPT-7002");
+        result.Messages[^1].Code.ShouldBe("ENCRYPT-60001");
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var result = await executor.Execute(Encrypt([1]), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages[^1].Code.ShouldBe("ENCRYPT-7003");
+        result.Messages[^1].Code.ShouldBe("ENCRYPT-90002");
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var result = await executor.Execute((EncryptCommand)null!, TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages[^1].Code.ShouldBe("ENCRYPT-7010");
+        result.Messages[^1].Code.ShouldBe("ENCRYPT-20001");
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public sealed class AesGcmEncryptionCommandExecutorTests
         var result = await executor.Execute((DecryptCommand)null!, TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
-        result.Messages[^1].Code.ShouldBe("ENCRYPT-7010");
+        result.Messages[^1].Code.ShouldBe("ENCRYPT-20001");
     }
 
     [Fact]

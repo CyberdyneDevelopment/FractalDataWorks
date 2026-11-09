@@ -5,6 +5,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
 using Fdw.Services.Data;
+using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,7 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
     private readonly MapScopeSelector _scopes;
     private readonly IFrameworkAuthorizationService _authorization;
     private readonly IExecutionTracker _runs;
+    private readonly IPipelineProjectMemberships _projects;
 
     /// <inheritdoc />
     protected GetMapEndpointBase(
@@ -44,10 +46,12 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IFrameworkAuthorizationService authorization,
-        IExecutionTracker runs)
+        IExecutionTracker runs,
+        IPipelineProjectMemberships projects)
         : base(logger)
     {
         _runs = runs ?? throw new ArgumentNullException(nameof(runs));
+        _projects = projects ?? throw new ArgumentNullException(nameof(projects));
         _sources = new MapSources(dataSets, dataStores, pipelines, variations, categories);
         _scopes = new MapScopeSelector(workspaces, access, MapLogger);
         _authorization = authorization;
@@ -84,6 +88,6 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
         return workspaces.IsFailure
             ? workspaces.ToNewResult<MapStream>()
             : GenericResult<MapStream>.Success(
-                new OverviewMapStream(selection.Value!, _sources, editing.Value!, MapLogger, dataSetWorkspaces: workspaces.Value, runs: _runs));
+                new OverviewMapStream(selection.Value!, _sources, editing.Value!, MapLogger, dataSetWorkspaces: workspaces.Value, runs: _runs, projects: _projects));
     }
 }

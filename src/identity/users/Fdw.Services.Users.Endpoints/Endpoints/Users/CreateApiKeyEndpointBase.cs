@@ -8,6 +8,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Users.Clients.Models;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -69,9 +70,15 @@ public abstract class CreateApiKeyEndpointBase : Endpoint<CreateApiKeyRequest, A
         var userResult = await UserRouteTarget
             .Resolve(_userProvider, User, req.IdOrName, ct).ConfigureAwait(false);
 
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateApiKeyUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -80,15 +87,14 @@ public abstract class CreateApiKeyEndpointBase : Endpoint<CreateApiKeyRequest, A
         if (!AccountAuthority.ManagesKeys(User, user, Resolve<ISystemRoleConfiguration>()))
         {
             UserEndpointLog.ApiKeyOperationNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateApiKeyForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var isAgent = string.Equals(req.Kind, ApiKeyKinds.Agent, StringComparison.OrdinalIgnoreCase);
         if (!isAgent && !string.Equals(req.Kind, ApiKeyKinds.User, StringComparison.OrdinalIgnoreCase))
         {
-            AddError("API key kind must be 'user' or 'agent'.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateApiKeyApiKeyKindMustBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -98,8 +104,7 @@ public abstract class CreateApiKeyEndpointBase : Endpoint<CreateApiKeyRequest, A
 
         if (!issued.IsSuccess || issued.Value is null)
         {
-            AddError("The key could not be minted.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateApiKeyReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

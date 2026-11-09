@@ -36,7 +36,7 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
     /// <summary>Gets the data gateway.</summary>
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
-    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
+    protected IDataGateway DataGateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
     protected ILogger EndpointLogger { get; }

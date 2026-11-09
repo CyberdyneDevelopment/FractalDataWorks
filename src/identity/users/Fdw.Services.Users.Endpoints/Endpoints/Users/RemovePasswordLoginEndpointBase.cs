@@ -5,6 +5,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Users.Abstractions;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -73,9 +75,15 @@ public abstract class RemovePasswordLoginEndpointBase : Endpoint<UserScopedReque
 
         // Row-level security hides accounts outside the caller's tenant, so "not found" also covers
         // "not yours to see".
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.RemovePasswordLoginUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -84,30 +92,27 @@ public abstract class RemovePasswordLoginEndpointBase : Endpoint<UserScopedReque
         if (!AccountAuthority.Administers(User, user, Resolve<ISystemRoleConfiguration>()))
         {
             UserEndpointLog.PasswordRemovalNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.RemovePasswordLoginForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var hasPassword = await _credentialService.HasCredential(user.Id, "Password", ct).ConfigureAwait(false);
         if (hasPassword.IsFailure)
         {
-            AddError("The account's password state could not be read.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(hasPassword, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (!hasPassword.Value)
         {
-            UserEndpointLog.PasswordLoginAbsent(_logger, req.IdOrName);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.PasswordLoginAbsent(_logger, req.IdOrName)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var removed = await _credentialService.Remove(user.Id, "Password", ct).ConfigureAwait(false);
         if (removed.IsFailure)
         {
-            AddError("The password could not be removed.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(removed, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -731,9 +731,10 @@ public static partial class DataGatewayLogger
     /// down to a single store, so cross-store sources are invalid — fail loud).
     /// </summary>
     [MessageLogging(
-        EventId = 11047,
+        EventId = 21007,
         Level = LogLevel.Error,
-        Message = "Compound DataSet '{dataSetName}' has sources spanning {storeCount} data stores; a compound (pushed-down) join requires a single store")]
+        Message = "Compound DataSet '{dataSetName}' has sources spanning {storeCount} data stores; a compound (pushed-down) join requires a single store",
+        ClientMessage = "Compound DataSet '{dataSetName}' has sources spanning {storeCount} data stores; a compound (pushed-down) join requires a single store")]
     public static partial IGenericMessage CompoundSourcesSpanStores(
         ILogger logger,
         string dataSetName,
@@ -758,9 +759,10 @@ public static partial class DataGatewayLogger
     /// name is missing or not a registered FederationStrategies member). Fail loud — no default.
     /// </summary>
     [MessageLogging(
-        EventId = 11049,
+        EventId = 61014,
         Level = LogLevel.Error,
-        Message = "Federated DataSet '{dataSetName}' has no resolvable federation strategy: {reason}")]
+        Message = "Federated DataSet '{dataSetName}' has no resolvable federation strategy: {reason}",
+        ClientMessage = "Federated DataSet '{dataSetName}' has no resolvable federation strategy")]
     public static partial IGenericMessage FederationStrategyMissing(
         ILogger logger,
         string dataSetName,
@@ -772,9 +774,10 @@ public static partial class DataGatewayLogger
     /// <c>DataRecord</c>. Fail loud — no fallback to a materializing path (NO FALLBACKS).
     /// </summary>
     [MessageLogging(
-        EventId = 11050,
+        EventId = 61015,
         Level = LogLevel.Error,
-        Message = "Federated DataSet '{dataSetName}' source '{sourceName}' connection '{connectionName}' does not support record-source streaming (IRecordSourceConnection); a federated in-memory join requires record-source-capable connections")]
+        Message = "Federated DataSet '{dataSetName}' source '{sourceName}' connection '{connectionName}' does not support record-source streaming (IRecordSourceConnection); a federated in-memory join requires record-source-capable connections",
+        ClientMessage = "Federated DataSet '{dataSetName}' source '{sourceName}' connection '{connectionName}' does not support record-source streaming (IRecordSourceConnection); a federated in-memory join requires record-source-capable connections")]
     public static partial IGenericMessage FederatedSourceNotRecordCapable(
         ILogger logger,
         string dataSetName,
@@ -786,9 +789,10 @@ public static partial class DataGatewayLogger
     /// parse/convert error surfaced as a failed result). Fail loud — do not silently drop the record.
     /// </summary>
     [MessageLogging(
-        EventId = 11051,
+        EventId = 91008,
         Level = LogLevel.Error,
-        Message = "Federated DataSet '{dataSetName}' source '{sourceName}' failed to read a record: {reason}")]
+        Message = "Federated DataSet '{dataSetName}' source '{sourceName}' failed to read a record: {reason}",
+        ClientMessage = "Federated DataSet '{dataSetName}' source '{sourceName}' failed to read a record")]
     public static partial IGenericMessage FederatedRecordReadFailed(
         ILogger logger,
         string dataSetName,

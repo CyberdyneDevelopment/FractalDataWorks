@@ -123,8 +123,7 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
         {
             sw.Stop();
             CalculationEndpointLog.CalculationFailed(EndpointLogger, ex, dataSetName, req.CalculationType);
-            AddError("An internal error occurred during calculation execution.");
-            await Send.ErrorsAsync(cancellation: ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CalculationEndpointLog.ExecuteCalculationFaulted(EndpointLogger)), HttpContext)).ConfigureAwait(false);
         }
     }
 
@@ -141,7 +140,7 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
             || services.GetService(typeof(IDataGatewayProvider)) is not IDataGatewayProvider gateways)
             return GenericResult<IReadOnlyList<decimal>>.Failure(CalculationEndpointLog.DataSetReaderUnavailable(EndpointLogger));
 
-        var read = await reader.Read(gateways.ByName("Main"), req.DataSetName, rowCap.Value, ct).ConfigureAwait(false);
+        var read = await reader.Read(gateways.ByName(DataGatewayNames.Main), req.DataSetName, rowCap.Value, ct).ConfigureAwait(false);
         if (!read.IsSuccess || read.Value is not { } rows)
             return read.ToNewResult<IReadOnlyList<decimal>>();
 

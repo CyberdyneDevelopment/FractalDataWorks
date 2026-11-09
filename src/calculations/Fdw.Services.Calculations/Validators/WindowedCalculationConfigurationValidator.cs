@@ -25,8 +25,8 @@ public sealed class WindowedCalculationConfigurationValidator : FdwConfiguration
             .NotEmpty()
             .WithMessage("WindowFunction is required");
 
-        RuleFor(x => x.OutputFieldName)
+        RuleFor(x => x.ResultFieldName)
             .NotEmpty()
-            .WithMessage("OutputFieldName is required");
+            .WithMessage("ResultFieldName is required");
     }
 }

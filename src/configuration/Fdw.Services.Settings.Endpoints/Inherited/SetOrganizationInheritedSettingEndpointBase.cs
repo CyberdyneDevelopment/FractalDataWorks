@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Settings.Endpoints;
 
@@ -54,7 +55,7 @@ public abstract class SetOrganizationInheritedSettingEndpointBase : Endpoint<Set
         if (audited.IsFailure)
         {
             InheritedSettingsEndpointLog.ChangeNotAudited(EndpointLogger, "setting", InheritedSettingAudit.ItemOf(scope, req.SettingName), audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

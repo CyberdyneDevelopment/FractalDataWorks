@@ -6,6 +6,7 @@ using Fdw.Operations.Abstractions.Escalation;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -55,14 +56,12 @@ public abstract class DeleteEscalationPolicyEndpointBase : Endpoint<EscalationPo
             {
                 if (FailureCategory.IsMissing(result))
                 {
-                    OperationsEndpointLog.EscalationPolicyNotFound(_logger, req.Id);
-                    await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                    await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.EscalationPolicyNotFound(_logger, req.Id)), HttpContext)).ConfigureAwait(false);
                     return;
                 }
 
                 OperationsEndpointLog.DeleteEscalationPolicyFailed(_logger, req.Id, result.CurrentMessage!);
-                AddError("Failed to delete escalation policy");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -76,8 +75,7 @@ public abstract class DeleteEscalationPolicyEndpointBase : Endpoint<EscalationPo
         catch (Exception ex)
         {
             OperationsEndpointLog.DeleteEscalationPolicyFailed(_logger, req.Id, ex.Message);
-            AddError("Failed to delete escalation policy");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DeleteEscalationPolicyFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

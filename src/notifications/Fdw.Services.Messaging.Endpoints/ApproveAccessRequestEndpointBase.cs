@@ -7,6 +7,7 @@ using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -64,7 +65,7 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
                 if (!CallerClaims.TryGetUserId(HttpContext.User, out var reviewerUserId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ApproveAccessRequestNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -79,11 +80,10 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
                 MessagingEndpointLog.AccessRequestApproveFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
                 if (FailureCategory.IsMissing(result))
                 {
-                    await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                    await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ApproveAccessRequestNotFound(_logger)), HttpContext)).ConfigureAwait(false);
                     return;
                 }
-                AddError("Failed to approve access request");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -97,7 +97,7 @@ public abstract class ApproveAccessRequestEndpointBase : Endpoint<ReviewAccessRe
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "approve-access-request");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ApproveAccessRequestFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

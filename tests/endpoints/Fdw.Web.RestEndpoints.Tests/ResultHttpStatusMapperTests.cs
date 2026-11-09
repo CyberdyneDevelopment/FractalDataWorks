@@ -75,6 +75,7 @@ public class ResultHttpStatusMapperTests
     [InlineData(DependencyCode, 502)]
     [InlineData(TransientCode, 503)]
     [InlineData(InternalCode, 500)]
+    [InlineData(130001, 413)]    // category 13 (PayloadTooLarge) -> 413
     public void MapDerivesHttpStatusFromCategory(int codeNumber, int expectedStatus)
     {
         // Arrange

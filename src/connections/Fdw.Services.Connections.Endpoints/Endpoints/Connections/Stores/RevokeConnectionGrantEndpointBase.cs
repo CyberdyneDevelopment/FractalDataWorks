@@ -6,6 +6,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -47,7 +49,7 @@ public abstract class RevokeConnectionGrantEndpointBase : Endpoint<ConnectionGra
         if (!_systemRoles.IsPlatformAdmin(User))
         {
             ConnectionStoreEndpointLog.PlatformAdministratorRequired(EndpointLogger, req.TenantId);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConnectionStoreEndpointLog.RevokeConnectionGrantForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -64,7 +66,7 @@ public abstract class RevokeConnectionGrantEndpointBase : Endpoint<ConnectionGra
         if (audited.IsFailure)
         {
             ConnectionStoreEndpointLog.ChangeNotAudited(EndpointLogger, "revocation", $"{grant.TenantId}:{grant.Purpose}:{grant.ConnectionName}", audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.HealthChecks.Monitoring;
 
 using Fdw.Services.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Health;
 
@@ -59,11 +60,17 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
         {
             var monitorResult = await ReportingMonitor(ct).ConfigureAwait(false);
 
-            if (!monitorResult.IsSuccess || monitorResult.Value is null)
+            if (monitorResult.IsFailure)
             {
                 OperationsEndpointLog.GetSystemHealthFailed(_logger, monitorResult.NoValueReason().Message);
-                AddError("Failed to retrieve system health");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(monitorResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (monitorResult.Value is null)
+            {
+                OperationsEndpointLog.GetSystemHealthFailed(_logger, monitorResult.NoValueReason().Message);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetSystemHealthReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -72,8 +79,7 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.GetSystemHealthFailed(_logger, result.FailureReason().Message);
-                AddError("Failed to retrieve system health");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -86,8 +92,7 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
         catch (Exception ex)
         {
             OperationsEndpointLog.GetSystemHealthFailed(_logger, ex.Message);
-            AddError("Failed to retrieve system health");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetSystemHealthFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

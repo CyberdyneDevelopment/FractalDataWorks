@@ -11,6 +11,8 @@ using Fdw.Services.Quality;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.Pagination;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -79,21 +81,21 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
         var (kinds, unknown) = CatalogKindSet.Of(req.EntityTypes);
         if (kinds is null)
         {
-            AddError(r => r.EntityTypes, $"'{unknown}' is not a catalog kind; the kinds are {string.Join(", ", CatalogKinds.All)}");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.SearchCatalogUnknownKind(Logger, unknown ?? string.Empty, string.Join(", ", CatalogKinds.All))), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         // The one reader every list endpoint pages by: ?skip and ?take, sized by the paging settings, a failure when one is missing.
         var paging = PaginationQuery.Parse(HttpContext, Logger);
-        if (paging.IsFailure || paging.Value is not { } page)
+        if (paging.IsFailure)
         {
-            if (paging.CurrentMessage is { } refused)
-            {
-                AddError(refused);
-            }
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(paging, HttpContext)).ConfigureAwait(false);
+            return;
+        }
 
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+    if (paging.Value is not { } page)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.SearchCatalogPagingReturnedNothing(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -103,15 +105,14 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
         // Why: the page is chosen from the closest matches each source returns, and a source reads no more than the window.
         if ((long)skip + take > CatalogSearchLimits.MaxWindow)
         {
-            AddError(r => r.Skip, $"skip plus take must be at most {CatalogSearchLimits.MaxWindow}; narrow the search with q or entityTypes to reach further");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.SearchCatalogWindowTooLarge(Logger, CatalogSearchLimits.MaxWindow)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var found = await _search.Run(kinds, (req.Query ?? string.Empty).Trim(), skip, take, ct).ConfigureAwait(false);
         if (found.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to search the catalog", Details = found.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(found, HttpContext)).ConfigureAwait(false);
             return;
         }
 

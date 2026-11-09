@@ -57,7 +57,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
         var exists = await _dataSets.Get(req.DataSetName, ct).ConfigureAwait(false);
         if (!exists.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to read the data set", Details = exists.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(exists, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,7 +75,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to list annotations", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

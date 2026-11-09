@@ -11,6 +11,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
 using FdwErrorResponse = Fdw.Web.RestEndpoints.Models.ErrorResponse;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Web.RestEndpoints.Base;
 
@@ -48,7 +49,7 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
     /// <summary>
     /// Gets the data gateway for database operations.
     /// </summary>
-    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
+    protected IDataGateway DataGateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>
     /// Gets the orchestration executor for running orchestrations. Null if not registered.
@@ -71,7 +72,7 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
             var authResult = await CheckAuthorization(req, ct).ConfigureAwait(false);
             if (!authResult.IsSuccess)
             {
-                await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WebRestEndpointsAnswerLog.GenericNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 

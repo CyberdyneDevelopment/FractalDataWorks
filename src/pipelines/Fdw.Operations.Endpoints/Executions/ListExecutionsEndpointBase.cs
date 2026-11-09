@@ -77,7 +77,8 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
         var itemTypeFilter = ExecutionListItemType.Of(req.ItemType, req.RootId.HasValue, !string.IsNullOrWhiteSpace(req.CorrelationId), out var refusal);
         if (refusal is not null)
         {
-            ThrowError(refusal, 400);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ListExecutionsItemTypeUnknown(EndpointLogger, req.ItemType ?? string.Empty, string.Join(", ", ExecutionItemTypes.All().Select(type => type.Name)))), HttpContext)).ConfigureAwait(false);
+            return;
         }
 
         // If correlation ID is provided, use the specialized query
@@ -90,7 +91,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             {
                 var errorMessage = correlationResult.FailureReason().Message;
                 OnExecutionQueryFailed(errorMessage);
-                await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query executions", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(correlationResult, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -115,23 +116,23 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             return;
         }
 
-        IExecutionStateType? stateFilter = null;
-        if (!string.IsNullOrWhiteSpace(req.State))
-        {
-            var resolved = ExecutionStateTypes.ByName(req.State);
-            if (resolved != ExecutionStateTypes.NotFound)
-                stateFilter = resolved;
-        }
-
         var listResult = await _tracker.ListExecutions(
             req.Page, page.Take,
-            itemTypeFilter, stateFilter, req.CorrelationId, req.RootId, ct).ConfigureAwait(false);
+            itemTypeFilter, StateFilter(req.State), req.CorrelationId, req.RootId, ct).ConfigureAwait(false);
 
-        if (!listResult.IsSuccess || listResult.Value == null)
+        if (listResult.IsFailure)
         {
             var errorMessage = listResult.NoValueReason().Message;
             OnExecutionQueryFailed(errorMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query executions", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(listResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (listResult.Value == null)
+        {
+            var errorMessage = listResult.NoValueReason().Message;
+            OnExecutionQueryFailed(errorMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ListExecutionsReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -145,6 +146,16 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             PageSize = pagedResult.PageSize,
             TotalCount = (int)pagedResult.TotalCount
         }, ct).ConfigureAwait(false);
+    }
+
+    // The state type the request names, or none when it names none or one that is not a state (the list then holds every state).
+    private static IExecutionStateType? StateFilter(string? state)
+    {
+        if (string.IsNullOrWhiteSpace(state))
+            return null;
+
+        var resolved = ExecutionStateTypes.ByName(state);
+        return resolved == ExecutionStateTypes.NotFound ? null : resolved;
     }
 
     /// <summary>

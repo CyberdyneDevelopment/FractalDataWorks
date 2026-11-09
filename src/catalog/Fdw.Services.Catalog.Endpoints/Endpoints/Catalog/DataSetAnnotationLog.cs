@@ -34,4 +34,8 @@ public static partial class DataSetAnnotationLog
         Message = "The tags of DataSet '{dataSetName}' cannot be read or written: no data set has that name",
         ClientMessage = "No data set has the name the annotation gives")]
     public static partial IGenericMessage TagsDataSetNotFound(ILogger logger, string dataSetName);
+
+    /// <summary>Logs that Data set annotation was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 32756, Level = LogLevel.Warning, Message = "Data set annotation was not found, or is not visible to the caller", ClientMessage = "Data set annotation was not found")]
+    public static partial IGenericMessage ResolveDataSetAnnotationNotFound(ILogger logger);
 }

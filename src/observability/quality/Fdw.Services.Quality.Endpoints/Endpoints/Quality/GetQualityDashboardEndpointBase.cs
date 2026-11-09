@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Quality;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -49,7 +50,7 @@ public abstract class GetQualityDashboardEndpointBase : EndpointWithoutRequest<Q
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to load quality rules for dashboard", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

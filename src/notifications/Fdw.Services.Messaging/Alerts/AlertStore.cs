@@ -44,7 +44,7 @@ internal sealed class AlertStore
     }
 
     // Why resolved here rather than injected: the gateway is scoped and the service is not, so holding one would be a captive dependency.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private IDataGateway Gateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>Reads the actions a person has taken on some alerts of one kind.</summary>
     /// <param name="kind">The kind of alert.</param>

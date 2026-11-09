@@ -6,6 +6,7 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -68,8 +69,7 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
         // Whether a role belongs to one tenant is the caller's choice; there is no default (FDW-3823).
         if (req.IsTenantScoped is not { } isTenantScoped)
         {
-            AddError(r => r.IsTenantScoped, "IsTenantScoped is required");
-            ThrowIfAnyErrors();
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.CreateRoleIsTenantScopedRequired(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -89,7 +89,7 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
         if (audited.IsFailure)
         {
             AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RoleCreated", req.Name, audited.CurrentMessage);
-            await Send.ResponseAsync(new RoleSummaryResponse { Name = req.Name }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

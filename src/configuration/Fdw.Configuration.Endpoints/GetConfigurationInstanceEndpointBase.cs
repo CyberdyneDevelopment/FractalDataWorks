@@ -10,6 +10,8 @@ using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Configuration.Endpoints;
 
@@ -66,7 +68,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
         if (containers.Count == 0)
         {
             ConfigurationEndpointLog.NoCategoryTypes(_logger, req.Category);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConfigurationEndpointLog.GetConfigurationInstanceNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -78,8 +80,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
         catch (Exception ex)
         {
             ConfigurationEndpointLog.TableQueryFailed(_logger, ex, req.Category, $"instance {req.Name}");
-            AddError("An error occurred while retrieving the configuration instance");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConfigurationEndpointLog.GetConfigurationInstanceFaulted(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -90,7 +91,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
         }
 
         ConfigurationEndpointLog.InstanceNotFound(_logger, req.Name, req.Category);
-        await Send.NotFoundAsync(ct).ConfigureAwait(false);
+        await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConfigurationEndpointLog.GetConfigurationInstanceNotFound2(_logger)), HttpContext)).ConfigureAwait(false);
     }
 
     private async Task<ConfigurationInstanceDetailResponse?> FindInstanceDetail(

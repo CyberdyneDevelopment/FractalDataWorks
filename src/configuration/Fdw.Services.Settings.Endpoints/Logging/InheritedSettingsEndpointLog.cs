@@ -23,4 +23,24 @@ public static partial class InheritedSettingsEndpointLog
     /// <summary>Logs that the settings of another tenant were refused.</summary>
     [MessageLogging(EventId = 102911, Level = LogLevel.Warning, Message = "The settings of tenant '{tenantId}' were refused: the caller does not act in it and is not a platform administrator")]
     public static partial IGenericMessage OtherTenant(ILogger logger, Guid tenantId);
+
+    /// <summary>Logs that The request to list tenant inherited settings was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102912, Level = LogLevel.Warning, Message = "The request to list tenant inherited settings was refused: the caller is not allowed", ClientMessage = "You are not allowed to list tenant inherited settings")]
+    public static partial IGenericMessage ListTenantInheritedSettingsForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to list platform inherited settings was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102913, Level = LogLevel.Warning, Message = "The request to list platform inherited settings was refused: the caller is not allowed", ClientMessage = "You are not allowed to list platform inherited settings")]
+    public static partial IGenericMessage ListPlatformInheritedSettingsForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to set tenant inherited setting was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102914, Level = LogLevel.Warning, Message = "The request to set tenant inherited setting was refused: the caller is not allowed", ClientMessage = "You are not allowed to set tenant inherited setting")]
+    public static partial IGenericMessage SetTenantInheritedSettingForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to set platform inherited setting was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102915, Level = LogLevel.Warning, Message = "The request to set platform inherited setting was refused: the caller is not allowed", ClientMessage = "You are not allowed to set platform inherited setting")]
+    public static partial IGenericMessage SetPlatformInheritedSettingForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to lift tenant setting lock was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102916, Level = LogLevel.Warning, Message = "The request to lift tenant setting lock was refused: the caller is not allowed", ClientMessage = "You are not allowed to lift tenant setting lock")]
+    public static partial IGenericMessage LiftTenantSettingLockForbidden(ILogger logger);
 }

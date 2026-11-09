@@ -164,4 +164,76 @@ public static partial class SchemaEndpointLog
     public static partial IGenericMessage PreviewNotAnswered(
         ILogger logger,
         string source);
+
+    /// <summary>Logs that the request failed: Schema graph retrieval failed.</summary>
+    [MessageLogging(EventId = 91002, Level = LogLevel.Error, Message = "Schema graph retrieval failed", ClientMessage = "Schema graph retrieval failed")]
+    public static partial IGenericMessage GetSchemaGraphFaulted(ILogger logger);
+
+    /// <summary>Logs that the request failed: Schema discovery failed.</summary>
+    [MessageLogging(EventId = 91003, Level = LogLevel.Error, Message = "Schema discovery failed", ClientMessage = "Schema discovery failed")]
+    public static partial IGenericMessage DiscoverSchemaFaulted(ILogger logger);
+
+    /// <summary>Logs that the request failed: TableName is required.</summary>
+    [MessageLogging(EventId = 21003, Level = LogLevel.Warning, Message = "TableName is required", ClientMessage = "TableName is required")]
+    public static partial IGenericMessage ExecuteDdlTablenameIsRequired(ILogger logger);
+
+    /// <summary>Logs that the request failed: At least one column is required.</summary>
+    [MessageLogging(EventId = 21004, Level = LogLevel.Warning, Message = "At least one column is required", ClientMessage = "At least one column is required")]
+    public static partial IGenericMessage ExecuteDdlAtLeastOneColumnIs(ILogger logger);
+
+    /// <summary>Logs that the request failed: Unable to determine connection type.</summary>
+    [MessageLogging(EventId = 21005, Level = LogLevel.Warning, Message = "Unable to determine connection type", ClientMessage = "Unable to determine connection type")]
+    public static partial IGenericMessage GenerateDdlUnableToDetermineConnectionType(ILogger logger);
+
+    /// <summary>Logs that the request failed: DDL generation failed.</summary>
+    [MessageLogging(EventId = 91004, Level = LogLevel.Error, Message = "DDL generation failed", ClientMessage = "DDL generation failed")]
+    public static partial IGenericMessage GenerateDdlFaulted(ILogger logger);
+
+    /// <summary>Logs that the request failed: Schema sync failed.</summary>
+    [MessageLogging(EventId = 91005, Level = LogLevel.Error, Message = "Schema sync failed", ClientMessage = "Schema sync failed")]
+    public static partial IGenericMessage SyncSchemaFaulted(ILogger logger);
+
+    /// <summary>Logs that the request failed: Failed to list schema-capable connections.</summary>
+    [MessageLogging(EventId = 91006, Level = LogLevel.Error, Message = "Failed to list schema-capable connections", ClientMessage = "Failed to list schema-capable connections")]
+    public static partial IGenericMessage ListSchemaCapableConnectionsFailedToListSchemaCapable(ILogger logger);
+
+    /// <summary>Logs that the request failed: Either DataSetName or ContainerName must be provided.</summary>
+    [MessageLogging(EventId = 21006, Level = LogLevel.Warning, Message = "Either DataSetName or ContainerName must be provided", ClientMessage = "Either DataSetName or ContainerName must be provided")]
+    public static partial IGenericMessage DataPreviewEitherDatasetnameOrContainernameMust(ILogger logger);
+
+    /// <summary>Logs that the request failed: DataStoreName is required when ContainerName is provided.</summary>
+    [MessageLogging(EventId = 21007, Level = LogLevel.Warning, Message = "DataStoreName is required when ContainerName is provided", ClientMessage = "DataStoreName is required when ContainerName is provided")]
+    public static partial IGenericMessage DataPreviewDatastorenameIsRequiredWhenContainername(ILogger logger);
+
+    /// <summary>Logs that the request failed: PathName is required when ContainerName is provided.</summary>
+    [MessageLogging(EventId = 21008, Level = LogLevel.Warning, Message = "PathName is required when ContainerName is provided", ClientMessage = "PathName is required when ContainerName is provided")]
+    public static partial IGenericMessage DataPreviewPathnameIsRequiredWhenContainername(ILogger logger);
+
+    /// <summary>Logs that Connection 'connectionName' was not found for discoverschema.</summary>
+    [MessageLogging(EventId = 31002, Level = LogLevel.Warning, Message = "Connection '{connectionName}' was not found for discoverschema", ClientMessage = "Connection '{connectionName}' was not found")]
+    public static partial IGenericMessage DiscoverSchemaConnectionNotFound(ILogger logger, string connectionName);
+
+    /// <summary>Logs that Connection 'connectionName' was not found for getschemagraph.</summary>
+    [MessageLogging(EventId = 31003, Level = LogLevel.Warning, Message = "Connection '{connectionName}' was not found for getschemagraph", ClientMessage = "Connection '{connectionName}' was not found")]
+    public static partial IGenericMessage GetSchemaGraphConnectionNotFound(ILogger logger, string connectionName);
+
+    /// <summary>Logs that Connection 'connectionName' was not found for generateddl.</summary>
+    [MessageLogging(EventId = 31004, Level = LogLevel.Warning, Message = "Connection '{connectionName}' was not found for generateddl", ClientMessage = "Connection '{connectionName}' was not found")]
+    public static partial IGenericMessage GenerateDdlConnectionNotFound(ILogger logger, string connectionName);
+
+    /// <summary>Logs that Connection 'connectionName' was not found for syncschema.</summary>
+    [MessageLogging(EventId = 31005, Level = LogLevel.Warning, Message = "Connection '{connectionName}' was not found for syncschema", ClientMessage = "Connection '{connectionName}' was not found")]
+    public static partial IGenericMessage SyncSchemaConnectionNotFound(ILogger logger, string connectionName);
+
+    /// <summary>Logs that Importing the schema of connection 'connectionName' threw.</summary>
+    [MessageLogging(EventId = 91007, Level = LogLevel.Error, Message = "Importing the schema of connection '{connectionName}' threw", ClientMessage = "An internal error occurred during schema import")]
+    public static partial IGenericMessage ImportSchemaFaulted(ILogger logger, string connectionName);
+
+    /// <summary>Logs that Importing the schema of connection 'connectionName' answered a success and no value.</summary>
+    [MessageLogging(EventId = 91008, Level = LogLevel.Error, Message = "Importing the schema of connection '{connectionName}' answered a success and no value", ClientMessage = "The schema could not be imported")]
+    public static partial IGenericMessage ImportSchemaReturnedNothing(ILogger logger, string connectionName);
+
+    /// <summary>Logs that execute ddl failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91009, Level = LogLevel.Error, Message = "Execute ddl failed unexpectedly", ClientMessage = "Execute ddl failed unexpectedly")]
+    public static partial IGenericMessage ExecuteDdlFaulted(ILogger logger);
 }

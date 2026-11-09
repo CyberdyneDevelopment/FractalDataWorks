@@ -7,6 +7,8 @@ using Fdw.Web.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Web.Endpoints.SessionState;
 
@@ -45,7 +47,7 @@ public abstract class GetSessionStateEndpointBase : Endpoint<SessionStateKeyRequ
     {
         if (CallerClaims.UserId(User) is not { } userId)
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SessionStateEndpointLog.GetSessionStateNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -55,7 +57,7 @@ public abstract class GetSessionStateEndpointBase : Endpoint<SessionStateKeyRequ
 
         if (!result.IsSuccess || result.Value.ValueKind == JsonValueKind.Undefined)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SessionStateEndpointLog.GetSessionStateNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

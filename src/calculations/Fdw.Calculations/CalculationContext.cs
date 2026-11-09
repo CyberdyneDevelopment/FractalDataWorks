@@ -64,7 +64,7 @@ public sealed class CalculationContext : ICalculationContext
     /// <summary>Gets the gateway this calculation reads and writes through.</summary>
     /// <remarks>Resolved per use: the gateway is scoped and a context is not, so holding one
     /// would be a captive dependency.</remarks>
-    public IDataGateway DataGateway => _dataGateways.ByName("Main");
+    public IDataGateway DataGateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, object?> Parameters { get; }

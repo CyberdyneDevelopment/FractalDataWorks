@@ -28,7 +28,6 @@ namespace Fdw.Services.Connections.Sqlite;
 [TypeOption(typeof(SqliteDataCommandTranslators), "Insert", RestrictToCurrentCompilation = true)]
 public sealed class SqliteInsertTranslator : SqliteDataCommandTranslatorBase
 {
-    private const int MaxParametersPerStatement = 999;
 
     /// <summary>Initializes a new instance of the <see cref="SqliteInsertTranslator"/> class.</summary>
     public SqliteInsertTranslator()
@@ -106,7 +105,7 @@ public sealed class SqliteInsertTranslator : SqliteDataCommandTranslatorBase
             : $" RETURNING {string.Join(", ", returned.Select(c => dialect.QuoteIdentifier(c)))}";
 
         var columnsPerRow = fieldNames.Count;
-        var maxRowsPerBatch = Math.Max(1, MaxParametersPerStatement / columnsPerRow);
+        var maxRowsPerBatch = Math.Max(1, KeyListSpillScope.ParameterBudget / columnsPerRow);
 
         var sqlBatches = new List<string>();
         var allParameters = new List<SqliteParameter>();

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.MsSql;
 
@@ -12,12 +14,13 @@ namespace Fdw.Data.MsSql;
 /// <remarks>
 /// <see cref="TSqlDialect"/> is a stateless singleton — always use <see cref="Instance"/>.
 /// </remarks>
-public sealed class TSqlDialect : ISqlDialect
+public sealed class TSqlDialect : ISqlDialect, IKeyListSpillDialect
 {
     /// <summary>
     /// Gets the singleton instance of <see cref="TSqlDialect"/>.
     /// </summary>
     public static readonly TSqlDialect Instance = new TSqlDialect();
+
 
     private TSqlDialect()
     {
@@ -37,6 +40,26 @@ public sealed class TSqlDialect : ISqlDialect
 
     /// <inheritdoc/>
     public string ParameterPrefix => "@";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A temporary table typed like the filtered column: <c>SELECT TOP 0</c> of the column through <c>ISNULL</c> takes its type and collation and leaves out an
+    /// identity property, so the key table joins without a conversion and takes explicit values. It is filled from the one JSON parameter in the same batch,
+    /// and dropped after the statement.
+    /// </remarks>
+    public KeyListSpillForm KeyListSpill(string uniqueId, string sourceTable, string columnName, string jsonParameter)
+    {
+        var table = $"#fdw_k_{uniqueId}";
+        var column = QuoteIdentifier(columnName);
+        return new KeyListSpillForm(
+            $"SELECT TOP 0 ISNULL({column}, {column}) AS [Value] INTO {table} FROM {sourceTable}; "
+            + $"INSERT INTO {table} ([Value]) SELECT [Value] FROM OPENJSON({jsonParameter}) WITH ([Value] nvarchar(max) '$'); ",
+            $"SELECT [Value] FROM {table}",
+            $" DROP TABLE {table}; ");
+    }
+
+    /// <inheritdoc/>
+    public string KeyListJson(string columnName, IReadOnlyList<object?> values) => KeyListJsonWriter.Scalars(values);
 
     /// <inheritdoc/>
     public char LikeEscapeCharacter => '!';

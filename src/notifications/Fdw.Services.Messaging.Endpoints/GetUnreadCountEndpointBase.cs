@@ -6,6 +6,8 @@ using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -62,7 +64,7 @@ public abstract class GetUnreadCountEndpointBase : EndpointWithoutRequest<Unread
                 if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.GetUnreadCountNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,8 +77,7 @@ public abstract class GetUnreadCountEndpointBase : EndpointWithoutRequest<Unread
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.UnreadCountFailed(_logger, userId.ToString(), result.CurrentMessage!);
-                AddError("Failed to get unread count");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -90,7 +91,7 @@ public abstract class GetUnreadCountEndpointBase : EndpointWithoutRequest<Unread
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "get-unread-count");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.GetUnreadCountFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

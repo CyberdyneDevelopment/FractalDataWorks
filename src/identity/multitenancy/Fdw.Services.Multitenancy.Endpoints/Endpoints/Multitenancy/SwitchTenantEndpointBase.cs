@@ -9,6 +9,8 @@ using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Multitenancy.Clients.Models;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Services.Multitenancy.Endpoints.Logging;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -57,7 +59,7 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
         var userId = CallerClaims.UserId(User);
         if (string.IsNullOrEmpty(userId))
         {
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.SwitchTenantForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -65,14 +67,20 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
         if (!hasAccess.IsSuccess || !hasAccess.Value)
         {
             OnAccessDenied(userId, req.TenantId);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.SwitchTenantForbidden2(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var tenantResult = await _tenantProvider.GetTenant(req.TenantId, ct).ConfigureAwait(false);
-        if (!tenantResult.IsSuccess || tenantResult.Value is null)
+        if (tenantResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(tenantResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (tenantResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.SwitchTenantTenantNotFound(EndpointLogger, req.TenantId)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -81,11 +89,7 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
         var tokenResult = await GenerateNewToken(userId, tenant, ct).ConfigureAwait(false);
         if (!tokenResult.IsSuccess)
         {
-            await Send.ResponseAsync(new SwitchTenantDto
-            {
-                Success = false,
-                Message = "Failed to issue a token for the tenant"
-            }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(tokenResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 

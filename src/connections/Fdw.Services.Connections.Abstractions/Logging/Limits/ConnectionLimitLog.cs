@@ -116,8 +116,9 @@ public static partial class ConnectionLimitLog
     /// <summary>
     /// Logs when an operation is rejected because the calling code cancelled it.
     /// </summary>
-    [MessageLogging(EventId = 11006, Level = LogLevel.Debug,
-        Message = "Operation on connection '{connectionId}' was cancelled by the caller before limit enforcement")]
+    [MessageLogging(EventId = 90001, Level = LogLevel.Debug,
+        Message = "Operation on connection '{connectionId}' was cancelled by the caller before limit enforcement",
+        ClientMessage = "Operation on connection '{connectionId}' was cancelled by the caller before limit enforcement")]
     public static partial IGenericMessage OperationCancelled(
         ILogger logger,
         Guid connectionId);

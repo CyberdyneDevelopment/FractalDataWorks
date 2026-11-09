@@ -64,7 +64,9 @@ public class DataSetDetailResponse : ResourceDetail
     /// <summary>Gets or sets the logical id of the workspace that owns a Scoped variation; null otherwise.</summary>
     public Guid? OwnerWorkspaceId { get; set; }
 
-    /// <summary>Gets or sets the logical id of the user that owns a data view; null otherwise.</summary>
+    /// <summary>
+    /// Gets or sets the logical id of the user who owns the data set: its creator, or the owner of a data view. Null when it has no owner (made before owners existed): the list shows it as Unowned.
+    /// </summary>
     public Guid? OwnerUserId { get; set; }
 
     /// <summary>Gets or sets a variation's stored filter tree, in the body shape of the data route's filter; null when it has none or is not a variation.</summary>

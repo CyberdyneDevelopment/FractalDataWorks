@@ -127,6 +127,9 @@ public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConf
     /// <inheritdoc/>
     public int MaxSerialInsert { get; set; }
 
+    /// <inheritdoc/>
+    public int? MaxParametersBeforeTempTable { get; set; }
+
     /// <summary>
     /// Gets or sets the connection timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3580).
     /// </summary>

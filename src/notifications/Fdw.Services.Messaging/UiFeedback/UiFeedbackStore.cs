@@ -48,7 +48,7 @@ internal sealed class UiFeedbackStore
     }
 
     // Why resolved here rather than injected: the gateway is scoped and the service is not, so holding one would be a captive dependency.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private IDataGateway Gateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     /// <summary>Reads one comment's row.</summary>
     /// <param name="id">The comment's identifier.</param>

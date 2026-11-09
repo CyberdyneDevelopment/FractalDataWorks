@@ -105,4 +105,16 @@ public static partial class SecretManagerEndpointLog
     [MessageLogging(EventId = 41001, Level = LogLevel.Warning,
         Message = "Rejected modification of system secret manager '{secretManagerName}' — system configurations are read-only")]
     public static partial IGenericMessage SystemSecretManagerReadOnly(ILogger logger, string secretManagerName);
+
+    /// <summary>Logs that the request failed: Name is required.</summary>
+    [MessageLogging(EventId = 21004, Level = LogLevel.Warning, Message = "Name is required", ClientMessage = "Name is required")]
+    public static partial IGenericMessage CreateSecretManagerNameIsRequired(ILogger logger);
+
+    /// <summary>Logs that the request failed: SecretManagerType is required.</summary>
+    [MessageLogging(EventId = 21005, Level = LogLevel.Warning, Message = "SecretManagerType is required", ClientMessage = "SecretManagerType is required")]
+    public static partial IGenericMessage CreateSecretManagerSecretmanagertypeIsRequired(ILogger logger);
+
+    /// <summary>Logs that A secret manager named 'name' already exists; it was not created.</summary>
+    [MessageLogging(EventId = 41002, Level = LogLevel.Warning, Message = "A secret manager named '{name}' already exists; it was not created", ClientMessage = "A secret manager with name '{name}' already exists")]
+    public static partial IGenericMessage CreateSecretManagerNameAlreadyExists(ILogger logger, string name);
 }

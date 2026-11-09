@@ -60,7 +60,7 @@ public abstract class ListDataSetSamplesEndpointBase : Endpoint<DataSetNameReque
 
         var dataSet = await _dataSets.Get(req.Name, ct).ConfigureAwait(false);
         if (dataSet.IsFailure) { await SendError(dataSet, ct).ConfigureAwait(false); return; }
-        if (dataSet.Value is null) { await Send.NotFoundAsync(ct).ConfigureAwait(false); return; }
+        if (dataSet.Value is null) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(DataSetSampleEndpointLog.ListDataSetSamplesNotFound(_logger)), HttpContext)).ConfigureAwait(false); return; }
 
         var fieldNamesById = dataSet.Value.Fields.ToDictionary(f => f.Id, f => f.Name);
 

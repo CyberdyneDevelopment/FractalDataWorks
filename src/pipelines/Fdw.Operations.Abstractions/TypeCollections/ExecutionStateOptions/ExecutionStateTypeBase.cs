@@ -20,6 +20,7 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<ExecutionStateType
         IsTerminal = true;
         IsSuccess = false;
         IsFailure = false;
+        IsExecuting = false;
         CanTriggerEscalation = false;
         ValidTransitions = Array.Empty<string>();
     }
@@ -32,6 +33,7 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<ExecutionStateType
     /// <param name="isTerminal">Whether this is a terminal state.</param>
     /// <param name="isSuccess">Whether this state represents success.</param>
     /// <param name="isFailure">Whether this state represents failure.</param>
+    /// <param name="isExecuting">Whether a run in this state is executing: it has taken its turn and is not waiting or finished (FDW-4488).</param>
     /// <param name="canTriggerEscalation">Whether escalation can be triggered from this state.</param>
     /// <param name="validTransitions">Valid state transitions from this state.</param>
     protected ExecutionStateTypeBase(
@@ -40,6 +42,7 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<ExecutionStateType
         bool isTerminal,
         bool isSuccess,
         bool isFailure,
+        bool isExecuting,
         bool canTriggerEscalation,
         IReadOnlyList<string> validTransitions)
         : base(name, $"TypeOptions:{name}", displayName, $"Execution state: {name}", null)
@@ -47,6 +50,7 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<ExecutionStateType
         IsTerminal = isTerminal;
         IsSuccess = isSuccess;
         IsFailure = isFailure;
+        IsExecuting = isExecuting;
         CanTriggerEscalation = canTriggerEscalation;
         ValidTransitions = validTransitions;
     }
@@ -59,6 +63,12 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<ExecutionStateType
 
     /// <inheritdoc />
     public bool IsFailure { get; }
+
+    /// <inheritdoc />
+    public bool IsExecuting { get; }
+
+    /// <inheritdoc />
+    public bool IsStopped => IsTerminal && !IsSuccess && !IsFailure;
 
     /// <inheritdoc />
     public bool CanTriggerEscalation { get; }
