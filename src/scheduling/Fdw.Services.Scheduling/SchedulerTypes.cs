@@ -116,6 +116,9 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<ILogger<ScheduleImplementationConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "ScheduleConfiguration"));
 
+            // The fields a fire writes back to its schedule live on this container, so the recorder is the provider that owns it (FDW-4598).
+            builder.Services.TryAddSingleton<IScheduleRunRecorder>(sp => sp.GetRequiredService<ScheduleImplementationConfigurationProvider>());
+
             builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
             {
                 var domain = new ScheduleConfigurationProvider(

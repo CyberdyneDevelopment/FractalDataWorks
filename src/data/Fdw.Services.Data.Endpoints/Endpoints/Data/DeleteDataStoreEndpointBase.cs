@@ -17,10 +17,10 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointBase<DataStoreNameRequest>
     where TConfig : IDataStoreImplementationConfiguration
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected DeleteDataStoreEndpointBase(ILogger<DeleteDataStoreEndpointBase<TConfig>> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    protected DeleteDataStoreEndpointBase(ILogger<DeleteDataStoreEndpointBase<TConfig>> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }
@@ -49,7 +49,7 @@ public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointB
             return GenericResult.Failure(EndpointLogger.ResourceNotFound(Logger, "DataStore", request.Name));
         }
 
-        var deleteResult = await _dataStoreProvider.Delete(config.Id, ct).ConfigureAwait(false);
+        var deleteResult = await _dataStoreProvider.DeleteStore(config.Id, ct).ConfigureAwait(false);
         if (deleteResult.IsFailure)
         {
             return deleteResult;

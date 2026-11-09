@@ -10,7 +10,7 @@ namespace Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 [ExcludeFromCodeCoverage]
 public sealed class CompensatingStateType : ExecutionStateTypeBase
 {
-    private static readonly string[] ValidTransitionsArray = new[] { "Failed", "Cancelled", "Interrupted" };
+    private static readonly string[] ValidTransitionsArray = new[] { "Failed", "Cancelled", "Interrupted", "TimedOut" };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CompensatingStateType"/> class.
@@ -22,6 +22,7 @@ public sealed class CompensatingStateType : ExecutionStateTypeBase
             isTerminal: false,
             isSuccess: false,
             isFailure: false,
+            isExecuting: true,
             canTriggerEscalation: true,
             validTransitions: ValidTransitionsArray)
     {

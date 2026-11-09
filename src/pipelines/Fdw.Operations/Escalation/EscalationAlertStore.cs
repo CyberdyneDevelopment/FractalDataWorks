@@ -40,7 +40,7 @@ internal sealed class EscalationAlertStore : IEscalationAlertStore
     }
 
     // Resolved at the call, not held: the gateway is scoped and this store may outlive the scope it was made in.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private IDataGateway Gateway => _dataGateways.ByName(DataGatewayNames.Main);
 
     private bool StoreIsNamed => !string.IsNullOrWhiteSpace(_dataStoreName);
 

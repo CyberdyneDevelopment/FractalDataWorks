@@ -49,6 +49,13 @@ public interface IChildCascadeDescriptor
     string ChildContainerName { get; }
 
     /// <summary>
+    /// The name of the <c>ChildCascadeModes</c> option the property declares through <c>[ConfigurationChildCascade]</c>
+    /// (FDW-4240): how a save treats a collection that hangs from the owner's durable Id. Empty when it declares none,
+    /// which a collection that hangs from the owner's row does not need.
+    /// </summary>
+    string CascadeModeName { get; }
+
+    /// <summary>
     /// Reads the child collection from the parent instance, or <see langword="null"/> when unset.
     /// </summary>
     /// <param name="parent">The parent POCO instance.</param>

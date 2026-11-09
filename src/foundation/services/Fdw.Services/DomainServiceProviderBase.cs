@@ -128,9 +128,38 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
         return await Create(configuration.Value, identifier, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Whether a member may be built at all: asked once for every member, before a factory is chosen and before
+    /// anything the factory would fetch (FDW-3951).
+    /// </summary>
+    /// <param name="configuration">The member's configuration, already read.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// Success to build the member. A failure is the answer for the member: by name, id or configuration the caller
+    /// receives it, and the list of every member leaves the member out and logs why.
+    /// </returns>
+    /// <remarks>
+    /// This base admits every member. A domain overrides it where a member can be refused by a fact about the member
+    /// rather than by its implementation: the connection domain refuses a disabled connection here.
+    /// </remarks>
+    protected virtual Task<IGenericResult> Admit(TConfiguration configuration, CancellationToken cancellationToken = default)
+        => Task.FromResult(GenericResult.Success());
+
+    // The member is admitted or the caller gets the refusal; then it is built.
+    private async Task<IGenericResult<TService>> Create(
+        TConfiguration configuration,
+        string identifier,
+        CancellationToken cancellationToken)
+    {
+        var admitted = await Admit(configuration, cancellationToken).ConfigureAwait(false);
+        return admitted.IsSuccess
+            ? await Construct(configuration, identifier, cancellationToken).ConfigureAwait(false)
+            : admitted.ToNewResult<TService>();
+    }
+
     // The configuration is already in hand — whether it was just read or handed in by a caller — so
     // this picks the factory the row names and builds. No second read.
-    private async Task<IGenericResult<TService>> Create(
+    private async Task<IGenericResult<TService>> Construct(
         TConfiguration configuration,
         string identifier,
         CancellationToken cancellationToken)
@@ -228,7 +257,16 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
         var services = new List<TService>(configurations.Value.Count);
         foreach (var configuration in configurations.Value)
         {
-            var created = await Create(configuration, configuration.Name, cancellationToken).ConfigureAwait(false);
+            // A member refused for a fact about itself (a disabled connection) is not a failure of the list: it is
+            // left out, and the log says so. A member that is admitted and then fails to build still fails the list.
+            var admitted = await Admit(configuration, cancellationToken).ConfigureAwait(false);
+            if (!admitted.IsSuccess)
+            {
+                ServiceLogger.DomainMemberNotAdmitted(_logger, GetType().Name, configuration.Name, admitted.FailureReason().Message);
+                continue;
+            }
+
+            var created = await Construct(configuration, configuration.Name, cancellationToken).ConfigureAwait(false);
             if (!created.IsSuccess || created.Value is null)
             {
                 ServiceLogger.DomainMemberBuildFailed(_logger, GetType().Name, configuration.Name);

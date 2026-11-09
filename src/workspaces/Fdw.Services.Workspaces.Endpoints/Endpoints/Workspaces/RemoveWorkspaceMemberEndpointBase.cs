@@ -23,13 +23,13 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// <see cref="AddWorkspaceMemberEndpointBase"/> for why.</remarks>
 public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspaceMemberRequest>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly ILogger<RemoveWorkspaceMemberEndpointBase> _logger;
 
     /// <inheritdoc />
     protected RemoveWorkspaceMemberEndpointBase(
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         ILogger<RemoveWorkspaceMemberEndpointBase>? logger = null)
     {
@@ -62,13 +62,13 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
         var workspace = await _workspaces.Get(req.Name, ct).ConfigureAwait(false);
         if (workspace.IsFailure)
         {
-            await SendFailure(500, workspace.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(workspace, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (workspace.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.RemoveWorkspaceMemberWorkspacememberNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -77,9 +77,9 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
         {
             // A workspace the caller may not view answers exactly as a missing one does.
             if (WorkspaceAccessRefusals.Hides(permitted))
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.RemoveWorkspaceMemberNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             else
-                await SendFailure(ResultHttpStatusMapper.Map(permitted, HttpContext).StatusCode, permitted.CurrentMessage, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(permitted, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -90,7 +90,7 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
             var notFound = GenericResult.Failure(
                 WorkspacesResultCodes.ByName("WorkspaceChildNotFound"), _logger,
                 ResultDetails.Create("name", req.Name, "kind", "member", "id", req.MemberId.ToString()));
-            await SendFailure(404, notFound.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(notFound, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -110,7 +110,7 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
             workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
-            await SendFailure(500, saved.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saved, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -122,16 +122,5 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
     {
         var permitted = await _access.MayManageRole(workspace, WorkspaceMemberRoles.ByName(member.MemberRole), ct).ConfigureAwait(false);
         return permitted.IsFailure ? permitted : WorkspaceOwnerMembership.MayRemove(workspace, member, _logger);
-    }
-
-    private async Task SendFailure(int statusCode, string? reason, CancellationToken ct)
-    {
-        await Send.ResultAsync(TypedResults.Json(new Microsoft.AspNetCore.Mvc.ProblemDetails
-        {
-            Status = statusCode,
-            Title = "Member was not removed",
-            Detail = reason,
-            Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
-        }, statusCode: statusCode)).ConfigureAwait(false);
     }
 }

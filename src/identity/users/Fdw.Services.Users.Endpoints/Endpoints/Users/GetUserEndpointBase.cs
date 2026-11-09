@@ -29,7 +29,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResponse>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly ISignInLog _signIns;
 
     /// <summary>
@@ -38,7 +38,7 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="GetUserEndpointBase"/> class.</summary>
-    protected GetUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider, ISignInLog signIns)
+    protected GetUserEndpointBase(ILogger logger, IUserConfigurationProvider userProvider, ISignInLog signIns)
     {
         EndpointLogger = logger;
         _userProvider = userProvider;
@@ -48,7 +48,7 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:read".
@@ -121,11 +121,7 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
         }
 
         // API-62: structured 404 envelope.
-        await Send.ResultAsync(TypedResults.Json(new
-        {
-            errorCode = "NotFound",
-            messages = new[] { $"User '{req.IdOrName}' was not found." }
-        }, statusCode: 404)).ConfigureAwait(false);
+        await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.GetUserUserNotFound(EndpointLogger, req.IdOrName)), HttpContext)).ConfigureAwait(false);
     }
 
     /// <summary>

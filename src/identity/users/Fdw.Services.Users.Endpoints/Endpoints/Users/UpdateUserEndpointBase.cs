@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Results;
 using Fdw.Services.Users;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -15,7 +16,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     where TRequest : UpdateUserRequest
 {
     /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
-        private readonly UserConfigurationProvider _userProvider;
+        private readonly IUserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -23,7 +24,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
-    protected UpdateUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    protected UpdateUserEndpointBase(ILogger logger, IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
         _userProvider = userProvider;
@@ -33,7 +34,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
@@ -63,7 +64,7 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
 
         if (!result.IsSuccess)
         {
-            ThrowError(result.FailureReason().Message, 500);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

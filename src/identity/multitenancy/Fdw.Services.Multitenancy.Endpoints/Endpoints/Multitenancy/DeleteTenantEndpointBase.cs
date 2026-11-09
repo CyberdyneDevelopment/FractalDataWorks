@@ -6,6 +6,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -48,7 +50,7 @@ public abstract class DeleteTenantEndpointBase : Endpoint<TenantKeyRequest>
         if (!_systemRoles.IsPlatformAdmin(User))
         {
             TenantEndpointLog.PlatformAdministratorRequired(EndpointLogger);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.DeleteTenantForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -63,7 +65,7 @@ public abstract class DeleteTenantEndpointBase : Endpoint<TenantKeyRequest>
         if (audited.IsFailure)
         {
             TenantEndpointLog.ChangeNotAudited(EndpointLogger, req.Id, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -166,7 +166,7 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound
         var loaded = await _executor.Run(_pipelineName, units, rows, _parameters, _startedAt, cancellationToken).ConfigureAwait(false);
         if (loaded.IsFailure)
         {
-            return GenericResult.Failure(FlowLog.DestinationLoadFailed(_logger, _name, rows.Count, loaded.CurrentMessage));
+            return FlowFailures.Caused(FlowLog.DestinationLoadFailed(_logger, _name, rows.Count, FlowFailures.ReasonOf(loaded)), loaded);
         }
 
         RowsLoaded += loaded.Value;
@@ -211,7 +211,7 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound
                 .ConfigureAwait(false);
             if (emptied.IsFailure)
             {
-                return GenericResult.Failure(FlowLog.DestinationTruncateFailed(_logger, _name, emptied.CurrentMessage));
+                return FlowFailures.Caused(FlowLog.DestinationTruncateFailed(_logger, _name, FlowFailures.ReasonOf(emptied)), emptied);
             }
 
             _targetEmptied = true;
@@ -223,7 +223,7 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound
             .ConfigureAwait(false);
         if (loaded.IsFailure)
         {
-            return GenericResult.Failure(FlowLog.DestinationLoadFailed(_logger, _name, rows.Count, loaded.CurrentMessage));
+            return FlowFailures.Caused(FlowLog.DestinationLoadFailed(_logger, _name, rows.Count, FlowFailures.ReasonOf(loaded)), loaded);
         }
 
         RowsLoaded += loaded.Value;

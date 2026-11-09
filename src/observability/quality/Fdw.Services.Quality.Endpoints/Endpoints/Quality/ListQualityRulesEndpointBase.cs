@@ -7,6 +7,8 @@ using FastEndpoints;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -49,9 +51,15 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
     {
         var result = await _provider.Get(ct).ConfigureAwait(false);
 
-        if (!result.IsSuccess || result.Value is null)
+        if (result.IsFailure)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to list quality rules", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (result.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

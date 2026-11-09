@@ -5,10 +5,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
-using Fdw.Orchestration.Abstractions;
 using Fdw.Results;
-using Fdw.Services.Data.Abstractions;
-using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
 
 namespace Fdw.Web.RestEndpoints.Base;
@@ -26,11 +23,8 @@ public abstract class CommandEndpointBase<TCommand, TResult> : GenericEndpointBa
     /// Initializes a new instance of the <see cref="CommandEndpointBase{TCommand, TResult}"/> class.
     /// </summary>
     protected CommandEndpointBase(
-        ILogger<GenericEndpointBase<TCommand, TResult>> logger,
-        IDataGatewayProvider dataGateways,
-        IOrchestrationExecutor? executor = null,
-        ISchedulingService? scheduler = null)
-        : base(logger, dataGateways, executor, scheduler)
+        ILogger<GenericEndpointBase<TCommand, TResult>> logger)
+        : base(logger)
     {
     }
 
@@ -139,11 +133,8 @@ public abstract class CommandEndpointBase<TCommand> : CommandEndpointBase<TComma
     /// Initializes a new instance of the <see cref="CommandEndpointBase{TCommand}"/> class.
     /// </summary>
     protected CommandEndpointBase(
-        ILogger<GenericEndpointBase<TCommand, object>> logger,
-        IDataGatewayProvider dataGateways,
-        IOrchestrationExecutor? executor = null,
-        ISchedulingService? scheduler = null)
-        : base(logger, dataGateways, executor, scheduler)
+        ILogger<GenericEndpointBase<TCommand, object>> logger)
+        : base(logger)
     {
     }
 

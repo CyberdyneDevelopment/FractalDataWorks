@@ -10,19 +10,24 @@ namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
 /// Base endpoint for retrieving a specific connection configuration by name. Type-agnostic: a read
-/// through <see cref="ConnectionConfigurationProvider"/> is already dispatched, so what comes back is the
+/// through <see cref="IConnectionConfigurationProvider"/> is already dispatched, so what comes back is the
 /// implementation itself, and <see cref="ConnectionDetailMapper"/> maps it through the connection type's own
 /// <see cref="IConnectionType.EndpointBehavior"/> -- so one GET-by-name endpoint renders every connection
 /// type, including one with no endpoint code of its own, rather than being locked to one provider.
 /// </summary>
 public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<ConnectionNameRequest, ConnectionDetailDto>
 {
-    private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionDisabledStates _states;
 
-    /// <inheritdoc />
-    protected GetConnectionEndpointBase(ILogger<GetConnectionEndpointBase> logger, ConnectionConfigurationProvider configProvider) : base(logger)
+    /// <summary>Initializes a new instance of the <see cref="GetConnectionEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configProvider">Reads the connection.</param>
+    /// <param name="states">Where the disabled state of a connection is kept; read for every connection shown (FDW-4290).</param>
+    protected GetConnectionEndpointBase(ILogger<GetConnectionEndpointBase> logger, IConnectionConfigurationProvider configProvider, IConnectionDisabledStates states) : base(logger)
     {
         _configProvider = configProvider;
+        _states = states ?? throw new ArgumentNullException(nameof(states));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -49,8 +54,13 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
         var detail = ConnectionDetailMapper.Map(ConnectionTypes.ByName(connection.Implementation), connection, Logger);
         if (detail.IsFailure) return detail.ToNewResult<ConnectionDetailDto?>();
 
+        // A state that cannot be read fails the read: a connection is never shown as enabled because its state could not be asked (FDW-4290).
+        var state = await _states.Read(connection.Id, ct).ConfigureAwait(false);
+        if (state.IsFailure) return state.ToNewResult<ConnectionDetailDto?>();
+
         var found = detail.Value!;
         found.SchemaDiscovery = SchemaDiscoveryTypeInfo.Of(connection.SchemaDiscovery);
+        found.Disabled = state.Value is { } disabled ? ConnectionDisabledDto.Of(disabled) : null;
         return GenericResult<ConnectionDetailDto?>.Success(found);
     }
 }

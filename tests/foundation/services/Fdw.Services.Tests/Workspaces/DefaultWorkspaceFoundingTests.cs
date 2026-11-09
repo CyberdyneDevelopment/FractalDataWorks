@@ -28,14 +28,11 @@ public sealed class DefaultWorkspaceFoundingTests
         public IAuthenticationContext? Current { get; set; }
     }
 
-    private static NewDefaultWorkspace Request(bool organizationIsDefault) => new(
+    private static NewDefaultWorkspace Request(string ownerName) => new(
         WorkspaceId: Guid.NewGuid(),
         TenantId: Tenant,
-        TenantSlug: "afc",
+        OwnerName: ownerName,
         OrganizationId: Guid.NewGuid(),
-        OrganizationName: "Finance",
-        OrganizationSlug: "finance",
-        OrganizationIsDefault: organizationIsDefault,
         OwnerUserId: Guid.NewGuid());
 
     private sealed class Fixture
@@ -80,17 +77,18 @@ public sealed class DefaultWorkspaceFoundingTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Workspaces")]
-    public async Task TheDefaultOrganizationsWorkspaceIsNamedForTheTenantAndMadeWithTheIdTheOrganizationNames()
+    public async Task TheWorkspaceIsNamedForItsOwnerExactlyAndMadeWithTheIdTheOrganizationNames()
     {
         var fixture = Holding();
-        var request = Request(organizationIsDefault: true);
+        var request = Request("AFC");
 
         var made = await fixture.Founding.Found(request, TestContext.Current.CancellationToken);
 
         made.IsSuccess.ShouldBeTrue();
         made.Value.ShouldBe(request.WorkspaceId);
         fixture.Saved!.Id.ShouldBe(request.WorkspaceId);
-        fixture.Saved.Name.ShouldBe("afc-default");
+        fixture.Saved.Name.ShouldBe("AFC");
+        fixture.Saved.DisplayName.ShouldBe("AFC");
         fixture.Saved.OrganizationId.ShouldBe(request.OrganizationId);
         fixture.Saved.OwnerUserId.ShouldBe(request.OwnerUserId);
     }
@@ -98,14 +96,16 @@ public sealed class DefaultWorkspaceFoundingTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Workspaces")]
-    public async Task AnotherOrganizationsWorkspaceCarriesItsSlugAndEveryLifecycleValueIsStated()
+    public async Task NoTextOfTheWorkspaceSaysDefaultOrWorkspaceAndEveryLifecycleValueIsStated()
     {
         var fixture = Holding();
 
-        var made = await fixture.Founding.Found(Request(organizationIsDefault: false), TestContext.Current.CancellationToken);
+        var made = await fixture.Founding.Found(Request("Finance"), TestContext.Current.CancellationToken);
 
         made.IsSuccess.ShouldBeTrue();
-        fixture.Saved!.Name.ShouldBe("afc-finance-default");
+        fixture.Saved!.Name.ShouldBe("Finance");
+        new[] { fixture.Saved.Name, fixture.Saved.DisplayName, fixture.Saved.Description, fixture.Saved.Purpose }
+            .ShouldAllBe(text => !text!.Contains("default", StringComparison.OrdinalIgnoreCase) && !text.Contains("workspace", StringComparison.OrdinalIgnoreCase));
         fixture.Saved.Status.ShouldBe("Active");
         fixture.Saved.Visibility.ShouldBe("Private");
         fixture.Saved.JoinPolicy.ShouldBe("Closed");
@@ -121,7 +121,7 @@ public sealed class DefaultWorkspaceFoundingTests
         var fixture = Holding();
         var caller = fixture.Authentication.Current;
 
-        await fixture.Founding.Found(Request(organizationIsDefault: true), TestContext.Current.CancellationToken);
+        await fixture.Founding.Found(Request("AFC"), TestContext.Current.CancellationToken);
 
         fixture.TenantWhenSaved.ShouldBe(Tenant);
         fixture.Authentication.Current.ShouldBeSameAs(caller);
@@ -134,7 +134,7 @@ public sealed class DefaultWorkspaceFoundingTests
     {
         var fixture = Holding(saves: false);
 
-        var made = await fixture.Founding.Found(Request(organizationIsDefault: true), TestContext.Current.CancellationToken);
+        var made = await fixture.Founding.Found(Request("AFC"), TestContext.Current.CancellationToken);
 
         made.IsFailure.ShouldBeTrue();
         fixture.Permissions.Verify(p => p.Create(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -147,7 +147,7 @@ public sealed class DefaultWorkspaceFoundingTests
     {
         var fixture = Holding(permits: false);
 
-        var made = await fixture.Founding.Found(Request(organizationIsDefault: true), TestContext.Current.CancellationToken);
+        var made = await fixture.Founding.Found(Request("AFC"), TestContext.Current.CancellationToken);
 
         made.IsFailure.ShouldBeTrue();
         fixture.Workspaces.Verify(w => w.Delete(fixture.Saved!.Id, It.IsAny<CancellationToken>()), Times.Once);
@@ -159,7 +159,7 @@ public sealed class DefaultWorkspaceFoundingTests
     public async Task RemovingTheWorkspaceRemovesItsPermissionsAndItself()
     {
         var fixture = Holding();
-        var request = Request(organizationIsDefault: true);
+        var request = Request("AFC");
 
         var removed = await fixture.Founding.Remove(request, TestContext.Current.CancellationToken);
 

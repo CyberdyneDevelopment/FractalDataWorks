@@ -1,4 +1,5 @@
 using System;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -74,16 +75,23 @@ public abstract class DecideExecutionEndpointBase : Endpoint<ExecutionStateReque
         if (string.IsNullOrWhiteSpace(actor))
         {
             OnCallerUnknown(req.Id, Decision);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DecideExecutionNotSignedIn(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         OnDeciding(req.Id, Decision, actor);
         var found = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);
-        if (!found.IsSuccess || found.Value is null)
+        if (found.IsFailure)
         {
             OnExecutionNotFound(req.Id);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(found, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (found.Value is null)
+        {
+            OnExecutionNotFound(req.Id);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DecideExecutionExecutionNotFound(EndpointLogger, req.Id)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -91,7 +99,7 @@ public abstract class DecideExecutionEndpointBase : Endpoint<ExecutionStateReque
         if (!string.Equals(execution.State.Name, ExecutionStateTypes.AwaitingApproval.Name, StringComparison.Ordinal))
         {
             OnNotAwaitingApproval(req.Id, execution.State.Name);
-            ThrowError($"Execution is '{execution.State.Name}', not AwaitingApproval, so it cannot be {Decision}d", 409);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DecideExecutionNotAwaitingApproval(EndpointLogger, req.Id, execution.State.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -100,7 +108,7 @@ public abstract class DecideExecutionEndpointBase : Endpoint<ExecutionStateReque
         {
             // The run was waiting a moment ago; the only way the move is refused is that someone decided it first.
             OnDecisionRefused(req.Id, moved.CurrentMessage);
-            ThrowError("The execution was decided by someone else first", 409);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.DecideExecutionDecidedByAnother(EndpointLogger, req.Id)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -109,7 +117,7 @@ public abstract class DecideExecutionEndpointBase : Endpoint<ExecutionStateReque
         {
             OnReleaseFailed(req.Id, released.CurrentMessage);
             await ReturnToWaiting(req.Id, actor, ct).ConfigureAwait(false);
-            await Send.ResultAsync(TypedResults.Json(new { Error = $"The execution could not be {Decision}d", Details = released.CurrentMessage }, statusCode: 503)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(released, HttpContext)).ConfigureAwait(false);
             return;
         }
 

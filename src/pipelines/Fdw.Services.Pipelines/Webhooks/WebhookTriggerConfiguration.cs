@@ -54,9 +54,11 @@ public sealed partial class WebhookTriggerConfiguration : IWebhookTriggerImpleme
     public Guid? TenantId { get; set; }
 
     /// <summary>Gets or sets the roles a run started through the trigger acts with.</summary>
+    [ConfigurationChildCascade(typeof(AuthoritativeChildCascade))]
     public IList<WebhookTriggerRunRoleConfiguration> RunRoles { get; set; } = [];
 
     /// <summary>Gets or sets the mappings from the call's body to the pipeline's parameters, in the order they were written.</summary>
+    [ConfigurationChildCascade(typeof(AuthoritativeChildCascade))]
     public IList<WebhookTriggerParameterMapConfiguration> ParameterMaps { get; set; } = [];
 
     /// <summary>Gets the names of the roles a run acts with.</summary>

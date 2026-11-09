@@ -5,9 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Thresholds;
 using Fdw.Services.Etl.Execution;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -25,23 +27,25 @@ namespace Fdw.Services.Etl.Thresholds;
 /// <para>
 /// A run that names no tenant, or a schedule that is not one of the schedules read, cannot be asked about, so it is not taken and the reason is logged. Nothing is assumed.
 /// </para>
+/// <para>
+/// Why it opens a scope for each check (FDW-4611): this is a singleton, and the threshold source and the evaluator are scoped (the evaluator hands the scope's services to the
+/// consequence handlers). A singleton that took them would keep the one it was built with for the life of the process. The check runs in the flow of whoever triggered the run,
+/// whose ambient tenant is that caller's; the run's thresholds are the run's tenant's, so the scope works under the run's own tenant, as the stored requests of the runs do.
+/// </para>
 /// </remarks>
 public sealed class WaitHoldGate
 {
     private const string HoldNewRuns = "HoldNewRuns";
 
-    private readonly IThresholdSource _source;
-    private readonly IThresholdEvaluator _evaluator;
+    private readonly IServiceScopeFactory _scopes;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="WaitHoldGate"/> class.</summary>
-    /// <param name="source">Reads the thresholds attached to a subject.</param>
-    /// <param name="evaluator">Says which rules of the thresholds hold.</param>
+    /// <param name="scopes">Opens the scope each check resolves the threshold source and the evaluator in.</param>
     /// <param name="logger">The logger.</param>
-    public WaitHoldGate(IThresholdSource source, IThresholdEvaluator evaluator, ILogger<WaitHoldGate>? logger = null)
+    public WaitHoldGate(IServiceScopeFactory scopes, ILogger<WaitHoldGate>? logger = null)
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
+        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
         _logger = logger ?? NullLogger<WaitHoldGate>.Instance;
     }
 
@@ -73,7 +77,13 @@ public sealed class WaitHoldGate
             return asked.ToNewResult<PipelineRunStopCheck>();
         }
 
-        var attached = await _source.For(subject.Subject, cancellationToken).ConfigureAwait(false);
+        // The scope and the tenant live for the rest of the check: the source reads under the run's tenant and the evaluator's handlers are this scope's.
+        using var scope = _scopes.CreateScope();
+        using var tenant = new SystemAuthenticationContextScope(scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>(), tenantId);
+        var source = scope.ServiceProvider.GetRequiredService<IThresholdSource>();
+        var evaluator = scope.ServiceProvider.GetRequiredService<IThresholdEvaluator>();
+
+        var attached = await source.For(subject.Subject, cancellationToken).ConfigureAwait(false);
         if (attached.IsFailure)
         {
             return attached.ToNewResult<PipelineRunStopCheck>();
@@ -87,7 +97,7 @@ public sealed class WaitHoldGate
         }
 
         var values = new Dictionary<string, object?>(StringComparer.Ordinal) { [PipelineWaitsThresholdType.WaitingRuns] = subject.Waiting };
-        var held = _evaluator.Holds(subject.Subject, attached.Value, values, HoldNewRuns);
+        var held = evaluator.Holds(subject.Subject, attached.Value, values, HoldNewRuns);
         if (held.Count == 0)
         {
             return GenericResult<PipelineRunStopCheck>.Success(PipelineRunStopCheck.Open);

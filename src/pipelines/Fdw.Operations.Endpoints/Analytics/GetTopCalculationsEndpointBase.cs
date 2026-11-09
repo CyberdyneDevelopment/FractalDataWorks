@@ -7,6 +7,8 @@ using Fdw.Web.Analytics.Clients.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Analytics;
 
@@ -55,7 +57,7 @@ public abstract class GetTopCalculationsEndpointBase : Endpoint<TopCalculationsR
 
             if (!result.IsSuccess)
             {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

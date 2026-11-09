@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -66,7 +68,7 @@ public abstract class GetMessageEndpointBase : Endpoint<MessageIdRequest, Messag
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.MessageFetchFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.GetMessageNotFound(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -80,7 +82,7 @@ public abstract class GetMessageEndpointBase : Endpoint<MessageIdRequest, Messag
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "get-message");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.GetMessageFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

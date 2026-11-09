@@ -147,11 +147,27 @@ public static partial class DataSetProviderLog
     [MessageLogging(EventId = 11088, Level = LogLevel.Trace, Message = "Entering DataSetProvider.ResolveContainerForSource for SourceId '{sourceId}'")]
     public static partial IGenericMessage TraceResolveContainerForSourceEntry(ILogger logger, Guid sourceId);
 
-    /// <summary>Logs when cfg DataSet loading fails — database-backed DataSets will be missing.</summary>
-    [MessageLogging(EventId = 71019, Level = LogLevel.Warning, Message = "Failed to load cfg DataSets from database: {reason}")]
+    /// <summary>Logs when cfg DataSet loading fails. The read is returned as a failure, not as an empty list (FDW-3630).</summary>
+    [MessageLogging(EventId = 71019, Level = LogLevel.Error, Message = "Failed to load cfg DataSets from database: {reason}",
+        ClientMessage = "The data sets could not be read from the configuration store")]
     public static partial IGenericMessage CfgDataSetLoadFailed(ILogger logger, string reason);
 
     /// <summary>Logs when a field lookup by name fails on a built dataset.</summary>
     [MessageLogging(EventId = 31015, Level = LogLevel.Warning, Message = "[DataSet] Field '{fieldName}' not found in dataset '{datasetName}'")]
     public static partial IGenericMessage FieldNotFoundInDataSet(ILogger logger, string fieldName, string datasetName);
+
+    /// <summary>Logs a data set provider that was built with no configuration source, so it cannot list the data sets (FDW-3630). The number is in the Configuration category (6).</summary>
+    [MessageLogging(EventId = 60360, Level = LogLevel.Error, Message = "The data set provider has no configuration provider, so it cannot list the data sets",
+        ClientMessage = "The data set provider has no configuration source, so it cannot list the data sets")]
+    public static partial IGenericMessage ConfigurationProviderMissing(ILogger logger);
+
+    /// <summary>Logs a read of one data set by name that failed. The failure is returned with this message; DataSetNotFound is only for a read that succeeded and found nothing (FDW-3630).</summary>
+    [MessageLogging(EventId = 71134, Level = LogLevel.Error, Message = "The data set '{dataSetName}' could not be read from the configuration store: {reason}",
+        ClientMessage = "The data set '{dataSetName}' could not be read from the configuration store")]
+    public static partial IGenericMessage DataSetReadFailed(ILogger logger, string dataSetName, string reason);
+
+    /// <summary>Logs a read of one data set by id that failed. The failure is returned with this message; DataSetNotFound is only for a read that succeeded and found nothing (FDW-3630).</summary>
+    [MessageLogging(EventId = 71135, Level = LogLevel.Error, Message = "The data set {dataSetId} could not be read from the configuration store: {reason}",
+        ClientMessage = "The data set {dataSetId} could not be read from the configuration store")]
+    public static partial IGenericMessage DataSetReadByIdFailed(ILogger logger, Guid dataSetId, string reason);
 }

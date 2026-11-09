@@ -31,7 +31,7 @@ public abstract class SaveOrganizationHomePageDraftEndpointBase : Endpoint<SaveO
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/organizations/{OrganizationId}/home-page/draft");
+        Post("/organizations/{OrganizationId}/home-page/draft");
         ConfigureEndpoint();
     }
 

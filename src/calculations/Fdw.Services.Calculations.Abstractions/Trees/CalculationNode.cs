@@ -108,7 +108,7 @@ public sealed class CalculationNode
     /// <summary>Creates a Round node.</summary>
     /// <param name="operand">The value to round.</param>
     /// <param name="places">The decimal places.</param>
-    /// <param name="mode">The midpoint rounding mode, a <see cref="System.MidpointRounding"/> name.</param>
+    /// <param name="mode">The midpoint rounding mode: the name of an option of <c>RoundingModes</c>.</param>
     /// <returns>The node.</returns>
     public static CalculationNode Rounded(CalculationNode operand, int places, string mode) =>
         new("Round", null, null, null, places, mode, new[] { operand });

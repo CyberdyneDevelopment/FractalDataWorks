@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,7 +40,12 @@ public sealed class SingleTenantMultitenancyType : MultitenancyTypeBase<ISingleT
             RegisterAlwaysOnContexts(builder.Services);
 
             builder.Services.AddScoped<ITenantProvider, NullTenantProvider>();
-            builder.Services.TryAddSingleton<IOrganizationProvider>(_ => NullOrganizationProvider.Instance);
+            // A real read, not the null provider (FDW-4573): this host resolves no tenant per request, but a pipeline is made in an organization, and the check that the
+            // organization exists, belongs to a tenant and is active has to find it. The SQL multitenancy type registers its own provider for hosts that resolve tenants.
+            builder.Services.TryAddSingleton<IOrganizationProvider>(sp => new ConfiguredOrganizationProvider(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                MultitenancyTypes.ConfigurationConnection, "tenant", "Organization",
+                sp.GetService<ILogger<ConfiguredOrganizationProvider>>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

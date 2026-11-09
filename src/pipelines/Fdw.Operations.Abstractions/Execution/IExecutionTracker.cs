@@ -173,4 +173,23 @@ public interface IExecutionTracker
         string? correlationId = null,
         Guid? rootId = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the latest run of each of a set of pipelines, read as the caller (FDW-4350).
+    /// </summary>
+    /// <remarks>
+    /// The number of requests does not grow with the number of pipelines: the names are read in pieces of the chunk size the Operations option declares
+    /// (<c>OperationsServiceTypes.LatestRunsChunkSize</c>), a fixed number of requests per piece. A run is the latest of its pipeline by the time its
+    /// run row was written, not by when it started, since a run that is queued has not started. Child runs count as runs of their own pipelines.
+    /// A tenant-scoped caller sees only the runs of its tenant; a caller that reaches every tenant sees the newest run of a name across them.
+    /// </remarks>
+    /// <param name="pipelineNames">The names of the pipelines; a blank name is refused.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// The latest run of each pipeline that has one the caller may see, by pipeline name. A pipeline that has no run, or none the caller may see, is
+    /// absent from the answer: that is "none", not a failure.
+    /// </returns>
+    Task<IGenericResult<IReadOnlyDictionary<string, IExecutionItem>>> GetLatestRuns(
+        IReadOnlyCollection<string> pipelineNames,
+        CancellationToken cancellationToken = default);
 }

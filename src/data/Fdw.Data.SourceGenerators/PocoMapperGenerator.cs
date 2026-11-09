@@ -59,20 +59,29 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
             return null;
 
-        // Read the Direction property from [GenerateMapper(Direction = ...)].
-        // Default is 0 (MapperDirection.Input) when the property is absent, which preserves
-        // backward compat for all existing [GenerateMapper] sites.
+        // Read the Direction property from [GenerateMapper(Direction = typeof(...))]: the option type of the runtime
+        // MapperDirections collection (Fdw.Data.Abstractions), which this generator cannot reference, so it reads the
+        // type by its full name. Input is what a [GenerateMapper] with no Direction means, which preserves backward
+        // compat for all existing sites. A type that names none of the three directions is not read as Input: it is
+        // kept in UnknownDirection and GenerateMapper refuses it (FDW050).
         var direction = MapperDirection.Input;
+        string? unknownDirection = null;
         if (context.Attributes.Length > 0)
         {
             var attr = context.Attributes[0];
             foreach (var namedArg in attr.NamedArguments)
             {
-                if (string.Equals(namedArg.Key, "Direction", System.StringComparison.Ordinal) &&
-                    namedArg.Value.Value is int directionValue)
-                {
-                    direction = (MapperDirection)directionValue;
-                }
+                if (!string.Equals(namedArg.Key, "Direction", System.StringComparison.Ordinal))
+                    continue;
+
+                var named = namedArg.Value.Value is INamedTypeSymbol directionType
+                    && DirectionOptions.TryGetValue(directionType.ToDisplayString(), out var option)
+                        ? option
+                        : (MapperDirection?)null;
+                if (named is { } known)
+                    direction = known;
+                else
+                    unknownDirection = namedArg.Value.Value?.ToString() ?? string.Empty;
             }
         }
 
@@ -119,7 +128,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                     if (hasPublicSetter)
                         children.Add(new ChildInfo(ChildKind.PropertyCollection, p.Name,
                             p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                            null, null, kvpValueNullable, ChildTableAttributeValue(p)));
+                            null, null, kvpValueNullable, ChildTableAttributeValue(p), ChildCascadeModeName(p)));
                     continue;
                 }
 
@@ -134,7 +143,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             elem.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                             elem.Name,
                             false,
-                            null));
+                            null,
+                            ChildCascadeModeName(p)));
                     }
                     // Collections never become scalar columns (cannot bind as SQL parameters).
                     continue;
@@ -169,8 +179,18 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             properties,
             children.ToImmutableArray(),
             typedBodyTypeFqn,
-            direction);
+            direction,
+            unknownDirection);
     }
+
+    // The option types of the runtime MapperDirections collection, by full name, and the direction each stands for.
+    private static readonly System.Collections.Generic.Dictionary<string, MapperDirection> DirectionOptions =
+        new(System.StringComparer.Ordinal)
+        {
+            ["Fdw.Data.InputMapperDirection"] = MapperDirection.Input,
+            ["Fdw.Data.OutputMapperDirection"] = MapperDirection.Output,
+            ["Fdw.Data.BothMapperDirection"] = MapperDirection.Both,
+        };
 
 #pragma warning disable FDW017
     private enum MapperDirection
@@ -189,6 +209,12 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
 
     private static void GenerateMapper(SourceProductionContext context, TypeInfo typeInfo)
     {
+        if (typeInfo.UnknownDirection is { } unknownDirection)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(DirectionNotKnown, Location.None, typeInfo.Name, unknownDirection));
+            return;
+        }
+
         foreach (var child in typeInfo.Children)
         {
             if (child.Kind == ChildKind.PropertyCollection && child.ChildContainerName is null)
@@ -455,6 +481,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             public string ChildTypeName => "";
                             public bool IsPropertyCollection => true;
                             public string ChildContainerName => "{{c.ChildContainerName}}";
+                            public string CascadeModeName => "{{c.CascadeModeName}}";
                             public global::System.Collections.IEnumerable? GetCollection(object parent) => null;
                             public void SetCollection(object parent, object? collection) { }
                             public void FillDictionary(object parent, global::System.Collections.Generic.IDictionary<string, string?> values)
@@ -487,6 +514,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                         public string ChildTypeName => "{{c.ElementShortName}}";
                         public bool IsPropertyCollection => false;
                         public string ChildContainerName => "";
+                        public string CascadeModeName => "{{c.CascadeModeName}}";
                         public global::System.Collections.IEnumerable? GetCollection(object parent) => (({{parentFqn}})parent).{{c.BoundPropertyName}} as global::System.Collections.IEnumerable;
                         public void SetCollection(object parent, object? collection) => (({{parentFqn}})parent).{{c.BoundPropertyName}} = ({{c.PropertyTypeFqn}})collection!;
                         public void FillDictionary(object parent, global::System.Collections.Generic.IDictionary<string, string?> values) { }
@@ -698,7 +726,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         ImmutableArray<PropertyInfo> Properties,
         ImmutableArray<ChildInfo> Children,
         string? TypedBodyTypeFqn,
-        MapperDirection Direction);
+        MapperDirection Direction,
+        string? UnknownDirection);
 
     private readonly record struct PropertyInfo(
         string Name,
@@ -716,11 +745,39 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         string? ElementFqn,
         string? ElementShortName,
         bool KvpValueNullable,
-        string? ChildContainerName);
+        string? ChildContainerName,
+        string? CascadeModeName);
 
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
     private const string NotStoredAttributeFullName = "Fdw.Data.NotStoredAttribute";
+    private const string ChildCascadeAttributeFullName = "Fdw.Data.ConfigurationChildCascadeAttribute";
+
+    // The option types of the runtime ChildCascadeModes collection, by full name, and the mode name each stands for.
+    private static readonly System.Collections.Generic.Dictionary<string, string> ChildCascadeModeOptions =
+        new(System.StringComparer.Ordinal)
+        {
+            ["Fdw.Data.AuthoritativeChildCascade"] = "Authoritative",
+            ["Fdw.Data.UpsertOnlyChildCascade"] = "UpsertOnly",
+        };
+
+    // The cascade mode a child collection's [ConfigurationChildCascade] names, or null when it declares none. An option type
+    // the collection does not know is kept by its full name, so the runtime lookup by name finds nothing and refuses it.
+    private static string? ChildCascadeModeName(IPropertySymbol prop)
+    {
+        foreach (var attr in prop.GetAttributes())
+        {
+            if (attr.AttributeClass is null)
+                continue;
+            if (!string.Equals(attr.AttributeClass.ToDisplayString(), ChildCascadeAttributeFullName, System.StringComparison.Ordinal))
+                continue;
+            if (attr.ConstructorArguments.Length == 0 || attr.ConstructorArguments[0].Value is not ITypeSymbol modeType)
+                continue;
+            var full = modeType.ToDisplayString();
+            return ChildCascadeModeOptions.TryGetValue(full, out var name) ? name : full;
+        }
+        return null;
+    }
 
     private static bool HasAttribute(IPropertySymbol prop, string fullName)
         => prop.GetAttributes().Any(attr => attr.AttributeClass is not null
@@ -746,6 +803,14 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         }
         return null;
     }
+
+    private static readonly DiagnosticDescriptor DirectionNotKnown = new(
+        id: "FDW050",
+        title: "Mapper direction names no option of MapperDirections",
+        messageFormat: "'{0}' has [GenerateMapper(Direction = ...)] naming '{1}', which is not InputMapperDirection, OutputMapperDirection or BothMapperDirection; no mapper is generated",
+        category: "Configuration",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor ChildTableNotDeclared = new(
         id: "FDW049",

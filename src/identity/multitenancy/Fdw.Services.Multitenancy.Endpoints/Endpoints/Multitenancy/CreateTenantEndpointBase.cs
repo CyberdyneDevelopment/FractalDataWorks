@@ -10,6 +10,8 @@ using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Services;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -65,26 +67,25 @@ public abstract class CreateTenantEndpointBase : Endpoint<CreateTenantRequest, T
         if (!_systemRoles.IsPlatformAdmin(User))
         {
             TenantEndpointLog.PlatformAdministratorRequired(EndpointLogger);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.CreateTenantForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (await FindAdministrator(req.FirstAdministrator, ct).ConfigureAwait(false) is not { } administratorId)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.CreateTenantFirstAdministratorNotFound(EndpointLogger, req.FirstAdministrator)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         // Whether people can switch into the tenant is the caller's choice; there is no default (FDW-3823).
         if (req.IsSelectable is not { } isSelectable)
         {
-            AddError("IsSelectable is required");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.CreateTenantIsselectableIsRequired(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var founded = await _founding
-            .Found(new NewTenant(req.Name, req.Slug, req.OrgPrefix, req.ConnectionName, isSelectable, req.OrganizationName, req.OrganizationSlug), administratorId, req.AdministratorRole, ct)
+            .Found(new NewTenant(req.Name, req.Slug, req.OrgPrefix, req.ConnectionName, isSelectable, req.OrganizationSlug), administratorId, req.AdministratorRole, ct)
             .ConfigureAwait(false);
         if (founded.IsFailure)
         {
@@ -113,7 +114,7 @@ public abstract class CreateTenantEndpointBase : Endpoint<CreateTenantRequest, T
         if (audited.IsFailure)
         {
             TenantEndpointLog.ChangeNotAudited(EndpointLogger, tenantId, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -5,7 +5,7 @@ using Fdw.Services.Etl.Abstractions.Thresholds;
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
-/// <c>PUT /etl/wait-thresholds/...</c>: states the level of thresholds on waiting runs an owner states (FDW-3161), its mode and its thresholds together. A level that cannot be
+/// <c>PATCH /etl/wait-thresholds/...</c>: states the level of thresholds on waiting runs an owner states (FDW-3161), its mode and its thresholds together. A level that cannot be
 /// (see <c>WaitThresholdValidator</c>), or that names a notification rule or a pipeline that does not exist, is a 400 naming the member; a pipeline or schedule that does not exist
 /// is a 404. Needs <c>pipelines:write</c>.
 /// </summary>
@@ -20,7 +20,7 @@ public abstract class PutWaitThresholdLevelEndpointBase : WaitThresholdLevelEndp
     /// <inheritdoc/>
     public override void Configure()
     {
-        Put(RoutePath);
+        Patch(RoutePath);
         Policies("pipelines:write");
         Summary(s =>
         {

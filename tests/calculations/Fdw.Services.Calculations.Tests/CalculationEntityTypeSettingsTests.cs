@@ -61,7 +61,7 @@ public class CalculationEntityTypeSettingsTests
     [Fact]
     public void WindowedReadsTheValuesOfItsDeclaredSettingsFromAConfiguration()
     {
-        var configuration = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum", OutputFieldName = "unread" };
+        var configuration = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var values = new WindowedCalculationEntityType().SettingValues(configuration);
 

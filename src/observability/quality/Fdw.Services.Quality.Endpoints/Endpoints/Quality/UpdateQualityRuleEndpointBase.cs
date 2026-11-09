@@ -4,6 +4,8 @@ using FastEndpoints;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -40,13 +42,13 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
         var existing = await _provider.Get(req.Id, ct).ConfigureAwait(false);
         if (!existing.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to load quality rule", Details = existing.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(existing, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (existing.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(QualityAnswerLog.UpdateQualityRuleQualityruleNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -59,7 +61,7 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
         var result = await _provider.Update(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to update quality rule", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

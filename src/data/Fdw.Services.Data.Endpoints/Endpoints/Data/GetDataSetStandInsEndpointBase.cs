@@ -63,7 +63,7 @@ public abstract class GetDataSetStandInsEndpointBase : Endpoint<DataSetNameReque
         if (fields.Value is null)
         {
             StandInEndpointLog.DataSetNotFoundForStandIns(_logger, req.Name);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(StandInEndpointLog.GetDataSetStandInsDatasetstandinsNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -214,3 +214,144 @@ dotnet_naming_symbols.async_methods.required_modifiers = async
 
 dotnet_naming_style.async_suffix.required_suffix = Async
 dotnet_naming_style.async_suffix.capitalization = pascal_case
+
+# ===============================================
+# PROVIDER RULE (FDW-4618, analyzers FDW-4641)
+# ===============================================
+# Each diagnostic ships disabled. It is on for every file here, then off again per domain folder below
+# until that folder's domain story (FDW-4619..4638) merges: the story deletes its folder's line.
+[*.cs]
+# FDW060: an endpoint constructor takes only its domain's provider interface, a logger and the cross-cutting types.
+dotnet_diagnostic.FDW060.severity = error
+# FDW061: no runtime service locator outside a hosted worker, a registration body, an sp => lambda or [ServiceLocatorAllowed("reason")].
+dotnet_diagnostic.FDW061.severity = error
+# FDW062: no BuildServiceProvider, no edit of another component's registration, no AddXxx extension (DI ownership rule).
+dotnet_diagnostic.FDW062.severity = error
+# The cross-cutting types endpoints may take until Mike rules on them (FDW-4618, "Needs a ruling from Mike").
+# Full type names, comma-separated. Remove one to refuse it; mark a type [EndpointCrossCutting] to allow it instead.
+fdw_endpoint_cross_cutting_types = Fdw.Operations.Abstractions.Audit.IAdministrativeAudit, Fdw.Services.Workspaces.IWorkspaceAccessPolicy, Fdw.Services.Authentication.Abstractions.Security.ISystemRoleConfiguration, Fdw.Services.Authorization.Abstractions.IScopeAuthority, Fdw.Services.Multitenancy.Abstractions.ITenantContext, Fdw.Services.Multitenancy.Abstractions.IFeatureEnablement, Fdw.Services.Authentication.Abstractions.Security.IFrameworkAuthorizationService, Microsoft.AspNetCore.Authorization.IAuthorizationService
+
+[src/ai/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/calculations/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/catalog/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/commands/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/configuration/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/connections/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/data/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/datasets/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/documents/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/endpoints/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/foundation/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/hosts/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/identity/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/notifications/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/observability/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/pipelines/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/rowsources/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/scheduling/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/schema/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/secrets/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/tags/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/tooling/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/transformations/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/ui/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none
+
+[src/workspaces/**.cs]
+dotnet_diagnostic.FDW060.severity = none
+dotnet_diagnostic.FDW061.severity = none
+dotnet_diagnostic.FDW062.severity = none

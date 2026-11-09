@@ -22,13 +22,13 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// <see cref="AttachWorkspaceResourceEndpointBase"/> for why.</remarks>
 public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorkspaceResourceRequest>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly ILogger<DetachWorkspaceResourceEndpointBase> _logger;
 
     /// <inheritdoc />
     protected DetachWorkspaceResourceEndpointBase(
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         ILogger<DetachWorkspaceResourceEndpointBase>? logger = null)
     {
@@ -60,13 +60,13 @@ public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorks
         var workspace = await _workspaces.Get(req.Name, ct).ConfigureAwait(false);
         if (workspace.IsFailure)
         {
-            await SendFailure(500, workspace.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(workspace, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (workspace.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.DetachWorkspaceResourceDetachworkspaceresourceNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,9 +75,9 @@ public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorks
         {
             // A workspace the caller may not view answers exactly as a missing one does.
             if (WorkspaceAccessRefusals.Hides(permitted))
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(WorkspacesAnswerLog.DetachWorkspaceResourceNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             else
-                await SendFailure(ResultHttpStatusMapper.Map(permitted, HttpContext).StatusCode, permitted.CurrentMessage, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(permitted, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -88,7 +88,7 @@ public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorks
             var notFound = GenericResult.Failure(
                 WorkspacesResultCodes.ByName("WorkspaceChildNotFound"), _logger,
                 ResultDetails.Create("name", req.Name, "kind", "resource", "id", req.ResourceAttachmentId.ToString()));
-            await SendFailure(404, notFound.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(notFound, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -99,21 +99,10 @@ public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorks
             workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
-            await SendFailure(500, saved.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saved, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         await Send.NoContentAsync(ct).ConfigureAwait(false);
-    }
-
-    private async Task SendFailure(int statusCode, string? reason, CancellationToken ct)
-    {
-        await Send.ResultAsync(TypedResults.Json(new Microsoft.AspNetCore.Mvc.ProblemDetails
-        {
-            Status = statusCode,
-            Title = "Resource was not detached",
-            Detail = reason,
-            Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
-        }, statusCode: statusCode)).ConfigureAwait(false);
     }
 }

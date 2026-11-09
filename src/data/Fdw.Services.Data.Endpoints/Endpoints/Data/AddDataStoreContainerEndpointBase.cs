@@ -20,10 +20,10 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase<AddDataStoreContainerRequest, DataStoreContainerResponse>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected AddDataStoreContainerEndpointBase(ILogger<AddDataStoreContainerEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    protected AddDataStoreContainerEndpointBase(ILogger<AddDataStoreContainerEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }
@@ -44,7 +44,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
     protected override Task<IGenericResult<bool>> CheckExists(AddDataStoreContainerRequest request, CancellationToken ct)
         => Task.FromResult(GenericResult<bool>.Success(false));
 
-    /// <summary>Delegates persistence to DataStoreConfigurationProvider.AddContainer, which enforces
+    /// <summary>Delegates persistence to IDataStoreConfigurationProvider.AddContainer, which enforces
     /// store-exists, path-exists, and no-duplicate-name invariants before writing.</summary>
     protected override async Task<IGenericResult<DataStoreContainerResponse>> Create(AddDataStoreContainerRequest request, CancellationToken ct)
     {
@@ -115,7 +115,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
         path.Containers.Add(container);
 
         var addResult = await _dataStoreProvider
-            .Update(store, store.Domain, store.Implementation, store.Name, ct)
+            .UpdateStore(store, ct)
             .ConfigureAwait(false);
         if (addResult.IsFailure)
             return addResult.ToNewResult<DataStoreContainerResponse>();

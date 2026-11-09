@@ -16,7 +16,7 @@ public sealed class CommandEndpointBase : EndpointTypeBase
     public CommandEndpointBase() : base(
         name: "CommandEndpointBase",
         description: "State-changing business operations and actions",
-        defaultHttpMethods: ["POST", "PUT", "PATCH"],
+        defaultHttpMethods: ["POST", "PATCH"],
         requiresAuthentication: true,
         cachingStrategy: "NoCache",
         isReadOnly: false,

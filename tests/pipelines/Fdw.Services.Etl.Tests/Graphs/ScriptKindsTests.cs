@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs;
@@ -182,6 +183,35 @@ public sealed class ScriptKindsTests
         said.ShouldContain("connection 'Main'");
         said.ShouldContain("5 seconds");
         said.ShouldNotContain("SQL query timeout");
+    }
+
+    // FDW-4197: the step's failure keeps the gateway's coded message first, so the run is classified by what the connection said and not by the step's own event.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AnExecuteSqlStepThatTimedOutIsClassifiedByTheConnectionsCodeAndSaysTheSameSentence()
+    {
+        var fake = new ScriptingGateway([], fails: true, failure: TimedOut());
+        var step = new FlowExecuteSql("purge", fake.Gateway, "Warehouse", "WAITFOR DELAY '00:00:40'", [], null);
+
+        var ran = await step.Run(GraphTestKit.StepContext(new FlowVariables(), new FlowRunTally(new FlowExecutor())), TestContext.Current.CancellationToken);
+
+        ran.FirstFailureMessage().ShouldNotBeNull().Message.Code.ShouldBe("MSSQL-81010");
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("connection 'Main'");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AScriptSourceThatTimedOutIsClassifiedByTheConnectionsCodeWhenTheRunFails()
+    {
+        var fake = new ScriptingGateway([], fails: true, failure: TimedOut());
+        var (sink, _) = Sink("dst");
+        var graph = Graph([new FlowScriptSource("src", fake.Gateway, "Warehouse", "WAITFOR DELAY '00:00:40'; SELECT 1", [], 3, 2), sink], [Link("src", "dst")]);
+
+        var result = await new FlowExecutor().Run(graph, Options(), TestContext.Current.CancellationToken);
+
+        result.FirstFailureMessage().ShouldNotBeNull().Message.Code.ShouldBe("MSSQL-81010");
     }
 
     [Fact]

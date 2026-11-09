@@ -128,6 +128,19 @@ public interface IDomainConfigurationProvider<TImplementationConfiguration>
     /// </remarks>
     Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> Get(int levels, CancellationToken ct = default);
 
+    /// <summary>Gets every configured member of this domain composed to a depth, flat: not hung into trees (FDW-4449).</summary>
+    /// <param name="levels">
+    /// How many levels of child collections to read under each member; see <see cref="ConfigurationLevels"/>.
+    /// </param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>Every member, flat, or a structured failure.</returns>
+    /// <remarks>
+    /// For a caller that needs every member of a tree domain and rebuilds the tree it needs from the parent link in memory: it reads
+    /// the domain in a fixed number of statements, where <see cref="Get(int, CancellationToken)"/> grows with the number of members.
+    /// On the interface (FDW-4638) so a caller holds the domain's provider interface, never its concrete class.
+    /// </remarks>
+    Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> GetFlat(int levels, CancellationToken ct = default);
+
     /// <summary>Gets a configured member by name, composed to a depth.</summary>
     /// <param name="name">The member's name.</param>
     /// <param name="levels">
@@ -137,6 +150,18 @@ public interface IDomainConfigurationProvider<TImplementationConfiguration>
     /// <param name="ct">A token to cancel the operation.</param>
     /// <returns>The implementation configured for that member, or a structured failure.</returns>
     Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, CancellationToken ct = default);
+
+    /// <summary>Gets a configured member by name, composed to a depth, reading only the child rows <paramref name="narrowing"/> allows (FDW-4328).</summary>
+    /// <param name="name">The member's name.</param>
+    /// <param name="levels">How many levels of child collections to read; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="narrowing">Which rows of one kind of child collection to read. The collections it narrows hold those rows only, which is not the same as none.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The implementation configured for that member, or a structured failure.</returns>
+    /// <remarks>
+    /// For a caller that needs a few of a member's many children, such as two containers of a datastore of 500. A narrowed member is not the
+    /// member: it is never written back and never kept as the member.
+    /// </remarks>
+    Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default);
 
     /// <summary>Gets a configured member by the domain row's durable id, composed to a depth.</summary>
     /// <param name="id">The member's durable id.</param>

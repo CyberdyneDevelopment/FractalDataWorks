@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.Sqlite;
 
@@ -12,7 +14,7 @@ namespace Fdw.Data.Sqlite;
 /// <remarks>
 /// <see cref="SqliteDialect"/> is a stateless singleton — always use <see cref="Instance"/>.
 /// </remarks>
-public sealed class SqliteDialect : ISqlDialect
+public sealed class SqliteDialect : ISqlDialect, IKeyListSpillDialect
 {
     /// <summary>
     /// Gets the singleton instance of <see cref="SqliteDialect"/>.
@@ -40,6 +42,16 @@ public sealed class SqliteDialect : ISqlDialect
 
     /// <inheritdoc/>
     public string ParameterPrefix => "@";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// One JSON parameter and no table to make or drop: <c>json_each</c> reads the list as a set of values, and SQLite builds its own index for an IN subquery.
+    /// </remarks>
+    public KeyListSpillForm KeyListSpill(string uniqueId, string sourceTable, string columnName, string jsonParameter)
+        => new(string.Empty, $"SELECT value FROM json_each({jsonParameter})", string.Empty);
+
+    /// <inheritdoc/>
+    public string KeyListJson(string columnName, IReadOnlyList<object?> values) => KeyListJsonWriter.Scalars(values);
 
     /// <inheritdoc/>
     public char LikeEscapeCharacter => '!';

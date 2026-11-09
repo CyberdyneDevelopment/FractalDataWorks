@@ -24,7 +24,7 @@ public abstract class LinkTagEndpointBase : Endpoint<TagLinkRequest>
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/tags/{Name}/things/{Kind}/{ThingId}");
+        Post("/tags/{Name}/things/{Kind}/{ThingId}");
         Policies("tags:write");
         Summary(s => s.Summary = "Put a tag on a thing");
         Description(x => x.WithTags("tags"));

@@ -21,7 +21,11 @@ public sealed partial class DataGatewayService
     /// </remarks>
     public async Task<IGenericResult<T>> Execute<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken = default)
     {
-        if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
+        var hostDeclared = await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (hostDeclared.IsFailure)
+            return hostDeclared.ToNewResult<T>();
+
+        if (hostDeclared.Value)
         {
             var gateway = HostStoreGateway(target.DataStore, target.Container);
             if (gateway.IsFailure || gateway.Value is not { } hostGateway)
@@ -37,14 +41,14 @@ public sealed partial class DataGatewayService
     // command is refused, naming the store.
     private async Task<IGenericResult<T>> ExecuteVectorized<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken)
     {
-        var resolved = await ResolveTargetConnection(target, cancellationToken).ConfigureAwait(false);
+        var resolved = await ResolveTargetConnection(command, target, cancellationToken).ConfigureAwait(false);
         if (!resolved.IsSuccess)
             return resolved.ToNewResult<T>();
 
-        var (container, connection) = resolved.Value;
+        var (container, connection, connectionId) = resolved.Value;
         if (connection is not IVectorizedDataConnection vectorized)
             return GenericResult<T>.Failure(DataGatewayLogger.VectorizedNotSupported(_logger, target.DataStore, command.CommandType));
 
-        return await RunOnContainer(command, target, ct => vectorized.Execute(command, container, ct), cancellationToken).ConfigureAwait(false);
+        return await RunOnContainer(command, target, connectionId, ct => vectorized.Execute(command, container, ct), cancellationToken).ConfigureAwait(false);
     }
 }

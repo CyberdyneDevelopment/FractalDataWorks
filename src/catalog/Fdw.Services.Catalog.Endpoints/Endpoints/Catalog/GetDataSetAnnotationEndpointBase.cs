@@ -10,6 +10,7 @@ using Fdw.Services.Catalog.Clients.Models;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Tags;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -54,13 +55,13 @@ public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotat
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to get annotation", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (result.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.GetDataSetAnnotationDatasetannotationNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

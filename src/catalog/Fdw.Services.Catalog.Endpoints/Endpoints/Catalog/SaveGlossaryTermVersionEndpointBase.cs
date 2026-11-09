@@ -5,6 +5,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Quality;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -40,7 +42,7 @@ public abstract class SaveGlossaryTermVersionEndpointBase : Endpoint<SaveGlossar
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
     {
-        Put("/catalog/glossary/{Id}/versions/{PlaceKind}/{PlaceId}");
+        Post("/catalog/glossary/{Id}/versions/{PlaceKind}/{PlaceId}");
         Policies(WritePolicy);
         Summary(s => s.Summary = "Save a version of a glossary term at an organization or workspace");
     }
@@ -50,7 +52,7 @@ public abstract class SaveGlossaryTermVersionEndpointBase : Endpoint<SaveGlossar
     {
         if (_authContext.Current is not { IsAuthenticated: true, ActiveTenantId: { } tenantId })
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.SaveGlossaryTermVersionNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

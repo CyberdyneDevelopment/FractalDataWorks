@@ -5,11 +5,12 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for switching a feature on or off for a tenant: <c>PUT /tenants/{TenantId}/features/{Feature}</c> (FDW-1580).
+/// Generic base endpoint for switching a feature on or off for a tenant: <c>PATCH /tenants/{TenantId}/features/{Feature}</c> (FDW-1580).
 /// Who may is decided by the feature service (FDW-2478); the switch is recorded in the administrative audit at the platform level.
 /// </summary>
 public abstract class SetTenantFeatureEndpointBase : Endpoint<SetTenantFeatureRequest, FeatureResponse>
@@ -31,7 +32,7 @@ public abstract class SetTenantFeatureEndpointBase : Endpoint<SetTenantFeatureRe
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/tenants/{TenantId}/features/{Feature}");
+        Patch("/tenants/{TenantId}/features/{Feature}");
         ConfigureEndpoint();
     }
 
@@ -53,7 +54,7 @@ public abstract class SetTenantFeatureEndpointBase : Endpoint<SetTenantFeatureRe
         if (audited.IsFailure)
         {
             FeatureEndpointLog.SwitchNotAudited(EndpointLogger, set.Value.Name, itemId, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

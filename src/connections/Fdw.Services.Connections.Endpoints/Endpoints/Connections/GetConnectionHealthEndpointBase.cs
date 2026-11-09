@@ -9,23 +9,24 @@ using Fdw.Services.Connections.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
 /// Base endpoint for retrieving connection health check history by connection name.
-/// Resolves the connection via <see cref="ConnectionConfigurationProvider"/>, then delegates
+/// Resolves the connection via <see cref="IConnectionConfigurationProvider"/>, then delegates
 /// to <see cref="IConnectionHealthService"/> for the persisted history.
 /// </summary>
 public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameRequest, List<ConnectionHealthCheckDto>>
 {
-    private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionConfigurationProvider _configProvider;
     private readonly IConnectionHealthService _healthService;
     private readonly ILogger<GetConnectionHealthEndpointBase> _logger;
 
     /// <inheritdoc />
     protected GetConnectionHealthEndpointBase(
-        ConnectionConfigurationProvider configProvider,
+        IConnectionConfigurationProvider configProvider,
         IConnectionHealthService healthService,
         ILogger<GetConnectionHealthEndpointBase> logger)
     {
@@ -55,10 +56,16 @@ public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameR
     {
         var configResult = await _configProvider.Get(req.Name, ct).ConfigureAwait(false);
 
-        if (!configResult.IsSuccess || configResult.Value is null)
+        if (configResult.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(configResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (configResult.Value is null)
         {
             ConnectionEndpointLog.HealthHistoryConnectionNotFound(_logger, req.Name);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConnectionEndpointLog.GetConnectionHealthConnectionhealthNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -68,7 +75,7 @@ public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameR
         if (!result.IsSuccess)
         {
             ConnectionEndpointLog.HealthHistoryLoadFailed(_logger, req.Name, result.FailureReason().Message);
-            await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

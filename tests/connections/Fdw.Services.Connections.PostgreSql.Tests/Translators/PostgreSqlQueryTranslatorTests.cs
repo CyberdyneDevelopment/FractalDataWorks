@@ -6,6 +6,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Connections.Sql;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -374,12 +375,40 @@ public sealed class PostgreSqlQueryTranslatorTests
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
         queryCommand.Setup(q => q.Paging).Returns((IPagingExpression?)null);
 
-        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = await _sut.Translate(queryCommand.Object, container.Object, new TranslationSettings(50), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         // PG always-false predicate is FALSE, not "1 = 0"
         result.Value!.CommandText.ShouldContain("WHERE FALSE");
         result.Value.CommandText.ShouldNotContain("1 = 0");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public async Task AKeyListTranslatedWithoutTheConnectionsScopeFailsAsAnyTranslationThatThrows()
+    {
+        var container = CreateContainer();
+        var filter = new FilterExpression
+        {
+            Root = new FilterCondition
+            {
+                PropertyName = "id",
+                Operator = new InOperator(),
+                Value = new[] { 1, 2, 3 }
+            }
+        };
+
+        var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Filter).Returns(filter);
+        queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
+        queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
+        queryCommand.Setup(q => q.Paging).Returns((IPagingExpression?)null);
+
+        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+
+        // A connection never translates this way (it binds its setting to its translators); a direct call stops at the scope, and the translator reports a failed translation.
+        result.IsFailure.ShouldBeTrue();
     }
 
     [Fact]
@@ -404,7 +433,8 @@ public sealed class PostgreSqlQueryTranslatorTests
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
         queryCommand.Setup(q => q.Paging).Returns((IPagingExpression?)null);
 
-        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+        // The connection translates a key list with its setting (FDW-4267); this list is within it.
+        var result = await _sut.Translate(queryCommand.Object, container.Object, new TranslationSettings(50), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("\"id\" IN (@p0_0, @p0_1, @p0_2)");

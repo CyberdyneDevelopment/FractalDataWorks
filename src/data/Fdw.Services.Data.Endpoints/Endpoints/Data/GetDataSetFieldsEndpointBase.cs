@@ -19,11 +19,11 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSetNameRequest, List<DataSetFieldPayload>>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly IDataSetResolver _resolver;
 
     /// <inheritdoc />
-    protected GetDataSetFieldsEndpointBase(ILogger<GetDataSetFieldsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, IDataSetResolver resolver) : base(logger)
+    protected GetDataSetFieldsEndpointBase(ILogger<GetDataSetFieldsEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider, IDataSetResolver resolver) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));

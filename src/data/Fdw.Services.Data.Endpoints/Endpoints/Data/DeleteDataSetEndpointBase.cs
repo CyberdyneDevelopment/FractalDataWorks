@@ -15,17 +15,17 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for deleting a data set configuration.
-/// Delegates all reads and deletes to DataSetConfigurationProvider.
+/// Delegates all reads and deletes to IDataSetConfigurationProvider.
 /// </summary>
 public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSetNameRequest>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly IDataSetVariationConfigurationProvider _variations;
 
     /// <inheritdoc />
     protected DeleteDataSetEndpointBase(
         ILogger<DeleteDataSetEndpointBase> logger,
-        DataSetConfigurationProvider dataSetProvider,
+        IDataSetConfigurationProvider dataSetProvider,
         IDataSetVariationConfigurationProvider variations) : base(logger)
     {
         _dataSetProvider = dataSetProvider;

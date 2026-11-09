@@ -71,14 +71,14 @@ public sealed class EscalationAlerts : IEscalationAlerts
         if (history.Value.FirstOrDefault(row => !string.Equals(row.State, EscalationAlertStates.Resolved, StringComparison.Ordinal)) is { } open)
         {
             EscalationAlertLog.AlertAlreadyOpen(_logger, request.ThresholdName, request.SubjectKind, request.SubjectName, open.Id);
-            return GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcome.AlreadyOpen, Of(open)));
+            return GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcomes.AlreadyOpen, Of(open)));
         }
 
         var now = _clock.GetUtcNow();
         if (!EscalationTimeline.CooldownPassed(policy.Value, history.Value.Select(row => row.ResolvedAt).Max(), now))
         {
             EscalationAlertLog.AlertCoolingDown(_logger, request.ThresholdName, request.SubjectKind, request.SubjectName, request.PolicyName);
-            return GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcome.CoolingDown, null));
+            return GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcomes.CoolingDown, null));
         }
 
         return await Fire(request, now, cancellationToken).ConfigureAwait(false);
@@ -205,7 +205,7 @@ public sealed class EscalationAlerts : IEscalationAlerts
         }
 
         EscalationAlertLog.AlertOpened(_logger, row.Id, request.ThresholdName, request.SubjectKind, request.SubjectName, request.PolicyName);
-        return GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcome.Opened, Of(row)));
+        return GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcomes.Opened, Of(row)));
     }
 
     private async Task<IGenericResult<IEscalationPolicy>> PolicyNamed(string name, CancellationToken cancellationToken)

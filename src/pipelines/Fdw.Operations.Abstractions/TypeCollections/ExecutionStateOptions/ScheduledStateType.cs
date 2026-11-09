@@ -22,6 +22,7 @@ public sealed class ScheduledStateType : ExecutionStateTypeBase
             isTerminal: false,
             isSuccess: false,
             isFailure: false,
+            isExecuting: false,
             canTriggerEscalation: false,
             validTransitions: ValidTransitionsArray)
     {

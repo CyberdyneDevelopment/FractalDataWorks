@@ -17,11 +17,11 @@ public static partial class ScriptedRowsLog
 
     // Why Error: a column named twice cannot be a row keyed by name, and keeping one would lose a value silently.
     /// <summary>A script's result names a column twice.</summary>
-    [MessageLogging(EventId = 11411, Level = LogLevel.Error, Message = "The script's result has the column '{column}' more than once; give one of them another name with AS")]
+    [MessageLogging(EventId = 20001, Level = LogLevel.Error, Message = "The script's result has the column '{column}' more than once; give one of them another name with AS", ClientMessage = "The script's result has the column '{column}' more than once; give one of them another name with AS")]
     public static partial IGenericMessage ColumnRepeated(ILogger logger, string column);
 
     // Why Error: the script selected more than it was allowed to read, and the read stops rather than keep part of it.
     /// <summary>A script selected more rows than it may read.</summary>
-    [MessageLogging(EventId = 11412, Level = LogLevel.Error, Message = "The script selects more than the {take} row(s) it may read")]
+    [MessageLogging(EventId = 20002, Level = LogLevel.Error, Message = "The script selects more than the {take} row(s) it may read", ClientMessage = "The script selects more than the {take} row(s) it may read")]
     public static partial IGenericMessage TooManyRows(ILogger logger, int take);
 }

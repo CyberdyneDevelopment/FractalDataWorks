@@ -16,7 +16,7 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 
 /// <summary>
 /// Base endpoint for updating an existing secret manager configuration.
-/// Route: PUT /secret-managers/{Name}
+/// Route: PATCH /secret-managers/{Name}
 /// </summary>
 public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretManagerRequest, SecretManagerDetailResponse>
 {

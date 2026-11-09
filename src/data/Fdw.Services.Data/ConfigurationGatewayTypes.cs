@@ -48,6 +48,18 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
     public static string SchemaFileName { get; set; } = "configurationSchema.json";
 
     /// <summary>
+    /// The most keys one statement carries when configuration rows are read by the keys of the rows above them (FDW-4254), and so the
+    /// size of the chunks a larger set is read in. Every reader takes it from <see cref="IConfigurationGatewayProvider.KeyChunkSize"/>.
+    /// </summary>
+    /// <remarks>
+    /// This is where the default is declared, and a host changes it at registration, before <c>Register</c> runs; a value below one is
+    /// refused there. It is a tuning number: a larger one makes fewer statements for a set of rows, a smaller one carries fewer
+    /// parameters in each. It is the number the readers used before it was a setting.
+    /// </remarks>
+    public static int KeyChunkSize { get; set; } = 1000;
+
+
+    /// <summary>
     /// The connection an endpoint's bare, unnamed <see cref="IConfigurationGateway"/> resolves
     /// through: the one the host declared as <c>ConnectionRoles.Platform</c>.
     /// </summary>
@@ -73,6 +85,16 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
 
         Registration((builder, loggerFactory) =>
         {
+            // A chunk of no keys reads nothing: refused here, where a host sets it, and not found later as a read that never ends.
+            if (KeyChunkSize < 1)
+            {
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    ConfigurationGatewayProviderLog.KeyChunkSizeInvalid(
+                        loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
+                            ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance,
+                        KeyChunkSize));
+            }
+
             var schema = ConfigurationSchemaLoader.Load(SchemaFileName);
             builder.Services.TryAddSingleton(schema);
 

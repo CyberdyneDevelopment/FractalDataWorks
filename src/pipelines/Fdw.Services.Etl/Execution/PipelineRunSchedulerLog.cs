@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Execution;
 /// MessageLogging for the pipeline run scheduler (FDW-3085, FDW-1511): runs that wait for their turn, a run handing its place back
 /// while it waits for a pipeline it started, a limit setting that is missing, and a pipeline that states how many of its runs may run at once
 /// (FDW-3117), and a run held until a set time (FDW-3129).
-/// EventId range: 20988-20993, 22110-22115.
+/// EventId range: 20988-20993, 22110-22115, 22137.
 /// </summary>
 [MessageLoggingTypeCode("PIPELINERUN")]
 public static partial class PipelineRunSchedulerLog
@@ -60,4 +60,8 @@ public static partial class PipelineRunSchedulerLog
     /// <summary>Logs a trigger dropped because the host already holds as many triggers as its setting allows.</summary>
     [MessageLogging(EventId = 22114, Level = LogLevel.Warning, Message = "The ETL host already holds {capacity} pipeline triggers, the number the setting '{settingName}' gives, so the trigger of pipeline '{pipelineName}' is dropped")]
     public static partial IGenericMessage TriggerDropped(ILogger logger, int capacity, string settingName, string pipelineName);
+
+    /// <summary>Logs a trigger the full queue refused whose stored request could not be removed, so it was not answered as taken or as plainly full (FDW-4277).</summary>
+    [MessageLogging(EventId = 22137, Level = LogLevel.Error, Message = "The trigger of pipeline '{pipelineName}' was refused because the queue is full, but its stored request could not be removed ({reason}), so the run could start at the next host start")]
+    public static partial IGenericMessage RefusedRequestNotForgotten(ILogger logger, string pipelineName, string? reason);
 }

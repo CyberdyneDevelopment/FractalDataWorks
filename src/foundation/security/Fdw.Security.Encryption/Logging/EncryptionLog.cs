@@ -37,24 +37,27 @@ internal static partial class EncryptionLog
     /// <summary>The named secret manager could not be resolved.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="secretManagerName">The secret manager that was requested.</param>
-    [MessageLogging(EventId = 7002, Level = LogLevel.Error,
-        Message = "Secret manager '{secretManagerName}' could not be resolved")]
+    [MessageLogging(EventId = 60001, Level = LogLevel.Error,
+        Message = "Secret manager '{secretManagerName}' could not be resolved",
+        ClientMessage = "Secret manager could not be resolved")]
     internal static partial IGenericMessage SecretManagerUnresolved(
         ILogger<AesGcmEncryptionCommandExecutor> logger, string secretManagerName);
 
     /// <summary>The named key could not be read from its secret manager.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="keyName">The key that was requested.</param>
-    [MessageLogging(EventId = 7003, Level = LogLevel.Error,
-        Message = "Key '{keyName}' could not be read from its secret manager")]
+    [MessageLogging(EventId = 90002, Level = LogLevel.Error,
+        Message = "Key '{keyName}' could not be read from its secret manager",
+        ClientMessage = "Key could not be read from its secret manager")]
     internal static partial IGenericMessage KeyUnreadable(
         ILogger<AesGcmEncryptionCommandExecutor> logger, string keyName);
 
     /// <summary>The resolved key material is not a valid AES-256 key.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="keyName">The key that was requested.</param>
-    [MessageLogging(EventId = 7004, Level = LogLevel.Critical,
-        Message = "Key '{keyName}' is not valid base64-encoded 256-bit key material")]
+    [MessageLogging(EventId = 60003, Level = LogLevel.Critical,
+        Message = "Key '{keyName}' is not valid base64-encoded 256-bit key material",
+        ClientMessage = "Key is not valid base64-encoded 256-bit key material")]
     internal static partial IGenericMessage KeyMalformed(
         ILogger<AesGcmEncryptionCommandExecutor> logger, string keyName);
 
@@ -62,8 +65,9 @@ internal static partial class EncryptionLog
     /// <param name="logger">The logger.</param>
     /// <param name="ex">The decoding exception. Its message never carries the input, so no key material is logged.</param>
     /// <param name="keyName">The key that was requested.</param>
-    [MessageLogging(EventId = 7009, Level = LogLevel.Critical,
-        Message = "Key '{keyName}' is not base64 and cannot be used as key material")]
+    [MessageLogging(EventId = 60002, Level = LogLevel.Critical,
+        Message = "Key '{keyName}' is not base64 and cannot be used as key material",
+        ClientMessage = "Key is not base64 and cannot be used as key material")]
     internal static partial IGenericMessage KeyNotBase64(
         ILogger<AesGcmEncryptionCommandExecutor> logger, Exception ex, string keyName);
 
@@ -71,15 +75,17 @@ internal static partial class EncryptionLog
     /// <param name="logger">The logger.</param>
     /// <param name="ex">The underlying cryptographic exception.</param>
     /// <param name="keyName">The key that was used.</param>
-    [MessageLogging(EventId = 7005, Level = LogLevel.Error,
-        Message = "Decryption with key '{keyName}' failed integrity verification")]
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error,
+        Message = "Decryption with key '{keyName}' failed integrity verification",
+        ClientMessage = "Decryption with key failed integrity verification")]
     internal static partial IGenericMessage DecryptionFailed(
         ILogger<AesGcmEncryptionCommandExecutor> logger, Exception ex, string keyName);
 
     /// <summary>Ciphertext was too short to contain a nonce and tag.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 7006, Level = LogLevel.Error,
-        Message = "Ciphertext is too short to contain a nonce and authentication tag")]
+    [MessageLogging(EventId = 20002, Level = LogLevel.Error,
+        Message = "Ciphertext is too short to contain a nonce and authentication tag",
+        ClientMessage = "Ciphertext is too short to contain a nonce and authentication tag")]
     internal static partial IGenericMessage CiphertextTooShort(
         ILogger<AesGcmEncryptionCommandExecutor> logger);
 
@@ -104,8 +110,9 @@ internal static partial class EncryptionLog
     /// <summary>A required input to an encrypt or decrypt was null or empty.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="member">The command or member that was missing.</param>
-    [MessageLogging(EventId = 7010, Level = LogLevel.Error,
-        Message = "'{member}' is required to encrypt or decrypt and was null or empty")]
+    [MessageLogging(EventId = 20001, Level = LogLevel.Error,
+        Message = "'{member}' is required to encrypt or decrypt and was null or empty",
+        ClientMessage = "'{member}' is required to encrypt or decrypt and was null or empty")]
     internal static partial IGenericMessage RequiredValueMissing(
         ILogger<AesGcmEncryptionCommandExecutor> logger, string member);
 }

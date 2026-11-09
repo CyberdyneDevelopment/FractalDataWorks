@@ -34,14 +34,14 @@ namespace Fdw.Schema.Endpoints;
 /// </remarks>
 public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<SaveSourceMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SaveSourceMappingsEndpointBase"/> class.
     /// </summary>
     protected SaveSourceMappingsEndpointBase(
-        DataSetConfigurationProvider dataSetProvider,
+        IDataSetConfigurationProvider dataSetProvider,
         ILogger<SaveSourceMappingsEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
@@ -73,10 +73,16 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
 
         // Resolve the DataSet and its SourceIds via the provider (AssembleHierarchy runs on Get(name)).
         var dsResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
-        if (dsResult.IsFailure || dsResult.Value is null)
+        if (dsResult.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(dsResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (dsResult.Value is null)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet", req.Name);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaAnswerLog.SaveSourceMappingsSourcemappingsNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -86,7 +92,7 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
         if (source is null)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet source", req.SourceName);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaAnswerLog.SaveSourceMappingsNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

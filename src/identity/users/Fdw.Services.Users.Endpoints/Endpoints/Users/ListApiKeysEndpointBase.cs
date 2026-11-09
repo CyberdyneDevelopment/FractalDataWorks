@@ -8,6 +8,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Users.Clients.Models;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -16,7 +18,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </summary>
 public abstract class ListApiKeysEndpointBase : Endpoint<UserScopedRequest, List<ApiKeyState>>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IPersonalAccessTokenService _tokenService;
     private readonly IAgentKeyService _agentKeyService;
     private readonly ILogger _logger;
@@ -24,7 +26,7 @@ public abstract class ListApiKeysEndpointBase : Endpoint<UserScopedRequest, List
     /// <summary>Initializes a new instance of the <see cref="ListApiKeysEndpointBase"/> class.</summary>
     protected ListApiKeysEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IPersonalAccessTokenService tokenService,
         IAgentKeyService agentKeyService)
     {
@@ -64,9 +66,15 @@ public abstract class ListApiKeysEndpointBase : Endpoint<UserScopedRequest, List
         var userResult = await UserRouteTarget
             .Resolve(_userProvider, User, req.IdOrName, ct).ConfigureAwait(false);
 
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ListApiKeysUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,7 +83,7 @@ public abstract class ListApiKeysEndpointBase : Endpoint<UserScopedRequest, List
         if (!AccountAuthority.ManagesKeys(User, user, Resolve<ISystemRoleConfiguration>()))
         {
             UserEndpointLog.ApiKeyOperationNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ListApiKeysForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

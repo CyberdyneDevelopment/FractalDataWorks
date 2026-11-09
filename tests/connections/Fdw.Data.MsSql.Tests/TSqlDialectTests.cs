@@ -1,4 +1,6 @@
+using System;
 using Fdw.Data.MsSql;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.MsSql.Tests;
 
@@ -9,6 +11,29 @@ namespace Fdw.Data.MsSql.Tests;
 public sealed class TSqlDialectTests
 {
     private readonly TSqlDialect _sut = TSqlDialect.Instance;
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public void AKeyListGoesToATemporaryTableTypedLikeTheFilteredColumn()
+    {
+        var form = ((IKeyListSpillDialect)_sut).KeyListSpill("abc123", "[dbo].[Orders]", "Id", "@kl0");
+
+        form.Before.ShouldContain("SELECT TOP 0 ISNULL([Id], [Id]) AS [Value] INTO #fdw_k_abc123 FROM [dbo].[Orders]");
+        form.Before.ShouldContain("OPENJSON(@kl0)");
+        form.Subquery.ShouldBe("SELECT [Value] FROM #fdw_k_abc123");
+        form.After.ShouldContain("DROP TABLE #fdw_k_abc123");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public void AKeyListTravelsAsAJsonArrayOfScalars()
+    {
+        var id = Guid.Parse("11111111-2222-3333-4444-555555555555");
+
+        ((IKeyListSpillDialect)_sut).KeyListJson("Id", [1, "a", id]).ShouldBe("[1,\"a\",\"11111111-2222-3333-4444-555555555555\"]");
+    }
 
     [Fact]
     [Trait("Priority", "P0")]

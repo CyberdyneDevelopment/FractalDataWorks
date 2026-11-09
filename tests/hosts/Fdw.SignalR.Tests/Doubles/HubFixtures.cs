@@ -1,3 +1,4 @@
+using Fdw.Claims.Abstractions;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,9 +39,9 @@ public static class HubFixtures
     public static ClaimsPrincipal UserWithName(string name)
         => new(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, name) }, authenticationType: "test"));
 
-    /// <summary>Builds an authenticated principal carrying an <c>org_id</c> claim of <paramref name="orgId"/>.</summary>
+    /// <summary>Builds an authenticated principal carrying an <c>orgId</c> claim of <paramref name="orgId"/>.</summary>
     public static ClaimsPrincipal UserWithOrg(string orgId)
-        => new(new ClaimsIdentity(new[] { new Claim("org_id", orgId) }, authenticationType: "test"));
+        => new(new ClaimsIdentity(new[] { new Claim(ClaimDefinitions.orgId.Name, orgId) }, authenticationType: "test"));
 
     /// <summary>Builds an unauthenticated principal whose <c>Identity.Name</c> is <see langword="null"/>.</summary>
     public static ClaimsPrincipal Anonymous()

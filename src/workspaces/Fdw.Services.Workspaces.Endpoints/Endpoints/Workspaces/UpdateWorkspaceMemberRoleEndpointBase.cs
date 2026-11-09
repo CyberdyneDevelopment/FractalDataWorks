@@ -26,7 +26,7 @@ namespace Fdw.Services.Workspaces.Endpoints;
 public abstract class UpdateWorkspaceMemberRoleEndpointBase
     : CrudUpdateEndpointBase<UpdateWorkspaceMemberRoleRequest, WorkspaceMemberDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
 
     // Set by FindForUpdate, read by Update -- both run within the same request via
@@ -37,7 +37,7 @@ public abstract class UpdateWorkspaceMemberRoleEndpointBase
     /// <inheritdoc />
     protected UpdateWorkspaceMemberRoleEndpointBase(
         ILogger<UpdateWorkspaceMemberRoleEndpointBase> logger,
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access) : base(logger)
     {
         _workspaces = workspaces;

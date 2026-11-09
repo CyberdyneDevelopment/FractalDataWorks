@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -14,7 +15,7 @@ public static class PipelineDraft
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns><see langword="true"/> when the name is taken.</returns>
     public static async Task<bool> NameTaken(
-        PipelineServiceConfigurationProvider provider, string name, CancellationToken cancellationToken = default)
+        IPipelineConfigurationProvider provider, string name, CancellationToken cancellationToken = default)
     {
         var existing = await provider.Get(name, cancellationToken).ConfigureAwait(false);
         return existing.IsSuccess && existing.Value != null;

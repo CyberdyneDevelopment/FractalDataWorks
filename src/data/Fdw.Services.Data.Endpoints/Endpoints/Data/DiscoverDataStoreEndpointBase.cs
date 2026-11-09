@@ -38,7 +38,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStoreRequest, DiscoveryResultPayload>
 {
-    private readonly DataStoreConfigurationProvider _dataStores;
+    private readonly IDataStoreConfigurationProvider _dataStores;
     private readonly ISchemaInformationService _schema;
     private readonly ILogger _logger;
 
@@ -47,7 +47,7 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
     /// <param name="schema">Discovers through the store's connection and adds what the store lacks.</param>
     /// <param name="logger">The logger.</param>
     protected DiscoverDataStoreEndpointBase(
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         ISchemaInformationService schema,
         ILogger logger)
     {
@@ -112,6 +112,13 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
             return options.ToNewResult<DiscoveryResultPayload>();
         }
 
+        // Refused before the source is opened: the save below asks the same question, after the work is done (FDW-4459).
+        var permitted = await _dataStores.PermitWrite(found.Id, ct).ConfigureAwait(false);
+        if (permitted.IsFailure)
+        {
+            return permitted.ToNewResult<DiscoveryResultPayload>();
+        }
+
         var imported = await _schema.DiscoverInto(found, options.Value!, request.Refresh, ct).ConfigureAwait(false);
         if (imported.IsFailure || imported.Value is not { } result)
         {
@@ -119,7 +126,7 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
         }
 
         // Saved even when nothing was added: the discovery itself is recorded (LastDiscoveredAt).
-        var saved = await _dataStores.Update(found, found.Domain, found.Implementation, found.Name, ct).ConfigureAwait(false);
+        var saved = await _dataStores.UpdateStore(found, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<DiscoveryResultPayload>();

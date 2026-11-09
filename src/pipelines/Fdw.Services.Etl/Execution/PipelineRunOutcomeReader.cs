@@ -17,12 +17,13 @@ namespace Fdw.Services.Etl.Execution;
 
 /// <summary>
 /// Reads how a pipeline's runs ended, newest first, for the failure rule (FDW-3864). A run that succeeded ends the count; a failed run counts unless the kind of its failure
-/// (the <c>run.failed</c> event of FDW-3862) says it is transient; a failed run that recorded no kind (one from before the kind was recorded) counts as unclassified and is logged; a run that is still running, was cancelled or was interrupted is passed over.
+/// (the <c>run.failed</c> event of FDW-3862) says it is transient; a failed run that recorded no kind (one from before the kind was recorded) counts as unclassified and is logged; a run that is still running, was cancelled or was interrupted is passed over; a run that timed out is read as such, and whether it counts is the threshold's to say (FDW-4278).
 /// </summary>
 public static class PipelineRunOutcomeReader
 {
     private const string SucceededStatus = "Succeeded";
     private const string FailedStatus = "Failed";
+    private const string TimedOutStatus = "TimedOut";
 
     private static DataStoreTarget Target(string connection) => new(connection, "etl", "PipelineExecution");
 
@@ -68,7 +69,8 @@ public static class PipelineRunOutcomeReader
         foreach (var row in read.Value)
         {
             if (Convert.ToString(row["Status"], CultureInfo.InvariantCulture) is not { } status
-                || (!string.Equals(status, SucceededStatus, StringComparison.Ordinal) && !string.Equals(status, FailedStatus, StringComparison.Ordinal)))
+                || (!string.Equals(status, SucceededStatus, StringComparison.Ordinal) && !string.Equals(status, FailedStatus, StringComparison.Ordinal)
+                    && !string.Equals(status, TimedOutStatus, StringComparison.Ordinal)))
             {
                 continue;
             }
@@ -97,7 +99,13 @@ public static class PipelineRunOutcomeReader
         var at = ToOffset(completed);
         if (string.Equals(status, SucceededStatus, StringComparison.Ordinal))
         {
-            return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, true, false, null, null));
+            return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, true, false, null, null, null));
+        }
+
+        // A run that passed its time limit has no run.failed event (it did not fail): it is read as timed out, and the threshold that reads it says whether it counts (FDW-4278).
+        if (string.Equals(status, TimedOutStatus, StringComparison.Ordinal))
+        {
+            return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, false, false, null, TimedOutStatus, null, true));
         }
 
         var events = await tracker.GetEvents(id, cancellationToken).ConfigureAwait(false);
@@ -110,14 +118,14 @@ public static class PipelineRunOutcomeReader
         if (kind?.Data is null)
         {
             PipelineFailureRuleLog.RunKindMissing(logger, id, pipelineName);
-            return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, false, true, null, null));
+            return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, false, true, null, null, null));
         }
 
         var transient = kind.Data.TryGetValue("transient", out var flag) && flag is bool isTransient && isTransient;
 
         // Why a refused run does not count (FDW-4005): a refusal by the state of something the run uses is not the pipeline's own fault, so it is neither counted nor a reset, as a transient one.
         var refused = kind.Data.TryGetValue("refused", out var refusal) && refusal is bool isRefused && isRefused;
-        return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, false, !transient && !refused, Text(kind.Data, "category"), Text(kind.Data, "code")));
+        return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, false, !transient && !refused, Text(kind.Data, "category"), Text(kind.Data, "code"), ConnectionOf(kind.Data)));
     }
 
     private static DateTimeOffset ToOffset(object? value) => value switch
@@ -126,6 +134,10 @@ public static class PipelineRunOutcomeReader
         DateTime time => new DateTimeOffset(DateTime.SpecifyKind(time, DateTimeKind.Utc)),
         _ => throw new ArgumentException($"A run time of type {value?.GetType().Name} cannot be read.", nameof(value)),
     };
+
+    // The connection a failed run recorded; a run that recorded none, or text that is not an Id, has none.
+    private static Guid? ConnectionOf(IReadOnlyDictionary<string, object?> data) =>
+        Guid.TryParse(Text(data, "connectionId"), out var id) ? id : null;
 
     private static string? Text(IReadOnlyDictionary<string, object?> data, string key) =>
         data.TryGetValue(key, out var value) ? Convert.ToString(value, CultureInfo.InvariantCulture) : null;

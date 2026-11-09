@@ -263,7 +263,7 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
                 Parameters: c.Parameters
                     .Select(p => new ParameterInfo(
                         Name: p.Name,
-                        Type: p.Type.ToDisplayString(),
+                        Type: Fdw.Collections.SourceGenerators.Shared.CodeTypeNames.Of(p.Type),
                         HasDefaultValue: p.HasExplicitDefaultValue,
                         DefaultValue: FormatDefaultValue(p)
                     ))

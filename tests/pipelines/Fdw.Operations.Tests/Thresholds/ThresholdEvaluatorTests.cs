@@ -76,7 +76,7 @@ public sealed class ThresholdEvaluatorTests
     {
         var services = new Services();
         services.Alerts.Setup(a => a.Open(It.IsAny<EscalationAlertRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcome.Opened, null)));
+            .ReturnsAsync(GenericResult<EscalationOpened>.Success(new EscalationOpened(EscalationOpenOutcomes.Opened, null)));
         services.Disabler.Setup(d => d.Disable(It.IsAny<EscalationFiring>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
         var threshold = Failures(true, Alert(AtLeast("consecutiveFailures", 3)), Disable(AtLeast("consecutiveFailures", 5)));
 

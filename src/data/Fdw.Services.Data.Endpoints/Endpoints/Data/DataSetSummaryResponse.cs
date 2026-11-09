@@ -28,6 +28,12 @@ public class DataSetSummaryResponse : ResourceSummary
     /// <summary>Gets or sets the name of the category the data set sits under; null when it sits under none.</summary>
     public string? Category { get; set; }
 
+    /// <summary>
+    /// Gets or sets the data set's status, read off the latest runs of the pipelines that write it: the name of an option of <c>DataSetStatuses</c> (Unwritten, Failed, Running, Warning, Current or Idle,
+    /// or one a developer added). Null for a variation, which holds no data of its own (FDW-4488).
+    /// </summary>
+    public string? Status { get; set; }
+
     /// <summary>Gets or sets the display names from the top of the category tree down to the data set's category, joined by " / "; null when it sits under none.</summary>
     public string? CategoryPath { get; set; }
 
@@ -48,7 +54,9 @@ public class DataSetSummaryResponse : ResourceSummary
     /// <summary>Gets or sets the logical id of the workspace that owns a Scoped variation; null otherwise.</summary>
     public Guid? OwnerWorkspaceId { get; set; }
 
-    /// <summary>Gets or sets the logical id of the user that owns a data view; null otherwise.</summary>
+    /// <summary>
+    /// Gets or sets the logical id of the user who owns the data set: its creator, or the owner of a data view. Null when it has no owner (made before owners existed): the list shows it as Unowned.
+    /// </summary>
     public Guid? OwnerUserId { get; set; }
 
     /// <summary>Gets or sets a variation's stored filter tree, in the body shape of the data route's filter; null when it has none or is not a variation.</summary>

@@ -13,7 +13,7 @@ namespace Fdw.Services.Data.Endpoints;
 internal static class DataSetFieldResolver
 {
     public static async Task<IGenericResult<(IDataSetImplementationConfiguration DataSet, DataSetFieldConfiguration Field)?>> Resolve(
-        DataSetConfigurationProvider dataSets, string dataSetName, string fieldName, CancellationToken ct)
+        IDataSetConfigurationProvider dataSets, string dataSetName, string fieldName, CancellationToken ct)
     {
         var dataSet = await dataSets.Get(dataSetName, ct).ConfigureAwait(false);
         if (dataSet.IsFailure) return dataSet.ToNewResult<(IDataSetImplementationConfiguration, DataSetFieldConfiguration)?>();
@@ -26,7 +26,7 @@ internal static class DataSetFieldResolver
 
     /// <summary>Resolves a data set and returns all of its fields in ordinal order, or null when the data set does not exist.</summary>
     public static async Task<IGenericResult<IReadOnlyList<DataSetFieldConfiguration>?>> ResolveAll(
-        DataSetConfigurationProvider dataSets, string dataSetName, CancellationToken ct)
+        IDataSetConfigurationProvider dataSets, string dataSetName, CancellationToken ct)
     {
         var dataSet = await dataSets.Get(dataSetName, ct).ConfigureAwait(false);
         if (dataSet.IsFailure) return dataSet.ToNewResult<IReadOnlyList<DataSetFieldConfiguration>?>();

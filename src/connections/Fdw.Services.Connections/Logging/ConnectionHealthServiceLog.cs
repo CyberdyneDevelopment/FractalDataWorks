@@ -25,7 +25,7 @@ public static partial class ConnectionHealthServiceLog
     public static partial IGenericMessage HealthCheckRecordedUnhealthy(ILogger logger, string connectionName, bool isHealthy, int? responseTimeMs);
 
     /// <summary>Logs that persisting a health check record failed.</summary>
-    [MessageLogging(EventId = 12102, Level = LogLevel.Error, Message = "Failed to persist health check for connection '{connectionName}': {error}")]
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "Failed to persist health check for connection '{connectionName}': {error}", ClientMessage = "Failed to persist health check for connection '{connectionName}'")]
     public static partial IGenericMessage RecordHealthCheckFailed(ILogger logger, string connectionName, string error);
 
     /// <summary>Logs that health check history is about to be queried.</summary>
@@ -37,7 +37,7 @@ public static partial class ConnectionHealthServiceLog
     public static partial IGenericMessage HistoryRetrieved(ILogger logger, Guid connectionId, int resultCount);
 
     /// <summary>Logs that querying health check history failed.</summary>
-    [MessageLogging(EventId = 12105, Level = LogLevel.Error, Message = "Failed to query health check history for connection {connectionId}: {error}")]
+    [MessageLogging(EventId = 90002, Level = LogLevel.Error, Message = "Failed to query health check history for connection {connectionId}: {error}", ClientMessage = "Failed to query health check history for connection {connectionId}")]
     public static partial IGenericMessage QueryHistoryFailed(ILogger logger, Guid connectionId, string error);
 
     /// <summary>Logs that the health-check insert command returned a failure result. The command's own messages travel on the chained result, so no error text is duplicated here.</summary>
@@ -61,6 +61,6 @@ public static partial class ConnectionHealthServiceLog
     public static partial IGenericMessage QueryAllCurrentCommandFailed(ILogger logger);
 
     /// <summary>Logs that querying every connection's current health status threw.</summary>
-    [MessageLogging(EventId = 12112, Level = LogLevel.Error, Message = "Failed to query current health status for all connections: {error}")]
+    [MessageLogging(EventId = 90003, Level = LogLevel.Error, Message = "Failed to query current health status for all connections: {error}", ClientMessage = "Failed to query current health status for all connections")]
     public static partial IGenericMessage QueryAllCurrentFailed(ILogger logger, string error);
 }

@@ -2,9 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Connections.Sql;
@@ -42,6 +46,52 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
         : base(name, domainName)
     {
     }
+
+    /// <summary>
+    /// Translates a command for a connection that states how many parameters a key list may carry before it goes to a table (FDW-4267).
+    /// </summary>
+    /// <remarks>
+    /// Runs <see cref="DataCommandTranslatorBase{TCommand}.Translate(IDataCommand, IStorageContainer, CancellationToken)"/> inside a
+    /// <see cref="KeyListSpillScope"/>; a key list with more values than the setting is carried as one JSON parameter and joined through the dialect's own form,
+    /// and the finished command is wrapped with the statements that form needs. This is the only way a connection translates: it binds its setting to its translators.
+    /// </remarks>
+    /// <param name="command">The data command to translate.</param>
+    /// <param name="container">The container with schema metadata.</param>
+    /// <param name="settings">The setting of the connection that asked.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The translated command.</returns>
+    public async Task<IGenericResult<TCommand>> Translate(
+        IDataCommand command,
+        IStorageContainer container,
+        TranslationSettings settings,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(container);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        using var scope = KeyListSpillScope.Begin(settings, container.Path is IDatabasePath path ? SqlNames.QualifiedTable(path) : null);
+        var translated = await Translate(command, container, cancellationToken).ConfigureAwait(false);
+        if (translated.IsSuccess && translated.Value is { } built && scope.HasStatements)
+        {
+            WrapStatement(built, string.Concat(scope.Before), string.Concat(scope.After));
+        }
+
+        return translated;
+    }
+
+    /// <summary>
+    /// Puts the statements a key-list table needs before and after the finished command (FDW-4267).
+    /// </summary>
+    /// <remarks>
+    /// Only a dialect whose form needs statements around the main one (SQL Server's temporary table) calls this, and the translator base of that provider
+    /// overrides it. The base states no way to rewrite a provider's command, so a form that needs one for a provider that gave none stops here.
+    /// </remarks>
+    /// <param name="command">The translated command.</param>
+    /// <param name="before">The statements to put in front of it.</param>
+    /// <param name="after">The statements to put after it.</param>
+    protected virtual void WrapStatement(TCommand command, string before, string after)
+        => throw new InvalidOperationException(
+            $"{GetType().Name} cannot put statements around its command, and the dialect's key-list form needs them: {before}");
 
     // -----------------------------------------------------------------------
     // Shared helpers — called by per-command translators
@@ -289,9 +339,15 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
             if (condition.Value is IEnumerable enumerable and not string and not byte[])
             {
                 var conditionIndex = context.ParameterCounter++;
+                var items = enumerable.Cast<object?>().ToList();
+
+                // A key list longer than the connection's setting is carried as one JSON parameter and joined through the dialect's own table form (FDW-4267).
+                if (TrySpillKeyList(condition, columnName, items, conditionIndex, context) is { } spilled)
+                    return spilled;
+
                 var paramNames = new List<string>();
                 var itemIndex = 0;
-                foreach (var item in enumerable)
+                foreach (var item in items)
                 {
                     // SQL param name (in SQL text): "@p0_0", "@where_p0_0", etc.
                     var sqlParamName = $"{context.ParameterPrefix}p{conditionIndex}_{itemIndex++}";
@@ -321,6 +377,26 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
         }
 
         return $"{columnName} {condition.Operator.SqlOperator}";
+    }
+
+    // A key list with more values than the connection's setting goes to a table: one JSON parameter carries it, the dialect's form reads it back as a subquery, and
+    // the condition keeps its operator (IN or NOT IN). Not spilled, so the values stay parameters: a list at or below the setting, a column of a joined table (its
+    // table is not known here), a dialect with no form, and a list that holds a null (IN and NOT IN read a null as no match, which a table of values would not).
+    // The setting comes from the translation's scope, which the connection always opens (FDW-4267); outside one the scope stops the translation.
+    private static string? TrySpillKeyList(FilterCondition condition, string columnName, List<object?> items, int conditionIndex, SqlBuildContext context)
+    {
+        var scope = KeyListSpillScope.Required;
+        if (scope.SourceTable is null || items.Count <= scope.Settings.MaxParametersBeforeTempTable)
+            return null;
+
+        if (condition.PropertyName.Contains('.', StringComparison.Ordinal) || items.Contains(null) || context.Dialect is not IKeyListSpillDialect spillDialect)
+            return null;
+
+        var jsonParameter = $"{context.ParameterPrefix}kl{conditionIndex}";
+        context.AddParam(jsonParameter.Substring(1), spillDialect.KeyListJson(condition.PropertyName, items));
+        var form = spillDialect.KeyListSpill(Guid.NewGuid().ToString("N"), scope.SourceTable, condition.PropertyName, jsonParameter);
+        scope.Add(form);
+        return $"{columnName} {condition.Operator.SqlOperator} ({form.Subquery})";
     }
 
     // A pattern operator (Contains, StartsWith, EndsWith): the operator says where anything may sit around

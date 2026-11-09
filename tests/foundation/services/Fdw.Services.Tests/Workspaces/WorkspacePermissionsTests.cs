@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Authorization;
 using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Authorization.Validation;
 using Fdw.Services.Workspaces;
 using Fdw.Services.Workspaces.Results;
 using Moq;
@@ -40,6 +41,28 @@ public class WorkspacePermissionsTests
                                && p.Scope == "tenant");
         saved.Select(p => p.Action).ShouldBe(new[] { "view", "query" });
         saved[0].DisplayName.ShouldBe("View workspace sales");
+    }
+
+    [Fact]
+    public async Task EveryPermissionCreateWritesPassesThePermissionValidator()
+    {
+        // FDW-4241: Save runs the permission validator before any row is touched; a grammar that refused 'workspaces/{id}:view' failed every workspace
+        // creation, and so the founding of every tenant and organization.
+        var permissions = new Mock<IPermissionConfigurationProvider>();
+        permissions.Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IPermissionImplementationConfiguration>.Success(null!));
+        var saved = new List<PermissionImplementationConfiguration>();
+        permissions.Setup(p => p.Save(Capture.In(saved), "Permission", "Permission", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult.Success());
+
+        await Service(permissions).Create(SalesId, "sales", TestContext.Current.CancellationToken);
+
+        saved.Count.ShouldBe(2);
+        foreach (var permission in saved)
+        {
+            var verdict = new PermissionConfigurationValidator().Validate(permission);
+            verdict.IsValid.ShouldBeTrue(string.Join("; ", verdict.Errors.Select(e => e.ErrorMessage)));
+        }
     }
 
     [Fact]

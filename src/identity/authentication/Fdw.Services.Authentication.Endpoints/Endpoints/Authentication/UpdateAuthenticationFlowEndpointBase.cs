@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authentication.Endpoints;
 
@@ -40,8 +42,7 @@ public abstract class UpdateAuthenticationFlowEndpointBase : AuthenticationFlowC
     {
         if (req.IsEnabled is not { } isEnabled)
         {
-            AddError(r => r.IsEnabled, "isEnabled is required: it is the only thing this route changes.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.UpdateAuthenticationFlowIsenabledIsRequiredItIs(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

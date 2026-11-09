@@ -107,4 +107,12 @@ public static partial class NotificationEndpointLog
     /// <summary>Logs at Information level that the settings of a notification were set.</summary>
     [MessageLogging(EventId = 11013, Level = LogLevel.Information, Message = "Set the settings of notification '{notificationName}'")]
     public static partial IGenericMessage NotificationSettingsSet(ILogger logger, string notificationName);
+
+    /// <summary>Logs that list user preferences failed unexpectedly.</summary>
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "List user preferences failed unexpectedly", ClientMessage = "List user preferences failed unexpectedly")]
+    public static partial IGenericMessage ListUserPreferencesFaulted(ILogger logger);
+
+    /// <summary>Logs that update user preferences failed unexpectedly.</summary>
+    [MessageLogging(EventId = 90002, Level = LogLevel.Error, Message = "Update user preferences failed unexpectedly", ClientMessage = "Update user preferences failed unexpectedly")]
+    public static partial IGenericMessage UpdateUserPreferencesFaulted(ILogger logger);
 }

@@ -106,12 +106,14 @@ public sealed partial class ScheduleImplementationConfiguration : IScheduleImple
     /// </remarks>
     [NotMapped]
     [ConfigurationChildTable("ScheduleParameter")]
+    [ConfigurationChildCascade(typeof(AuthoritativeChildCascade))]
     public IDictionary<string, string?> Parameters { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets or sets the roles the schedule's runs act with (FDW-1161), one row per role. Cascade child
     /// (sched.ScheduleRunRole), recorded when the schedule is created or changed by the roles its creator named.
     /// </summary>
+    [ConfigurationChildCascade(typeof(AuthoritativeChildCascade))]
     public IList<ScheduleRunRoleConfiguration> RunRoles { get; set; } = [];
 
     /// <inheritdoc/>

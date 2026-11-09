@@ -8,6 +8,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.ExternalIdentityProviders.Binding;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -22,14 +24,14 @@ public abstract class UnbindExternalIdentityEndpointBase : Endpoint<UnbindExtern
 {
     private const string ExternalIdentityDomain = "ExternalIdentity";
 
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IExternalIdentityConfigurationProvider _externalIdentities;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UnbindExternalIdentityEndpointBase"/> class.</summary>
     protected UnbindExternalIdentityEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IExternalIdentityConfigurationProvider externalIdentities)
     {
         _logger = logger;
@@ -64,9 +66,15 @@ public abstract class UnbindExternalIdentityEndpointBase : Endpoint<UnbindExtern
         var userResult = await UserRouteTarget
             .Resolve(_userProvider, User, req.IdOrName, ct).ConfigureAwait(false);
 
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.UnbindExternalIdentityUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,7 +83,7 @@ public abstract class UnbindExternalIdentityEndpointBase : Endpoint<UnbindExtern
         if (!AccountAuthority.Administers(User, user, Resolve<ISystemRoleConfiguration>()))
         {
             UserEndpointLog.ApiKeyOperationNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.UnbindExternalIdentityForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -86,7 +94,7 @@ public abstract class UnbindExternalIdentityEndpointBase : Endpoint<UnbindExtern
             .ConfigureAwait(false);
         if (bindings.IsFailure || bindings.Value is null || !bindings.Value.Any())
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.UnbindExternalIdentityNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -94,8 +102,7 @@ public abstract class UnbindExternalIdentityEndpointBase : Endpoint<UnbindExtern
             .Delete(bindings.Value[0].Id, ct).ConfigureAwait(false);
         if (!deleteResult.IsSuccess)
         {
-            AddError("The binding could not be removed.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.UnbindExternalIdentityTheBindingCouldNotBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

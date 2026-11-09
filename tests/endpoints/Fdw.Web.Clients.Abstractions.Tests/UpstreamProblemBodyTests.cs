@@ -90,6 +90,22 @@ public sealed class UpstreamProblemBodyTests
         result.Code.FormatClientMessage(result.Details).ShouldBe("The pipeline 'AfcPlayersLoad' is counted by the threshold 'Backlog' of Server");
     }
 
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    [InlineData(HttpStatusCode.NotFound, "UpstreamResourceNotFound", "Pipeline 'NoSuchPipelineXyz' was not found")]
+    [InlineData(HttpStatusCode.Forbidden, "UpstreamForbidden", "This belongs to another tenant, and the setting 'ChangeConnections' does not allow an administrator of a different tenant to change it")]
+    public async Task ANotFoundOrForbiddenProblemBodyHandsItsReasonToTheCaller(HttpStatusCode status, string codeName, string reason)
+    {
+        var body = $"{{\"title\":\"x\",\"status\":{(int)status},\"detail\":\"{reason}\",\"referenceId\":\"{ReferenceId}\"}}";
+        var sut = CreateClient(status, body, "application/problem+json");
+
+        var result = await sut.Post<TestModel, TestModel>("api/items", new TestModel(), TestContext.Current.CancellationToken);
+
+        result.Code.ShouldNotBeNull().Name.ShouldBe(codeName);
+        result.Code.FormatClientMessage(result.Details).ShouldBe(reason);
+    }
+
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]

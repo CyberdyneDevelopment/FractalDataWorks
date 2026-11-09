@@ -93,9 +93,10 @@ public static partial class TenantTypesLog
     /// when org lookup is attempted but multitenancy is not enabled.
     /// </summary>
     [MessageLogging(
-        EventId = 11006,
+        EventId = 60002,
         Level = LogLevel.Debug,
-        Message = "Organization lookup not available — multitenancy is not enabled")]
+        Message = "Organization lookup not available — multitenancy is not enabled",
+        ClientMessage = "Organization lookup not available — multitenancy is not enabled")]
     public static partial IGenericMessage OrgLookupUnavailable(ILogger logger);
 
     /// <summary>
@@ -103,8 +104,9 @@ public static partial class TenantTypesLog
     /// tenant lookup is attempted but this host runs the SingleTenant multitenancy option.
     /// </summary>
     [MessageLogging(
-        EventId = 11007,
+        EventId = 60001,
         Level = LogLevel.Debug,
-        Message = "Tenant lookup not available — this host runs the SingleTenant multitenancy option")]
+        Message = "Tenant lookup not available — this host runs the SingleTenant multitenancy option",
+        ClientMessage = "Tenant lookup not available — this host runs the SingleTenant multitenancy option")]
     public static partial IGenericMessage TenantLookupUnavailable(ILogger logger);
 }

@@ -97,6 +97,14 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
             builder.Services.TryAddScoped<IUserCredentialService, UserCredentialService>();
 
+            // The workspaces domain implements the default-workspace founding and its endpoint group registers it. A host that maps these
+            // endpoints without that group gets the refusing one, so it starts and a founding fails with a message (FDW-4178). The group's
+            // real registration is added with AddScoped, which replaces this one whichever of the two registers first.
+            builder.Services.TryAddScoped<IDefaultWorkspaceFounding, UnavailableDefaultWorkspaceFounding>();
+            // The same for the tenant and organization writers, which only the SQL multitenancy type implements (FDW-4180): a single-tenant host
+            // that maps the tenant endpoints starts and a write fails with a message. That type's AddScoped replaces these in either order.
+            builder.Services.TryAddScoped<ITenantWriter, UnavailableTenantWriter>();
+            builder.Services.TryAddScoped<IOrganizationWriter, UnavailableOrganizationWriter>();
             // Scoped: the tenant writer it uses is scoped, as the tenant provider is (FDW-1578).
             builder.Services.TryAddScoped<ITenantFounding>(sp =>
                 new TenantFounding(

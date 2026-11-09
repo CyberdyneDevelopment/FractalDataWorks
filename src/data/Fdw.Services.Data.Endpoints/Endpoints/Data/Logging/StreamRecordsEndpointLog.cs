@@ -52,4 +52,20 @@ public static partial class StreamRecordsEndpointLog
     /// <summary>Logs a per-record failure raised after the response had already started.</summary>
     [MessageLogging(EventId = 91201, Level = LogLevel.Error, Message = "Stream of '{resource}' failed after {rowCount} rows: {reason}")]
     public static partial IGenericMessage StreamFailedMidResponse(ILogger logger, string resource, long rowCount, string reason);
+
+    /// <summary>Logs that A stream of 'resource' was refused: the request names no record format (available: available).</summary>
+    [MessageLogging(EventId = 20001, Level = LogLevel.Warning, Message = "A stream of '{resource}' was refused: the request names no record format (available: {available})", ClientMessage = "The request names no record format: state it with ?format= or an Accept header. Available: {available}.")]
+    public static partial IGenericMessage StreamRecordsFormatNotStated(ILogger logger, string resource, string available);
+
+    /// <summary>Logs that A stream of 'resource' was refused: no available record format satisfies the Accept header 'accept' (available: mediaTypes).</summary>
+    [MessageLogging(EventId = 140001, Level = LogLevel.Warning, Message = "A stream of '{resource}' was refused: no available record format satisfies the Accept header '{accept}' (available: {mediaTypes})", ClientMessage = "No available record format satisfies the Accept header. Available: {mediaTypes}.")]
+    public static partial IGenericMessage StreamRecordsAcceptNotSatisfied(ILogger logger, string resource, string accept, string mediaTypes);
+
+    /// <summary>Logs that A stream of 'resource' was refused: no record format is named 'named' (available: available).</summary>
+    [MessageLogging(EventId = 140002, Level = LogLevel.Warning, Message = "A stream of '{resource}' was refused: no record format is named '{named}' (available: {available})", ClientMessage = "No record format is named '{named}'. Available: {available}.")]
+    public static partial IGenericMessage StreamRecordsFormatNotNamed(ILogger logger, string resource, string named, string available);
+
+    /// <summary>Logs that A stream of 'resource' was refused: maxStreams concurrent streams are already running.</summary>
+    [MessageLogging(EventId = 150001, Level = LogLevel.Warning, Message = "A stream of '{resource}' was refused: {maxStreams} concurrent streams are already running", ClientMessage = "This endpoint is already streaming its limit of {maxStreams} concurrent responses.")]
+    public static partial IGenericMessage StreamRecordsLimitReached(ILogger logger, string resource, int maxStreams);
 }

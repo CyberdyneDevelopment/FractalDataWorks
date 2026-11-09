@@ -9,6 +9,7 @@ using Fdw.Operations.Abstractions.Execution;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Executions;
 
@@ -62,10 +63,17 @@ public abstract class GetExecutionEventsEndpointBase : Endpoint<ExecutionIdReque
 
         // First verify the execution exists
         var itemResult = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);
-        if (!itemResult.IsSuccess || itemResult.Value == null)
+        if (itemResult.IsFailure)
         {
             OnExecutionNotFound(req.Id);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(itemResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (itemResult.Value == null)
+        {
+            OnExecutionNotFound(req.Id);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ExecutionEventsExecutionNotFound(EndpointLogger, req.Id)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,7 +83,7 @@ public abstract class GetExecutionEventsEndpointBase : Endpoint<ExecutionIdReque
         {
             var errorMessage = eventsResult.FailureReason().Message;
             OnEventsFetchFailed(req.Id, errorMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch events", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(eventsResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -121,6 +121,10 @@ public sealed class RoslynWorkspaceConnectionType
     ];
 
     /// <inheritdoc/>
+    protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<RoslynWorkspaceConnectionConfiguration> EndpointAuthenticationDeclaration
+        => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<RoslynWorkspaceConnectionConfiguration>.None;
+
+    /// <inheritdoc/>
     /// <remarks>A workspace connection opens a solution from the host's disk with the host process's own file-system access, so every such connection acts as the host.</remarks>
     protected override IGenericResult<bool> DecideHostIdentity(RoslynWorkspaceConnectionConfiguration configuration)
         => GenericResult<bool>.Success(true);

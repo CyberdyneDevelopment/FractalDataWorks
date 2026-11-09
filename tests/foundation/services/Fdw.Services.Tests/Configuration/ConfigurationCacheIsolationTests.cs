@@ -46,9 +46,13 @@ public sealed class ConfigurationCacheIsolationTests
         var path = new DataPathConfiguration { Id = Guid.NewGuid(), Name = "auth" };
         var container = new DataContainerConfiguration { Id = Guid.NewGuid(), Name = "RevokedAccessToken" };
 
+        // FDW-4254: a read by durable id is the set read of one, so the store answers with rows as columns, a physical RowId on each, and a
+        // child row names the row it hangs from by that RowId. The domain row, the implementation row, the path and the container.
         var gateway = new ComposingReadGateway(store, cacheRows);
-        gateway.Seed(typeof(DataPathConfiguration), path);
-        gateway.Seed(typeof(DataContainerConfiguration), container);
+        gateway.SeedRows("DataStore", Row(1, ("Id", store.Id), ("Name", "AuthDb")));
+        gateway.SeedRows("DataStoreConfiguration", Row(11, ("DataStoreRowId", 1), ("Id", Guid.NewGuid()), ("Name", "AuthDb")));
+        gateway.SeedRows("DataPath", Row(21, ("DataStoreConfigurationRowId", 11), ("Id", path.Id), ("Name", "auth")));
+        gateway.SeedRows("DataContainer", Row(31, ("DataPathRowId", 21), ("Id", container.Id), ("Name", "RevokedAccessToken")));
 
         // Why the named provider and not the base: the base is abstract now, and the cascade under test
         // lives in ImplementationProviderBase, which DataStoreImplementationConfigurationProvider closes.
@@ -58,7 +62,7 @@ public sealed class ConfigurationCacheIsolationTests
             "ConfigurationDb", "data", "DataStoreConfiguration");
 
         // Act -- an implementation provider reads by the owning domain row's durable id, not by name.
-        var domain = new DataStoreConfigurationProvider(NullLogger<DataStoreConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStore", new UnavailablePlacement());
+        var domain = new DataStoreConfigurationProvider(NullLogger<DataStoreConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStore", new UnavailablePlacement(), Moq.Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Moq.Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>());
         domain.Register("MsSql", provider);
         var implementationId = store.Id;
         var first = await domain.Get("AuthDb", TestContext.Current.CancellationToken);
@@ -77,11 +81,20 @@ public sealed class ConfigurationCacheIsolationTests
         result.Value.Paths[0].Containers.ShouldHaveSingleItem();
         result.Value.Paths[0].Containers[0].Name.ShouldBe("RevokedAccessToken");
 
-        // Assert — the cascade keyed children via the metadata-driven JOIN to each owner (RowId is invisible;
-        // the join filters by the owner's durable Id). At least one typed child read ran per owner level.
-        gateway.ChildReads.ShouldNotBeEmpty();
-        gateway.ChildReads.ShouldContain(typeof(DataPathConfiguration));
-        gateway.ChildReads.ShouldContain(typeof(DataContainerConfiguration));
+        // Assert — the cascade read each owner level's children by the physical keys of the rows above (one read of each table,
+        // however many rows), and the second read built its own records from the rows, not the rows themselves.
+        gateway.RowReads.ShouldContain("DataPath");
+        gateway.RowReads.ShouldContain("DataContainer");
+        gateway.RowReads.Count(read => read == "DataPath").ShouldBe(2);
+    }
+
+    private static Dictionary<string, object?> Row(int rowId, params (string Column, object? Value)[] columns)
+    {
+        var row = new Dictionary<string, object?>(StringComparer.Ordinal) { ["RowId"] = rowId };
+        foreach (var (column, value) in columns)
+            row[column] = value;
+
+        return row;
     }
 
     /// <summary>
@@ -116,6 +129,14 @@ public sealed class ConfigurationCacheIsolationTests
 
         public List<Type> ChildReads { get; } = [];
 
+        /// <summary>The containers read as rows, one entry per statement, in order.</summary>
+        public List<string> RowReads { get; } = [];
+
+        private readonly Dictionary<string, List<Dictionary<string, object?>>> _rows = new(StringComparer.Ordinal);
+
+        /// <summary>Holds the rows a container answers a read with, selected by the <c>In</c> conditions the read carries.</summary>
+        public void SeedRows(string container, params Dictionary<string, object?>[] rows) => _rows[container] = [.. rows];
+
         public IReadOnlyList<IDataStore> DataStores => _stores;
 
         public void Seed(Type rowType, params object[] rows) => _childrenByType[rowType] = rows.ToList();
@@ -139,10 +160,50 @@ public sealed class ConfigurationCacheIsolationTests
             if (typeof(T) == typeof(IEnumerable<DataStoreImplementationConfiguration>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)new List<DataStoreImplementationConfiguration> { _cacheRows ? _header : new DataStoreImplementationConfiguration { Id = _originalId, Name = _header.Name } }));
 
+            // A set read: rows as columns. With cacheRows the same row objects are handed back on every read, as the gateway's cache does;
+            // without, a copy of each.
+            if (typeof(T) == typeof(IEnumerable<Dictionary<string, object?>>))
+            {
+                RowReads.Add(target.Container);
+                var held = _rows.GetValueOrDefault(target.Container) ?? [];
+                var selected = held.Where(row => Selected(command, row)).ToList();
+                return Task.FromResult(GenericResult<T>.Success((T)(object)selected
+                    .Select(row => _cacheRows ? row : new Dictionary<string, object?>(row, StringComparer.Ordinal)).ToList()));
+            }
+
             if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(typeof(T).GetGenericArguments()[0], 0)));
 
             return Task.FromResult(GenericResult<T>.Success(default!));
+        }
+
+        // A row is selected when every In condition names a column it holds the value of, as a store compares them.
+        private static bool Selected(IDataCommand command, Dictionary<string, object?> row)
+        {
+            if (command is not IQueryCommand { Filter.Root: { } root })
+                return true;
+
+            return Conditions(root)
+                .Where(c => string.Equals(c.Operator.SqlOperator, "IN", StringComparison.Ordinal) && c.Value is System.Collections.IEnumerable and not string)
+                .All(c => row.TryGetValue(c.PropertyName, out var value)
+                          && ((System.Collections.IEnumerable)c.Value!).Cast<object?>().Any(wanted => string.Equals(Text(wanted), Text(value), StringComparison.Ordinal)));
+        }
+
+        private static string Text(object? value) => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+
+        private static IEnumerable<FilterCondition> Conditions(IFilterNode node)
+        {
+            if (node is FilterCondition condition)
+            {
+                yield return condition;
+                yield break;
+            }
+
+            if (node is FilterGroup group)
+            {
+                foreach (var nested in group.Nodes.SelectMany(Conditions))
+                    yield return nested;
+            }
         }
 
         public Task<IGenericResult> Execute(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
@@ -316,6 +377,8 @@ public sealed class ConfigurationCacheIsolationTests
     {
         private readonly IConfigurationGateway _gateway;
         public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+        public int KeyChunkSize => 1000;
+
         public IGenericResult<IConfigurationGateway> Get(string connectionName)
             => GenericResult<IConfigurationGateway>.Success(_gateway);
         public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();

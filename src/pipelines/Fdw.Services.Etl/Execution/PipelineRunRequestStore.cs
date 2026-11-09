@@ -173,7 +173,7 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 TestRowsPerSource = old.TestRowsPerSource,
                 TimeoutSeconds = old.TimeoutSeconds
             };
-            await OpenMetrics(open.Value.Gateway, open.Value.Store, again, created.Value.State.Name, cancellationToken).ConfigureAwait(false);
+            await OpenMetrics(open.Value.Gateway, open.Value.Store, again, tenantId, created.Value.State.Name, cancellationToken).ConfigureAwait(false);
             return await Replace(tracker, open.Value.Gateway, open.Value.Store, new Stamp(again.ExecutionId, tenantId, host.Value), run, again, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -231,11 +231,11 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     }
 
     // The metrics row the engine updates as the run goes (the trigger writes it when it accepts a run); a failed write is logged, not fatal, as it is there.
-    private async Task OpenMetrics(IDataGateway gateway, string store, PipelineExecutionRequest request, string state, CancellationToken cancellationToken)
+    private async Task OpenMetrics(IDataGateway gateway, string store, PipelineExecutionRequest request, Guid tenantId, string state, CancellationToken cancellationToken)
     {
         var inserted = await gateway.Execute<int>(
             Insert.Into<EtlPipelineExecutionRecord>(MetricsContainerName).DataStore(store).Path(PathName)
-                .Value(new EtlPipelineExecutionRecord { Id = request.ExecutionId, PipelineName = request.PipelineName, ScheduleName = request.ScheduleName, Status = state }),
+                .Value(new EtlPipelineExecutionRecord { Id = request.ExecutionId, PipelineName = request.PipelineName, TenantId = tenantId, ScheduleName = request.ScheduleName, Status = state }),
             cancellationToken).ConfigureAwait(false);
         if (inserted.IsFailure)
         {
@@ -349,7 +349,7 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
         var store = EtlPipelineTypes.OperationalConnection;
         return string.IsNullOrWhiteSpace(store)
             ? GenericResult<(IDataGateway Gateway, string Store)>.Failure(PipelineRunRecoveryLog.StoreNotNamed(_logger))
-            : GenericResult<(IDataGateway Gateway, string Store)>.Success((services.GetRequiredService<IDataGatewayProvider>().ByName("Main"), store));
+            : GenericResult<(IDataGateway Gateway, string Store)>.Success((services.GetRequiredService<IDataGatewayProvider>().ByName(DataGatewayNames.Main), store));
     }
 
     // A run accepted a second time (one approved after it was held for approval) already has its row: the row's request is rewritten.
@@ -510,8 +510,10 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     // The run's bookkeeping context, as the background service establishes it: the run's tenant rides on it so the row lands under the run's tenant.
     private static void Elevate(IServiceProvider services, Guid? tenantId)
     {
-        var accessor = services.GetService<IAuthenticationContextAccessor>();
-        if (accessor is null || accessor.Current is not null)
+        // Why required (FDW-4395): every host that runs the pipeline types registers the accessor, so an absent one is a host that is built wrong, and
+        // the bookkeeping row would be written under no tenant context. It is a missing registration to be seen, not a case to step over.
+        var accessor = services.GetRequiredService<IAuthenticationContextAccessor>();
+        if (accessor.Current is not null)
         {
             return;
         }

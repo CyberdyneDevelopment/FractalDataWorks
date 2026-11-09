@@ -53,6 +53,20 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
     /// <param name="sql">The SQL command text.</param>
     protected static SqlCommand CreateCommand(string sql) => new SqlCommand(sql);
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// A statement that reads starts with SELECT and one that writes does not, and the connection tells the two apart by that first word (it runs the first
+    /// with a reader and the second for its row count). The key tables are therefore made first in a SELECT ... INTO, for a statement that reads; a statement
+    /// that writes gets SET NOCOUNT around the key-table statements, so the row count it returns is its own and not theirs.
+    /// </remarks>
+    protected override void WrapStatement(SqlCommand command, string before, string after)
+    {
+        var statement = command.CommandText;
+        command.CommandText = statement.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
+            ? string.Concat(before, statement, "; ", after)
+            : string.Concat("SET NOCOUNT ON; ", before, "SET NOCOUNT OFF; ", statement, "; ", after);
+    }
+
     /// <summary>
     /// Adds a named parameter to <paramref name="command"/>, serializing <see cref="IEnumerable"/>
     /// values (except <see cref="string"/>) to JSON for NVARCHAR(MAX) JSON columns.

@@ -153,7 +153,7 @@ Authentication is **mandatory** — there is no anonymous FDW real-time hub:
 **Per-org firehose.** The old global `pipeline-updates` group was an unconditional cross-org leak; it
 is replaced by `org:{orgId}:pipeline-updates`, scoped to a pipeline's owning org
 (`pipe.Pipeline.OrgId` → `PipelineConfiguration.OrgId`). `PipelineStatusHub.OnJoin` joins the group
-for the caller's `org_id` claim (no claim ⇒ no firehose, logged); the background executor resolves the
+for the caller's `orgId` claim (no claim ⇒ no firehose, logged); the background executor resolves the
 pipeline's owning `OrgId` and the broadcaster targets that group (null org ⇒ no firehose — there is no
 global group). Task/edge/pause/resume stay execution-scoped (`execution:{id}`). `CanJoin` still permits
 any non-empty scope key — org-authorized subscription (per-execution/pipeline) is a follow-up.

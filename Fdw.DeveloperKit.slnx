@@ -390,6 +390,7 @@
     <Project Path="src/pipelines/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
     <Project Path="src/pipelines/Fdw.Services.Etl.JobTriggerSources/Fdw.Services.Etl.JobTriggerSources.csproj" />
     <Project Path="src/pipelines/Fdw.Services.Etl.Projects.Clients/Fdw.Services.Etl.Projects.Clients.csproj" />
+    <Project Path="src/pipelines/Fdw.Services.Etl.Projects.Nodes.Registration/Fdw.Services.Etl.Projects.Nodes.Registration.csproj" />
     <Project Path="src/pipelines/Fdw.Services.Etl.Projects.Registration/Fdw.Services.Etl.Projects.Registration.csproj" />
     <Project Path="src/pipelines/Fdw.Services.Etl.Projects/Fdw.Services.Etl.Projects.csproj" />
     <Project Path="src/pipelines/Fdw.Services.Etl/Fdw.Services.Etl.csproj" />

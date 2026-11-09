@@ -89,6 +89,9 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     static ConnectionTypes()
     {
         var collectOptions = RegisterFunc;
+        // The disabled-state service asks the cross-tenant change policy before it enables a connection, and the connection provider is built on it, so a host without the policy
+        // cannot resolve a connection at all (FDW-4459). The Settings service type registers it; the requirement is checked once at Initialize, after every registration.
+        Requires<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(ConnectionRegistrationLog.CrossTenantChangePolicyNotRegistered);
 
         var providerService = typeof(IConnectionProvider).ToString();
 
@@ -178,6 +181,23 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddScoped<IConnectionHealthService, ConnectionHealthService>();
 
+            // The disabled state of a connection (FDW-3951): the provider below reads it before it builds any connection, and the
+            // threshold consequence DisableConnection writes it through the disabler, which takes it from here.
+            builder.Services.TryAddSingleton<IConnectionDisabledStates>(sp =>
+                new ConnectionDisabledStates(
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    ConnectionTypes.ConfigurationConnection,
+                    sp.GetRequiredService<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(),
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
+                    TimeProvider.System,
+                    sp.GetService<ILogger<ConnectionDisabledStates>>()));
+            builder.Services.TryAddScoped<Fdw.Operations.Abstractions.Thresholds.IConnectionDisabler>(sp =>
+                new ConnectionDisabler(
+                    sp.GetRequiredService<IConnectionDisabledStates>(),
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ITenantProvider>(),
+                    ConnectionDisablingOption.Instance,
+                    sp.GetService<ILogger<ConnectionDisabler>>()));
+
             // The health monitor's scan bounds are stated here, where it is registered, and a host that
             // wants others replaces this body. After each check it waits until the soonest enabled
             // connection falls due, never less than the first and never more than the second, which is
@@ -215,6 +235,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.AddSingleton<IConnectionProvider>(sp =>
             {
                 var provider = new ConnectionProvider(
+                    sp.GetRequiredService<IConnectionDisabledStates>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionProvider>()
                     ?? NullLogger<ConnectionProvider>.Instance);
 
@@ -261,6 +282,10 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     // type is not registered says nothing about how it authenticates, so the answer cannot be given.
     private sealed partial class NotFoundConnectionTypes
     {
+        /// <inheritdoc />
+        protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<IConnectionImplementationConfiguration> EndpointAuthenticationDeclaration
+            => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<IConnectionImplementationConfiguration>.None;
+
         /// <inheritdoc />
         protected override IGenericResult<bool> DecideHostIdentity(IConnectionImplementationConfiguration configuration)
             => GenericResult<bool>.Failure(

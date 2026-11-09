@@ -22,4 +22,8 @@ public static partial class ProxyEndpointLog
     /// <summary>Logs a proxy failure.</summary>
     [MessageLogging(EventId = 71000, Level = LogLevel.Error, Message = "Proxy call to {service} failed: {error}")]
     public static partial IGenericMessage ProxyFailed(ILogger logger, string service, string error);
+
+    /// <summary>Logs that the request failed: Failed to proxy request to EtlServer.</summary>
+    [MessageLogging(EventId = 71001, Level = LogLevel.Error, Message = "Failed to proxy request to EtlServer", ClientMessage = "Failed to proxy request to EtlServer")]
+    public static partial IGenericMessage TriggerEtlJobProxyFailedToProxyRequestTo(ILogger logger);
 }

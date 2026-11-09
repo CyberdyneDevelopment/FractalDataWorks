@@ -34,10 +34,10 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     where TRequest : CreateUserRequest
 {
     /// <summary>Initializes a new instance of the <see cref="CreateUserEndpointBase{TRequest}"/> class.</summary>
-        private readonly UserConfigurationProvider _userProvider;
-    private readonly UserTenantConfigurationProvider _tenantProvider;
-    private readonly UserRoleConfigurationProvider _userRoleProvider;
-    private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IUserConfigurationProvider _userProvider;
+    private readonly IUserTenantConfigurationProvider _tenantProvider;
+    private readonly IUserRoleConfigurationProvider _userRoleProvider;
+    private readonly IRoleConfigurationProvider _roleProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly IPersonalAccessTokenService _tokenService;
     private readonly IAgentKeyService _agentKeyService;
@@ -49,10 +49,10 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="CreateUserEndpointBase{TRequest}"/> class.</summary>
-    protected CreateUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider,
-        UserTenantConfigurationProvider tenantProvider,
-        UserRoleConfigurationProvider userRoleProvider,
-        RoleConfigurationProvider roleProvider,
+    protected CreateUserEndpointBase(ILogger logger, IUserConfigurationProvider userProvider,
+        IUserTenantConfigurationProvider tenantProvider,
+        IUserRoleConfigurationProvider userRoleProvider,
+        IRoleConfigurationProvider roleProvider,
         IUserCredentialService credentialService,
         IPersonalAccessTokenService tokenService,
         IAgentKeyService agentKeyService,
@@ -73,22 +73,22 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the tenant provider.
     /// </summary>
-    protected UserTenantConfigurationProvider TenantProvider => _tenantProvider;
+    protected IUserTenantConfigurationProvider TenantProvider => _tenantProvider;
 
     /// <summary>
     /// Gets the user-role configuration provider.
     /// </summary>
-    protected UserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
+    protected IUserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
 
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IRoleConfigurationProvider RoleProvider => _roleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
@@ -118,17 +118,13 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
 
         if (!result.IsSuccess)
         {
-            await SendRefusal(result, result.FailureReason(), ct).ConfigureAwait(false);
+            await SendRefusal(result, result.FailureReason(), req.Username, ct).ConfigureAwait(false);
             return;
         }
 
         if (result.Value is null)
         {
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "CreateUserFailed",
-                messages = OutcomeMissingMessage
-            }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateUserReturnedNothing(EndpointLogger, req.Username)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -137,11 +133,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         var loadResult = await _userProvider.Get(result.Value.UserId, ct).ConfigureAwait(false);
         if (!loadResult.IsSuccess || loadResult.Value is null)
         {
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "CreateUserPostLoadFailed",
-                messages = new[] { $"User '{req.Username}' was created (id {result.Value.UserId}) but could not be re-read for the response body." }
-            }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateUserCreatedButNotReRead(EndpointLogger, req.Username, result.Value.UserId)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -154,49 +146,38 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     // and answers 400. A step that failed after the account row exists is the platform's,
     // and the caller needs the account's id and what landed to finish it -- that is a 500
     // carrying both, never a 400 that reads as "nothing happened".
-    private async Task SendRefusal(IGenericResult<UserCreated> result, IGenericMessage reason, CancellationToken ct)
+    private async Task SendRefusal(IGenericResult<UserCreated> result, IGenericMessage reason, string username, CancellationToken ct)
     {
         var details = result.Details?.Data;
         var partial = details is not null && details.ContainsKey("userId");
 
-        if (!partial && await SendConflict(result, ct).ConfigureAwait(false))
+        if (!partial && await SendConflict(result, username, ct).ConfigureAwait(false))
             return;
 
-        if (!partial && await SendForbidden(result).ConfigureAwait(false))
-            return;
-
-        await Send.ResultAsync(TypedResults.Json(new
+        if (!partial)
         {
-            errorCode = partial ? "UserPartiallyCreated" : "CreateUserFailed",
-            messages = new[] { reason.Message },
-            userId = partial ? details!["userId"] : null,
-            created = partial ? details!["created"] : null,
-            failed = partial ? details!["failed"] : null
-        }, statusCode: partial ? 500 : 400)).ConfigureAwait(false);
-    }
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+            return;
+        }
 
-    // A refusal in the Forbidden band (the caller may not give a role, FDW-1577) answers 403 with its own code, not the
-    // general 400: the request is well formed and the caller is signed in. Returns whether one was sent.
-    private async Task<bool> SendForbidden(IGenericResult<UserCreated> result)
-    {
-        var (statusCode, problem) = ResultHttpStatusMapper.Map(result, HttpContext);
-        if (statusCode != StatusCodes.Status403Forbidden)
-            return false;
-
+        // Why the partial answer keeps its own fields: the caller needs the account's id and what landed to finish it, and the mapper's body has no place for them,
+        // so they ride as extensions on the same ProblemDetails every other failure answers.
+        var (statusCode, problem) = ResultHttpStatusMapper.Map(GenericResult.Failure(UserEndpointLog.CreateUserPartiallyCreated(EndpointLogger, username, details!["userId"]!)), HttpContext);
+        problem.Extensions["userId"] = details["userId"];
+        problem.Extensions["created"] = details["created"];
+        problem.Extensions["failed"] = details["failed"];
         await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
-        return true;
     }
 
     // The refusals that answer 409, each scoped to its own field so a client can tell them apart.
     // Returns whether one was sent.
-    private async Task<bool> SendConflict(IGenericResult<UserCreated> result, CancellationToken ct)
+    private async Task<bool> SendConflict(IGenericResult<UserCreated> result, string username, CancellationToken ct)
     {
         // A taken username is a conflict (FDW-1056): 409, scoped to Username so a client can tell it
         // from the Roles refusal below. Names match ignoring case, so 'Jane' is taken by 'jane'.
         if (result.CodeChain.Contains(UserResultCodes.ByName("UserAlreadyExists")))
         {
-            AddError(r => r.Username, "A user with this username already exists. Usernames are matched ignoring case, so a name that differs only by case is the same user.");
-            await Send.ErrorsAsync(409, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateUserUsernameTaken(EndpointLogger, username)), HttpContext)).ConfigureAwait(false);
             return true;
         }
 
@@ -205,8 +186,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         // the taken-username refusal above also answers 409 and a client has to tell them apart.
         if (result.CodeChain.Contains(UserResultCodes.ByName("PasswordNotUsable")))
         {
-            AddError(r => r.Roles!, "None of these roles allows password sign-in: no enabled password sign-in flow admits an account holding them. Add a role that carries what the password flow requires, or create the account without a password.");
-            await Send.ErrorsAsync(409, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateUserPasswordNotUsable(EndpointLogger, username)), HttpContext)).ConfigureAwait(false);
             return true;
         }
 

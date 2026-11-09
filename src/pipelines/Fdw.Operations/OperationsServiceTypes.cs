@@ -34,4 +34,15 @@ public partial class OperationsServiceTypes : ServiceTypeCollectionBase<Operatio
     /// </remarks>
     public static string? OperationalConnection { get; set; }
 
+    /// <summary>
+    /// How many pipeline names the latest runs are read for in one piece (FDW-4350). The tracker reads the names in pieces of this size, a fixed number of
+    /// requests per piece, so the number of requests does not grow with the number of pipelines.
+    /// </summary>
+    /// <remarks>
+    /// A host changes it at registration, before the Registration phase runs; it refuses a value below 1. Each name is one SQL parameter in one read and
+    /// the run ids of a piece are one parameter each in another, so a value above what SQL Server takes in one statement (2100 parameters) makes a read fail
+    /// loud with the server's own error; no code caps the value.
+    /// </remarks>
+    public static int LatestRunsChunkSize { get; set; } = 500;
+
 }

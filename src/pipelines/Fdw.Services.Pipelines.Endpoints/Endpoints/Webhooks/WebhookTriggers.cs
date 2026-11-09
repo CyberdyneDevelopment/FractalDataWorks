@@ -21,7 +21,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public sealed class WebhookTriggers
 {
     private readonly WebhookTriggerConfigurationProvider _provider;
-    private readonly PipelineServiceConfigurationProvider _pipelines;
+    private readonly IPipelineConfigurationProvider _pipelines;
     private readonly RunRoleAuthority _roles;
     private readonly ILogger _logger;
 
@@ -31,7 +31,7 @@ public sealed class WebhookTriggers
     /// <param name="roles">Judges the run roles a caller names.</param>
     /// <param name="logger">The logger.</param>
     public WebhookTriggers(
-        WebhookTriggerConfigurationProvider provider, PipelineServiceConfigurationProvider pipelines, RunRoleAuthority roles, ILogger logger)
+        WebhookTriggerConfigurationProvider provider, IPipelineConfigurationProvider pipelines, RunRoleAuthority roles, ILogger logger)
     {
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));
         _pipelines = pipelines ?? throw new ArgumentNullException(nameof(pipelines));

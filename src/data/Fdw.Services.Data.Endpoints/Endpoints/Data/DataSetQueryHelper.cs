@@ -98,6 +98,8 @@ internal static class DataSetQueryHelper
             detail.DisplayName = view.DisplayName;
             detail.Description = view.Description;
             detail.ClassificationId = view.ClassificationId;
+            // The detail is the base data set's, under the view's name: the owner it shows is the view's.
+            detail.OwnerUserId = view.OwnerUserId;
             Describe(detail, view);
         }
 
@@ -111,7 +113,6 @@ internal static class DataSetQueryHelper
         detail.BaseDataSetId = variation.BaseDataSetId;
         detail.ParentVariationId = variation.ParentVariationId;
         detail.OwnerWorkspaceId = variation.OwnerWorkspaceId;
-        detail.OwnerUserId = variation.OwnerUserId;
         detail.VariationFilters = variation.StoredFilters;
     }
 
@@ -121,7 +122,6 @@ internal static class DataSetQueryHelper
         summary.BaseDataSetId = variation.BaseDataSetId;
         summary.ParentVariationId = variation.ParentVariationId;
         summary.OwnerWorkspaceId = variation.OwnerWorkspaceId;
-        summary.OwnerUserId = variation.OwnerUserId;
         summary.VariationFilters = variation.StoredFilters;
     }
 
@@ -142,6 +142,7 @@ internal static class DataSetQueryHelper
         Abbreviation = config.Abbreviation,
         Description = config.Description,
         ClassificationId = config.ClassificationId,
+        OwnerUserId = config.OwnerUserId,
         Version = config.Version,
         Implementation = config.Implementation,
         FederationStrategy = config.FederationStrategyOrNone(),
@@ -223,6 +224,7 @@ internal static class DataSetQueryHelper
         Abbreviation = config.Abbreviation,
         Description = config.Description,
         ClassificationId = config.ClassificationId,
+        OwnerUserId = config.OwnerUserId,
         Version = config.Version,
         CreatedAt = config.CreateDate,
         ModifiedAt = config.ModifyDate,

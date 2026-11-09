@@ -5,6 +5,7 @@ using FastEndpoints;
 using Fdw.Services.Users;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -13,7 +14,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </summary>
 public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<UserPreferencesResponse>
 {
-    private readonly UserPreferenceConfigurationProvider _preferenceProvider;
+    private readonly IUserPreferenceConfigurationProvider _preferenceProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -22,7 +23,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     /// <param name="preferenceProvider">The user preference configuration provider.</param>
     /// <param name="logger">The logger.</param>
     protected GetUserPreferencesEndpointBase(
-        UserPreferenceConfigurationProvider preferenceProvider,
+        IUserPreferenceConfigurationProvider preferenceProvider,
         ILogger logger)
     {
         _preferenceProvider = preferenceProvider;
@@ -32,7 +33,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     /// <summary>
     /// Gets the user preference configuration provider.
     /// </summary>
-    protected UserPreferenceConfigurationProvider PreferenceProvider => _preferenceProvider;
+    protected IUserPreferenceConfigurationProvider PreferenceProvider => _preferenceProvider;
 
     /// <summary>
     /// Gets the logger.
@@ -63,7 +64,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     {
         if (!PreferenceEndpointIdentity.TryGetUserId(User, out var userId))
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.GetUserPreferencesNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -73,8 +74,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
 
             if (!result.IsSuccess)
             {
-                AddError(result.FailureReason().Message);
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -98,7 +98,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
         catch (Exception ex)
         {
             UserEndpointLog.GetPreferencesFailed(_logger, ex, userId.ToString());
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.GetUserPreferencesFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

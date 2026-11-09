@@ -10,6 +10,8 @@ using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Conventions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Configuration.Endpoints;
 
@@ -75,8 +77,7 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
         catch (Exception ex)
         {
             ConfigurationEndpointLog.TableQueryFailed(_logger, ex, "configuration", "listing instances");
-            AddError("An error occurred while retrieving configuration instances");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConfigurationEndpointLog.ListConfigurationInstancesFaulted(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -99,7 +99,8 @@ public sealed class WaitThresholdSourceTests
         _levels.Add(Level("Pipeline", "AfcPlayersLoad", "Sometimes"));
         var mode = await Sut().Read(TestContext.Current.CancellationToken);
 
-        _levels.RemoveAt(_levels.Count - 1);
+        // Sut() appended the server level after the pipeline's, so the last level is not the one with the bad mode: remove that one by its owner.
+        _levels.RemoveAll(level => string.Equals(level.OwnerName, "AfcPlayersLoad", StringComparison.Ordinal));
         _levels.Add(Level("Pipeline", "Ghost", "None"));
         var owner = await Sut(serverLevel: false).Read(TestContext.Current.CancellationToken);
 

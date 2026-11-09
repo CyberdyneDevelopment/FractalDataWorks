@@ -30,7 +30,7 @@ public sealed class PlacementOptInTests
     public void TheDataStoreProviderPlacesItsMembersAsADataStore()
     {
         var provider = new DataStoreConfigurationProvider(
-            NullLogger<DataStoreConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataStore", Placing());
+            NullLogger<DataStoreConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataStore", Placing(), Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>());
 
         WorkspaceResourceKinds.ByName(provider.PlacementKind).ShouldNotBeSameAs(WorkspaceResourceKinds.NotFound);
         provider.PlacementKind.ShouldBe("DataStore");
@@ -54,7 +54,7 @@ public sealed class PlacementOptInTests
     public void AProviderWillNotTakeNoPlacement()
     {
         Should.Throw<ArgumentNullException>(() => new DataStoreConfigurationProvider(
-            NullLogger<DataStoreConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataStore", null!));
+            NullLogger<DataStoreConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataStore", null!, Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>()));
     }
 
     [Fact]

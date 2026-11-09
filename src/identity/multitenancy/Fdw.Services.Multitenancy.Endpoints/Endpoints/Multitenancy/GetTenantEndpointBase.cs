@@ -10,6 +10,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Services.Multitenancy.Endpoints.Logging;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -75,9 +77,15 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
             }
         }
 
-        if (!tenantResult.IsSuccess || tenantResult.Value is null)
+        if (tenantResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(tenantResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (tenantResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.GetTenantTenantNotFound(EndpointLogger, req.Id)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -91,7 +99,7 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
             if (!hasAccess)
             {
                 OnAccessDenied(userId, tenant.Id);
-                await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.GetTenantForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
         }

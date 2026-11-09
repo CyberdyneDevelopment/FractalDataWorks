@@ -1,6 +1,6 @@
 using FastEndpoints;
-using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -13,7 +13,7 @@ public abstract class GetDataflowGraphEndpointBase : DataflowLayerEndpointBase
     /// <inheritdoc />
     protected GetDataflowGraphEndpointBase(
         DataflowGraphConfigurationProvider provider,
-        PipelineServiceConfigurationProvider pipelineProvider,
+        IPipelineConfigurationProvider pipelineProvider,
         ILogger<GetDataflowGraphEndpointBase> logger)
         : base(provider, pipelineProvider, logger)
     {

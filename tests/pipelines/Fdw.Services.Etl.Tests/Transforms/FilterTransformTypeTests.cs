@@ -41,7 +41,7 @@ public sealed class FilterTransformTypeTests
 
         // Assert — a param-less combine op fails loud, it never silently passes every record through
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11048");
+        result.Messages[^1].Code.ShouldBe("ETL-61011");
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class FilterTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11048");
+        result.Messages[^1].Code.ShouldBe("ETL-61011");
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class FilterTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11052");
+        result.Messages[^1].Code.ShouldBe("ETL-61003");
     }
 
     // ── Transform: predicate pass / fail ────────────────────────────────────────────────
@@ -176,7 +176,7 @@ public sealed class FilterTransformTypeTests
 
         // Assert — a param-less Filter step must fail loud, never silently pass every record through
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11048");
+        result.Messages[^1].Code.ShouldBe("ETL-61011");
     }
 
     [Fact]
@@ -574,7 +574,7 @@ public sealed class FilterTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11048");
+        result.Messages[^1].Code.ShouldBe("ETL-61011");
     }
 
     [Fact]
@@ -591,6 +591,6 @@ public sealed class FilterTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11052");
+        result.Messages[^1].Code.ShouldBe("ETL-61003");
     }
 }

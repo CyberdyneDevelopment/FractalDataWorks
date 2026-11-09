@@ -19,18 +19,29 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public static class GraphSave
 {
-    /// <summary>Judges and saves a graph.</summary>
+    /// <summary>Decides the organization a new graph belongs to (FDW-4573), then judges and saves it.</summary>
     /// <param name="provider">The pipeline domain's configuration provider.</param>
-    /// <param name="graph">The graph to save.</param>
+    /// <param name="graph">The graph to save; its organization is set from the owner's decision.</param>
+    /// <param name="owner">Decides the organization of the new pipeline.</param>
+    /// <param name="requestedOrganizationId">The organization the request names; null when it names none.</param>
     /// <param name="dataSets">The data sets, read for the type of the columns a destination's value sources fill.</param>
     /// <param name="mayWriteScripts">Says whether the caller may write scripts (FDW-3676); asked only when the graph holds script text.</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <param name="ct">Cancels the save.</param>
     /// <returns>The saved graph as the API states it, or the refusal or failure.</returns>
-    public static Task<IGenericResult<GraphPayload>> Save(
-        PipelineServiceConfigurationProvider provider, GraphPipelineConfiguration graph, IDataSetConfigurationProvider dataSets,
-        Func<CancellationToken, Task<bool>> mayWriteScripts, ILogger logger, CancellationToken ct)
-        => Write(provider, graph, dataSets, mayWriteScripts, logger, mayCreate: true, ct);
+    public static async Task<IGenericResult<GraphPayload>> Save(
+        IPipelineConfigurationProvider provider, GraphPipelineConfiguration graph, PipelineOwner owner, Guid? requestedOrganizationId,
+        IDataSetConfigurationProvider dataSets, Func<CancellationToken, Task<bool>> mayWriteScripts, ILogger logger, CancellationToken ct)
+    {
+        var organization = await owner.OrganizationOfNew(requestedOrganizationId, ct).ConfigureAwait(false);
+        if (organization.IsFailure)
+        {
+            return organization.ToNewResult<GraphPayload>();
+        }
+
+        graph.OrgId = organization.Value;
+        return await Write(provider, graph, dataSets, mayWriteScripts, logger, mayCreate: true, ct).ConfigureAwait(false);
+    }
 
     /// <summary>Judges a graph and updates the pipeline it identifies; a pipeline removed since it was read is not brought back.</summary>
     /// <param name="provider">The pipeline domain's configuration provider.</param>
@@ -41,7 +52,7 @@ public static class GraphSave
     /// <param name="ct">Cancels the save.</param>
     /// <returns>The saved graph as the API states it, or the refusal or failure.</returns>
     public static Task<IGenericResult<GraphPayload>> Update(
-        PipelineServiceConfigurationProvider provider, GraphPipelineConfiguration graph, IDataSetConfigurationProvider dataSets,
+        IPipelineConfigurationProvider provider, GraphPipelineConfiguration graph, IDataSetConfigurationProvider dataSets,
         Func<CancellationToken, Task<bool>> mayWriteScripts, ILogger logger, CancellationToken ct)
         => Write(provider, graph, dataSets, mayWriteScripts, logger, mayCreate: false, ct);
 
@@ -59,7 +70,7 @@ public static class GraphSave
     ];
 
     private static async Task<IGenericResult<GraphPayload>> Write(
-        PipelineServiceConfigurationProvider provider, GraphPipelineConfiguration graph, IDataSetConfigurationProvider dataSets,
+        IPipelineConfigurationProvider provider, GraphPipelineConfiguration graph, IDataSetConfigurationProvider dataSets,
         Func<CancellationToken, Task<bool>> mayWriteScripts, ILogger logger, bool mayCreate, CancellationToken ct)
     {
         var access = await GraphScriptAccess.Check(graph, mayWriteScripts, logger, ct).ConfigureAwait(false);

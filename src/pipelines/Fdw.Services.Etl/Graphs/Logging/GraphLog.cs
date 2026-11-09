@@ -107,4 +107,10 @@ public static partial class GraphLog
     [MessageLogging(EventId = 20001, Level = LogLevel.Error,
         Message = "Component '{component}' maps the field '{target}', but {reason}")]
     public static partial IGenericMessage FieldConversionInvalid(ILogger logger, string component, string target, string reason);
+
+    /// <summary>Logs a host that attached the graph pipeline but registered nothing that reads the pipelines that write each data set and their latest runs, which the data set status is judged by (FDW-4488, FDW-4588). The number is in the Configuration category (6).</summary>
+    [MessageLogging(EventId = 60350, Level = LogLevel.Critical,
+        Message = "The host runs graph pipelines but registered no IDataSetWriterRuns, which the status of a data set is judged by; register the graph pipeline service type's registration; the host does not start",
+        ClientMessage = "The graph pipeline service type needs the data set writer runs to be registered, and they are not")]
+    public static partial IGenericMessage DataSetWriterRunsNotRegistered(ILogger logger);
 }

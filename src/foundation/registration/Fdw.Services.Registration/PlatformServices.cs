@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Abstractions;
@@ -34,6 +36,30 @@ namespace Fdw.ServiceTypes;
 public static class PlatformServices
 {
     private static readonly object _gate = new();
+
+    /// <summary>
+    /// Whether a singleton that takes a scoped or a transient service stops the host at Register (FDW-4640). A host that needs to start while it clears the findings sets this to
+    /// <c>false</c> before <see cref="Register"/>; every finding is still logged, at Warning in the summary.
+    /// </summary>
+    /// <remarks>
+    /// Why a setting and not a switch in code: Release-Supervisor's ruling for the first window, so a host can show all its findings without stopping at the first. It governs the
+    /// registration walk only; ValidateScopes and ValidateOnBuild stay on, because a scoped service resolved from the root provider cannot be tolerated at run time.
+    /// </remarks>
+    public static bool LifetimeFindingsFailStartup { get; set; } = true;
+
+    // Declared before the setting that starts from it: static initializers run in the order written.
+    private static readonly Type[] DefaultLifetimeCheckSkippedServiceTypes = [typeof(IOptionsFactory<>)];
+
+    /// <summary>
+    /// The service types the registration lifetime check does not report as a singleton's dependency (FDW-4640). An open generic type names every closed form of it.
+    /// </summary>
+    /// <remarks>
+    /// Why a list the host can change: Microsoft.Extensions.Options registers IOptions&lt;T&gt; and IOptionsMonitor&lt;T&gt; as singletons that take the transient
+    /// IOptionsFactory&lt;T&gt;, which is the framework's own design and not a captive dependency of ours. The default lists that one type; a host that finds another framework
+    /// registration of the same kind sets the list before <see cref="Register"/> rather than the check naming types in code.
+    /// </remarks>
+    public static IReadOnlyCollection<Type> LifetimeCheckSkippedServiceTypes { get; set; } = DefaultLifetimeCheckSkippedServiceTypes;
+
 
     // Pre-freeze staging. Written only by [ModuleInitializer] Add() calls, which are CLR-guaranteed
     // complete before Main() and thus before anything can trigger the freeze.
@@ -115,8 +141,8 @@ public static class PlatformServices
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">
-    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>.
+    /// Run every domain even if its phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>.
     /// </param>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -125,9 +151,14 @@ public static class PlatformServices
         var _failed = new List<string>();
         IGenericResult<IHostApplicationBuilder>? _first = null;
 
+        // Why here, in every environment (FDW-4640): the framework turns these on only when the environment is Development, so Staging and Production never validated and a
+        // singleton holding a scoped service (WaitHoldGate) shipped. Hosts do not set the options; this is the one place that does.
+        builder.ConfigureContainer(new DefaultServiceProviderFactory(ContainerValidation.Options));
+        builder.Services.TryAddSingleton<ContainerValidation>();
+
         foreach (var entry in _frozenOrder)
         {
-            if (!force && entry.ConfigureState == PhaseState.Deferred) continue;
+            if (!force && entry.ConfigureState.IsDeferred) continue;
 
             var result = entry.Configure(builder, loggerFactory, force: force);
             if (result.IsFailure)
@@ -173,8 +204,8 @@ public static class PlatformServices
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">
-    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>.
+    /// Run every domain even if its phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>.
     /// </param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -185,7 +216,7 @@ public static class PlatformServices
 
         foreach (var entry in _frozenOrder)
         {
-            if (!force && entry.RegisterState == PhaseState.Deferred) continue;
+            if (!force && entry.RegisterState.IsDeferred) continue;
 
             var result = entry.Register(builder, loggerFactory, force: force);
             if (result.IsFailure)
@@ -212,6 +243,19 @@ public static class PlatformServices
             return _first!;
         }
 
+        // The registrations are complete here: name every singleton that takes a scoped or a transient service (FDW-4640).
+        var lifetimeFindings = ServiceLifetimeCheck.Check(builder.Services, _log, LifetimeCheckSkippedServiceTypes);
+        if (lifetimeFindings.Count > 0)
+        {
+            if (LifetimeFindingsFailStartup)
+            {
+                ServiceTypeLog.ServiceLifetimeFindings(_log, lifetimeFindings.Count);
+                return GenericResult<IHostApplicationBuilder>.Failure(lifetimeFindings);
+            }
+
+            ServiceTypeLog.ServiceLifetimeFindingsTolerated(_log, lifetimeFindings.Count);
+        }
+
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
@@ -230,8 +274,8 @@ public static class PlatformServices
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
     /// <param name="force">
-    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>.
+    /// Run every domain even if its phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>.
     /// </param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
@@ -240,9 +284,15 @@ public static class PlatformServices
         var _failed = new List<string>();
         IGenericResult<IHost>? _first = null;
 
+        // A host whose builder never went through Configure was not built to validate lifetimes (FDW-4640): it does not start.
+        if (host.Services.GetService<ContainerValidation>() is null)
+        {
+            return GenericResult<IHost>.Failure(ServiceTypeLog.ContainerValidationNotConfigured(_log));
+        }
+
         foreach (var entry in _frozenOrder)
         {
-            if (!force && entry.InitializeState == PhaseState.Deferred) continue;
+            if (!force && entry.InitializeState.IsDeferred) continue;
 
             var result = entry.Initialize(host, loggerFactory, force: force);
             if (result.IsFailure)
@@ -282,6 +332,8 @@ public static class PlatformServices
         lock (_gate)
         {
             _pending.Clear();
+            LifetimeFindingsFailStartup = true;
+            LifetimeCheckSkippedServiceTypes = DefaultLifetimeCheckSkippedServiceTypes;
             _frozenOrder = default;
             _frozen = false;
         }

@@ -25,6 +25,10 @@ namespace Fdw.Services.Authorization.Tests;
 [Trait("Category", "Security")]
 public sealed class OrganizationEndpointTests
 {
+    // A row that is not there, as a provider reports it: a failure numbered in the Missing band (3xxxx), which the mapper answers 404.
+    // An unnumbered failure is a fault and answers 500.
+    private static GenericMessage MissingRow() => new(MessageSeverity.Error, "not found", "TEST-30001");
+
     private static readonly Guid Finance = new("44444444-0000-0000-0000-000000000001");
     private static readonly Guid Jo = new("22222222-0000-0000-0000-000000000001");
 
@@ -66,7 +70,7 @@ public sealed class OrganizationEndpointTests
         var users = new Mock<IUserConfigurationProvider>();
         users.Setup(u => u.Get(Jo, It.IsAny<CancellationToken>())).ReturnsAsync(exists
             ? GenericResult<IUserImplementationConfiguration>.Success(Mock.Of<IUserImplementationConfiguration>())
-            : GenericResult<IUserImplementationConfiguration>.Failure(new GenericMessage("not found")));
+            : GenericResult<IUserImplementationConfiguration>.Failure(MissingRow()));
         return users;
     }
 

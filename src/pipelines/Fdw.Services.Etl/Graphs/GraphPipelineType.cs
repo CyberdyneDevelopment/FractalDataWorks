@@ -31,9 +31,10 @@ using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Thresholds;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Graphs.Commands;
-using Fdw.Services.Pipelines;
+using Fdw.Services.Etl.Graphs.Logging;
 using Fdw.Results;
 using Fdw.Services.Settings;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Etl.Graphs;
 
@@ -61,22 +62,21 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
         category: "ETL",
         defaultContainerName: "GraphPipelineConfiguration")
     {
+        // Every run is judged against thresholds, so a host that runs pipelines without the evaluator is miswired (FDW-3865); the status of a data set is judged by the pipelines that write it
+        // and their latest runs, which this option registers a reader of (FDW-4488). A host that never attached this option is asked for neither.
+        Requires<IThresholdEvaluator>(RunThresholdLog.EvaluatorNotRegistered);
+        Requires<IDataSetWriterRuns>(GraphLog.DataSetWriterRunsNotRegistered);
+
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
 
-            // Why the host is refused here (FDW-3865): every run is judged against thresholds, so a host that runs pipelines without the evaluator is miswired.
-            if (!services.GetRequiredService<IServiceProviderIsService>().IsService(typeof(IThresholdEvaluator)))
-            {
-                return GenericResult<IHost>.Failure(RunThresholdLog.EvaluatorNotRegistered(loggerFactory?.CreateLogger<GraphPipelineType>() ?? NullLogger<GraphPipelineType>.Instance));
-            }
-
             // One domain, one implementation: the engine's provider registers under its own
             // name on the Pipeline domain provider. There is no intermediate kind row to
             // mint or resolve -- pipe.Pipeline already names the implementation.
-            services.GetRequiredService<PipelineServiceConfigurationProvider>()
+            services.GetRequiredService<IPipelineConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<GraphPipelineConfigurationProvider>());
-    
+
             return GenericResult<IHost>.Success(host);
         });
 
@@ -117,6 +117,10 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
                 typeof(IGraphPipelineProvider),
                 sp => new GraphPipelineProvider(sp.GetRequiredService<IGraphPipelineFactory>()),
                 ServiceLifetime.Scoped));
+
+            // Which pipelines write each data set, read from the pipelines themselves, and the latest run of each, for the status of a data set (FDW-4488).
+            builder.Services.TryAddScoped<IDataSetWriters, DataSetWriters>();
+            builder.Services.TryAddScoped<IDataSetWriterRuns, DataSetWriterRuns>();
 
             builder.Services.TryAddSingleton(sp => new GraphPipelineConfigurationProvider(
                 sp.GetRequiredService<ILogger<GraphPipelineConfigurationProvider>>(),

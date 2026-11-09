@@ -98,10 +98,11 @@ public class LineageSearchReaderTests
     [Fact]
     public async Task AProviderThatCannotListItsDomainTableIsAFailureNotAnEmptyAnswer()
     {
-        // A plain configuration provider with no record listing: the probe for it finds nothing.
+        // The data set provider lists its domain table since FDW-4636 (IDataSetConfigurationProvider is an IDomainRecordProvider), so the provider that cannot is the pipeline one:
+        // Search hands it a plain configuration provider with no record listing, and the probe for it finds nothing.
         var dataSets = new Mock<IDataSetConfigurationProvider>();
 
-        var page = await Search(dataSets, new LineageSearchQuery("o", KindsOf("DataSet"), 10));
+        var page = await Search(dataSets, new LineageSearchQuery("o", KindsOf("Pipeline", pipelinesAreNodes: true), 10));
 
         page.IsFailure.ShouldBeTrue();
     }

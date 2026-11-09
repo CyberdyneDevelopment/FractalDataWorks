@@ -21,7 +21,8 @@ public sealed class PermissionConfigurationValidatorTests
         {
             Scope = "tenant",
             Name = "connections-read",
-            Domain = "connections",
+            Domain = "Permission",
+            PermissionDomain = "connections",
             Resource = "connections",
             Action = "read"
         };
@@ -212,7 +213,7 @@ public sealed class PermissionConfigurationValidatorTests
             Scope = "tenant",
             Name = "connections-browse",
             Resource = "connections",
-            Action = "browse"
+            Action = "1browse"
         };
 
         // Act
@@ -230,6 +231,11 @@ public sealed class PermissionConfigurationValidatorTests
     [InlineData("execute")]
     [InlineData("delete")]
     [InlineData("admin")]
+    [InlineData("view")]
+    [InlineData("query")]
+    [InlineData("members")]
+    [InlineData("delegate")]
+    [InlineData("api-key")]
     public void ValidatePassesWithValidActions(string action)
     {
         // Arrange
@@ -275,6 +281,99 @@ public sealed class PermissionConfigurationValidatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
+    public void ValidatePassesWithThePermissionAWorkspaceIsGiven()
+    {
+        // FDW-4241: creating a workspace saves workspaces/{guid}:view; every Save was refused before the grammar matched what is stored.
+        var config = new PermissionImplementationConfiguration
+        {
+            Scope = "tenant",
+            Name = "workspaces/66666666-0000-0000-0000-000000000001:view",
+            Domain = "Permission",
+            Implementation = "Permission",
+            PermissionDomain = "workspaces",
+            Resource = "workspaces/66666666-0000-0000-0000-000000000001",
+            Action = "view",
+            DisplayName = "View workspace Acme",
+            Category = "Workspaces"
+        };
+
+        var result = _validator.TestValidate(config);
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    [InlineData("settings/role")]
+    [InlineData("notifications/lists")]
+    [InlineData("workspaces/0abc1234-0000-0000-0000-000000000001")]
+    [InlineData("*")]
+    public void ValidatePassesWithSlashSeparatedResources(string resource)
+    {
+        var config = new PermissionImplementationConfiguration
+        {
+            Scope = "global",
+            Name = $"{resource}:read",
+            Domain = "Permission",
+            PermissionDomain = "settings",
+            Resource = resource,
+            Action = "read"
+        };
+
+        var result = _validator.TestValidate(config);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.Resource);
+        result.ShouldNotHaveValidationErrorFor(x => x.Name);
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    [InlineData("/settings")]
+    [InlineData("settings/")]
+    [InlineData("settings//role")]
+    [InlineData("settings/Role")]
+    [InlineData("settings/-role")]
+    [InlineData("settings role")]
+    public void ValidateFailsWithMalformedResources(string resource)
+    {
+        var config = new PermissionImplementationConfiguration
+        {
+            Scope = "global",
+            Name = "settings:read",
+            PermissionDomain = "settings",
+            Resource = resource,
+            Action = "read"
+        };
+
+        var result = _validator.TestValidate(config);
+
+        result.ShouldHaveValidationErrorFor(x => x.Resource);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void ValidateFailsWithNoPermissionDomain()
+    {
+        var config = new PermissionImplementationConfiguration
+        {
+            Scope = "global",
+            Name = "settings:read",
+            PermissionDomain = string.Empty,
+            Resource = "settings",
+            Action = "read"
+        };
+
+        var result = _validator.TestValidate(config);
+
+        result.ShouldHaveValidationErrorFor(x => x.PermissionDomain);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
     public void ValidatePassesWithNullCategory()
     {
         // Arrange
@@ -282,7 +381,8 @@ public sealed class PermissionConfigurationValidatorTests
         {
             Scope = "tenant",
             Name = "connections-read",
-            Domain = "connections",
+            Domain = "Permission",
+            PermissionDomain = "connections",
             Resource = "connections",
             Action = "read",
             Category = null
@@ -305,7 +405,8 @@ public sealed class PermissionConfigurationValidatorTests
         {
             Scope = "tenant",
             Name = "connections-read",
-            Domain = "connections",
+            Domain = "Permission",
+            PermissionDomain = "connections",
             Resource = "connections",
             Action = "read",
             Category = "Data Access"
@@ -350,7 +451,8 @@ public sealed class PermissionConfigurationValidatorTests
         {
             Scope = "tenant",
             Name = "connections-read",
-            Domain = "connections",
+            Domain = "Permission",
+            PermissionDomain = "connections",
             Resource = "connections",
             Action = "read",
             Description = null
@@ -395,7 +497,8 @@ public sealed class PermissionConfigurationValidatorTests
         {
             Scope = "tenant",
             Name = "connections-read",
-            Domain = "connections",
+            Domain = "Permission",
+            PermissionDomain = "connections",
             Resource = "connections",
             Action = "read"
         };

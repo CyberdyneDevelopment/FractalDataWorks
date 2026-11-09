@@ -123,8 +123,8 @@ public sealed class TdsLogin
     // The credential is presented to the flow for exactly this run, as POST /auth/login presents it.
     private async Task<IGenericResult<string>> Run(Login7Request login, AuthenticationFlow flow, IServiceProvider services, CancellationToken cancellationToken)
     {
-        var runner = services.GetRequiredService<AuthenticationRunner>();
-        var presented = services.GetRequiredService<PresentedPasswordCredentialAccessor>();
+        var runner = services.GetRequiredService<IAuthenticationRunner>();
+        var presented = services.GetRequiredService<IPresentedPasswordCredentialAccessor>();
         IGenericResult<FlowResult> result;
         using (new PresentedPasswordCredentialScope(presented, login.UserName, login.Password))
         {

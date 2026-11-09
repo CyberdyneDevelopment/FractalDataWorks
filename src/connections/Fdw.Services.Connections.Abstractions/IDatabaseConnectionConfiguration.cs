@@ -19,4 +19,13 @@ public interface IDatabaseConnectionConfiguration : IConnectionImplementationCon
     /// configuration leaves it so is refused when it is created, naming the connection.
     /// </remarks>
     int MaxSerialInsert { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most values a key list carries as parameters in a statement of this connection before the key list goes to a temporary table the statement
+    /// joins on, or <see langword="null"/> when the connection states none (FDW-4267).
+    /// </summary>
+    /// <remarks>
+    /// Null means the connection states none: the default declared on its connection type's service type option applies. Nothing is assumed here or in the column.
+    /// </remarks>
+    int? MaxParametersBeforeTempTable { get; set; }
 }

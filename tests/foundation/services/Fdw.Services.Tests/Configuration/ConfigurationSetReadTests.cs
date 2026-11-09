@@ -35,6 +35,9 @@ public sealed class ConfigurationSetReadTests
 {
     private const int Levels = ConfigurationLevels.WholeAggregate;
 
+    // The most keys one statement carries in the test that reads past it; the gateway provider states it, so a set one larger is read in two.
+    private const int SmallKeyChunkSize = 4;
+
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Performance")]
@@ -51,6 +54,91 @@ public sealed class ConfigurationSetReadTests
         store.Gateway.Reads("TestRoot").ShouldBe(1);
         store.Gateway.Reads("TestOp").ShouldBe(1);
         store.Gateway.Reads("TestMap").ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Performance")]
+    public async Task ASingleReadByNameReadsEachTableOnceWhateverTheNumberOfChildren()
+    {
+        // FDW-4254: one row with many descendants. Read row by row, this made a statement for each operation's mappings (a datastore of 500
+        // containers made ~2470 statements, FDW-4252); the cascade of one row is the set read of a set of one, so it is a statement per table.
+        const int operations = 25;
+        var store = new SetStore().WithRoots(1);
+        for (var i = 0; i < operations; i++)
+        {
+            store.Gateway.Add("TestOp", Row(100 + i, "TestRootRowId", 11, $"op{i}"));
+            store.Gateway.Add("TestMap", Row(200 + 2 * i, "TestOpRowId", 100 + i, $"m{i}a"), Row(201 + 2 * i, "TestOpRowId", 100 + i, $"m{i}b"));
+        }
+
+        var result = await store.Domain.Get("root1", Levels, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var root = result.Value.ShouldBeOfType<TestRootConfiguration>();
+        root.Operations.Count.ShouldBe(operations);
+        root.Operations.ShouldAllBe(op => op.Mappings.Count == 2);
+        store.Gateway.Reads("TestRoot").ShouldBe(1);
+        store.Gateway.Reads("TestOp").ShouldBe(1);
+        store.Gateway.Reads("TestMap").ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Performance")]
+    public async Task ANarrowedReadLoadsOnlyTheNamedRowsAndTheChildrenOfThose()
+    {
+        // FDW-4328: a command that names two containers of a store of 500 reads those and what hangs from them, not the other 498.
+        var store = new SetStore().WithRoots(1);
+        store.Gateway.Add("TestOp", Row(21, "TestRootRowId", 11, "op1a"), Row(22, "TestRootRowId", 11, "op1b"), Row(23, "TestRootRowId", 11, "op1c"));
+        store.Gateway.Add("TestMap", Row(31, "TestOpRowId", 21, "m1a"), Row(32, "TestOpRowId", 22, "m1b"), Row(33, "TestOpRowId", 23, "m1c"));
+        var narrowing = new ChildNarrowing(typeof(TestOpConfiguration), "Name", ["op1a", "op1c"]);
+
+        var result = await store.Domain.Get("root1", Levels, narrowing, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var root = result.Value.ShouldBeOfType<TestRootConfiguration>();
+        root.Operations.Select(op => op.Name).OrderBy(name => name, StringComparer.Ordinal).ShouldBe(["op1a", "op1c"]);
+        root.Operations.SelectMany(op => op.Mappings).Select(map => map.Name).OrderBy(name => name, StringComparer.Ordinal).ShouldBe(["m1a", "m1c"]);
+        store.Gateway.Reads("TestRoot").ShouldBe(1);
+        store.Gateway.Reads("TestOp").ShouldBe(1);
+        store.Gateway.Reads("TestMap").ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ANarrowingOfAnotherKindOfRowNarrowsNothing()
+    {
+        var store = new SetStore().WithRoots(1);
+        store.Gateway.Add("TestOp", Row(21, "TestRootRowId", 11, "op1a"), Row(22, "TestRootRowId", 11, "op1b"));
+        var narrowing = new ChildNarrowing(typeof(TestMapConfiguration), "Name", ["nothing-by-this-name"]);
+
+        var result = await store.Domain.Get("root1", Levels, narrowing, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldBeOfType<TestRootConfiguration>().Operations.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ASingleReadByIdGivesTheSameRowsAsTheListRead()
+    {
+        // One root: the fake domain read answers every domain row it holds whatever the id, so a second would make the single read ambiguous.
+        var store = new SetStore().WithRoots(1);
+        store.Gateway.Add("TestOp", Row(21, "TestRootRowId", 11, "op1a"), Row(22, "TestRootRowId", 11, "op1b"));
+        store.Gateway.Add("TestMap", Row(31, "TestOpRowId", 21, "m1a"), Row(32, "TestOpRowId", 22, "m1b"));
+
+        var listed = await store.Domain.Get(Levels, TestContext.Current.CancellationToken);
+        var single = await store.Domain.Get(store.DomainIds[0], Levels, TestContext.Current.CancellationToken);
+
+        listed.IsSuccess.ShouldBeTrue(listed.CurrentMessage);
+        single.IsSuccess.ShouldBeTrue(single.CurrentMessage);
+        var fromList = listed.Value!.Cast<TestRootConfiguration>().Single(root => root.Id == store.DomainIds[0]);
+        var alone = single.Value.ShouldBeOfType<TestRootConfiguration>();
+        alone.Name.ShouldBe(fromList.Name);
+        alone.Operations.Select(op => op.Name).ShouldBe(fromList.Operations.Select(op => op.Name));
+        alone.Operations.SelectMany(op => op.Mappings).Select(map => map.Name).ShouldBe(fromList.Operations.SelectMany(op => op.Mappings).Select(map => map.Name));
     }
 
     [Fact]
@@ -92,8 +180,8 @@ public sealed class ConfigurationSetReadTests
     [Trait("Category", "Performance")]
     public async Task ASetLargerThanOneStatementCarriesIsReadInChunks()
     {
-        var count = ParentChain.MaxKeys + 1;
-        var store = new SetStore().WithRoots(count);
+        var count = SmallKeyChunkSize + 1;
+        var store = new SetStore(SmallKeyChunkSize).WithRoots(count);
         for (var i = 0; i < count; i++)
             store.Gateway.Add("TestOp", Row(1000 + i, "TestRootRowId", 11 + i, $"op{i}"));
 
@@ -156,10 +244,10 @@ public sealed class ConfigurationSetReadTests
     /// <summary>A domain provider over a store that holds roots, their operations and the operations' mappings, and counts what is read.</summary>
     private sealed class SetStore
     {
-        public SetStore()
+        public SetStore(int keyChunkSize = 1000)
         {
             Gateway = new CountingGateway();
-            var gateways = new Gateways(Gateway);
+            var gateways = new Gateways(Gateway, keyChunkSize);
             Domain = new TestRootDomainProvider(gateways);
             Domain.Register("Default", new TestRootImplementationProvider(gateways));
         }
@@ -195,7 +283,13 @@ public sealed class ConfigurationSetReadTests
     {
         private readonly IConfigurationGateway _gateway;
 
-        public Gateways(IConfigurationGateway gateway) => _gateway = gateway;
+        public Gateways(IConfigurationGateway gateway, int keyChunkSize)
+        {
+            _gateway = gateway;
+            KeyChunkSize = keyChunkSize;
+        }
+
+        public int KeyChunkSize { get; }
 
         public IGenericResult<IConfigurationGateway> Get(string connectionName) => GenericResult<IConfigurationGateway>.Success(_gateway);
 

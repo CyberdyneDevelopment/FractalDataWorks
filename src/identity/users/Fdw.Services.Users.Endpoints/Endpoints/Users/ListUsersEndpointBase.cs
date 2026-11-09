@@ -32,21 +32,21 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class ListUsersEndpointBase : CrudPageEndpointBase<UserDomainConfiguration, UserResponse>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly ISignInLog _signIns;
 
     /// <summary>Initializes a new instance of the <see cref="ListUsersEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="userProvider">Reads the page of users.</param>
     /// <param name="signIns">Reads when each user last signed in.</param>
-    protected ListUsersEndpointBase(ILogger logger, UserConfigurationProvider userProvider, ISignInLog signIns) : base(logger)
+    protected ListUsersEndpointBase(ILogger logger, IUserConfigurationProvider userProvider, ISignInLog signIns) : base(logger)
     {
         _userProvider = userProvider ?? throw new ArgumentNullException(nameof(userProvider));
         _signIns = signIns ?? throw new ArgumentNullException(nameof(signIns));
     }
 
     /// <summary>Gets the user provider.</summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>Gets the resource name used for the route and the default policy: <c>/users</c>, <c>users:read</c>.</summary>
     protected override string ResourceName => "users";

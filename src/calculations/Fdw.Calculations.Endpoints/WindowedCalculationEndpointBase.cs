@@ -56,8 +56,7 @@ public abstract class WindowedCalculationEndpointBase : Endpoint<WindowedCalcula
         if (missing is not null)
         {
             CalculationEndpointLog.ValidationFailed(EndpointLogger, $"{missing} is required");
-            AddError($"{missing} is required");
-            await Send.ErrorsAsync(cancellation: ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CalculationsAnswerLog.WindowedCalculationFieldRequired(EndpointLogger, missing)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -11,6 +11,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
@@ -231,8 +232,8 @@ public sealed class CompoundDataSetType : DataSetTypeBase
 
         var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.DataStoreName, connectionResult.NoValueReason().Message));
+            return ConnectionFailures.Caused<T>(
+                connectionResult, DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, primarySource.DataStoreName, connectionResult.NoValueReason().Message));
 
         // Execute the pushed-down compound query through the single connection.
         var result = await connectionResult.Value.Execute<T>(sourceQuery, containerResult.Value, ct).ConfigureAwait(false);

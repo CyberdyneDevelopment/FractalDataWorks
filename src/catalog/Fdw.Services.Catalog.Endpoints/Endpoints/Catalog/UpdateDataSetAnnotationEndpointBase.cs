@@ -61,7 +61,7 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
 
         if (!getResult.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to load existing annotation", Details = getResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(getResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -82,7 +82,7 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to update annotation", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -20,7 +20,7 @@ public interface IPipelineImplementationConfiguration : IImplementationConfigura
     /// <remarks>
     /// Payload, not an ambient RLS column: the ETL background service reads it off a dispatched read
     /// to key the realtime firehose (<c>org:{OrgId}:pipeline-updates</c>), which the hub joins from the
-    /// caller's <c>org_id</c> claim. It therefore lives on the implementation row a read hands back,
+    /// caller's <c>orgId</c> claim. It therefore lives on the implementation row a read hands back,
     /// not on the four-column domain row.
     /// </remarks>
     Guid? OrgId { get; }

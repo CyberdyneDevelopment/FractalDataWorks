@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.ServiceTypes;
 
@@ -24,25 +25,10 @@ namespace Fdw.ServiceTypes;
 /// </remarks>
 public static class ServiceTypePhaseState
 {
-    /// <summary>The three registration phases, tracked independently.</summary>
-#pragma warning disable FDW017
-    public enum Phase
-    {
-        /// <summary>Phase 1 — Configure (bind options / register required services before Build).</summary>
-        Configure,
+    private static readonly ConditionalWeakTable<object, HashSet<(string Category, string Phase, string? Option)>> _byScope = new();
 
-        /// <summary>Phase 2 — Register (register services before Build).</summary>
-        Register,
-
-        /// <summary>Phase 3 — Initialize (wire factories/providers after Build).</summary>
-        Initialize,
-    }
-#pragma warning restore FDW017
-
-    private static readonly ConditionalWeakTable<object, HashSet<(string Category, Phase Phase, string? Option)>> _byScope = new();
-
-    private static HashSet<(string Category, Phase Phase, string? Option)> SetFor(object scope)
-        => _byScope.GetValue(scope, static _ => new HashSet<(string Category, Phase Phase, string? Option)>());
+    private static HashSet<(string Category, string Phase, string? Option)> SetFor(object scope)
+        => _byScope.GetValue(scope, static _ => new HashSet<(string Category, string Phase, string? Option)>());
 
     /// <summary>
     /// Atomically records that the whole COLLECTION's <paramref name="phase"/> is running for
@@ -54,13 +40,13 @@ public static class ServiceTypePhaseState
     /// <param name="phase">The phase being run.</param>
     /// <exception cref="ArgumentException"><paramref name="category"/> is null/empty.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="scope"/> is null.</exception>
-    public static bool TryMarkCollection(string category, object scope, Phase phase)
+    public static bool TryMarkCollection(string category, object scope, IServiceTypePhase phase)
     {
         if (string.IsNullOrEmpty(category)) throw new ArgumentException("category must not be empty.", nameof(category));
         if (scope is null) throw new ArgumentNullException(nameof(scope));
 
         var set = SetFor(scope);
-        lock (set) return set.Add((category, phase, null));
+        lock (set) return set.Add((category, phase.Name, null));
     }
 
     /// <summary>
@@ -74,26 +60,26 @@ public static class ServiceTypePhaseState
     /// <param name="phase">The phase being run.</param>
     /// <exception cref="ArgumentException"><paramref name="category"/> or <paramref name="optionName"/> is null/empty.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="scope"/> is null.</exception>
-    public static bool TryMarkOption(string category, string optionName, object scope, Phase phase)
+    public static bool TryMarkOption(string category, string optionName, object scope, IServiceTypePhase phase)
     {
         if (string.IsNullOrEmpty(category)) throw new ArgumentException("category must not be empty.", nameof(category));
         if (string.IsNullOrEmpty(optionName)) throw new ArgumentException("optionName must not be empty.", nameof(optionName));
         if (scope is null) throw new ArgumentNullException(nameof(scope));
 
         var set = SetFor(scope);
-        lock (set) return set.Add((category, phase, optionName));
+        lock (set) return set.Add((category, phase.Name, optionName));
     }
 
     /// <summary>
     /// Returns whether the whole COLLECTION's <paramref name="phase"/> has already run for
     /// <paramref name="scope"/>, without recording anything. Use for read-only inspection (e.g. tests).
     /// </summary>
-    public static bool HasCollectionRun(string category, object scope, Phase phase)
+    public static bool HasCollectionRun(string category, object scope, IServiceTypePhase phase)
     {
         if (string.IsNullOrEmpty(category)) throw new ArgumentException("category must not be empty.", nameof(category));
         if (scope is null) throw new ArgumentNullException(nameof(scope));
 
         var set = SetFor(scope);
-        lock (set) return set.Contains((category, phase, null));
+        lock (set) return set.Contains((category, phase.Name, null));
     }
 }

@@ -10,7 +10,7 @@ namespace Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 [ExcludeFromCodeCoverage]
 public sealed class TriggeredStateType : ExecutionStateTypeBase
 {
-    private static readonly string[] ValidTransitionsArray = new[] { "Initialized", "Failed", "Cancelled", "Interrupted" };
+    private static readonly string[] ValidTransitionsArray = new[] { "Initialized", "Failed", "Cancelled", "Interrupted", "TimedOut" };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggeredStateType"/> class.
@@ -22,6 +22,7 @@ public sealed class TriggeredStateType : ExecutionStateTypeBase
             isTerminal: false,
             isSuccess: false,
             isFailure: false,
+            isExecuting: true,
             canTriggerEscalation: false,
             validTransitions: ValidTransitionsArray)
     {

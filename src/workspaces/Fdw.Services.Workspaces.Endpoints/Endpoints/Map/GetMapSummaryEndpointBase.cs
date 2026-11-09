@@ -33,7 +33,7 @@ public abstract class GetMapSummaryEndpointBase : Endpoint<MapRequest, MapSummar
     protected GetMapSummaryEndpointBase(
         ILogger<GetMapSummaryEndpointBase> logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,

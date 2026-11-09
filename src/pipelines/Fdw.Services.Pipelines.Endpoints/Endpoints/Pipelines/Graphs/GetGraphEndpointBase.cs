@@ -16,12 +16,12 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetGraphEndpointBase : CrudGetEndpointBase<PipelineNameRequest, GraphPayload>
 {
-    private readonly PipelineServiceConfigurationProvider _provider;
+    private readonly IPipelineConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="GetGraphEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="provider">The pipeline domain's configuration provider.</param>
-    protected GetGraphEndpointBase(ILogger<GetGraphEndpointBase> logger, PipelineServiceConfigurationProvider provider) : base(logger)
+    protected GetGraphEndpointBase(ILogger<GetGraphEndpointBase> logger, IPipelineConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

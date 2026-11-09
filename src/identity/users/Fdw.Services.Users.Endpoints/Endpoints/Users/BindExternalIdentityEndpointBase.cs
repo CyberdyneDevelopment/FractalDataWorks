@@ -10,6 +10,7 @@ using Fdw.Services.ExternalIdentityProviders.Binding;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -25,14 +26,14 @@ public abstract class BindExternalIdentityEndpointBase : Endpoint<BindExternalId
 {
     private const string ExternalIdentityDomain = "ExternalIdentity";
 
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IExternalIdentityConfigurationProvider _externalIdentities;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="BindExternalIdentityEndpointBase"/> class.</summary>
     protected BindExternalIdentityEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IExternalIdentityConfigurationProvider externalIdentities)
     {
         _logger = logger;
@@ -67,9 +68,15 @@ public abstract class BindExternalIdentityEndpointBase : Endpoint<BindExternalId
         var userResult = await UserRouteTarget
             .Resolve(_userProvider, User, req.IdOrName, ct).ConfigureAwait(false);
 
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.BindExternalIdentityUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -79,15 +86,14 @@ public abstract class BindExternalIdentityEndpointBase : Endpoint<BindExternalId
         // cannot say which the operator meant.
         if (string.IsNullOrWhiteSpace(req.Subject) == string.IsNullOrWhiteSpace(req.InvitedEmail))
         {
-            AddError("Name exactly one of subject (bind now) or invitedEmail (invite).");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.BindExternalIdentityNameExactlyOneOfSubject(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (!AccountAuthority.Administers(User, user, Resolve<ISystemRoleConfiguration>()))
         {
             UserEndpointLog.ApiKeyOperationNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.BindExternalIdentityForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -95,10 +101,15 @@ public abstract class BindExternalIdentityEndpointBase : Endpoint<BindExternalId
         // this deployment cannot resolve is inert: it writes, reads back, and the first real sign-in
         // ignores it and provisions a second account.
         var issuers = await Resolve<IExternalIssuerCatalog>().Read(ct).ConfigureAwait(false);
-        if (issuers.IsFailure || issuers.Value is null)
+        if (issuers.IsFailure)
         {
-            AddError("The issuers this platform trusts could not be read.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(issuers, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (issuers.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.BindExternalIdentityReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -110,14 +121,12 @@ public abstract class BindExternalIdentityEndpointBase : Endpoint<BindExternalId
             if (!issuers.Value.IsComplete)
             {
                 UserEndpointLog.ExternalIssuersUnreadable(_logger, req.Issuer);
-                AddError("Whether this platform can resolve that issuer could not be determined: an authority could not be read.");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.BindExternalIdentityWhetherThisPlatformCanResolve(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             UserEndpointLog.ExternalIssuerUnknown(_logger, req.Issuer);
-            AddError($"'{req.Issuer}' is not an issuer this platform can resolve. Accepted: {string.Join(", ", issuers.Value.Issuers)}.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.BindExternalIdentityIssuerUnknown(_logger, req.Issuer, string.Join(", ", issuers.Value.Issuers))), HttpContext)).ConfigureAwait(false);
             return;
         }
 

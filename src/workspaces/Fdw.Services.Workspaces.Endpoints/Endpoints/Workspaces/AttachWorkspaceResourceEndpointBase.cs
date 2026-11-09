@@ -30,7 +30,7 @@ namespace Fdw.Services.Workspaces.Endpoints;
 public abstract class AttachWorkspaceResourceEndpointBase
     : CrudCreateEndpointBase<AttachWorkspaceResourceRequest, WorkspaceMapNodeDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IDataSetVariationConfigurationProvider _variations;
@@ -44,7 +44,7 @@ public abstract class AttachWorkspaceResourceEndpointBase
     /// <inheritdoc />
     protected AttachWorkspaceResourceEndpointBase(
         ILogger<AttachWorkspaceResourceEndpointBase> logger,
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IDataSetConfigurationProvider dataSets,
         IDataSetVariationConfigurationProvider variations,

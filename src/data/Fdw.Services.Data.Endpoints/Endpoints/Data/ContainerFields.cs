@@ -26,7 +26,7 @@ internal static class ContainerFields
     /// too, but it names another container's key: its fields refer to a key, they are not one.
     /// </remarks>
     internal static async Task<IGenericResult<List<DataStoreFieldResponse>>> Get(
-        DataStoreConfigurationProvider provider, string dataStoreName, Guid containerId, CancellationToken ct)
+        IDataStoreConfigurationProvider provider, string dataStoreName, Guid containerId, CancellationToken ct)
     {
         var fields = await provider.Get<DataContainerConfiguration, DataContainerFieldConfiguration>(
             dataStoreName, containerId, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);

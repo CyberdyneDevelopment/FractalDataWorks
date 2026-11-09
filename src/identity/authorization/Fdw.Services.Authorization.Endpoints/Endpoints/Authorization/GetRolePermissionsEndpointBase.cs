@@ -7,6 +7,8 @@ using FastEndpoints;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -74,33 +76,49 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
                 roleResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(roleResult, HttpContext)).ConfigureAwait(false);
             return;
         }
         if (roleResult.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetRolePermissionsRoleNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var role = roleResult.Value;
 
         var rolePermissionsResult = await _rolePermissionProvider
             .Find<IRolePermissionImplementationConfiguration>(rp => rp.RoleId == role.Id, ct).ConfigureAwait(false);
-        if (!rolePermissionsResult.IsSuccess || rolePermissionsResult.Value is null)
+        if (rolePermissionsResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
                 rolePermissionsResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(rolePermissionsResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (rolePermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                rolePermissionsResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetRolePermissionsRolePermissionsReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var rolePermissions = rolePermissionsResult.Value;
 
         var permissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
-        if (!permissionsResult.IsSuccess || permissionsResult.Value is null)
+        if (permissionsResult.IsFailure)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
                 permissionsResult.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(permissionsResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (permissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                permissionsResult.CurrentMessage);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.GetRolePermissionsPermissionsReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var permissions = permissionsResult.Value;

@@ -5,6 +5,7 @@ using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Configuration;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes.Logging;
@@ -31,7 +32,8 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     : GuidTypeOptionBase<IServiceType<Guid>>,
       IServiceType<Guid, TService, TFactory, TConfiguration>,
       IServiceType,
-      IDeclaresDefaults
+      IDeclaresDefaults,
+      IServiceRequirements
     where TService : IGenericService
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IServiceFactory<TService, TConfiguration>
@@ -88,31 +90,53 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     // Defaults are set HERE, in the declaration, so a func is never null and the invoker never guards.
     //
 
-    private PhaseState _configure;
-    private PhaseState _register;
-    private PhaseState _initialize;
+    private IPhaseState _configure = PhaseStates.NotRun;
+    private IPhaseState _register = PhaseStates.NotRun;
+    private IPhaseState _initialize = PhaseStates.NotRun;
+
+    private readonly List<ServiceRequirement> _requirements = new();
+
+    /// <summary>Gets the services this service type needs registered (FDW-4588).</summary>
+    public IReadOnlyList<ServiceRequirement> Requirements => _requirements;
+
+    /// <summary>
+    /// Declares a service this service type needs registered, set from its constructor. Its collection's Initialize fails, with <paramref name="message"/>, when the built host has no registration
+    /// for it (FDW-4588).
+    /// </summary>
+    /// <typeparam name="TRequired">The service that must be registered.</typeparam>
+    /// <param name="message">The coded message for the service being absent: a <c>[MessageLogging]</c> method, passed as a method group.</param>
+    /// <remarks>
+    /// Why on the option and not the collection: a host that never attached this option is not asked for the service. The requirement stays with the option when a host replaces its Initialization body.
+    /// </remarks>
+    protected void Requires<TRequired>(Func<ILogger, IGenericMessage> message)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        _requirements.Add(new ServiceRequirement(typeof(TRequired), message));
+    }
 
     /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
     /// <remarks>
     /// A phase runs once. Idempotence is what makes chaining safe: a body appended by one contributor
     /// cannot re-run what an earlier one already did, however many times a phase is invoked.
     /// </remarks>
-    public PhaseState ConfigureState => _configure;
+    public IPhaseState ConfigureState => _configure;
 
     /// <summary>Gets whether Register has not run, is deferred, or has run.</summary>
-    public PhaseState RegisterState => _register;
+    public IPhaseState RegisterState => _register;
 
     /// <summary>Gets whether Initialize has not run, is deferred, or has run.</summary>
-    public PhaseState InitializeState => _initialize;
+    public IPhaseState InitializeState => _initialize;
 
     /// <summary>Gets a value indicating whether Configure has run.</summary>
-    public bool Configured => _configure == PhaseState.Ran;
+    public bool Configured => _configure.HasRun;
 
     /// <summary>Gets a value indicating whether Register has run.</summary>
-    public bool Registered => _register == PhaseState.Ran;
+    public bool Registered => _register.HasRun;
 
     /// <summary>Gets a value indicating whether Initialize has run.</summary>
-    public bool Initialized => _initialize == PhaseState.Ran;
+    public bool Initialized => _initialize.HasRun;
 
 
     /// <summary>
@@ -493,14 +517,14 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _configure == PhaseState.Ran)
+        if (!force && _configure.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _configure = PhaseState.Deferred;
+            _configure = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -511,7 +535,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        _configure = PhaseState.Ran;
+        _configure = PhaseStates.Ran;
         return result;
     }
 
@@ -526,14 +550,14 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         bool force = false,
         bool defer = false)
     {
-        if (!force && _register == PhaseState.Ran)
+        if (!force && _register.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _register = PhaseState.Deferred;
+            _register = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -545,7 +569,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        _register = PhaseState.Ran;
+        _register = PhaseStates.Ran;
         return result;
     }
 
@@ -555,14 +579,14 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _initialize == PhaseState.Ran)
+        if (!force && _initialize.HasRun)
         {
             return GenericResult<IHost>.Success(host);
         }
 
         if (defer)
         {
-            _initialize = PhaseState.Deferred;
+            _initialize = PhaseStates.Deferred;
             return GenericResult<IHost>.Success(host);
         }
 
@@ -574,7 +598,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
             return result;
         }
 
-        _initialize = PhaseState.Ran;
+        _initialize = PhaseStates.Ran;
         return result;
     }
 

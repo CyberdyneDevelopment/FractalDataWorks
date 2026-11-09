@@ -7,6 +7,8 @@ using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -28,7 +30,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly ILogger _logger;
 
@@ -39,7 +41,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
     /// <param name="credentialService">The user credential service.</param>
     /// <param name="logger">The logger.</param>
     protected ResetPasswordEndpointBase(
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IUserCredentialService credentialService,
         ILogger logger)
     {
@@ -51,7 +53,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the logger.
@@ -89,7 +91,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
         if (!Resolve<ISystemRoleConfiguration>().IsPlatformAdmin(User))
         {
             UserEndpointLog.ResetPasswordRequiresPlatformAdmin(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ResetPasswordForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -98,9 +100,15 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
             var userResult = Guid.TryParse(req.IdOrName, out var requestedId)
             ? await _userProvider.Get(requestedId, ct).ConfigureAwait(false)
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
-            if (!userResult.IsSuccess || userResult.Value is null)
+            if (userResult.IsFailure)
             {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (userResult.Value is null)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ResetPasswordUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -113,24 +121,21 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
             if (usable.IsFailure)
             {
                 UserEndpointLog.PasswordAdmissionUndecided(_logger, req.IdOrName);
-                AddError("Whether the account may sign in with a password could not be decided.");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(usable, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             if (!usable.Value)
             {
                 UserEndpointLog.PasswordNotUsable(_logger, "reset the password", req.IdOrName);
-                AddError("No enabled password sign-in flow admits this account; grant it the permission the flow requires first.");
-                await Send.ErrorsAsync(409, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ResetPasswordNoEnabledPasswordSignIn(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
             var storeResult = await _credentialService.Store(userId, "Password", req.NewPassword, ct).ConfigureAwait(false);
             if (!storeResult.IsSuccess)
             {
-                AddError("Failed to reset password.");
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ResetPasswordFailedToResetPassword(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -139,8 +144,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
             var forceResult = await _credentialService.ForcePasswordChange(userId, ct).ConfigureAwait(false);
             if (!forceResult.IsSuccess)
             {
-                AddError("The password was reset but could not be marked for change at next login.");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(forceResult, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -153,7 +157,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
         catch (Exception ex)
         {
             UserEndpointLog.OperationFailed(_logger, ex, "reset-password", req.IdOrName);
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ResetPasswordFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

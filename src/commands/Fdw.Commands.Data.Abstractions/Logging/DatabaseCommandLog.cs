@@ -24,4 +24,9 @@ public static partial class DatabaseCommandLog
     [MessageLogging(EventId = 61002, Level = LogLevel.Error,
         Message = "Connection '{connectionName}' does not state MaxSerialInsert, the most rows an insert runs serially; state a positive number in the connection's configuration")]
     public static partial IGenericMessage MaxSerialInsertNotStated(ILogger logger, string connectionName);
+
+    /// <summary>Logs a connection type that declares no integer default for MaxParametersBeforeTempTable (FDW-4267).</summary>
+    [MessageLogging(EventId = 61155, Level = LogLevel.Critical,
+        Message = "The {connectionType} connection type declares no integer default for MaxParametersBeforeTempTable; declare one in the type's DeclaredDefaults or state it with ServiceTypeDefaults.Override")]
+    public static partial IGenericMessage MaxParametersBeforeTempTableNotDeclared(ILogger logger, string connectionType);
 }

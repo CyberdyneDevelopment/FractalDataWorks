@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Etl.Logging;
 
 /// <summary>
-/// MessageLogging for the pipeline failure rule (FDW-3864). EventId range: 11330-11331, 60320-60323, 71320-71327.
+/// MessageLogging for the pipeline failure rule (FDW-3864). EventId range: 11330-11331, 60320-60323, 71320-71330.
 /// </summary>
 [MessageLoggingTypeCode("ETL")]
 public static partial class PipelineFailureRuleLog
@@ -62,4 +62,12 @@ public static partial class PipelineFailureRuleLog
     /// <summary>Logs that the connection the run history is kept in was never named, so the history of a pipeline cannot be read.</summary>
     [MessageLogging(EventId = 71328, Level = LogLevel.Error, Message = "The operational connection is not named, so the runs of pipeline '{pipeline}' cannot be read")]
     public static partial IGenericMessage OperationalConnectionNotNamed(ILogger logger, string pipeline);
+
+    /// <summary>Logs a threshold whose CountedOutcomes names an outcome a run is not counted by, so it is not judged (FDW-4278).</summary>
+    [MessageLogging(EventId = 71330, Level = LogLevel.Error, Message = "Threshold '{threshold}' of pipeline '{pipeline}' was not judged: its CountedOutcomes names '{outcome}', which is not an outcome a run is counted by (Failed, TimedOut)")]
+    public static partial IGenericMessage CountedOutcomeUnknown(ILogger logger, string threshold, string pipeline, string outcome);
+
+    /// <summary>Logs that the connection a failed component works on could not be found, so the run's failure names none (FDW-4192).</summary>
+    [MessageLogging(EventId = 71329, Level = LogLevel.Error, Message = "The connection of failed component '{component}' could not be found, so the run's failure names none: {reason}")]
+    public static partial IGenericMessage FailedConnectionNotResolved(ILogger logger, string component, string reason);
 }

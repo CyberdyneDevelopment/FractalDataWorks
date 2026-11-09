@@ -7,11 +7,12 @@ using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for denying an access request (PUT /access-requests/{Id}/deny).
+/// Abstract base class for denying an access request (POST /access-requests/{Id}/deny).
 /// </summary>
 public abstract class DenyAccessRequestEndpointBase : Endpoint<ReviewAccessRequestRequest>
 {
@@ -64,7 +65,7 @@ public abstract class DenyAccessRequestEndpointBase : Endpoint<ReviewAccessReque
                 if (!CallerClaims.TryGetUserId(HttpContext.User, out var reviewerUserId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.DenyAccessRequestNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -79,12 +80,10 @@ public abstract class DenyAccessRequestEndpointBase : Endpoint<ReviewAccessReque
                 MessagingEndpointLog.AccessRequestDenyFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
                 if (FailureCategory.IsMissing(result))
                 {
-                    await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                    await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.DenyAccessRequestNotFound(_logger)), HttpContext)).ConfigureAwait(false);
                     return;
                 }
-
-                AddError("Failed to deny access request");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -98,7 +97,7 @@ public abstract class DenyAccessRequestEndpointBase : Endpoint<ReviewAccessReque
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "deny-access-request");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.DenyAccessRequestFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

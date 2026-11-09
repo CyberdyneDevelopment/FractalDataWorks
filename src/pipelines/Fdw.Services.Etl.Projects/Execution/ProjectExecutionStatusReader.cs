@@ -23,7 +23,7 @@ public sealed class ProjectExecutionStatusReader : IProjectExecutionStatusReader
 
     private static readonly HashSet<string> TerminalStates = new HashSet<string>(StringComparer.Ordinal)
     {
-        "Completed", "Failed", "Cancelled", "Interrupted"
+        "Completed", "Failed", "Cancelled", "Interrupted", "TimedOut"
     };
 
     private static readonly HashSet<string> FailureStates = new HashSet<string>(StringComparer.Ordinal)

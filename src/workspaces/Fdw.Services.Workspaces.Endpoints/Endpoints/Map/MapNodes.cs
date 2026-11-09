@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Operations.Abstractions.Execution;
+using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Services.Connections;
 using Fdw.Services.Etl;
 using Fdw.Services.Pipelines.Abstractions;
@@ -20,8 +22,12 @@ internal static class MapNodes
     /// <param name="dataSet">The data set.</param>
     /// <param name="variations">Its variations counted by kind, or none.</param>
     /// <param name="categoryPath">The path of the category the data set sits under, from the DataSet category tree; null when it sits under none.</param>
+    /// <param name="workspace">The workspace that owns the data set, named on its node; null when no workspace the caller may view owns it, and the node then carries none.</param>
     public static MapNodeDto DataSet(
-        IDataSetImplementationConfiguration dataSet, IReadOnlyList<WorkspaceMapVariationCountDto> variations, string? categoryPath) => new()
+        IDataSetImplementationConfiguration dataSet,
+        IReadOnlyList<WorkspaceMapVariationCountDto> variations,
+        string? categoryPath,
+        MapWorkspaceRef? workspace = null) => new()
     {
         Id = MapNodeIds.DataSet(dataSet.Id),
         Label = dataSet.Name,
@@ -32,7 +38,9 @@ internal static class MapNodes
         Metadata = Metadata(
             ("description", dataSet.Description),
             ("version", dataSet.Version),
-            ("recordType", dataSet.RecordTypeName)),
+            ("recordType", dataSet.RecordTypeName),
+            ("workspaceId", workspace?.Id.ToString("D", CultureInfo.InvariantCulture)),
+            ("workspace", workspace?.Name)),
     };
 
     /// <summary>A data store node.</summary>
@@ -51,7 +59,15 @@ internal static class MapNodes
 
     /// <summary>A pipeline node.</summary>
     /// <param name="pipeline">The pipeline.</param>
-    public static MapNodeDto Pipeline(IPipelineImplementationConfiguration pipeline) => new()
+    /// <param name="latestRun">
+    /// The pipeline's latest run, or null when it has not run or the map does not read runs. The node then carries <c>lastRunState</c> and <c>failed</c> (true
+    /// when that run ended Failed); with no run it carries neither, which means "no run", not "did not fail".
+    /// </param>
+    /// <param name="projects">
+    /// The names of the projects that run the pipeline, sorted, or null when the map does not read projects. The node then carries <c>projects</c>, an empty list when
+    /// no project runs the pipeline; with null it carries none, which means "not read", not "in no project".
+    /// </param>
+    public static MapNodeDto Pipeline(IPipelineImplementationConfiguration pipeline, IExecutionItem? latestRun = null, IReadOnlyList<string>? projects = null) => new()
     {
         Id = MapNodeIds.Pipeline(pipeline.Id),
         Label = pipeline.Name,
@@ -60,7 +76,10 @@ internal static class MapNodes
         CanExplode = false,
         Metadata = Metadata(
             ("isEnabled", pipeline is IEnablablePipelineConfiguration enablable ? (object)enablable.IsEnabled : null),
-            ("organizationId", pipeline.OrgId?.ToString("D", CultureInfo.InvariantCulture))),
+            ("lastRunState", latestRun?.State.Name),
+            ("failed", latestRun is null ? null : string.Equals(latestRun.State.Name, ExecutionStateTypes.Failed.Name, StringComparison.Ordinal)),
+            ("organizationId", pipeline.OrgId?.ToString("D", CultureInfo.InvariantCulture)),
+            ("projects", projects)),
     };
 
     /// <summary>A container node, named within its data store.</summary>

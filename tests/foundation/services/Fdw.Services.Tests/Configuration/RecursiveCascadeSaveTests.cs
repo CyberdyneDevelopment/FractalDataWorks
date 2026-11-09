@@ -197,6 +197,45 @@ public sealed class RecursiveCascadeSaveTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
+    public async Task UpdateActsOnTheMemberTheRecordsIdNamesWhenTheNameMatchesSeveralTenantsRows()
+    {
+        var first = new DomainConfiguration { Id = Guid.NewGuid(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var second = new DomainConfiguration { Id = Guid.NewGuid(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var gateway = new HeaderReturningGateway(first, second) { FiltersByKey = true, DataStores = [RecordingGateway.TestRootStore()] };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Update(
+            new TestRootConfiguration { Id = second.Id }, "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // FDW-4459: a system scope sees every tenant's rows, so the name matches both; the record's Id says which member is meant.
+        // The ambiguity refusal names the ids of the rows it could not choose between; the write must not end that way.
+        (result.CurrentMessage ?? string.Empty).ShouldNotContain(first.Id.ToString("D"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task UpdateStillRefusesANameSeveralRowsCarryWhenTheRecordsIdIsNoneOfThem()
+    {
+        var first = new DomainConfiguration { Id = Guid.NewGuid(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var second = new DomainConfiguration { Id = Guid.NewGuid(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var gateway = new HeaderReturningGateway(first, second) { FiltersByKey = true, DataStores = [RecordingGateway.TestRootStore()] };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Update(
+            new TestRootConfiguration { Id = Guid.NewGuid() }, "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(first.Id.ToString("D"));
+        result.CurrentMessage.ShouldContain(second.Id.ToString("D"));
+        gateway.Transaction.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
     public async Task CreateMintsAMemberForANameNoRowCarries()
     {
         var gateway = new RecordingGateway();
@@ -877,6 +916,8 @@ public sealed class RecursiveCascadeSaveTests
         private readonly IConfigurationGateway _gateway;
 
         public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+
+        public int KeyChunkSize => 1000;
 
         public IGenericResult<IConfigurationGateway> Get(string connectionName)
             => GenericResult<IConfigurationGateway>.Success(_gateway);

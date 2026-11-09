@@ -6,6 +6,7 @@ using Fdw.Services.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -15,7 +16,7 @@ namespace Fdw.Services.Users.Endpoints;
 public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 {
     /// <summary>Initializes a new instance of the <see cref="DeleteUserEndpointBase"/> class.</summary>
-        private readonly UserConfigurationProvider _userProvider;
+        private readonly IUserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -23,7 +24,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="DeleteUserEndpointBase"/> class.</summary>
-    protected DeleteUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    protected DeleteUserEndpointBase(ILogger logger, IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
         _userProvider = userProvider;
@@ -33,7 +34,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:delete".
@@ -63,11 +64,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
         if (!lookup.IsSuccess || lookup.Value is null)
         {
-            await Send.ResultAsync(TypedResults.Json(new
-            {
-                errorCode = "NotFound",
-                messages = new[] { $"User '{req.IdOrName}' was not found." }
-            }, statusCode: 404)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.DeleteUserUserNotFound(EndpointLogger, req.IdOrName)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -79,7 +76,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 
         if (!result.IsSuccess)
         {
-            ThrowError(result.FailureReason().Message, 500);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

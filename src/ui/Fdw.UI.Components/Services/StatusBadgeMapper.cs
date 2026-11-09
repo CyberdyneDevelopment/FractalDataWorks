@@ -80,6 +80,11 @@ public static class StatusBadgeMapper
             return new StatusBadge("Interrupted", StatusColors.Yellow, StatusVariants.Warning);
         }
 
+        if (string.Equals(status, "TimedOut", StringComparison.OrdinalIgnoreCase))
+        {
+            return new StatusBadge("Timed out", StatusColors.Yellow, StatusVariants.Warning);
+        }
+
         if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(status, "Queued", StringComparison.OrdinalIgnoreCase))
         {

@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Etl.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Endpoints;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -36,6 +37,19 @@ public sealed class PipelineRunAuthorityTests
     private readonly Mock<IDataSetConfigurationProvider> _dataSets = new();
     private readonly Mock<IConnectionConfigurationProvider> _connections = new();
     private readonly Mock<IDataStoreProvider> _dataStores = new();
+
+    // How the data store provider says a store or a container is not there for the caller: a failure in the Missing category (a 3xxxx number).
+    private static IGenericMessage Missing() => new GenericMessage(MessageSeverity.Error, "not there for this caller", "DATA-31100");
+
+    // A lookup that broke: no category, so it is not an answer about the caller's access.
+    private static IGenericMessage Broke() => new GenericMessage(MessageSeverity.Error, "the lookup broke");
+
+    private static void ShouldBeTheLookupsOwnFailure(IGenericResult result)
+    {
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Message == "the lookup broke");
+        result.Code.ShouldNotBeSameAs(EtlResultCodes.ByName("PipelineRunRefused"));
+    }
 
     private PipelineRunAuthority Build() => new(_grants.Object, _dataSets.Object, _connections.Object, _dataStores.Object);
 
@@ -65,7 +79,7 @@ public sealed class PipelineRunAuthorityTests
     {
         _dataSets
             .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IDataSetImplementationConfiguration>.Failure(Mock.Of<IGenericMessage>()));
+            .ReturnsAsync(GenericResult<IDataSetImplementationConfiguration>.Success(default!));
         foreach (var name in dataSets)
         {
             _dataSets
@@ -78,7 +92,7 @@ public sealed class PipelineRunAuthorityTests
     {
         _connections
             .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IConnectionImplementationConfiguration>.Failure(Mock.Of<IGenericMessage>()));
+            .ReturnsAsync(GenericResult<IConnectionImplementationConfiguration>.Success(default!));
         foreach (var name in names)
         {
             _connections
@@ -89,11 +103,9 @@ public sealed class PipelineRunAuthorityTests
 
     private void StoreVisible(string name, bool declaredByHost = false)
     {
-        var store = new Mock<IDataStore>();
-        store.SetupGet(s => s.DeclaredByHost).Returns(declaredByHost);
         _dataStores
-            .Setup(p => p.Get(name, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IDataStore>.Success(store.Object));
+            .Setup(p => p.GetReference(name, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreReference>.Success(new DataStoreReference(name, Guid.NewGuid(), declaredByHost)));
     }
 
     private void ContainerVisible(string store, string path, string container, bool visible)
@@ -101,7 +113,7 @@ public sealed class PipelineRunAuthorityTests
             .Setup(p => p.Get(store, path, container, It.IsAny<CancellationToken>()))
             .ReturnsAsync(visible
                 ? GenericResult<IDataContainer>.Success(Mock.Of<IDataContainer>())
-                : GenericResult<IDataContainer>.Failure(Mock.Of<IGenericMessage>()));
+                : GenericResult<IDataContainer>.Failure(Missing()));
 
     // Everything the plain reach touches is visible: both data sets, the connection and the store behind them.
     private void EverythingVisible()
@@ -246,8 +258,8 @@ public sealed class PipelineRunAuthorityTests
         Visible("Orders", "OrdersCopy");
         ConnectionsVisible("Main");
         _dataStores
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IDataStore>.Failure(Mock.Of<IGenericMessage>()));
+            .Setup(p => p.GetReference(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreReference>.Failure(Missing()));
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), Reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -582,5 +594,119 @@ public sealed class PipelineRunAuthorityTests
             NullLogger.Instance, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
+    }
+
+    // FDW-3630: a lookup answers three ways, and only two of them are the caller's access. A lookup that broke is its own failure with its own messages, not a refusal of the run.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ADataSetLookupThatBrokeIsItsOwnFailureAndNotARefusal()
+    {
+        RolesCarryAll();
+        _dataSets
+            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IDataSetImplementationConfiguration>.Failure(Broke()));
+
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), Reach, ["DataEngineer"], NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        ShouldBeTheLookupsOwnFailure(result);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AConnectionLookupThatBrokeIsItsOwnFailureAndNotARefusal()
+    {
+        RolesCarryAll();
+        Visible("Orders", "OrdersCopy");
+        _connections
+            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IConnectionImplementationConfiguration>.Failure(Broke()));
+
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), Reach, ["DataEngineer"], NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        ShouldBeTheLookupsOwnFailure(result);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ADataStoreLookupThatBrokeIsItsOwnFailureAndNotARefusal()
+    {
+        RolesCarryAll();
+        Visible("Orders", "OrdersCopy");
+        ConnectionsVisible("Main");
+        _dataStores
+            .Setup(p => p.GetReference(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreReference>.Failure(Broke()));
+
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), Reach, ["DataEngineer"], NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        ShouldBeTheLookupsOwnFailure(result);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AContainerStoreLookupThatBrokeIsItsOwnFailureAndNotARefusal()
+    {
+        RolesCarryAll();
+        EverythingVisible();
+        _dataStores
+            .Setup(p => p.GetReference("Feeds", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreReference>.Failure(Broke()));
+
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), StoreReach, ["DataEngineer"], NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        ShouldBeTheLookupsOwnFailure(result);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AContainerLookupThatBrokeIsItsOwnFailureAndNotARefusal()
+    {
+        RolesCarryAll();
+        EverythingVisible();
+        StoreVisible("Feeds");
+        _dataStores
+            .Setup(p => p.Get("Feeds", "orders/v1", "orders", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IDataContainer>.Failure(Broke()));
+
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), StoreReach, ["DataEngineer"], NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        ShouldBeTheLookupsOwnFailure(result);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnythingTheLookupSaysIsNotThereIsARefusalOfTheRun()
+    {
+        RolesCarryAll();
+        Visible("OrdersCopy");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
+
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), Reach, ["DataEngineer"], NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Code.ShouldBeSameAs(EtlResultCodes.ByName("PipelineRunRefused"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AStoreOrContainerTheProviderSaysIsMissingIsARefusalOfTheRun()
+    {
+        RolesCarryAll();
+        EverythingVisible();
+        StoreVisible("Feeds");
+        ContainerVisible("Feeds", "orders/v1", "orders", visible: false);
+
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), StoreReach, ["DataEngineer"], NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Code.ShouldBeSameAs(EtlResultCodes.ByName("PipelineRunRefused"));
     }
 }

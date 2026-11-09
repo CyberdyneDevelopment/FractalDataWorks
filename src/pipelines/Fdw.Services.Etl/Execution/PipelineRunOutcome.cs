@@ -14,4 +14,10 @@ namespace Fdw.Services.Etl.Execution;
 /// </param>
 /// <param name="Category">The failure's category name, when it has one.</param>
 /// <param name="Code">The failure's code, when it has one.</param>
-public sealed record PipelineRunOutcome(Guid ExecutionId, DateTimeOffset At, bool Succeeded, bool Counts, string? Category, string? Code);
+/// <param name="ConnectionId">The connection that raised the failure (FDW-4192, FDW-4279), when the run recorded one.</param>
+/// <param name="TimedOut">
+/// Whether the run ended because it passed its time limit (FDW-4278). A timed-out run is never a success and never <paramref name="Counts"/> by itself: whether it counts is
+/// the threshold's to say (<see cref="PipelineRunThresholdType.CountedOutcomes"/>), so <see cref="PipelineFailureCounter"/> is asked.
+/// </param>
+public sealed record PipelineRunOutcome(
+    Guid ExecutionId, DateTimeOffset At, bool Succeeded, bool Counts, string? Category, string? Code, Guid? ConnectionId, bool TimedOut = false);

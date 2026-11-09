@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Data;
 using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -55,16 +57,21 @@ public abstract class GetConnectionSchemaEndpointBase : Endpoint<ConnectionSchem
             req.Name, Logger);
         if (options.IsFailure)
         {
-            AddError(options.CurrentMessage ?? string.Empty);
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(options, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var result = await _schemaService.GetSchema(req.Name, options.Value!, ct).ConfigureAwait(false);
 
-        if (!result.IsSuccess || result.Value == null)
+        if (result.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (result.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConnectionsAnswerLog.GetConnectionSchemaConnectionschemaNotFound(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

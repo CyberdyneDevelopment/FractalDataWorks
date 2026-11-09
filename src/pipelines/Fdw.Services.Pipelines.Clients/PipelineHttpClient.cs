@@ -76,7 +76,7 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     /// <inheritdoc />
     public Task<IGenericResult<GraphPayload>> ReplaceGraph(string name, GraphPayload graph, CancellationToken cancellationToken = default)
     {
-        return Put<GraphPayload, GraphPayload>($"pipelines/{name}/graph", graph, cancellationToken);
+        return Patch<GraphPayload, GraphPayload>($"pipelines/{name}/graph", graph, cancellationToken);
     }
 
     /// <inheritdoc />

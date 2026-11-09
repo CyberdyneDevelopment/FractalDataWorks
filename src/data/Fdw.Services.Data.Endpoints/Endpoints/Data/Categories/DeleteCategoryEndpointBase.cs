@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets.Abstractions;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -14,8 +15,8 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>Retires a category (FDW-1465). A category with categories, data sets or glossary terms under it stays.</summary>
 public abstract class DeleteCategoryEndpointBase : CrudDeleteEndpointBase<CategoryNameRequest>
 {
-    private readonly CategoryConfigurationProvider _categories;
-    private readonly DataSetConfigurationProvider _dataSets;
+    private readonly ICategoryConfigurationProvider _categories;
+    private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IGlossaryTermConfigurationProvider _terms;
 
     /// <summary>Initializes a new instance of the <see cref="DeleteCategoryEndpointBase"/> class.</summary>
@@ -25,8 +26,8 @@ public abstract class DeleteCategoryEndpointBase : CrudDeleteEndpointBase<Catego
     /// <param name="terms">The glossary terms, which cite the categories they sit under.</param>
     protected DeleteCategoryEndpointBase(
         ILogger<DeleteCategoryEndpointBase> logger,
-        CategoryConfigurationProvider categories,
-        DataSetConfigurationProvider dataSets,
+        ICategoryConfigurationProvider categories,
+        IDataSetConfigurationProvider dataSets,
         IGlossaryTermConfigurationProvider terms)
         : base(logger)
     {

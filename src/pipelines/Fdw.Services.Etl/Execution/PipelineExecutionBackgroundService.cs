@@ -417,13 +417,21 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         EtlLog.ExecutionElevatedToSystemContext(_logger, request.ExecutionId, request.TenantId);
     }
 
-    private static async Task<Guid?> ResolveOwningOrg(
+    // The organization a run's live events are addressed by (FDW-4276). A read that fails is logged and the run's events go to no firehose group, as for a pipeline that
+    // states no organization; it is no longer the same answer silently.
+    private async Task<Guid?> ResolveOwningOrg(
         IServiceProvider services,
         PipelineExecutionRequest request,
         CancellationToken ct)
     {
-        var configResult = await services.GetRequiredService<IPipelineConfigurationProvider>().Get(request.PipelineId, ct).ConfigureAwait(false);
-        return configResult.IsSuccess && configResult.Value is not null ? configResult.Value.OrgId : null;
+        var owner = await OwningOrg.Of(services, request.PipelineId, ct).ConfigureAwait(false);
+        if (owner.IsFailure)
+        {
+            EtlLog.OwningOrgNotRead(_logger, request.PipelineId, request.ExecutionId, owner.CurrentMessage);
+            return null;
+        }
+
+        return owner.Value;
     }
 
     private static async Task TransitionToRunning(
@@ -511,7 +519,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
                 StartedAt = DateTimeOffset.UtcNow
             });
 
-        var updateResult = await dataGateways.ByName("Main").Execute<int>(updateCommand, stoppingToken).ConfigureAwait(false);
+        var updateResult = await dataGateways.ByName(DataGatewayNames.Main).Execute<int>(updateCommand, stoppingToken).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
             EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);
@@ -681,7 +689,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
 
         return await PipelineWatermarks.Read(
-            dataGateways.ByName("Main"), EtlPipelineTypes.OperationalConnection, request.PipelineId, tenantId, request.PipelineName, _logger, stoppingToken)
+            dataGateways.ByName(DataGatewayNames.Main), EtlPipelineTypes.OperationalConnection, request.PipelineId, tenantId, request.PipelineName, _logger, stoppingToken)
             .ConfigureAwait(false);
     }
 
@@ -701,7 +709,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
 
         return await PipelineWatermarks.Record(
-            dataGateways.ByName("Main"), EtlPipelineTypes.OperationalConnection, existing, request.PipelineId, tenantId, startedAt, request.ExecutionId,
+            dataGateways.ByName(DataGatewayNames.Main), EtlPipelineTypes.OperationalConnection, existing, request.PipelineId, tenantId, startedAt, request.ExecutionId,
             request.PipelineName, _logger, stoppingToken).ConfigureAwait(false);
     }
 
@@ -774,8 +782,9 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     private static string ReasonOfStop(PipelineRunHandle run, PipelineExecutionRequest request) =>
         run.IsTimedOut ? PipelineRunTimeLimit.Reason(request) : run.ThresholdReason is { } reason ? reason : CancelledReason;
 
-    // Ends a run that was cancelled (or timed out, FDW-3784): the run and every open record under it are closed Cancelled with the code and a message that
-    // says how far it got, the run's row in the metrics table is closed the same way, and anyone watching it is told. The figures are read before the closing,
+    // Ends a run that was cancelled (or timed out, FDW-3784): the run and every open record under it are closed with the state the stop names, with the code and a message
+    // that says how far it got, the run's row in the metrics table is closed the same way, and anyone watching it is told. A run that passed its time limit ends TimedOut
+    // (FDW-4278) and any other stop ends Cancelled; a timed-out run is not restarted, since its request is not kept for a run in a state that has ended. The figures are read before the closing,
     // from the events its stages wrote when they finished; a run whose records cannot be read is closed with the reason alone and the failure is logged.
     private static async Task HandleCancellation(
         IExecutionTracker executionTracker,
@@ -795,8 +804,10 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
 
         var message = tracking.Value is { } read ? CancelledRunMessage.Of(reason, read) : reason;
+        // Typed as the state contract: the two options are different classes, so a conditional between them has no common type.
+        IExecutionStateType endState = string.Equals(resultCode, TimedOutCode, StringComparison.Ordinal) ? ExecutionStateTypes.TimedOut : ExecutionStateTypes.Cancelled;
         var closed = await new OpenRunRecords(executionTracker, logger)
-            .Close(request.ExecutionId, ExecutionStateTypes.Cancelled, resultCode, message, CancellationToken.None).ConfigureAwait(false);
+            .Close(request.ExecutionId, endState, resultCode, message, CancellationToken.None).ConfigureAwait(false);
         if (closed.IsFailure)
         {
             EtlLog.CancellationCompleteFailed(logger, request.ExecutionId, closed.CurrentMessage);
@@ -804,13 +815,13 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
 
         _ = await WriteMetricsRow(dataGateways, logger, request.ExecutionId, new ExecutionUpdateRecord
         {
-            Status = ExecutionStateTypes.Cancelled.Name,
+            Status = endState.Name,
             CompletedAt = DateTimeOffset.UtcNow,
             DurationMs = tracking.Value?.RunTimeMs,
             ErrorMessage = message,
         }).ConfigureAwait(false);
 
-        await broadcaster.BroadcastStatusChange(request.PipelineName, request.ExecutionId, ExecutionStateTypes.Cancelled.Name, message, orgId).ConfigureAwait(false);
+        await broadcaster.BroadcastStatusChange(request.PipelineName, request.ExecutionId, endState.Name, message, orgId).ConfigureAwait(false);
 
         completionSignaler?.Signal(request.ExecutionId, false, resultCode);
     }
@@ -835,7 +846,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             .Where("Id", executionId)
             .Value(updateRecord);
 
-        var updateResult = await dataGateways.ByName("Main").Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
+        var updateResult = await dataGateways.ByName(DataGatewayNames.Main).Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
             EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);

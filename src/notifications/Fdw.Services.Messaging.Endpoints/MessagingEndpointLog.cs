@@ -240,20 +240,20 @@ public static partial class MessagingEndpointLog
     /// <summary>
     /// Logged at Warning level when a send is refused for carrying no thread reference.
     /// </summary>
-    [MessageLogging(EventId = 51002, Level = LogLevel.Warning, Message = "Refused send with no ReferenceId — the thread is not identified")]
+    [MessageLogging(EventId = 21025, Level = LogLevel.Warning, Message = "Refused send with no ReferenceId — the thread is not identified", ClientMessage = "A reference id is required to identify the thread")]
     public static partial IGenericMessage ReferenceIdMissing(ILogger logger);
 
     /// <summary>
     /// Logged at Warning level when a send is refused for carrying no subject.
     /// </summary>
-    [MessageLogging(EventId = 51003, Level = LogLevel.Warning, Message = "Refused send into thread '{referenceId}' with no subject")]
+    [MessageLogging(EventId = 21026, Level = LogLevel.Warning, Message = "Refused send into thread '{referenceId}' with no subject", ClientMessage = "A subject is required to send a message")]
     public static partial IGenericMessage SubjectMissing(ILogger logger, string referenceId);
 
     /// <summary>
     /// Logged at Warning level when a send is refused because the declared message type is not a
     /// conversation type.
     /// </summary>
-    [MessageLogging(EventId = 51001, Level = LogLevel.Warning, Message = "Refused message type '{messageType}' — not a conversation type")]
+    [MessageLogging(EventId = 21027, Level = LogLevel.Warning, Message = "Refused message type '{messageType}' — not a conversation type", ClientMessage = "'{messageType}' is not a conversation message type")]
     public static partial IGenericMessage MessageTypeRefused(ILogger logger, string messageType);
 
     /// <summary>
@@ -321,4 +321,104 @@ public static partial class MessagingEndpointLog
     [MessageLogging(EventId = 21022, Level = LogLevel.Warning, Message = "Refused a message list with the order '{order}'",
         ClientMessage = "The order '{order}' is not one of newest, oldest")]
     public static partial IGenericMessage OrderUnknown(ILogger logger, string order);
+
+    /// <summary>Logs that the request failed: Tenant context required.</summary>
+    [MessageLogging(EventId = 21023, Level = LogLevel.Warning, Message = "Tenant context required", ClientMessage = "Tenant context required")]
+    public static partial IGenericMessage CreateAccessRequestTenantContextRequired(ILogger logger);
+
+    /// <summary>Logs that the request failed: Tenant context required.</summary>
+    [MessageLogging(EventId = 21024, Level = LogLevel.Warning, Message = "Tenant context required", ClientMessage = "Tenant context required")]
+    public static partial IGenericMessage SendMessageTenantContextRequired(ILogger logger);
+
+    /// <summary>Logs that The request to list access requests was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51004, Level = LogLevel.Warning, Message = "The request to list access requests was refused: the caller is not signed in", ClientMessage = "You must be signed in to list access requests")]
+    public static partial IGenericMessage ListAccessRequestsNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to mark all read was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51005, Level = LogLevel.Warning, Message = "The request to mark all read was refused: the caller is not signed in", ClientMessage = "You must be signed in to mark all read")]
+    public static partial IGenericMessage MarkAllReadNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to create access request was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51006, Level = LogLevel.Warning, Message = "The request to create access request was refused: the caller is not signed in", ClientMessage = "You must be signed in to create access request")]
+    public static partial IGenericMessage CreateAccessRequestNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to get unread count was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51007, Level = LogLevel.Warning, Message = "The request to get unread count was refused: the caller is not signed in", ClientMessage = "You must be signed in to get unread count")]
+    public static partial IGenericMessage GetUnreadCountNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to list messages was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51008, Level = LogLevel.Warning, Message = "The request to list messages was refused: the caller is not signed in", ClientMessage = "You must be signed in to list messages")]
+    public static partial IGenericMessage ListMessagesNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to deny access request was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51009, Level = LogLevel.Warning, Message = "The request to deny access request was refused: the caller is not signed in", ClientMessage = "You must be signed in to deny access request")]
+    public static partial IGenericMessage DenyAccessRequestNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to send message was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51010, Level = LogLevel.Warning, Message = "The request to send message was refused: the caller is not signed in", ClientMessage = "You must be signed in to send message")]
+    public static partial IGenericMessage SendMessageNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to approve access request was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51011, Level = LogLevel.Warning, Message = "The request to approve access request was refused: the caller is not signed in", ClientMessage = "You must be signed in to approve access request")]
+    public static partial IGenericMessage ApproveAccessRequestNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that Message was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30001, Level = LogLevel.Warning, Message = "Message was not found, or is not visible to the caller", ClientMessage = "Message was not found")]
+    public static partial IGenericMessage GetMessageNotFound(ILogger logger);
+
+    /// <summary>Logs that Access request was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30002, Level = LogLevel.Warning, Message = "Access request was not found, or is not visible to the caller", ClientMessage = "Access request was not found")]
+    public static partial IGenericMessage DenyAccessRequestNotFound(ILogger logger);
+
+    /// <summary>Logs that Access request was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30003, Level = LogLevel.Warning, Message = "Access request was not found, or is not visible to the caller", ClientMessage = "Access request was not found")]
+    public static partial IGenericMessage ApproveAccessRequestNotFound(ILogger logger);
+
+    /// <summary>Logs that dismiss message failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91022, Level = LogLevel.Error, Message = "Dismiss message failed unexpectedly", ClientMessage = "Dismiss message failed unexpectedly")]
+    public static partial IGenericMessage DismissMessageFaulted(ILogger logger);
+
+    /// <summary>Logs that deny access request failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91023, Level = LogLevel.Error, Message = "Deny access request failed unexpectedly", ClientMessage = "Deny access request failed unexpectedly")]
+    public static partial IGenericMessage DenyAccessRequestFaulted(ILogger logger);
+
+    /// <summary>Logs that approve access request failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91024, Level = LogLevel.Error, Message = "Approve access request failed unexpectedly", ClientMessage = "Approve access request failed unexpectedly")]
+    public static partial IGenericMessage ApproveAccessRequestFaulted(ILogger logger);
+
+    /// <summary>Logs that get unread count failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91025, Level = LogLevel.Error, Message = "Get unread count failed unexpectedly", ClientMessage = "Get unread count failed unexpectedly")]
+    public static partial IGenericMessage GetUnreadCountFaulted(ILogger logger);
+
+    /// <summary>Logs that mark message read failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91026, Level = LogLevel.Error, Message = "Mark message read failed unexpectedly", ClientMessage = "Mark message read failed unexpectedly")]
+    public static partial IGenericMessage MarkMessageReadFaulted(ILogger logger);
+
+    /// <summary>Logs that archive message failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91027, Level = LogLevel.Error, Message = "Archive message failed unexpectedly", ClientMessage = "Archive message failed unexpectedly")]
+    public static partial IGenericMessage ArchiveMessageFaulted(ILogger logger);
+
+    /// <summary>Logs that list messages failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91028, Level = LogLevel.Error, Message = "List messages failed unexpectedly", ClientMessage = "List messages failed unexpectedly")]
+    public static partial IGenericMessage ListMessagesFaulted(ILogger logger);
+
+    /// <summary>Logs that get message failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91029, Level = LogLevel.Error, Message = "Get message failed unexpectedly", ClientMessage = "Get message failed unexpectedly")]
+    public static partial IGenericMessage GetMessageFaulted(ILogger logger);
+
+    /// <summary>Logs that send message failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91030, Level = LogLevel.Error, Message = "Send message failed unexpectedly", ClientMessage = "Send message failed unexpectedly")]
+    public static partial IGenericMessage SendMessageFaulted(ILogger logger);
+
+    /// <summary>Logs that create access request failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91031, Level = LogLevel.Error, Message = "Create access request failed unexpectedly", ClientMessage = "Create access request failed unexpectedly")]
+    public static partial IGenericMessage CreateAccessRequestFaulted(ILogger logger);
+
+    /// <summary>Logs that list access requests failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91032, Level = LogLevel.Error, Message = "List access requests failed unexpectedly", ClientMessage = "List access requests failed unexpectedly")]
+    public static partial IGenericMessage ListAccessRequestsFaulted(ILogger logger);
+
+    /// <summary>Logs that mark all read failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91033, Level = LogLevel.Error, Message = "Mark all read failed unexpectedly", ClientMessage = "Mark all read failed unexpectedly")]
+    public static partial IGenericMessage MarkAllReadFaulted(ILogger logger);
 }

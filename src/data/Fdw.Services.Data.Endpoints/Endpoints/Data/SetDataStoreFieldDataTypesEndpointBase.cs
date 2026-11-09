@@ -27,13 +27,13 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class SetDataStoreFieldDataTypesEndpointBase
     : CrudUpdateEndpointBase<SetDataStoreFieldDataTypesRequest, List<DataTypedFieldResponse>>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <summary>Initializes a new instance of the <see cref="SetDataStoreFieldDataTypesEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">Reads and saves the data store.</param>
     protected SetDataStoreFieldDataTypesEndpointBase(
-        ILogger<SetDataStoreFieldDataTypesEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+        ILogger<SetDataStoreFieldDataTypesEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
     }
@@ -87,7 +87,7 @@ public abstract class SetDataStoreFieldDataTypesEndpointBase
         foreach (var field in fields.Value!)
             field.FrameworkDataType = request.FrameworkDataType;
 
-        var saved = await _dataStoreProvider.Update(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
+        var saved = await _dataStoreProvider.UpdateStore(current, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (field, frameworkDataType) in previous)

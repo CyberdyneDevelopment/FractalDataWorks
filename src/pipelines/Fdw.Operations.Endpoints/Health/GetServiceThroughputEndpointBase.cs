@@ -59,8 +59,7 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
         if (!TryParseWindow(req.Window, out var window))
         {
             OperationsEndpointLog.InvalidWindowFormat(_logger, req.Window);
-            AddError("Invalid window format. Use format like '5m', '1h', '24h'.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetServiceThroughputInvalidWindowFormatUseFormat(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -68,11 +67,17 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
         {
             var monitorResult = await ReportingMonitor(ct).ConfigureAwait(false);
 
-            if (!monitorResult.IsSuccess || monitorResult.Value is null)
+            if (monitorResult.IsFailure)
             {
                 OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, monitorResult.NoValueReason().Message);
-                AddError("Failed to retrieve throughput data");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(monitorResult, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (monitorResult.Value is null)
+            {
+                OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, monitorResult.NoValueReason().Message);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetServiceThroughputReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -94,8 +99,7 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
         catch (Exception ex)
         {
             OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, ex.Message);
-            AddError("Failed to retrieve throughput data");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.GetServiceThroughputFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 

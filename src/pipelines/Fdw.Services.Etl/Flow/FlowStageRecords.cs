@@ -68,7 +68,7 @@ internal sealed class FlowStageRecords : IFlowStageObserver
     /// <param name="stop">Why the flow was stopped: a stage with a component that did not succeed is closed Cancelled for a cancel, not Failed (FDW-3784), and is left open for a host stop (FDW-3880).</param>
     /// <param name="cancellationToken">Cancels the writes.</param>
     /// <returns>A task that completes when every record is finished.</returns>
-    public async Task Finish(FlowRunReport report, IGenericResult outcome, FlowStopKind stop, CancellationToken cancellationToken)
+    public async Task Finish(FlowRunReport report, IGenericResult outcome, IFlowStopKind stop, CancellationToken cancellationToken)
     {
         foreach (var (stage, record) in _records.OrderBy(pair => pair.Key))
         {
@@ -85,18 +85,7 @@ internal sealed class FlowStageRecords : IFlowStageObserver
 
             // Why failed or cancelled only where a component of the stage did not succeed: a stage that finished before the failure or the cancel is complete.
             var unfinished = outcome.IsFailure && components.Any(component => !component.Succeeded);
-            if (unfinished && stop == FlowStopKind.HostStopped)
-            {
-                continue;
-            }
-
-            if (unfinished && stop == FlowStopKind.Cancelled)
-            {
-                await _reporter.StepCancelled(record, cancellationToken).ConfigureAwait(false);
-                continue;
-            }
-
-            await _reporter.StepFinished(record, unfinished ? outcome : GenericResult.Success(), cancellationToken).ConfigureAwait(false);
+            await stop.EndRecord(_reporter, record, outcome, unfinished, cancellationToken).ConfigureAwait(false);
         }
     }
 }

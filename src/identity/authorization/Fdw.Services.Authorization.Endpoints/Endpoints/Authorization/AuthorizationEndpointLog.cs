@@ -333,4 +333,156 @@ public static partial class AuthorizationEndpointLog
     [MessageLogging(EventId = 61020, Level = LogLevel.Error,
         Message = "Role '{roleName}' has no owning tenant recorded; its permissions cannot be changed until it does")]
     public static partial IGenericMessage RoleTenantNotRecorded(ILogger logger, string roleName);
+
+    /// <summary>Logs that Role was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30001, Level = LogLevel.Warning, Message = "Role was not found, or is not visible to the caller", ClientMessage = "Role was not found")]
+    public static partial IGenericMessage GetRolePermissionsRoleNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30002, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage GetUserRolesUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30003, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage AssignUserRoleUserNotFound(ILogger logger);
+
+    /// <summary>Logs that Role was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30004, Level = LogLevel.Warning, Message = "Role was not found, or is not visible to the caller", ClientMessage = "Role was not found")]
+    public static partial IGenericMessage AssignUserRoleRoleNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30005, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage RevokeUserRoleUserNotFound(ILogger logger);
+
+    /// <summary>Logs that Role was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30006, Level = LogLevel.Warning, Message = "Role was not found, or is not visible to the caller", ClientMessage = "Role was not found")]
+    public static partial IGenericMessage RevokeUserRoleRoleNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30007, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage GiveOrganizationMemberRoleUserNotFound(ILogger logger);
+
+    /// <summary>Logs that The all roles read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91002, Level = LogLevel.Error, Message = "The all roles read answered a success and no value", ClientMessage = "The all roles could not be read")]
+    public static partial IGenericMessage GetUserRolesAllRolesReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The user roles read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91003, Level = LogLevel.Error, Message = "The user roles read answered a success and no value", ClientMessage = "The user roles could not be read")]
+    public static partial IGenericMessage GetUserRolesUserRolesReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The all roles read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91004, Level = LogLevel.Error, Message = "The all roles read answered a success and no value", ClientMessage = "The all roles could not be read")]
+    public static partial IGenericMessage AssignUserRoleAllRolesReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The user roles read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91005, Level = LogLevel.Error, Message = "The user roles read answered a success and no value", ClientMessage = "The user roles could not be read")]
+    public static partial IGenericMessage AssignUserRoleUserRolesReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The all permissions read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91006, Level = LogLevel.Error, Message = "The all permissions read answered a success and no value", ClientMessage = "The all permissions could not be read")]
+    public static partial IGenericMessage ListPermissionsGroupedAllPermissionsReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The user roles read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91007, Level = LogLevel.Error, Message = "The user roles read answered a success and no value", ClientMessage = "The user roles could not be read")]
+    public static partial IGenericMessage RevokeUserRoleUserRolesReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The existing mappings read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91008, Level = LogLevel.Error, Message = "The existing mappings read answered a success and no value", ClientMessage = "The existing mappings could not be read")]
+    public static partial IGenericMessage SetRolePermissionsExistingMappingsReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The current read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91009, Level = LogLevel.Error, Message = "The current read answered a success and no value", ClientMessage = "The current could not be read")]
+    public static partial IGenericMessage SetRolePermissionsCurrentReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The current permissions read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91010, Level = LogLevel.Error, Message = "The current permissions read answered a success and no value", ClientMessage = "The current permissions could not be read")]
+    public static partial IGenericMessage SetRolePermissionsCurrentPermissionsReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The response read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91011, Level = LogLevel.Error, Message = "The response read answered a success and no value", ClientMessage = "The response could not be read")]
+    public static partial IGenericMessage GetRoleResponseReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The role permissions read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91012, Level = LogLevel.Error, Message = "The role permissions read answered a success and no value", ClientMessage = "The role permissions could not be read")]
+    public static partial IGenericMessage GetRolePermissionsRolePermissionsReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The permissions read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91013, Level = LogLevel.Error, Message = "The permissions read answered a success and no value", ClientMessage = "The permissions could not be read")]
+    public static partial IGenericMessage GetRolePermissionsPermissionsReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that Role 'roleName' to update was not found.</summary>
+    [MessageLogging(EventId = 30008, Level = LogLevel.Warning, Message = "Role '{roleName}' to update was not found", ClientMessage = "Role '{roleName}' was not found")]
+    public static partial IGenericMessage UpdateRoleRoleNotFound(ILogger logger, string roleName);
+
+    /// <summary>Logs that Role 'roleName' was not found.</summary>
+    [MessageLogging(EventId = 30009, Level = LogLevel.Warning, Message = "Role '{roleName}' was not found", ClientMessage = "Role '{roleName}' was not found")]
+    public static partial IGenericMessage GetRoleRoleNotFound2(ILogger logger, string roleName);
+
+    /// <summary>Logs that Role 'roleName' to delete was not found.</summary>
+    [MessageLogging(EventId = 30010, Level = LogLevel.Warning, Message = "Role '{roleName}' to delete was not found", ClientMessage = "Role '{roleName}' was not found")]
+    public static partial IGenericMessage DeleteRoleRoleNotFound(ILogger logger, string roleName);
+
+    /// <summary>Logs that Role 'roleName' whose permissions are set was not found.</summary>
+    [MessageLogging(EventId = 30011, Level = LogLevel.Warning, Message = "Role '{roleName}' whose permissions are set was not found", ClientMessage = "Role '{roleName}' was not found")]
+    public static partial IGenericMessage SetRolePermissionsRoleNotFound(ILogger logger, string roleName);
+
+    /// <summary>Logs that Role 'roleName' is a built-in system role; its permissions were not changed.</summary>
+    [MessageLogging(EventId = 100001, Level = LogLevel.Warning, Message = "Role '{roleName}' is a built-in system role; its permissions were not changed", ClientMessage = "Role '{roleName}' is a built-in system role and its permissions cannot be modified through this endpoint")]
+    public static partial IGenericMessage SetRolePermissionsSystemRoleImmutable(ILogger logger, string roleName);
+
+    /// <summary>Logs that Permission set for role 'roleName' refused: names did not resolve.</summary>
+    [MessageLogging(EventId = 20001, Level = LogLevel.Warning, Message = "Permission set for role '{roleName}' refused: {names} did not resolve", ClientMessage = "Permission(s) not found: {names}")]
+    public static partial IGenericMessage SetRolePermissionsUnknownPermission(ILogger logger, string roleName, string names);
+
+    /// <summary>Logs that Role 'roleName' is shared by every tenant; only a platform administrator may change its permissions.</summary>
+    [MessageLogging(EventId = 100002, Level = LogLevel.Warning, Message = "Role '{roleName}' is shared by every tenant; only a platform administrator may change its permissions", ClientMessage = "Role '{roleName}' is shared by every tenant; only a platform administrator may change its permissions")]
+    public static partial IGenericMessage SetRolePermissionsSharedRoleRoleIsSharedByEvery(ILogger logger, string roleName);
+
+    /// <summary>Logs that Role 'roleName' belongs to another tenant and cannot be changed from the acting tenant.</summary>
+    [MessageLogging(EventId = 100003, Level = LogLevel.Warning, Message = "Role '{roleName}' belongs to another tenant and cannot be changed from the acting tenant", ClientMessage = "Role '{roleName}' belongs to another tenant and cannot be changed from this one")]
+    public static partial IGenericMessage SetRolePermissionsOtherTenantRoleRoleBelongsToAnotherTenant(ILogger logger, string roleName);
+
+    /// <summary>Logs that The permission catalogue read for role 'roleName' answered a success and no value.</summary>
+    [MessageLogging(EventId = 91014, Level = LogLevel.Error, Message = "The permission catalogue read for role '{roleName}' answered a success and no value", ClientMessage = "The permissions could not be read")]
+    public static partial IGenericMessage SetRolePermissionsPermissionCatalogReturnedNothing(ILogger logger, string roleName);
+
+    /// <summary>Logs that The permission catalogue is empty, so no permission of role 'roleName' can resolve.</summary>
+    [MessageLogging(EventId = 91015, Level = LogLevel.Error, Message = "The permission catalogue is empty, so no permission of role '{roleName}' can resolve", ClientMessage = "The permission catalogue is empty, so no permission can be set")]
+    public static partial IGenericMessage SetRolePermissionsPermissionCatalogEmpty(ILogger logger, string roleName);
+
+    /// <summary>Logs that Role 'roleName' records no tenant, so its change cannot be placed.</summary>
+    [MessageLogging(EventId = 91016, Level = LogLevel.Error, Message = "Role '{roleName}' records no tenant, so its change cannot be placed", ClientMessage = "The role records no tenant, so its permissions cannot be changed")]
+    public static partial IGenericMessage SetRolePermissionsRoleTenantNotRecorded(ILogger logger, string roleName);
+
+    /// <summary>Logs that The request to revoke user role was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100004, Level = LogLevel.Warning, Message = "The request to revoke user role was refused: the caller is not allowed", ClientMessage = "You are not allowed to revoke user role")]
+    public static partial IGenericMessage RevokeUserRoleForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to assign user role was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100005, Level = LogLevel.Warning, Message = "The request to assign user role was refused: the caller is not allowed", ClientMessage = "You are not allowed to assign user role")]
+    public static partial IGenericMessage AssignUserRoleForbidden(ILogger logger);
+
+    /// <summary>Logs that A role was not created: IsTenantScoped was not stated.</summary>
+    [MessageLogging(EventId = 20002, Level = LogLevel.Warning, Message = "A role was not created: IsTenantScoped was not stated", ClientMessage = "IsTenantScoped is required")]
+    public static partial IGenericMessage CreateRoleIsTenantScopedRequired(ILogger logger);
+
+    /// <summary>Logs that The user-role assignments read answered a success and no value.</summary>
+    [MessageLogging(EventId = 91017, Level = LogLevel.Error, Message = "The user-role assignments read answered a success and no value", ClientMessage = "The user roles could not be read")]
+    public static partial IGenericMessage ListAllUserRolesAssignmentsReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that The roles read for the user-roles list answered a success and no value.</summary>
+    [MessageLogging(EventId = 91018, Level = LogLevel.Error, Message = "The roles read for the user-roles list answered a success and no value", ClientMessage = "The user roles could not be read")]
+    public static partial IGenericMessage ListAllUserRolesRolesReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that get user roles failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91019, Level = LogLevel.Error, Message = "Get user roles failed unexpectedly", ClientMessage = "Get user roles failed unexpectedly")]
+    public static partial IGenericMessage GetUserRolesFaulted(ILogger logger);
+
+    /// <summary>Logs that revoke user role failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91020, Level = LogLevel.Error, Message = "Revoke user role failed unexpectedly", ClientMessage = "Revoke user role failed unexpectedly")]
+    public static partial IGenericMessage RevokeUserRoleFaulted(ILogger logger);
+
+    /// <summary>Logs that assign user role failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91021, Level = LogLevel.Error, Message = "Assign user role failed unexpectedly", ClientMessage = "Assign user role failed unexpectedly")]
+    public static partial IGenericMessage AssignUserRoleFaulted(ILogger logger);
 }

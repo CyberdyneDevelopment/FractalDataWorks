@@ -1,4 +1,5 @@
 ﻿using System;
+using Fdw.Services.Connections.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -23,12 +24,12 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdateDataStoreRequest, DataStoreDetailResponse>
     where TConfig : class, IDataStoreImplementationConfiguration
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly ConnectionConfigurationProvider _connectionProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
-    protected UpdateDataStoreEndpointBase(ILogger<UpdateDataStoreEndpointBase<TConfig>> logger, DataStoreConfigurationProvider dataStoreProvider,
-        ConnectionConfigurationProvider connectionProvider) : base(logger)
+    protected UpdateDataStoreEndpointBase(ILogger<UpdateDataStoreEndpointBase<TConfig>> logger, IDataStoreConfigurationProvider dataStoreProvider,
+        IConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
         _connectionProvider = connectionProvider;
@@ -98,7 +99,7 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
 
         ApplyPaths(updated, request);
 
-        var saveResult = await _dataStoreProvider.Update(updated, "DataStore", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
+        var saveResult = await _dataStoreProvider.UpdateStore(updated, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<DataStoreDetailResponse>();

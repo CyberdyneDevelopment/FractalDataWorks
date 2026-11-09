@@ -20,6 +20,7 @@ public sealed class CompletedStateType : ExecutionStateTypeBase
             isTerminal: true,
             isSuccess: true,
             isFailure: false,
+            isExecuting: false,
             canTriggerEscalation: false,
             validTransitions: System.Array.Empty<string>())
     {

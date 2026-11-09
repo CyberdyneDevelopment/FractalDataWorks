@@ -52,6 +52,23 @@ public sealed record ContextContribution
     /// </remarks>
     public IReadOnlyList<string> ObservedMethods { get; init; } = [];
 
+    /// <summary>
+    /// Gets the authentication methods this execution's authority permits the step to assert (FDW-4697).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For a step whose methods are not fixed by the step but by the authority row it read for this
+    /// execution (a foreign token, an OIDC redirect). A step is one instance for the process, so it
+    /// must not keep them in a field for the runner to read afterwards: two logins at once would
+    /// overwrite each other's. They travel with the result of the execution that read them.
+    /// </para>
+    /// <para>
+    /// The runner's ceiling for what the step may record is the step's own declaration plus these.
+    /// Empty adds nothing.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<string> AssertableMethods { get; init; } = [];
+
     /// <summary>Enumerates the elements actually present, for checking against the declaration.</summary>
     public IEnumerable<IContextElement> Present()
     {

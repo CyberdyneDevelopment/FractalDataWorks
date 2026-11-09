@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Operations.Abstractions.Thresholds;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Etl.Execution;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -29,6 +31,11 @@ namespace Fdw.Services.Etl.Thresholds;
 /// carries no schedule Id is counted for its pipeline only, and is logged. This is called from the one loop of <see cref="WaitThresholdMonitor"/>, so it keeps the
 /// subjects it last reported without a lock.
 /// </para>
+/// <para>
+/// Why it opens a scope for each subject (FDW-4611): this is a singleton and the evaluator is scoped (it hands the scope's services to the consequence handlers), so a singleton
+/// that took it would keep one evaluator, and one set of handlers, for every tenant for the life of the process. Each subject is reported in a scope that works under the
+/// tenant the subject belongs to; the monitor's loop has no request flow of its own to take a tenant from.
+/// </para>
 /// </remarks>
 public sealed class WaitThresholdReporter
 {
@@ -38,7 +45,7 @@ public sealed class WaitThresholdReporter
 
     private const string ServerKind = "Server";
 
-    private readonly IThresholdEvaluator _evaluator;
+    private readonly IServiceScopeFactory _scopes;
     private readonly ILogger _logger;
     private Dictionary<WaitSubject, Guid> _reported = [];
 
@@ -46,11 +53,11 @@ public sealed class WaitThresholdReporter
     private readonly record struct WaitSubject(string Kind, string Name, Guid TenantId);
 
     /// <summary>Initializes a new instance of the <see cref="WaitThresholdReporter"/> class.</summary>
-    /// <param name="evaluator">The evaluator that judges the thresholds attached to a subject.</param>
+    /// <param name="scopes">Opens the scope each report resolves the evaluator that judges the thresholds attached to a subject in.</param>
     /// <param name="logger">The logger.</param>
-    public WaitThresholdReporter(IThresholdEvaluator evaluator, ILogger<WaitThresholdReporter>? logger = null)
+    public WaitThresholdReporter(IServiceScopeFactory scopes, ILogger<WaitThresholdReporter>? logger = null)
     {
-        _evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
+        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
         _logger = logger ?? NullLogger<WaitThresholdReporter>.Instance;
     }
 
@@ -128,7 +135,10 @@ public sealed class WaitThresholdReporter
         var values = new Dictionary<string, object?>(StringComparer.Ordinal) { [PipelineWaitsThresholdType.WaitingRuns] = waitingRuns };
         try
         {
-            var report = await _evaluator.Report(subject, values, cancellationToken).ConfigureAwait(false);
+            using var scope = _scopes.CreateScope();
+            using var tenant = new SystemAuthenticationContextScope(scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>(), waiting.TenantId);
+            var evaluator = scope.ServiceProvider.GetRequiredService<IThresholdEvaluator>();
+            var report = await evaluator.Report(subject, values, cancellationToken).ConfigureAwait(false);
             if (report.IsFailure)
             {
                 WaitThresholdLog.WaitingRunsNotJudged(_logger, waiting.Name, report.CurrentMessage);

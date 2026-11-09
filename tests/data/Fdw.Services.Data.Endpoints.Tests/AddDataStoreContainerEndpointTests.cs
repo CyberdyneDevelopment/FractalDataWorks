@@ -30,7 +30,8 @@ public class AddDataStoreContainerEndpointTests
                 NullLogger<DataStoreConfigurationProvider>.Instance,
                 Mock.Of<IConfigurationGatewayProvider>(),
                 "TestStore", "dbo", "DataStore",
-                new Fdw.Services.Configuration.UnavailablePlacement()))
+                new Fdw.Services.Configuration.UnavailablePlacement(),
+                Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>()))
         {
         }
 

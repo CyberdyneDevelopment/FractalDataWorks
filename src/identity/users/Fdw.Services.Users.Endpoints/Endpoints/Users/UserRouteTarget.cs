@@ -31,7 +31,7 @@ public static class UserRouteTarget
     /// <param name="idOrName">The route segment: a Guid id, a username, or <c>me</c>.</param>
     /// <param name="ct">Propagated cancellation token.</param>
     public static Task<IGenericResult<IUserImplementationConfiguration>> Resolve(
-        UserConfigurationProvider provider, ClaimsPrincipal caller, string idOrName, CancellationToken ct)
+        IUserConfigurationProvider provider, ClaimsPrincipal caller, string idOrName, CancellationToken ct)
     {
         if (string.Equals(idOrName, Self, StringComparison.OrdinalIgnoreCase))
         {

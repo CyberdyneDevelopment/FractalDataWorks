@@ -31,4 +31,16 @@ public static partial class OrganizationSwitchEndpointLog
     /// <summary>Logs that a person was refused a department they hold no access in.</summary>
     [MessageLogging(EventId = 102772, Level = LogLevel.Warning, Message = "User '{userId}' was refused department '{organizationId}': they may not act in it")]
     public static partial IGenericMessage AccessDenied(ILogger logger, Guid userId, Guid organizationId);
+
+    /// <summary>Logs that The request to switch organization was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102773, Level = LogLevel.Warning, Message = "The request to switch organization was refused: the caller is not allowed", ClientMessage = "You are not allowed to switch organization")]
+    public static partial IGenericMessage SwitchOrganizationForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to switch organization was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102774, Level = LogLevel.Warning, Message = "The request to switch organization was refused: the caller is not allowed", ClientMessage = "You are not allowed to switch organization")]
+    public static partial IGenericMessage SwitchOrganizationForbidden2(ILogger logger);
+
+    /// <summary>Logs that The request to switch organization was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 102775, Level = LogLevel.Warning, Message = "The request to switch organization was refused: the caller is not allowed", ClientMessage = "You are not allowed to switch organization")]
+    public static partial IGenericMessage SwitchOrganizationForbidden3(ILogger logger);
 }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Fdw.Services.Calculations.Abstractions.CalculationNodeOptions;
 using Fdw.Services.Calculations.Abstractions.RelativeTime;
+using Fdw.Services.Calculations.Abstractions.Rounding;
 using Shouldly;
 using Xunit;
 
@@ -40,7 +41,26 @@ public sealed class CalculationNodeCatalogTests
     [Fact]
     public void RoundOffersEveryMidpointMode()
     {
-        CalculationNodeTypes.ByName("Round").Modes.ShouldBe(Enum.GetNames(typeof(MidpointRounding)));
+        CalculationNodeTypes.ByName("Round").Modes.ShouldBe(RoundingModes.All().Select(mode => mode.Name), ignoreOrder: true);
+        CalculationNodeTypes.ByName("Round").Modes.ShouldBe(Enum.GetNames(typeof(MidpointRounding)), ignoreOrder: true);
+    }
+
+    [Fact]
+    public void EveryRoundingModeStandsForTheMidpointRoundingOfTheSameName()
+    {
+        RoundingModes.All().ShouldNotBeEmpty();
+        foreach (var mode in RoundingModes.All())
+        {
+            Enum.Parse<MidpointRounding>(mode.Name).ShouldBe(mode.Midpoint, mode.Name);
+        }
+    }
+
+    [Fact]
+    public void ARoundingModeIsFoundByItsExactNameOnly()
+    {
+        RoundingModes.ByName("ToEven").ShouldNotBeSameAs(RoundingModes.NotFound);
+        RoundingModes.ByName("toeven").ShouldBeSameAs(RoundingModes.NotFound);
+        RoundingModes.ByName("Banker").ShouldBeSameAs(RoundingModes.NotFound);
     }
 
     [Fact]

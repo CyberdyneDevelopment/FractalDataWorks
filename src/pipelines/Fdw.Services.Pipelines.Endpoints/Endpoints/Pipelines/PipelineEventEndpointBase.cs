@@ -4,6 +4,8 @@ using Fdw.Services.Pipelines.Clients.Abstractions;
 using Fdw.Services.Pipelines.Notifications;
 using FastEndpoints;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -44,15 +46,13 @@ public abstract class PipelineEventEndpointBase : Endpoint<PipelineEventRequest,
         var kind = PipelineEventKinds.ByName(req.Kind);
         if (kind == PipelineEventKinds.NotFound)
         {
-            AddError(PipelineEventLog.UnknownKind(EndpointLogger, req.Kind).Message);
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelineEventLog.UnknownKind(EndpointLogger, req.Kind)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (!await kind.Relay(_broadcaster, req).ConfigureAwait(false))
         {
-            AddError(PipelineEventLog.BodyMissing(EndpointLogger, kind.Name).Message);
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelineEventLog.BodyMissing(EndpointLogger, kind.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

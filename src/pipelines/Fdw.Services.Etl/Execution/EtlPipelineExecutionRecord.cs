@@ -30,6 +30,12 @@ public sealed class EtlPipelineExecutionRecord
     public string PipelineName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the tenant the run belongs to (FDW-4350). A pipeline name is unique per tenant, so the latest run of a name is
+    /// read inside one tenant; every writer states it.
+    /// </summary>
+    public Guid TenantId { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the schedule that triggered this execution.
     /// Null for manual/ad-hoc executions.
     /// </summary>

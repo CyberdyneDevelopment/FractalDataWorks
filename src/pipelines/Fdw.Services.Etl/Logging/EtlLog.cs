@@ -966,9 +966,10 @@ public static partial class EtlLog
     /// rather than a silent pass-through.
     /// </summary>
     [MessageLogging(
-        EventId = 11045,
+        EventId = 61006,
         Level = LogLevel.Error,
-        Message = "Aggregate '{name}' has no group-by fields and/or aggregations")]
+        Message = "Aggregate '{name}' has no group-by fields and/or aggregations",
+        ClientMessage = "Aggregate '{name}' has no group-by fields and/or aggregations")]
     public static partial IGenericMessage AggregateParamsMissing(
         ILogger logger,
         string name);
@@ -978,9 +979,10 @@ public static partial class EtlLog
     /// fail loud rather than a silent pass-through.
     /// </summary>
     [MessageLogging(
-        EventId = 11046,
+        EventId = 61008,
         Level = LogLevel.Error,
-        Message = "Lookup '{name}' missing connection/dataset/keys or lookup columns")]
+        Message = "Lookup '{name}' missing connection/dataset/keys or lookup columns",
+        ClientMessage = "Lookup '{name}' missing connection/dataset/keys or lookup columns")]
     public static partial IGenericMessage LookupParamsMissing(
         ILogger logger,
         string name);
@@ -990,9 +992,10 @@ public static partial class EtlLog
     /// pass-through.
     /// </summary>
     [MessageLogging(
-        EventId = 11047,
+        EventId = 61004,
         Level = LogLevel.Error,
-        Message = "Calculate '{name}' has no computed columns")]
+        Message = "Calculate '{name}' has no computed columns",
+        ClientMessage = "Calculate '{name}' has no computed columns")]
     public static partial IGenericMessage CalculationParamsMissing(
         ILogger logger,
         string name);
@@ -1002,9 +1005,10 @@ public static partial class EtlLog
     /// pass-through.
     /// </summary>
     [MessageLogging(
-        EventId = 11048,
+        EventId = 61011,
         Level = LogLevel.Error,
-        Message = "Filter '{name}' has no filter expression")]
+        Message = "Filter '{name}' has no filter expression",
+        ClientMessage = "Filter '{name}' has no filter expression")]
     public static partial IGenericMessage FilterExpressionMissing(
         ILogger logger,
         string name);
@@ -1013,9 +1017,10 @@ public static partial class EtlLog
     /// Logs when the transform-operation type name does not resolve against <c>TransformTypes</c>.
     /// </summary>
     [MessageLogging(
-        EventId = 11049,
+        EventId = 61005,
         Level = LogLevel.Error,
-        Message = "Unknown transform type '{operationType}'")]
+        Message = "Unknown transform type '{operationType}'",
+        ClientMessage = "Unknown transform type '{operationType}'")]
     public static partial IGenericMessage UnknownTransformType(
         ILogger logger,
         string operationType);
@@ -1024,9 +1029,10 @@ public static partial class EtlLog
     /// Logs when an aggregation names a function that does not resolve against <c>AggregateFunctions</c>.
     /// </summary>
     [MessageLogging(
-        EventId = 11050,
+        EventId = 61007,
         Level = LogLevel.Error,
-        Message = "Unknown aggregate function '{function}' on '{name}'")]
+        Message = "Unknown aggregate function '{function}' on '{name}'",
+        ClientMessage = "Unknown aggregate function '{function}' on '{name}'")]
     public static partial IGenericMessage UnknownAggregateFunction(
         ILogger logger,
         string function,
@@ -1037,9 +1043,10 @@ public static partial class EtlLog
     /// Logs when a transform option receives a configuration instance of the wrong concrete type.
     /// </summary>
     [MessageLogging(
-        EventId = 11052,
+        EventId = 61003,
         Level = LogLevel.Error,
-        Message = "Transform '{name}' received configuration of type '{actual}'")]
+        Message = "Transform '{name}' received configuration of type '{actual}'",
+        ClientMessage = "Transform '{name}' received configuration of type '{actual}'")]
     public static partial IGenericMessage WrongConfigurationType(
         ILogger logger,
         string name,
@@ -1060,9 +1067,10 @@ public static partial class EtlLog
     /// Logs when a Lookup transform names a join type that does not resolve against <c>LookupJoinTypes</c>.
     /// </summary>
     [MessageLogging(
-        EventId = 11054,
+        EventId = 61009,
         Level = LogLevel.Error,
-        Message = "Unknown lookup join type '{joinType}' on '{name}'")]
+        Message = "Unknown lookup join type '{joinType}' on '{name}'",
+        ClientMessage = "Unknown lookup join type '{joinType}' on '{name}'")]
     public static partial IGenericMessage UnknownJoinType(
         ILogger logger,
         string joinType,
@@ -1073,9 +1081,10 @@ public static partial class EtlLog
     /// would otherwise treat every key as missing.
     /// </summary>
     [MessageLogging(
-        EventId = 11059,
+        EventId = 91016,
         Level = LogLevel.Error,
-        Message = "Lookup '{name}' could not preload from {source}: {error}")]
+        Message = "Lookup '{name}' could not preload from {source}: {error}",
+        ClientMessage = "Lookup '{name}' could not preload from {source}")]
     public static partial IGenericMessage LookupPreloadFailed(
         ILogger logger,
         string name,
@@ -1086,9 +1095,10 @@ public static partial class EtlLog
     /// Logs when a Lookup transform runs on a context that carries no data gateway, so it cannot load its reference data.
     /// </summary>
     [MessageLogging(
-        EventId = 11060,
+        EventId = 61010,
         Level = LogLevel.Error,
-        Message = "Lookup '{name}' has no data gateway on its transform context, so its reference data cannot be preloaded")]
+        Message = "Lookup '{name}' has no data gateway on its transform context, so its reference data cannot be preloaded",
+        ClientMessage = "Lookup '{name}' has no data gateway on its transform context, so its reference data cannot be preloaded")]
     public static partial IGenericMessage LookupGatewayMissing(
         ILogger logger,
         string name);
@@ -1099,9 +1109,10 @@ public static partial class EtlLog
     /// (currently Aggregate) — the engine must call <c>TransformBatch</c> instead.
     /// </summary>
     [MessageLogging(
-        EventId = 11056,
+        EventId = 91015,
         Level = LogLevel.Error,
-        Message = "Transform '{name}' is set-based and cannot run per-record; the engine must call TransformBatch")]
+        Message = "Transform '{name}' is set-based and cannot run per-record; the engine must call TransformBatch",
+        ClientMessage = "Transform '{name}' is set-based and cannot run per-record; the engine must call TransformBatch")]
     public static partial IGenericMessage TransformRequiresBatchExecution(
         ILogger logger,
         string name);
@@ -1168,4 +1179,15 @@ public static partial class EtlLog
         string pipelineName,
         string components,
         string permission);
+
+    /// <summary>Logs a run whose owning organization could not be read: its live events go to no firehose group.</summary>
+    [MessageLogging(
+        EventId = 71314,
+        Level = LogLevel.Error,
+        Message = "The organization that owns pipeline {pipelineId} could not be read for execution {executionId}, so its live events go to no organization group: {reason}")]
+    public static partial IGenericMessage OwningOrgNotRead(
+        ILogger logger,
+        Guid pipelineId,
+        Guid executionId,
+        string? reason);
 }

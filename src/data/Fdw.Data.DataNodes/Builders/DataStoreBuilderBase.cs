@@ -52,6 +52,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     private readonly ILogger _logger;
     private IDataStoreImplementationConfiguration? _config;
     private bool _declaredByHost;
+    private HashSet<string>? _slice;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataStoreBuilderBase"/> class.
@@ -67,6 +68,13 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
 
     /// <inheritdoc />
     public void DeclareByHost() => _declaredByHost = true;
+
+    /// <inheritdoc />
+    public void DeclareSlice(IReadOnlyCollection<string> containerNames)
+    {
+        ArgumentNullException.ThrowIfNull(containerNames);
+        _slice = new HashSet<string>(containerNames, StringComparer.Ordinal);
+    }
 
     /// <inheritdoc />
     public IGenericResult Configure(IGenericConfiguration storeConfig)
@@ -127,12 +135,19 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         }
 
         // Pass 2: resolve keys FK-direct against the wave-A nodes (ReferencedContainer = the bare node).
+        // A slice resolves the keys of the containers it names and no others (FDW-4328).
         var keysByContainerName = new Dictionary<string, IReadOnlyList<IContainerKey>>(StringComparer.Ordinal);
-        foreach (var bc in built.Values)
+        foreach (var bc in built.Values.Where(bc => _slice is null || _slice.Contains(bc.Config.Name)))
             keysByContainerName[bc.Config.Name] = ResolveKeys(bc, built, bareNodesByName);
 
-        // Pass 3: inbound referencing-key index (which keys point AT each container).
-        var referencingByContainerName = BuildReferencingIndex(built, bareNodesByName, keysByContainerName);
+        // Pass 3: inbound referencing-key index (which keys point AT each container). A slice does not hold the keys of the other containers, so it cannot
+        // say which point at the ones it names; it says so, and does not guess.
+        var referencingByContainerName = _slice is null
+            ? BuildReferencingIndex(built, bareNodesByName, keysByContainerName)
+            : built.Keys.Where(_slice.Contains).ToDictionary(
+                name => name,
+                name => (IGenericResult<IReadOnlyList<ReferencingKeyBinding>>)GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Failure(DataStoreLoaderLog.ReferencingKeysNotResolved(_logger, name)),
+                StringComparer.Ordinal);
 
         // Wave B: build the final nodes carrying keys + referencing, wired under real parent paths.
         var builtPaths = new List<IDataNodePath>(cfg.Paths.Count);
@@ -140,7 +155,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         {
             var path = new DataPath(pathCfg.Name, store, [], pathCfg.Description, _logger);
             var finalContainers = new List<IDataContainer>(pathCfg.Containers.Count);
-            foreach (var containerCfg in pathCfg.Containers)
+            foreach (var containerCfg in pathCfg.Containers.Where(c => _slice is null || _slice.Contains(c.Name)))
             {
                 var bc = built[containerCfg.Name];
                 var referencing = referencingByContainerName.TryGetValue(containerCfg.Name, out var r)
@@ -279,6 +294,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
                 description: keyCfg.Description,
                 keyType: (KeyTypeBase)keyType,
                 isPhysical: isPhysical,
+                isOwner: keyCfg.IsOwner,
                 referencedContainer: referencedContainerNode,
                 keyFields: keyFields));
         }

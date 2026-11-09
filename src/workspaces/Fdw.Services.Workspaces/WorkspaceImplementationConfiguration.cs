@@ -92,15 +92,19 @@ public partial class WorkspaceImplementationConfiguration
     public Guid? VisibilityGroupId { get; set; }
 
     /// <summary>Gets or sets the members of this workspace.</summary>
+    [ConfigurationChildCascade(typeof(UpsertOnlyChildCascade))]
     public IList<WorkspaceMemberConfiguration> Members { get; set; } = [];
 
     /// <summary>Gets or sets the resources attached to this workspace.</summary>
+    [ConfigurationChildCascade(typeof(UpsertOnlyChildCascade))]
     public IList<WorkspaceResourceConfiguration> Resources { get; set; } = [];
 
     /// <summary>Gets or sets the declared relationships between this workspace's data sets.</summary>
+    [ConfigurationChildCascade(typeof(UpsertOnlyChildCascade))]
     public IList<WorkspaceRelationshipConfiguration> Relationships { get; set; } = [];
 
     /// <summary>Gets or sets the requests to join this workspace.</summary>
+    [ConfigurationChildCascade(typeof(UpsertOnlyChildCascade))]
     public IList<WorkspaceMembershipRequestConfiguration> MembershipRequests { get; set; } = [];
 
     /// <summary>Gets or sets whether this is the current active version of the row.</summary>

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Connections.Abstractions;
 
@@ -8,7 +9,7 @@ namespace Fdw.Services.Connections.Sql.Tests.Fakes;
 /// Uses double-quote quoting ("x"), @ parameter prefix, FALSE always-false predicate,
 /// and LIMIT/OFFSET paging — independent of any real backend.
 /// </summary>
-internal sealed class FakeDialect : ISqlDialect
+internal sealed class FakeDialect : ISqlDialect, IKeyListSpillDialect
 {
     public FakeDialect(
         bool supportsSchemaNamespace = true,
@@ -37,6 +38,11 @@ internal sealed class FakeDialect : ISqlDialect
     public string PatternMatchOperator { get; }
 
     public string AlwaysFalsePredicate => "FALSE";
+
+    public KeyListSpillForm KeyListSpill(string uniqueId, string sourceTable, string columnName, string jsonParameter)
+        => new($"PREPARE {uniqueId} FROM {sourceTable} USING {jsonParameter}; ", $"SELECT v FROM keys_{uniqueId}", $" CLEAN {uniqueId};");
+
+    public string KeyListJson(string columnName, IReadOnlyList<object?> values) => KeyListJsonWriter.Scalars(values);
 
     public string BuildPagingClause(IPagingExpression paging)
         => paging.Take.HasValue

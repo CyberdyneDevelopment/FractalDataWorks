@@ -29,13 +29,13 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class ClassifyDataStoreItemsEndpointBase
     : CrudUpdateEndpointBase<ClassifyDataStoreItemsRequest, List<ClassifiedItemResponse>>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <summary>Initializes a new instance of the <see cref="ClassifyDataStoreItemsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">Reads and saves the data store.</param>
     protected ClassifyDataStoreItemsEndpointBase(
-        ILogger<ClassifyDataStoreItemsEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+        ILogger<ClassifyDataStoreItemsEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
     }
@@ -90,7 +90,7 @@ public abstract class ClassifyDataStoreItemsEndpointBase
         foreach (var item in items.Value!)
             item.SetClassificationId(request.ClassificationId);
 
-        var saved = await _dataStoreProvider.Update(current, "DataStore", current.Implementation, current.Name, ct).ConfigureAwait(false);
+        var saved = await _dataStoreProvider.UpdateStore(current, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (item, classificationId) in previous)

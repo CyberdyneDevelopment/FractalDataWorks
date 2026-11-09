@@ -44,6 +44,13 @@ public interface IContainerKey
     bool IsPhysical { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this key is declared as the one by which the referenced container OWNS the container that holds the key
+    /// (FDW-4240). Nothing is inferred from the key's shape: a Foreign key to a Logical key otherwise cites a record (a node's parent node) and
+    /// does not hold the child.
+    /// </summary>
+    bool IsOwner { get; }
+
+    /// <summary>
     /// Gets the container referenced by this key, if it is a foreign-key relationship.
     /// </summary>
     /// <value>

@@ -239,4 +239,12 @@ public static partial class CalculationEndpointLog
     [MessageLogging(EventId = 91030, Level = LogLevel.Error,
         Message = "The result of windowed calculation '{calculationName}' does not state its PartitionCount and RowCount")]
     public static partial IGenericMessage WindowedResultCountsMissing(ILogger logger, string calculationName);
+
+    /// <summary>Logs that the request failed: An internal error occurred during calculation execution.</summary>
+    [MessageLogging(EventId = 21550, Level = LogLevel.Warning, Message = "An internal error occurred during calculation execution.", ClientMessage = "An internal error occurred during calculation execution.")]
+    public static partial IGenericMessage ExecuteCalculationFaulted(ILogger logger);
+
+    /// <summary>Logs that the request failed: An internal error occurred during calculation execution.</summary>
+    [MessageLogging(EventId = 21551, Level = LogLevel.Warning, Message = "An internal error occurred during calculation execution.", ClientMessage = "An internal error occurred during calculation execution.")]
+    public static partial IGenericMessage PreviewCalculationFaulted(ILogger logger);
 }

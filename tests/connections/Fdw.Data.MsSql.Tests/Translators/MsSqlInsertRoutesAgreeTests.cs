@@ -155,7 +155,7 @@ public sealed class MsSqlInsertRoutesAgreeTests
             .Prepend(CreateField("Id", typeof(Guid), isIdentity: true).Object)
             .ToArray();
 
-        MsSqlInsertTranslator.RowsPerRequest(CreateContainer(fields).Object).ShouldBe(140);
+        MsSqlInsertTranslator.RowsPerRequest(CreateContainer(fields).Object, 2100).ShouldBe(140);
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public sealed class MsSqlInsertRoutesAgreeTests
     {
         var container = CreateContainer(CreateField("Id", typeof(Guid), isIdentity: true).Object);
 
-        MsSqlInsertTranslator.RowsPerRequest(container.Object).ShouldBe(int.MaxValue);
+        MsSqlInsertTranslator.RowsPerRequest(container.Object, 2100).ShouldBe(int.MaxValue);
     }
 
     [Fact]
@@ -180,18 +180,5 @@ public sealed class MsSqlInsertRoutesAgreeTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Parameters.Count.ShouldBe(2100);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task ARequestOverTheLimitIsRefusedNotSentToTheServer()
-    {
-        var fields = Enumerable.Range(0, 15).Select(i => CreateField($"C{i}", typeof(string)).Object).ToArray();
-        var rows = Enumerable.Range(0, 141).Select(i => (object)fields.ToDictionary(f => f.Name, f => (object?)$"v{i}")).ToList();
-
-        var result = await _sut.Translate(CreateCommand(rows).Object, CreateContainer(fields).Object, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
     }
 }

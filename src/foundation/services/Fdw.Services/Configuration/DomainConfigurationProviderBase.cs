@@ -97,10 +97,6 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     // same answer every time.
     private IReadOnlyList<string>? _listFields;
 
-    // SQL Server allows 2,100 parameters per statement and every id is one; a thousand leaves room for the
-    // rest of the statement, and is the same ceiling a query's In operator has.
-    private const int MaxIds = 1000;
-
     // How many of the rows an ambiguous name matched are listed in the refusal: enough to address each by id.
     private const int MaxAmbiguousIds = 10;
 
@@ -175,6 +171,21 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
             : await Compose(member, provider => provider.Get(member.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(narrowing);
+        if (levels < 0)
+            return GenericResult<TImplementationConfiguration>.Failure(
+                DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TImplementationConfiguration).Name, nameof(levels), levels));
+
+        var row = await DomainRow(_commands.Get(DataStoreName, PathName, name), name, ct).ConfigureAwait(false);
+        if (row.IsFailure) return row.ToNewResult<TImplementationConfiguration>();
+        return row.Value is not { } member
+            ? GenericResult<TImplementationConfiguration>.Success(default!)
+            : await Compose(member, provider => provider.Get(member.Id, levels, narrowing, ct), levels, null, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -295,7 +306,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var wanted = ids.Distinct().ToList();
         if (wanted.Count == 0)
             return GenericResult<IReadOnlyList<TDomain>>.Success(Array.Empty<TDomain>());
-        if (wanted.Count > MaxIds)
+        if (wanted.Count > _gatewayProvider.KeyChunkSize)
             return GenericResult<IReadOnlyList<TDomain>>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TDomain).Name, nameof(ids), wanted.Count));
 
@@ -451,7 +462,11 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     // within a tenant, and a caller can see several tenants' rows (shared rows from every tenant, every tenant's from
     // the global one), so the first row back is not necessarily the one asked for; acting on it would act on a
     // configuration the caller did not choose (FDW-1101).
-    private IGenericResult<TDomain?> OnlyRow(IEnumerable<TDomain>? rows, string key)
+    //
+    // A write whose record carries the durable Id of the member it changes names that member (FDW-4459): an administrator writing another tenant's member writes under that
+    // tenant's system scope, which sees every tenant's rows, so the name alone can match several. Only when exactly one of them has the record's Id is it the row; an Id that
+    // none carries still leaves the name ambiguous and refused.
+    private IGenericResult<TDomain?> OnlyRow(IEnumerable<TDomain>? rows, string key, Guid memberId = default)
     {
         // A read that answers with no row set has selected nothing, the same answer as an empty one.
         if (rows is null)
@@ -460,6 +475,9 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var found = rows.ToList();
         if (found.Count <= 1)
             return GenericResult<TDomain?>.Success(found.Count == 1 ? found[0] : null);
+
+        if (memberId != Guid.Empty && found.Count(row => row.Id == memberId) == 1)
+            return GenericResult<TDomain?>.Success(found.Single(row => row.Id == memberId));
 
         return GenericResult<TDomain?>.Failure(
             ServicesResultCodes.ByName("ConfigurationNameAmbiguous"), _logger,
@@ -589,6 +607,29 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (members.IsFailure) return members;
 
         return ConfigurationTrees.Attach(root, members.Value!, link.Value!, trees, mapper, levels, _logger);
+    }
+
+    /// <summary>
+    /// Reads every member of the domain composed to the given levels but not hung into trees, in a fixed number of statements (FDW-4449).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Get(int, CancellationToken)"/> hangs a tree domain's members into trees, which re-reads the domain once for each member, so a list of N members
+    /// costs a number of statements that grows with N. This reads the domain's rows once, their implementation rows once and each child collection once, and leaves the
+    /// members flat: the caller rebuilds whatever tree it needs from the parent link in memory. The rows are those the caller may see, as for every read here.
+    /// </remarks>
+    /// <param name="levels">How many levels of child collections to read: <see cref="ConfigurationLevels.RecordOnly"/> for the rows alone, <see cref="ConfigurationLevels.Children"/> for each member's own child collections.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Every member, flat, or the failure of the read.</returns>
+    public async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> GetFlat(int levels, CancellationToken ct = default)
+    {
+        if (levels < 0)
+            return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TImplementationConfiguration).Name, nameof(levels), levels));
+
+        var members = await ComposeMembers(levels, ct).ConfigureAwait(false);
+        return members.IsFailure
+            ? members.ToNewResult<IReadOnlyList<TImplementationConfiguration>>()
+            : GenericResult<IReadOnlyList<TImplementationConfiguration>>.Success([.. members.Value!.OfType<TImplementationConfiguration>()]);
     }
 
     // Every member of the domain, composed to the given levels but not hung into trees.
@@ -903,7 +944,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         // member, unless the record's Id names a member: then the record is that member under a new name.
         // The two rows are never written apart: a domain row naming an implementation that was not
         // written is the record that fails to compose on the next read.
-        var current = OnlyRow(existing.Value, name);
+        var current = OnlyRow(existing.Value, name, implementationConfiguration.Id);
         if (current.IsFailure) return current;
         var target = await CheckTarget(current.Value, implementationConfiguration.Id, name, mayCreate, mayReplace, unit, ct).ConfigureAwait(false);
         if (target.IsFailure) return target;
@@ -1096,8 +1137,8 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <summary>Refuses a record that is one member saved under the name of another.</summary>
     /// <remarks>
     /// A record carrying the Id of a current member is that member. The row that carries the name is the row the save writes into, so a record
-    /// that is member A saved under member B's name would overwrite B and leave A as it was. A record whose Id names no member (a create mints a
-    /// fresh Id) is a new record and saves into the row that carries the name, as it always did.
+    /// that is member A saved under member B's name would overwrite B and leave A as it was. A record whose Id names no member (a create that
+    /// states no Id is given a fresh one, a create that states one keeps it) is a new record and saves into the row that carries the name, as it always did.
     /// </remarks>
     private async Task<IGenericResult> RefuseOtherMembersName(
         TDomain holder, Guid recordId, string name, ConfigurationWriteScope unit, CancellationToken ct)
@@ -1117,8 +1158,8 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <summary>The domain row a record with no row under its name hangs from: the member its Id names, renamed, or a new member.</summary>
     /// <remarks>
     /// A member's durable identity is its Id and its name is an attribute of it, so a loaded member saved under another name is the
-    /// same member renamed. Reading it as a new member left the old one current beside it. A record whose Id names no member (a
-    /// create mints a fresh Id) is a new member.
+    /// same member renamed. Reading it as a new member left the old one current beside it. A record whose Id names no member is a new
+    /// member and keeps the Id it states; a record that states none is given a fresh one.
     /// </remarks>
     private async Task<IGenericResult<(Guid Id, IReadOnlyDictionary<string, object?> Keys, string Action)>> RenamedOrMintedDomainRow(
         string name,
@@ -1199,7 +1240,10 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <summary>Writes the domain row a new record hangs from, inside the record's unit of work.</summary>
     /// <remarks>
     /// The row is minted and written in one step because it exists only to own the implementation that
-    /// follows it in the same unit; neither is ever written without the other. It carries the list
+    /// follows it in the same unit; neither is ever written without the other. The row takes the Id the record
+    /// states, because a caller that names a new member's Id before it is saved (an organization naming its default
+    /// workspace, FDW-4266) must find the member under that Id; a record that states none is given a version-7 Id.
+    /// A stated Id a row already holds is refused by the table's unique index, never replaced. It carries the list
     /// fields the implementation holds. The write returns the row's key values, which the
     /// implementation's Foreign key is filled from.
     /// </remarks>
@@ -1213,7 +1257,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     {
         var record = new TDomain
         {
-            Id = Guid.CreateVersion7(),
+            Id = implementation.Id == Guid.Empty ? Guid.CreateVersion7() : implementation.Id,
             Name = name,
             Domain = domain,
             Implementation = implementationName,

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Schema.Clients.Models;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Schema.Endpoints.Discovery;
 
@@ -83,16 +84,15 @@ public abstract class ImportSchemaEndpointBase : Endpoint<ImportSchemaRequest, I
 
             var result = await ImportSchema(req, ct).ConfigureAwait(false);
 
-            if (!result.IsSuccess || result.Value == null)
+            if (result.IsFailure)
             {
-                var response = new ImportSchemaResponse
-                {
-                    Success = false,
-                    DataStoreName = dataStoreName,
-                    ErrorMessage = result.NoValueReason().Message
-                };
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+                return;
+            }
 
-                await Send.ResponseAsync(response, 400, ct).ConfigureAwait(false);
+            if (result.Value == null)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.ImportSchemaReturnedNothing(_logger, req.ConnectionName)), HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -109,14 +109,7 @@ public abstract class ImportSchemaEndpointBase : Endpoint<ImportSchemaRequest, I
         catch (Exception ex)
         {
             SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "import", req.ConnectionName);
-            var errorResponse = new ImportSchemaResponse
-            {
-                Success = false,
-                DataStoreName = dataStoreName,
-                ErrorMessage = "An internal error occurred during schema import."
-            };
-
-            await Send.ResponseAsync(errorResponse, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.ImportSchemaFaulted(_logger, req.ConnectionName)), HttpContext)).ConfigureAwait(false);
         }
     }
 

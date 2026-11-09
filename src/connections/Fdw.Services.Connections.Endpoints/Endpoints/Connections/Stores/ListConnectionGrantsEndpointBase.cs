@@ -9,6 +9,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -49,7 +51,7 @@ public abstract class ListConnectionGrantsEndpointBase : Endpoint<TenantConnecti
         if (!actsIn && !_systemRoles.IsPlatformAdmin(User))
         {
             ConnectionStoreEndpointLog.OtherTenant(EndpointLogger, req.TenantId);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConnectionStoreEndpointLog.ListConnectionGrantsForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

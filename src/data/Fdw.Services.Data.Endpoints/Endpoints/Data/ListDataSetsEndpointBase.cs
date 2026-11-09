@@ -24,24 +24,29 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class ListDataSetsEndpointBase
     : CrudPageEndpointBase<IDataSetImplementationConfiguration, DataSetSummaryResponse>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
+    private readonly ICategoryConfigurationProvider _categories;
+    private readonly IDataSetStatuses _statuses;
     private readonly ITagService? _tags;
     private CategoryTree? _tree;
+    private IDataSetStatusView? _statusView;
 
     /// <summary>Initializes a new instance of the <see cref="ListDataSetsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataSetProvider">Reads the page of data sets.</param>
     /// <param name="categories">Reads the category tree the data sets are organised in.</param>
+    /// <param name="statuses">The data set domain's answer to a data set's status (FDW-4488).</param>
     /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c>.</param>
     protected ListDataSetsEndpointBase(
         ILogger<ListDataSetsEndpointBase> logger,
-        DataSetConfigurationProvider dataSetProvider,
-        CategoryConfigurationProvider categories,
+        IDataSetConfigurationProvider dataSetProvider,
+        ICategoryConfigurationProvider categories,
+        IDataSetStatuses statuses,
         ITagService? tags = null)
         : base(logger)
     {
         _tags = tags;
+        _statuses = statuses ?? throw new ArgumentNullException(nameof(statuses));
         _dataSetProvider = dataSetProvider ?? throw new ArgumentNullException(nameof(dataSetProvider));
         _categories = categories ?? throw new ArgumentNullException(nameof(categories));
     }
@@ -60,6 +65,15 @@ public abstract class ListDataSetsEndpointBase
         }
 
         _tree = tree.Value;
+
+        // What a status is judged by, read once for the whole request by the data set domain, so no data set costs a read of its own (FDW-4488).
+        var statuses = await _statuses.Read(ct).ConfigureAwait(false);
+        if (statuses.IsFailure || statuses.Value is null)
+        {
+            return statuses.ToNewResult<ConfigurationPage<IDataSetImplementationConfiguration>>();
+        }
+
+        _statusView = statuses.Value;
         var selection = await TagSelection.Read(TaggedWith, _tags, "DataSet", Logger, ct).ConfigureAwait(false);
         if (selection.IsFailure || selection.Value is null)
         {
@@ -131,6 +145,19 @@ public abstract class ListDataSetsEndpointBase
 
         summary.Category = label.Value.Name;
         summary.CategoryPath = label.Value.Path;
+
+        // A variation has no status of its own: the view answers success with none.
+        var status = (_statusView ?? throw new InvalidOperationException("The statuses are read before a page is.")).StatusOf(item);
+        if (status.IsFailure)
+        {
+            return Task.FromResult(status.ToNewResult<DataSetSummaryResponse>());
+        }
+
+        if (status.Value is { } named)
+        {
+            summary.Status = named.Name;
+        }
+
         return Task.FromResult(GenericResult<DataSetSummaryResponse>.Success(summary));
     }
 

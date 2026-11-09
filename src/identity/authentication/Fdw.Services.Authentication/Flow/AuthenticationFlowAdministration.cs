@@ -347,18 +347,45 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         if (held.IsFailure)
             return held.ToNewResult<bool>();
 
-        return GenericResult<bool>.Success(rows
+        // A flow whose federated authority cannot be read does not admit the administrator, and says why; that reason decides only when no other flow admits them.
+        IGenericResult<bool>? unreadable = null;
+        foreach (var row in rows
             .Select(r => string.Equals(r.Name, changed.Name, StringComparison.Ordinal) ? changed : r)
-            .Where(r => r.IsEnabled)
-            .Any(r => Admits(r, held.Value!, administrator.AuthenticationMethods)));
+            .Where(r => r.IsEnabled))
+        {
+            var admits = await Admits(row, held.Value!, administrator.AuthenticationMethods, cancellationToken).ConfigureAwait(false);
+            if (admits.IsFailure)
+                unreadable ??= admits;
+            else if (admits.Value)
+                return admits;
+        }
+
+        if (unreadable is not null)
+            return unreadable;
+
+        return GenericResult<bool>.Success(false);
     }
 
     // Proves one of the methods and requires nothing the administrator lacks. A gate whose settings name
     // no permission admits nobody: its flow will not load.
-    private bool Admits(IAuthenticationFlowImplementationConfiguration row, HashSet<string> held, IReadOnlyList<string> methods)
-        => row.Steps.Select(s => _step(s.StepName)).OfType<IAuthenticationStep>()
-               .Any(s => s.AuthenticationMethods.Any(m => methods.Contains(m, StringComparer.Ordinal)))
-           && Gates(row.Steps).All(g => g.Step.RequiredPermission(g.Row.Configuration) is { IsSuccess: true, Value: { } p } && held.Contains(p));
+    private async Task<IGenericResult<bool>> Admits(
+        IAuthenticationFlowImplementationConfiguration row, HashSet<string> held, IReadOnlyList<string> methods, CancellationToken cancellationToken)
+    {
+        if (!Gates(row.Steps).All(g => g.Step.RequiredPermission(g.Row.Configuration) is { IsSuccess: true, Value: { } p } && held.Contains(p)))
+            return GenericResult<bool>.Success(false);
+
+        IGenericResult<IReadOnlyList<string>>? unreadable = null;
+        foreach (var step in row.Steps.Select(s => _step(s.StepName)).OfType<IAuthenticationStep>())
+        {
+            var provable = await StepMethods.Of(step, cancellationToken).ConfigureAwait(false);
+            if (provable.IsFailure)
+                unreadable ??= provable;
+            else if (provable.Value!.Any(m => methods.Contains(m, StringComparer.Ordinal)))
+                return GenericResult<bool>.Success(true);
+        }
+
+        return unreadable is null ? GenericResult<bool>.Success(false) : unreadable.ToNewResult<bool>();
+    }
 
     // What the administrator holds in the tenant their sign-in lands in -- the same place a gate reads.
     private async Task<IGenericResult<HashSet<string>>> Held(Guid userId, CancellationToken cancellationToken)
@@ -410,18 +437,25 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         // A switched-off flow is not asked for: the provider would only answer that it is switched off.
         var served = row.IsEnabled ? await _flows.Get(row.Name, cancellationToken).ConfigureAwait(false) : null;
 
+        var provable = new List<string>();
+        IGenericResult<IReadOnlyList<string>>? unreadable = null;
+        foreach (var step in ordered.Select(s => _step(s.StepName)).OfType<IAuthenticationStep>())
+        {
+            var methods = await StepMethods.Of(step, cancellationToken).ConfigureAwait(false);
+            if (methods.IsFailure)
+                unreadable ??= methods;
+            else
+                provable.AddRange(methods.Value!);
+        }
+
         return new AuthenticationFlowState
         {
             Name = row.Name,
             Description = row.Description,
             IsEnabled = row.IsEnabled,
             IsServing = served is { IsSuccess: true },
-            Problem = served is { IsFailure: true } ? served.CurrentMessage : null,
-            AuthenticationMethods = [.. ordered
-                .Select(s => _step(s.StepName))
-                .OfType<IAuthenticationStep>()
-                .SelectMany(s => s.AuthenticationMethods)
-                .Distinct(StringComparer.Ordinal)],
+            Problem = served is { IsFailure: true } ? served.CurrentMessage : unreadable?.CurrentMessage,
+            AuthenticationMethods = [.. provable.Distinct(StringComparer.Ordinal)],
             // A gate whose settings do not name a permission is left out; the flow then fails to load,
             // and Problem says why.
             RequiredPermissions = [.. gates

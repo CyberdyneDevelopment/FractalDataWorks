@@ -1,174 +1,113 @@
-# Building a Token Manager
+# Token Issuance
 
-This guide walks through the FractalDataWorks **TokenManager** service domain — the provider axis that issues, validates, invalidates, and reads claims from bearer tokens — and shows how to add a new token-manager provider. OpenIddict (RS256 JWT) is the first, reference implementation.
+This guide describes how an FDW host mints, signs, validates and revokes its own bearer tokens.
 
-> **Replaces the old auth-server split.** Earlier revisions of FDW modelled authentication as capability-routed `AuthServer` / `AuthenticationServer` / `AuthorizationServer` / `AuthService` collections. That model is **deleted**. There is now **one** provider axis — `TokenManagerTypes` — and one service interface, `ITokenManager`. If you are looking for `IAuthServer`, `AuthServerTypes`, `ITokenIssuanceService`, or `OpenIddictAuthenticationServiceType`, they no longer exist.
+> **Replaces the OpenIddict token manager.** Earlier revisions of this page described an `ITokenManager`
+> provider axis, a `[ServiceTypeCollection]` named `TokenManagerTypes`, an `OpenIddictTokenManagerType` option,
+> grant routing on `/connect/token`, and a signing key loaded by `OpenIddictSigningKeyConfigurator`. FDW-672
+> replaced all of it with the step pipeline. There is no `/connect/token`, no `client_credentials` grant, no
+> `auth.OpenIddictTokenManager` row and no `OPENIDDICT_SIGNING_KEY` secret. If you are looking for any of them,
+> they no longer exist.
 
 ## Overview
 
-Authentication in FDW is a standard [service domain](06-01-Service-Domains-Overview.md) built on a [`ServiceTypeCollection`](10-TypeCollection-Patterns.md):
+Signing in and minting are separate. A sign-in flow (the step pipeline; who may use each method is in
+[Choosing Who May Use Each Sign-In Method](12-19-Choosing-Who-May-Sign-In.md)) settles who the caller is and what the token may
+assert. `AuthenticationRunner` (`Fdw.Services.Authentication/Flow/AuthenticationRunner.cs`) then builds an
+`IssuanceRequest` from the completed flow and hands it to `ITokenIssuer`. Neither the pipeline nor the issuer
+references the other; the runner is the one place that knows both.
 
 | Piece | Type | Package |
 |-------|------|---------|
-| Service interface | `ITokenManager` (`IServiceOption`) | `Fdw.Services.TokenManagers.Abstractions` |
-| Collection | `TokenManagerTypes` (`[ServiceTypeCollection]`) | `Fdw.Services.TokenManagers` |
-| Header config | `TokenManagerConfiguration` (`auth.TokenManager`) | `Fdw.Services.TokenManagers` |
-| Config provider | `TokenManagerConfigurationProvider` | `Fdw.Services.TokenManagers` |
-| Generic authN service | `AuthenticationService` (`IAuthenticationService`) | `Fdw.Services.TokenManagers` |
-| First option | `OpenIddictTokenManagerType` (`[Implementation(..., "OpenIddict")]`) | `Fdw.Services.Authentication.OpenIddict` |
-| First implementation | `OpenIdTokenManager` | `Fdw.Services.Authentication.OpenIddict` |
+| Minting seam | `ITokenIssuer` | `Fdw.Services.TokenManagers.Abstractions` |
+| Minting implementation | `JwtTokenIssuer` (RFC 9068 access-token profile) | `Fdw.Services.TokenManagers` |
+| Signing key seam | `ISigningCredentialProvider` | `Fdw.Services.TokenManagers.Abstractions` |
+| Signing key from a secret manager | `SecretManagerSigningCredentialProvider` | `Fdw.Services.TokenManagers` |
+| Reads the rows, builds both, once | `JwtIssuanceResolver` (internal; constructs `JwtTokenIssuer` and `SecretManagerSigningCredentialProvider`) | `Fdw.Services.TokenManagers` |
+| What the container hands out | `ConfiguredTokenIssuer` / `ConfiguredSigningCredentialProvider` (internal pass-throughs to the resolver) | `Fdw.Services.TokenManagers` |
+| Revocation | `ITokenRevocationStore` / `TokenRevocationStore` | `Fdw.Services.TokenManagers(.Abstractions)` |
+| Local validation | `LocalKeyAuthenticationHandler` | `Fdw.Services.Authentication` |
+| Registration | `TokenManagerTypes` (`[PlatformServiceProvider(ServiceCategory = "TokenManager")]`) | `Fdw.Services.TokenManagers` |
 
-The generic `AuthenticationService` knows nothing about any specific provider. It resolves the **one active** token manager by configured name through `IFdwServiceProvider<ITokenManager, TokenManagerConfiguration>` and delegates to it. Swapping OpenIddict for Entra (or any other IdP) is adding one more `[Implementation]` — no consumer changes.
+Issuance is exclusive, not pluggable: a deployment mints as exactly one issuer (see the remarks on
+`ITokenIssuer`). Validation is the interchangeable half: a host checks its own tokens against its own key, and
+accepts another authority's tokens through the flows that verify foreign tokens (the OIDC redirect/callback pair,
+`TokenExchangeEndpoint`).
 
-## The `ITokenManager` Contract
+## Registration: `TokenManagerTypes`
 
-`ITokenManager` is the four-operation provider seam. It extends `IServiceOption`, so consumers resolve it through its provider by name — never by injecting the interface directly (enforced by [FDW044](13-07-Analyzer-Catalog.md)).
+`TokenManagerTypes` is a hand-written three-phase registrant, not a `[ServiceTypeCollection]`. FDW-672 removed the
+per-option selection, and no `[TypeOption]` was ever declared against the old collection. Referencing the package
+enlists it with PlatformServices; no host registers anything itself.
 
-```csharp
-// Source: Fdw.Services.TokenManagers.Abstractions/ITokenManager.cs
-public interface ITokenManager : IServiceOption
-{
-    // Issues a token for the grant in the request. Returns the thin ClaimsPrincipal the
-    // provider signs in — provider-specific validation (e.g. client_credentials secret) happens here.
-    Task<IGenericResult<ClaimsPrincipal>> Issue(TokenIssuanceRequest request, CancellationToken cancellationToken = default);
+- **Register** adds the `auth.TokenManager` and `auth.JwtTokenManagerConfiguration` configuration providers,
+  `JwtIssuanceResolver`, `ITokenIssuer` as `ConfiguredTokenIssuer` and `ISigningCredentialProvider` as
+  `ConfiguredSigningCredentialProvider` (pass-throughs, so the container can hand them out before the rows can be
+  read; each asks the resolver on use), and the scoped `ITokenRevocationStore`.
+- **Initialize** hands the Jwt configuration provider to the token-manager domain, so a row naming
+  `Implementation = 'Jwt'` can be composed. Without that step every login failed at issuance with
+  "cannot compose 'ApiTokenIssuer'".
+- `SigningCredentialCacheLifetime` (10 minutes as declared) is how long a fetched signing key is reused before it
+  is read from its secret manager again. Set it at registration to change it.
 
-    // Validates a bearer token (signature, expiry, provider-specific invalidation check) and returns its principal.
-    Task<IGenericResult<ClaimsPrincipal>> Validate(string token, CancellationToken cancellationToken = default);
+## Resolution on first use
 
-    // Invalidates a previously issued token so later Validate calls reject it.
-    Task<IGenericResult> Invalidate(string token, CancellationToken cancellationToken = default);
+The rows that say what a host signs as live in a database reached through a gateway that does not exist during
+registration. So `JwtIssuanceResolver` reads them the first time anything mints or validates, and builds the
+minting and validating halves together from that one read, so that they cannot drift apart on key or issuer.
 
-    // Extracts the claims carried by an already-validated token.
-    Task<IGenericResult<ClaimsPrincipal>> ExtractClaims(string token, CancellationToken cancellationToken = default);
-}
-```
+- It reads the enabled `auth.TokenManager` row whose `Implementation` is `Jwt`. Zero such rows fail every login
+  with `No enabled auth.TokenManager row declares Implementation 'Jwt'`.
+- `SecretManagerSigningCredentialProvider` fetches the key named by `SecretKeyName` from the secret manager named
+  by `SecretManagerName`, imports it as a PEM RSA private key (`ImportFromPem`, a failure carried as a result), and
+  signs RS256 with `KeyId` set to the key name. It caches the key for `SigningCredentialCacheLifetime`, so a
+  rotation in the secret manager takes effect without a restart.
+- The key never appears in configuration, appsettings, a connection string or the host's environment.
 
-## The Collection: `TokenManagerTypes`
+## Configuration tables
 
-`TokenManagerTypes` is a `[ServiceTypeCollection]` whose `ServiceInterface` is `ITokenManager`. It is **discovered by PlatformServices like every other domain** — no host registers it by hand, and it is **not** `Manual`. Exactly one enabled `auth.TokenManager` row is expected per deployment; the provider resolves it by name.
+The domain follows the [polymorphic configuration pattern](03-07-Polymorphic-Configuration-Pattern.md): an
+identity header plus one typed body.
 
-```csharp
-// Source: Fdw.Services.TokenManagers/TokenManagerTypes.cs
-[ServiceTypeCollection(
-    typeof(TokenManagerTypeBase<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>>),
-    typeof(ITokenManagerType),
-    typeof(TokenManagerTypes),
-    GenerateProvider = true,
-    ServiceInterface = typeof(ITokenManager),
-    ConfigurationType = typeof(TokenManagerConfiguration),
-    ProviderType = typeof(DefaultServiceProvider<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>, IServiceConfigurationProvider<TokenManagerConfiguration>>),
-    ProviderInterface = typeof(IFdwServiceProvider<ITokenManager, TokenManagerConfiguration>),
-    ServiceCategory = "TokenManager")]
-public partial class TokenManagerTypes : ServiceTypeCollectionBase<
-    TokenManagerTypeBase<ITokenManager, TokenManagerConfiguration, ITokenManagerFactory<ITokenManager, TokenManagerConfiguration>>,
-    ITokenManagerType>
-{
-    // Configure(), Register(), Initialize() are source-generated (required by FDW024).
-}
-```
-
-## The Generic `AuthenticationService`
-
-`AuthenticationService : IAuthenticationService` is provider-agnostic. It verifies first-party credential grants (`password` / `agent_key`) through the credential vault, then resolves and delegates to the active token manager.
-
-```csharp
-// Source: Fdw.Services.TokenManagers/AuthenticationService.cs (elided)
-public async Task<IGenericResult<ClaimsPrincipal>> Authenticate(
-    TokenIssuanceRequest request, CancellationToken cancellationToken = default)
-{
-    // Only password/agent_key are verified here; every other grant's validation
-    // (e.g. client_credentials) is left entirely to the active token manager's Issue.
-    if (IsFirstPartyCredentialGrant(request.GrantType))
-    {
-        var credentialResult = await VerifyCredential(request, cancellationToken).ConfigureAwait(false);
-        if (!credentialResult.IsSuccess) return credentialResult.ToNewResult<ClaimsPrincipal>();
-    }
-
-    var tokenManager = await ResolveActiveTokenManager(cancellationToken).ConfigureAwait(false);
-    if (!tokenManager.IsSuccess) return tokenManager.ToNewResult<ClaimsPrincipal>();
-
-    return await tokenManager.Value!.Issue(request, cancellationToken).ConfigureAwait(false);
-}
-```
-
-`ResolveActiveTokenManager` reads the config **headers** directly (`TokenManagerConfigurationProvider.Get()`), fails loud if **zero** or **more than one** enabled `auth.TokenManager` row exists, then resolves the service instance through the well-tested `Get(name)` path every other domain uses. No fallback, no defaulted provider.
-
-## The OpenIddict Option (exemplar)
-
-`OpenIddictTokenManagerType` is `[Implementation(typeof(TokenManagerTypes), "OpenIddict")]`. It registers everything OpenIddict's engine needs (`AddCore` + `AddServer` + `AddValidation`, the DataGateway-backed stores, the sign-in claim handler) in its `RegisterRequiredServices` — the one registration surface. `OpenIdTokenManager` is the `ITokenManager` implementation.
-
-### Grant routing (`OpenIdTokenManager.Issue`)
-
-| Grant | Behaviour |
-|-------|-----------|
-| `password` / `agent_key` | Resolve username → active FDW user, verify via `IUserCredentialService`, return a thin principal. `agent_key` adds the `agent` role. |
-| `external_identity` | Map the already-validated external principal's `iss`/`sub` to a FDW user via `auth.ExternalIdentity`. |
-| `client_credentials` | Resolve `OAUTH_{CLIENTID}` from the header's secret manager, constant-time-compare it to the presented secret, then bake the service principal's effective permissions as `perm` claims. |
-
-Full FDW claim baking (`tenant_id`, `org_id`, `role`, `perm`) for the interactive paths happens in `ProcessSignInClaimsHandler` during OpenIddict's sign-in pipeline — `Issue` returns only the thin identity principal for those paths.
-
-### Client-secret validation
-
-The OAuth **client secret is FDW's secret**, stored in the secret manager under `OAUTH_{CLIENTID}` — never copied onto the OpenIddict application row (`ClientSecretHash` is deliberately `NULL`). Because the app row is never version-on-written, its seeded permissions stay linked. So `OpenIdTokenManager.IssueForClientCredentials` resolves `OAUTH_{CLIENTID}` from the header's configured secret manager and compares it with `CryptographicOperations.FixedTimeEquals`; a missing config, missing secret, or mismatch all fail loud. OpenIddict's own `ValidateClientSecret` event handler is **removed** so the token service owns this check:
-
-```csharp
-// Source: OpenIddictTokenManagerType.RegisterOpenIddictComponents (AddServer)
-options.RemoveEventHandler(OpenIddictServerHandlers.ValidateClientSecret.Descriptor);
-```
-
-### Stateless JWTs and revocation
-
-Access tokens are **stateless RS256 JWTs** — `options.DisableTokenStorage()` means OpenIddict never persists a per-token row, so there is no database round-trip on every request. Revocation therefore has one path:
-
-- `OpenIdTokenManager.Invalidate(token)` reads the token's `jti`, then writes a revocation row to **`auth.RevokedAccessToken`** (with the token's expiry) via `RevokedAccessTokenStore`.
-- `OpenIdTokenManager.Validate(token)` verifies the RS256 signature (key resolved from the secret manager) **and** rejects any token whose `jti` has an unexpired row in `auth.RevokedAccessToken`.
-- `Logout(subjectId)` revokes the persisted **authorizations** for the subject (and, transitively, their refresh tokens); already-issued access tokens remain valid until expiry unless separately invalidated.
-
-### Signing key
-
-The RS256 signing key and issuer are resolved on demand by `OpenIddictSigningKeyConfigurator` (an `IConfigureOptions<OpenIddictServerOptions>`) through the gateway-backed config providers and the secret manager — the same injected-provider path every other FDW service uses. The key name lives on the header (`SecretManagerName` / `SecretKeyName`); never in appsettings.
-
-## Configuration Tables
-
-The TokenManager domain follows the [polymorphic configuration pattern](03-07-Polymorphic-Configuration-Pattern.md): an identity-only parent header plus one typed body per option.
-
-**Parent — `auth.TokenManager`** (`TokenManagerConfiguration`, identity-only):
+**Header: `auth.TokenManager`** (`TokenManagerConfiguration`)
 
 | Column | Notes |
 |--------|-------|
-| `Id`, `Name` | Logical identity + display name |
-| `Implementation` | The `TokenManagerTypes` discriminator, e.g. `"OpenIddict"` |
-| `SecretManagerName` | Secret manager that resolves provider secrets (signing key, `OAUTH_*`) |
-| `SecretKeyName` | Signing-key secret name within that manager |
-| `Description`, tenant/visibility/audit block | — |
+| `Id`, `Name` | Identity; the seeded row is `ApiTokenIssuer` |
+| `Domain` | `TokenManager` |
+| `Implementation` | `Jwt`, the only implementation |
 
-**Typed body — `auth.OpenIddictTokenManager`** (`OpenIddictTokenManagerConfiguration`, FK `TokenManagerId → auth.TokenManager.Id`):
+**Typed body: `auth.JwtTokenManagerConfiguration`** (`JwtTokenManagerConfiguration`, keyed on the header's row)
 
 | Column | Notes |
 |--------|-------|
-| `Authority` | Issuer URI (JWT `iss`, discovery doc) |
-| `TokenEndpoint` | Absolute or `Authority`-relative; `/connect/token` when empty |
-| `AccessTokenLifetime` / `RefreshTokenLifetime` | ISO-8601 durations; applied via `PostConfigure<OpenIddictServerOptions>` |
+| `Issuer` | The `iss` every token carries. Per environment, seeded from `$(AuthAuthority)`, no default |
+| `AccessTokenLifetime` | ISO-8601 duration (`PT15M` as seeded) |
+| `SecretManagerName` | The secret manager that holds the signing key (`MsSqlSecrets` as seeded) |
+| `SecretKeyName` | The signing key's secret name (`TokenSigningKey` as seeded) |
 
-The typed body is a standalone POCO — it does **not** inherit `TokenManagerConfiguration`. The header provider loads the header, dispatches on `Implementation` to the typed provider, and sets `header.Configuration = typedBody`.
+The rows are seeded by `databases-seed/ConfigurationDb/seed/29-seed-jwt-token-manager.sql`. The key itself is
+never seed data: `scripts/populate-dev-secrets.sh` writes `TokenSigningKey` into `sec.Secret`, which `MsSqlSecrets`
+resolves.
 
-## Adding a New Token-Manager Provider
+## The issuer must equal the validating authority
 
-Mirror `OpenIddictTokenManagerType`:
+A host validates its own tokens with `LocalKeyAuthenticationHandler`, against the LocalKey authority in its
+`server-config/auth`. That authority and the `Issuer` above are compared as opaque strings: a trailing slash on
+one side and not the other is a mismatch. Minting does not check the issuer and validation does, so when they
+disagree the host silently refuses the tokens it has just issued (FDW-751). Copy the string verbatim between the
+two; do not retype it.
 
-1. **Create `Fdw.Services.Authentication.MyProvider`.** Reference `Fdw.Services.TokenManagers.Abstractions`.
-2. **Implement `MyTokenManager : ITokenManager`** — the four operations (`Issue` / `Validate` / `Invalidate` / `ExtractClaims`). Do all provider-specific credential/secret validation inside `Issue`.
-3. **Create `MyTokenManagerConfiguration : ITokenManagerConfiguration`** as a standalone typed body with `[ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "MyProvider")]` and a `TokenManagerId` FK. Put every field your manager reads at runtime on this typed body (parent header stays identity-only).
-4. **Create `MyTokenManagerType : TokenManagerTypeBase<...>`** decorated with `[Implementation(typeof(TokenManagerTypes), "MyProvider")]`. Override `RegisterRequiredServices` (register your factory, header + typed config providers, and any runtime deps) and `RegisterFactory` (wire the typed provider onto the header provider and register the factory by name).
-5. **Nothing in `Program.cs`.** `TokenManagerTypes` is discovered by PlatformServices; the option's `Registration.SourceGenerators` module initializer registers it on package reference. Point the deployment at your provider by seeding a single enabled `auth.TokenManager` row with `Implementation = 'MyProvider'` plus its typed-body row.
+## Revocation
 
-For an external IdP, you can reuse the `external_identity` grant + `auth.ExternalIdentity` mapping rows instead of writing a full credential path — the vault path (`IUserCredentialService.Verify`) is invoked only for `password` / `agent_key`.
+Access tokens are stateless JWTs; nothing is stored per token at issue. `ITokenRevocationStore` deny-lists them
+in the host's `ConnectionRoles.Auth` connection: one token by its `jti` (container `RevokedAccessToken`), or every
+token issued to a user up to a moment (container `UserTokenRevocation`). It is a direct, single-purpose store,
+because there is exactly one kind of token to revoke.
 
 ## Related Documentation
 
-- [Authentication Architecture](12-11-JWT-Authentication-Architecture.md) — end-to-end server + client token flow
-- [Analyzer Catalog](13-07-Analyzer-Catalog.md) — FDW044 (provider injection), FDW024 (phase methods)
-- [TypeCollection Patterns](10-TypeCollection-Patterns.md) — `IServiceOption`, ServiceTypeCollection three-phase
-- [Secret Management](12-10-Secret-Management.md) — SecretManager resolution for signing keys and `OAUTH_*`
-- [Polymorphic Configuration Pattern](03-07-Polymorphic-Configuration-Pattern.md) — parent header + typed body
-- [Service Domains Overview](06-01-Service-Domains-Overview.md) — ServiceTypeCollection plugin architecture
+- [Choosing Who May Use Each Sign-In Method](12-19-Choosing-Who-May-Sign-In.md): which sign-in methods each user may use
+- [Authentication Architecture](12-11-JWT-Authentication-Architecture.md): server and client token flow
+- [Secret Management](12-10-Secret-Management.md): how the signing key is resolved from its secret manager
+- [Polymorphic Configuration Pattern](03-07-Polymorphic-Configuration-Pattern.md): header plus typed body

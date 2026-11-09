@@ -114,4 +114,12 @@ public static partial class ConfigurationGatewayProviderLog
         Message = "No configuration gateway available for connection '{connectionName}': {reason}")]
     public static partial IGenericMessage BareGatewayUnavailable(ILogger logger, string connectionName, string reason);
 
+    /// <summary>The key chunk size a host set on the configuration gateway collection is below one, so no read could carry a key (FDW-4254).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="keyChunkSize">The value that was set.</param>
+    [MessageLogging(EventId = 61039, Level = LogLevel.Error,
+        Message = "The configuration gateway key chunk size is {keyChunkSize}; it is the most keys one read carries and must be at least 1")]
+    public static partial IGenericMessage KeyChunkSizeInvalid(ILogger logger, int keyChunkSize);
+
+
 }

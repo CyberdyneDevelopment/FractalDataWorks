@@ -8,6 +8,8 @@ using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Users.Abstractions;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -22,14 +24,14 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRequest>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="SetPasswordLoginEndpointBase"/> class.</summary>
     protected SetPasswordLoginEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IUserCredentialService credentialService)
     {
         _logger = logger;
@@ -66,9 +68,15 @@ public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRe
 
         // Row-level security hides accounts outside the caller's tenant, so "not found" also covers
         // "not yours to see".
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.SetPasswordLoginUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -81,7 +89,7 @@ public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRe
         if (!AccountAuthority.Administers(User, user, roles))
         {
             UserEndpointLog.PasswordLoginNotPermitted(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.SetPasswordLoginForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -90,32 +98,28 @@ public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRe
         if (usable.IsFailure)
         {
             UserEndpointLog.PasswordAdmissionUndecided(_logger, req.IdOrName);
-            AddError("Whether the account may sign in with a password could not be decided.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(usable, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (!usable.Value)
         {
             UserEndpointLog.PasswordNotUsable(_logger, "set a first password", req.IdOrName);
-            AddError("No enabled password sign-in flow admits this account; grant it the permission the flow requires first.");
-            await Send.ErrorsAsync(409, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.SetPasswordLoginNoEnabledPasswordSignIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var hasPassword = await _credentialService.HasCredential(userId, "Password", ct).ConfigureAwait(false);
         if (hasPassword.IsFailure)
         {
-            AddError("The account's password state could not be read.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(hasPassword, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (hasPassword.Value && !isPlatformAdmin)
         {
             UserEndpointLog.PasswordLoginAlreadySet(_logger, req.IdOrName);
-            AddError("A password is already set; only a platform administrator may reset it.");
-            await Send.ErrorsAsync(403, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.SetPasswordLoginAPasswordIsAlreadySet(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -123,8 +127,7 @@ public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRe
             .Store(userId, "Password", req.InitialPassword, ct).ConfigureAwait(false);
         if (!storeResult.IsSuccess)
         {
-            AddError("The password could not be set.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.SetPasswordLoginThePasswordCouldNotBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -133,8 +136,7 @@ public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRe
         var forceResult = await _credentialService.ForcePasswordChange(userId, ct).ConfigureAwait(false);
         if (!forceResult.IsSuccess)
         {
-            AddError("The password was set but could not be marked for change at next sign-in.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(forceResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -77,12 +77,14 @@ public partial class NotificationServiceTypes
 
             builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
 
-            // The concrete provider is registered as itself and the interface maps to it: the list and query
-            // endpoints read a page of the domain table, which only the provider itself offers (FDW-1005).
+            // One singleton, reached through each interface it serves: the domain configuration contract, and the
+            // page read of the domain table the list and query endpoints take (FDW-1005, FDW-4626).
             builder.Services.AddSingleton<NotificationConfigurationProvider>(sp => new NotificationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "Notification"));
             builder.Services.AddSingleton<INotificationConfigurationProvider>(sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<INotificationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IDomainRecordProvider<NotificationDomainConfiguration>>(
+                sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
             builder.Services.AddSingleton<INotificationRuleImplementationConfigurationProvider, NotificationRuleImplementationConfigurationProvider>(sp => new NotificationRuleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationRuleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "NotificationRuleConfiguration"));
             builder.Services.TryAddSingleton<NotificationRuleConfigurationProvider>(sp =>

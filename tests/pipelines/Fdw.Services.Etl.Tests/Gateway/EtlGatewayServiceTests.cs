@@ -13,6 +13,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Results;
 using Fdw.Services.EtlGateway;
 
 namespace Fdw.Services.Etl.Tests.Gateway;
@@ -45,7 +46,7 @@ public sealed class EtlGatewayServiceTests
     }
 
     private static (EtlGatewayService Sut, ScriptedConnection Connection, Mock<IDataConnectionProvider> Connections) Build(
-        string[]? roles, bool hostDeclared = false, bool systemContext = false)
+        string[]? roles, bool hostDeclared = false, bool systemContext = false, IGenericResult<DataStoreReference>? lookup = null)
     {
         var connection = new ScriptedConnection();
         var store = new Mock<IDataStoreImplementationConfiguration>();
@@ -56,11 +57,9 @@ public sealed class EtlGatewayServiceTests
         var connections = new Mock<IDataConnectionProvider>();
         connections.Setup(p => p.Get(ConnectionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDataConnection>.Success(connection.Mock.Object));
-        var dataStore = new Mock<IDataStore>();
-        dataStore.SetupGet(s => s.DeclaredByHost).Returns(hostDeclared);
         var dataStores = new Mock<IDataStoreProvider>();
-        dataStores.Setup(p => p.Get("Warehouse", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IDataStore>.Success(dataStore.Object));
+        dataStores.Setup(p => p.GetReference("Warehouse", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(lookup ?? GenericResult<DataStoreReference>.Success(new DataStoreReference("Warehouse", ConnectionId, hostDeclared)));
         var caller = new Mock<IAuthenticationContext>();
         caller.SetupGet(c => c.Roles).Returns(roles ?? []);
         caller.SetupGet(c => c.IsSystemContext).Returns(systemContext);
@@ -115,6 +114,48 @@ public sealed class EtlGatewayServiceTests
 
     [Fact]
     [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AHostDeclarationThatCannotBeReadRefusesTheScriptAndRunsNothing()
+    {
+        // Why: a lookup that broke says nothing about whether the store is the host's, so it is never read as "not the host's" (FDW-4281).
+        var (sut, connection, connections) = Build(
+            ["DataEngineer"], lookup: GenericResult<DataStoreReference>.Failure(new GenericMessage("the configuration read broke")));
+
+        var ran = await sut.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+
+        ran.IsFailure.ShouldBeTrue();
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("could not be read");
+        connection.Ran.ShouldBeEmpty();
+        connections.Verify(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AStoreTheProviderSaysDoesNotExistIsNotTheHostsAndGoesOnToBeResolved()
+    {
+        var (sut, connection, _) = Build(
+            ["DataEngineer"], lookup: GenericResult<DataStoreReference>.Failure(DataServiceResultCodes.ByName("DataStoreNotFound")));
+
+        var ran = await sut.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+
+        ran.IsSuccess.ShouldBeTrue();
+        connection.Ran.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void TheGatewayCannotBeBuiltWithoutADataStoreProvider()
+    {
+        Should.Throw<ArgumentNullException>(() => new EtlGatewayService(
+            new Mock<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>().Object,
+            new Mock<IDataConnectionProvider>().Object,
+            null!));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task AnUnsoundScriptIsRefusedBeforeAnythingIsResolved()
     {
@@ -157,6 +198,58 @@ public sealed class EtlGatewayServiceTests
     // category's generic title (FDW-3338: a script on a connection that could not be built answered "The request was invalid").
     private static IReadOnlyList<string> ClientTexts(IGenericResult result)
         => result.Messages.OfType<IClientMessage>().Select(message => message.ClientText).ToList();
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AFailureTheStoresConnectionReturnsNamesThatConnection()
+    {
+        var (sut, connection, _) = Build(["DataEngineer"]);
+        connection.Mock.As<IScriptedDataConnection>()
+            .Setup(c => c.Execute(It.IsAny<IScriptedDataCommand<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<int>.Failure(new GenericMessage("The server was not found or was not accessible")));
+
+        var ran = await sut.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+
+        ran.IsFailure.ShouldBeTrue();
+        ConnectionFailures.ConnectionOf(ran).ShouldBe(ConnectionId);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AStoreWhoseConnectionTheProviderWillNotGiveNamesThatConnection()
+    {
+        var (sut, _, connections) = Build(["DataEngineer"]);
+        connections.Setup(p => p.Get(ConnectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IDataConnection>.Failure(new GenericMessage("Connection 'Orders' has been disabled")));
+
+        var ran = await sut.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+
+        ran.IsFailure.ShouldBeTrue();
+        ConnectionFailures.ConnectionOf(ran).ShouldBe(ConnectionId);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ARefusalNoConnectionRaisedNamesNone()
+    {
+        var (callerWithoutRole, _, _) = Build(["Reader"]);
+        var (hostStore, _, _) = Build(["DataEngineer"], hostDeclared: true);
+        var (unsound, _, _) = Build(["DataEngineer"]);
+
+        var withoutRole = await callerWithoutRole.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+        var host = await hostStore.Execute(Command(), "Warehouse", TestContext.Current.CancellationToken);
+        var empty = await unsound.Execute(Command(" "), "Warehouse", TestContext.Current.CancellationToken);
+
+        withoutRole.IsFailure.ShouldBeTrue();
+        host.IsFailure.ShouldBeTrue();
+        empty.IsFailure.ShouldBeTrue();
+        ConnectionFailures.ConnectionOf(withoutRole).ShouldBeNull();
+        ConnectionFailures.ConnectionOf(host).ShouldBeNull();
+        ConnectionFailures.ConnectionOf(empty).ShouldBeNull();
+    }
 
     [Fact]
     [Trait("Priority", "P1")]

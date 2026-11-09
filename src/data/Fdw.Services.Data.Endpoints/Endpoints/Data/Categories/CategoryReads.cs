@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -17,7 +18,7 @@ public static class CategoryReads
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The category, or null when the tree has none by that name.</returns>
     public static async Task<IGenericResult<CategoryPayload?>> Find(
-        CategoryConfigurationProvider categories, string name, ILogger logger, CancellationToken ct)
+        ICategoryConfigurationProvider categories, string name, ILogger logger, CancellationToken ct)
     {
         var tree = await CategoryTrees.Load(categories, logger, ct).ConfigureAwait(false);
         if (tree.IsFailure || tree.Value is null)
@@ -42,7 +43,7 @@ public static class CategoryReads
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The category, or the failure that says it cannot be read.</returns>
     public static async Task<IGenericResult<CategoryPayload>> Read(
-        CategoryConfigurationProvider categories, string name, ILogger logger, CancellationToken ct)
+        ICategoryConfigurationProvider categories, string name, ILogger logger, CancellationToken ct)
     {
         var found = await Find(categories, name, logger, ct).ConfigureAwait(false);
         if (found.IsFailure)

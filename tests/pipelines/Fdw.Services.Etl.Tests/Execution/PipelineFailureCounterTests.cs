@@ -16,13 +16,13 @@ public sealed class PipelineFailureCounterTests
     private static readonly DateTimeOffset Start = new(2026, 11, 4, 12, 0, 0, TimeSpan.Zero);
 
     private static PipelineRunOutcome Failed(int minutes, string category = "Validation", string code = "FDW-20000") =>
-        new(Guid.NewGuid(), Start.AddMinutes(minutes), false, true, category, code);
+        new(Guid.NewGuid(), Start.AddMinutes(minutes), false, true, category, code, null);
 
-    private static PipelineRunOutcome Transient(int minutes) => new(Guid.NewGuid(), Start.AddMinutes(minutes), false, false, "Dependency", "FDW-71000");
+    private static PipelineRunOutcome Transient(int minutes) => new(Guid.NewGuid(), Start.AddMinutes(minutes), false, false, "Dependency", "FDW-71000", null);
 
-    private static PipelineRunOutcome Cancelled(int minutes) => new(Guid.NewGuid(), Start.AddMinutes(minutes), false, false, null, null);
+    private static PipelineRunOutcome Cancelled(int minutes) => new(Guid.NewGuid(), Start.AddMinutes(minutes), false, false, null, null, null);
 
-    private static PipelineRunOutcome Succeeded(int minutes) => new(Guid.NewGuid(), Start.AddMinutes(minutes), true, false, null, null);
+    private static PipelineRunOutcome Succeeded(int minutes) => new(Guid.NewGuid(), Start.AddMinutes(minutes), true, false, null, null, null);
 
     private static IReadOnlyList<PipelineRunOutcome> NewestFirst(params PipelineRunOutcome[] runs) => [.. runs.OrderByDescending(run => run.At)];
 
@@ -97,5 +97,32 @@ public sealed class PipelineFailureCounterTests
 
         found.Count.ShouldBe(0);
         found.Failures.ShouldBeEmpty();
+    }
+
+    private static PipelineRunOutcome TimedOut(int minutes) => new(Guid.NewGuid(), Start.AddMinutes(minutes), false, false, null, "TimedOut", null, true);
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void ARunThatTimedOutIsPassedOverUnlessTheThresholdCountsIt()
+    {
+        var runs = NewestFirst(TimedOut(3), Failed(2), Failed(1));
+
+        PipelineFailureCounter.Count(runs, null, false).Count.ShouldBe(2);
+        PipelineFailureCounter.Count(runs, null).Count.ShouldBe(2);
+        PipelineFailureCounter.Count(runs, null, true).Count.ShouldBe(3);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void ACountedTimeoutDoesNotEndTheCountAndASuccessStillDoes()
+    {
+        var runs = NewestFirst(TimedOut(3), Succeeded(2), Failed(1));
+
+        var found = PipelineFailureCounter.Count(runs, null, true);
+
+        found.Count.ShouldBe(1);
+        found.Ended.ShouldBeTrue();
     }
 }

@@ -7,6 +7,7 @@ using Fdw.Services.Calculations;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Workspaces;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Calculations.Endpoints.CalculationEntities;
 
@@ -57,7 +58,7 @@ public abstract class ListCalculationVersionsEndpointBase : Endpoint<Calculation
     {
         if (CallerPlaces.Of(_authContext, req.WorkspaceId) is not { } origin)
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CalculationsAnswerLog.ListCalculationVersionsNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

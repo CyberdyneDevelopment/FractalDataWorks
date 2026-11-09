@@ -57,7 +57,7 @@ public sealed class WaitThresholdMonitorTests
         var thresholds = new Mock<IThresholdSource>();
         thresholds.Setup(s => s.For(It.IsAny<ThresholdSubject>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<IThresholdDefinition>>.Success([]));
         return new WaitThresholdMonitor(
-            new Source(configuration), new WaitHoldGate(thresholds.Object, _evaluator), new WaitThresholdReporter(_evaluator),
+            new Source(configuration), new WaitHoldGate(WaitThresholdKit.Scopes(thresholds.Object, _evaluator)), new WaitThresholdReporter(WaitThresholdKit.Scopes(thresholds.Object, _evaluator)),
             NullLogger<WaitThresholdMonitor>.Instance);
     }
 

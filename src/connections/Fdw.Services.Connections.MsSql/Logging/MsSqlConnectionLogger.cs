@@ -378,6 +378,13 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage SqlQueryTimeout(ILogger logger, Exception ex, string commandText);
 
     /// <summary>
+    /// Logs when SQL Server rejected the statement or its data on a working connection (severity 11 to 16, no handler of its own for the number): a
+    /// syntax error, a divide by zero, a conversion or truncation, an error the script raised (FDW-4361). Retrying the same statement fails the same way.
+    /// </summary>
+    [MessageLogging(EventId = 22007, Level = LogLevel.Error, Message = "SQL Server rejected the statement with error {errorNumber} on '{commandText}': {errorMessage}")]
+    public static partial IGenericMessage SqlStatementFailed(ILogger logger, Exception ex, string commandText, int errorNumber, string errorMessage);
+
+    /// <summary>
     /// Logs an unhandled SQL error with full context for diagnosis.
     /// </summary>
     [MessageLogging(EventId = 71017, Level = LogLevel.Error, Message = "Unhandled SQL error {errorNumber} on '{commandText}': {errorMessage}")]
@@ -392,6 +399,17 @@ public static partial class MsSqlConnectionLogger
     /// <returns>A generic message containing the error information.</returns>
     [MessageLogging(EventId = 40001, Level = LogLevel.Error, Message = "SQL unique constraint violated on '{commandText}'")]
     public static partial IGenericMessage SqlUniqueViolation(ILogger logger, Exception ex, string commandText);
+
+    /// <summary>
+    /// Logs when a row-level security block predicate refused a write (error 33504): the caller's tenant may not write that row (FDW-4193).
+    /// The number is in the Forbidden band (category 10), so the failure is read as forbidden and never as a fault of the server or a dependency.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="ex">The SQL exception.</param>
+    /// <param name="commandText">The SQL command text that failed.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(EventId = 100011, Level = LogLevel.Warning, Message = "SQL refused a write on '{commandText}': the row-level security policy of the target does not allow it for the caller")]
+    public static partial IGenericMessage SqlBlockPredicateViolation(ILogger logger, Exception ex, string commandText);
 
     /// <summary>
     /// Logs when a foreign key constraint refused a statement (error 547): a referenced row is missing, or the row is still referenced.

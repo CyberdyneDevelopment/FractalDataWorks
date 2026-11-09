@@ -6,6 +6,8 @@ using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Quality;
 using Fdw.Services.Workspaces;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -55,7 +57,7 @@ public abstract class ListGlossaryTermVersionsEndpointBase : Endpoint<GlossaryTe
     {
         if (CallerPlaces.Of(_authContext, req.WorkspaceId) is not { } origin)
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.ListGlossaryTermVersionsNotSignedIn(Logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

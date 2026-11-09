@@ -58,5 +58,6 @@ public partial class OrganizationRoleImplementationConfiguration : IOrganization
 
     /// <inheritdoc />
     /// <remarks>Cascade children (<c>tenant.OrganizationRolePermission</c>).</remarks>
+    [ConfigurationChildCascade(typeof(AuthoritativeChildCascade))]
     public IList<OrganizationRolePermissionConfiguration> Permissions { get; set; } = [];
 }

@@ -7,6 +7,8 @@ using Fdw.Conventions;
 using Fdw.Services.Agents.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.AgentActions;
 
@@ -56,8 +58,7 @@ public abstract class ListAgentActionsEndpointBase : Endpoint<ListAgentActionsRe
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.ListAgentActionsFailed(_logger, result.CurrentMessage!);
-                AddError("Failed to list agent actions");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -71,8 +72,7 @@ public abstract class ListAgentActionsEndpointBase : Endpoint<ListAgentActionsRe
         catch (Exception ex)
         {
             OperationsEndpointLog.ListAgentActionsFailed(_logger, ex.Message);
-            AddError("Failed to list agent actions");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ListAgentActionsFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

@@ -8,6 +8,8 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -60,7 +62,7 @@ public abstract class UpdateOrganizationEndpointBase : Endpoint<UpdateOrganizati
         if (!FeatureCaller.MayActFor(User, before.Value.TenantId, _systemRoles))
         {
             OrganizationAdminEndpointLog.OtherTenant(EndpointLogger, before.Value.TenantId);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OrganizationAdminEndpointLog.UpdateOrganizationForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -95,7 +97,7 @@ public abstract class UpdateOrganizationEndpointBase : Endpoint<UpdateOrganizati
             if (audited.IsFailure)
             {
                 OrganizationAdminEndpointLog.ChangeNotAudited(EndpointLogger, req.OrganizationId, audited.CurrentMessage);
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
                 return;
             }
         }

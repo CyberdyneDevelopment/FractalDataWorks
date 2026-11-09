@@ -9,6 +9,7 @@ using Fdw.Web.RestEndpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Claims.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
@@ -76,7 +77,7 @@ public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, P
                 if (!CallerClaims.TryGetUserId(HttpContext.User, out var userId))
         {
             MessagingEndpointLog.UserClaimNotFound(_logger);
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ListMessagesNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -135,7 +136,7 @@ public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, P
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "list-messages");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.ListMessagesFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

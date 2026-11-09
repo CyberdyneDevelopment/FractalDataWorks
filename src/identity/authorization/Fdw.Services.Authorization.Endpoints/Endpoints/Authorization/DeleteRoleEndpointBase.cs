@@ -9,6 +9,7 @@ using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -76,14 +77,14 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         if (!existing.IsSuccess)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name, existing.CurrentMessage);
-            ThrowError(existing.FailureReason().Message, 500);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(existing, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (existing.Value is null)
         {
             AuthorizationEndpointLog.RoleNotFound(EndpointLogger, req.Name);
-            await Send.ResultAsync(TypedResults.Json(new { errorCode = "NotFound", messages = new[] { $"roles \u0027{req.Name}\u0027 was not found." } }, statusCode: 404)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.DeleteRoleRoleNotFound(EndpointLogger, req.Name)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -104,7 +105,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         if (!result.IsSuccess)
         {
             AuthorizationEndpointLog.RoleWriteFailed(EndpointLogger, "delete", req.Name, result.CurrentMessage);
-            ThrowError(result.FailureReason().Message, 500);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -114,7 +115,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         var ended = await RoleHolderSessions.End(_userRoles, _revocations, existing.Value.Id, req.Name, EndpointLogger, ct).ConfigureAwait(false);
         if (ended.IsFailure)
         {
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(ended, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -123,7 +124,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         if (audited.IsFailure)
         {
             AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RoleDeleted", req.Name, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

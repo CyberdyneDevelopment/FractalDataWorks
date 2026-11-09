@@ -33,6 +33,7 @@ public sealed class PipelineExecutionQueueTests
         var store = new Mock<IPipelineRunRequestStore>();
         store.Setup(s => s.Record(It.IsAny<PipelineExecutionRequest>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult<IGenericResult>(
             records ? GenericResult.Success() : GenericResult.Failure(new GenericMessage("the record is not available"))));
+        store.Setup(s => s.Forget(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult<IGenericResult>(GenericResult.Success()));
         return store;
     }
 
@@ -178,5 +179,40 @@ public sealed class PipelineExecutionQueueTests
 
         failure.Message.ShouldContain("Monthly");
         store.Verify(s => s.Record(It.IsAny<PipelineExecutionRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AFullQueueForgetsTheStoredRequestSoARestartDoesNotStartIt()
+    {
+        var store = Store();
+        var queue = new PipelineExecutionQueue(1, store.Object, Stops());
+        _ = await queue.Enqueue(Request(), TestContext.Current.CancellationToken);
+        var refused = Request();
+
+        var answer = await queue.Enqueue(refused, TestContext.Current.CancellationToken);
+
+        answer.Code.ShouldBe("QueueFull");
+        store.Verify(s => s.Forget(refused.ExecutionId, It.IsAny<CancellationToken>()), Times.Once);
+        store.Verify(s => s.Forget(It.Is<Guid>(id => id != refused.ExecutionId), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ARefusedRequestThatCannotBeForgottenIsACodedRefusalAndIsNotAnsweredAsFull()
+    {
+        var store = Store();
+        store.Setup(s => s.Forget(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult<IGenericResult>(GenericResult.Failure(new GenericMessage("the request cannot be removed"))));
+        var queue = new PipelineExecutionQueue(1, store.Object, Stops());
+        _ = await queue.Enqueue(Request(), TestContext.Current.CancellationToken);
+
+        var answer = await queue.Enqueue(Request(), TestContext.Current.CancellationToken);
+
+        answer.IsAccepted.ShouldBeFalse();
+        answer.Code.ShouldBe("RefusalNotRecorded");
+        answer.Reason.ShouldContain("could not be removed");
     }
 }

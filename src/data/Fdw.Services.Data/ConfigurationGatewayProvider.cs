@@ -40,6 +40,11 @@ public sealed class ConfigurationGatewayProvider : IConfigurationGatewayProvider
     }
 
     /// <inheritdoc />
+    /// <inheritdoc/>
+    /// <remarks>Read from the collection that declares it, where a host changes it at registration (FDW-4254).</remarks>
+    public int KeyChunkSize => ConfigurationGatewayTypes.KeyChunkSize;
+
+    /// <inheritdoc/>
     public IGenericResult<IConfigurationGateway> Get(string connectionName)
     {
         if (string.IsNullOrWhiteSpace(connectionName))

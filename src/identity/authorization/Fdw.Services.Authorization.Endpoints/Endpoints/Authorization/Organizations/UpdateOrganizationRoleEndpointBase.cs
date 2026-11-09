@@ -6,6 +6,7 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authorization.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -32,7 +33,7 @@ public abstract class UpdateOrganizationRoleEndpointBase : Endpoint<Organization
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/organizations/{OrganizationId}/roles/{RoleName}");
+        Patch("/organizations/{OrganizationId}/roles/{RoleName}");
         ConfigureEndpoint();
     }
 
@@ -63,7 +64,7 @@ public abstract class UpdateOrganizationRoleEndpointBase : Endpoint<Organization
         if (audited.IsFailure)
         {
             AuthorizationEndpointLog.OrganizationChangeNotAudited(EndpointLogger, "change", role.Name, req.OrganizationId, audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

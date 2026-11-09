@@ -175,7 +175,7 @@ public static partial class UserEndpointLog
     /// Logs when a password login is asked to be removed from an account that has none (FDW-910).
     /// </summary>
     [MessageLogging(EventId = 30000, Level = LogLevel.Information,
-        Message = "Account '{user}' has no password login to remove")]
+        Message = "Account '{user}' has no password login to remove", ClientMessage = "Account '{user}' has no password login to remove")]
     public static partial IGenericMessage PasswordLoginAbsent(
         ILogger logger,
         string user);
@@ -326,4 +326,232 @@ public static partial class UserEndpointLog
     public static partial IGenericMessage PasswordLinkSettingMissing(
         ILogger logger,
         string setting);
+
+    /// <summary>Logs that the request failed: API key kind must be 'user' or 'agent'.</summary>
+    [MessageLogging(EventId = 21044, Level = LogLevel.Warning, Message = "API key kind must be 'user' or 'agent'.", ClientMessage = "API key kind must be 'user' or 'agent'.")]
+    public static partial IGenericMessage RevokeApiKeyApiKeyKindMustBe(ILogger logger);
+
+    /// <summary>Logs that the request failed: The key could not be revoked.</summary>
+    [MessageLogging(EventId = 21045, Level = LogLevel.Warning, Message = "The key could not be revoked.", ClientMessage = "The key could not be revoked.")]
+    public static partial IGenericMessage RevokeApiKeyTheKeyCouldNotBe(ILogger logger);
+
+    /// <summary>Logs that the request failed: Name exactly one of subject (bind now) or invitedEmail (invite).</summary>
+    [MessageLogging(EventId = 21046, Level = LogLevel.Warning, Message = "Name exactly one of subject (bind now) or invitedEmail (invite).", ClientMessage = "Name exactly one of subject (bind now) or invitedEmail (invite).")]
+    public static partial IGenericMessage BindExternalIdentityNameExactlyOneOfSubject(ILogger logger);
+
+    /// <summary>Logs that the request failed: The issuers this platform trusts could not be read.</summary>
+    [MessageLogging(EventId = 91004, Level = LogLevel.Error, Message = "The issuers this platform trusts could not be read.", ClientMessage = "The issuers this platform trusts could not be read.")]
+    public static partial IGenericMessage BindExternalIdentityReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that the request failed: Whether this platform can resolve that issuer could not be determined: an authority could not be read.</summary>
+    [MessageLogging(EventId = 91005, Level = LogLevel.Error, Message = "Whether this platform can resolve that issuer could not be determined: an authority could not be read.", ClientMessage = "Whether this platform can resolve that issuer could not be determined: an authority could not be read.")]
+    public static partial IGenericMessage BindExternalIdentityWhetherThisPlatformCanResolve(ILogger logger);
+
+    /// <summary>Logs that the request failed: The binding could not be removed.</summary>
+    [MessageLogging(EventId = 21047, Level = LogLevel.Warning, Message = "The binding could not be removed.", ClientMessage = "The binding could not be removed.")]
+    public static partial IGenericMessage UnbindExternalIdentityTheBindingCouldNotBe(ILogger logger);
+
+    /// <summary>Logs that the request failed: Password links are not configured on this host.</summary>
+    [MessageLogging(EventId = 91006, Level = LogLevel.Error, Message = "Password links are not configured on this host.", ClientMessage = "Password links are not configured on this host.")]
+    public static partial IGenericMessage CreatePasswordLinkPasswordLinksAreNotConfigured(ILogger logger);
+
+    /// <summary>Logs that the request failed: The administrator creating the link could not be identified.</summary>
+    [MessageLogging(EventId = 91007, Level = LogLevel.Error, Message = "The administrator creating the link could not be identified.", ClientMessage = "The administrator creating the link could not be identified.")]
+    public static partial IGenericMessage CreatePasswordLinkTheAdministratorCreatingTheLink(ILogger logger);
+
+    /// <summary>Logs that the request failed: The password link could not be created.</summary>
+    [MessageLogging(EventId = 91008, Level = LogLevel.Error, Message = "The password link could not be created.", ClientMessage = "The password link could not be created.")]
+    public static partial IGenericMessage CreatePasswordLinkReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that the request failed: No enabled password sign-in flow admits this account; grant it the permission the flow requires first.</summary>
+    [MessageLogging(EventId = 40001, Level = LogLevel.Warning, Message = "No enabled password sign-in flow admits this account; grant it the permission the flow requires first.", ClientMessage = "No enabled password sign-in flow admits this account; grant it the permission the flow requires first.")]
+    public static partial IGenericMessage CreatePasswordLinkNoEnabledPasswordSignIn(ILogger logger);
+
+    /// <summary>Logs that the request failed: No enabled password sign-in flow admits this account; grant it the permission the flow requires first.</summary>
+    [MessageLogging(EventId = 40002, Level = LogLevel.Warning, Message = "No enabled password sign-in flow admits this account; grant it the permission the flow requires first.", ClientMessage = "No enabled password sign-in flow admits this account; grant it the permission the flow requires first.")]
+    public static partial IGenericMessage ResetPasswordNoEnabledPasswordSignIn(ILogger logger);
+
+    /// <summary>Logs that the request failed: Failed to reset password.</summary>
+    [MessageLogging(EventId = 21048, Level = LogLevel.Warning, Message = "Failed to reset password.", ClientMessage = "Failed to reset password.")]
+    public static partial IGenericMessage ResetPasswordFailedToResetPassword(ILogger logger);
+
+    /// <summary>Logs that the request failed: The account could not be marked to change its password.</summary>
+    [MessageLogging(EventId = 21049, Level = LogLevel.Warning, Message = "The account could not be marked to change its password.", ClientMessage = "The account could not be marked to change its password.")]
+    public static partial IGenericMessage RequirePasswordChangeTheAccountCouldNotBe(ILogger logger);
+
+    /// <summary>Logs that the request failed: No enabled password sign-in flow admits this account; grant it the permission the flow requires first.</summary>
+    [MessageLogging(EventId = 40003, Level = LogLevel.Warning, Message = "No enabled password sign-in flow admits this account; grant it the permission the flow requires first.", ClientMessage = "No enabled password sign-in flow admits this account; grant it the permission the flow requires first.")]
+    public static partial IGenericMessage SetPasswordLoginNoEnabledPasswordSignIn(ILogger logger);
+
+    /// <summary>Logs that the request failed: A password is already set; only a platform administrator may reset it.</summary>
+    [MessageLogging(EventId = 100001, Level = LogLevel.Warning, Message = "A password is already set; only a platform administrator may reset it.", ClientMessage = "A password is already set; only a platform administrator may reset it.")]
+    public static partial IGenericMessage SetPasswordLoginAPasswordIsAlreadySet(ILogger logger);
+
+    /// <summary>Logs that the request failed: The password could not be set.</summary>
+    [MessageLogging(EventId = 21050, Level = LogLevel.Warning, Message = "The password could not be set.", ClientMessage = "The password could not be set.")]
+    public static partial IGenericMessage SetPasswordLoginThePasswordCouldNotBe(ILogger logger);
+
+    /// <summary>Logs that the request failed: API key kind must be 'user' or 'agent'.</summary>
+    [MessageLogging(EventId = 21051, Level = LogLevel.Warning, Message = "API key kind must be 'user' or 'agent'.", ClientMessage = "API key kind must be 'user' or 'agent'.")]
+    public static partial IGenericMessage CreateApiKeyApiKeyKindMustBe(ILogger logger);
+
+    /// <summary>Logs that the request failed: The key could not be minted.</summary>
+    [MessageLogging(EventId = 21052, Level = LogLevel.Warning, Message = "The key could not be minted.", ClientMessage = "The key could not be minted.")]
+    public static partial IGenericMessage CreateApiKeyReturnedNothing(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31001, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage RevokeApiKeyUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31002, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage ListApiKeysUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31003, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage RemovePasswordLoginUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31004, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage ListUserSignInsUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31005, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage RequirePasswordChangeUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31006, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage ResetPasswordUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31007, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage SetPasswordLoginUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31008, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage BindExternalIdentityUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31009, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage UnbindExternalIdentityUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31010, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage CreateApiKeyUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31011, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage GetSignInMethodsUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31012, Level = LogLevel.Warning, Message = "User was not found, or is not visible to the caller", ClientMessage = "User was not found")]
+    public static partial IGenericMessage CreatePasswordLinkUserNotFound(ILogger logger);
+
+    /// <summary>Logs that User 'identifier' was not found.</summary>
+    [MessageLogging(EventId = 31013, Level = LogLevel.Warning, Message = "User '{identifier}' was not found", ClientMessage = "User '{identifier}' was not found")]
+    public static partial IGenericMessage GetUserUserNotFound(ILogger logger, string identifier);
+
+    /// <summary>Logs that User 'identifier' to delete was not found.</summary>
+    [MessageLogging(EventId = 31014, Level = LogLevel.Warning, Message = "User '{identifier}' to delete was not found", ClientMessage = "User '{identifier}' was not found")]
+    public static partial IGenericMessage DeleteUserUserNotFound(ILogger logger, string identifier);
+
+    /// <summary>Logs that A list of sign-ins was refused: skip skip or take take is out of range (take is 1 to maxTake).</summary>
+    [MessageLogging(EventId = 21053, Level = LogLevel.Warning, Message = "A list of sign-ins was refused: skip {skip} or take {take} is out of range (take is 1 to {maxTake})", ClientMessage = "skip must be 0 or more, and take must be from 1 to {maxTake}")]
+    public static partial IGenericMessage ListUserSignInsPagingInvalid(ILogger logger, int skip, int take, int maxTake);
+
+    /// <summary>Logs that Creating user 'username' answered a success and no outcome.</summary>
+    [MessageLogging(EventId = 91009, Level = LogLevel.Error, Message = "Creating user '{username}' answered a success and no outcome", ClientMessage = "The user could not be created")]
+    public static partial IGenericMessage CreateUserReturnedNothing(ILogger logger, string username);
+
+    /// <summary>Logs that User 'username' was created (id userId) but could not be re-read for the response body.</summary>
+    [MessageLogging(EventId = 91010, Level = LogLevel.Error, Message = "User '{username}' was created (id {userId}) but could not be re-read for the response body", ClientMessage = "User '{username}' was created (id {userId}) but could not be re-read for the response body")]
+    public static partial IGenericMessage CreateUserCreatedButNotReRead(ILogger logger, string username, Guid userId);
+
+    /// <summary>Logs that 'issuer' is not an issuer this platform can resolve (accepted: accepted).</summary>
+    [MessageLogging(EventId = 21054, Level = LogLevel.Warning, Message = "'{issuer}' is not an issuer this platform can resolve (accepted: {accepted})", ClientMessage = "'{issuer}' is not an issuer this platform can resolve. Accepted: {accepted}.")]
+    public static partial IGenericMessage BindExternalIdentityIssuerUnknown(ILogger logger, string issuer, string accepted);
+
+    /// <summary>Logs that A user with the username 'username' already exists (usernames match ignoring case).</summary>
+    [MessageLogging(EventId = 40004, Level = LogLevel.Warning, Message = "A user with the username '{username}' already exists (usernames match ignoring case)", ClientMessage = "A user with this username already exists. Usernames are matched ignoring case, so a name that differs only by case is the same user.")]
+    public static partial IGenericMessage CreateUserUsernameTaken(ILogger logger, string username);
+
+    /// <summary>Logs that None of the roles of user 'username' allows password sign-in.</summary>
+    [MessageLogging(EventId = 40005, Level = LogLevel.Warning, Message = "None of the roles of user '{username}' allows password sign-in", ClientMessage = "None of these roles allows password sign-in: no enabled password sign-in flow admits an account holding them. Add a role that carries what the password flow requires, or create the account without a password.")]
+    public static partial IGenericMessage CreateUserPasswordNotUsable(ILogger logger, string username);
+
+    /// <summary>Logs that User 'username' was created (id userId) but a later step failed.</summary>
+    [MessageLogging(EventId = 91011, Level = LogLevel.Error, Message = "User '{username}' was created (id {userId}) but a later step failed", ClientMessage = "User '{username}' was created (id {userId}) but a later step failed; the response lists what landed and what did not")]
+    public static partial IGenericMessage CreateUserPartiallyCreated(ILogger logger, string username, object userId);
+
+    /// <summary>Logs that The request to get user preferences was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 50009, Level = LogLevel.Warning, Message = "The request to get user preferences was refused: the caller is not signed in", ClientMessage = "You must be signed in to get user preferences")]
+    public static partial IGenericMessage GetUserPreferencesNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to list user sign ins was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100002, Level = LogLevel.Warning, Message = "The request to list user sign ins was refused: the caller is not allowed", ClientMessage = "You are not allowed to list user sign ins")]
+    public static partial IGenericMessage ListUserSignInsForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to bind external identity was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100003, Level = LogLevel.Warning, Message = "The request to bind external identity was refused: the caller is not allowed", ClientMessage = "You are not allowed to bind external identity")]
+    public static partial IGenericMessage BindExternalIdentityForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to reset password was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100004, Level = LogLevel.Warning, Message = "The request to reset password was refused: the caller is not allowed", ClientMessage = "You are not allowed to reset password")]
+    public static partial IGenericMessage ResetPasswordForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to create password link was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100005, Level = LogLevel.Warning, Message = "The request to create password link was refused: the caller is not allowed", ClientMessage = "You are not allowed to create password link")]
+    public static partial IGenericMessage CreatePasswordLinkForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to update user preferences was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 50010, Level = LogLevel.Warning, Message = "The request to update user preferences was refused: the caller is not signed in", ClientMessage = "You must be signed in to update user preferences")]
+    public static partial IGenericMessage UpdateUserPreferencesNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to set password login was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100006, Level = LogLevel.Warning, Message = "The request to set password login was refused: the caller is not allowed", ClientMessage = "You are not allowed to set password login")]
+    public static partial IGenericMessage SetPasswordLoginForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to unbind external identity was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100007, Level = LogLevel.Warning, Message = "The request to unbind external identity was refused: the caller is not allowed", ClientMessage = "You are not allowed to unbind external identity")]
+    public static partial IGenericMessage UnbindExternalIdentityForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to remove password login was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100008, Level = LogLevel.Warning, Message = "The request to remove password login was refused: the caller is not allowed", ClientMessage = "You are not allowed to remove password login")]
+    public static partial IGenericMessage RemovePasswordLoginForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to create api key was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100009, Level = LogLevel.Warning, Message = "The request to create api key was refused: the caller is not allowed", ClientMessage = "You are not allowed to create api key")]
+    public static partial IGenericMessage CreateApiKeyForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to revoke api key was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100010, Level = LogLevel.Warning, Message = "The request to revoke api key was refused: the caller is not allowed", ClientMessage = "You are not allowed to revoke api key")]
+    public static partial IGenericMessage RevokeApiKeyForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to require password change was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100011, Level = LogLevel.Warning, Message = "The request to require password change was refused: the caller is not allowed", ClientMessage = "You are not allowed to require password change")]
+    public static partial IGenericMessage RequirePasswordChangeForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to list api keys was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100012, Level = LogLevel.Warning, Message = "The request to list api keys was refused: the caller is not allowed", ClientMessage = "You are not allowed to list api keys")]
+    public static partial IGenericMessage ListApiKeysForbidden(ILogger logger);
+
+    /// <summary>Logs that Unbind external identity was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 31015, Level = LogLevel.Warning, Message = "Unbind external identity was not found, or is not visible to the caller", ClientMessage = "Unbind external identity was not found")]
+    public static partial IGenericMessage UnbindExternalIdentityNotFound(ILogger logger);
+
+    /// <summary>Logs that update user preferences failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91012, Level = LogLevel.Error, Message = "Update user preferences failed unexpectedly", ClientMessage = "Update user preferences failed unexpectedly")]
+    public static partial IGenericMessage UpdateUserPreferencesFaulted(ILogger logger);
+
+    /// <summary>Logs that create password link failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91013, Level = LogLevel.Error, Message = "Create password link failed unexpectedly", ClientMessage = "Create password link failed unexpectedly")]
+    public static partial IGenericMessage CreatePasswordLinkFaulted(ILogger logger);
+
+    /// <summary>Logs that reset password failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91014, Level = LogLevel.Error, Message = "Reset password failed unexpectedly", ClientMessage = "Reset password failed unexpectedly")]
+    public static partial IGenericMessage ResetPasswordFaulted(ILogger logger);
+
+    /// <summary>Logs that get user preferences failed unexpectedly.</summary>
+    [MessageLogging(EventId = 91015, Level = LogLevel.Error, Message = "Get user preferences failed unexpectedly", ClientMessage = "Get user preferences failed unexpectedly")]
+    public static partial IGenericMessage GetUserPreferencesFaulted(ILogger logger);
 }

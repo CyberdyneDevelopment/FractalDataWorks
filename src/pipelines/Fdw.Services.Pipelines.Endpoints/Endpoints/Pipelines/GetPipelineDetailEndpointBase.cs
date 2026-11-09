@@ -5,12 +5,13 @@ using FastEndpoints;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Services.Etl;
 using Fdw.Services.Etl.Transforms;
-using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Clients.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -19,14 +20,14 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineRequest, PipelineDetailResponse>
 {
-    private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly IPipelineConfigurationProvider _pipelineProvider;
 
     /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="pipelineProvider">Reads the pipeline.</param>
     protected GetPipelineDetailEndpointBase(
         ILogger logger,
-        PipelineServiceConfigurationProvider pipelineProvider)
+        IPipelineConfigurationProvider pipelineProvider)
     {
         EndpointLogger = logger;
         _pipelineProvider = pipelineProvider;
@@ -60,8 +61,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineReques
         var byName = !string.IsNullOrWhiteSpace(req.Name);
         if (byName == req.Id.HasValue)
         {
-            AddError("Name exactly one of 'id' or 'name'.");
-            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelinesAnswerLog.GetPipelineDetailNameExactlyOneOfId(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -74,7 +74,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineReques
         if (!result.IsSuccess)
         {
             OnPipelineFetchFailed(asked, result.CurrentMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch pipeline", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

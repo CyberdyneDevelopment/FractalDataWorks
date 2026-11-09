@@ -29,7 +29,7 @@ namespace Fdw.Services.Workspaces.Endpoints;
 public abstract class AddWorkspaceMemberEndpointBase
     : CrudCreateEndpointBase<AddWorkspaceMemberRequest, WorkspaceMemberDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IAuthenticationContextAccessor _authContext;
 
@@ -39,7 +39,7 @@ public abstract class AddWorkspaceMemberEndpointBase
     /// <inheritdoc />
     protected AddWorkspaceMemberEndpointBase(
         ILogger<AddWorkspaceMemberEndpointBase> logger,
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IAuthenticationContextAccessor authContext) : base(logger)
     {

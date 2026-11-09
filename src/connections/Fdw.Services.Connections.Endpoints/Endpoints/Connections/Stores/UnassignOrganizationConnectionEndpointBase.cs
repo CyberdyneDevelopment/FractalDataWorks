@@ -5,6 +5,7 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -53,7 +54,7 @@ public abstract class UnassignOrganizationConnectionEndpointBase : Endpoint<Orga
         if (audited.IsFailure)
         {
             ConnectionStoreEndpointLog.ChangeNotAudited(EndpointLogger, "removal", $"{req.OrganizationId}:{req.Purpose}", audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

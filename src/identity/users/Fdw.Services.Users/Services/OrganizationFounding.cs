@@ -143,7 +143,7 @@ public sealed class OrganizationFounding : IOrganizationFounding
         }
 
         var request = new NewDefaultWorkspace(
-            made.DefaultWorkspaceId, organization.TenantId, owner.Slug, made.Id, made.Name, made.Slug, made.IsDefault, administratorId);
+            made.DefaultWorkspaceId, organization.TenantId, made.IsDefault ? owner.DisplayName : made.Name, made.Id, administratorId);
         var founded = await _defaultWorkspaces.Found(request, cancellationToken).ConfigureAwait(false);
         if (founded.IsFailure)
         {

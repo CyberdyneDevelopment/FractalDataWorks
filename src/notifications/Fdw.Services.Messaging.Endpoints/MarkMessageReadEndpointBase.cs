@@ -4,11 +4,13 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for marking a message as read (PUT /messages/{Id}/read).
+/// Abstract base class for marking a message as read (POST /messages/{Id}/read).
 /// </summary>
 public abstract class MarkMessageReadEndpointBase : Endpoint<MessageIdRequest>
 {
@@ -66,8 +68,7 @@ public abstract class MarkMessageReadEndpointBase : Endpoint<MessageIdRequest>
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.MarkReadFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
-                AddError("Failed to mark message as read");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -81,7 +82,7 @@ public abstract class MarkMessageReadEndpointBase : Endpoint<MessageIdRequest>
         catch (Exception ex)
         {
             MessagingEndpointLog.MessagingException(_logger, ex, "mark-message-read");
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(MessagingEndpointLog.MarkMessageReadFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

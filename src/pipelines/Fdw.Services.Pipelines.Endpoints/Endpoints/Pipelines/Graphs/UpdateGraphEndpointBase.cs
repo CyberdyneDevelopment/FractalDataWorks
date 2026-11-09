@@ -21,7 +21,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </remarks>
 public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayload, GraphPayload>
 {
-    private readonly PipelineServiceConfigurationProvider _provider;
+    private readonly IPipelineConfigurationProvider _provider;
     private readonly StageChainLookup _chains;
     private readonly IDataSetConfigurationProvider _dataSets;
 
@@ -31,7 +31,7 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
     /// <param name="transformations">Resolves the named transformations a field mapping's chain applies.</param>
     /// <param name="dataSets">The data sets, read for the type of the columns a destination's value sources fill.</param>
     protected UpdateGraphEndpointBase(
-        ILogger<UpdateGraphEndpointBase> logger, PipelineServiceConfigurationProvider provider, ITransformationConfigurationProvider transformations,
+        ILogger<UpdateGraphEndpointBase> logger, IPipelineConfigurationProvider provider, ITransformationConfigurationProvider transformations,
         IDataSetConfigurationProvider dataSets) : base(logger)
     {
         _provider = provider;
@@ -45,8 +45,6 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
     /// <inheritdoc />
     protected override string Route => "/pipelines/{Name}/graph";
 
-    /// <inheritdoc />
-    protected override HttpVerb UpdateVerb => HttpVerb.PUT;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Replace a graph pipeline";
@@ -75,6 +73,17 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
         if (graph.IsFailure || graph.Value is null)
         {
             return graph.ToNewResult<GraphPayload>();
+        }
+
+        // Why the stored organization is carried over (FDW-4362): the payload never states which organization owns the pipeline (a caller cannot assign one), and the graph is
+        // rebuilt from the payload alone, so without this every save through the API cleared the owner that the run events and the organization's map are keyed on.
+        graph.Value.OrgId = original.Value.OrgId;
+
+        // An update cannot move a pipeline to another organization (FDW-4573): naming the one it already belongs to, or none, is fine.
+        var unchanged = PipelineOwner.OrganizationUnchanged(Logger, request.Name, original.Value.OrgId, request.OrgId);
+        if (unchanged.IsFailure)
+        {
+            return unchanged.ToNewResult<GraphPayload>();
         }
 
         return await GraphSave.Update(_provider, graph.Value, _dataSets, GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);

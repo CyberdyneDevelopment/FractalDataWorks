@@ -68,16 +68,17 @@ public sealed class UserTenantsHeld : IUserTenantsHeld
 
         try
         {
-            var keys = asked.Value.Select(row => row.Number("UserTenantsRowId") ?? throw new InvalidOperationException("a membership has no domain row")).Distinct().ToList();
-            var current = await _domains.Page(Condition("RowId", "In", keys.Cast<object>().ToList()), ByRowId, 0, keys.Count, true, cancellationToken).ConfigureAwait(false);
+            // A membership names its domain row by the row's durable Id, which every version of it keeps (FDW-4239): it stays attached through a re-save of the row.
+            var keys = asked.Value.Select(row => row.Identifier("UserTenantsId") ?? throw new InvalidOperationException("a membership has no domain row")).Distinct().ToList();
+            var current = await _domains.Page(Condition("Id", "In", keys.Cast<object>().ToList()), ByRowId, 0, keys.Count, true, cancellationToken).ConfigureAwait(false);
             if (current.IsFailure)
             {
                 return current.ToNewResult<IReadOnlyList<HeldTenant>>();
             }
 
-            var present = current.Value!.Select(row => row.Number("RowId")).ToHashSet();
+            var present = current.Value!.Select(row => row.Identifier("Id")).ToHashSet();
             var held = asked.Value
-                .Where(row => present.Contains(row.Number("UserTenantsRowId")))
+                .Where(row => present.Contains(row.Identifier("UserTenantsId")))
                 .Select(row => new HeldTenant(
                     row.Identifier("TenantId") ?? throw new InvalidOperationException("a membership has no tenant"),
                     row.Flag("IsDefault") ?? throw new InvalidOperationException("a membership does not say whether it is the default"),

@@ -14,6 +14,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
@@ -238,8 +239,8 @@ public sealed class FederatedDataSetType : DataSetTypeBase
 
         var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
-            return GenericResult<MaterializedSource>.Failure(
-                DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.NoValueReason().Message));
+            return ConnectionFailures.Caused<MaterializedSource>(
+                connectionResult, DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.NoValueReason().Message));
 
         if (connectionResult.Value is not IRecordSourceConnection recordConnection)
             return GenericResult<MaterializedSource>.Failure(

@@ -1,8 +1,11 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
 using Fdw.Services.Data;
+using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Logging;
@@ -29,20 +32,26 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
     private readonly MapSources _sources;
     private readonly MapScopeSelector _scopes;
     private readonly IFrameworkAuthorizationService _authorization;
+    private readonly IExecutionTracker _runs;
+    private readonly IPipelineProjectMemberships _projects;
 
     /// <inheritdoc />
     protected GetMapEndpointBase(
         ILogger<GetMapEndpointBase> logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
-        IFrameworkAuthorizationService authorization)
+        IFrameworkAuthorizationService authorization,
+        IExecutionTracker runs,
+        IPipelineProjectMemberships projects)
         : base(logger)
     {
+        _runs = runs ?? throw new ArgumentNullException(nameof(runs));
+        _projects = projects ?? throw new ArgumentNullException(nameof(projects));
         _sources = new MapSources(dataSets, dataStores, pipelines, variations, categories);
         _scopes = new MapScopeSelector(workspaces, access, MapLogger);
         _authorization = authorization;
@@ -72,8 +81,13 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
 
         var editing = await MapEditing.Resolve(
             _authorization, new ClaimsPrincipalAuthenticationContext(User), selection.Value!.CanEditScope, ct).ConfigureAwait(false);
-        return editing.IsFailure
-            ? editing.ToNewResult<MapStream>()
-            : GenericResult<MapStream>.Success(new OverviewMapStream(selection.Value!, _sources, editing.Value!, MapLogger));
+        if (editing.IsFailure) return editing.ToNewResult<MapStream>();
+
+        // The workspace of each data set, read once for the whole map so each data set node names its own without a read of its own (FDW-4345).
+        var workspaces = await _scopes.DataSetWorkspaces(ct).ConfigureAwait(false);
+        return workspaces.IsFailure
+            ? workspaces.ToNewResult<MapStream>()
+            : GenericResult<MapStream>.Success(
+                new OverviewMapStream(selection.Value!, _sources, editing.Value!, MapLogger, dataSetWorkspaces: workspaces.Value, runs: _runs, projects: _projects));
     }
 }

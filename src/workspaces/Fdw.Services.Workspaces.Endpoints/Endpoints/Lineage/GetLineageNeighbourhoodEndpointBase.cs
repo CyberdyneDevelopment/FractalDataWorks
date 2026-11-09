@@ -17,7 +17,7 @@ public abstract class GetLineageNeighbourhoodEndpointBase : LineageEndpointBase<
     protected GetLineageNeighbourhoodEndpointBase(
         ILogger logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,

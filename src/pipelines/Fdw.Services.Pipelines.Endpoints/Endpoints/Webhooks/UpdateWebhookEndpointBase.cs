@@ -8,6 +8,7 @@ using Fdw.Services.Pipelines.Clients.Abstractions;
 using Fdw.Services.Pipelines.Webhooks;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -24,7 +25,7 @@ public abstract class UpdateWebhookEndpointBase : CrudUpdateEndpointBase<Webhook
     protected UpdateWebhookEndpointBase(
         ILogger<UpdateWebhookEndpointBase> logger,
         WebhookTriggerConfigurationProvider provider,
-        PipelineServiceConfigurationProvider pipelines,
+        IPipelineConfigurationProvider pipelines,
         IRoleGrants grants) : base(logger)
     {
         _triggers = new WebhookTriggers(provider, pipelines, new RunRoleAuthority(grants), logger);
@@ -36,8 +37,6 @@ public abstract class UpdateWebhookEndpointBase : CrudUpdateEndpointBase<Webhook
     /// <inheritdoc />
     protected override string Route => "/webhooks/{Name}";
 
-    /// <inheritdoc />
-    protected override HttpVerb UpdateVerb => HttpVerb.PUT;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Replace a webhook trigger";

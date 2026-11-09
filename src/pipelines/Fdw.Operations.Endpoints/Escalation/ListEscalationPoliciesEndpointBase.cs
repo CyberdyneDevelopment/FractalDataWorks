@@ -7,6 +7,8 @@ using FastEndpoints;
 using Fdw.Operations.Abstractions.Escalation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Escalation;
 
@@ -55,8 +57,7 @@ public abstract class ListEscalationPoliciesEndpointBase : EndpointWithoutReques
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.ListEscalationPoliciesFailed(_logger, result.CurrentMessage!);
-                AddError("Failed to list escalation policies");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -74,8 +75,7 @@ public abstract class ListEscalationPoliciesEndpointBase : EndpointWithoutReques
         catch (Exception ex)
         {
             OperationsEndpointLog.ListEscalationPoliciesFailed(_logger, ex.Message);
-            AddError("Failed to list escalation policies");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(OperationsEndpointLog.ListEscalationPoliciesFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

@@ -1,4 +1,5 @@
 using Fdw.Configuration;
+using Fdw.Services.Identity.Abstractions;
 using Fdw.Web.RestEndpoints.Query;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +19,7 @@ public abstract class QueryIdentitiesEndpointBase : QueryDomainEndpointBase<Doma
     /// <summary>Initializes a new instance of the <see cref="QueryIdentitiesEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="identityProvider">Reads the page from the identities domain table.</param>
-    protected QueryIdentitiesEndpointBase(ILogger logger, IdentityServiceConfigurationProvider identityProvider)
+    protected QueryIdentitiesEndpointBase(ILogger logger, IIdentityServiceConfigurationProvider identityProvider)
         : base(logger, identityProvider)
     {
     }

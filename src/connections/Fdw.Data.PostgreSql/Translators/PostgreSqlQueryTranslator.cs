@@ -17,6 +17,7 @@ using Fdw.Services.Connections.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.PostgreSql;
 

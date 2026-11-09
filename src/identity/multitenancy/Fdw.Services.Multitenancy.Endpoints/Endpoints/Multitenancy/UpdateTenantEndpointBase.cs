@@ -9,6 +9,8 @@ using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Clients.Models;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
 
@@ -60,14 +62,20 @@ public abstract class UpdateTenantEndpointBase : Endpoint<UpdateTenantRequest, T
         if (!_systemRoles.IsPlatformAdmin(User))
         {
             TenantEndpointLog.PlatformAdministratorRequired(EndpointLogger);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.UpdateTenantForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var before = await _tenants.GetTenant(req.Id, ct).ConfigureAwait(false);
-        if (!before.IsSuccess || before.Value is null)
+        if (before.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(before, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (before.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(TenantEndpointLog.UpdateTenantTenantNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -104,7 +112,7 @@ public abstract class UpdateTenantEndpointBase : Endpoint<UpdateTenantRequest, T
             if (audited.IsFailure)
             {
                 TenantEndpointLog.ChangeNotAudited(EndpointLogger, req.Id, audited.CurrentMessage);
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
                 return;
             }
         }

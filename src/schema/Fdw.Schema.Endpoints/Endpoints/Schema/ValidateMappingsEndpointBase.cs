@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 using Fdw.Operations.Endpoints;
 using Fdw.Schema.Clients.Models;
 using Fdw.Conventions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Schema.Endpoints;
 
@@ -26,7 +28,7 @@ namespace Fdw.Schema.Endpoints;
 /// </summary>
 public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRequest, MappingValidationResponse>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<ValidateMappingsEndpointBase> _logger;
 
     /// <summary>
@@ -34,7 +36,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
     /// </summary>
     /// <param name="dataSetProvider">Reads the data set with its sources and fields composed.</param>
     /// <param name="logger">The logger instance.</param>
-    protected ValidateMappingsEndpointBase(DataSetConfigurationProvider dataSetProvider, ILogger<ValidateMappingsEndpointBase> logger)
+    protected ValidateMappingsEndpointBase(IDataSetConfigurationProvider dataSetProvider, ILogger<ValidateMappingsEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
         _logger = logger;
@@ -70,7 +72,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
         var dataSetResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
         if (!dataSetResult.IsSuccess)
         {
-            await SendReadFailure("data set", dataSetResult.CurrentMessage, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(dataSetResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -170,14 +172,5 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
                 Message = $"Required field '{unmapped}' has no mapping"
             });
         }
-    }
-
-    private async Task SendReadFailure(string what, string? reason, CancellationToken ct)
-    {
-        await Send.ResultAsync(TypedResults.Json(new
-        {
-            errorCode = "ReadFailed",
-            messages = new[] { $"Reading {what} failed: {reason ?? LogPlaceholders.NoReason}" }
-        }, statusCode: 500)).ConfigureAwait(false);
     }
 }

@@ -12,6 +12,8 @@ using Fdw.Services.Settings;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -68,7 +70,7 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
         if (!reachesAll && caller is null)
         {
             OnNoTenant();
-            await Send.ResultAsync(TypedResults.Json(new { Error = "The run queue is listed for the caller's tenant, and this request carries none." }, statusCode: 403)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelinesAnswerLog.ListPipelineRunQueueTheRunQueueIsListed(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

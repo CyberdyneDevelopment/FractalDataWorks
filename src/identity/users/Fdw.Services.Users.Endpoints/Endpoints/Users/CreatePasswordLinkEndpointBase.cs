@@ -11,6 +11,7 @@ using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Settings;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -32,7 +33,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLinkRequest, PasswordLinkResponse>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IPasswordLinkService _linkService;
     private readonly ILogger _logger;
 
@@ -43,7 +44,7 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
     /// <param name="linkService">Creates and stores the link.</param>
     /// <param name="logger">The logger.</param>
     protected CreatePasswordLinkEndpointBase(
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IPasswordLinkService linkService,
         ILogger logger)
     {
@@ -83,7 +84,7 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
         if (!Resolve<ISystemRoleConfiguration>().IsPlatformAdmin(User))
         {
             UserEndpointLog.PasswordLinkRequiresPlatformAdmin(_logger, req.IdOrName);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreatePasswordLinkForbidden(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -98,7 +99,7 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
         catch (Exception ex)
         {
             UserEndpointLog.OperationFailed(_logger, ex, "password-link", req.IdOrName);
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreatePasswordLinkFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 
@@ -107,9 +108,15 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
         var userResult = Guid.TryParse(req.IdOrName, out var requestedId)
             ? await _userProvider.Get(requestedId, ct).ConfigureAwait(false)
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreatePasswordLinkUserNotFound(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -120,25 +127,28 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
 
         if (ReadSettings() is not { } settings)
         {
-            AddError("Password links are not configured on this host.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreatePasswordLinkPasswordLinksAreNotConfigured(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         if (CallerId() is not { } createdBy)
         {
-            AddError("The administrator creating the link could not be identified.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreatePasswordLinkTheAdministratorCreatingTheLink(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
         var created = await _linkService
             .CreateLink(user.Id, createdBy, DateTimeOffset.UtcNow.AddMinutes(settings.LifetimeMinutes), ct)
             .ConfigureAwait(false);
-        if (!created.IsSuccess || created.Value is null)
+        if (created.IsFailure)
         {
-            AddError("The password link could not be created.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(created, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (created.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreatePasswordLinkReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -166,16 +176,14 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
         if (usable.IsFailure)
         {
             UserEndpointLog.PasswordAdmissionUndecided(_logger, idOrName);
-            AddError("Whether the account may sign in with a password could not be decided.");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(usable, HttpContext)).ConfigureAwait(false);
             return false;
         }
 
         if (!usable.Value)
         {
             UserEndpointLog.PasswordNotUsable(_logger, "create a password link", idOrName);
-            AddError("No enabled password sign-in flow admits this account; grant it the permission the flow requires first.");
-            await Send.ErrorsAsync(409, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreatePasswordLinkNoEnabledPasswordSignIn(_logger)), HttpContext)).ConfigureAwait(false);
             return false;
         }
 

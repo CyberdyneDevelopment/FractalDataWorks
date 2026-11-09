@@ -23,31 +23,31 @@ namespace Fdw.ServiceTypes;
 public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeCollection Descriptor)
 {
     /// <summary>Whether <see cref="Configure"/> has already run for this entry.</summary>
-    private PhaseState _configure;
+    private IPhaseState _configure = PhaseStates.NotRun;
 
     /// <summary>Gets whether this phase has not run, is deferred, or has run.</summary>
-    public PhaseState ConfigureState => _configure;
+    public IPhaseState ConfigureState => _configure;
 
     /// <summary>Gets a value indicating whether the phase has run.</summary>
-    public bool Configured => _configure == PhaseState.Ran;
+    public bool Configured => _configure.HasRun;
 
     /// <summary>Whether <see cref="Initialize"/> has already run for this entry.</summary>
-    private PhaseState _initialize;
+    private IPhaseState _initialize = PhaseStates.NotRun;
 
     /// <summary>Gets whether this phase has not run, is deferred, or has run.</summary>
-    public PhaseState InitializeState => _initialize;
+    public IPhaseState InitializeState => _initialize;
 
     /// <summary>Gets a value indicating whether the phase has run.</summary>
-    public bool Initialized => _initialize == PhaseState.Ran;
+    public bool Initialized => _initialize.HasRun;
 
     /// <summary>Whether <see cref="Register"/> has already run for this entry.</summary>
-    private PhaseState _register;
+    private IPhaseState _register = PhaseStates.NotRun;
 
     /// <summary>Gets whether this phase has not run, is deferred, or has run.</summary>
-    public PhaseState RegisterState => _register;
+    public IPhaseState RegisterState => _register;
 
     /// <summary>Gets a value indicating whether the phase has run.</summary>
-    public bool Registered => _register == PhaseState.Ran;
+    public bool Registered => _register.HasRun;
 
     // ── Phase-delegate replacements (author-curated variant selection; the keyset stays frozen) ─────────
     private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _configurationMethod;
@@ -116,16 +116,16 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
     /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
     /// <param name="force">
-    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// Run even if this phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>. Overrides <paramref name="defer"/>.
     /// </param>
     public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (!force && _initialize == PhaseState.Ran) return GenericResult<IHost>.Success(host);
+        if (!force && _initialize.HasRun) return GenericResult<IHost>.Success(host);
 
         if (defer && !force)
         {
-            _initialize = PhaseState.Deferred;
+            _initialize = PhaseStates.Deferred;
             return GenericResult<IHost>.Success(host);
         }
 
@@ -144,7 +144,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
             ? _initializationMethod(host, loggerFactory)
             : Descriptor.Initialize(host, loggerFactory, true, false);
 
-        _initialize = PhaseState.Ran;
+        _initialize = PhaseStates.Ran;
         return result;
     }
 
@@ -160,16 +160,16 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
     /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
     /// <param name="force">
-    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// Run even if this phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>. Overrides <paramref name="defer"/>.
     /// </param>
     public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (!force && _configure == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (!force && _configure.HasRun) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
         if (defer && !force)
         {
-            _configure = PhaseState.Deferred;
+            _configure = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -177,7 +177,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
             ? _configurationMethod(builder, loggerFactory)
             : Descriptor.Configure(builder, loggerFactory, true, false);
 
-        _configure = PhaseState.Ran;
+        _configure = PhaseStates.Ran;
         return result;
     }
 
@@ -193,16 +193,16 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
     /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
     /// <param name="force">
-    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
-    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// Run even if this phase is <see cref="PhaseStates.Deferred"/> or has already
+    /// <see cref="PhaseStates.Ran"/>. Overrides <paramref name="defer"/>.
     /// </param>
     public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (!force && _register == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (!force && _register.HasRun) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
         if (defer && !force)
         {
-            _register = PhaseState.Deferred;
+            _register = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -216,7 +216,7 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
             ? _registrationMethod(builder, loggerFactory)
             : Descriptor.Register(builder, loggerFactory, true, false);
 
-        _register = PhaseState.Ran;
+        _register = PhaseStates.Ran;
         return result;
     }
 }

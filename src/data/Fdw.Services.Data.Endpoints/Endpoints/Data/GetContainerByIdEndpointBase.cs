@@ -24,10 +24,10 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
     // A store's paths are one level under it and their containers two.
     private const int ThroughContainers = 2;
 
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected GetContainerByIdEndpointBase(ILogger<GetContainerByIdEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    protected GetContainerByIdEndpointBase(ILogger<GetContainerByIdEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }

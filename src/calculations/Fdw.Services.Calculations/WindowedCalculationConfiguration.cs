@@ -11,7 +11,7 @@ namespace Fdw.Services.Calculations;
 
 /// <summary>
 /// Configuration for a Windowed calculation entity.
-/// Specifies the target field, the window function to apply, and the output field name.
+/// Specifies the target field and the window function to apply; the field the result is written to is the entity's <see cref="ResultFieldName"/>.
 /// Partition-by and order-by field lists are stored in relational child tables
 /// (<c>calc.WindowedCalculationPartitionField</c> / <c>calc.WindowedCalculationOrderField</c>).
 /// Persisted in <c>calc.WindowedCalculationConfiguration</c> as a type-specific child of <c>calc.CalculationEntity</c>.
@@ -85,9 +85,4 @@ public sealed partial class WindowedCalculationConfiguration : ICalculationTyped
     /// (e.g., <c>"Avg"</c>, <c>"Sum"</c>, <c>"RowNumber"</c>, <c>"Rank"</c>).
     /// </summary>
     public string WindowFunction { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the name of the field written to the output DataSet with the window result.
-    /// </summary>
-    public string OutputFieldName { get; set; } = string.Empty;
 }

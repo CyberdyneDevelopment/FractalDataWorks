@@ -1,3 +1,4 @@
+using Fdw.Claims.Abstractions;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -121,7 +122,7 @@ public sealed class HubScopeAuthorizationTests
     [Fact]
     public async Task AMemberJoinsTheirOwnOrganizationsScope()
     {
-        var (hub, groups, _) = Hub(Principal(new Claim("org_id", "org-1")));
+        var (hub, groups, _) = Hub(Principal(new Claim(ClaimDefinitions.orgId.Name, "org-1")));
 
         await hub.Subscribe(HubScopes.Org("org-1", "pipeline-updates"));
 
@@ -131,7 +132,7 @@ public sealed class HubScopeAuthorizationTests
     [Fact]
     public async Task AMemberIsRefusedAnotherOrganizationsScope()
     {
-        var (hub, groups, logger) = Hub(Principal(new Claim("org_id", "org-1")));
+        var (hub, groups, logger) = Hub(Principal(new Claim(ClaimDefinitions.orgId.Name, "org-1")));
 
         await hub.Subscribe(HubScopes.Org("org-2", "pipeline-updates"));
 
@@ -142,7 +143,7 @@ public sealed class HubScopeAuthorizationTests
     [Fact]
     public async Task AnOrganizationScopeWhoseIdOnlyStartsLikeTheCallersIsRefused()
     {
-        var (hub, groups, _) = Hub(Principal(new Claim("org_id", "org-1")));
+        var (hub, groups, _) = Hub(Principal(new Claim(ClaimDefinitions.orgId.Name, "org-1")));
 
         await hub.Subscribe(HubScopes.Org("org-10", "pipeline-updates"));
 
@@ -216,8 +217,8 @@ public sealed class HubScopeAuthorizationTests
     [Fact]
     public void TheCallersTenantIsTheTenantIdClaimAndNothingElse()
     {
-        var (hub, _, _) = Hub(Principal(new Claim("tenantId", "t-1"), new Claim("org_id", "o-1")));
+        var (hub, _, _) = Hub(Principal(new Claim("tenantId", "t-1"), new Claim(ClaimDefinitions.orgId.Name, "o-1")));
         hub.CallerTenantIdPublic.ShouldBe("t-1");
-        Hub(Principal(new Claim("org_id", "o-1"))).Hub.CallerTenantIdPublic.ShouldBeNull();
+        Hub(Principal(new Claim(ClaimDefinitions.orgId.Name, "o-1"))).Hub.CallerTenantIdPublic.ShouldBeNull();
     }
 }

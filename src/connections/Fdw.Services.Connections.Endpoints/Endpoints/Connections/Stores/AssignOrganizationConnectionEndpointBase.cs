@@ -5,6 +5,7 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -31,7 +32,7 @@ public abstract class AssignOrganizationConnectionEndpointBase : Endpoint<Organi
     /// <inheritdoc />
     public override void Configure()
     {
-        Put("/organizations/{OrganizationId}/connections/{Purpose}");
+        Post("/organizations/{OrganizationId}/connections/{Purpose}");
         ConfigureEndpoint();
     }
 
@@ -54,7 +55,7 @@ public abstract class AssignOrganizationConnectionEndpointBase : Endpoint<Organi
         if (audited.IsFailure)
         {
             ConnectionStoreEndpointLog.ChangeNotAudited(EndpointLogger, "assignment", $"{req.OrganizationId}:{req.Purpose}", audited.CurrentMessage);
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

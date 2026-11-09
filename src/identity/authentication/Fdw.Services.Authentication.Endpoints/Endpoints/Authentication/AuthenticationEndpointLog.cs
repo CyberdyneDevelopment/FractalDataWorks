@@ -367,4 +367,48 @@ public static partial class AuthenticationEndpointLog
     public static partial IGenericMessage FlowChangeCallerUnknown(
         ILogger logger,
         string flowName);
+
+    /// <summary>Logs that the request failed: Password change failed. Verify your current password is correct.</summary>
+    [MessageLogging(EventId = 20001, Level = LogLevel.Warning, Message = "Password change failed. Verify your current password is correct.", ClientMessage = "Password change failed. Verify your current password is correct.")]
+    public static partial IGenericMessage ChangePasswordPasswordChangeFailedVerifyYour(ILogger logger);
+
+    /// <summary>Logs that The request to authentication flow change was refused: the caller is not allowed.</summary>
+    [MessageLogging(EventId = 100001, Level = LogLevel.Warning, Message = "The request to authentication flow change was refused: the caller is not allowed", ClientMessage = "You are not allowed to authentication flow change")]
+    public static partial IGenericMessage AuthenticationFlowChangeForbidden(ILogger logger);
+
+    /// <summary>Logs that The request to change password was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51006, Level = LogLevel.Warning, Message = "The request to change password was refused: the caller is not signed in", ClientMessage = "You must be signed in to change password")]
+    public static partial IGenericMessage ChangePasswordNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that The request to get me was refused: the caller is not signed in.</summary>
+    [MessageLogging(EventId = 51007, Level = LogLevel.Warning, Message = "The request to get me was refused: the caller is not signed in", ClientMessage = "You must be signed in to get me")]
+    public static partial IGenericMessage GetMeNotSignedIn(ILogger logger);
+
+    /// <summary>Logs that the request failed: isEnabled is required: it is the only thing this route changes.</summary>
+    [MessageLogging(EventId = 20002, Level = LogLevel.Warning, Message = "isEnabled is required: it is the only thing this route changes.", ClientMessage = "isEnabled is required: it is the only thing this route changes.")]
+    public static partial IGenericMessage UpdateAuthenticationFlowIsenabledIsRequiredItIs(ILogger logger);
+
+    /// <summary>Logs that the request failed: permission is required.</summary>
+    [MessageLogging(EventId = 20003, Level = LogLevel.Warning, Message = "permission is required.", ClientMessage = "permission is required.")]
+    public static partial IGenericMessage SetAuthenticationFlowPermissionPermissionIsRequired(ILogger logger);
+
+    /// <summary>Logs that Authentication flow change was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30001, Level = LogLevel.Warning, Message = "Authentication flow change was not found, or is not visible to the caller", ClientMessage = "Authentication flow change was not found")]
+    public static partial IGenericMessage AuthenticationFlowChangeNotFound(ILogger logger);
+
+    /// <summary>Logs that Me was not found, or is not visible to the caller.</summary>
+    [MessageLogging(EventId = 30002, Level = LogLevel.Warning, Message = "Me was not found, or is not visible to the caller", ClientMessage = "Me was not found")]
+    public static partial IGenericMessage GetMeNotFound(ILogger logger);
+
+    /// <summary>Logs that get me failed unexpectedly.</summary>
+    [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "Get me failed unexpectedly", ClientMessage = "Get me failed unexpectedly")]
+    public static partial IGenericMessage GetMeFaulted(ILogger logger);
+
+    /// <summary>Logs that change password failed unexpectedly.</summary>
+    [MessageLogging(EventId = 90002, Level = LogLevel.Error, Message = "Change password failed unexpectedly", ClientMessage = "Change password failed unexpectedly")]
+    public static partial IGenericMessage ChangePasswordFaulted(ILogger logger);
+
+    /// <summary>Logs that logout failed unexpectedly.</summary>
+    [MessageLogging(EventId = 90003, Level = LogLevel.Error, Message = "Logout failed unexpectedly", ClientMessage = "Logout failed unexpectedly")]
+    public static partial IGenericMessage LogoutFaulted(ILogger logger);
 }

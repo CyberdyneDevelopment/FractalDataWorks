@@ -129,6 +129,7 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
         dataStore.Setup(d => d.Path(It.IsAny<string>())).Returns(GenericResult<IDataNodePath>.Success(path.Object));
         gateway.SetupGet(g => g.DataStores).Returns([dataStore.Object]);
         var gateways = new Mock<IConfigurationGatewayProvider>();
+        gateways.SetupGet(p => p.KeyChunkSize).Returns(1000);
         gateways
             .Setup(p => p.Get(It.IsAny<string>()))
             .Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));

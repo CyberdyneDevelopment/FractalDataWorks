@@ -15,6 +15,7 @@ using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Users.Clients.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
@@ -89,9 +90,15 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         var userResult = Guid.TryParse(req.IdOrName, out var parsedUserId)
             ? await _userProvider.Get(parsedUserId, ct).ConfigureAwait(false)
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
-        if (!userResult.IsSuccess || userResult.Value is null)
+        if (userResult.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.RevokeUserRoleUserNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -103,7 +110,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         if (!Guid.TryParse(User.FindFirst(ClaimDefinitions.tenantId.Name)?.Value, out var tenantId))
         {
             AuthorizationEndpointLog.RoleChangeWithoutTenant(EndpointLogger, userIdString);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.RevokeUserRoleForbidden(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -116,7 +123,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         catch (Exception ex)
         {
             AuthorizationEndpointLog.OperationFailed(EndpointLogger, ex, "revoke role", userIdString);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.RevokeUserRoleFaulted(EndpointLogger)), HttpContext)).ConfigureAwait(false);
         }
     }
 
@@ -129,12 +136,12 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName,
                 roleResult.CurrentMessage);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(roleResult, HttpContext)).ConfigureAwait(false);
             return;
         }
         if (roleResult.Value is null)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.RevokeUserRoleRoleNotFound(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
         var role = roleResult.Value;
@@ -155,9 +162,15 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
                 // sides are parsed and compared as the Guids they are (FDW-532).
                 ur => Guid.TryParse(ur.UserId, out var assigned) && assigned == userId, ct)
             .ConfigureAwait(false);
-        if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
+        if (userRolesResult.IsFailure)
         {
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(userRolesResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (userRolesResult.Value is null)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthorizationEndpointLog.RevokeUserRoleUserRolesReturnedNothing(EndpointLogger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -192,7 +205,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         {
             AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
                 revokeResult.CurrentMessage);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(revokeResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -203,7 +216,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         if (ended.IsFailure)
         {
             AuthorizationEndpointLog.RoleRevokedSessionsNotEnded(EndpointLogger, requestedRoleName, userIdString);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(ended, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -213,7 +226,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         {
             AuthorizationEndpointLog.RoleChangeNotAudited(EndpointLogger, "revocation", roleName, userIdString,
                 audited.CurrentMessage);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(audited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

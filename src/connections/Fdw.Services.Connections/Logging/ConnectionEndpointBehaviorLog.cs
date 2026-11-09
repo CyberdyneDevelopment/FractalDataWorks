@@ -22,6 +22,18 @@ public static partial class ConnectionEndpointBehaviorLog
         ClientMessage = "The configuration for a '{configurationType}' connection failed validation: {details}")]
     public static partial IGenericMessage ConfigurationRejected(ILogger logger, string configurationType, string details);
 
+    /// <summary>Logged when a connection's authentication holds a key its authentication type does not expect (FDW-4607).</summary>
+    [MessageLogging(EventId = 20003, Level = LogLevel.Warning,
+        Message = "The '{authenticationType}' authentication of a '{configurationType}' connection holds keys it does not expect: {keys}",
+        ClientMessage = "The '{authenticationType}' authentication of a '{configurationType}' connection holds keys it does not expect: {keys}. Send only the keys that authentication type declares.")]
+    public static partial IGenericMessage AuthenticationPropertyNotExpected(ILogger logger, string configurationType, string authenticationType, string keys);
+
+    /// <summary>Logged when a connection kind declares it has no authentication dictionary, yet its configuration holds one (FDW-4607).</summary>
+    [MessageLogging(EventId = 20004, Level = LogLevel.Error,
+        Message = "The '{configurationType}' connection type declares no authentication but its configuration holds the string dictionaries {dictionaries}",
+        ClientMessage = "The '{configurationType}' connection type cannot save a connection: it declares no authentication but its configuration holds the string dictionaries {dictionaries}.")]
+    public static partial IGenericMessage AuthenticationNotDeclared(ILogger logger, string configurationType, string dictionaries);
+
     /// <summary>Logged when a connection type's configuration class cannot be bound at all.</summary>
     [MessageLogging(EventId = 60003, Level = LogLevel.Error,
         Message = "Configuration type '{configurationType}' is not a concrete connection configuration, so a connection of this kind cannot be created or updated through the endpoints")]

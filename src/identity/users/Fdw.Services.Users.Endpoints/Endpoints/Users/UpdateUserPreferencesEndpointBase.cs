@@ -11,7 +11,7 @@ using Fdw.Results;
 namespace Fdw.Services.Users.Endpoints;
 
 /// <summary>
-/// Abstract base class for updating user preferences (PUT /users/me/preferences).
+/// Abstract base class for updating user preferences (PATCH /users/me/preferences).
 /// </summary>
 public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPreferencesRequest>
 {
@@ -65,7 +65,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     {
         if (!PreferenceEndpointIdentity.TryGetUserId(User, out var userId))
         {
-            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.UpdateUserPreferencesNotSignedIn(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -75,8 +75,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
             var loadResult = await _preferenceProvider.Get(PreferenceEndpointIdentity.RowName(userId), ct).ConfigureAwait(false);
             if (!loadResult.IsSuccess)
             {
-                AddError(loadResult.FailureReason().Message);
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(loadResult, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -104,8 +103,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
                 .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
             {
-                AddError(saveResult.FailureReason().Message);
-                await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(saveResult, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
@@ -118,7 +116,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
         catch (Exception ex)
         {
             UserEndpointLog.UpdatePreferencesFailed(_logger, ex, userId.ToString());
-            await Send.StatusCodeAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.UpdateUserPreferencesFaulted(_logger)), HttpContext)).ConfigureAwait(false);
         }
     }
 }

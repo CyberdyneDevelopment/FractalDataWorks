@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.ServiceTypes.Logging;
 using Fdw.ServiceTypes.Results;
@@ -242,33 +244,66 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// Per closed generic, like everything else static here: each collection tracks its own phases,
     /// and a phase runs once so that a chained body cannot re-cycle members an earlier one already did.
     /// </remarks>
-    private static PhaseState _configure;
-    private static PhaseState _register;
-    private static PhaseState _initialize;
+    private static IPhaseState _configure = PhaseStates.NotRun;
+    private static IPhaseState _register = PhaseStates.NotRun;
+    private static IPhaseState _initialize = PhaseStates.NotRun;
 
     /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
-    public static PhaseState ConfigureState => _configure;
+    public static IPhaseState ConfigureState => _configure;
 
     /// <summary>Gets whether Register has not run, is deferred, or has run.</summary>
-    public static PhaseState RegisterState => _register;
+    public static IPhaseState RegisterState => _register;
 
     /// <summary>Gets whether Initialize has not run, is deferred, or has run.</summary>
-    public static PhaseState InitializeState => _initialize;
+    public static IPhaseState InitializeState => _initialize;
 
     /// <summary>Gets a value indicating whether Configure has run.</summary>
-    public static bool Configured => _configure == PhaseState.Ran;
+    public static bool Configured => _configure.HasRun;
 
     /// <summary>Gets a value indicating whether Register has run.</summary>
-    public static bool Registered => _register == PhaseState.Ran;
+    public static bool Registered => _register.HasRun;
 
     /// <summary>Gets a value indicating whether Initialize has run.</summary>
-    public static bool Initialized => _initialize == PhaseState.Ran;
+    public static bool Initialized => _initialize.HasRun;
 
     /// <summary>Gets this collection's Configure body.</summary>
     protected static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> ConfigurationFunc => _configurationFunc;
 
     /// <summary>Gets this collection's Register body.</summary>
     protected static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> RegisterFunc => _registerFunc;
+
+    // The services this collection itself needs registered (FDW-4588), set from the concrete collection's static constructor beside its phase bodies.
+    private static readonly List<ServiceRequirement> _requirements = new();
+
+    /// <summary>
+    /// Declares a service this collection needs registered. Its Initialize fails, with <paramref name="message"/>, when the built host has no registration for it (FDW-4588).
+    /// </summary>
+    /// <typeparam name="TRequired">The service that must be registered.</typeparam>
+    /// <param name="message">The coded message for the service being absent: the collection's own <c>[MessageLogging]</c> method, passed as a method group.</param>
+    /// <remarks>
+    /// The check is wrapped around whatever Initialize body is current, so a host that replaces, appends or prepends a body is still checked. It asks the container whether a registration
+    /// exists and never resolves the service, so it does not depend on the order the domains registered or initialized in. The options this collection holds declare their own requirements the same way
+    /// (<c>ServiceTypeBase.Requires</c>), and a requirement of an option that was never attached is never asked for.
+    /// </remarks>
+    protected static void Requires<TRequired>(Func<ILogger, IGenericMessage> message)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        lock (_gate)
+            _requirements.Add(new ServiceRequirement(typeof(TRequired), message));
+    }
+
+    // The body Initialize runs: the declared requirements first, then the current Initialize func.
+    private static IGenericResult<IHost> CheckRequirementsThenInitialize(IHost host, ILoggerFactory? loggerFactory)
+    {
+        ServiceRequirement[] own;
+        lock (_gate)
+            own = _requirements.ToArray();
+
+        var checkedHost = ServiceRequirements.Check(host, loggerFactory, own.Concat(Options.OfType<IServiceRequirements>().SelectMany(option => option.Requirements)), CollectionName);
+        return checkedHost.IsFailure ? checkedHost : _initializationFunc(host, loggerFactory);
+    }
 
     /// <summary>Gets this collection's Initialize body.</summary>
     protected static Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationFunc => _initializationFunc;
@@ -429,14 +464,14 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _configure == PhaseState.Ran)
+        if (!force && _configure.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _configure = PhaseState.Deferred;
+            _configure = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -447,7 +482,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return phaseResult;
         }
 
-        _configure = PhaseState.Ran;
+        _configure = PhaseStates.Ran;
         return phaseResult;
     }
 
@@ -465,14 +500,14 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _register == PhaseState.Ran)
+        if (!force && _register.HasRun)
         {
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
         if (defer)
         {
-            _register = PhaseState.Deferred;
+            _register = PhaseStates.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
@@ -483,7 +518,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             return phaseResult;
         }
 
-        _register = PhaseState.Ran;
+        _register = PhaseStates.Ran;
         return phaseResult;
     }
 
@@ -499,25 +534,25 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
     {
-        if (!force && _initialize == PhaseState.Ran)
+        if (!force && _initialize.HasRun)
         {
             return GenericResult<IHost>.Success(host);
         }
 
         if (defer)
         {
-            _initialize = PhaseState.Deferred;
+            _initialize = PhaseStates.Deferred;
             return GenericResult<IHost>.Success(host);
         }
 
         var phaseResult = RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
-            ServiceTypePhaseSequence.Initialize, _initializationFunc);
+            ServiceTypePhaseSequence.Initialize, CheckRequirementsThenInitialize);
         if (phaseResult.IsFailure)
         {
             return phaseResult;
         }
 
-        _initialize = PhaseState.Ran;
+        _initialize = PhaseStates.Ran;
         return phaseResult;
     }
 

@@ -8,6 +8,7 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration.Logging;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ namespace Fdw.Services.Configuration;
 /// collections that has collections of its own. A list of a few thousand rows took minutes (FDW-3906). Here the owners' physical keys go in one
 /// <c>IN</c> condition on the child's Foreign key, the rows come back as the columns the store returned, and each is built into its record through
 /// the mapper's coercing reader and handed to the owner whose key it holds. The same chunk of keys is the most one statement carries
-/// (<see cref="ParentChain.MaxKeys"/>); a larger set is read in chunks.
+/// (<see cref="IConfigurationGatewayProvider.KeyChunkSize"/>); a larger set is read in chunks.
 /// </para>
 /// <para>
 /// What a level is, which rows are current, and the depth-first rule are the single-owner cascade's: a collection goes to its owner whole, grandchildren
@@ -71,10 +72,11 @@ internal sealed class ChildSetLoader
     /// <param name="ownerMapper">The owners' mapper, which lists their child collections.</param>
     /// <param name="ownerContainer">The container the owners live in.</param>
     /// <param name="levels">How many hops down the cascade to load; at zero the owners are left as they are.</param>
+    /// <param name="narrowing">Which rows of one kind of child collection to read, or none to read them all (FDW-4328).</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>Success, or the failure of the first collection that could not be loaded.</returns>
     internal async Task<IGenericResult> Load(
-        IReadOnlyList<ConfigurationSetOwner> owners, IPocoMapper ownerMapper, string ownerContainer, int levels, CancellationToken cancellationToken)
+        IReadOnlyList<ConfigurationSetOwner> owners, IPocoMapper ownerMapper, string ownerContainer, int levels, ChildNarrowing? narrowing, CancellationToken cancellationToken)
     {
         if (owners.Count == 0 || levels <= 0)
             return GenericResult.Success();
@@ -83,7 +85,7 @@ internal sealed class ChildSetLoader
         var ownerType = owners[0].Row.GetType();
         foreach (var descriptor in ownerMapper.CascadeChildren.Where(d => !ConfigurationTrees.IsTree(d, ownerType)))
         {
-            var loaded = await LoadChild(owners, ownerMapper, ownerContainer, descriptor, levels, cancellationToken).ConfigureAwait(false);
+            var loaded = await LoadChild(owners, ownerMapper, ownerContainer, descriptor, levels, narrowing, cancellationToken).ConfigureAwait(false);
             if (loaded.IsFailure)
                 return loaded;
         }
@@ -126,6 +128,7 @@ internal sealed class ChildSetLoader
         string ownerContainer,
         IChildCascadeDescriptor descriptor,
         int levels,
+        ChildNarrowing? narrowing,
         CancellationToken cancellationToken)
     {
         var ownerTypeName = owners[0].Row.GetType().Name;
@@ -137,14 +140,18 @@ internal sealed class ChildSetLoader
         if (keyed.IsFailure)
             return keyed;
 
-        var rows = await Read(plan.Value!, keyed.Value!, cancellationToken).ConfigureAwait(false);
+        var rows = await Read(plan.Value!, keyed.Value!, NarrowingFor(descriptor, narrowing), cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure)
             return rows;
 
         return descriptor.IsPropertyCollection
             ? Dictionaries(descriptor, keyed.Value!, rows.Value!, plan.Value!)
-            : await Lists(descriptor, keyed.Value!, rows.Value!, plan.Value!, ownerTypeName, levels, cancellationToken).ConfigureAwait(false);
+            : await Lists(descriptor, keyed.Value!, rows.Value!, plan.Value!, ownerTypeName, levels, narrowing, cancellationToken).ConfigureAwait(false);
     }
+
+    // The narrowing that applies to this collection: the caller's, when it names the kind of row this collection holds, and none otherwise (FDW-4328).
+    private static ChildNarrowing? NarrowingFor(IChildCascadeDescriptor descriptor, ChildNarrowing? narrowing)
+        => narrowing is not null && !descriptor.IsPropertyCollection && descriptor.ChildType == narrowing.ChildType ? narrowing : null;
 
     // Where a child collection lives and how it hangs from its owner: its container, the Foreign key it declares to the owner's container, and
     // the owner's physical key field (the one the Foreign key holds when it holds the row's own key and not its durable Id).
@@ -200,14 +207,25 @@ internal sealed class ChildSetLoader
 
     // The current rows whose Foreign key holds one of the owners' keys, a chunk of keys to a statement.
     private async Task<IGenericResult<List<ConfigurationRow>>> Read(
-        ChildPlan plan, Dictionary<string, KeyedOwner> keyed, CancellationToken cancellationToken)
+        ChildPlan plan, Dictionary<string, KeyedOwner> keyed, ChildNarrowing? narrowing, CancellationToken cancellationToken)
     {
+        if (_gateways.KeyChunkSize < 1)
+            return GenericResult<List<ConfigurationRow>>.Failure(
+                DefaultConfigurationProviderLog.KeyChunkSizeNotStated(_logger, plan.ChildName, _gateways.KeyChunkSize));
+
         var reader = new ConfigurationRowReader(_gateways, _dataStoreName, plan.Child.Parent.Name, plan.Child.Name, _logger);
         var rows = new List<ConfigurationRow>();
-        foreach (var chunk in keyed.Values.Select(entry => entry.Value).Chunk(ParentChain.MaxKeys))
+        foreach (var chunk in keyed.Values.Select(entry => entry.Value).Chunk(_gateways.KeyChunkSize))
         {
+            var owned = new FilterCondition { PropertyName = plan.ChildColumn, Operator = FilterOperators.ByName("In"), Value = chunk.ToList() };
             var read = await reader.All(
-                new FilterCondition { PropertyName = plan.ChildColumn, Operator = FilterOperators.ByName("In"), Value = chunk.ToList() },
+                narrowing is null
+                    ? owned
+                    : new FilterGroup
+                    {
+                        Operator = LogicalOperator.And,
+                        Nodes = [owned, new FilterCondition { PropertyName = narrowing.Property, Operator = FilterOperators.ByName("In"), Value = narrowing.Values.Cast<object>().ToList() }],
+                    },
                 cancellationToken).ConfigureAwait(false);
             if (read.IsFailure)
                 return read.ToNewResult<List<ConfigurationRow>>();
@@ -257,6 +275,7 @@ internal sealed class ChildSetLoader
         ChildPlan plan,
         string ownerTypeName,
         int levels,
+        ChildNarrowing? narrowing,
         CancellationToken cancellationToken)
     {
         var childMapper = PocoMapperCollection.ByName(descriptor.ChildTypeName);
@@ -271,7 +290,7 @@ internal sealed class ChildSetLoader
         if (grouped.IsFailure)
             return grouped;
 
-        var deeper = await LoadGrandchildren(childMapper, descriptor, plan, rows, items.Value!, levels - 1, cancellationToken).ConfigureAwait(false);
+        var deeper = await LoadGrandchildren(childMapper, descriptor, plan, rows, items.Value!, levels - 1, narrowing, cancellationToken).ConfigureAwait(false);
         if (deeper.IsFailure)
             return deeper;
 
@@ -316,6 +335,7 @@ internal sealed class ChildSetLoader
         List<ConfigurationRow> rows,
         List<object> items,
         int levels,
+        ChildNarrowing? narrowing,
         CancellationToken cancellationToken)
     {
         if (levels <= 0 || !childMapper.CascadeChildren.Any(d => !ConfigurationTrees.IsTree(d, descriptor.ChildType)))
@@ -334,6 +354,6 @@ internal sealed class ChildSetLoader
             owners.Add(new ConfigurationSetOwner(items[i], rowId));
         }
 
-        return await Load(owners, childMapper, plan.ChildName, levels, cancellationToken).ConfigureAwait(false);
+        return await Load(owners, childMapper, plan.ChildName, levels, narrowing, cancellationToken).ConfigureAwait(false);
     }
 }

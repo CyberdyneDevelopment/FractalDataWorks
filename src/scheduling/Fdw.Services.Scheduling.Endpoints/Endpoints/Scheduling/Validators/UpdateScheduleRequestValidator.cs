@@ -19,7 +19,7 @@ public abstract class UpdateScheduleRequestValidator : FdwEndpointValidator<Upda
     /// <summary>Initializes a new instance of the <see cref="UpdateScheduleRequestValidator"/> class.</summary>
     protected UpdateScheduleRequestValidator()
     {
-        // Why NotEmpty only: PUT is partial, so a field is checked only when the caller supplied it; and the name is the route's, naming a
+        // Why NotEmpty only: PATCH is partial, so a field is checked only when the caller supplied it; and the name is the route's, naming a
         // schedule that exists, so a name rule here would refuse an update to a stored name written in another form.
         RuleFor(x => x.Name)
             .NotEmpty()

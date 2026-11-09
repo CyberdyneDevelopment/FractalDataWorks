@@ -7,17 +7,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
 using Fdw.Messages;
-using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Base;
 
 namespace Fdw.Web.RestEndpoints.Tests.Base;
-
-// A stub rather than the real provider: these fixtures are about the executeFunc behavior, not
-// about how a gateway is supplied. Never exercised — DataGateway is exposed but never asserted.
-file sealed class StubGatewayProvider : IDataGatewayProvider
-{
-    public IDataGateway ByName(string name) => throw new NotSupportedException("Not exercised by these tests.");
-}
 
 // Test implementation of GenericEndpointBase for testing
 public class TestGenericEndpoint : GenericEndpointBase<TestRequest, TestResponse>
@@ -25,7 +17,7 @@ public class TestGenericEndpoint : GenericEndpointBase<TestRequest, TestResponse
     private readonly Func<TestRequest, CancellationToken, Task<object>> _executeFunc;
 
     public TestGenericEndpoint(Func<TestRequest, CancellationToken, Task<object>> executeFunc)
-        : base(NullLogger<GenericEndpointBase<TestRequest, TestResponse>>.Instance, new StubGatewayProvider())
+        : base(NullLogger<GenericEndpointBase<TestRequest, TestResponse>>.Instance)
     {
         _executeFunc = executeFunc;
     }
@@ -36,7 +28,6 @@ public class TestGenericEndpoint : GenericEndpointBase<TestRequest, TestResponse
     }
 
     public new ILogger Logger => base.Logger;
-    public new IDataGateway DataGateway => base.DataGateway;
     public new string[] CreateErrorMessages(IGenericResult result) => base.CreateErrorMessages(result);
 }
 

@@ -21,7 +21,7 @@ namespace Fdw.Services.Authentication.Abstractions.Steps;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public sealed class PresentedPasswordCredentialAccessor : IPasswordCredentialAccessor
+public sealed class PresentedPasswordCredentialAccessor : IPresentedPasswordCredentialAccessor
 {
     // The instance's own slot: the scope a transport opens and the step that verifies read one accessor, the
     // singleton DI hands both, so they meet in the same slot.

@@ -225,6 +225,114 @@ public sealed class FlowExecutorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
+    public async Task AMappingRefusalThatCarriesItsFailureIsClassifiedByTheCauseAndKeepsTheSentence()
+    {
+        var cause = GenericResult.Failure(new GenericMessage(MessageSeverity.Error, "the transformation said no", "ETL-20001"));
+        var thrower = new ScriptedComponent(
+            "boom", ["input"], ["output"], (_, _) => throw new FlowMappingRefusedException("the field 'x' was refused", cause));
+        var (sink, _) = Sink("dst");
+        var graph = Graph([Source("src", 100), thrower, sink], [Link("src", "boom"), Link("boom", "dst")]);
+
+        var result = await _sut.Run(graph, Options(), TestContext.Current.CancellationToken);
+
+        RunFailureClassification.Of(result).Code.ShouldBe("ETL-20001");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("FlowMappingRefusedException");
+        result.CurrentMessage.ShouldContain("the field 'x' was refused");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AMappingRefusalThatCarriesNoFailureIsTheFlowsOwnEventAsBefore()
+    {
+        var thrower = new ScriptedComponent(
+            "boom", ["input"], ["output"], (_, _) => throw new FlowMappingRefusedException("the field 'x' was refused"));
+        var (sink, _) = Sink("dst");
+        var graph = Graph([Source("src", 100), thrower, sink], [Link("src", "boom"), Link("boom", "dst")]);
+
+        var result = await _sut.Run(graph, Options(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("the field 'x' was refused");
+    }
+
+    // A component that fails with a coded message ends the run with that message first (FDW-4197): what classifies the run is what failed in the component,
+    // and the sentence the run reports is still the flow's own.
+    private async Task<IGenericResult> RunFailingWith(IGenericResult failure)
+    {
+        var failing = new ScriptedComponent("boom", ["input"], ["output"], (_, _) => Task.FromResult(failure));
+        var (sink, _) = Sink("dst");
+        var graph = Graph([Source("src", 100), failing, sink], [Link("src", "boom"), Link("boom", "dst")]);
+
+        return await _sut.Run(graph, Options(), TestContext.Current.CancellationToken);
+    }
+
+    [Theory]
+    [InlineData("MSSQL-70001", "Dependency", true)]
+    [InlineData("MSSQL-80001", "Transient", true)]
+    [InlineData("MSSQL-40001", "Conflict", false)]
+    [InlineData("MSSQL-100011", "Forbidden", false)]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ARunThatAComponentEndedIsClassifiedByWhatFailedInTheComponentAndNotByTheFlow(string code, string category, bool transient)
+    {
+        var result = await RunFailingWith(GenericResult.Failure(new GenericMessage(MessageSeverity.Error, "the connection said no", code)));
+
+        var kind = RunFailureClassification.Of(result);
+
+        kind.Classified.ShouldBeTrue();
+        kind.Category.ShouldBe(category);
+        kind.Code.ShouldBe(code);
+        kind.Transient.ShouldBe(transient);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task TheSentenceTheRunReportsIsStillTheFlowsOwnAndNamesTheComponentAndTheCause()
+    {
+        var result = await RunFailingWith(GenericResult.Failure(new GenericMessage(MessageSeverity.Error, "the connection said no", "MSSQL-70001")));
+
+        result.IsFailure.ShouldBeTrue();
+        result.FailureReason().Message.ShouldContain("boom");
+        result.FailureReason().Message.ShouldContain("the connection said no");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task TheSentenceNamesTheCodedCauseEvenWhenTheFailureEndsWithAMessageThatIsNotAFailure()
+    {
+        // Seen on dev: a failed connection ended with a message reading "Success", and the run said "could not read rows: Success".
+        IReadOnlyList<IGenericMessage> messages =
+        [
+            new GenericMessage(MessageSeverity.Error, "the connection said no", "MSSQL-70001"),
+            new GenericMessage(MessageSeverity.Information, "Success"),
+        ];
+
+        var result = await RunFailingWith(GenericResult.Failure(messages));
+
+        result.FailureReason().Message.ShouldContain("the connection said no");
+        RunFailureClassification.Of(result).Category.ShouldBe("Dependency");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ACauseThatCarriesNoCodedFailureMessageLeavesTheRunUnclassified()
+    {
+        var result = await RunFailingWith(GenericResult.Failure(new GenericMessage("a record failed")));
+
+        var kind = RunFailureClassification.Of(result);
+
+        // The flow's own message (event 20903) is a coded failure message too: a cause with no code is reported as the flow's category, as before, never as the cause's.
+        kind.Code.ShouldNotBeNull().ShouldNotContain("MSSQL");
+        kind.Transient.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
     public async Task AFailedRunStillHandsBackItsReportNamingTheComponentThatFailed()
     {
         var failing = new ScriptedComponent(

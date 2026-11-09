@@ -21,7 +21,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetTransformationEndpointBase : CrudGetEndpointBase<TransformationNameRequest, TransformationPayload>
 {
-    private readonly TransformationConfigurationProvider _transformations;
+    private readonly ITransformationConfigurationProvider _transformations;
     private readonly TransformationKindContext _context;
 
     /// <summary>Initializes a new instance of the <see cref="GetTransformationEndpointBase"/> class.</summary>
@@ -29,7 +29,7 @@ public abstract class GetTransformationEndpointBase : CrudGetEndpointBase<Transf
     /// <param name="transformations">Reads the Transformation domain.</param>
     /// <param name="settings">Supplies the limits on a calculation.</param>
     protected GetTransformationEndpointBase(ILogger<GetTransformationEndpointBase> logger,
-        TransformationConfigurationProvider transformations, IEffectiveSettingsProvider settings) : base(logger)
+        ITransformationConfigurationProvider transformations, IEffectiveSettingsProvider settings) : base(logger)
     {
         _transformations = transformations;
         _context = new TransformationKindContext(settings, logger);

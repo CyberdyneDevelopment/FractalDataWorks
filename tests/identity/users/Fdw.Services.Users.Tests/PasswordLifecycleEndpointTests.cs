@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System;
 using System.Security.Claims;
@@ -177,8 +178,8 @@ public class PasswordLifecycleEndpointTests
         await endpoint.HandleAsync(PasswordAccount(["Viewer"]), CancellationToken.None);
 
         endpoint.HttpContext.Response.StatusCode.ShouldBe(409);
-        // Named on Roles, so a client can tell it from the route's other 409 (a taken username).
-        endpoint.ValidationFailures.ShouldContain(f => f.PropertyName == "Roles");
+        // The reason is the refusal's own client text, so a client can tell it from the route's other 409 (a taken username).
+        (await BodyOf(endpoint)).ShouldContain("None of these roles allows password sign-in");
         credentials.VerifyNoOtherCalls();
     }
 
@@ -209,7 +210,7 @@ public class PasswordLifecycleEndpointTests
         await endpoint.HandleAsync(PasswordAccount(["Viewer", "PasswordSignIn"], username: "vendor"), CancellationToken.None);
 
         endpoint.HttpContext.Response.StatusCode.ShouldBe(409);
-        endpoint.ValidationFailures.ShouldContain(f => f.PropertyName == "Username");
+        (await BodyOf(endpoint)).ShouldContain("A user with this username already exists");
         store.Writes.ShouldBeEmpty();
         credentials.VerifyNoOtherCalls();
     }
@@ -223,8 +224,17 @@ public class PasswordLifecycleEndpointTests
         await endpoint.HandleAsync(PasswordAccount(["Viewer"], username: "jane.doe@example.com"), CancellationToken.None);
 
         // Past the username check, so refused on the roles instead (no password flow admits "Viewer").
-        endpoint.ValidationFailures.ShouldNotContain(f => f.PropertyName == "Username");
-        endpoint.ValidationFailures.ShouldContain(f => f.PropertyName == "Roles");
+        var body = await BodyOf(endpoint);
+        body.ShouldNotContain("A user with this username already exists");
+        body.ShouldContain("None of these roles allows password sign-in");
+    }
+
+    private static async Task<string> BodyOf(CreateUser endpoint)
+    {
+        var stream = endpoint.HttpContext.Response.Body;
+        stream.Position = 0;
+        using var reader = new StreamReader(stream, leaveOpen: true);
+        return await reader.ReadToEndAsync();
     }
 
     private static CreateUserRequest PasswordAccount(string[] roles, string username = "newhire") => new()
@@ -237,6 +247,8 @@ public class PasswordLifecycleEndpointTests
     private static Action<DefaultHttpContext> CreateContext(bool admits, Action<IReadOnlyCollection<string>>? onAsked = null)
         => ctx =>
         {
+            // Readable, so a test can read the answer the endpoint wrote.
+            ctx.Response.Body = new MemoryStream();
             ctx.User = new ClaimsPrincipal(new ClaimsIdentity(
                 [new Claim(Fdw.Claims.Abstractions.ClaimDefinitions.tenantId.Name, Guid.NewGuid().ToString())], "test"));
             var grants = new Mock<Fdw.Services.Authorization.Abstractions.IRoleGrants>();

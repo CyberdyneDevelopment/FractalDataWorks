@@ -1,23 +1,27 @@
 # Fdw.Services.TokenManagers
 
-The token-manager domain — issuing and validating tokens, as a collection of kinds.
+The token-manager domain: minting, signing and revoking this host's own bearer tokens.
 
-Registration lives in the option, not in a host's `Program.cs`. Each option carries three replaceable phase bodies — **Configure**, **Register**, **Initialize** — where the first two take and return the `IHostApplicationBuilder` and the third takes and returns the `IServiceProvider`. Referencing this package is what enlists its options: a module initializer collects and dedupes them at assembly load.
+Since FDW-672 this is not a collection of kinds. `TokenManagerTypes` is one hand-written three-phase registrant
+(`[PlatformServiceProvider(ServiceCategory = "TokenManager")]`): **Register** adds the `auth.TokenManager` and
+`auth.JwtTokenManagerConfiguration` configuration providers, `JwtIssuanceResolver`, `ITokenIssuer` (as the
+`ConfiguredTokenIssuer` pass-through), `ISigningCredentialProvider` (as `ConfiguredSigningCredentialProvider`) and the
+scoped `ITokenRevocationStore`; **Initialize** connects the Jwt configuration provider to the token-manager domain.
+Referencing this package is what enlists it; no host registers anything itself. A deployment mints as exactly one
+issuer: the enabled `auth.TokenManager` row whose `Implementation` is `Jwt`.
 
-## Collections
+## Types
 
-| Type | Kind | Purpose |
-|---|---|---|
-| `TokenManagerTypes` | class | Collection of token manager service types. Structurally copies SchedulerTypes and is collected by… |
+| Type | Purpose |
+|---|---|
+| `TokenManagerTypes` | The registrant above; also declares `SigningCredentialCacheLifetime` (how long a fetched signing key is reused) |
+| `JwtIssuanceResolver` | Reads the Jwt token manager rows on first use and builds `JwtTokenIssuer` and `SecretManagerSigningCredentialProvider` from them, together |
+| `JwtTokenIssuer` | Mints a signed RS256 JWT (RFC 9068 access-token profile) asserting what a completed sign-in flow established |
+| `SecretManagerSigningCredentialProvider` | Fetches the PEM signing key by name from the named secret manager, caches it, re-reads it when the cache lapses |
+| `TokenRevocationStore` | Deny-lists a token by `jti` (`RevokedAccessToken`) or every token of a user up to a moment (`UserTokenRevocation`) |
+| `JwtTokenManagerConfiguration` | The typed body: `Issuer`, `AccessTokenLifetime`, `SecretManagerName`, `SecretKeyName`, all required |
 
-## Configuration
-
-Configuration classes are `[ManagedConfiguration]`: they generate their own DDL, validation and UI form metadata, and are read back as rows rather than from JSON.
-
-| Type | Kind | Purpose |
-|---|---|---|
-| `TokenManagerConfiguration` | class | Header configuration for token manager services representing the auth.TokenManager parent table. Fields… |
-| `TokenManagerTypeBase<TService, TConfiguration, TFactory>` | class | Base class for token manager service type definitions. Structurally copies SchedulerTypeBase… |
+How it fits together, with the configuration tables and failure messages: `public/wiki/10-03-Building-Authentication-Service.md`.
 
 ## Installation
 

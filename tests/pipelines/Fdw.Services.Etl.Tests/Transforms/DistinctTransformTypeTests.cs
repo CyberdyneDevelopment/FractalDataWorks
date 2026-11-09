@@ -152,6 +152,6 @@ public sealed class DistinctTransformTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11056");
+        result.Messages[^1].Code.ShouldBe("ETL-91015");
     }
 }

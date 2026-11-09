@@ -18,7 +18,7 @@ public abstract class QueryNotificationRulesEndpointBase : QueryDomainEndpointBa
     /// <summary>Initializes a new instance of the <see cref="QueryNotificationRulesEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="ruleProvider">Reads the page from the notification rules domain table.</param>
-    protected QueryNotificationRulesEndpointBase(ILogger logger, NotificationRuleConfigurationProvider ruleProvider)
+    protected QueryNotificationRulesEndpointBase(ILogger logger, INotificationRuleConfigurationProvider ruleProvider)
         : base(logger, ruleProvider)
     {
     }

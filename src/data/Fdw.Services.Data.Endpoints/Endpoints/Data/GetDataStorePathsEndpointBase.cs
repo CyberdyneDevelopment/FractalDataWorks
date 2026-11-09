@@ -19,10 +19,10 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class GetDataStorePathsEndpointBase : CrudGetEndpointBase<DataStoreNameRequest, List<DataStorePathResponse>>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected GetDataStorePathsEndpointBase(ILogger<GetDataStorePathsEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    protected GetDataStorePathsEndpointBase(ILogger<GetDataStorePathsEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }

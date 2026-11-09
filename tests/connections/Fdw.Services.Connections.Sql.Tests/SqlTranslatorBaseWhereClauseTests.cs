@@ -91,6 +91,9 @@ public sealed class SqlTranslatorBaseWhereClauseTests
             }
         };
 
+        // A key list is built inside the connection's scope.
+        using var scope = KeyListSpillScope.Begin(new TranslationSettings(50), "[t]");
+
         var (sql, captured) = BuildWhere(filter);
 
         sql.ShouldContain("SELECT NULL WHERE FALSE");
@@ -111,6 +114,9 @@ public sealed class SqlTranslatorBaseWhereClauseTests
                 Value = new[] { 1, 2, 3 }
             }
         };
+
+        // A key list is built inside the connection's scope; this list is within its setting.
+        using var scope = KeyListSpillScope.Begin(new TranslationSettings(50), "[t]");
 
         var (sql, captured) = BuildWhere(filter);
 
