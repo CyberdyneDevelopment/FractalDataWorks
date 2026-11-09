@@ -97,6 +97,11 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
             if (DeleteScope.Problem(command) is { } problem)
                 return Task.FromResult(GenericResult<SqlCommand>.Failure(DeleteScopeLog.Refused(NullLogger<MsSqlDeleteTranslator>.Instance, container.Name, problem)));
 
+            // A filter value a date column cannot be compared with is refused here, with its own code, not sent to SQL Server as a parameter (FDW-4726).
+            var refused = MsSqlDateValues.Refusal(container.Name, container.Schema.Fields, command.Filter);
+            if (refused is not null)
+                return Task.FromResult(refused.ToNewResult<SqlCommand>());
+
             // A soft delete flags rows instead of removing them (FDW-1107).
             var soft = MsSqlSoftDeleteSql.For(command, container, dbPath.Dialect, allowAbsentSet: true);
             if (soft.Applies || soft.Problem is not null)

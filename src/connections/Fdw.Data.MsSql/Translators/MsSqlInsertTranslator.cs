@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
@@ -46,9 +47,15 @@ public sealed partial class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBa
 
             MsSqlInsertTranslatorLog.Translating(NullLogger<MsSqlInsertTranslator>.Instance, container.Name);
 
+            // The rows are read once and checked before any statement is built: a value a date column cannot take is refused here, with its own code, not left for SQL Server (FDW-4726).
             var (dbPath, rows) = source.Value!;
+            var entities = rows.Cast<object>().ToList();
+            var refused = MsSqlDateValues.Refusal(container.Name, InsertColumns.Supplied(InsertableFields(container), entities), entities);
+            if (refused is not null)
+                return Task.FromResult(refused.ToNewResult<SqlCommand>());
+
             return Task.FromResult(GenericResult<SqlCommand>.Success(
-                BuildBatchedInsertStatements(container, dbPath, rows, ReturnedColumnsOf(command, container))));
+                BuildBatchedInsertStatements(container, dbPath, entities, ReturnedColumnsOf(command, container))));
         }
         catch (Exception ex)
         {

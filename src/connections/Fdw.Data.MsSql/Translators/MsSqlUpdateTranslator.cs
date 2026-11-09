@@ -110,6 +110,12 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
             if (soft.Problem is not null)
                 return Task.FromResult(MsSqlSoftDeleteSql.Refusal(soft));
 
+            // A value a date column cannot take is refused here, with its own code, not left for SQL Server (FDW-4726).
+            var refused = MsSqlDateValues.Refusal(container.Name, UpdatableFields(container), new[] { dataObj })
+                ?? MsSqlDateValues.Refusal(container.Name, container.Schema.Fields, command.Filter);
+            if (refused is not null)
+                return Task.FromResult(refused.ToNewResult<SqlCommand>());
+
             // Build UPDATE statement with strongly-typed Filter property (no reflection!)
             var sqlCommand = BuildUpdateStatement(container, dbPath, dataObj, command.Filter, soft, ReturnedColumnsOf(command, container));
 
@@ -156,6 +162,23 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
     ];
 
     /// <summary>
+    /// The columns an update may set: the container's fields without the PK, identity, computed and system-provided columns. System-provided columns (e.g. RowId via
+    /// newsequentialid(), audit CreateDate/ModifyDate, IsCurrent/IsDeleted version flags) must not appear in SET: including RowId there violates child FK constraints
+    /// (FK_*_RowId) on version-on-write parents.
+    /// </summary>
+    private static List<IField> UpdatableFields(IStorageContainer container)
+    {
+        var pkFieldName = container.GetPrimaryKeyFieldName();
+        return container.Schema.Fields
+            .Where(f =>
+                !string.Equals(f.Name, pkFieldName, StringComparison.OrdinalIgnoreCase)
+                && !f.IsIdentity
+                && !f.IsComputed
+                && !f.IsSystemProvided)
+            .ToList();
+    }
+
+    /// <summary>
     /// Builds a complete T-SQL UPDATE statement.
     /// </summary>
     [ConventionOverride(MaxCyclomaticComplexity = 15)]  // SQL UPDATE builder with field filtering, reflection, and conditional WHERE clause (filter vs primary key)
@@ -169,19 +192,7 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
     {
         var dialect = dbPath.Dialect;
 
-        var pkFieldName = container.GetPrimaryKeyFieldName();
-        // Get columns from schema (exclude PK, identity, computed, and system-provided
-        // columns). System-provided columns (e.g. RowId via newsequentialid(), audit
-        // CreateDate/ModifyDate, IsCurrent/IsDeleted version flags) must not appear in
-        // SET — including RowId there violates child FK constraints (FK_*_RowId) on
-        // version-on-write parents.
-        var updateFields = container.Schema.Fields
-            .Where(f =>
-                !string.Equals(f.Name, pkFieldName, StringComparison.OrdinalIgnoreCase)
-                && !f.IsIdentity
-                && !f.IsComputed
-                && !f.IsSystemProvided)
-            .ToList();
+        var updateFields = UpdatableFields(container);
 
         if (updateFields.Count == 0)
         {

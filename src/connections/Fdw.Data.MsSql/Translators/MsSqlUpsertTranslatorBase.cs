@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Data;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
@@ -111,7 +112,13 @@ public abstract class MsSqlUpsertTranslatorBase : MsSqlDataCommandTranslatorBase
         if (problem is not null)
             return Refused(containerName, problem.Message);
 
-        var json = MsSqlRowStaging.Serialize(rows, options.WriteColumns, out var rowsProblem);
+        // The rows are read once; a value a date column cannot take is refused here, with MSSQL-21030, not left for the database to fail converting the staged JSON (FDW-4726).
+        var all = rows.Cast<object>().ToList();
+        var refused = MsSqlDateValues.Refusal(container, options.WriteColumns, all);
+        if (refused is not null)
+            return refused.ToNewResult<SqlCommand>();
+
+        var json = MsSqlRowStaging.Serialize(all, options.WriteColumns, out var rowsProblem);
         if (rowsProblem is not null)
             return Refused(containerName, rowsProblem);
 

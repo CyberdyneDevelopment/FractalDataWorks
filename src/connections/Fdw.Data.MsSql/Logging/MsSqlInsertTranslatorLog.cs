@@ -101,6 +101,17 @@ public static partial class MsSqlInsertTranslatorLog
         string container,
         string actualType);
 
+    /// <summary>Reports a value written to a date column that is not a date (FDW-4726). The value itself is not logged, only its kind.</summary>
+    [MessageLogging(
+        EventId = 21030,
+        Level = LogLevel.Error,
+        Message = "MsSqlInsertTranslator: column '{column}' of container '{container}' takes a date; a value of kind {valueKind} is not a date")]
+    public static partial IGenericMessage InvalidDateValue(
+        ILogger logger,
+        string container,
+        string column,
+        string valueKind);
+
     /// <summary>Reports an insert with no rows.</summary>
     [MessageLogging(
         EventId = 22000,

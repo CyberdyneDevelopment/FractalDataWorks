@@ -42,11 +42,19 @@ public sealed class MsSqlDateConverter()
     /// <inheritdoc/>
     public override object? ToDb(object? clrValue)
     {
-        if (clrValue is DateOnly dateOnly)
+        return clrValue switch
         {
-            return dateOnly.ToDateTime(TimeOnly.MinValue);
-        }
-
-        return clrValue;
+            DateOnly dateOnly => dateOnly.ToDateTime(TimeOnly.MinValue),
+            DateTimeOffset moment => moment.DateTime.Date,
+            string text => DayOf(text),
+            _ => clrValue,
+        };
     }
+
+    // A day written as text ("10/27/2026", "2026-10-27", with or without a time): the invariant culture reads the month first. Text that is not a date is returned as it came: ToDb has no
+    // way to report a failure (no result), so the bulk plan, which has one, refuses the value with its own code (MSSQL-21030), naming the column and the kind of value.
+    private static object DayOf(string text) =>
+        DateTime.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var moment)
+            ? moment.Date
+            : text;
 }

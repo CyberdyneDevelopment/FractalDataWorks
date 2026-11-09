@@ -53,7 +53,11 @@ public sealed partial class MsSqlInsertTranslator
                     $"The rows have no properties matching insertable fields for container {container.Name}");
             }
 
-            var rows = ConvertToDataTable(entities, fields);
+            var table = ConvertToDataTable(entities, fields, container.Name);
+            if (table.IsFailure)
+                return table.ToNewResult<MsSqlBulkCopyPlan>();
+
+            var rows = table.Value!;
             MsSqlInsertTranslatorLog.Planned(
                 NullLogger<MsSqlInsertTranslator>.Instance, container.Name, rows.Rows.Count);
 
@@ -71,7 +75,7 @@ public sealed partial class MsSqlInsertTranslator
     }
 
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // DataTable conversion with type inference from field metadata and switch-based type mapping
-    private static DataTable ConvertToDataTable(IEnumerable collection, List<IField> fields)
+    private static IGenericResult<DataTable> ConvertToDataTable(IEnumerable collection, List<IField> fields, string container)
     {
         var dataTable = new DataTable();
 
@@ -103,19 +107,35 @@ public sealed partial class MsSqlInsertTranslator
         foreach (var entity in collection)
         {
             var row = dataTable.NewRow();
-            FillRow(row, entity, fields);
+            var filled = FillRow(row, entity, fields, container);
+            if (filled.IsFailure)
+                return filled.ToNewResult<DataTable>();
+
             dataTable.Rows.Add(row);
         }
 
-        return dataTable;
+        return GenericResult<DataTable>.Success(dataTable);
     }
 
-    private static void FillRow(DataRow row, object entity, List<IField> fields)
+    // Each value goes in as its column's type; a value a date column cannot take (text that is not a date) refuses the plan with its own code, naming the column and the kind of value.
+    private static IGenericResult FillRow(DataRow row, object entity, List<IField> fields, string container)
     {
         foreach (var field in fields)
         {
             RowValues.TryRead(entity, field.Name, out var value, out _);
-            row[field.Name] = value ?? DBNull.Value;
+            var column = row.Table.Columns[field.Name]!;
+            if (value is null)
+            {
+                row[column] = DBNull.Value;
+                continue;
+            }
+
+            if (!MsSqlBulkCopyColumnValue.TryFit(column.DataType, value, out var fitted))
+                return MsSqlDateValues.Invalid(container, field.Name, value);
+
+            row[column] = fitted;
         }
+
+        return GenericResult.Success();
     }
 }

@@ -106,6 +106,11 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                 return Task.FromResult(GenericResult<SqlCommand>.Failure(
                     MsSqlTranslatorLog.ContainerNotDataContainer(NullLogger<MsSqlQueryTranslator>.Instance, container.Name)));
 
+            // A filter value a date column cannot be compared with is refused here, with its own code, not sent to SQL Server as a parameter (FDW-4726).
+            var refused = MsSqlDateValues.Refusal(container.Name, container.Schema.Fields, command.Filter);
+            if (refused is not null)
+                return Task.FromResult(refused.ToNewResult<SqlCommand>());
+
             var returnedFieldNames = ReturnedFieldNames(command, container);
 
             // Why no fall-back to every declared column: a container whose fields are all withheld
