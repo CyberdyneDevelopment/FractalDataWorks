@@ -24,7 +24,7 @@ public static class DataSetCategoryLinks
     /// <param name="logger">The logger a stored tree that is not sound is reported through.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The tree of the DataSet type, or the failure.</returns>
-    public static Task<IGenericResult<CategoryTree>> Tree(CategoryConfigurationProvider categories, ILogger logger, CancellationToken ct) =>
+    public static Task<IGenericResult<CategoryTree>> Tree(ICategoryConfigurationProvider categories, ILogger logger, CancellationToken ct) =>
         CategoryTrees.Load(categories, DataSetCategoryConfiguration.ImplementationName, logger, ct);
 
     /// <summary>Finds the category a request names.</summary>
@@ -70,7 +70,7 @@ public static class DataSetCategoryLinks
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The tree and the category's identity (null for none), or the refusal.</returns>
     public static Task<IGenericResult<(CategoryTree Tree, Guid? Id)>> Requested(
-        CategoryConfigurationProvider categories, string? name, ILogger logger, CancellationToken ct) =>
+        ICategoryConfigurationProvider categories, string? name, ILogger logger, CancellationToken ct) =>
         CategoryLinks.Requested(categories, DataSetCategoryConfiguration.ImplementationName, name, logger, ct);
 
     /// <summary>Lists the data sets of the kinds asked for that sit under any of the categories asked about; a missing limit leaves that side unlimited.</summary>
@@ -80,7 +80,7 @@ public static class DataSetCategoryLinks
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The data sets, read without their children, or the failure.</returns>
     public static async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Matching(
-        DataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid>? categoryIds, IReadOnlyList<string> kinds, CancellationToken ct)
+        IDataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid>? categoryIds, IReadOnlyList<string> kinds, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(dataSets);
         ArgumentNullException.ThrowIfNull(kinds);
@@ -113,7 +113,7 @@ public static class DataSetCategoryLinks
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The data sets, read without their children, or the failure.</returns>
     public static async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Citing(
-        DataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid> categoryIds, CancellationToken ct)
+        IDataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid> categoryIds, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(dataSets);
         ArgumentNullException.ThrowIfNull(categoryIds);

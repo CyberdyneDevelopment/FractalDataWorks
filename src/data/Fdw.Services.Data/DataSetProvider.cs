@@ -165,14 +165,20 @@ public sealed class DataSetProvider
                 DataServiceResultCodes.ByName("DataSetNameRequired"), _logger);
         }
 
-        if (_configurationProvider != null)
+        // Why three answers (FDW-3630): a read that failed is returned with its own code and messages, and a provider with no configuration source cannot answer; only a read that
+        // succeeded and found nothing is DataSetNotFound, so a failed read is never reported to the caller as a missing data set.
+        if (_configurationProvider is null)
+            return GenericResult<IDataSetImplementationConfiguration>.Failure(DataSetProviderLog.ConfigurationProviderMissing(_logger));
+
+        var configResult = await _configurationProvider.Get(name, cancellationToken).ConfigureAwait(false);
+        if (configResult.IsFailure)
+            return GenericResult<IDataSetImplementationConfiguration>.Failure(
+                new[] { DataSetProviderLog.DataSetReadFailed(_logger, name, configResult.FailureReason().Message) }.Concat(configResult.Messages));
+
+        if (configResult.Value != null)
         {
-            var configResult = await _configurationProvider.Get(name, cancellationToken).ConfigureAwait(false);
-            if (configResult.IsSuccess && configResult.Value != null)
-            {
-                DataSetProviderLog.DataSetRetrieved(_logger, name);
-                return configResult;
-            }
+            DataSetProviderLog.DataSetRetrieved(_logger, name);
+            return configResult;
         }
 
         DataSetProviderLog.DataSetNotFound(_logger, name);
@@ -186,14 +192,19 @@ public sealed class DataSetProvider
     {
         DataSetProviderLog.TraceGetDataSetByIdEntry(_logger, id);
 
-        if (_configurationProvider != null)
+        // Why three answers: see Get(string) (FDW-3630).
+        if (_configurationProvider is null)
+            return GenericResult<IDataSetImplementationConfiguration>.Failure(DataSetProviderLog.ConfigurationProviderMissing(_logger));
+
+        var configResult = await _configurationProvider.Get(id, cancellationToken).ConfigureAwait(false);
+        if (configResult.IsFailure)
+            return GenericResult<IDataSetImplementationConfiguration>.Failure(
+                new[] { DataSetProviderLog.DataSetReadByIdFailed(_logger, id, configResult.FailureReason().Message) }.Concat(configResult.Messages));
+
+        if (configResult.Value != null)
         {
-            var configResult = await _configurationProvider.Get(id, cancellationToken).ConfigureAwait(false);
-            if (configResult.IsSuccess && configResult.Value != null)
-            {
-                DataSetProviderLog.DataSetRetrievedById(_logger, id, "configurationProvider");
-                return configResult;
-            }
+            DataSetProviderLog.DataSetRetrievedById(_logger, id, "configurationProvider");
+            return configResult;
         }
 
         DataSetProviderLog.DataSetByIdNotFound(_logger, id);
@@ -207,25 +218,17 @@ public sealed class DataSetProvider
     {
         DataSetProviderLog.TraceGetAllDataSetsEntry(_logger);
 
-        var dataSets = new List<IDataSetImplementationConfiguration>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Why a failed read is returned and not answered as an empty list (FDW-3630): the list is the data sets that exist, so an empty one says there are none, and the caller
+        // cannot tell a store that holds none from a store that could not be read. A provider that was never given the configuration source cannot answer at all.
+        if (_configurationProvider is null)
+            return GenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>.Failure(DataSetProviderLog.ConfigurationProviderMissing(_logger));
 
-        if (_configurationProvider != null)
-        {
-            var dbResult = await _configurationProvider.Get(cancellationToken).ConfigureAwait(false);
-            if (dbResult.IsSuccess && dbResult.Value != null)
-            {
-                foreach (var cfg in dbResult.Value)
-                {
-                    dataSets.Add(cfg);
-                    seen.Add(cfg.Name);
-                }
-            }
-            else
-            {
-                DataSetProviderLog.CfgDataSetLoadFailed(_logger, dbResult.NoValueReason().Message);
-            }
-        }
+        var dbResult = await _configurationProvider.Get(cancellationToken).ConfigureAwait(false);
+        if (!dbResult.IsSuccess || dbResult.Value is null)
+            return GenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>.Failure(
+                new[] { DataSetProviderLog.CfgDataSetLoadFailed(_logger, dbResult.NoValueReason().Message) }.Concat(dbResult.Messages));
+
+        var dataSets = new List<IDataSetImplementationConfiguration>(dbResult.Value);
 
         DataSetProviderLog.AllDataSetsRetrieved(_logger, dataSets.Count);
         return GenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>.Success(dataSets.AsReadOnly());

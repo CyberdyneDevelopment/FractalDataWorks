@@ -27,7 +27,7 @@ namespace Fdw.Services.Workspaces.Endpoints;
 public abstract class UpdateWorkspaceRelationshipEndpointBase
     : CrudUpdateEndpointBase<UpdateWorkspaceRelationshipRequest, WorkspaceMapEdgeDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IDataSetConfigurationProvider _dataSets;
 
@@ -39,7 +39,7 @@ public abstract class UpdateWorkspaceRelationshipEndpointBase
     /// <inheritdoc />
     protected UpdateWorkspaceRelationshipEndpointBase(
         ILogger<UpdateWorkspaceRelationshipEndpointBase> logger,
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IDataSetConfigurationProvider dataSets) : base(logger)
     {

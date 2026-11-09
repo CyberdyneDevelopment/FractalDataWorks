@@ -17,16 +17,16 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for updating an existing data set configuration.
-/// Delegates all reads and writes to DataSetConfigurationProvider.
+/// Delegates all reads and writes to IDataSetConfigurationProvider.
 /// </summary>
 public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateDataSetRequest, DataSetDetailResponse>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
+    private readonly ICategoryConfigurationProvider _categories;
 
     /// <inheritdoc />
     protected UpdateDataSetEndpointBase(
-        ILogger<UpdateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories) : base(logger)
+        ILogger<UpdateDataSetEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider, ICategoryConfigurationProvider categories) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
         _categories = categories ?? throw new ArgumentNullException(nameof(categories));

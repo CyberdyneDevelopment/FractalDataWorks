@@ -20,7 +20,7 @@ public abstract class QueryUsersEndpointBase : QueryDomainEndpointBase<UserDomai
     /// <summary>Initializes a new instance of the <see cref="QueryUsersEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="userProvider">Reads the page from the users domain table.</param>
-    protected QueryUsersEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    protected QueryUsersEndpointBase(ILogger logger, IUserConfigurationProvider userProvider)
         : base(logger, userProvider)
     {
     }

@@ -34,6 +34,9 @@ public sealed class ProbeTransportConnectionType : ConnectionTypeBase<IGenericCo
 {
     public ProbeTransportConnectionType() : base("ProbeTransport", "ProbeTransport", "Probe transport", "Carries files for these tests", "Test") { }
 
+    protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration> EndpointAuthenticationDeclaration
+        => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration>.None;
+
     protected override Fdw.Results.IGenericResult<bool> DecideHostIdentity(MockConnectionConfiguration configuration)
         => Fdw.Results.GenericResult<bool>.Success(false);
 
@@ -55,6 +58,9 @@ public sealed class ProbeTransportConnectionType : ConnectionTypeBase<IGenericCo
 public sealed class ProbeNoStoresConnectionType : ConnectionTypeBase<IGenericConnection, IMockConnectionFactory, MockConnectionConfiguration>
 {
     public ProbeNoStoresConnectionType() : base("ProbeNoStores", "ProbeNoStores", "Probe no stores", "Backs no data store type", "Test") { }
+
+    protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration> EndpointAuthenticationDeclaration
+        => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration>.None;
 
     protected override Fdw.Results.IGenericResult<bool> DecideHostIdentity(MockConnectionConfiguration configuration)
         => Fdw.Results.GenericResult<bool>.Success(false);

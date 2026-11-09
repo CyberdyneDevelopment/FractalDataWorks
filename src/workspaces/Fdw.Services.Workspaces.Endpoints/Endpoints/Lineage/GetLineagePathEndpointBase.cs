@@ -18,7 +18,7 @@ public abstract class GetLineagePathEndpointBase : LineageEndpointBase<LineagePa
     protected GetLineagePathEndpointBase(
         ILogger logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,

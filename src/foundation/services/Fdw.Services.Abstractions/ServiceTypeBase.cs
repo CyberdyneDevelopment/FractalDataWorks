@@ -5,6 +5,7 @@ using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Configuration;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes.Logging;
@@ -31,7 +32,8 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     : GuidTypeOptionBase<IServiceType<Guid>>,
       IServiceType<Guid, TService, TFactory, TConfiguration>,
       IServiceType,
-      IDeclaresDefaults
+      IDeclaresDefaults,
+      IServiceRequirements
     where TService : IGenericService
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IServiceFactory<TService, TConfiguration>
@@ -91,6 +93,28 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     private IPhaseState _configure = PhaseStates.NotRun;
     private IPhaseState _register = PhaseStates.NotRun;
     private IPhaseState _initialize = PhaseStates.NotRun;
+
+    private readonly List<ServiceRequirement> _requirements = new();
+
+    /// <summary>Gets the services this service type needs registered (FDW-4588).</summary>
+    public IReadOnlyList<ServiceRequirement> Requirements => _requirements;
+
+    /// <summary>
+    /// Declares a service this service type needs registered, set from its constructor. Its collection's Initialize fails, with <paramref name="message"/>, when the built host has no registration
+    /// for it (FDW-4588).
+    /// </summary>
+    /// <typeparam name="TRequired">The service that must be registered.</typeparam>
+    /// <param name="message">The coded message for the service being absent: a <c>[MessageLogging]</c> method, passed as a method group.</param>
+    /// <remarks>
+    /// Why on the option and not the collection: a host that never attached this option is not asked for the service. The requirement stays with the option when a host replaces its Initialization body.
+    /// </remarks>
+    protected void Requires<TRequired>(Func<ILogger, IGenericMessage> message)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        _requirements.Add(new ServiceRequirement(typeof(TRequired), message));
+    }
 
     /// <summary>Gets whether Configure has not run, is deferred, or has run.</summary>
     /// <remarks>

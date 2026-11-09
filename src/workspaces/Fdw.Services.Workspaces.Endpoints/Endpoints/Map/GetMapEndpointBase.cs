@@ -39,7 +39,7 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
     protected GetMapEndpointBase(
         ILogger<GetMapEndpointBase> logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,

@@ -18,7 +18,7 @@ namespace Fdw.Services.Pipelines.Tests;
 
 /// <summary>
 /// Covers the registration of <see cref="PipelineServiceConfigurationProvider"/>: one singleton is
-/// published under the domain interface and every forward, and registering succeeds when no
+/// published under the domain interfaces and the concrete alias, and registering succeeds when no
 /// operational connection is named.
 /// </summary>
 [Trait("Category", "Configuration")]
@@ -44,11 +44,11 @@ public sealed class PipelineServiceConfigurationProviderTests
         using var provider = builder.Services.BuildServiceProvider();
         var byInterface = provider.GetRequiredService<IPipelineConfigurationProvider>();
         var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
+        concrete.ShouldBeSameAs(byInterface);
         // A domain provider since the domain/implementation split: it is published under the domain
         // contract, not the implementation-provider names it carried before.
         var asDomain = provider.GetRequiredService<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>();
 
-        concrete.ShouldBeSameAs(byInterface);
         asDomain.ShouldBeSameAs(concrete);
         concrete.DataStoreName.ShouldBe(PipelineServiceTypes.ConfigurationConnection);
         concrete.PathName.ShouldBe("pipe");
@@ -71,7 +71,7 @@ public sealed class PipelineServiceConfigurationProviderTests
         PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
         using var provider = builder.Services.BuildServiceProvider();
-        var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
+        var concrete = provider.GetRequiredService<IPipelineConfigurationProvider>().ShouldBeOfType<PipelineServiceConfigurationProvider>();
         concrete.Placement.ShouldBeSameAs(registered);
         concrete.PlacementKind.ShouldBe("Pipeline");
     }
@@ -89,7 +89,7 @@ public sealed class PipelineServiceConfigurationProviderTests
         PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
         using var provider = builder.Services.BuildServiceProvider();
-        provider.GetRequiredService<PipelineServiceConfigurationProvider>().Placement.ShouldBeOfType<UnavailablePlacement>();
+        provider.GetRequiredService<IPipelineConfigurationProvider>().ShouldBeOfType<PipelineServiceConfigurationProvider>().Placement.ShouldBeOfType<UnavailablePlacement>();
     }
 
     [Fact]

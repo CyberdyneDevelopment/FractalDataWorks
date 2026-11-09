@@ -17,14 +17,14 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public abstract class CreateCategoryEndpointBase : CrudCreateEndpointBase<CategoryPayload, CategoryPayload>
 {
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly ICategoryConfigurationProvider _categories;
     private readonly ITenantContext _tenant;
 
     /// <summary>Initializes a new instance of the <see cref="CreateCategoryEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="categories">The categories.</param>
     /// <param name="tenant">The tenant the category is created in.</param>
-    protected CreateCategoryEndpointBase(ILogger<CreateCategoryEndpointBase> logger, CategoryConfigurationProvider categories, ITenantContext tenant)
+    protected CreateCategoryEndpointBase(ILogger<CreateCategoryEndpointBase> logger, ICategoryConfigurationProvider categories, ITenantContext tenant)
         : base(logger)
     {
         _categories = categories;

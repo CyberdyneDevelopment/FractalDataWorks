@@ -13,7 +13,6 @@ using Fdw.Data;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
-using Fdw.Services.Pipelines;
 // DataSetRecord and DataSetSourceConfiguration now in this namespace
 // ApiEndpointLog now in this namespace
 using Microsoft.Extensions.Logging;
@@ -23,6 +22,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
 using Fdw.Results;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -33,13 +33,13 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetDataSetLineageEndpointBase> _logger;
-    private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly IPipelineConfigurationProvider _pipelineProvider;
     private readonly ICalculationConfigurationProvider _calculations;
 
     /// <inheritdoc />
     protected GetDataSetLineageEndpointBase(
         DataSetConfigurationProvider dataSetProvider,
-        PipelineServiceConfigurationProvider pipelineProvider,
+        IPipelineConfigurationProvider pipelineProvider,
         ICalculationConfigurationProvider calculations,
         ILogger<GetDataSetLineageEndpointBase> logger)
     {

@@ -12,7 +12,7 @@ namespace Fdw.Services.Connections.Abstractions.Authentication;
 /// authentication method needs regardless of which connection it authenticates: whether opening a
 /// connection with it needs a secret resolved first.
 /// </summary>
-public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<TSelf>
+public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<TSelf>, IConnectionAuthenticationType
     where TSelf : ITypeOption<int, TSelf>
 {
     /// <summary>
@@ -47,6 +47,30 @@ public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<T
     /// the platform itself.
     /// </summary>
     public bool RequiresSecret { get; }
+
+    /// <summary>
+    /// Gets the authentication values this method accepts: every name a connection's authentication may hold for it, its
+    /// credential fields and the secret manager included.
+    /// </summary>
+    /// <remarks>
+    /// Abstract so every method states it; a key outside it is not a value the method reads, so it is refused when a
+    /// connection is saved and masked when one is shown (FDW-4607).
+    /// </remarks>
+    public abstract IReadOnlyList<string> ExpectedProperties { get; }
+
+    /// <summary>
+    /// Gets the names in <paramref name="names"/> that this method does not expect.
+    /// </summary>
+    /// <param name="names">The names of the connection's authentication values.</param>
+    /// <returns>The unexpected names, in the order given; never their values. Every name when the method is unrecognised.</returns>
+    public IReadOnlyList<string> UnexpectedProperties(IEnumerable<string> names)
+    {
+        if (names is null) throw new ArgumentNullException(nameof(names));
+
+        return names
+            .Where(key => !ExpectedProperties.Contains(key, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+    }
 
     /// <summary>
     /// Whether a connection opened with this authentication method presents the host's own identity -- the
@@ -106,7 +130,7 @@ public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<T
     /// </summary>
     /// <param name="values">The connection's authentication values.</param>
     /// <param name="maskValue">What a masked value is shown as.</param>
-    /// <returns>The values with the credential references masked; the secret manager and the settings are shown as they are.</returns>
+    /// <returns>The values with the credential references and any unexpected key masked; the secret manager and the settings are shown as they are.</returns>
     /// <remarks>
     /// Why: a credential's value is the name of a secret, and a caller never learns where a credential is kept. The secret
     /// manager's name and the method's settings are not secret. An unrecognised method (the NotFound sentinel has no
@@ -122,7 +146,11 @@ public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<T
         foreach (var entry in values)
             masked[entry.Key] = entry.Value;
 
-        var keysToMask = string.IsNullOrEmpty(Name) ? masked.Keys.ToList() : CredentialFields.ToList();
+        // Why unexpected keys too (FDW-4607): a key the method does not declare was never validated, so it is not known to
+        // be a name; a row stored before unexpected keys were refused must not be answered with its value.
+        var keysToMask = string.IsNullOrEmpty(Name)
+            ? masked.Keys.ToList()
+            : CredentialFields.Concat(UnexpectedProperties(values.Keys)).ToList();
         foreach (var key in keysToMask)
         {
             if (masked.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))

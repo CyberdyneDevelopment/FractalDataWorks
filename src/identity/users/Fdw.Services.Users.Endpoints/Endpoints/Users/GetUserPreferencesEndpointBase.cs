@@ -14,7 +14,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </summary>
 public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<UserPreferencesResponse>
 {
-    private readonly UserPreferenceConfigurationProvider _preferenceProvider;
+    private readonly IUserPreferenceConfigurationProvider _preferenceProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -23,7 +23,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     /// <param name="preferenceProvider">The user preference configuration provider.</param>
     /// <param name="logger">The logger.</param>
     protected GetUserPreferencesEndpointBase(
-        UserPreferenceConfigurationProvider preferenceProvider,
+        IUserPreferenceConfigurationProvider preferenceProvider,
         ILogger logger)
     {
         _preferenceProvider = preferenceProvider;
@@ -33,7 +33,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
     /// <summary>
     /// Gets the user preference configuration provider.
     /// </summary>
-    protected UserPreferenceConfigurationProvider PreferenceProvider => _preferenceProvider;
+    protected IUserPreferenceConfigurationProvider PreferenceProvider => _preferenceProvider;
 
     /// <summary>
     /// Gets the logger.

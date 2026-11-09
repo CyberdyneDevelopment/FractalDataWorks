@@ -25,8 +25,8 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointBase<CreateDataStoreRequest, DataStoreDetailResponse>
     where TConfig : IDataStoreImplementationConfiguration
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly ConnectionConfigurationProvider _connectionProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IConnectionConfigurationProvider _connectionProvider;
     private readonly ISchemaInformationService _schema;
 
     /// <summary>Initializes a new instance of the <see cref="CreateDataStoreEndpointBase{TConfig}"/> class.</summary>
@@ -34,8 +34,8 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
     /// <param name="dataStoreProvider">Saves and reads the store.</param>
     /// <param name="connectionProvider">Resolves the store's connection by name.</param>
     /// <param name="schema">Discovers the connection's schema when the store is created with <c>discover</c>.</param>
-    protected CreateDataStoreEndpointBase(ILogger<CreateDataStoreEndpointBase<TConfig>> logger, DataStoreConfigurationProvider dataStoreProvider,
-        ConnectionConfigurationProvider connectionProvider, ISchemaInformationService schema) : base(logger)
+    protected CreateDataStoreEndpointBase(ILogger<CreateDataStoreEndpointBase<TConfig>> logger, IDataStoreConfigurationProvider dataStoreProvider,
+        IConnectionConfigurationProvider connectionProvider, ISchemaInformationService schema) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
         _connectionProvider = connectionProvider;

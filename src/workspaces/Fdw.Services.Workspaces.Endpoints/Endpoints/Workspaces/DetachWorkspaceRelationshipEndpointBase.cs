@@ -22,13 +22,13 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// <see cref="CreateWorkspaceRelationshipEndpointBase"/> for why.</remarks>
 public abstract class DetachWorkspaceRelationshipEndpointBase : Endpoint<DetachWorkspaceRelationshipRequest>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly ILogger<DetachWorkspaceRelationshipEndpointBase> _logger;
 
     /// <inheritdoc />
     protected DetachWorkspaceRelationshipEndpointBase(
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         ILogger<DetachWorkspaceRelationshipEndpointBase>? logger = null)
     {

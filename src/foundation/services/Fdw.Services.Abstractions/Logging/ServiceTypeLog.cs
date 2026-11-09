@@ -1327,4 +1327,89 @@ public static partial class ServiceTypeLog
         string optionName,
         string factoryType,
         string? reason);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Service lifetimes (FDW-4640)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Logs that a singleton takes a scoped service in its constructor.
+    /// </summary>
+    /// <remarks>
+    /// A singleton lives as long as the process; the scoped service it takes was meant to live for one scope, so the singleton keeps the first scope's instance for every later
+    /// caller, whatever tenant or request that caller belongs to. WaitHoldGate shipped in 1.5.0 this way.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61022,
+        Level = LogLevel.Critical,
+        Message = "Singleton service '{singletonService}' (implemented by '{implementation}') takes the scoped service '{dependencyService}' as its constructor parameter '{parameter}'. "
+            + "A singleton lives for the whole process, so it would keep the first scope's instance for every later caller. Make the singleton scoped, or give it a provider that "
+            + "creates the service fresh on every call.")]
+    public static partial IGenericMessage SingletonTakesScopedService(
+        ILogger logger,
+        string singletonService,
+        string implementation,
+        string dependencyService,
+        string parameter);
+
+    /// <summary>
+    /// Logs that a singleton takes a transient service in its constructor.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61023,
+        Level = LogLevel.Critical,
+        Message = "Singleton service '{singletonService}' (implemented by '{implementation}') takes the transient service '{dependencyService}' as its constructor parameter '{parameter}'. "
+            + "A singleton lives for the whole process, so it would keep the one instance it was given and the transient lifetime would never apply. Register the service as a singleton "
+            + "if it holds no state, make the singleton transient or scoped, or give it a provider that builds the service fresh on every call.")]
+    public static partial IGenericMessage SingletonTakesTransientService(
+        ILogger logger,
+        string singletonService,
+        string implementation,
+        string dependencyService,
+        string parameter);
+
+    /// <summary>
+    /// Logs that a host reached Initialize without Configure having set its service provider to validate lifetimes.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61024,
+        Level = LogLevel.Critical,
+        Message = "The host's service provider was not built to validate service lifetimes: PlatformServices.Configure did not run on its builder. "
+            + "Call PlatformServices.Configure before Register so ValidateScopes and ValidateOnBuild are on in every environment.")]
+    public static partial IGenericMessage ContainerValidationNotConfigured(ILogger logger);
+
+    /// <summary>
+    /// Logs that a singleton registration could not be resolved from the built provider.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61025,
+        Level = LogLevel.Critical,
+        Message = "Singleton service '{service}' could not be resolved from the built provider: {reason}")]
+    public static partial IGenericMessage SingletonCannotBeResolved(
+        ILogger logger,
+        string service,
+        string reason);
+
+    /// <summary>
+    /// Logs the total of the lifetime findings in a host's registrations.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61026,
+        Level = LogLevel.Critical,
+        Message = "The registrations hold {count} singleton(s) that depend on a scoped or transient service; each is named above. The host does not start until they are cleared.")]
+    public static partial IGenericMessage ServiceLifetimeFindings(
+        ILogger logger,
+        int count);
+
+    /// <summary>
+    /// Logs the total of the lifetime findings when the host has chosen to start with them.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61027,
+        Level = LogLevel.Warning,
+        Message = "The registrations hold {count} singleton(s) that depend on a scoped or transient service; each is named above. The host starts anyway because "
+            + "PlatformServices.LifetimeFindingsFailStartup was set to false before Register.")]
+    public static partial IGenericMessage ServiceLifetimeFindingsTolerated(
+        ILogger logger,
+        int count);
 }

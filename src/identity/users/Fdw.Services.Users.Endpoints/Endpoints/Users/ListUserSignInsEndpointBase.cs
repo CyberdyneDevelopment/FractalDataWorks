@@ -23,12 +23,12 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequest, SignInPageResponse>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly ISignInLog _signIns;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ListUserSignInsEndpointBase"/> class.</summary>
-    protected ListUserSignInsEndpointBase(ILogger logger, UserConfigurationProvider userProvider, ISignInLog signIns)
+    protected ListUserSignInsEndpointBase(ILogger logger, IUserConfigurationProvider userProvider, ISignInLog signIns)
     {
         _logger = logger;
         _userProvider = userProvider;

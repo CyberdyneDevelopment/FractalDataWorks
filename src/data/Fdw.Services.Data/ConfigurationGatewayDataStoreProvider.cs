@@ -358,8 +358,12 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     {
         DataStoreProviderLog.TraceGetAllDataStoresEntry(_logger);
         var stores = await Load(cancellationToken).ConfigureAwait(false);
-        DataStoreProviderLog.AllDataStoresRetrieved(_logger, stores.Count);
-        return GenericResult<IReadOnlyList<IDataStore>>.Success(stores);
+        if (stores.IsFailure)
+            return stores;
+
+        // Load answers a success only with the list it built (a new List of the stores, possibly empty), never with no value, so there is no absence to pass on here.
+        DataStoreProviderLog.AllDataStoresRetrieved(_logger, stores.Value!.Count);
+        return stores;
     }
 
     /// <inheritdoc/>
@@ -456,19 +460,22 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     /// own gateway-owned stores are merged in.
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The assembled IDataStore tree.</returns>
-    public async Task<IReadOnlyList<Fdw.Data.Abstractions.IDataStore>> Load(CancellationToken ct = default)
+    /// <returns>The assembled IDataStore tree, or the failure of the read that could not be made (FDW-3630): an empty tree says there are no stores, not that they could not be read.</returns>
+    public async Task<IGenericResult<IReadOnlyList<Fdw.Data.Abstractions.IDataStore>>> Load(CancellationToken ct = default)
     {
         DataStoreProviderLog.LoadStarted(_logger);
 
         var coreResult = await _coreProvider.Get(ct).ConfigureAwait(false);
         if (!coreResult.IsSuccess)
         {
-            DataStoreProviderLog.LoadFailed(
-                _logger,
-                new InvalidOperationException(coreResult.FailureReason().Message),
-                coreResult.FailureReason().Message);
-            return [];
+            return GenericResult<IReadOnlyList<Fdw.Data.Abstractions.IDataStore>>.Failure(
+                new[]
+                {
+                    DataStoreProviderLog.LoadFailed(
+                        _logger,
+                        new InvalidOperationException(coreResult.FailureReason().Message),
+                        coreResult.FailureReason().Message)
+                }.Concat(coreResult.Messages));
         }
 
         var composedStores = coreResult.Value ?? [];
@@ -476,29 +483,33 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         var totalContainers = composedStores.Sum(s => s.Paths.Sum(p => p.Containers.Count));
 
         var result = new List<Fdw.Data.Abstractions.IDataStore>(composedStores);
-        MergeConfigurationGatewayDataStores(result);
+        var merged = MergeConfigurationGatewayDataStores(result);
+        if (merged.IsFailure)
+            return merged.ToNewResult<IReadOnlyList<Fdw.Data.Abstractions.IDataStore>>();
+
         DataStoreProviderLog.LoadCompleted(_logger, result.Count, totalPaths, totalContainers);
-        return result;
+        return GenericResult<IReadOnlyList<Fdw.Data.Abstractions.IDataStore>>.Success(result);
     }
 
-    private void MergeConfigurationGatewayDataStores(List<Fdw.Data.Abstractions.IDataStore> result)
+    private IGenericResult MergeConfigurationGatewayDataStores(List<Fdw.Data.Abstractions.IDataStore> result)
     {
-        if (_gatewayProvider is null) return;
+        if (_gatewayProvider is null) return GenericResult.Success();
 
         IReadOnlyList<Fdw.Data.Abstractions.IDataStore> configDbStores;
         try
         {
             var gw = _gatewayProvider.Get(ConfigurationConnectionName);
-            if (gw.IsFailure) return;
+            if (gw.IsFailure)
+                return GenericResult.Failure(new[] { DataStoreProviderLog.LoadFailed(_logger, new InvalidOperationException(gw.FailureReason().Message), gw.FailureReason().Message) }.Concat(gw.Messages));
+
             configDbStores = gw.Value!.DataStores ?? [];
         }
         catch (Exception ex)
         {
-            DataStoreProviderLog.LoadFailed(_logger, ex, "ConfigurationDb DataStores read failed");
-            return;
+            return GenericResult.Failure(DataStoreProviderLog.LoadFailed(_logger, ex, "ConfigurationDb DataStores read failed"));
         }
 
-        if (configDbStores.Count == 0) return;
+        if (configDbStores.Count == 0) return GenericResult.Success();
 
         var existingNames = new HashSet<string>(
             result.Where(s => !string.IsNullOrWhiteSpace(s.Name)).Select(s => s.Name),
@@ -510,6 +521,8 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             result.Add(store);
             DataStoreProviderLog.DataStoreRegistered(_logger, store.Name, "configuration-gateway");
         }
+
+        return GenericResult.Success();
     }
 
 }

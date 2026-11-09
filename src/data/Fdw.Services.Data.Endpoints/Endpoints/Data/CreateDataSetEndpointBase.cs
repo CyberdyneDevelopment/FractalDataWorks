@@ -18,12 +18,12 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for creating a new data set configuration.
-/// Delegates all reads and writes to DataSetConfigurationProvider.
+/// Delegates all reads and writes to IDataSetConfigurationProvider.
 /// </summary>
 public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateDataSetRequest, DataSetDetailResponse>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
+    private readonly ICategoryConfigurationProvider _categories;
     private readonly IAuthenticationContextAccessor _authContext;
 
     /// <summary>Initializes a new instance of the <see cref="CreateDataSetEndpointBase"/> class.</summary>
@@ -32,7 +32,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
     /// <param name="categories">Resolves the category the request names.</param>
     /// <param name="authContext">Identifies the caller, who owns the new data set (FDW-4346).</param>
     protected CreateDataSetEndpointBase(
-        ILogger<CreateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories,
+        ILogger<CreateDataSetEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider, ICategoryConfigurationProvider categories,
         IAuthenticationContextAccessor authContext) : base(logger)
     {
         _dataSetProvider = dataSetProvider;

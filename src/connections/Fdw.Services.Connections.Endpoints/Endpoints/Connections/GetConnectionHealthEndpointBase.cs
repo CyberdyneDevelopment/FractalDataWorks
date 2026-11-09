@@ -15,18 +15,18 @@ namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
 /// Base endpoint for retrieving connection health check history by connection name.
-/// Resolves the connection via <see cref="ConnectionConfigurationProvider"/>, then delegates
+/// Resolves the connection via <see cref="IConnectionConfigurationProvider"/>, then delegates
 /// to <see cref="IConnectionHealthService"/> for the persisted history.
 /// </summary>
 public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameRequest, List<ConnectionHealthCheckDto>>
 {
-    private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionConfigurationProvider _configProvider;
     private readonly IConnectionHealthService _healthService;
     private readonly ILogger<GetConnectionHealthEndpointBase> _logger;
 
     /// <inheritdoc />
     protected GetConnectionHealthEndpointBase(
-        ConnectionConfigurationProvider configProvider,
+        IConnectionConfigurationProvider configProvider,
         IConnectionHealthService healthService,
         ILogger<GetConnectionHealthEndpointBase> logger)
     {

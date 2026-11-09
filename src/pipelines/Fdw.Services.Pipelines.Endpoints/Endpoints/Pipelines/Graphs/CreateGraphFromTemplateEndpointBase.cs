@@ -25,19 +25,22 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </remarks>
 public abstract class CreateGraphFromTemplateEndpointBase : CrudCreateEndpointBase<GraphFromTemplatePayload, GraphPayload>
 {
-    private readonly PipelineServiceConfigurationProvider _provider;
+    private readonly IPipelineConfigurationProvider _provider;
     private readonly StageChainLookup _chains;
     private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly PipelineOwner _owner;
 
     /// <summary>Initializes a new instance of the <see cref="CreateGraphFromTemplateEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="provider">The pipeline domain's configuration provider.</param>
     /// <param name="transformations">Resolves the named transformations a field mapping's chain applies.</param>
     /// <param name="dataSets">The data sets, read for the type of the columns a destination's value sources fill.</param>
+    /// <param name="owner">Decides the organization the new pipeline belongs to (FDW-4573).</param>
     protected CreateGraphFromTemplateEndpointBase(
-        ILogger<CreateGraphFromTemplateEndpointBase> logger, PipelineServiceConfigurationProvider provider, ITransformationConfigurationProvider transformations,
-        IDataSetConfigurationProvider dataSets) : base(logger)
+        ILogger<CreateGraphFromTemplateEndpointBase> logger, IPipelineConfigurationProvider provider, ITransformationConfigurationProvider transformations,
+        IDataSetConfigurationProvider dataSets, PipelineOwner owner) : base(logger)
     {
+        _owner = owner;
         _provider = provider;
         _chains = new StageChainLookup(transformations, logger);
         _dataSets = dataSets;
@@ -90,7 +93,7 @@ public abstract class CreateGraphFromTemplateEndpointBase : CrudCreateEndpointBa
             return graph.ToNewResult<GraphPayload>();
         }
 
-        return await GraphSave.Save(_provider, graph.Value, _dataSets, GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
+        return await GraphSave.Save(_provider, graph.Value, _owner, request.OrgId, _dataSets, GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

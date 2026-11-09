@@ -16,12 +16,12 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBase<PipelineNameRequest>
     where TConfig : IPipelineImplementationConfiguration
 {
-    private readonly PipelineServiceConfigurationProvider _provider;
+    private readonly IPipelineConfigurationProvider _provider;
     private readonly WaitThresholdOwnerRelease _release;
 
     /// <inheritdoc />
     protected DeletePipelineEndpointBase(
-        ILogger<DeletePipelineEndpointBase<TConfig>> logger, PipelineServiceConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
+        ILogger<DeletePipelineEndpointBase<TConfig>> logger, IPipelineConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
     {
         _provider = provider;
         _release = new WaitThresholdOwnerRelease(gateways, logger);

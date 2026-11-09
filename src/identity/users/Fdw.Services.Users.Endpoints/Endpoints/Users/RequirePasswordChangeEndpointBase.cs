@@ -30,7 +30,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class RequirePasswordChangeEndpointBase : Endpoint<UserScopedRequest>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly ILogger _logger;
 
@@ -41,7 +41,7 @@ public abstract class RequirePasswordChangeEndpointBase : Endpoint<UserScopedReq
     /// <param name="credentialService">The user credential service.</param>
     /// <param name="logger">The logger.</param>
     protected RequirePasswordChangeEndpointBase(
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IUserCredentialService credentialService,
         ILogger logger)
     {

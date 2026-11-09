@@ -22,7 +22,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class CreateApiKeyEndpointBase : Endpoint<CreateApiKeyRequest, ApiKeyIssued>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IPersonalAccessTokenService _tokenService;
     private readonly IAgentKeyService _agentKeyService;
     private readonly ILogger _logger;
@@ -30,7 +30,7 @@ public abstract class CreateApiKeyEndpointBase : Endpoint<CreateApiKeyRequest, A
     /// <summary>Initializes a new instance of the <see cref="CreateApiKeyEndpointBase"/> class.</summary>
     protected CreateApiKeyEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IPersonalAccessTokenService tokenService,
         IAgentKeyService agentKeyService)
     {

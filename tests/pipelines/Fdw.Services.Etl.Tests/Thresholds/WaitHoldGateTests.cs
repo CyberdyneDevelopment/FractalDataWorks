@@ -53,7 +53,7 @@ public sealed class WaitHoldGateTests
     private WaitHoldGate Gate(Evaluator evaluator)
     {
         _source.Setup(s => s.For(It.IsAny<ThresholdSubject>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<IThresholdDefinition>>.Success([]));
-        return new WaitHoldGate(_source.Object, evaluator);
+        return new WaitHoldGate(Scopes(_source.Object, evaluator));
     }
 
     private static PipelineExecutionRequest Request(Guid? tenant, string? schedule = null, Guid? scheduleId = null) => new()

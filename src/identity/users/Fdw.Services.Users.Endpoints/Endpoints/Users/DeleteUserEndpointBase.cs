@@ -16,7 +16,7 @@ namespace Fdw.Services.Users.Endpoints;
 public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 {
     /// <summary>Initializes a new instance of the <see cref="DeleteUserEndpointBase"/> class.</summary>
-        private readonly UserConfigurationProvider _userProvider;
+        private readonly IUserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -24,7 +24,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="DeleteUserEndpointBase"/> class.</summary>
-    protected DeleteUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    protected DeleteUserEndpointBase(ILogger logger, IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
         _userProvider = userProvider;
@@ -34,7 +34,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:delete".

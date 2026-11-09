@@ -25,6 +25,7 @@ public static class GraphPayloadWriter
         return new GraphPayload
         {
             Name = graph.Name,
+            OrgId = graph.OrgId,
             Description = graph.Description,
             IsEnabled = graph.IsEnabled,
             LinkCapacity = graph.LinkCapacity,

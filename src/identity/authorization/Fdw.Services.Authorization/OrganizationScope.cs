@@ -83,8 +83,18 @@ public sealed class OrganizationScope : IOrganizationScope
         }
 
         var found = await _organizations.Get(organizationId, cancellationToken).ConfigureAwait(false);
-        return !found.IsSuccess || found.Value is not { IsDeleted: false } organization
-            ? GenericResult<Guid>.Failure(OrganizationAccessLog.OrganizationNotFound(_logger, organizationId))
-            : GenericResult<Guid>.Success(organization.TenantId);
+        if (found.IsSuccess && found.Value is { IsDeleted: false } organization)
+        {
+            return GenericResult<Guid>.Success(organization.TenantId);
+        }
+
+        // Only a lookup that found no such organization is "not found" (FDW-4573). A lookup that could not be made (no organization lookup on this host, the store
+        // unavailable) keeps its own coded failure, so an operator is told the lookup failed and not that the organization does not exist.
+        if (found.IsFailure && !FailureCategory.IsMissing(found))
+        {
+            return found.ToNewResult<Guid>();
+        }
+
+        return GenericResult<Guid>.Failure(OrganizationAccessLog.OrganizationNotFound(_logger, organizationId));
     }
 }

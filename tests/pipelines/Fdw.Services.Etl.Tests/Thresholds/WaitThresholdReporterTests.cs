@@ -7,6 +7,7 @@ using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Results;
 using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Thresholds;
+using Moq;
 
 namespace Fdw.Services.Etl.Tests.Thresholds;
 
@@ -45,7 +46,7 @@ public sealed class WaitThresholdReporterTests
     private static PipelineRunQueueEntry Entry(Guid pipelineId, string name, Guid? tenant, string? schedule = null, Guid? scheduleId = null) =>
         new(new PipelineRunIdentity(Guid.NewGuid(), pipelineId, name, tenant, schedule, scheduleId), DateTimeOffset.UnixEpoch, null, null);
 
-    private static WaitThresholdReporter Reporter(Evaluator evaluator) => new(evaluator);
+    private static WaitThresholdReporter Reporter(Evaluator evaluator) => new(WaitThresholdKit.Scopes(new Mock<IThresholdSource>().Object, evaluator));
 
     private static PipelineRunQueueSnapshot Waiting(params PipelineRunQueueEntry[] entries) => new([], entries);
 

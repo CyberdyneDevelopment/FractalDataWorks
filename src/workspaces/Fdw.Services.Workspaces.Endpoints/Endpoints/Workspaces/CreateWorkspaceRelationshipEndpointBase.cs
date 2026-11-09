@@ -22,14 +22,14 @@ namespace Fdw.Services.Workspaces.Endpoints;
 public abstract class CreateWorkspaceRelationshipEndpointBase
     : CrudCreateEndpointBase<CreateWorkspaceRelationshipRequest, WorkspaceMapEdgeDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IDataSetConfigurationProvider _dataSets;
 
     /// <inheritdoc />
     protected CreateWorkspaceRelationshipEndpointBase(
         ILogger<CreateWorkspaceRelationshipEndpointBase> logger,
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IDataSetConfigurationProvider dataSets) : base(logger)
     {

@@ -87,8 +87,13 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // What the shipped steps take beyond their own registration. A step is activated on
             // demand, so a dependency missing here fails at the first login that names the step,
             // never at startup - which is why these were found one deploy at a time.
-            builder.Services.TryAddScoped<ITenantResolver, UserTenantResolver>();
-            builder.Services.TryAddScoped<IIssuanceEligibility, UserAccountEligibility>();
+            //
+            // Singletons (FDW-4640): a step is one instance for the process and captures these at Initialize, which runs against the root provider. Each is stateless, built from
+            // singletons only, and reads who is acting from the ambient accessor (a singleton that follows the async flow) and the tenant from what Execute is handed, so one
+            // instance serves every login and two logins at once never share anything. A service that does have per-request dependencies is handed to the step by the runner
+            // instead (IRequestBoundAuthenticationStep).
+            builder.Services.TryAddSingleton<ITenantResolver, UserTenantResolver>();
+            builder.Services.TryAddSingleton<IIssuanceEligibility, UserAccountEligibility>();
 
             // Scoped with the tenant resolver it reads through. The step lookup is the collection, the
             // same registry the runner and the flow provider are handed.
@@ -177,15 +182,15 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // deployment can resolve; the collection above is what knows.
             builder.Services.TryAddSingleton<IExternalIssuerCatalog, ExternalIssuerCatalog>();
 
-            builder.Services.TryAddScoped<IPrincipalBinding, ExternalIdentityBinding>();
+            builder.Services.TryAddSingleton<IPrincipalBinding, ExternalIdentityBinding>();
 
-            // The presented token comes off the request, so this follows the request scope.
-            builder.Services.TryAddScoped<IForeignTokenAccessor, HttpForeignTokenAccessor>();
+            // The presented token comes off the request, read through the HTTP context accessor at the moment it is asked, so one instance follows every request (FDW-4640).
+            builder.Services.TryAddSingleton<IForeignTokenAccessor, HttpForeignTokenAccessor>();
 
-            // The code and state the provider's redirect carries back are also request-scoped, and
+            // The code and state the provider's redirect carries back are read the same way, and
             // reading them off the query string is the same for every OIDC provider - only the
             // authority a flow sends the caller to is vendor-specific.
-            builder.Services.TryAddScoped<IOidcCallbackAccessor, HttpOidcCallbackAccessor>();
+            builder.Services.TryAddSingleton<IOidcCallbackAccessor, HttpOidcCallbackAccessor>();
 
             // Singleton because it caches the authority's keys across requests and refreshes them
             // on its own schedule; a scoped one would re-fetch per request and lose the point.
@@ -211,14 +216,15 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // pulls in what only that step needs.
             builder.Services.AddHttpContextAccessor();
 
-            builder.Services.TryAddScoped(sp => new AuthenticationRunner(
+            // The runner is scoped, so its lookup binds a request-bound step to this scope's services (FDW-4640).
+            builder.Services.TryAddScoped<IAuthenticationRunner>(sp => new AuthenticationRunner(
                 sp.GetRequiredService<IAcrPolicy>(),
                 sp.GetRequiredService<ITokenIssuer>(),
                 sp.GetRequiredService<ISessionStore>(),
                 sp.GetRequiredService<IAuthenticationExecutionStore>(),
                 sp.GetRequiredService<IAuthenticationFlowProvider>(),
                 // The collection IS the registry: a name resolves to the option that declared it.
-                name => AuthenticationStepTypes.ByName(name) as IAuthenticationStep,
+                name => RequestBoundSteps.ForRequest(AuthenticationStepTypes.ByName(name) as IAuthenticationStep, type => sp.GetRequiredService(type)),
                 sp.GetRequiredService<ITenantProvider>(),
                 sp.GetRequiredService<ISignInLog>(),
                 sp.GetService<ILogger<AuthenticationRunner>>()));

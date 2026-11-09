@@ -37,7 +37,7 @@ internal sealed class MapSources
     /// <param name="categories">The category domain, whose DataSet tree names the path of the category a data set sits under.</param>
     public MapSources(
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories)
@@ -53,7 +53,7 @@ internal sealed class MapSources
     public IDataSetConfigurationProvider DataSets { get; }
 
     /// <summary>Gets the data store domain.</summary>
-    public DataStoreConfigurationProvider DataStores { get; }
+    public IDataStoreConfigurationProvider DataStores { get; }
 
     /// <summary>Gets the pipeline domain.</summary>
     public IPipelineConfigurationProvider Pipelines { get; }

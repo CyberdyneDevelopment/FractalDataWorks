@@ -9,7 +9,6 @@ using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 using Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
 using Fdw.Services.Etl.Projects.Logging;
-using Fdw.Services.Etl.Projects.Providers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -32,13 +31,13 @@ namespace Fdw.Services.Etl.Projects.Memberships;
 /// </remarks>
 public sealed class PipelineProjectMemberships : IPipelineProjectMemberships
 {
-    private readonly OrchestrationNodeConfigurationProvider _nodes;
+    private readonly IOrchestrationNodeConfigurationProvider _nodes;
     private readonly ILogger<PipelineProjectMemberships> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="PipelineProjectMemberships"/> class.</summary>
     /// <param name="nodes">Reads the orchestration nodes.</param>
     /// <param name="logger">The logger the read reports through.</param>
-    public PipelineProjectMemberships(OrchestrationNodeConfigurationProvider nodes, ILogger<PipelineProjectMemberships>? logger = null)
+    public PipelineProjectMemberships(IOrchestrationNodeConfigurationProvider nodes, ILogger<PipelineProjectMemberships>? logger = null)
     {
         _nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
         _logger = logger ?? NullLogger<PipelineProjectMemberships>.Instance;

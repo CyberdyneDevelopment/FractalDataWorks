@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.ServiceTypes.Logging;
 using Fdw.ServiceTypes.Results;
@@ -270,6 +272,39 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <summary>Gets this collection's Register body.</summary>
     protected static Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> RegisterFunc => _registerFunc;
 
+    // The services this collection itself needs registered (FDW-4588), set from the concrete collection's static constructor beside its phase bodies.
+    private static readonly List<ServiceRequirement> _requirements = new();
+
+    /// <summary>
+    /// Declares a service this collection needs registered. Its Initialize fails, with <paramref name="message"/>, when the built host has no registration for it (FDW-4588).
+    /// </summary>
+    /// <typeparam name="TRequired">The service that must be registered.</typeparam>
+    /// <param name="message">The coded message for the service being absent: the collection's own <c>[MessageLogging]</c> method, passed as a method group.</param>
+    /// <remarks>
+    /// The check is wrapped around whatever Initialize body is current, so a host that replaces, appends or prepends a body is still checked. It asks the container whether a registration
+    /// exists and never resolves the service, so it does not depend on the order the domains registered or initialized in. The options this collection holds declare their own requirements the same way
+    /// (<c>ServiceTypeBase.Requires</c>), and a requirement of an option that was never attached is never asked for.
+    /// </remarks>
+    protected static void Requires<TRequired>(Func<ILogger, IGenericMessage> message)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        lock (_gate)
+            _requirements.Add(new ServiceRequirement(typeof(TRequired), message));
+    }
+
+    // The body Initialize runs: the declared requirements first, then the current Initialize func.
+    private static IGenericResult<IHost> CheckRequirementsThenInitialize(IHost host, ILoggerFactory? loggerFactory)
+    {
+        ServiceRequirement[] own;
+        lock (_gate)
+            own = _requirements.ToArray();
+
+        var checkedHost = ServiceRequirements.Check(host, loggerFactory, own.Concat(Options.OfType<IServiceRequirements>().SelectMany(option => option.Requirements)), CollectionName);
+        return checkedHost.IsFailure ? checkedHost : _initializationFunc(host, loggerFactory);
+    }
+
     /// <summary>Gets this collection's Initialize body.</summary>
     protected static Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationFunc => _initializationFunc;
 
@@ -511,7 +546,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
         }
 
         var phaseResult = RunPhase(host, loggerFactory, "Initialize", InitializationIsCustom,
-            ServiceTypePhaseSequence.Initialize, _initializationFunc);
+            ServiceTypePhaseSequence.Initialize, CheckRequirementsThenInitialize);
         if (phaseResult.IsFailure)
         {
             return phaseResult;

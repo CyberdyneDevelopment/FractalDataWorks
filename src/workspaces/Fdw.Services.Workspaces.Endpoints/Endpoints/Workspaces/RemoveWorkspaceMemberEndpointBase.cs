@@ -23,13 +23,13 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// <see cref="AddWorkspaceMemberEndpointBase"/> for why.</remarks>
 public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspaceMemberRequest>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
     private readonly ILogger<RemoveWorkspaceMemberEndpointBase> _logger;
 
     /// <inheritdoc />
     protected RemoveWorkspaceMemberEndpointBase(
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         ILogger<RemoveWorkspaceMemberEndpointBase>? logger = null)
     {

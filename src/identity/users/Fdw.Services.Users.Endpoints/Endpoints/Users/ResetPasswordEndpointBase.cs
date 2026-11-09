@@ -30,7 +30,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IUserCredentialService _credentialService;
     private readonly ILogger _logger;
 
@@ -41,7 +41,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
     /// <param name="credentialService">The user credential service.</param>
     /// <param name="logger">The logger.</param>
     protected ResetPasswordEndpointBase(
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IUserCredentialService credentialService,
         ILogger logger)
     {
@@ -53,7 +53,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
     /// <summary>
     /// Gets the user provider.
     /// </summary>
-    protected UserConfigurationProvider UserProvider => _userProvider;
+    protected IUserConfigurationProvider UserProvider => _userProvider;
 
     /// <summary>
     /// Gets the logger.

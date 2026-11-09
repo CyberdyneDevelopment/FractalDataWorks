@@ -97,10 +97,42 @@ public sealed class SignInMethodAdmission : ISignInMethodAdmission
         if (flows.IsFailure)
             return flows.ToNewResult<List<AuthenticationFlow>>();
 
-        return GenericResult<List<AuthenticationFlow>>.Success((flows.Value ?? [])
-            .Where(f => f.Steps.Any(s => _step(s.Name) is { } step
-                && step.AuthenticationMethods.Contains(authenticationMethod, StringComparer.Ordinal)))
-            .ToList());
+        // A flow whose federated authority cannot be read does not prove the method, and says why; that reason decides only when no other flow proves it. A password flow must
+        // not be refused because an unrelated flow's authority is not declared.
+        var proving = new List<AuthenticationFlow>();
+        IGenericResult<bool>? unreadable = null;
+        foreach (var flow in flows.Value ?? [])
+        {
+            var proves = await Proves(flow, authenticationMethod, cancellationToken).ConfigureAwait(false);
+            if (proves.IsFailure)
+                unreadable ??= proves;
+            else if (proves.Value)
+                proving.Add(flow);
+        }
+
+        return proving.Count == 0 && unreadable is not null
+            ? unreadable.ToNewResult<List<AuthenticationFlow>>()
+            : GenericResult<List<AuthenticationFlow>>.Success(proving);
+    }
+
+    // A step proves what it declares and, when it relays an authority, what that authority permits (FDW-4697).
+    private async Task<IGenericResult<bool>> Proves(AuthenticationFlow flow, string authenticationMethod, CancellationToken cancellationToken)
+    {
+        IGenericResult<IReadOnlyList<string>>? unreadable = null;
+        foreach (var entry in flow.Steps)
+        {
+            if (_step(entry.Name) is not { } step)
+                continue;
+
+            var methods = await StepMethods.Of(step, cancellationToken).ConfigureAwait(false);
+            if (methods.IsFailure)
+                unreadable ??= methods;
+            else if (methods.Value!.Contains(authenticationMethod, StringComparer.Ordinal))
+                return GenericResult<bool>.Success(true);
+        }
+
+        // Another step of the flow proves the method before an unreadable authority is held against it.
+        return unreadable is null ? GenericResult<bool>.Success(false) : unreadable.ToNewResult<bool>();
     }
 
     // One flow proving the method admits the principal: an open one admits everyone, a gated one those

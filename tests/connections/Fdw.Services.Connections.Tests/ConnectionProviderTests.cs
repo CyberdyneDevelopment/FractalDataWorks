@@ -137,6 +137,9 @@ public class ConnectionProviderTests
         public Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> Get(int levels, CancellationToken ct = default)
             => Get(ct);
 
+        public Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> GetFlat(int levels, CancellationToken ct = default)
+            => Get(ct);
+
         public Task<IGenericResult<ConfigurationPage<IConnectionImplementationConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not page.");
 

@@ -16,11 +16,11 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRequest, DataSetDetailResponse>
 {
     private readonly IDataSetResolver _resolver;
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly ICategoryConfigurationProvider _categories;
 
     /// <inheritdoc />
     protected GetDataSetEndpointBase(
-        ILogger<GetDataSetEndpointBase> logger, IDataSetResolver resolver, CategoryConfigurationProvider categories) : base(logger)
+        ILogger<GetDataSetEndpointBase> logger, IDataSetResolver resolver, ICategoryConfigurationProvider categories) : base(logger)
     {
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         _categories = categories ?? throw new ArgumentNullException(nameof(categories));

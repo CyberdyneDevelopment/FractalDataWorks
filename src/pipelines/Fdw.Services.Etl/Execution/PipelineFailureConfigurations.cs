@@ -2,17 +2,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Etl.Graphs;
-using Fdw.Services.Pipelines;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Etl.Execution;
 
 /// <summary>Reads and disables a pipeline through the pipeline configuration provider (FDW-3864).</summary>
 public sealed class PipelineFailureConfigurations : IPipelineFailureConfigurations
 {
-    private readonly PipelineServiceConfigurationProvider _pipelines;
+    private readonly IPipelineConfigurationProvider _pipelines;
 
     /// <summary>Initializes a new instance of the <see cref="PipelineFailureConfigurations"/> class.</summary>
-    public PipelineFailureConfigurations(PipelineServiceConfigurationProvider pipelines)
+    public PipelineFailureConfigurations(IPipelineConfigurationProvider pipelines)
     {
         _pipelines = pipelines;
     }

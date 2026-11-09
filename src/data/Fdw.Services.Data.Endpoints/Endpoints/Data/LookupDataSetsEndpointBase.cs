@@ -27,12 +27,12 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class LookupDataSetsEndpointBase : LookupEndpointBase<DomainConfiguration>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
 
     /// <summary>Initializes a new instance of the <see cref="LookupDataSetsEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataSetProvider">Reads the page of data set rows.</param>
-    protected LookupDataSetsEndpointBase(ILogger<LookupDataSetsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider)
+    protected LookupDataSetsEndpointBase(ILogger<LookupDataSetsEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider)
         : base(logger)
     {
         _dataSetProvider = dataSetProvider;

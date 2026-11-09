@@ -33,7 +33,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </remarks>
 public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLinkRequest, PasswordLinkResponse>
 {
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IPasswordLinkService _linkService;
     private readonly ILogger _logger;
 
@@ -44,7 +44,7 @@ public abstract class CreatePasswordLinkEndpointBase : Endpoint<CreatePasswordLi
     /// <param name="linkService">Creates and stores the link.</param>
     /// <param name="logger">The logger.</param>
     protected CreatePasswordLinkEndpointBase(
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IPasswordLinkService linkService,
         ILogger logger)
     {

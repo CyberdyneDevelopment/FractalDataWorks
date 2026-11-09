@@ -33,7 +33,7 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class ListDataStoresEndpointBase
     : CrudPageEndpointBase<DataStoreDomainConfiguration, DataStoreSummaryResponse>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
     private readonly ConnectionNames _connectionNames;
     private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ITagService? _tags;
@@ -54,7 +54,7 @@ public abstract class ListDataStoresEndpointBase
     /// <param name="tags">The Tags service that answers <c>?tag=</c>; absent on a host that does not run it, which then refuses a request that sends <c>tag</c> (FDW-3816).</param>
     protected ListDataStoresEndpointBase(
         ILogger<ListDataStoresEndpointBase> logger,
-        DataStoreConfigurationProvider dataStoreProvider,
+        IDataStoreConfigurationProvider dataStoreProvider,
         ConnectionConfigurationProvider connectionProvider,
         IAuthorizationService authorization,
         IConfigurationGatewayProvider configurationGateways,

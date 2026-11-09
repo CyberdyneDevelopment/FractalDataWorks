@@ -58,16 +58,13 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
         var collectOptions = RegisterFunc;
         var initializeOptions = InitializationFunc;
 
+        // The data store provider is built on the cross-tenant change policy, which the Settings service type registers (FDW-4459); checked once at Initialize, after every registration.
+        Requires<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(DataStoreCrossTenantLog.CrossTenantChangePolicyNotRegistered);
+
         // The implementation providers are attached to their domain providers after Build, once the options have initialized, so a registration that fails stops the host with
         // a failed result and does not throw out of a singleton factory or pass unseen (FDW-3966).
         Initialization((host, loggerFactory) =>
         {
-            // Why the host is refused here (FDW-4459): the data store provider is built on the cross-tenant change policy, which the Settings service type registers.
-            if (!host.Services.GetRequiredService<IServiceProviderIsService>().IsService(typeof(Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy)))
-            {
-                return GenericResult<IHost>.Failure(DataStoreCrossTenantLog.CrossTenantChangePolicyNotRegistered(loggerFactory?.CreateLogger<DataStoreServiceTypes>() ?? NullLogger<DataStoreServiceTypes>.Instance));
-            }
-
             var initialized = initializeOptions(host, loggerFactory);
             if (initialized.IsFailure)
             {
@@ -108,6 +105,8 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 return domain;
             });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(
+                sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
+            builder.Services.TryAddSingleton<IDataStoreConfigurationProvider>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
 
             // Each kind of data set is its own implementation with its own table and provider (FDW-1031); the
@@ -166,6 +165,17 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IDataSetConfigurationProvider>(),
                     sp.GetRequiredService<IDataSetVariationConfigurationProvider>(),
                     sp.GetService<ILogger<DataSetResolver>>()));
+
+            // The status of the data sets the caller may see (FDW-4488). Scoped: the tenant, the pipelines that write the data sets and their latest runs are the caller's. The pipelines
+            // implement IDataSetWriterRuns, so a host that serves the status also runs them; a host that does not fails when a request asks for it.
+            builder.Services.TryAddScoped<IDataSetStatuses>(sp =>
+                new DataSetStatusProvider(
+                    sp.GetRequiredService<IDataSetConfigurationProvider>(),
+                    sp.GetRequiredService<IDataSetWriterRuns>(),
+                    sp.GetRequiredService<Fdw.Services.Settings.IEffectiveSettingsProvider>(),
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ITenantContext>(),
+                    sp.GetRequiredService<System.TimeProvider>(),
+                    sp.GetService<ILogger<DataSetStatusProvider>>()));
 
             // The rows of a data set for a consumer that is not a data query, such as a calculation's input (FDW-3130): read through
             // the gateway the consumer holds, so the access is the caller's, and capped.

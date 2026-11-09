@@ -19,7 +19,7 @@ namespace Fdw.Services.Authentication.Abstractions.Steps;
 /// </remarks>
 public sealed class PresentedPasswordCredentialScope : IDisposable
 {
-    private readonly PresentedPasswordCredentialAccessor _accessor;
+    private readonly IPresentedPasswordCredentialAccessor _accessor;
     private readonly PresentedPasswordCredential? _previous;
     private bool _disposed;
 
@@ -29,7 +29,7 @@ public sealed class PresentedPasswordCredentialScope : IDisposable
     /// <param name="accessor">The ambient accessor the verifying step reads.</param>
     /// <param name="username">The username the caller presented, or null when none was.</param>
     /// <param name="password">The password the caller presented, or null when none was.</param>
-    public PresentedPasswordCredentialScope(PresentedPasswordCredentialAccessor accessor, string? username, string? password)
+    public PresentedPasswordCredentialScope(IPresentedPasswordCredentialAccessor accessor, string? username, string? password)
     {
         _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
         _previous = accessor.Current;

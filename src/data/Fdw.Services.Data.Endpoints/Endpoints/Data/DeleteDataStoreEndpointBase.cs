@@ -17,10 +17,10 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointBase<DataStoreNameRequest>
     where TConfig : IDataStoreImplementationConfiguration
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
-    protected DeleteDataStoreEndpointBase(ILogger<DeleteDataStoreEndpointBase<TConfig>> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    protected DeleteDataStoreEndpointBase(ILogger<DeleteDataStoreEndpointBase<TConfig>> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
     }

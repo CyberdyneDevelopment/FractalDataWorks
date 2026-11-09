@@ -33,7 +33,7 @@ namespace Fdw.Schema.Endpoints;
 /// </summary>
 public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetDataSetMappingsEndpointBase> _logger;
 
     /// <summary>
@@ -41,7 +41,7 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
     /// </summary>
     /// <param name="dataSetProvider">Reads the data set with its sources and fields composed.</param>
     /// <param name="logger">The logger instance.</param>
-    protected GetDataSetMappingsEndpointBase(DataSetConfigurationProvider dataSetProvider, ILogger<GetDataSetMappingsEndpointBase> logger)
+    protected GetDataSetMappingsEndpointBase(IDataSetConfigurationProvider dataSetProvider, ILogger<GetDataSetMappingsEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
         _logger = logger ?? NullLogger<GetDataSetMappingsEndpointBase>.Instance;

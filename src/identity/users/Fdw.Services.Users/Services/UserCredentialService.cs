@@ -28,7 +28,7 @@ namespace Fdw.Services.Users.Services;
 /// Match/NoMatch; expiry, must-change, and lockout are composed HERE from non-secret data on the user
 /// record (README §5/§6/§7). The negative path runs the same KDF against a fixed decoy salt so timing
 /// does not enumerate accounts, and every failure logs a single uniform "denied" message.
-/// Reads and writes of usr.Users security columns now go through <see cref="UserConfigurationProvider"/>
+/// Reads and writes of usr.Users security columns now go through <see cref="IUserConfigurationProvider"/>
 /// instead of directly against the configuration gateway.
 /// </remarks>
 public sealed class UserCredentialService : IUserCredentialService
@@ -44,7 +44,7 @@ public sealed class UserCredentialService : IUserCredentialService
 
     private readonly ICredentialServiceProvider _credentialServiceProvider;
     private readonly UsersServiceConfigurationProvider _configuration;
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<UserCredentialService> _logger;
 
@@ -56,7 +56,7 @@ public sealed class UserCredentialService : IUserCredentialService
     public UserCredentialService(
         ICredentialServiceProvider credentialServiceProvider,
         UsersServiceConfigurationProvider configuration,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserCredentialService>? logger = null)
     {

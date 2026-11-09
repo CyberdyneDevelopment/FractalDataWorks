@@ -15,12 +15,12 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>Renames, describes or moves a category (FDW-1465). Its name and its type never change.</summary>
 public abstract class UpdateCategoryEndpointBase : CrudUpdateEndpointBase<CategoryPayload, CategoryPayload>
 {
-    private readonly CategoryConfigurationProvider _categories;
+    private readonly ICategoryConfigurationProvider _categories;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateCategoryEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="categories">The categories.</param>
-    protected UpdateCategoryEndpointBase(ILogger<UpdateCategoryEndpointBase> logger, CategoryConfigurationProvider categories)
+    protected UpdateCategoryEndpointBase(ILogger<UpdateCategoryEndpointBase> logger, ICategoryConfigurationProvider categories)
         : base(logger)
     {
         _categories = categories;

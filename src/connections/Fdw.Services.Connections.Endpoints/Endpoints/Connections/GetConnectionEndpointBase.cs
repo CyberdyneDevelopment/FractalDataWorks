@@ -10,21 +10,21 @@ namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
 /// Base endpoint for retrieving a specific connection configuration by name. Type-agnostic: a read
-/// through <see cref="ConnectionConfigurationProvider"/> is already dispatched, so what comes back is the
+/// through <see cref="IConnectionConfigurationProvider"/> is already dispatched, so what comes back is the
 /// implementation itself, and <see cref="ConnectionDetailMapper"/> maps it through the connection type's own
 /// <see cref="IConnectionType.EndpointBehavior"/> -- so one GET-by-name endpoint renders every connection
 /// type, including one with no endpoint code of its own, rather than being locked to one provider.
 /// </summary>
 public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<ConnectionNameRequest, ConnectionDetailDto>
 {
-    private readonly ConnectionConfigurationProvider _configProvider;
+    private readonly IConnectionConfigurationProvider _configProvider;
     private readonly IConnectionDisabledStates _states;
 
     /// <summary>Initializes a new instance of the <see cref="GetConnectionEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="configProvider">Reads the connection.</param>
     /// <param name="states">Where the disabled state of a connection is kept; read for every connection shown (FDW-4290).</param>
-    protected GetConnectionEndpointBase(ILogger<GetConnectionEndpointBase> logger, ConnectionConfigurationProvider configProvider, IConnectionDisabledStates states) : base(logger)
+    protected GetConnectionEndpointBase(ILogger<GetConnectionEndpointBase> logger, IConnectionConfigurationProvider configProvider, IConnectionDisabledStates states) : base(logger)
     {
         _configProvider = configProvider;
         _states = states ?? throw new ArgumentNullException(nameof(states));

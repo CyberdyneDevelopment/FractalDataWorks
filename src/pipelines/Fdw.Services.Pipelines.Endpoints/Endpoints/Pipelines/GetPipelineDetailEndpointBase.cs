@@ -5,7 +5,6 @@ using FastEndpoints;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Services.Etl;
 using Fdw.Services.Etl.Transforms;
-using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -21,14 +20,14 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineRequest, PipelineDetailResponse>
 {
-    private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly IPipelineConfigurationProvider _pipelineProvider;
 
     /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="pipelineProvider">Reads the pipeline.</param>
     protected GetPipelineDetailEndpointBase(
         ILogger logger,
-        PipelineServiceConfigurationProvider pipelineProvider)
+        IPipelineConfigurationProvider pipelineProvider)
     {
         EndpointLogger = logger;
         _pipelineProvider = pipelineProvider;

@@ -3,10 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.Extensions.Logging;
-using Fdw.Orchestration.Abstractions;
 using Fdw.Results;
-using Fdw.Services.Data.Abstractions;
-using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Web.RestEndpoints.Configuration;
 using Fdw.Web.RestEndpoints.Pagination;
 
@@ -25,11 +22,8 @@ public abstract class QueryEndpointBase<TQuery, TResult> : GenericEndpointBase<T
     /// Initializes a new instance of the <see cref="QueryEndpointBase{TQuery, TResult}"/> class.
     /// </summary>
     protected QueryEndpointBase(
-        ILogger<GenericEndpointBase<TQuery, PagedResponse<TResult>>> logger,
-        IDataGatewayProvider dataGateways,
-        IOrchestrationExecutor? executor = null,
-        ISchedulingService? scheduler = null)
-        : base(logger, dataGateways, executor, scheduler)
+        ILogger<GenericEndpointBase<TQuery, PagedResponse<TResult>>> logger)
+        : base(logger)
     {
     }
 
@@ -107,11 +101,8 @@ public abstract class QueryEndpointBase<TResult> : QueryEndpointBase<PagedReques
     /// Initializes a new instance of the <see cref="QueryEndpointBase{TResult}"/> class.
     /// </summary>
     protected QueryEndpointBase(
-        ILogger<GenericEndpointBase<PagedRequest, PagedResponse<TResult>>> logger,
-        IDataGatewayProvider dataGateways,
-        IOrchestrationExecutor? executor = null,
-        ISchedulingService? scheduler = null)
-        : base(logger, dataGateways, executor, scheduler)
+        ILogger<GenericEndpointBase<PagedRequest, PagedResponse<TResult>>> logger)
+        : base(logger)
     {
     }
 }

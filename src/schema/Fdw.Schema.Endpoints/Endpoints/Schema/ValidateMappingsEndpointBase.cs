@@ -28,7 +28,7 @@ namespace Fdw.Schema.Endpoints;
 /// </summary>
 public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRequest, MappingValidationResponse>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<ValidateMappingsEndpointBase> _logger;
 
     /// <summary>
@@ -36,7 +36,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
     /// </summary>
     /// <param name="dataSetProvider">Reads the data set with its sources and fields composed.</param>
     /// <param name="logger">The logger instance.</param>
-    protected ValidateMappingsEndpointBase(DataSetConfigurationProvider dataSetProvider, ILogger<ValidateMappingsEndpointBase> logger)
+    protected ValidateMappingsEndpointBase(IDataSetConfigurationProvider dataSetProvider, ILogger<ValidateMappingsEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
         _logger = logger;

@@ -19,7 +19,7 @@ public abstract class SearchLineageEndpointBase : LineageEndpointBase<LineageSea
     protected SearchLineageEndpointBase(
         ILogger logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,

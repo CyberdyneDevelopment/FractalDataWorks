@@ -10,6 +10,7 @@ using Fdw.Services.Pipelines.Webhooks;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -29,7 +30,7 @@ public abstract class NewWebhookSecretEndpointBase : Endpoint<WebhookNameRequest
     protected NewWebhookSecretEndpointBase(
         ILogger<NewWebhookSecretEndpointBase> logger,
         WebhookTriggerConfigurationProvider provider,
-        PipelineServiceConfigurationProvider pipelines,
+        IPipelineConfigurationProvider pipelines,
         IRoleGrants grants)
     {
         _triggers = new WebhookTriggers(provider, pipelines, new RunRoleAuthority(grants), logger ?? throw new ArgumentNullException(nameof(logger)));

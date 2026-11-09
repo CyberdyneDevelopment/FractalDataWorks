@@ -43,7 +43,7 @@ public sealed class CrossTenantChangePolicyRegistrationTests
         var initialized = ConnectionTypes.Initialize(host, NullLoggerFactory.Instance, Force);
 
         initialized.IsFailure.ShouldBeTrue();
-        initialized.Messages[^1].Code.ShouldBe("CONNECTIONS-72830");
+        initialized.Messages[^1].Code.ShouldBe("CONNECTIONS-60340");
         initialized.Messages[^1].Message.ShouldContain("ICrossTenantChangePolicy");
     }
 
@@ -76,7 +76,7 @@ public sealed class CrossTenantChangePolicyRegistrationTests
         var initialized = DataStoreServiceTypes.Initialize(host, NullLoggerFactory.Instance, Force);
 
         initialized.IsFailure.ShouldBeTrue();
-        initialized.Messages[^1].Code.ShouldBe("DATA-72831");
+        initialized.Messages[^1].Code.ShouldBe("DATA-60341");
         initialized.Messages[^1].Message.ShouldContain("ICrossTenantChangePolicy");
     }
 }

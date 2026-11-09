@@ -33,10 +33,10 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </remarks>
 public abstract class UpdateConnectionEndpointBase : CrudUpdateEndpointBase<UpdateConnectionRequest, ConnectionDetailDto>
 {
-    private readonly ConnectionConfigurationProvider _connectionProvider;
+    private readonly IConnectionConfigurationProvider _connectionProvider;
 
     /// <inheritdoc />
-    protected UpdateConnectionEndpointBase(ILogger<UpdateConnectionEndpointBase> logger, ConnectionConfigurationProvider connectionProvider) : base(logger)
+    protected UpdateConnectionEndpointBase(ILogger<UpdateConnectionEndpointBase> logger, IConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _connectionProvider = connectionProvider;
     }

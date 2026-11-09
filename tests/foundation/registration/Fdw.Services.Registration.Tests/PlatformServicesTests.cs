@@ -18,6 +18,7 @@ namespace Fdw.Services.Registration.Tests;
 /// </summary>
 [Trait("Priority", "P1")]
 [Trait("Category", "CoreFramework")]
+[Collection("PlatformServicesRegistry")]
 public sealed class PlatformServicesTests : IDisposable
 {
     public PlatformServicesTests() => PlatformServices.ResetForTesting();
@@ -412,11 +413,12 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     // A host as the platform's Register phase leaves it: every such host carries the
-    // authentication-context accessor, which Initialize elevates through.
+    // authentication-context accessor, which Initialize elevates through, and the marker Configure leaves so that Initialize knows the lifetimes were validated.
     private static IHost EmptyHost()
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
+        builder.Services.AddSingleton<ContainerValidation>();
         return builder.Build();
     }
 

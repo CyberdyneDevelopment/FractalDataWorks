@@ -24,14 +24,14 @@ public abstract class UnbindExternalIdentityEndpointBase : Endpoint<UnbindExtern
 {
     private const string ExternalIdentityDomain = "ExternalIdentity";
 
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
     private readonly IExternalIdentityConfigurationProvider _externalIdentities;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UnbindExternalIdentityEndpointBase"/> class.</summary>
     protected UnbindExternalIdentityEndpointBase(
         ILogger logger,
-        UserConfigurationProvider userProvider,
+        IUserConfigurationProvider userProvider,
         IExternalIdentityConfigurationProvider externalIdentities)
     {
         _logger = logger;

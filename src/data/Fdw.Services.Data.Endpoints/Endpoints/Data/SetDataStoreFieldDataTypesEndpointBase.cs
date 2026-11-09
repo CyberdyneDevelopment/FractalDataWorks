@@ -27,13 +27,13 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class SetDataStoreFieldDataTypesEndpointBase
     : CrudUpdateEndpointBase<SetDataStoreFieldDataTypesRequest, List<DataTypedFieldResponse>>
 {
-    private readonly DataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
     /// <summary>Initializes a new instance of the <see cref="SetDataStoreFieldDataTypesEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">Reads and saves the data store.</param>
     protected SetDataStoreFieldDataTypesEndpointBase(
-        ILogger<SetDataStoreFieldDataTypesEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider) : base(logger)
+        ILogger<SetDataStoreFieldDataTypesEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
     }

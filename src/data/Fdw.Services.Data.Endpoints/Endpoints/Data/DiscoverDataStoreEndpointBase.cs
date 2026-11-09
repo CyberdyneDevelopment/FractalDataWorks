@@ -38,7 +38,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStoreRequest, DiscoveryResultPayload>
 {
-    private readonly DataStoreConfigurationProvider _dataStores;
+    private readonly IDataStoreConfigurationProvider _dataStores;
     private readonly ISchemaInformationService _schema;
     private readonly ILogger _logger;
 
@@ -47,7 +47,7 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
     /// <param name="schema">Discovers through the store's connection and adds what the store lacks.</param>
     /// <param name="logger">The logger.</param>
     protected DiscoverDataStoreEndpointBase(
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         ISchemaInformationService schema,
         ILogger logger)
     {

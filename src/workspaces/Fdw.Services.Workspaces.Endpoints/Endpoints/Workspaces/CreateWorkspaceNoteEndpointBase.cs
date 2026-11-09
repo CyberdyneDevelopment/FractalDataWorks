@@ -31,8 +31,8 @@ public abstract class CreateWorkspaceNoteEndpointBase : CrudCreateEndpointBase<C
     public const int MaxBodyLength = 4000;
 
     private readonly IWorkspaceConfigurationProvider _workspaces;
-    private readonly NoteConfigurationProvider _notes;
-    private readonly UserConfigurationProvider _users;
+    private readonly INoteConfigurationProvider _notes;
+    private readonly IUserConfigurationProvider _users;
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IWorkspaceAccessPolicy _access;
@@ -41,8 +41,8 @@ public abstract class CreateWorkspaceNoteEndpointBase : CrudCreateEndpointBase<C
     protected CreateWorkspaceNoteEndpointBase(
         ILogger<CreateWorkspaceNoteEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,
-        NoteConfigurationProvider notes,
-        UserConfigurationProvider users,
+        INoteConfigurationProvider notes,
+        IUserConfigurationProvider users,
         IAuthenticationContextAccessor authContext,
         IDataSetConfigurationProvider dataSets,
         IWorkspaceAccessPolicy access) : base(logger)

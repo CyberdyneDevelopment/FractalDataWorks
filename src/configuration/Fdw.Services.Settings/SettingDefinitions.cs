@@ -221,6 +221,15 @@ public static class SettingDefinitions
     public const string CrossTenantDataStoreWrite = Fdw.Services.Multitenancy.Abstractions.CrossTenantChangeOption.DataStoreWrite;
 
     /// <summary>
+    /// Whether founding a tenant or an organization makes a default workspace (FDW-4599). DataType: Boolean.
+    /// </summary>
+    /// <remarks>
+    /// A server row states it. Where there is none, the value <c>WorkspaceFoundingOption</c> declares applies (true: founding makes one, as it always did), which a host overrides at
+    /// registration. Off, a tenant is founded with no workspace and a new data store, data set or pipeline is placed in none.
+    /// </remarks>
+    public const string FoundingMakesDefaultWorkspace = Fdw.Services.Multitenancy.Abstractions.WorkspaceFoundingOption.FoundingMakesDefaultWorkspace;
+
+    /// <summary>
     /// How often, in seconds, the ETL host publishes the components of the runs in flight (FDW-3778). DataType: Int32. Must be positive.
     /// </summary>
     /// <remarks>
@@ -400,6 +409,7 @@ public static class SettingDefinitions
             [LiveViewRefreshSeconds] = new("Int32", "How often, in seconds, the console reads the run queue again while the queue tab is open. Not set: the tab does not read again by itself."),
             [PipelineEventRelayEnabled] = new("Boolean", "Whether a host that serves no real-time hub relays its pipeline events to the host that does."),
             [CrossTenantConnectionEnable] = new("Boolean", "Whether an administrator of one tenant may enable a disabled connection that belongs to another tenant when they can see it. Not set: the value the host or the service type declares applies."),
+            [FoundingMakesDefaultWorkspace] = new("Boolean", "Whether founding a tenant or an organization makes a default workspace. Not set: the value the host or the service type declares applies (true)."),
             [CrossTenantDataStoreWrite] = new("Boolean", "Whether an administrator of one tenant may change a data store that belongs to another tenant when they can see it. Not set: the value the host or the service type declares applies."),
             [EscalationAlertsRefreshSeconds] = new("Int32", "How often, in seconds, the console reads the escalation alerts again while the alerts page is open. Not set: the page does not read again by itself."),
             [EscalationAdvanceIntervalSeconds] = new("Int32", "How often, in seconds, the host looks at its open escalation alerts and sends the levels that have fallen due. Not set: the host does not start the escalation timer and says so."),

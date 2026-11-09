@@ -8,7 +8,7 @@ Roslyn analyzers that enforce FDW conventions at compile time.
 
 ## Diagnostics
 
-`FDW024` · `FDW025` · `FDW027` · `FDW044` · `FDW045` · `STC001` · `STC002` · `SVCTYPE001`
+`FDW024` · `FDW025` · `FDW027` · `FDW044` · `FDW045` · `FDW060` · `FDW061` · `FDW062` · `STC001` · `STC002` · `SVCTYPE001`
 
 ## Analyzers
 
@@ -17,9 +17,12 @@ Roslyn analyzers that enforce FDW conventions at compile time.
 | `AbstractMemberAnalyzer` | class | Analyzer that warns about abstract properties and fields in enhanced enum base classes. Suggests using… |
 | `DuplicateLookupValueAnalyzer` | class | Analyzer that detects duplicate lookup values in enhanced enum ServiceTypes when AllowMultiple is not… |
 | `DuplicateTypeOptionAnalyzer` | class | Analyzer that detects duplicate enum option names within the same collection. |
+| `EndpointConstructorAllowlistAnalyzer` | class | FDW060 (FDW-4641 A): an endpoint constructor takes only ILogger, an interface named *Provider, or a cross-cutting type ([EndpointCrossCutting] or the `fdw_endpoint_cross_cutting_types` .editorconfig key). Ships disabled; a repository turns it on per folder. |
 | `FactoryProviderInjectionAnalyzer` | class | Analyzer that keeps service factories PURE: a class implementing Fdw.Abstractions.IServiceFactory must… |
 | `InstancePropertyAnalyzer` | class | Analyzer that detects and forbids the static Instance property pattern on TypeOption/ServiceType… |
 | `MissingTypeOptionAnalyzer` | class | Analyzer that warns when a type inherits from a base type specified in a [TypeCollection] attribute but… |
+| `RegistrationSurgeryAnalyzer` | class | FDW062 (FDW-4641 C): no `BuildServiceProvider`, no Remove/Replace/Clear/Insert on an `IServiceCollection`, no read of `ServiceDescriptor.Implementation*`, and no `Add*` extension on `IServiceCollection`/`IHostApplicationBuilder`. Ships disabled; a repository turns it on per folder. |
+| `RuntimeServiceLocatorAnalyzer` | class | FDW061 (FDW-4641 B): no runtime service locator outside a hosted worker, a registration body (a method or lambda taking IHostApplicationBuilder, IServiceCollection or IHost), an `sp =>` lambda, or a member marked `[ServiceLocatorAllowed("reason")]`. Ships disabled; a repository turns it on per folder. |
 | `ServiceProviderInjectionAnalyzer` | class | Analyzer that ensures a service-type-option service (a class implementing an IServiceOption-derived… |
 | `ServiceServiceTypeCollectionAttributeAnalyzer` | class | Analyzer that ensures EnumCollection attribute has CollectionName specified and validates inheritance. |
 | `TypeLookupNamingConflictAnalyzer` | class | Analyzer that detects when a [TypeLookup] attribute on a base type property will generate a method that… |

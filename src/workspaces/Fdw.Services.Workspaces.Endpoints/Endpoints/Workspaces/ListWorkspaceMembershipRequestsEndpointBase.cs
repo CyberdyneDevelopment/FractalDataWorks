@@ -22,13 +22,13 @@ namespace Fdw.Services.Workspaces.Endpoints;
 public abstract class ListWorkspaceMembershipRequestsEndpointBase
     : CrudListEndpointBase<WorkspaceNameRequest, WorkspaceMembershipRequestDto>
 {
-    private readonly WorkspaceConfigurationProvider _workspaces;
+    private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
 
     /// <inheritdoc />
     protected ListWorkspaceMembershipRequestsEndpointBase(
         ILogger<ListWorkspaceMembershipRequestsEndpointBase> logger,
-        WorkspaceConfigurationProvider workspaces,
+        IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access) : base(logger)
     {
         _workspaces = workspaces;

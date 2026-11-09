@@ -4,12 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines;
 
 /// <summary>
 /// Default pipeline-service type. Registers the gateway-backed
-/// <see cref="PipelineServiceConfigurationProvider"/> that the pipeline endpoints depend on.
+/// <see cref="IPipelineConfigurationProvider"/> that the pipeline endpoints depend on.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [Implementation(typeof(PipelineServiceTypes), "Default")]

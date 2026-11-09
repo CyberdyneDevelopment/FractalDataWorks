@@ -16,7 +16,7 @@ public abstract class ListDataStorePathContainersEndpointBase : SearchDataStoreC
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">Reads the store's paths and their containers.</param>
     protected ListDataStorePathContainersEndpointBase(
-        ILogger<ListDataStorePathContainersEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider)
+        ILogger<ListDataStorePathContainersEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider)
         : base(logger, dataStoreProvider)
     {
     }

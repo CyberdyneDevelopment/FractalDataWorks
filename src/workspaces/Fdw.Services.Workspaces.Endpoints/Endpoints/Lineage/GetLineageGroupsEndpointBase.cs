@@ -29,7 +29,7 @@ public abstract class GetLineageGroupsEndpointBase : LineageEndpointBase<Lineage
     protected GetLineageGroupsEndpointBase(
         ILogger logger,
         IDataSetConfigurationProvider dataSets,
-        DataStoreConfigurationProvider dataStores,
+        IDataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,

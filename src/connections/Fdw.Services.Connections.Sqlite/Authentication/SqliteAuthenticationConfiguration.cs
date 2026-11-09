@@ -43,7 +43,7 @@ public abstract class SqliteAuthenticationConfiguration
     }
 
     /// <summary>The KVP keys this authentication method reads from its auth dictionary.</summary>
-    public IReadOnlyList<string> ExpectedProperties { get; } = [];
+    public override IReadOnlyList<string> ExpectedProperties { get; } = [];
 
     /// <summary>The subset of <see cref="ExpectedProperties"/> that must be present.</summary>
     public IReadOnlyList<string> RequiredProperties { get; } = [];
