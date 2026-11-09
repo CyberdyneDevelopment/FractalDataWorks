@@ -114,12 +114,18 @@ internal sealed class LatestPipelineRunReader
     private async Task<IGenericResult<IReadOnlyDictionary<string, Guid>>> RowsAtThoseTimes(
         IReadOnlyDictionary<string, DateTimeOffset> newest, ExecutionTenantScope scope, CancellationToken cancellationToken)
     {
+        // CreateDate is a Metadata field, which a read leaves out unless it names it (FDW-988); this read matches each row on it, so it names the
+        // columns it reads (OPERATIONS-61153).
         var command = new QueryCommand<Dictionary<string, object?>>
         {
             Filter = Filter(
                 In("PipelineName", newest.Keys.Cast<object?>().ToList()),
                 In("CreateDate", newest.Values.Distinct().Cast<object?>().ToList()),
                 scope),
+            Projection = new ProjectionExpression
+            {
+                Fields = [new ProjectionField { PropertyName = "Id" }, new ProjectionField { PropertyName = "PipelineName" }, new ProjectionField { PropertyName = "CreateDate" }],
+            },
         };
         var read = await _gateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, Target(), cancellationToken).ConfigureAwait(false);
         if (read.IsFailure)

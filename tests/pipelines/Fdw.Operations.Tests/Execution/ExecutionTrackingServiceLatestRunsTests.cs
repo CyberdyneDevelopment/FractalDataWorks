@@ -106,7 +106,19 @@ public sealed class ExecutionTrackingServiceLatestRunsTests
         var times = Values(query.Filter, "CreateDate");
         return _runs
             .Where(r => names.Contains(r.Pipeline) && times.Contains(r.At))
-            .Select(r => Corrupted(new Dictionary<string, object?> { ["Id"] = r.Id, ["PipelineName"] = r.Pipeline, ["CreateDate"] = r.At }));
+            .Select(r => Corrupted(Returned(query, new Dictionary<string, object?> { ["Id"] = r.Id, ["PipelineName"] = r.Pipeline, ["CreateDate"] = r.At })));
+    }
+
+    // The columns a store returns of a run row (FDW-988): CreateDate is a Metadata field, left out unless the read names it, and a read that
+    // names its columns gets those (OPERATIONS-61153).
+    private static Dictionary<string, object?> Returned(QueryCommand<Dictionary<string, object?>> query, Dictionary<string, object?> row)
+    {
+        var named = query.Projection?.PropertyNames;
+        return row
+            .Where(c => named is not null
+                ? named.Contains(c.Key, StringComparer.OrdinalIgnoreCase)
+                : !string.Equals(c.Key, "CreateDate", StringComparison.Ordinal))
+            .ToDictionary(c => c.Key, c => c.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     private Dictionary<string, object?> Corrupted(Dictionary<string, object?> row)
@@ -139,6 +151,21 @@ public sealed class ExecutionTrackingServiceLatestRunsTests
         result.Value["Nightly"].State.Name.ShouldBe("Completed");
         result.Value["Hourly"].Id.ShouldBe(onlyRun);
         result.Value["Hourly"].State.Name.ShouldBe("Failed");
+    }
+
+    // OPERATIONS-61153: CreateDate is a Metadata field, which a read that does not name it never gets back; the row read matches on it, so it names it.
+    [Fact]
+    public async Task TheRowReadNamesTheMetadataCreateDateItMatchesOn()
+    {
+        var run = Guid.NewGuid();
+        Seed(new Run("Nightly", Newer, run, "Completed"));
+
+        var result = await Tracker(500).GetLatestRuns(["Nightly"], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!["Nightly"].Id.ShouldBe(run);
+        var rowRead = _commands.OfType<QueryCommand<Dictionary<string, object?>>>().Single(c => c.Aggregation is null);
+        rowRead.Projection.ShouldNotBeNull().PropertyNames.ShouldNotBeNull().ShouldBe(["Id", "PipelineName", "CreateDate"], ignoreOrder: true);
     }
 
     [Fact]
