@@ -19,14 +19,27 @@ public sealed class SqlTranslatorBaseKeyListSpillTests
 {
     private static readonly FakeDialect Dialect = new();
 
-    private static IFilterExpression In(string column, IEnumerable<object?> values, string op = "In")
-        => new FilterExpression { Root = new FilterCondition { PropertyName = column, Operator = FilterOperators.ByName(op), Value = values.ToList() } };
+    private static IFilterExpression In(string column, IEnumerable<object?> values, FilterOperatorBase? op = null)
+        => new FilterExpression { Root = new FilterCondition { PropertyName = column, Operator = op ?? new InOperator(), Value = values.ToList() } };
 
     private static (string Sql, List<(string Name, object? Value)> Parameters) Build(IFilterExpression filter)
     {
         var captured = new List<(string, object?)>();
         var sql = SqlTranslatorProxy.ExposeWhereClause(filter, Dialect, (name, value) => captured.Add((name, value)));
         return (sql, captured);
+    }
+
+    // No NOT IN operator is declared in FilterOperators; this stands in for one so the spill's keeping of the condition's own operator is tested.
+    private sealed class NotInTestOperator : FilterOperatorBase
+    {
+        public NotInTestOperator()
+            : base(name: "NotInTest", sqlOperator: "NOT IN", odataOperator: "notin", requiresValue: true)
+        {
+        }
+
+        public override string FormatODataValue(object? value) => string.Empty;
+
+        public override bool Matches(object? left, object? right) => false;
     }
 
     private static IEnumerable<object?> Ints(int count) => Enumerable.Range(1, count).Select(i => (object?)i);
@@ -78,7 +91,7 @@ public sealed class SqlTranslatorBaseKeyListSpillTests
     {
         using var scope = KeyListSpillScope.Begin(new TranslationSettings(5), "[t]");
 
-        var (sql, _) = Build(In("id", Ints(6), "NotIn"));
+        var (sql, _) = Build(In("id", Ints(6), new NotInTestOperator()));
 
         sql.ShouldContain(" NOT IN (SELECT v FROM keys_");
     }

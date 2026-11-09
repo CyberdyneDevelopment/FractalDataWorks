@@ -46,11 +46,12 @@ public sealed class PipelineProjectMembershipsTests
     {
         var zeta = Node("Project", "Zeta", null);
         var alpha = Node("Project", "Alpha", null);
-        var zetaStep = Node("Step", "S1", Node("Stage", "G1", zeta.Id).Id, Sales);
+        var zetaStage = Node("Stage", "G1", zeta.Id);
+        var zetaStep = Node("Step", "S1", zetaStage.Id, Sales);
         var alphaStage = Node("Stage", "G2", alpha.Id);
         var alphaStep = Node("Step", "S2", alphaStage.Id, Sales, Budget);
 
-        var projects = Of(zeta, alpha, alphaStage, alphaStep, zetaStep);
+        var projects = Of(zeta, alpha, zetaStage, alphaStage, alphaStep, zetaStep);
 
         projects[Sales].ShouldBe(["Alpha", "Zeta"]);
         projects[Budget].ShouldBe(["Alpha"]);

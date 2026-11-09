@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Fdw.Services.Connections.Commands;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Data.Commands;
+using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Search;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Services.Data.Transformations;
@@ -61,6 +62,12 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
         // a failed result and does not throw out of a singleton factory or pass unseen (FDW-3966).
         Initialization((host, loggerFactory) =>
         {
+            // Why the host is refused here (FDW-4459): the data store provider is built on the cross-tenant change policy, which the Settings service type registers.
+            if (!host.Services.GetRequiredService<IServiceProviderIsService>().IsService(typeof(Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy)))
+            {
+                return GenericResult<IHost>.Failure(DataStoreCrossTenantLog.CrossTenantChangePolicyNotRegistered(loggerFactory?.CreateLogger<DataStoreServiceTypes>() ?? NullLogger<DataStoreServiceTypes>.Instance));
+            }
+
             var initialized = initializeOptions(host, loggerFactory);
             if (initialized.IsFailure)
             {

@@ -30,6 +30,10 @@ namespace Fdw.Services.Multitenancy.Endpoints.Tests;
 [Trait("Category", "Security")]
 public sealed class TenantEndpointTests
 {
+    // A row that is not there, as a provider reports it: a failure numbered in the Missing band (3xxxx), which the mapper answers 404.
+    // An unnumbered failure is a fault and answers 500.
+    private static GenericMessage MissingRow() => new(MessageSeverity.Error, "not found", "TEST-30001");
+
     private static readonly Guid Administrator = new("22222222-0000-0000-0000-000000000001");
     private static readonly Guid TenantId = new("11111111-0000-0000-0000-000000000009");
 
@@ -197,7 +201,7 @@ public sealed class TenantEndpointTests
     {
         var writer = new Mock<ITenantWriter>();
         var tenants = new Mock<ITenantProvider>();
-        tenants.Setup(t => t.GetTenant(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<ITenant>.Failure(new GenericMessage("not found")));
+        tenants.Setup(t => t.GetTenant(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<ITenant>.Failure(MissingRow()));
         var endpoint = Factory.Create<UpdateTenant>(Caller(), writer.Object, tenants.Object, Audit().Object, Roles(true).Object);
 
         await endpoint.HandleAsync(new UpdateTenantRequest { Id = TenantId, Name = "Beta Corp" }, CancellationToken.None);
