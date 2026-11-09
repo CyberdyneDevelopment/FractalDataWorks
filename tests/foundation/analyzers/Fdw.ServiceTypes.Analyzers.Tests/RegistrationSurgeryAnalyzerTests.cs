@@ -144,14 +144,13 @@ public static class ThingWiring
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
-    public Task TheRuleIsOffUntilEditorConfigTurnsItOn() => Run(@"
-using Microsoft.Extensions.DependencyInjection;
+    public void TheRuleIsOffUntilEditorConfigTurnsItOn()
+    {
+        // What a rule ships as is its descriptors' IsEnabledByDefault. The test harness enables every descriptor of the analyzer it
+        // runs, so running the analyzer with an empty editorconfig cannot show that the rule is off (FDW-4716).
+        var supported = new RegistrationSurgeryAnalyzer().SupportedDiagnostics;
 
-public static class ThingServiceCollectionExtensions
-{
-    public static System.IServiceProvider Build(IServiceCollection services) => services.BuildServiceProvider();
-
-    public static IServiceCollection AddThings(this IServiceCollection services) => services;
-}
-", string.Empty);
+        Assert.NotEmpty(supported);
+        Assert.All(supported, descriptor => Assert.False(descriptor.IsEnabledByDefault, descriptor.Id));
+    }
 }

@@ -202,16 +202,15 @@ public sealed class ThingService
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
-    public Task TheRuleIsOffUntilEditorConfigTurnsItOn() => Run(@"
-using Fdw.Services.Data.Abstractions;
-
-public sealed class ListThingsEndpoint : FastEndpoints.EndpointWithoutRequest
-{
-    public ListThingsEndpoint(IDataGateway gateway)
+    public void TheRuleIsOffUntilEditorConfigTurnsItOn()
     {
+        // What a rule ships as is its descriptors' IsEnabledByDefault. The test harness enables every descriptor of the analyzer it
+        // runs, so running the analyzer with an empty editorconfig cannot show that the rule is off (FDW-4716).
+        var supported = new EndpointConstructorAllowlistAnalyzer().SupportedDiagnostics;
+
+        Assert.NotEmpty(supported);
+        Assert.All(supported, descriptor => Assert.False(descriptor.IsEnabledByDefault, descriptor.Id));
     }
-}
-", string.Empty);
 
     [Fact]
     [Trait("Priority", "P0")]
