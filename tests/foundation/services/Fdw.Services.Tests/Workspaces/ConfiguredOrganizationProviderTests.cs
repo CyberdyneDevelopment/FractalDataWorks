@@ -31,7 +31,7 @@ public sealed class ConfiguredOrganizationProviderTests
     {
         var gateway = new Mock<IConfigurationGateway>();
         gateway
-            .Setup(g => g.Execute<IEnumerable<OrganizationRow>>(It.IsAny<IDataCommand>(), It.IsAny<CancellationToken>()))
+            .Setup(g => g.Execute<IEnumerable<OrganizationRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(answer);
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get(It.IsAny<string>())).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));

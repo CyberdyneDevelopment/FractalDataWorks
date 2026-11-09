@@ -246,7 +246,7 @@ public sealed class OrganizationScopeTests
         // FDW-2887: the caller does not act in the organization's tenant and is refused, so nothing may say the organization exists.
         var missing = new Mock<IOrganizationProvider>();
         missing.Setup(o => o.Get(Finance, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("not found")));
+            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(Fdw.Services.Authorization.Logging.OrganizationAccessLog.OrganizationNotFound(NullLogger.Instance, Finance)));
 
         var ofAnotherTenant = await Scope(Caller(Tenant), Organizations(Finance, OtherTenant), HoldsAt()).TenantOf(Right, Finance, TestContext.Current.CancellationToken);
         var absent = await Scope(Caller(Tenant), missing, HoldsAt()).TenantOf(Right, Finance, TestContext.Current.CancellationToken);
