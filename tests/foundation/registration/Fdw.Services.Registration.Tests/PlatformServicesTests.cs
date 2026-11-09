@@ -108,6 +108,8 @@ public sealed class PlatformServicesTests : IDisposable
 
         var builder = Host.CreateApplicationBuilder();
 
+        // Configure first, as a host does: it is what leaves the marker that Initialize requires (FDW-4640).
+        PlatformServices.Configure(builder);
         PlatformServices.Register(builder);
         PlatformServices.Initialize(builder.Build());
 
