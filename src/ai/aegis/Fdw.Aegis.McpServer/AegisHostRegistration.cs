@@ -14,6 +14,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.SecretManagers;
+using Fdw.Services.Settings;
 using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -168,6 +169,10 @@ public static class AegisHostRegistration
     /// declares none and idles, which is the state this host is in. The monitor opens a scope under a system
     /// authentication context, so the accessor it resolves is registered here too.
     /// </para>
+    /// <para>
+    /// Why the Settings service type is registered too (FDW-4459): the connection and data store domains ask the cross-tenant change policy it registers, and a host without it is refused at
+    /// initialization with the domain's own coded message. This host has no tenants, so the policy never reads a setting; it is registered so the domains find the one they ask.
+    /// </para>
     /// </remarks>
     /// <param name="builder">The host application builder.</param>
     /// <param name="schemaFileName">The schema file, resolved against the application base directory.</param>
@@ -195,14 +200,20 @@ public static class AegisHostRegistration
         var gatewayRegistered = gatewayConfigured.IsFailure
             ? gatewayConfigured
             : ConfigurationGatewayTypes.Register(builder, loggerFactory);
-        if (gatewayRegistered.IsFailure)
+        var settingsConfigured = gatewayRegistered.IsFailure
+            ? gatewayRegistered
+            : SettingsServiceTypes.Configure(builder, loggerFactory);
+        var settingsRegistered = settingsConfigured.IsFailure
+            ? settingsConfigured
+            : SettingsServiceTypes.Register(builder, loggerFactory);
+        if (settingsRegistered.IsFailure)
         {
-            AegisLog.HostPhaseFailed(logger, nameof(RegisterConfigurationSource), gatewayRegistered.CurrentMessage);
-            return gatewayRegistered;
+            AegisLog.HostPhaseFailed(logger, nameof(RegisterConfigurationSource), settingsRegistered.CurrentMessage);
+            return settingsRegistered;
         }
 
         AegisLog.HostPhaseCompleted(logger, nameof(RegisterConfigurationSource));
-        return gatewayRegistered;
+        return settingsRegistered;
     }
 
     /// <summary>

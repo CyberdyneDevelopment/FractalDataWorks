@@ -375,7 +375,7 @@ public sealed class PostgreSqlQueryTranslatorTests
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
         queryCommand.Setup(q => q.Paging).Returns((IPagingExpression?)null);
 
-        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = await _sut.Translate(queryCommand.Object, container.Object, new TranslationSettings(50), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         // PG always-false predicate is FALSE, not "1 = 0"
