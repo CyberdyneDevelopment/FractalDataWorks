@@ -1,20 +1,16 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Fdw.Results.Abstractions;
 
 namespace Fdw.Results;
 
 /// <summary>
-/// Pooled implementation of <see cref="IResultDetails"/> for efficient allocation.
+/// The key-value details of a result. Every <see cref="Create()"/> returns a new instance that is never recycled (FDW-4785): results share
+/// their details (a copied result holds its source's), so an instance a result can still hold must never be cleared or handed to another result.
 /// </summary>
 public sealed class ResultDetails : IResultDetails
 {
-    private static readonly ConcurrentBag<ResultDetails> Pool = new();
-    private static readonly int MaxPoolSize = 100;
-
     private readonly Dictionary<string, object?> _data = new(StringComparer.Ordinal);
-    private bool _isPooled;
 
     private ResultDetails()
     {
@@ -24,22 +20,14 @@ public sealed class ResultDetails : IResultDetails
     public IReadOnlyDictionary<string, object?> Data => _data;
 
     /// <inheritdoc />
-    public bool IsPooled => _isPooled;
+    /// <remarks>Always <see langword="false"/>: instances are not pooled (FDW-4785).</remarks>
+    public bool IsPooled => false;
 
     /// <summary>
-    /// Gets a <see cref="ResultDetails"/> instance from the pool or creates a new one.
+    /// Creates a new, empty <see cref="ResultDetails"/> instance.
     /// </summary>
-    /// <returns>A <see cref="ResultDetails"/> instance.</returns>
-    public static ResultDetails Create()
-    {
-        if (Pool.TryTake(out var instance))
-        {
-            instance._isPooled = false;
-            return instance;
-        }
-
-        return new ResultDetails();
-    }
+    /// <returns>A new <see cref="ResultDetails"/> instance.</returns>
+    public static ResultDetails Create() => new();
 
     /// <summary>
     /// Creates a <see cref="ResultDetails"/> instance with a single key-value pair.
@@ -82,11 +70,6 @@ public sealed class ResultDetails : IResultDetails
     /// <returns>This instance for fluent chaining.</returns>
     public ResultDetails With(string key, object? value)
     {
-        if (_isPooled)
-        {
-            throw new ObjectDisposedException(nameof(ResultDetails), "Cannot modify a pooled instance.");
-        }
-
         _data[key] = value;
         return this;
     }
@@ -102,20 +85,10 @@ public sealed class ResultDetails : IResultDetails
         return default;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Does nothing. The data stays intact and the instance is never recycled, because a result may still hold it (FDW-4785).
+    /// </summary>
     public void Dispose()
     {
-        if (_isPooled)
-        {
-            return;
-        }
-
-        _data.Clear();
-        _isPooled = true;
-
-        if (Pool.Count < MaxPoolSize)
-        {
-            Pool.Add(this);
-        }
     }
 }

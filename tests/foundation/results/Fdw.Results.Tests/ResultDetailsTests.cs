@@ -3,7 +3,7 @@ using Fdw.Results;
 namespace Fdw.Results.Tests;
 
 /// <summary>
-/// Tests for the ResultDetails class - pooled implementation of IResultDetails.
+/// Tests for the ResultDetails class, the IResultDetails implementation. Instances are never pooled (FDW-4785).
 /// </summary>
 public class ResultDetailsTests
 {
@@ -136,14 +136,17 @@ public class ResultDetailsTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void With_ThrowsObjectDisposedExceptionWhenPooled()
+    public void WithStillWritesAfterDispose()
     {
         // Arrange
         var details = ResultDetails.Create();
         details.Dispose();
 
-        // Act & Assert
-        Should.Throw<ObjectDisposedException>(() => details.With("Key", "Value"));
+        // Act
+        _ = details.With("Key", "Value");
+
+        // Assert - Dispose does not invalidate the instance (FDW-4785)
+        details.Data["Key"].ShouldBe("Value");
     }
 
     #endregion
@@ -227,12 +230,14 @@ public class ResultDetailsTests
 
     #endregion
 
-    #region Dispose / Pooling Tests
+    #region Dispose Tests
+
+    // FDW-4785: results share their details, so Dispose must neither clear an instance nor hand it to another Create.
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Dispose_SetsIsPooledToTrue()
+    public void DisposeLeavesIsPooledFalse()
     {
         // Arrange
         var details = ResultDetails.Create("Key", "Value");
@@ -241,13 +246,13 @@ public class ResultDetailsTests
         details.Dispose();
 
         // Assert
-        details.IsPooled.ShouldBeTrue();
+        details.IsPooled.ShouldBeFalse();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Dispose_ClearsData()
+    public void DisposeKeepsTheData()
     {
         // Arrange
         var details = ResultDetails.Create("Key", "Value");
@@ -256,7 +261,8 @@ public class ResultDetailsTests
         details.Dispose();
 
         // Assert
-        details.Data.ShouldBeEmpty();
+        details.Data.Count.ShouldBe(1);
+        details.Data["Key"].ShouldBe("Value");
     }
 
     [Fact]
@@ -275,18 +281,19 @@ public class ResultDetailsTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void PooledInstanceCanBeReusedViaCreate()
+    public void CreateNeverHandsBackADisposedInstance()
     {
-        // Arrange - dispose to return to pool
+        // Arrange
         var original = ResultDetails.Create("OldKey", "OldValue");
         original.Dispose();
 
-        // Act - get from pool
-        var reused = ResultDetails.Create();
+        // Act
+        var next = ResultDetails.Create();
 
-        // Assert - should get a clean instance (data cleared during dispose)
-        reused.Data.ShouldBeEmpty();
-        reused.IsPooled.ShouldBeFalse();
+        // Assert - a new instance, and the disposed one keeps its data
+        ReferenceEquals(original, next).ShouldBeFalse();
+        next.Data.ShouldBeEmpty();
+        original.Data["OldKey"].ShouldBe("OldValue");
     }
 
     #endregion

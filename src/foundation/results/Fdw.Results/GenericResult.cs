@@ -194,7 +194,7 @@ public class GenericResult : IGenericResult
         Details = MergeDetails(source.Details, details);
     }
 
-    // The source's details with the added ones over them. The merged bag is never disposed here: a pooled instance is recycled only when someone disposes it.
+    // The source's details with the added ones over them, in a new instance; the source's own details are read, never changed.
     private static IResultDetails MergeDetails(IResultDetails? existing, IResultDetails added)
     {
         if (existing is null)

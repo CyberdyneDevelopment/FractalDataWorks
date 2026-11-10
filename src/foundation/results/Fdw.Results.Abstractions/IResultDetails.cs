@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Fdw.Results.Abstractions;
 
 /// <summary>
-/// Interface for result details that can be formatted into messages.
+/// Interface for result details that can be formatted into messages. Disposing an instance must not clear or recycle it: a result may still hold it.
 /// </summary>
 public interface IResultDetails : IDisposable
 {
@@ -22,7 +22,7 @@ public interface IResultDetails : IDisposable
     T? GetValue<T>(string key);
 
     /// <summary>
-    /// Gets whether this details instance has been returned to the pool.
+    /// Gets whether this details instance has been returned to a pool. Always <see langword="false"/> for <c>ResultDetails</c>, which is never pooled (FDW-4785).
     /// </summary>
     bool IsPooled { get; }
 }
