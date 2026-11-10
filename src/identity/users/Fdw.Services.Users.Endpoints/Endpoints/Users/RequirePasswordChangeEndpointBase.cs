@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -111,7 +110,7 @@ public abstract class RequirePasswordChangeEndpointBase : Endpoint<UserScopedReq
         var result = await _credentialService.ForcePasswordChange(user.Id, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(result.Messages.Append(UserEndpointLog.RequirePasswordChangeTheAccountCouldNotBe(_logger))), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Caused(result, UserEndpointLog.RequirePasswordChangeTheAccountCouldNotBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

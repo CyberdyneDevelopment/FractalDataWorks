@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -105,7 +104,12 @@ public abstract class CreateApiKeyEndpointBase : Endpoint<CreateApiKeyRequest, A
 
         if (!issued.IsSuccess || issued.Value is null)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(issued.Messages.Append(UserEndpointLog.CreateApiKeyReturnedNothing(_logger))), HttpContext)).ConfigureAwait(false);
+            // Why two answers: a failed mint is passed on whole with this endpoint's message after it (FDW-4851); a mint that succeeded
+            // with no key has no failure to carry, so this endpoint's message is the failure.
+            var failed = issued.IsFailure
+                ? GenericResult.Caused(issued, UserEndpointLog.CreateApiKeyReturnedNothing(_logger))
+                : GenericResult.Failure(UserEndpointLog.CreateApiKeyReturnedNothing(_logger));
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(failed, HttpContext)).ConfigureAwait(false);
             return;
         }
 

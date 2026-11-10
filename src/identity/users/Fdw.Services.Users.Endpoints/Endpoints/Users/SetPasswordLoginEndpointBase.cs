@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -128,7 +127,7 @@ public abstract class SetPasswordLoginEndpointBase : Endpoint<SetPasswordLoginRe
             .Store(userId, "Password", req.InitialPassword, ct).ConfigureAwait(false);
         if (!storeResult.IsSuccess)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(storeResult.Messages.Append(UserEndpointLog.SetPasswordLoginThePasswordCouldNotBe(_logger))), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Caused(storeResult, UserEndpointLog.SetPasswordLoginThePasswordCouldNotBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

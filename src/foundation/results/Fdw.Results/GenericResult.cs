@@ -194,6 +194,18 @@ public class GenericResult : IGenericResult
         Details = MergeDetails(source.Details, details);
     }
 
+    /// <summary>
+    /// Constructor that copies a failure whole and adds a message after its own (FDW-4851). Code, InnerResult, Details, status and
+    /// the outcome carry over.
+    /// </summary>
+    /// <param name="source">The failure to copy.</param>
+    /// <param name="appended">The message added after the source's messages.</param>
+    protected GenericResult(IGenericResult source, IGenericMessage appended)
+        : this(source)
+    {
+        EnsureMessages().Add(appended);
+    }
+
     // The source's details with the added ones over them, in a new instance; the source's own details are read, never changed.
     private static IResultDetails MergeDetails(IResultDetails? existing, IResultDetails added)
     {
@@ -481,6 +493,39 @@ public class GenericResult : IGenericResult
     {
         code.Log(logger, details);
         return new GenericResult(code, innerResult, false, details);
+    }
+
+    /// <summary>
+    /// Creates the failure of a caller that received a failure: the cause whole, with the caller's own message after its messages
+    /// (FDW-4851). The cause's Code, InnerResult, Details and messages carry over, so what classifies the failure (its code, then
+    /// its first coded message) is still the cause's; the caller's message says where the failure surfaced and classifies it only
+    /// when the cause carries no code.
+    /// </summary>
+    /// <remarks>
+    /// Why not <c>Failure(cause.Messages.Append(context))</c>: that keeps the messages and drops the Code, the chain and the
+    /// details (FDW015). Why not <c>Chain</c>: it puts the caller's result code in front, and that code would choose the status.
+    /// </remarks>
+    /// <param name="cause">The failure the caller received; a success is refused.</param>
+    /// <param name="context">The caller's message, which says where the failure surfaced.</param>
+    /// <returns>A failed result that is the cause with the caller's message last.</returns>
+    public static IGenericResult Caused(IGenericResult cause, IGenericMessage context)
+    {
+        if (cause is null)
+        {
+            throw new ArgumentNullException(nameof(cause));
+        }
+
+        if (context is null)
+        {
+            throw new ArgumentNullException(nameof(context));
+        }
+
+        if (cause.IsSuccess)
+        {
+            throw new ArgumentException("A cause is a failure; a success has nothing to carry.", nameof(cause));
+        }
+
+        return new GenericResult(cause, context);
     }
 
     /// <summary>

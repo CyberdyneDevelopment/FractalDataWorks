@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -104,7 +103,7 @@ public abstract class RevokeApiKeyEndpointBase : Endpoint<RevokeApiKeyRequest>
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(result.Messages.Append(UserEndpointLog.RevokeApiKeyTheKeyCouldNotBe(_logger))), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Caused(result, UserEndpointLog.RevokeApiKeyTheKeyCouldNotBe(_logger)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
