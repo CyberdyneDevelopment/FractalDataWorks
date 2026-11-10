@@ -10,6 +10,12 @@ namespace Fdw.Services.Scheduling.Clients.Abstractions;
 public class ScheduleInfoDto
 {
     /// <summary>
+    /// Gets or sets the schedule's id (FDW-4815). The scheduler answers it; a client that scopes something to a schedule, such as an
+    /// escalation policy, names it by this id.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
     /// Gets or sets the schedule name.
     /// </summary>
     public string Name { get; set; } = string.Empty;

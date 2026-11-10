@@ -58,12 +58,12 @@ public static partial class ComputeSetLog
     public static partial IGenericMessage SetNeedsABatchRun(ILogger logger, string stageName);
 
     /// <summary>Logs a table bound to a data set that cannot be read.</summary>
-    [MessageLogging(EventId = 20629, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70629, Level = LogLevel.Error,
         Message = "Compute stage '{stageName}' could not read data set '{dataSet}' for table '{tableName}': {reason}")]
     public static partial IGenericMessage DataSetUnreadable(ILogger logger, string stageName, string dataSet, string tableName, string reason);
 
     /// <summary>Logs a tables Compute stage in a run with no data gateway.</summary>
-    [MessageLogging(EventId = 20630, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60630, Level = LogLevel.Error,
         Message = "Compute stage '{stageName}' reads data set '{dataSet}' and the run has no data gateway")]
     public static partial IGenericMessage NoGateway(ILogger logger, string stageName, string dataSet);
 

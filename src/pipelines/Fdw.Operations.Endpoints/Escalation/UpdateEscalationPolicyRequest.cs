@@ -20,6 +20,9 @@ public class UpdateEscalationPolicyRequest
     /// <summary>Gets or sets the optional workflow ID scope. Omitted leaves it unchanged.</summary>
     public Guid? WorkflowId { get; set; }
 
+    /// <summary>Gets or sets the optional schedule ID scope. Omitted leaves it unchanged (FDW-4814).</summary>
+    public Guid? ScheduleId { get; set; }
+
     /// <summary>Gets or sets the maximum escalation level. Omitted leaves it unchanged.</summary>
     public int? MaxEscalationLevel { get; set; }
 

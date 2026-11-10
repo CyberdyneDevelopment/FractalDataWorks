@@ -102,7 +102,7 @@ public abstract class UnbindExternalIdentityEndpointBase : Endpoint<UnbindExtern
             .Delete(bindings.Value[0].Id, ct).ConfigureAwait(false);
         if (!deleteResult.IsSuccess)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.UnbindExternalIdentityTheBindingCouldNotBe(_logger)), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(deleteResult.Messages.Append(UserEndpointLog.UnbindExternalIdentityTheBindingCouldNotBe(_logger))), HttpContext)).ConfigureAwait(false);
             return;
         }
 

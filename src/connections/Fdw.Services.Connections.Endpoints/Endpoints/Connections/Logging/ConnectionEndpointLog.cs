@@ -68,7 +68,7 @@ public static partial class ConnectionEndpointLog
     public static partial IGenericMessage TypedBodyLookupSkipped(ILogger logger, string connectionName, System.Guid connectionId);
 
     /// <summary>Logs when a create/update request enables health checks without any trigger that would ever run them.</summary>
-    [MessageLogging(EventId = 71005, Level = LogLevel.Warning, Message = "Connection '{connectionName}' has HealthCheckEnabled=true but no trigger is configured (HealthCheckOnStartup=false and HealthCheckIntervalSeconds is null) — this would never be checked; refusing to save")]
+    [MessageLogging(EventId = 21007, Level = LogLevel.Warning, Message = "Connection '{connectionName}' has HealthCheckEnabled=true but no trigger is configured (HealthCheckOnStartup=false and HealthCheckIntervalSeconds is null) — this would never be checked; refusing to save")]
     public static partial IGenericMessage HealthCheckEnabledWithoutTrigger(ILogger logger, string connectionName);
 
     /// <summary>A request tried to choose where a connection's credentials are stored (FDW-1086).</summary>

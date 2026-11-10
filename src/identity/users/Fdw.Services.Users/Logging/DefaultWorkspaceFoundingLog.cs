@@ -18,6 +18,6 @@ public static partial class DefaultWorkspaceFoundingLog
     /// <param name="workspaceId">The workspace.</param>
     /// <param name="tenantId">The tenant it belongs to.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 72739, Level = LogLevel.Error, Message = "The default workspace '{workspaceId}' of tenant '{tenantId}' could not be {operation}: this host does not run the workspaces service, so a tenant or an organization cannot be founded here")]
+    [MessageLogging(EventId = 62739, Level = LogLevel.Error, Message = "The default workspace '{workspaceId}' of tenant '{tenantId}' could not be {operation}: this host does not run the workspaces service, so a tenant or an organization cannot be founded here")]
     public static partial IGenericMessage Unavailable(ILogger logger, string operation, Guid workspaceId, Guid tenantId);
 }

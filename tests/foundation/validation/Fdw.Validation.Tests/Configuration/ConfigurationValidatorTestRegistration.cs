@@ -17,5 +17,6 @@ internal static class ConfigurationValidatorTestRegistration
         ConfigurationValidators.RegisterMember(new ResolverOwnOption());
         ConfigurationValidators.RegisterMember(new ResolverContractOption());
         ConfigurationValidators.RegisterMember(new ResolverOtherContractOption());
+        ConfigurationValidators.RegisterMember(new CodedRefusalOption());
     }
 }

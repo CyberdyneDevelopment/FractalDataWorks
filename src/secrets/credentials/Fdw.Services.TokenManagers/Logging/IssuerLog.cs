@@ -193,7 +193,7 @@ internal static partial class IssuerLog
     /// <param name="validUntil">When the claims stopped being true.</param>
     // Warning, not Error: nothing is broken. A role assignment expired between resolving permissions
     // and minting, and the caller signs in again to get a token for what it holds now.
-    [MessageLogging(EventId = 91210, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 51210, Level = LogLevel.Warning,
         Message = "Refused to mint a token for '{audience}' naming principal {principalId}: its claims stopped being true at {validUntil}")]
     internal static partial IGenericMessage ClaimsAlreadyExpired(
         ILogger<JwtTokenIssuer> logger, string audience, Guid principalId, DateTimeOffset validUntil);

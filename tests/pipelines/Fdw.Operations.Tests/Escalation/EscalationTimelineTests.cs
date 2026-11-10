@@ -11,21 +11,28 @@ public sealed class EscalationTimelineTests
 {
     private static readonly DateTimeOffset Fired = new(2026, 11, 4, 12, 0, 0, TimeSpan.Zero);
 
+    private sealed class TestRecipient(string recipient, string recipientType) : IEscalationRecipient
+    {
+        public string Recipient { get; } = recipient;
+
+        public string RecipientType { get; } = recipientType;
+    }
+
     private sealed class TestLevel(int level, int delayMinutes) : IEscalationLevel
     {
         public int Level { get; } = level;
+
+        public string Name => "Level";
 
         public int DelayMinutes { get; } = delayMinutes;
 
         public string NotificationChannel => "Email";
 
-        public IReadOnlyList<string> Recipients => ["ops"];
+        public IReadOnlyList<IEscalationRecipient> Recipients => [new TestRecipient("ops", "Email")];
 
         public string? MessageTemplate => null;
 
         public string Severity => "Warning";
-
-        public string RecipientType => "Email";
     }
 
     private sealed class TestPolicy(int max, int cooldownMinutes, bool enabled, params IEscalationLevel[] levels) : IEscalationPolicy
@@ -37,6 +44,7 @@ public sealed class EscalationTimelineTests
         public bool IsEnabled { get; } = enabled;
 
         public Guid? WorkflowId => null;
+        public Guid? ScheduleId => null;
 
         public int MaxEscalationLevel { get; } = max;
 

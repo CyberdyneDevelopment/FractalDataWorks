@@ -52,32 +52,32 @@ public static partial class DevSessionManagerLog
         string toState);
 
     [MessageLogging(
-        EventId = 92030,
-        Level = LogLevel.Error,
+        EventId = 32030,
+        Level = LogLevel.Warning,
         Message = "No session found with id {sessionId}")]
     public static partial IGenericMessage SessionNotFoundById(
         ILogger logger,
         Guid sessionId);
 
     [MessageLogging(
-        EventId = 92031,
-        Level = LogLevel.Error,
+        EventId = 32031,
+        Level = LogLevel.Warning,
         Message = "No session found for key {key}")]
     public static partial IGenericMessage SessionNotFoundByKey(
         ILogger logger,
         string key);
 
     [MessageLogging(
-        EventId = 92032,
-        Level = LogLevel.Error,
+        EventId = 22032,
+        Level = LogLevel.Warning,
         Message = "Unknown isolation level '{isolationLevelName}' — it is not a registered IsolationLevels option")]
     public static partial IGenericMessage UnknownIsolationLevel(
         ILogger logger,
         string isolationLevelName);
 
     [MessageLogging(
-        EventId = 92033,
-        Level = LogLevel.Error,
+        EventId = 42033,
+        Level = LogLevel.Warning,
         Message = "Session {sessionId} is in terminal state {state} and cannot be {attemptedOperation}")]
     public static partial IGenericMessage SessionIsTerminal(
         ILogger logger,
@@ -86,8 +86,8 @@ public static partial class DevSessionManagerLog
         string attemptedOperation);
 
     [MessageLogging(
-        EventId = 92034,
-        Level = LogLevel.Error,
+        EventId = 42034,
+        Level = LogLevel.Warning,
         Message = "Session {sessionId} is {state}, so it cannot be {attemptedOperation}")]
     public static partial IGenericMessage InvalidTransition(
         ILogger logger,

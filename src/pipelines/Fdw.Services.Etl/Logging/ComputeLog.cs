@@ -14,7 +14,7 @@ namespace Fdw.Services.Etl.Logging;
 public static partial class ComputeLog
 {
     /// <summary>Logs that Compute stages cannot be resolved because the run has no Transformation provider.</summary>
-    [MessageLogging(EventId = 20601, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60601, Level = LogLevel.Error,
         Message = "Stage '{stageName}' applies a Built transformation, but the host gave the run no Transformation provider to resolve it")]
     public static partial IGenericMessage TransformationProviderMissing(ILogger logger, string stageName);
 
@@ -49,12 +49,12 @@ public static partial class ComputeLog
     public static partial IGenericMessage CalculationRefused(ILogger logger, string stageName, string transformationName);
 
     /// <summary>Logs that Compute stages cannot be compiled because the run has no settings provider.</summary>
-    [MessageLogging(EventId = 20612, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60612, Level = LogLevel.Error,
         Message = "Stage '{stageName}' applies a Built transformation, but the host gave the run no settings provider to read the calculation limits from")]
     public static partial IGenericMessage SettingsProviderMissing(ILogger logger, string stageName);
 
     /// <summary>Logs that a required calculation limit setting is missing or not positive.</summary>
-    [MessageLogging(EventId = 20608, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60608, Level = LogLevel.Error,
         Message = "The setting '{settingName}' that limits calculations is missing or not positive, so Compute stages cannot be compiled")]
     public static partial IGenericMessage LimitSettingMissing(ILogger logger, string settingName);
 

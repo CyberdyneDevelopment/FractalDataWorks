@@ -49,7 +49,7 @@ public static partial class EtlGatewayLog
     public static partial IGenericMessage StoreNotResolved(ILogger logger, string dataStore, string reason);
 
     /// <summary>Logs a script refused because the host's declaration of its data stores could not be read.</summary>
-    [MessageLogging(EventId = 20988, Level = LogLevel.Error, Message = "The {commandType} script for data store '{dataStore}' is refused: whether the host declares the store could not be read ({reason})",
+    [MessageLogging(EventId = 70988, Level = LogLevel.Error, Message = "The {commandType} script for data store '{dataStore}' is refused: whether the host declares the store could not be read ({reason})",
         ClientMessage = "The {commandType} script for data store '{dataStore}' is refused: whether the host declares the store could not be read")]
     public static partial IGenericMessage StoreLookupFailed(ILogger logger, string dataStore, string commandType, string? reason);
 }

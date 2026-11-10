@@ -1,4 +1,3 @@
-using System.Linq;
 using FluentValidation.Results;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
@@ -16,13 +15,14 @@ public static class ValidationResultExtensions
     /// <param name="result">The FluentValidation result.</param>
     /// <param name="logger">The logger the refusal is logged to.</param>
     /// <returns>
-    /// A success result if valid; otherwise one failure naming every rule that failed, as <c>property: message</c> joined by <c>; </c>. The
-    /// failure carries a Validation-band number and a client message, so a host answers it with 400 and the reason (FDW-3539).
+    /// A success result if valid; otherwise a failure with a message for each rule that has a coded message of its own (<see cref="ValidationFailureMessages"/>),
+    /// and one message naming the other rules, as <c>property: message</c> joined by <c>; </c>. The failure carries Validation-band numbers and client
+    /// messages, so a host answers it with 400 and the reason (FDW-3539, FDW-4738).
     /// </returns>
     public static IGenericResult ToGenericResult(this ValidationResult result, ILogger logger)
         => result.IsValid
             ? GenericResult.Success()
-            : GenericResult.Failure(ValidationLog.InputRejected(logger, Details(result)));
+            : GenericResult.Failure(ValidationFailureMessages.From(result, details => ValidationLog.InputRejected(logger, details)));
 
     /// <summary>
     /// Converts a FluentValidation <see cref="ValidationResult"/> to an <see cref="IGenericResult{T}"/>.
@@ -33,14 +33,12 @@ public static class ValidationResultExtensions
     /// <param name="value">The value to return on success.</param>
     /// <param name="logger">The logger the refusal is logged to.</param>
     /// <returns>
-    /// A success result with the value if valid; otherwise one failure naming every rule that failed, as <c>property: message</c> joined
-    /// by <c>; </c>. The failure carries a Validation-band number and a client message, so a host answers it with 400 and the reason.
+    /// A success result with the value if valid; otherwise a failure with a message for each rule that has a coded message of its own, and one
+    /// message naming the other rules, as <c>property: message</c> joined by <c>; </c>. The failure carries Validation-band numbers and client
+    /// messages, so a host answers it with 400 and the reason.
     /// </returns>
     public static IGenericResult<T> ToGenericResult<T>(this ValidationResult result, T value, ILogger logger)
         => result.IsValid
             ? GenericResult<T>.Success(value)
-            : GenericResult<T>.Failure(ValidationLog.InputRejected(logger, Details(result)));
-
-    private static string Details(ValidationResult result)
-        => string.Join("; ", result.Errors.Select(error => $"{error.PropertyName}: {error.ErrorMessage}"));
+            : GenericResult<T>.Failure(ValidationFailureMessages.From(result, details => ValidationLog.InputRejected(logger, details)));
 }

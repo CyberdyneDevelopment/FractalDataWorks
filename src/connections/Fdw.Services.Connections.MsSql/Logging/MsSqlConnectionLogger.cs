@@ -356,7 +356,7 @@ public static partial class MsSqlConnectionLogger
     /// <summary>
     /// Logs when a SQL login fails (error 18456).
     /// </summary>
-    [MessageLogging(EventId = 51004, Level = LogLevel.Error, Message = "SQL login failed on '{commandText}'")]
+    [MessageLogging(EventId = 71037, Level = LogLevel.Error, Message = "SQL login failed on '{commandText}'")]
     public static partial IGenericMessage SqlLoginFailed(ILogger logger, Exception ex, string commandText);
 
     /// <summary>

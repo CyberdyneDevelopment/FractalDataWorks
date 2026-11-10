@@ -12,7 +12,7 @@ namespace Fdw.Services.Pipelines.Endpoints.Logging;
 public static partial class WebhookEndpointLog
 {
     /// <summary>Logs a webhook trigger that was saved and cannot be read back.</summary>
-    [MessageLogging(EventId = 20994, Level = LogLevel.Error, Message = "Webhook trigger '{webhook}' was saved and cannot be read back")]
+    [MessageLogging(EventId = 90994, Level = LogLevel.Error, Message = "Webhook trigger '{webhook}' was saved and cannot be read back")]
     public static partial IGenericMessage SavedButUnreadable(ILogger logger, string webhook);
 
     /// <summary>Logs a stored webhook trigger of an implementation this endpoint does not read.</summary>

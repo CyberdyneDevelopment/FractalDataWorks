@@ -4,6 +4,8 @@ using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Connections.Logging;
 using Microsoft.Extensions.Logging;
@@ -52,15 +54,15 @@ public static class ScriptedRows
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentNullException.ThrowIfNull(logger);
+        if (RepeatedColumn(reader) is { } repeated)
+        {
+            return GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Failure(ScriptedRowsLog.ColumnRepeated(logger, repeated));
+        }
+
         var names = new string[reader.FieldCount];
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < names.Length; i++)
         {
             names[i] = reader.GetName(i);
-            if (!seen.Add(names[i]))
-            {
-                return GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Failure(ScriptedRowsLog.ColumnRepeated(logger, names[i]));
-            }
         }
 
         var rows = new List<IDictionary<string, object?>>();
@@ -82,5 +84,55 @@ public static class ScriptedRows
 
         ScriptedRowsLog.Read(logger, rows.Count);
         return GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Success(rows);
+    }
+
+    /// <summary>
+    /// Streams the first result set (FDW-4903): answers a record source that reads each row when it is asked for and owns the
+    /// reader, its command and its connection until it ends or is disposed. A name twice in the result fails here, before any
+    /// row is read, and what was handed over is released.
+    /// </summary>
+    /// <param name="reader">The open reader.</param>
+    /// <param name="owned">What the source releases when it ends, in order: the reader, then its command, then its connection.</param>
+    /// <param name="take">The most rows to read; the row after them ends the read as a failed record. Null states no limit.</param>
+    /// <param name="failed">Says what a failure of the store while reading is, as the connection that ran the script says it.</param>
+    /// <param name="logger">The logger a failure is written to.</param>
+    /// <returns>The record source, or the failure that says why the result cannot be read.</returns>
+    public static IGenericResult<IRecordSource<DataRecord>> Open(
+        DbDataReader reader,
+        IReadOnlyList<IDisposable> owned,
+        int? take,
+        Func<Exception, IEnumerable<IGenericMessage>> failed,
+        ILogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(owned);
+        ArgumentNullException.ThrowIfNull(failed);
+        ArgumentNullException.ThrowIfNull(logger);
+        if (RepeatedColumn(reader) is { } repeated)
+        {
+            foreach (var release in owned)
+            {
+                release.Dispose();
+            }
+
+            return GenericResult<IRecordSource<DataRecord>>.Failure(ScriptedRowsLog.ColumnRepeated(logger, repeated));
+        }
+
+        return GenericResult<IRecordSource<DataRecord>>.Success(new ScriptedRecordSource(reader, owned, take, failed, logger));
+    }
+
+    // The first column whose name an earlier column already has, ignoring case; none when every name is its own.
+    private static string? RepeatedColumn(DbDataReader reader)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (!seen.Add(reader.GetName(i)))
+            {
+                return reader.GetName(i);
+            }
+        }
+
+        return null;
     }
 }

@@ -36,6 +36,7 @@ public sealed class SqlErrorHandlerStatusTests
     [InlineData(33504, 403)]
     [InlineData(515, 500)]
     [InlineData(8003, 500)]
+    [InlineData(18456, 502)] // FDW-4843: the platform's own login failing is a downstream fault, never the caller's 401
     public void A_constraint_or_statement_error_answers_with_its_own_status(int sqlErrorNumber, int expectedStatus)
         => StatusOf(sqlErrorNumber).ShouldBe(expectedStatus);
 
@@ -105,7 +106,7 @@ public sealed class SqlErrorHandlerStatusTests
     [InlineData(229, 14, 50001)]
     [InlineData(2627, 14, 40001)]
     [InlineData(547, 16, 40000)]
-    [InlineData(18456, 14, 51004)]
+    [InlineData(18456, 14, 71037)]
     [InlineData(4060, 11, 71022)]
     [InlineData(1205, 13, 81000)]
     public void A_number_with_its_own_handler_keeps_it_whatever_its_class(int sqlErrorNumber, int sqlErrorClass, int expectedCode)

@@ -13,6 +13,11 @@ public interface IEscalationLevel
     int Level { get; }
 
     /// <summary>
+    /// Gets the level's name (FDW-4852). The caller states it; there is no default and none is derived from the level number.
+    /// </summary>
+    string Name { get; }
+
+    /// <summary>
     /// Gets the delay in minutes before this level is triggered.
     /// </summary>
     int DelayMinutes { get; }
@@ -23,9 +28,9 @@ public interface IEscalationLevel
     string NotificationChannel { get; }
 
     /// <summary>
-    /// Gets the list of recipients for this level.
+    /// Gets the recipients of this level, each with its own type. Empty for a level on a channel that needs none (the Console channel).
     /// </summary>
-    IReadOnlyList<string> Recipients { get; }
+    IReadOnlyList<IEscalationRecipient> Recipients { get; }
 
     /// <summary>
     /// Gets the message template for notifications at this level.
@@ -36,9 +41,4 @@ public interface IEscalationLevel
     /// Gets the severity of the notification at this level (Warning, Error, Critical). The caller states it; there is no default (FDW-3823).
     /// </summary>
     string Severity { get; }
-
-    /// <summary>
-    /// Gets the type of this level's recipients (Email, Webhook, IntegrationKey). The caller states it; there is no default (FDW-3823).
-    /// </summary>
-    string RecipientType { get; }
 }

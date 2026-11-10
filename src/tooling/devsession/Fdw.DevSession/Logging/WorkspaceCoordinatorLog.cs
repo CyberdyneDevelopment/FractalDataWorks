@@ -41,8 +41,8 @@ public static partial class WorkspaceCoordinatorLog
         Guid sessionId);
 
     [MessageLogging(
-        EventId = 92050,
-        Level = LogLevel.Error,
+        EventId = 42050,
+        Level = LogLevel.Warning,
         Message = "Strand {strandId} cannot be fenced: its paths overlap those already claimed by strand {conflictingStrandId}")]
     public static partial IGenericMessage ScopeOverlap(
         ILogger logger,
@@ -50,8 +50,8 @@ public static partial class WorkspaceCoordinatorLog
         string conflictingStrandId);
 
     [MessageLogging(
-        EventId = 92051,
-        Level = LogLevel.Error,
+        EventId = 42051,
+        Level = LogLevel.Warning,
         Message = "Strand {strandId} is already fenced in session {sessionId}")]
     public static partial IGenericMessage StrandAlreadyFenced(
         ILogger logger,
@@ -59,8 +59,8 @@ public static partial class WorkspaceCoordinatorLog
         Guid sessionId);
 
     [MessageLogging(
-        EventId = 92052,
-        Level = LogLevel.Error,
+        EventId = 32052,
+        Level = LogLevel.Warning,
         Message = "No strand {strandId} in session {sessionId}")]
     public static partial IGenericMessage StrandNotFound(
         ILogger logger,
@@ -76,8 +76,8 @@ public static partial class WorkspaceCoordinatorLog
         string strandId);
 
     [MessageLogging(
-        EventId = 92054,
-        Level = LogLevel.Error,
+        EventId = 42054,
+        Level = LogLevel.Warning,
         Message = "Strand {strandId} is in terminal state {state} and cannot be reconciled")]
     public static partial IGenericMessage StrandIsTerminal(
         ILogger logger,
@@ -85,8 +85,8 @@ public static partial class WorkspaceCoordinatorLog
         string state);
 
     [MessageLogging(
-        EventId = 92055,
-        Level = LogLevel.Error,
+        EventId = 22055,
+        Level = LogLevel.Warning,
         Message = "A scope request must claim at least one path (strand {strandId})")]
     public static partial IGenericMessage EmptyScope(
         ILogger logger,

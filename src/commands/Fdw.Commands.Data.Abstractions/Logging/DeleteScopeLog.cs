@@ -13,7 +13,7 @@ public static partial class DeleteScopeLog
     /// <summary>
     /// Logs a delete a translator refused because it does not state the rows it removes.
     /// </summary>
-    [MessageLogging(EventId = 90100, Level = LogLevel.Error,
+    [MessageLogging(EventId = 20100, Level = LogLevel.Warning,
         Message = "A Delete on container '{containerName}' is refused: {problem}")]
     public static partial IGenericMessage Refused(ILogger logger, string containerName, string problem);
 }

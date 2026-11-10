@@ -12,16 +12,15 @@ public sealed class EscalationLevelPayload
     public Guid Id { get; set; }
     /// <summary>Gets or sets the escalation level number.</summary>
     public int Level { get; set; }
+    /// <summary>Gets or sets the level's name. Required on a create and an update (FDW-4852).</summary>
+    public string Name { get; set; } = string.Empty;
     /// <summary>Gets or sets the delay in minutes before this level triggers.</summary>
     public int? DelayMinutes { get; set; }
     /// <summary>Gets or sets the notification channel.</summary>
     public string NotificationChannel { get; set; } = string.Empty;
-    /// <summary>Gets or sets the recipients for this level.</summary>
-    public IReadOnlyList<string> Recipients { get; set; } = [];
+    /// <summary>Gets or sets the recipients for this level, each with its own type. Empty for a level that needs none.</summary>
+    public IReadOnlyList<EscalationRecipientPayload> Recipients { get; set; } = [];
 
     /// <summary>Gets or sets the severity of the notification at this level. Required on a create (FDW-3823).</summary>
     public string Severity { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the type of this level's recipients. Required on a create (FDW-3823).</summary>
-    public string RecipientType { get; set; } = string.Empty;
 }

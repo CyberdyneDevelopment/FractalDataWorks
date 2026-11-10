@@ -117,7 +117,7 @@ public sealed class PipelineWatermarksTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("PIPELINERUN-20232");
+        result.Messages[^1].Code.ShouldBe("PIPELINERUN-70232");
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("store down");
     }
 
@@ -134,7 +134,7 @@ public sealed class PipelineWatermarksTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("PIPELINERUN-20231");
+        result.Messages[^1].Code.ShouldBe("PIPELINERUN-60231");
         _calls.ShouldBeEmpty();
     }
 
@@ -306,7 +306,7 @@ public sealed class PipelineWatermarksTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("PIPELINERUN-20231");
+        result.Messages[^1].Code.ShouldBe("PIPELINERUN-60231");
         _calls.ShouldBeEmpty();
     }
 }

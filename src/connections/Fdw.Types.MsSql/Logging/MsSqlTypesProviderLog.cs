@@ -61,7 +61,7 @@ public static partial class MsSqlTypesProviderLog
     /// Logs when a stored TypeCollection names a collection kind the platform does not declare (FDW-3580).
     /// </summary>
     [MessageLogging(
-        EventId = 71005,
+        EventId = 61005,
         Level = LogLevel.Error,
         Message = "TypeCollection '{collectionName}' is stored with collection kind '{kindName}', which CollectionKinds does not declare")]
     public static partial IGenericMessage UnknownCollectionKind(ILogger logger, string collectionName, string kindName);

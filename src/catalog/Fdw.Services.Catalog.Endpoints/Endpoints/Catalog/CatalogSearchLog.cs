@@ -35,7 +35,7 @@ public static partial class CatalogSearchLog
     /// <param name="maximum">The most the source reads.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     // Why Error: the endpoint refuses a window past CatalogSearchLimits.MaxWindow, so a source narrower than that limit is a host mistake.
-    [MessageLogging(EventId = 91643, Level = LogLevel.Error,
+    [MessageLogging(EventId = 21643, Level = LogLevel.Warning,
         Message = "The catalog search needs {window} matches of kind {kind} and its source reads at most {maximum}")]
     public static partial IGenericMessage WindowPastSource(ILogger logger, string kind, int window, int maximum);
 

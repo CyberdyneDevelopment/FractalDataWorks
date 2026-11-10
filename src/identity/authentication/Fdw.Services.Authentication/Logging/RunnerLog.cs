@@ -98,7 +98,7 @@ internal static partial class RunnerLog
     /// <param name="logger">The logger.</param>
     /// <param name="flowName">The flow.</param>
     /// <param name="reason">Why not.</param>
-    [MessageLogging(EventId = 91108, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 101108, Level = LogLevel.Warning,
         Message = "Flow '{flowName}' will not issue: {reason}")]
     internal static partial IGenericMessage NotPermitted(ILogger<AuthenticationRunner> logger, string flowName, string reason);
 
@@ -186,7 +186,7 @@ internal static partial class RunnerLog
     /// <param name="flowName">The flow.</param>
     /// <param name="achieved">The level reached.</param>
     /// <param name="required">The level demanded.</param>
-    [MessageLogging(EventId = 91109, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 51109, Level = LogLevel.Warning,
         Message = "Flow '{flowName}' reached assurance '{achieved}' but requires '{required}'")]
     internal static partial IGenericMessage InsufficientAssurance(
         ILogger<AuthenticationRunner> logger, string flowName, string achieved, string required);

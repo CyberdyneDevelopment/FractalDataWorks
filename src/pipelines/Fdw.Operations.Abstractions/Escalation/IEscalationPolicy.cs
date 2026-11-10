@@ -29,6 +29,11 @@ public interface IEscalationPolicy
     Guid? WorkflowId { get; }
 
     /// <summary>
+    /// Gets the schedule ID this policy is scoped to, if any (FDW-4814).
+    /// </summary>
+    Guid? ScheduleId { get; }
+
+    /// <summary>
     /// Gets the maximum escalation level.
     /// </summary>
     int MaxEscalationLevel { get; }

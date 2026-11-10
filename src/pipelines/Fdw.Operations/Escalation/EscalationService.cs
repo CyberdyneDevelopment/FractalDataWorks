@@ -62,8 +62,17 @@ public sealed class EscalationService : IEscalationService
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<IEscalationPolicy>>> GetAllPolicies(
+    public Task<IGenericResult<IReadOnlyList<IEscalationPolicy>>> GetAllPolicies(
         CancellationToken cancellationToken = default)
+        => ReadPolicies(enabledOnly: false, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<IGenericResult<IReadOnlyList<IEscalationPolicy>>> GetEnabledPolicies(
+        CancellationToken cancellationToken = default)
+        => ReadPolicies(enabledOnly: true, cancellationToken);
+
+    // The two reads differ only in which headers they read in full: the list wants every policy and its state, the alert engine only the enabled ones (FDW-4874).
+    private async Task<IGenericResult<IReadOnlyList<IEscalationPolicy>>> ReadPolicies(bool enabledOnly, CancellationToken cancellationToken)
     {
         OperationsLog.EscalationListingPolicies(_logger);
 
@@ -73,7 +82,7 @@ public sealed class EscalationService : IEscalationService
                 OperationsLog.EscalationPersistFailed(_logger, "Failed to query policies"));
 
         var policies = new List<IEscalationPolicy>();
-        foreach (var header in (headers.Value ?? []).Where(c => c.IsEnabled))
+        foreach (var header in (headers.Value ?? []).Where(c => !enabledOnly || c.IsEnabled))
         {
             var full = await _provider.Get(header.Id, cancellationToken).ConfigureAwait(false);
             if (!full.IsSuccess)
@@ -190,13 +199,14 @@ public sealed class EscalationService : IEscalationService
         return GenericResult.Success();
     }
 
-    private static EscalationPolicyImplementationConfiguration BuildConfig(IEscalationPolicy policy, Guid? id)
+    internal static EscalationPolicyImplementationConfiguration BuildConfig(IEscalationPolicy policy, Guid? id)
         => new()
         {
             Id = id ?? NotYetMinted,
             Name = policy.Name,
             IsEnabled = policy.IsEnabled,
             WorkflowId = policy.WorkflowId,
+            ScheduleId = policy.ScheduleId,
             MaxEscalationLevel = policy.MaxEscalationLevel,
             CooldownMinutes = policy.CooldownMinutes,
             MaxRetries = policy.MaxRetries,
@@ -204,15 +214,16 @@ public sealed class EscalationService : IEscalationService
             Levels = policy.Levels.Select(level => new EscalationLevelConfiguration
             {
                 Level = level.Level,
+                Name = level.Name,
                 DelayMinutes = level.DelayMinutes,
                 NotificationChannel = level.NotificationChannel,
                 Template = level.MessageTemplate,
                 Severity = level.Severity,
                 Recipients = level.Recipients.Select(recipient => new EscalationLevelRecipientConfiguration
                 {
-                    Name = recipient,
-                    Recipient = recipient,
-                    RecipientType = level.RecipientType
+                    Name = recipient.Recipient,
+                    Recipient = recipient.Recipient,
+                    RecipientType = recipient.RecipientType
                 }).ToList<EscalationLevelRecipientConfiguration>()
             }).ToList<EscalationLevelConfiguration>()
         };

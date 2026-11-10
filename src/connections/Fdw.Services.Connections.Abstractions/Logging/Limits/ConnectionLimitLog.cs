@@ -15,7 +15,7 @@ public static partial class ConnectionLimitLog
     /// <summary>
     /// Logs when an outbound query is rejected because the rate limit is exceeded.
     /// </summary>
-    [MessageLogging(EventId = 81000, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 151000, Level = LogLevel.Warning,
         Message = "Rate limit exceeded on connection '{connectionId}' — {currentRate} req/s exceeds cap of {maxPerSecond}")]
     public static partial IGenericMessage RateExceeded(
         ILogger logger,
@@ -36,7 +36,7 @@ public static partial class ConnectionLimitLog
     /// <summary>
     /// Logs when a query is rejected because the result size would exceed the configured cap.
     /// </summary>
-    [MessageLogging(EventId = 81002, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 21002, Level = LogLevel.Warning,
         Message = "Max result size exceeded on connection '{connectionId}' — requested {requestedRows} rows exceeds cap of {maxRows}")]
     public static partial IGenericMessage MaxResultSizeExceeded(
         ILogger logger,
@@ -58,7 +58,7 @@ public static partial class ConnectionLimitLog
     /// <summary>
     /// Logs when a query is rejected because the daily query budget is exhausted.
     /// </summary>
-    [MessageLogging(EventId = 81004, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 151004, Level = LogLevel.Warning,
         Message = "Daily query budget exhausted on connection '{connectionId}' — {queriesUsed} of {maxQueriesPerDay} queries used today")]
     public static partial IGenericMessage DailyQueryBudgetExhausted(
         ILogger logger,

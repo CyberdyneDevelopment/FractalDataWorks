@@ -93,7 +93,7 @@ public sealed class EscalationAlerts : IEscalationAlerts
             return open.ToNewResult<int>();
         }
 
-        var policies = await _policies.GetAllPolicies(cancellationToken).ConfigureAwait(false);
+        var policies = await _policies.GetEnabledPolicies(cancellationToken).ConfigureAwait(false);
         if (policies.IsFailure || policies.Value is null)
         {
             return policies.ToNewResult<int>();
@@ -223,11 +223,11 @@ public sealed class EscalationAlerts : IEscalationAlerts
 
         if (!policy.IsEnabled)
         {
-            return GenericResult<IEscalationPolicy>.Failure(EscalationAlertLog.PolicyNotUsable(_logger, name, "it is not enabled"));
+            return GenericResult<IEscalationPolicy>.Failure(EscalationAlertLog.PolicyNotEnabled(_logger, name));
         }
 
         return EscalationTimeline.Next(policy, 0) is null
-            ? GenericResult<IEscalationPolicy>.Failure(EscalationAlertLog.PolicyNotUsable(_logger, name, "it states no level within its maximum level"))
+            ? GenericResult<IEscalationPolicy>.Failure(EscalationAlertLog.PolicyHasNoLevel(_logger, name))
             : GenericResult<IEscalationPolicy>.Success(policy);
     }
 
@@ -278,7 +278,7 @@ public sealed class EscalationAlerts : IEscalationAlerts
 
         var sent = await service.Send(
             new NotificationRequest(
-                service.ServiceType, level.Recipients, EscalationMessage.SubjectOf(row, step.Level), EscalationMessage.BodyOf(row, level),
+                service.ServiceType, [.. level.Recipients.Select(recipient => recipient.Recipient)], EscalationMessage.SubjectOf(row, step.Level), EscalationMessage.BodyOf(row, level),
                 NotificationPriorities.ByName(priorityName),
                 new Dictionary<string, object?>(StringComparer.Ordinal) { ["AlertId"] = row.Id, ["Policy"] = policy.Name, ["Level"] = step.Level, ["Threshold"] = row.ThresholdName }),
             cancellationToken).ConfigureAwait(false);

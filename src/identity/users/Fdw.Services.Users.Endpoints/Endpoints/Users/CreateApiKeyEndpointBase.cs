@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -104,7 +105,7 @@ public abstract class CreateApiKeyEndpointBase : Endpoint<CreateApiKeyRequest, A
 
         if (!issued.IsSuccess || issued.Value is null)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.CreateApiKeyReturnedNothing(_logger)), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(issued.Messages.Append(UserEndpointLog.CreateApiKeyReturnedNothing(_logger))), HttpContext)).ConfigureAwait(false);
             return;
         }
 

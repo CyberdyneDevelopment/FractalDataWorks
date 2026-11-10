@@ -44,12 +44,12 @@ public static partial class PipelineEndpointLog
     public static partial IGenericMessage PipelineNotFound(ILogger logger, string pipelineName);
 
     /// <summary>Logs a run-role expansion that failed without saying why, so no reason can be given to the caller.</summary>
-    [MessageLogging(EventId = 71000, Level = LogLevel.Error,
+    [MessageLogging(EventId = 91000, Level = LogLevel.Error,
         Message = "Expanding the run roles {roles} of pipeline '{pipelineName}' failed and gave no reason")]
     public static partial IGenericMessage RunRolesExpansionUnexplained(ILogger logger, string pipelineName, string roles);
 
     /// <summary>Logs a run-role expansion that reported success but returned no roles.</summary>
-    [MessageLogging(EventId = 71001, Level = LogLevel.Error,
+    [MessageLogging(EventId = 91001, Level = LogLevel.Error,
         Message = "Expanding the run roles {roles} of pipeline '{pipelineName}' succeeded but returned nothing")]
     public static partial IGenericMessage RunRolesExpansionEmpty(ILogger logger, string pipelineName, string roles);
 

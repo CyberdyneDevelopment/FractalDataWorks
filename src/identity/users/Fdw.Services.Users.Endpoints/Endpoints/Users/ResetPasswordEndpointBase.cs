@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -135,7 +136,7 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
             var storeResult = await _credentialService.Store(userId, "Password", req.NewPassword, ct).ConfigureAwait(false);
             if (!storeResult.IsSuccess)
             {
-                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ResetPasswordFailedToResetPassword(_logger)), HttpContext)).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(storeResult.Messages.Append(UserEndpointLog.ResetPasswordFailedToResetPassword(_logger))), HttpContext)).ConfigureAwait(false);
                 return;
             }
 

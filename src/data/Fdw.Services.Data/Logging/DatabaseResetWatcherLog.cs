@@ -84,7 +84,7 @@ public static partial class DatabaseResetWatcherLog
     /// <param name="logger">The logger.</param>
     /// <param name="settingName">The setting.</param>
     /// <returns>The structured message.</returns>
-    [MessageLogging(EventId = 20988, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60988, Level = LogLevel.Error,
         Message = "The setting '{settingName}' that says how often the configuration databases are looked at for a reset is missing or not positive, so the host cannot start")]
     public static partial IGenericMessage IntervalSettingMissing(ILogger logger, string settingName);
 

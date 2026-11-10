@@ -33,13 +33,13 @@ internal static partial class DatabaseAuthorizationCodeStoreLog
 
     /// <summary>The code presented is missing, expired, or already redeemed.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91272, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 51272, Level = LogLevel.Warning,
         Message = "No sign-in code can be redeemed with the code presented")]
     internal static partial IGenericMessage NotRedeemable(ILogger<DatabaseAuthorizationCodeStore> logger);
 
     /// <summary>No code was supplied to redeem.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91273, Level = LogLevel.Error,
+    [MessageLogging(EventId = 21273, Level = LogLevel.Warning,
         Message = "A sign-in code must be supplied to redeem one")]
     internal static partial IGenericMessage CodeMissing(ILogger<DatabaseAuthorizationCodeStore> logger);
 

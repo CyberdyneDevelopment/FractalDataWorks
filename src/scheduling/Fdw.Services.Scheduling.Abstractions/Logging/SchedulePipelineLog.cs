@@ -15,7 +15,7 @@ public static partial class SchedulePipelineLog
     public static partial IGenericMessage SchedulePipelineNotFound(ILogger logger, string scheduleName, Guid pipelineId);
 
     /// <summary>Logs a pipeline lookup that reported success but returned no pipeline.</summary>
-    [MessageLogging(EventId = 71000, Level = LogLevel.Error,
+    [MessageLogging(EventId = 91000, Level = LogLevel.Error,
         Message = "Schedule '{scheduleName}': looking up pipeline '{pipelineId}' succeeded but returned no pipeline")]
     public static partial IGenericMessage SchedulePipelineLookupEmpty(ILogger logger, string scheduleName, Guid pipelineId);
 }

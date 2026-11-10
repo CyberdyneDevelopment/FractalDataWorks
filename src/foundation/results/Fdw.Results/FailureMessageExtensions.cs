@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Fdw.Results;
@@ -27,31 +28,63 @@ public static class FailureMessageExtensions
     /// </returns>
     public static FailureMessage? FirstFailureMessage(this IGenericResult result)
     {
+        var failures = result.FailureMessages();
+        return failures.Count > 0 ? failures[0] : null;
+    }
+
+    /// <summary>
+    /// Gets every message on <paramref name="result"/> whose code number is in a failure category (20000 and up), in the order the
+    /// result holds them.
+    /// </summary>
+    /// <param name="result">The result to read.</param>
+    /// <returns>The messages; empty when the result carries none. The first is the one <see cref="FirstFailureMessage"/> returns.</returns>
+    /// <remarks>
+    /// Why all of them: a refusal by a validator carries one message for each rule that failed, and the answer to the caller names
+    /// every one of them while taking its code and status from the first (FDW-4738).
+    /// </remarks>
+    public static IReadOnlyList<FailureMessage> FailureMessages(this IGenericResult result)
+    {
         if (result == null)
         {
             throw new ArgumentNullException(nameof(result));
         }
 
+        var failures = new List<FailureMessage>();
         foreach (var message in result.Messages)
         {
-            if (message?.Code is not { Length: > 0 } text)
+            if (message?.AsFailureMessage() is { } failure)
             {
-                continue;
-            }
-
-            var dash = text.LastIndexOf('-');
-            if (dash < 0 || !int.TryParse(text.Substring(dash + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var number))
-            {
-                continue;
-            }
-
-            if (number >= FirstFailureNumber)
-            {
-                return new FailureMessage(text, number, message);
+                failures.Add(failure);
             }
         }
 
-        return null;
+        return failures;
+    }
+
+    /// <summary>
+    /// Reads <paramref name="message"/> as a failure message: its code in the generator's "PREFIX-NNNNN" form with a number of 20000 or more.
+    /// </summary>
+    /// <param name="message">The message to read.</param>
+    /// <returns>The failure message, or <see langword="null"/> when the message has no code, a code of another form, or a success or progress number.</returns>
+    public static FailureMessage? AsFailureMessage(this Fdw.Messages.IGenericMessage message)
+    {
+        if (message == null)
+        {
+            throw new ArgumentNullException(nameof(message));
+        }
+
+        if (message.Code is not { Length: > 0 } text)
+        {
+            return null;
+        }
+
+        var dash = text.LastIndexOf('-');
+        if (dash < 0 || !int.TryParse(text.Substring(dash + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var number))
+        {
+            return null;
+        }
+
+        return number >= FirstFailureNumber ? new FailureMessage(text, number, message) : null;
     }
 
     /// <summary>

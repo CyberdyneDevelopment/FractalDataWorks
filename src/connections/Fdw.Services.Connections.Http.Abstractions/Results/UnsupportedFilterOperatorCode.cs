@@ -20,8 +20,8 @@ public sealed class UnsupportedFilterOperatorCode : HttpResultCodeBase
     /// Initializes a new instance of the <see cref="UnsupportedFilterOperatorCode"/> class.
     /// </summary>
     public UnsupportedFilterOperatorCode()
-        : base(91013, "UnsupportedFilterOperator",
-            ResultSeverities.ByName("Error"),
+        : base(21013, "UnsupportedFilterOperator",
+            ResultSeverities.ByName("Warning"),
             "Protocol '{Protocol}' cannot express filter operator '{Operator}' on '{Field}'",
             isRetryable: false)
     {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Fdw.Messages;
 using Fdw.Results;
@@ -78,7 +79,7 @@ public static class ResultHttpStatusMapper
                     category.IsRetryable,
                     category.ClientAction,
                     httpContext,
-                    ClientReason(messageCode.Message)));
+                    ClientReason(result, messageCode, category)));
             }
         }
 
@@ -105,6 +106,27 @@ public static class ResultHttpStatusMapper
     // written only for the log, and shows nothing, whatever its category.
     private static string? ClientReason(IGenericMessage message)
         => message is IClientMessage { ClientText: { } text } ? text : null;
+
+    // The same for a failure built from [MessageLogging] messages, one for each rule a validator refused (FDW-4738). The code and the status
+    // are the first message's; the reason names every Validation-category rule that failed, because the first one alone would hide the others
+    // from a caller who must fix them all. A first message that is not a client message, or another category, answers as one message does.
+    private static string? ClientReason(IGenericResult result, FailureMessage first, IResultCategory category)
+    {
+        if (first.Message is not IClientMessage || !ReferenceEquals(category, ResultCategories.ByName("Validation")))
+            return ClientReason(first.Message);
+
+        var reasons = new List<string>();
+        foreach (var failure in result.FailureMessages())
+        {
+            if (failure.Message is IClientMessage { ClientText: { Length: > 0 } text }
+                && ReferenceEquals(ResultCategories.ById(failure.Number / 10000), category))
+            {
+                reasons.Add(text);
+            }
+        }
+
+        return string.Join("; ", reasons);
+    }
 
     // Why only the result's own code: the details hold what the client captured from the downstream host's answer for THAT
     // failure. A code found further down a chain belongs to a different failure, and its id would trace the wrong call.

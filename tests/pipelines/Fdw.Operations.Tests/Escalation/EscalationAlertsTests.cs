@@ -52,21 +52,28 @@ public sealed class EscalationAlertsTests
                 [.. Rows.Where(row => state is null || row.State == state)]));
     }
 
+    private sealed class TestRecipient(string recipient, string recipientType) : IEscalationRecipient
+    {
+        public string Recipient { get; } = recipient;
+
+        public string RecipientType { get; } = recipientType;
+    }
+
     private sealed class TestLevel(int level, int delayMinutes) : IEscalationLevel
     {
         public int Level { get; } = level;
+
+        public string Name => "Level";
 
         public int DelayMinutes { get; } = delayMinutes;
 
         public string NotificationChannel => "OpsMail";
 
-        public IReadOnlyList<string> Recipients => ["ops@example.test"];
+        public IReadOnlyList<IEscalationRecipient> Recipients => [new TestRecipient("ops@example.test", "Email")];
 
         public string? MessageTemplate => null;
 
         public string Severity => "Warning";
-
-        public string RecipientType => "Email";
     }
 
     private sealed class TestPolicy(string name, bool enabled, int max, int cooldownMinutes, params IEscalationLevel[] levels) : IEscalationPolicy
@@ -78,6 +85,7 @@ public sealed class EscalationAlertsTests
         public bool IsEnabled { get; } = enabled;
 
         public Guid? WorkflowId => null;
+        public Guid? ScheduleId => null;
 
         public int MaxEscalationLevel { get; } = max;
 
@@ -117,6 +125,9 @@ public sealed class EscalationAlertsTests
         _policies
             .Setup(p => p.GetAllPolicies(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<IEscalationPolicy>>.Success(policies));
+        _policies
+            .Setup(p => p.GetEnabledPolicies(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<IEscalationPolicy>>.Success(policies.Where(p => p.IsEnabled).ToList()));
         var context = new Mock<IAuthenticationContext>();
         context.SetupGet(c => c.IsSystemContext).Returns(false);
         context.SetupGet(c => c.ActiveTenantId).Returns(Tenant);
@@ -253,5 +264,35 @@ public sealed class EscalationAlertsTests
         await sut.Open(Fired(), TestContext.Current.CancellationToken);
 
         (await sut.Advance(Start.AddMinutes(4), TestContext.Current.CancellationToken)).Value.ShouldBe(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task EachReasonAPolicyCannotBeUsedHasItsOwnCodedRefusal()
+    {
+        var missing = await Sut(null, Ops()).Open(Fired("Nobody"), TestContext.Current.CancellationToken);
+        var notEnabled = await Sut(null, Ops(enabled: false)).Open(Fired(), TestContext.Current.CancellationToken);
+        var noLevel = await Sut(null, new TestPolicy("Ops", true, 2, 30)).Open(Fired(), TestContext.Current.CancellationToken);
+
+        missing.Messages[^1].Code.ShouldBe("ESCALATIONALERT-31005");
+        notEnabled.Messages[^1].Code.ShouldBe("ESCALATIONALERT-21007");
+        noLevel.Messages[^1].Code.ShouldBe("ESCALATIONALERT-21009");
+        _store.Rows.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AnOpenAlertOnAPolicyThatWasSwitchedOffIsNotAdvancedAndThePassReadsOnlyEnabledPolicies()
+    {
+        var alert = (await Sut("High", Ops()).Open(Fired(), TestContext.Current.CancellationToken)).Value!.Alert!;
+        var sut = Sut("High", Ops(enabled: false));
+
+        var advanced = await sut.Advance(Start.AddMinutes(10), TestContext.Current.CancellationToken);
+
+        advanced.Value.ShouldBe(0);
+        _store.Rows.Single(row => row.Id == alert.Id).CurrentLevel.ShouldBe(0);
+        _policies.Verify(p => p.GetEnabledPolicies(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

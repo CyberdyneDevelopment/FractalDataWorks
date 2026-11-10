@@ -343,7 +343,7 @@ public static partial class OperationsLog
     /// <summary>
     /// Logs when a pipeline name given for the latest runs is blank.
     /// </summary>
-    [MessageLogging(EventId = 61152, Level = LogLevel.Error, Message = "A pipeline name given for the latest runs is blank; every name must be stated")]
+    [MessageLogging(EventId = 21152, Level = LogLevel.Warning, Message = "A pipeline name given for the latest runs is blank; every name must be stated")]
     public static partial IGenericMessage LatestRunsNameBlank(ILogger logger);
 
     /// <summary>

@@ -189,12 +189,12 @@ public static partial class PipelineRunLog
     public static partial IGenericMessage ConnectionLacksCapability(ILogger logger, string owner, string target, string capability);
 
     /// <summary>Logs that the store holding the watermark is not named.</summary>
-    [MessageLogging(EventId = 20231, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60231, Level = LogLevel.Error,
         Message = "The operational store that holds the pipeline watermark is not named by the host")]
     public static partial IGenericMessage WatermarkStoreNotNamed(ILogger logger);
 
     /// <summary>Logs a failed read of the watermark.</summary>
-    [MessageLogging(EventId = 20232, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70232, Level = LogLevel.Error,
         Message = "Reading the watermark of pipeline '{pipelineName}' failed: {reason}")]
     public static partial IGenericMessage WatermarkReadFailed(ILogger logger, string pipelineName, string reason);
 

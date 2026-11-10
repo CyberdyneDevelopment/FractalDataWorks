@@ -113,8 +113,8 @@ public static partial class WorktreeEngineLog
         string error);
 
     [MessageLogging(
-        EventId = 92012,
-        Level = LogLevel.Error,
+        EventId = 22012,
+        Level = LogLevel.Warning,
         Message = "Repository path does not exist or is not a git repository: {repoPath}")]
     public static partial IGenericMessage RepoPathInvalid(
         ILogger logger,

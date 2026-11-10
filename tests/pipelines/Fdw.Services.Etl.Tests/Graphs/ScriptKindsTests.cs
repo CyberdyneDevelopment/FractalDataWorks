@@ -53,7 +53,7 @@ public sealed class ScriptKindsTests
         rows.Count.ShouldBe(5);
         var (store, command) = fake.Commands.ShouldHaveSingleItem();
         store.ShouldBe("Warehouse");
-        var read = command.ShouldBeOfType<ScriptReadCommand>();
+        var read = command.ShouldBeOfType<ScriptStreamCommand>();
         read.Parameters.ShouldBe(parameters);
         read.Take.ShouldBe(11);
     }
@@ -61,8 +61,9 @@ public sealed class ScriptKindsTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public async Task AScriptThatSelectsMoreThanItsMostRowsFailsTheRunAndSendsNothing()
+    public async Task AScriptThatSelectsMoreThanItsMostRowsFailsTheRunOnTheRowPastIt()
     {
+        // FDW-4903: the rows stream, so the batch before the row past the most may already have left; the run fails all the same.
         var fake = new ScriptingGateway(Rows(4));
         var (sink, rows) = Sink("dst");
         var graph = Graph([new FlowScriptSource("src", fake.Gateway, "Warehouse", "SELECT Id FROM dbo.T", [], 3, 2), sink], [Link("src", "dst")]);
@@ -71,7 +72,9 @@ public sealed class ScriptKindsTests
 
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("src");
-        rows.ShouldBeEmpty();
+        result.FirstFailureMessage().ShouldNotBeNull().Message.Code
+            .ShouldBe(FlowScriptLog.TooManyRows(NullLogger.Instance, "src", "Warehouse", 3).Code);
+        rows.Count.ShouldBeLessThanOrEqualTo(2);
     }
 
     [Fact]

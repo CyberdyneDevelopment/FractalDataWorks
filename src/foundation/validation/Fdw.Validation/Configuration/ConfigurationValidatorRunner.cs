@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using FluentValidation;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
@@ -11,8 +10,8 @@ namespace Fdw.Validation.Configuration;
 /// </summary>
 /// <remarks>
 /// A class that states <see cref="IConfigurationValidator.NoValidationReason"/> passes. A class with no declaration is refused by
-/// <see cref="ConfigurationValidatorResolver"/>, and a configuration its validator refuses is one failure naming every failed rule, with a client
-/// message, so a host answers it with 400.
+/// <see cref="ConfigurationValidatorResolver"/>, and a configuration its validator refuses is one failure with a message for each rule that has a
+/// coded message of its own (it keeps its code and client text) and one message naming the other rules, so a host answers it with 400 (FDW-4738).
 /// </remarks>
 public static class ConfigurationValidatorRunner
 {
@@ -35,9 +34,8 @@ public static class ConfigurationValidatorRunner
         var validated = validator.Validate(new ValidationContext<object>(configuration));
         return validated.IsValid
             ? GenericResult.Success()
-            : GenericResult.Failure(ConfigurationValidatorLog.ConfigurationRejected(
-                logger,
-                configuration.GetType().Name,
-                string.Join("; ", validated.Errors.Select(error => $"{error.PropertyName}: {error.ErrorMessage}"))));
+            : GenericResult.Failure(ValidationFailureMessages.From(
+                validated,
+                details => ConfigurationValidatorLog.ConfigurationRejected(logger, configuration.GetType().Name, details)));
     }
 }

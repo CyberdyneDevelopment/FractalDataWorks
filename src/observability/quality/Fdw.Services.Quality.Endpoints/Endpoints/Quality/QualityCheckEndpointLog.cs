@@ -29,7 +29,7 @@ public static partial class QualityCheckEndpointLog
     public static partial IGenericMessage NoActiveTenant(ILogger logger);
 
     /// <summary>Logs that the host names no operational store, so no verdict can be kept or read.</summary>
-    [MessageLogging(EventId = 20003, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60003, Level = LogLevel.Error,
         Message = "QualityServiceTypes.OperationalConnection is not set; the host must name the operational store the quality executions are kept in, and none is guessed")]
     public static partial IGenericMessage ExecutionStoreNotNamed(ILogger logger);
 

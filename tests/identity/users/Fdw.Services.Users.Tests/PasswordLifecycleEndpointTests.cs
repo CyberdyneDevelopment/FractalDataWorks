@@ -67,6 +67,42 @@ public class PasswordLifecycleEndpointTests
         credentials.Verify(c => c.Store(VendorId, "Password", "Initial#Pass1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // FDW-4851: the endpoint answered its own Validation code for every failed store, so an outage answered 400. The inner
+    // failure's code now decides the status, and the endpoint's code stands only when the inner failure carries none.
+    [Fact]
+    [Trait("Priority", "P1")]
+    public async Task SetPasswordLoginAnswersTheStoreFailuresOwnStatus()
+    {
+        var credentials = new Mock<IUserCredentialService>();
+        credentials.Setup(c => c.HasCredential(VendorId, "Password", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<bool>.Success(false));
+        credentials.Setup(c => c.Store(VendorId, "Password", "Initial#Pass1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult.Failure(new GenericMessage(MessageSeverity.Error, "vault unreachable", "TEST-71000", "Test")));
+        var endpoint = Factory.Create<SetPasswordLogin>(
+            Context(admits: GenericResult<bool>.Success(true)), Store().Provider, credentials.Object);
+
+        await endpoint.HandleAsync(new SetPasswordLoginRequest { IdOrName = VendorId.ToString(), InitialPassword = "Initial#Pass1" }, CancellationToken.None);
+
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(502);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    public async Task SetPasswordLoginAnswersServerErrorWhenTheStoreFailureCarriesNoCode()
+    {
+        var credentials = new Mock<IUserCredentialService>();
+        credentials.Setup(c => c.HasCredential(VendorId, "Password", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<bool>.Success(false));
+        credentials.Setup(c => c.Store(VendorId, "Password", "Initial#Pass1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult.Failure(new GenericMessage("store failed")));
+        var endpoint = Factory.Create<SetPasswordLogin>(
+            Context(admits: GenericResult<bool>.Success(true)), Store().Provider, credentials.Object);
+
+        await endpoint.HandleAsync(new SetPasswordLoginRequest { IdOrName = VendorId.ToString(), InitialPassword = "Initial#Pass1" }, CancellationToken.None);
+
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(500);
+    }
+
     [Fact]
     public async Task SetPasswordLoginIssuesNothingWhenAdmissionCannotBeDecided()
     {

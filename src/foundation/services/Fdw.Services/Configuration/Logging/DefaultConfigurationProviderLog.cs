@@ -1057,7 +1057,7 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="logger">The logger.</param>
     /// <param name="container">The container the set was read from.</param>
     /// <param name="keyChunkSize">The value the gateway provider states.</param>
-    [MessageLogging(EventId = 21067, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61067, Level = LogLevel.Error,
         Message = "The configuration gateway provider states a key chunk size of {keyChunkSize} for a read of container '{container}'; a set read carries at least one key to a statement")]
     public static partial IGenericMessage KeyChunkSizeNotStated(ILogger logger, string container, int keyChunkSize);
 

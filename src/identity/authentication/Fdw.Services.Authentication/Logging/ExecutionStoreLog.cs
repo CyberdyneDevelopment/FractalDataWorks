@@ -38,7 +38,7 @@ internal static partial class ExecutionStoreLog
 
     /// <summary>Nothing was suspended under the token presented.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91132, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 51132, Level = LogLevel.Warning,
         Message = "No suspended flow can be resumed with the token presented")]
     internal static partial IGenericMessage NotResumable(ILogger<InMemoryExecutionStore> logger);
 

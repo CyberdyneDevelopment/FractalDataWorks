@@ -17,32 +17,32 @@ public static partial class AuthenticationValidationLog
     public static partial IGenericMessage EntryMissingImplementation(ILogger logger, string sectionPath);
 
     /// <summary>Logs an enabled AuthenticationServices entry with no name.</summary>
-    [MessageLogging(EventId = 71101, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61101, Level = LogLevel.Error,
         Message = "Authentication service at '{sectionPath}' declares no Name. Set Name to a unique label for this issuer - it becomes the ASP.NET scheme name and the identifier in every routing and rejection log line")]
     public static partial IGenericMessage EntryMissingName(ILogger logger, string sectionPath);
 
     /// <summary>Logs an enabled AuthenticationServices entry with no authority.</summary>
-    [MessageLogging(EventId = 71102, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61102, Level = LogLevel.Error,
         Message = "Authentication service '{serviceName}' declares no Authority. Set Authority to the absolute issuer URL its tokens carry in their 'iss' claim - this host's own authority for OpenIddict, or the remote authority for JwtBearer (e.g. https://login.example.dev/application/o/{{slug}}/). There is NO default: without it no scheme is registered and every token from this issuer is rejected. The trailing slash is compared literally - take the value from the issuer's own /.well-known/openid-configuration rather than typing it")]
     public static partial IGenericMessage EntryMissingAuthority(ILogger logger, string serviceName);
 
     /// <summary>Logs an authority that is not an absolute http(s) URL.</summary>
-    [MessageLogging(EventId = 71103, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61103, Level = LogLevel.Error,
         Message = "Authentication service '{serviceName}' declares Authority '{authority}', which is not an absolute http(s) URL. It must be the full issuer URL including scheme - https://host/path, not a host name, a relative path, or a bare name")]
     public static partial IGenericMessage AuthorityNotAbsolute(ILogger logger, string serviceName, string authority);
 
     /// <summary>Logs a JwtBearer entry with no audience.</summary>
-    [MessageLogging(EventId = 71104, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61104, Level = LogLevel.Error,
         Message = "JwtBearer authentication service '{serviceName}' declares no Audience. Set Audience to the value this host's tokens carry in their 'aud' claim - decode a real token and read it rather than assuming, since a token minted for an application carries the client id while one minted for an exposed API carries that API's identifier. Without it, the roles below would be conferred on EVERY token this issuer mints, for any audience")]
     public static partial IGenericMessage JwtBearerMissingAudience(ILogger logger, string serviceName);
 
     /// <summary>Logs a JwtBearer entry with no roles.</summary>
-    [MessageLogging(EventId = 71105, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61105, Level = LogLevel.Error,
         Message = "JwtBearer authentication service '{serviceName}' declares no Roles. Set Roles to the local role names a caller from this issuer receives - they must exist in authz.Role, and their permissions are what every role-gated endpoint checks. Registration is refused rather than authenticating a caller into nothing: with no roles the caller would pass authentication and be denied by every route it reaches")]
     public static partial IGenericMessage JwtBearerMissingRoles(ILogger logger, string serviceName);
 
     /// <summary>Logs a host that registered a validation mechanism but declared no authentication services.</summary>
-    [MessageLogging(EventId = 71106, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61106, Level = LogLevel.Error,
         Message = "No enabled entries in '{sectionName}'. This host registered a token-validation mechanism and declared no issuer for it to trust, so it accepts no tokens at all. Add at least one entry naming a Implementation and an Authority, and confirm its Enabled flag is set - a declared-but-disabled entry reads as absent here")]
     public static partial IGenericMessage NoAuthenticationServicesDeclared(ILogger logger, string sectionName);
 
@@ -52,7 +52,7 @@ public static partial class AuthenticationValidationLog
     public static partial IGenericMessage SchemeNotProduced(ILogger logger, string serviceName, string mechanism);
 
     /// <summary>Logs a declared authentication service whose Implementation names no registered option.</summary>
-    [MessageLogging(EventId = 71108, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61108, Level = LogLevel.Error,
         Message = "Authentication service '{serviceName}' names Implementation '{implementation}', and no option is registered under that name. The row was read and composed; what is missing is the package that declares that implementation, so either the name is misspelled or this host does not reference it")]
     public static partial IGenericMessage NoOptionForImplementation(ILogger logger, string serviceName, string implementation);
 
@@ -62,7 +62,7 @@ public static partial class AuthenticationValidationLog
     public static partial IGenericMessage ValidatedTokenHasNoIdentity(ILogger logger, string serviceName);
 
     /// <summary>Logs declared roles that could not be expanded to permissions.</summary>
-    [MessageLogging(EventId = 71110, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61110, Level = LogLevel.Error,
         Message = "Authentication service '{serviceName}' could not resolve its declared roles '{roles}' to permissions: {reason}. Each name must match a row in authz.Role, and that role needs grants in authz.RolePermission - a role that exists with no grants resolves to an empty permission set and authorises nothing")]
     public static partial IGenericMessage DeclaredRolesNotResolved(ILogger logger, string serviceName, string roles, string reason);
 
@@ -107,17 +107,17 @@ public static partial class AuthenticationValidationLog
     public static partial IGenericMessage ForeignPlatformClaimsRemoved(ILogger logger, string serviceName, string? subject, string claimTypes);
 
     /// <summary>Logs a JwtBearer entry that does not say which platform claims it accepts.</summary>
-    [MessageLogging(EventId = 71129, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61129, Level = LogLevel.Error,
         Message = "JwtBearer authentication service '{serviceName}' declares no AcceptedClaims. Set AcceptedClaims to the platform claims this issuer's tokens may carry onto the caller, separated by commas (for example 'roles'), or to 'none' for an issuer trusted for none of them. Nothing is assumed in either direction.")]
     public static partial IGenericMessage JwtBearerMissingAcceptedClaims(ILogger logger, string serviceName);
 
     /// <summary>Logs a JwtBearer entry that accepts a claim the platform does not define.</summary>
-    [MessageLogging(EventId = 71130, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61130, Level = LogLevel.Error,
         Message = "JwtBearer authentication service '{serviceName}' accepts claim '{claim}', which is not a platform claim. Known claims: {known}. Use one of them, or 'none'.")]
     public static partial IGenericMessage JwtBearerAcceptedClaimUnknown(ILogger logger, string serviceName, string claim, string known);
 
     /// <summary>Logs a JwtBearer entry that accepts a claim only the platform may state about a session.</summary>
-    [MessageLogging(EventId = 71131, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61131, Level = LogLevel.Error,
         Message = "JwtBearer authentication service '{serviceName}' accepts claim '{claim}', which is the platform's statement about a session it created. A token from another issuer cannot carry it; remove it from AcceptedClaims.")]
     public static partial IGenericMessage JwtBearerAcceptedClaimSessionBound(ILogger logger, string serviceName, string claim);
 
@@ -147,7 +147,7 @@ public static partial class AuthenticationValidationLog
     // Why Error and why registration fails on it: a scheme that cannot check a signature refuses
     // every token it exists to accept. Failing here stops the host with the cause named, rather
     // than starting one that 401s everything and says nothing about why.
-    [MessageLogging(EventId = 71113, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61113, Level = LogLevel.Error,
         Message = "No local signing key is available for '{serviceName}', so its tokens cannot be validated")]
     public static partial IGenericMessage LocalSigningKeyUnavailable(ILogger logger, string serviceName);
 
@@ -155,7 +155,7 @@ public static partial class AuthenticationValidationLog
     // Separate from JwtBearerMissingAudience so the message can say what a LocalKey audience is
     // for. Here it is what this host mints into its own tokens, not a value agreed with a remote
     // issuer, so the thing to go change is the flow rather than the provider registration.
-    [MessageLogging(EventId = 71114, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61114, Level = LogLevel.Error,
         Message = "LocalKey authentication service '{serviceName}' declares no Audience. Set it to the audience this host's flows mint - a token is only accepted for the audience it names, so a mismatch rejects every token this host issued")]
     public static partial IGenericMessage LocalKeyMissingAudience(ILogger logger, string serviceName);
 
@@ -188,7 +188,7 @@ public static partial class AuthenticationValidationLog
     // Why the reason is carried rather than summarised: IDX codes name exactly which check failed -
     // issuer, audience, lifetime, signature - and a reader who cannot see which one is left guessing
     // at the same four possibilities every time.
-    [MessageLogging(EventId = 71117, Level = LogLevel.Information,
+    [MessageLogging(EventId = 51117, Level = LogLevel.Information,
         Message = "Token for authentication service '{serviceName}' was rejected: {reason}")]
     public static partial IGenericMessage TokenRejected(ILogger logger, string serviceName, string reason);
 
@@ -196,7 +196,7 @@ public static partial class AuthenticationValidationLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="serviceName">The authentication service that validated the token.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 71132, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 51132, Level = LogLevel.Warning,
         Message = "Token for authentication service '{serviceName}' was rejected, and the token validator gave no exception to say which check failed")]
     public static partial IGenericMessage TokenRejectedWithoutReason(ILogger logger, string serviceName);
 

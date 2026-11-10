@@ -61,7 +61,7 @@ public static partial class StandInEndpointLog
     public static partial IGenericMessage DataSetNotFoundForStandIns(ILogger logger, string dataSetName);
 
     /// <summary>Logs a stand-in row for which none of the strategy tables has a current row.</summary>
-    [MessageLogging(EventId = 71013, Level = LogLevel.Error, Message = "The stand-in of field '{fieldName}' ({standInId}) has no current row in any strategy table")]
+    [MessageLogging(EventId = 91013, Level = LogLevel.Error, Message = "The stand-in of field '{fieldName}' ({standInId}) has no current row in any strategy table")]
     public static partial IGenericMessage StandInHasNoStrategy(ILogger logger, string fieldName, System.Guid standInId);
 
     /// <summary>Logs that Data set stand ins was not found, or is not visible to the caller.</summary>

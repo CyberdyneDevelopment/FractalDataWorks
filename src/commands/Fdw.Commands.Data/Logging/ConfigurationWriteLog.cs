@@ -52,7 +52,7 @@ public static partial class ConfigurationWriteLog
     public static partial IGenericMessage LogicalKeyNotDeclared(ILogger logger, string container);
 
     /// <summary>Logs a save with no value for a field of its Logical key.</summary>
-    [MessageLogging(EventId = 62014, Level = LogLevel.Error,
+    [MessageLogging(EventId = 22014, Level = LogLevel.Warning,
         Message = "[ConfigurationSave] save to '{container}' has no value for field '{field}' of its Logical key '{keyName}'")]
     public static partial IGenericMessage LogicalKeyValueMissing(ILogger logger, string container, string keyName, string field);
 
@@ -77,7 +77,7 @@ public static partial class ConfigurationWriteLog
     public static partial IGenericMessage NothingToMatch(ILogger logger, string container);
 
     /// <summary>Logs a configuration write that matches on a field it has no value for.</summary>
-    [MessageLogging(EventId = 62019, Level = LogLevel.Error,
+    [MessageLogging(EventId = 22019, Level = LogLevel.Warning,
         Message = "[{commandType}] write to '{container}' has no value for field '{field}', which it matches the current row on")]
     public static partial IGenericMessage MatchValueMissing(ILogger logger, string commandType, string container, string field);
 

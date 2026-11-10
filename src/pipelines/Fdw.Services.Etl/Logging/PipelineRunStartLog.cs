@@ -34,17 +34,17 @@ public static partial class PipelineRunStartLog
     public static partial IGenericMessage PipelineRequiresApproval(ILogger logger, string pipeline);
 
     /// <summary>Logs a start whose execution record could not be created.</summary>
-    [MessageLogging(EventId = 20803, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70803, Level = LogLevel.Error,
         Message = "The execution record of pipeline '{pipeline}' started under '{parentExecutionId}' could not be created: {reason}")]
     public static partial IGenericMessage ExecutionNotCreated(ILogger logger, string pipeline, Guid parentExecutionId, string? reason);
 
     /// <summary>Logs a start whose start/end row could not be written.</summary>
-    [MessageLogging(EventId = 20804, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70804, Level = LogLevel.Error,
         Message = "The run row of pipeline '{pipeline}' (execution '{executionId}') could not be written, so the run was not started: {reason}")]
     public static partial IGenericMessage RunRowNotWritten(ILogger logger, string pipeline, Guid executionId, string? reason);
 
     /// <summary>Logs a start refused because the host names no operational store.</summary>
-    [MessageLogging(EventId = 20805, Level = LogLevel.Error,
+    [MessageLogging(EventId = 60805, Level = LogLevel.Error,
         Message = "EtlPipelineTypes.OperationalConnection is not set; the host must name the operational store a run's start and end are kept in, so pipeline '{pipeline}' was not started")]
     public static partial IGenericMessage OperationalStoreNotNamed(ILogger logger, string pipeline);
 

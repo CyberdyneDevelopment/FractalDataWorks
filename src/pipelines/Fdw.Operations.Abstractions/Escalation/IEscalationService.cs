@@ -22,11 +22,19 @@ public interface IEscalationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all escalation policies.
+    /// Gets every escalation policy, enabled or not (FDW-4874). Each carries <see cref="IEscalationPolicy.IsEnabled"/>, so a caller that lists policies shows their state.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of all escalation policies.</returns>
     Task<IGenericResult<IReadOnlyList<IEscalationPolicy>>> GetAllPolicies(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the escalation policies that are enabled (FDW-4874): the read the alert engine's pass uses. A policy that is not enabled is not read in full.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of the enabled escalation policies.</returns>
+    Task<IGenericResult<IReadOnlyList<IEscalationPolicy>>> GetEnabledPolicies(
         CancellationToken cancellationToken = default);
 
     /// <summary>

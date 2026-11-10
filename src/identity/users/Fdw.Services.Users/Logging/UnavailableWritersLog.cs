@@ -15,13 +15,13 @@ public static partial class UnavailableWritersLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="operation">What was asked: made, changed, deleted or marked deleted.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 72741, Level = LogLevel.Error, Message = "A tenant could not be {operation}: this host does not run the tenant service, so tenants cannot be written here")]
+    [MessageLogging(EventId = 62741, Level = LogLevel.Error, Message = "A tenant could not be {operation}: this host does not run the tenant service, so tenants cannot be written here")]
     public static partial IGenericMessage TenantWriterUnavailable(ILogger logger, string operation);
 
     /// <summary>Logs that an organization was asked to change on a host that does not run the tenant service.</summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="operation">What was asked: made, changed or deleted.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 72742, Level = LogLevel.Error, Message = "An organization could not be {operation}: this host does not run the tenant service, so organizations cannot be written here")]
+    [MessageLogging(EventId = 62742, Level = LogLevel.Error, Message = "An organization could not be {operation}: this host does not run the tenant service, so organizations cannot be written here")]
     public static partial IGenericMessage OrganizationWriterUnavailable(ILogger logger, string operation);
 }

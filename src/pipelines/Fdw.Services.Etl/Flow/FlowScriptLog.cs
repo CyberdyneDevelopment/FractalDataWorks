@@ -12,7 +12,7 @@ namespace Fdw.Services.Etl.Flow;
 public static partial class FlowScriptLog
 {
     /// <summary>Logs a script source whose read failed.</summary>
-    [MessageLogging(EventId = 20930, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70930, Level = LogLevel.Error,
         Message = "Flow script source '{component}' could not read its script on data store '{dataStore}': {reason}")]
     public static partial IGenericMessage ReadFailed(ILogger logger, string component, string dataStore, string? reason);
 
@@ -27,7 +27,7 @@ public static partial class FlowScriptLog
     public static partial IGenericMessage TooManyRows(ILogger logger, string component, string dataStore, int maxRows);
 
     /// <summary>Logs an Execute SQL step whose script failed.</summary>
-    [MessageLogging(EventId = 20932, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70932, Level = LogLevel.Error,
         Message = "Flow step '{step}' could not run its script on data store '{dataStore}': {reason}")]
     public static partial IGenericMessage RunFailed(ILogger logger, string step, string dataStore, string? reason);
 

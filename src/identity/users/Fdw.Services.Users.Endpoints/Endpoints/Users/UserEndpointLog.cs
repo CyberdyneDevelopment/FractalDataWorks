@@ -332,7 +332,7 @@ public static partial class UserEndpointLog
     public static partial IGenericMessage RevokeApiKeyApiKeyKindMustBe(ILogger logger);
 
     /// <summary>Logs that the request failed: The key could not be revoked.</summary>
-    [MessageLogging(EventId = 21045, Level = LogLevel.Warning, Message = "The key could not be revoked.", ClientMessage = "The key could not be revoked.")]
+    [MessageLogging(EventId = 91045, Level = LogLevel.Error, Message = "The key could not be revoked.", ClientMessage = "The key could not be revoked.")]
     public static partial IGenericMessage RevokeApiKeyTheKeyCouldNotBe(ILogger logger);
 
     /// <summary>Logs that the request failed: Name exactly one of subject (bind now) or invitedEmail (invite).</summary>
@@ -348,7 +348,7 @@ public static partial class UserEndpointLog
     public static partial IGenericMessage BindExternalIdentityWhetherThisPlatformCanResolve(ILogger logger);
 
     /// <summary>Logs that the request failed: The binding could not be removed.</summary>
-    [MessageLogging(EventId = 21047, Level = LogLevel.Warning, Message = "The binding could not be removed.", ClientMessage = "The binding could not be removed.")]
+    [MessageLogging(EventId = 91047, Level = LogLevel.Error, Message = "The binding could not be removed.", ClientMessage = "The binding could not be removed.")]
     public static partial IGenericMessage UnbindExternalIdentityTheBindingCouldNotBe(ILogger logger);
 
     /// <summary>Logs that the request failed: Password links are not configured on this host.</summary>
@@ -372,11 +372,11 @@ public static partial class UserEndpointLog
     public static partial IGenericMessage ResetPasswordNoEnabledPasswordSignIn(ILogger logger);
 
     /// <summary>Logs that the request failed: Failed to reset password.</summary>
-    [MessageLogging(EventId = 21048, Level = LogLevel.Warning, Message = "Failed to reset password.", ClientMessage = "Failed to reset password.")]
+    [MessageLogging(EventId = 91048, Level = LogLevel.Error, Message = "Failed to reset password.", ClientMessage = "Failed to reset password.")]
     public static partial IGenericMessage ResetPasswordFailedToResetPassword(ILogger logger);
 
     /// <summary>Logs that the request failed: The account could not be marked to change its password.</summary>
-    [MessageLogging(EventId = 21049, Level = LogLevel.Warning, Message = "The account could not be marked to change its password.", ClientMessage = "The account could not be marked to change its password.")]
+    [MessageLogging(EventId = 91049, Level = LogLevel.Error, Message = "The account could not be marked to change its password.", ClientMessage = "The account could not be marked to change its password.")]
     public static partial IGenericMessage RequirePasswordChangeTheAccountCouldNotBe(ILogger logger);
 
     /// <summary>Logs that the request failed: No enabled password sign-in flow admits this account; grant it the permission the flow requires first.</summary>
@@ -388,7 +388,7 @@ public static partial class UserEndpointLog
     public static partial IGenericMessage SetPasswordLoginAPasswordIsAlreadySet(ILogger logger);
 
     /// <summary>Logs that the request failed: The password could not be set.</summary>
-    [MessageLogging(EventId = 21050, Level = LogLevel.Warning, Message = "The password could not be set.", ClientMessage = "The password could not be set.")]
+    [MessageLogging(EventId = 91050, Level = LogLevel.Error, Message = "The password could not be set.", ClientMessage = "The password could not be set.")]
     public static partial IGenericMessage SetPasswordLoginThePasswordCouldNotBe(ILogger logger);
 
     /// <summary>Logs that the request failed: API key kind must be 'user' or 'agent'.</summary>
@@ -396,7 +396,7 @@ public static partial class UserEndpointLog
     public static partial IGenericMessage CreateApiKeyApiKeyKindMustBe(ILogger logger);
 
     /// <summary>Logs that the request failed: The key could not be minted.</summary>
-    [MessageLogging(EventId = 21052, Level = LogLevel.Warning, Message = "The key could not be minted.", ClientMessage = "The key could not be minted.")]
+    [MessageLogging(EventId = 91052, Level = LogLevel.Error, Message = "The key could not be minted.", ClientMessage = "The key could not be minted.")]
     public static partial IGenericMessage CreateApiKeyReturnedNothing(ILogger logger);
 
     /// <summary>Logs that User was not found, or is not visible to the caller.</summary>

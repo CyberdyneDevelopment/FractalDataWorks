@@ -139,7 +139,7 @@ public static partial class FlowLog
     public static partial IGenericMessage StepFinished(ILogger logger, string step);
 
     /// <summary>Logs a source whose read of a page of rows failed.</summary>
-    [MessageLogging(EventId = 20925, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70925, Level = LogLevel.Error,
         Message = "Flow source '{component}' could not read rows (skipping {skipped}): {reason}")]
     public static partial IGenericMessage SourceReadFailed(ILogger logger, string component, int skipped, string? reason);
 
@@ -149,12 +149,12 @@ public static partial class FlowLog
     public static partial IGenericMessage SourceReturnedNothing(ILogger logger, string component);
 
     /// <summary>Logs a destination whose load of a batch failed.</summary>
-    [MessageLogging(EventId = 20927, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70927, Level = LogLevel.Error,
         Message = "Flow destination '{component}' could not load a batch of {rows} rows: {reason}")]
     public static partial IGenericMessage DestinationLoadFailed(ILogger logger, string component, int rows, string? reason);
 
     /// <summary>Logs a destination whose truncate before the first batch failed.</summary>
-    [MessageLogging(EventId = 20928, Level = LogLevel.Error,
+    [MessageLogging(EventId = 70928, Level = LogLevel.Error,
         Message = "Flow destination '{component}' could not truncate its target before the first batch: {reason}")]
     public static partial IGenericMessage DestinationTruncateFailed(ILogger logger, string component, string? reason);
 

@@ -28,7 +28,7 @@ public static partial class PipelineFailureRuleLog
     public static partial IGenericMessage NotRead(ILogger logger, string pipeline, string reason);
 
     /// <summary>Logs a finished run whose row holds no completion time, so its place among the others cannot be known.</summary>
-    [MessageLogging(EventId = 71323, Level = LogLevel.Error, Message = "Run {executionId} of pipeline '{pipeline}' ended as {status} but holds no completion time, so the failure rule cannot place it")]
+    [MessageLogging(EventId = 91323, Level = LogLevel.Error, Message = "Run {executionId} of pipeline '{pipeline}' ended as {status} but holds no completion time, so the failure rule cannot place it")]
     public static partial IGenericMessage RunTimeMissing(ILogger logger, Guid executionId, string pipeline, string status);
 
     /// <summary>Logs a failure-rule disable whose record could not be written on the run.</summary>
@@ -36,7 +36,7 @@ public static partial class PipelineFailureRuleLog
     public static partial IGenericMessage DisableRecordNotWritten(ILogger logger, Guid executionId, string pipeline, string reason);
 
     /// <summary>Logs a pipeline marked as disabled by its failure rule whose record cannot be found on the run.</summary>
-    [MessageLogging(EventId = 71325, Level = LogLevel.Error, Message = "Run {executionId} holds no usable record of a failure-rule disable")]
+    [MessageLogging(EventId = 91325, Level = LogLevel.Error, Message = "Run {executionId} holds no usable record of a failure-rule disable")]
     public static partial IGenericMessage DisableRecordMissing(ILogger logger, Guid executionId);
 
     /// <summary>Logs a failure rule that fired for a subject that carries no run, so the record cannot be kept.</summary>
@@ -60,11 +60,11 @@ public static partial class PipelineFailureRuleLog
     public static partial IGenericMessage DisableFailed(ILogger logger, string pipeline, string reason);
 
     /// <summary>Logs that the connection the run history is kept in was never named, so the history of a pipeline cannot be read.</summary>
-    [MessageLogging(EventId = 71328, Level = LogLevel.Error, Message = "The operational connection is not named, so the runs of pipeline '{pipeline}' cannot be read")]
+    [MessageLogging(EventId = 61328, Level = LogLevel.Error, Message = "The operational connection is not named, so the runs of pipeline '{pipeline}' cannot be read")]
     public static partial IGenericMessage OperationalConnectionNotNamed(ILogger logger, string pipeline);
 
     /// <summary>Logs a threshold whose CountedOutcomes names an outcome a run is not counted by, so it is not judged (FDW-4278).</summary>
-    [MessageLogging(EventId = 71330, Level = LogLevel.Error, Message = "Threshold '{threshold}' of pipeline '{pipeline}' was not judged: its CountedOutcomes names '{outcome}', which is not an outcome a run is counted by (Failed, TimedOut)")]
+    [MessageLogging(EventId = 61330, Level = LogLevel.Error, Message = "Threshold '{threshold}' of pipeline '{pipeline}' was not judged: its CountedOutcomes names '{outcome}', which is not an outcome a run is counted by (Failed, TimedOut)")]
     public static partial IGenericMessage CountedOutcomeUnknown(ILogger logger, string threshold, string pipeline, string outcome);
 
     /// <summary>Logs that the connection a failed component works on could not be found, so the run's failure names none (FDW-4192).</summary>

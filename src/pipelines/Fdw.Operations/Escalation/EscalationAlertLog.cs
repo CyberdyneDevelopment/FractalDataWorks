@@ -37,9 +37,15 @@ public static partial class EscalationAlertLog
     [MessageLogging(EventId = 11025, Level = LogLevel.Information, Message = "Alert {alertId} was resolved by {actor}")]
     public static partial IGenericMessage AlertResolved(ILogger logger, Guid alertId, string actor);
 
-    /// <summary>Logs a policy that is not enabled or has no level to send.</summary>
-    [MessageLogging(EventId = 21007, Level = LogLevel.Warning, Message = "Escalation policy '{policy}' cannot be used: {reason}")]
-    public static partial IGenericMessage PolicyNotUsable(ILogger logger, string policy, string reason);
+    /// <summary>Logs a policy that is not enabled, so no alert can use it (FDW-4874).</summary>
+    [MessageLogging(EventId = 21007, Level = LogLevel.Warning, Message = "Escalation policy '{policy}' is not enabled, so no alert can use it",
+        ClientMessage = "Escalation policy '{policy}' is not enabled; enable it before an alert can use it")]
+    public static partial IGenericMessage PolicyNotEnabled(ILogger logger, string policy);
+
+    /// <summary>Logs a policy that states no level within its maximum level, so it has nothing to send (FDW-4874).</summary>
+    [MessageLogging(EventId = 21009, Level = LogLevel.Warning, Message = "Escalation policy '{policy}' states no level within its maximum level, so it has nothing to send",
+        ClientMessage = "Escalation policy '{policy}' states no level within its maximum level; add a level before an alert can use it")]
+    public static partial IGenericMessage PolicyHasNoLevel(ILogger logger, string policy);
 
     /// <summary>Logs a state that is not one of the alert states.</summary>
     [MessageLogging(EventId = 21008, Level = LogLevel.Warning, Message = "'{state}' is not an escalation alert state; the states are Firing, Acknowledged and Resolved")]

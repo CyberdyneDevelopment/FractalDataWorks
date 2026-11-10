@@ -22,6 +22,9 @@ public class EscalationPolicyModel : IEscalationPolicy
     public Guid? WorkflowId { get; set; }
 
     /// <inheritdoc/>
+    public Guid? ScheduleId { get; set; }
+
+    /// <inheritdoc/>
     public int MaxEscalationLevel { get; set; }
 
     /// <inheritdoc/>

@@ -13,7 +13,7 @@ namespace Fdw.Services.Etl.Execution;
 public static partial class PipelineRunRecoveryLog
 {
     /// <summary>Logs a request that could not be written, so the run is not accepted.</summary>
-    [MessageLogging(EventId = 22116, Level = LogLevel.Error,
+    [MessageLogging(EventId = 72116, Level = LogLevel.Error,
         Message = "The request of pipeline run {executionId} could not be written, so the run cannot be taken up again after a restart and is not accepted: {reason}")]
     public static partial IGenericMessage RequestNotWritten(ILogger logger, Guid executionId, string? reason);
 
@@ -23,7 +23,7 @@ public static partial class PipelineRunRecoveryLog
     public static partial IGenericMessage ValueNotKept(ILogger logger, string parameter, string type, string reason);
 
     /// <summary>Logs a recorded request that cannot be read.</summary>
-    [MessageLogging(EventId = 22118, Level = LogLevel.Error,
+    [MessageLogging(EventId = 72118, Level = LogLevel.Error,
         Message = "The recorded request of pipeline run {executionId} cannot be read: {reason}")]
     public static partial IGenericMessage RequestUnreadable(ILogger logger, Guid executionId, string reason);
 
@@ -53,7 +53,7 @@ public static partial class PipelineRunRecoveryLog
     public static partial IGenericMessage OpenRecordsClosed(ILogger logger, Guid executionId, int closedCount, string state);
 
     /// <summary>Logs that the stop-grace setting is missing or not positive, so the host does not start (FDW-3786).</summary>
-    [MessageLogging(EventId = 22711, Level = LogLevel.Error,
+    [MessageLogging(EventId = 62711, Level = LogLevel.Error,
         Message = "The setting {settingName} is not set to a positive number of seconds, so the host cannot say how long it lets running pipelines finish when it stops; the host does not start")]
     public static partial IGenericMessage StopGraceSettingMissing(ILogger logger, string settingName);
 
@@ -83,12 +83,12 @@ public static partial class PipelineRunRecoveryLog
     public static partial IGenericMessage FailureKindNotRecorded(ILogger logger, Guid executionId, string? reason);
 
     /// <summary>Logs a cut-off run whose destinations' committed rows could not be read, so it cannot be known whether starting it again would load rows twice (FDW-3840).</summary>
-    [MessageLogging(EventId = 22716, Level = LogLevel.Error,
+    [MessageLogging(EventId = 72716, Level = LogLevel.Error,
         Message = "The rows the destinations of pipeline run {executionId} had committed could not be read: {reason}")]
     public static partial IGenericMessage CommittedLoadsNotRead(ILogger logger, Guid executionId, string? reason);
 
     /// <summary>Logs a record of a run that cannot be taken up and could not be closed.</summary>
-    [MessageLogging(EventId = 22123, Level = LogLevel.Error,
+    [MessageLogging(EventId = 72123, Level = LogLevel.Error,
         Message = "Pipeline run {executionId} cannot be taken up again and its record could not be closed: {reason}")]
     public static partial IGenericMessage RecordNotClosed(ILogger logger, Guid executionId, string? reason);
 
@@ -108,7 +108,7 @@ public static partial class PipelineRunRecoveryLog
     public static partial IGenericMessage RunHasNoTenant(ILogger logger, Guid executionId, string pipeline);
 
     /// <summary>Logs that the host does not name the operational store the requests are kept in.</summary>
-    [MessageLogging(EventId = 22127, Level = LogLevel.Error,
+    [MessageLogging(EventId = 62127, Level = LogLevel.Error,
         Message = "The host does not name its operational store, so the requests of pipeline runs cannot be kept or read")]
     public static partial IGenericMessage StoreNotNamed(ILogger logger);
 
@@ -143,7 +143,7 @@ public static partial class PipelineRunRecoveryLog
     public static partial IGenericMessage RunNotStartedAgain(ILogger logger, Guid executionId, string pipeline, string reason);
 
     /// <summary>Logs the setting that limits how often a cut-off run is started again when it is not set.</summary>
-    [MessageLogging(EventId = 22133, Level = LogLevel.Error,
+    [MessageLogging(EventId = 62133, Level = LogLevel.Error,
         Message = "The setting '{setting}' that limits how many times the host starts a cut-off pipeline run again is not set or is negative, so no cut-off run is started again")]
     public static partial IGenericMessage RestartLimitMissing(ILogger logger, string setting);
 
@@ -163,7 +163,7 @@ public static partial class PipelineRunRecoveryLog
     public static partial IGenericMessage RequestsWithoutHost(ILogger logger, int requests);
 
     /// <summary>Logs a stored request that could not be removed.</summary>
-    [MessageLogging(EventId = 22129, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 72129, Level = LogLevel.Warning,
         Message = "The stored request of pipeline run {executionId} could not be removed: {reason}")]
     public static partial IGenericMessage RequestNotRemoved(ILogger logger, Guid executionId, string? reason);
 }

@@ -19,6 +19,7 @@ public static class EscalationMapper
             Name = policy.Name,
             IsEnabled = policy.IsEnabled,
             WorkflowId = policy.WorkflowId,
+            ScheduleId = policy.ScheduleId,
             MaxEscalationLevel = policy.MaxEscalationLevel,
             CooldownMinutes = policy.CooldownMinutes,
             MaxRetries = policy.MaxRetries,
@@ -26,12 +27,12 @@ public static class EscalationMapper
             Levels = policy.Levels.Select(l => new EscalationLevelResponse
             {
                 Level = l.Level,
+                Name = l.Name,
                 DelayMinutes = l.DelayMinutes,
                 NotificationChannel = l.NotificationChannel,
-                Recipients = l.Recipients,
+                Recipients = ToDto(l.Recipients),
                 MessageTemplate = l.MessageTemplate,
-                Severity = l.Severity,
-                RecipientType = l.RecipientType
+                Severity = l.Severity
             }).ToList()
         };
     }
@@ -50,6 +51,7 @@ public static class EscalationMapper
             Name = request.Name,
             IsEnabled = isEnabled,
             WorkflowId = request.WorkflowId,
+            ScheduleId = request.ScheduleId,
             MaxEscalationLevel = maxEscalationLevel,
             CooldownMinutes = cooldownMinutes,
             MaxRetries = maxRetries,
@@ -57,12 +59,12 @@ public static class EscalationMapper
             Levels = request.Levels.Select(l => (IEscalationLevel)new EscalationLevelModel
             {
                 Level = l.Level,
+                Name = l.Name,
                 DelayMinutes = Delay(l),
                 NotificationChannel = l.NotificationChannel,
                 Recipients = l.Recipients,
                 MessageTemplate = l.MessageTemplate,
-                Severity = l.Severity,
-                RecipientType = l.RecipientType
+                Severity = l.Severity
             }).ToList()
         };
     }
@@ -79,12 +81,12 @@ public static class EscalationMapper
         var levels = request.Levels ?? existing.Levels.Select(l => new EscalationLevelResponse
         {
             Level = l.Level,
+            Name = l.Name,
             DelayMinutes = l.DelayMinutes,
             NotificationChannel = l.NotificationChannel,
-            Recipients = l.Recipients,
+            Recipients = ToDto(l.Recipients),
             MessageTemplate = l.MessageTemplate,
-            Severity = l.Severity,
-            RecipientType = l.RecipientType
+            Severity = l.Severity
         }).ToList();
 
         return new EscalationPolicyModel
@@ -92,12 +94,12 @@ public static class EscalationMapper
             Id = request.Id,
             Name = request.Name ?? existing.Name,
             IsEnabled = request.IsEnabled ?? existing.IsEnabled,
-            // WorkflowId was already nullable before this fix and is assigned as-sent, not merged:
-            // it is itself an optional scope (null legitimately means "no workflow"), so unlike the
-            // other properties here there is no wire representation that distinguishes "omitted,
-            // leave alone" from "explicitly cleared" for it. Not in scope of the fields the audit
-            // found broken -- left exactly as it behaved before.
-            WorkflowId = request.WorkflowId,
+            // A policy has one scope, a workflow or a schedule, and the configuration refuses one with neither (FDW-4814, FDW-4822).
+            // An update that states neither keeps the stored scope, so a name-only update of a scoped policy stays valid. One that
+            // states a scope sets both members from the request, so naming a schedule on a workflow-scoped policy moves it (the
+            // workflow is cleared), and the reverse. A request that states both keeps both as sent; the validator decides.
+            WorkflowId = StatesScope(request) ? request.WorkflowId : existing.WorkflowId,
+            ScheduleId = StatesScope(request) ? request.ScheduleId : existing.ScheduleId,
             MaxEscalationLevel = request.MaxEscalationLevel ?? existing.MaxEscalationLevel,
             CooldownMinutes = request.CooldownMinutes ?? existing.CooldownMinutes,
             MaxRetries = request.MaxRetries ?? existing.MaxRetries,
@@ -105,17 +107,17 @@ public static class EscalationMapper
             Levels = levels.Select(l => (IEscalationLevel)new EscalationLevelModel
             {
                 Level = l.Level,
+                Name = l.Name,
                 DelayMinutes = Delay(l),
                 NotificationChannel = l.NotificationChannel,
                 Recipients = l.Recipients,
                 MessageTemplate = l.MessageTemplate,
-                Severity = l.Severity,
-                RecipientType = l.RecipientType
+                Severity = l.Severity
             }).ToList()
         };
     }
 
-    /// <summary>Names what a create request leaves out: the policy's own choices and every level's severity and recipient type (FDW-3823).</summary>
+    /// <summary>Names what a create request leaves out: the policy's own choices, every level's severity and every recipient's type (FDW-3823).</summary>
     /// <param name="request">The create request.</param>
     /// <returns>The missing members, empty when the request states them all.</returns>
     public static IReadOnlyList<string> Missing(EscalationPolicyRequest request)
@@ -130,7 +132,7 @@ public static class EscalationMapper
         return missing;
     }
 
-    /// <summary>Names the severity and recipient type a level leaves out.</summary>
+    /// <summary>Names the name, delay and severity a level leaves out, and the type each of its recipients leaves out. A level with no recipients states no type (FDW-4891).</summary>
     /// <param name="levels">The levels a request sends.</param>
     /// <returns>The missing members, each with its level number.</returns>
     public static IReadOnlyList<string> MissingOnLevels(IReadOnlyList<EscalationLevelResponse>? levels)
@@ -138,13 +140,25 @@ public static class EscalationMapper
         List<string> missing = [];
         foreach (var level in levels ?? [])
         {
+            if (string.IsNullOrWhiteSpace(level.Name)) missing.Add($"levels[{level.Level}].name");
             if (level.DelayMinutes is null) missing.Add($"levels[{level.Level}].delayMinutes");
             if (string.IsNullOrWhiteSpace(level.Severity)) missing.Add($"levels[{level.Level}].severity");
-            if (string.IsNullOrWhiteSpace(level.RecipientType)) missing.Add($"levels[{level.Level}].recipientType");
+            var recipients = level.Recipients ?? [];
+            for (var index = 0; index < recipients.Count; index++)
+            {
+                if (recipients[index] is null) missing.Add($"levels[{level.Level}].recipients[{index}]");
+                else if (string.IsNullOrWhiteSpace(recipients[index].RecipientType)) missing.Add($"levels[{level.Level}].recipients[{index}].recipientType");
+            }
         }
 
         return missing;
     }
+
+    private static List<EscalationRecipientResponse> ToDto(IReadOnlyList<IEscalationRecipient> recipients) =>
+        recipients.Select(r => new EscalationRecipientResponse { Recipient = r.Recipient, RecipientType = r.RecipientType }).ToList();
+
+    // An update states a scope when it names a workflow or a schedule (FDW-4822).
+    private static bool StatesScope(UpdateEscalationPolicyRequest request) => request.WorkflowId is not null || request.ScheduleId is not null;
 
     // Missing() and MissingOnLevels() have refused a request whose level states no delay before a level is mapped; reaching here without one is a bug, so it is loud.
     private static int Delay(EscalationLevelResponse level)

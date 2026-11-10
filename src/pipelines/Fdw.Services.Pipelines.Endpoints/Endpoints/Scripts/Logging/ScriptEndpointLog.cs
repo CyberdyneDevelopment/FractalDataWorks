@@ -20,7 +20,7 @@ public static partial class ScriptEndpointLog
     public static partial IGenericMessage DraftCheckFinished(ILogger logger, string script, int problemCount);
 
     /// <summary>Logs a stored script that was saved and cannot be read back.</summary>
-    [MessageLogging(EventId = 20975, Level = LogLevel.Error, Message = "Script '{script}' was saved and cannot be read back")]
+    [MessageLogging(EventId = 90975, Level = LogLevel.Error, Message = "Script '{script}' was saved and cannot be read back")]
     public static partial IGenericMessage SavedButUnreadable(ILogger logger, string script);
 
     /// <summary>Logs a stored script of an implementation this endpoint does not read.</summary>

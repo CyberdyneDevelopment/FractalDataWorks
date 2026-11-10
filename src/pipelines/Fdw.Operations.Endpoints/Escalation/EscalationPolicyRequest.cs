@@ -17,6 +17,9 @@ public class EscalationPolicyRequest
     /// <summary>Gets or sets the optional workflow ID scope.</summary>
     public Guid? WorkflowId { get; set; }
 
+    /// <summary>Gets or sets the optional schedule ID scope. A policy is scoped to a workflow or a schedule; the configuration refuses one with neither (FDW-4814).</summary>
+    public Guid? ScheduleId { get; set; }
+
     /// <summary>Gets or sets the maximum escalation level. Required (FDW-3823).</summary>
     public int? MaxEscalationLevel { get; set; }
 

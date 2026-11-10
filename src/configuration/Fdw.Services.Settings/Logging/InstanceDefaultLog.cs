@@ -48,7 +48,7 @@ public static partial class InstanceDefaultLog
 
     // Why Warning: the request is refused; the caller must state the value, nothing is stored.
     /// <summary>Logs a create body that leaves out a value only the caller can choose, which has no default (FDW-3823).</summary>
-    [MessageLogging(EventId = 62056, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 22056, Level = LogLevel.Warning,
         Message = "The {ownerKind} '{ownerName}' states no {field}, which is the caller's choice and has no default",
         ClientMessage = "The {ownerKind} '{ownerName}' states no {field}; it is required")]
     public static partial IGenericMessage ChoiceNotStated(ILogger logger, string ownerKind, string ownerName, string field);

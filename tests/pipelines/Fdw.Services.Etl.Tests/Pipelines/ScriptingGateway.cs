@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.EtlGateway;
@@ -9,8 +10,9 @@ using Fdw.Services.EtlGateway;
 namespace Fdw.Services.Etl.Tests.Pipelines;
 
 /// <summary>
-/// An ETL gateway fake for script tests (FDW-1443): answers a script read with the rows it was given, answers a script run with
-/// the rows affected it was given, and keeps every command it was asked to run, with the data store it was asked to run on.
+/// An ETL gateway fake for script tests (FDW-1443): answers a script read with the rows it was given, a streamed read with a
+/// record source over them or the one it was given (FDW-4903), a script run with the rows affected it was given, and keeps every
+/// command it was asked to run, with the data store it was asked to run on.
 /// </summary>
 internal sealed class ScriptingGateway
 {
@@ -19,7 +21,13 @@ internal sealed class ScriptingGateway
     /// <param name="affected">The rows affected a run answers.</param>
     /// <param name="fails">Whether every read and run fails.</param>
     /// <param name="failure">The messages a failing read or run carries, in order; one uncoded message when it is not given.</param>
-    public ScriptingGateway(IReadOnlyList<IDictionary<string, object?>> rows, int affected = 0, bool fails = false, IReadOnlyList<IGenericMessage>? failure = null)
+    /// <param name="stream">The record source a streamed read answers; one over <paramref name="rows"/>, holding to the read's limit, when it is not given.</param>
+    public ScriptingGateway(
+        IReadOnlyList<IDictionary<string, object?>> rows,
+        int affected = 0,
+        bool fails = false,
+        IReadOnlyList<IGenericMessage>? failure = null,
+        IRecordSource<DataRecord>? stream = null)
     {
         IReadOnlyList<IGenericMessage> refusal = failure is null ? [new GenericMessage("script refused")] : failure;
         var gateway = new Mock<IEtlGateway>();
@@ -33,6 +41,19 @@ internal sealed class ScriptingGateway
                     fails
                         ? GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Failure(refusal)
                         : GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Success(rows));
+            });
+        gateway
+            .Setup(g => g.Execute<IRecordSource<DataRecord>>(
+                It.IsAny<IScriptedDataCommand<IRecordSource<DataRecord>>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((IScriptedDataCommand<IRecordSource<DataRecord>> command, string store, CancellationToken token) =>
+            {
+                Commands.Add((store, command));
+                if (fails)
+                    return Task.FromResult<IGenericResult<IRecordSource<DataRecord>>>(GenericResult<IRecordSource<DataRecord>>.Failure(refusal));
+
+                // Why a source over the rows when none was given: the test states rows, and the read holds to the limit the command states.
+                return Task.FromResult<IGenericResult<IRecordSource<DataRecord>>>(GenericResult<IRecordSource<DataRecord>>.Success(
+                    stream is not null ? stream : new StreamedScript(rows, ((IScriptStreamCommand)command).Take)));
             });
         gateway
             .Setup(g => g.Execute<int>(It.IsAny<IScriptedDataCommand<int>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))

@@ -178,7 +178,7 @@ public static partial class AuthorizationLog
     public static partial IGenericMessage RoleExpansionNamesRequired(ILogger logger);
 
     /// <summary>Logs when a declared role name matches no row in the role catalogue.</summary>
-    [MessageLogging(EventId = 71006, Level = LogLevel.Error,
+    [MessageLogging(EventId = 61006, Level = LogLevel.Error,
         Message = "Role '{roleName}' does not exist in the role catalogue — the declaration names a row that is not there")]
     public static partial IGenericMessage RoleNameUnknown(ILogger logger, string roleName);
 

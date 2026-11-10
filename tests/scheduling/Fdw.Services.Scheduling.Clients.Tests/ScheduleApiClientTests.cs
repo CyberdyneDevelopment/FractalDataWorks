@@ -100,6 +100,54 @@ public sealed class ScheduleHttpClientTests
         result.Messages.ShouldNotBeEmpty();
     }
 
+    // --- Id (FDW-4815) ---
+
+    private const string ScheduleWithId = "{\"id\":\"01a1c408-9853-79c1-8ad2-355676f6ccb0\",\"name\":\"daily-etl\",\"pipelineName\":\"etl-pipeline\",\"isEnabled\":false}";
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "Scheduling")]
+    public async Task GetCarriesTheSchedulesId()
+    {
+        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(ScheduleWithId, System.Text.Encoding.UTF8, "application/json")
+        });
+        var sut = CreateClient(handler);
+
+        var result = await sut.Get("daily-etl", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Id.ShouldBe(Guid.Parse("01a1c408-9853-79c1-8ad2-355676f6ccb0"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "Scheduling")]
+    public async Task ListCarriesEachSchedulesId()
+    {
+        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("[" + ScheduleWithId + "]", System.Text.Encoding.UTF8, "application/json")
+        });
+        var sut = CreateClient(handler);
+
+        var result = await sut.List(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Single().Id.ShouldBe(Guid.Parse("01a1c408-9853-79c1-8ad2-355676f6ccb0"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "Scheduling")]
+    public void ScheduleInfoSerializesItsIdAsId()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new ScheduleInfoDto { Id = Guid.Parse("01a1c408-9853-79c1-8ad2-355676f6ccb0") }, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+
+        json.ShouldContain("\"id\":\"01a1c408-9853-79c1-8ad2-355676f6ccb0\"");
+    }
+
     // --- CreateSchedule ---
 
     [Fact]

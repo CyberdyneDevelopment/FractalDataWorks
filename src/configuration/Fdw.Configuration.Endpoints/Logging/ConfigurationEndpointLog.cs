@@ -103,7 +103,7 @@ public static partial class ConfigurationEndpointLog
     public static partial IGenericMessage InstanceNotFoundByName(ILogger logger, string name);
 
     /// <summary>Logs a stored configuration row that lacks a column every instance has, so it cannot be returned.</summary>
-    [MessageLogging(EventId = 71004, Level = LogLevel.Error,
+    [MessageLogging(EventId = 91004, Level = LogLevel.Error,
         Message = "Configuration instance '{name}' in '{tableName}' has no valid '{column}' column; the row cannot be returned")]
     public static partial IGenericMessage InstanceRowIncomplete(ILogger logger, string name, string tableName, string column);
 

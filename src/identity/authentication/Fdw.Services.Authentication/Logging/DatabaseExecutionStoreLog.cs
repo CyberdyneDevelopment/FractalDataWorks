@@ -37,7 +37,7 @@ internal static partial class DatabaseExecutionStoreLog
 
     /// <summary>Nothing was suspended under the token presented, it had already been consumed, or it had expired.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91153, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 51153, Level = LogLevel.Warning,
         Message = "No suspended flow can be resumed with the token presented")]
     internal static partial IGenericMessage NotResumable(ILogger<DatabaseExecutionStore> logger);
 

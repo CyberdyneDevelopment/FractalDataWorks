@@ -174,7 +174,7 @@ public static partial class DataGatewayLogger
     /// <param name="logger">The logger instance.</param>
     /// <returns>A generic message containing the error information.</returns>
     [MessageLogging(
-        EventId = 71052,
+        EventId = 61052,
         Level = LogLevel.Error,
         Message = "Container resolution cannot run: no IDataStoreProvider is available on this DataGatewayService instance")]
     public static partial IGenericMessage DataStoreProviderUnavailable(ILogger logger);
@@ -437,7 +437,7 @@ public static partial class DataGatewayLogger
     /// Logs when the DataStore was resolved but has no ConnectionId (empty Guid).
     /// </summary>
     [MessageLogging(
-        EventId = 41003,
+        EventId = 61022,
         Level = LogLevel.Error,
         Message = "DataStore '{dataStoreName}' has no ConnectionId. Cannot route container command.")]
     public static partial IGenericMessage DataStoreHasNoConnectionId(
@@ -651,8 +651,8 @@ public static partial class DataGatewayLogger
     /// Logs a vectorized command refused because the store's connection is not vectorized (FDW-1354).
     /// </summary>
     [MessageLogging(
-        EventId = 61013,
-        Level = LogLevel.Error,
+        EventId = 21013,
+        Level = LogLevel.Warning,
         Message = "Data store '{dataStore}' does not hold vectors: its connection is not vectorized, so the {commandType} command is refused")]
     public static partial IGenericMessage VectorizedNotSupported(ILogger logger, string dataStore, string commandType);
 

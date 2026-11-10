@@ -62,6 +62,6 @@ public static partial class PipelineRunSchedulerLog
     public static partial IGenericMessage TriggerDropped(ILogger logger, int capacity, string settingName, string pipelineName);
 
     /// <summary>Logs a trigger the full queue refused whose stored request could not be removed, so it was not answered as taken or as plainly full (FDW-4277).</summary>
-    [MessageLogging(EventId = 22137, Level = LogLevel.Error, Message = "The trigger of pipeline '{pipelineName}' was refused because the queue is full, but its stored request could not be removed ({reason}), so the run could start at the next host start")]
+    [MessageLogging(EventId = 72137, Level = LogLevel.Error, Message = "The trigger of pipeline '{pipelineName}' was refused because the queue is full, but its stored request could not be removed ({reason}), so the run could start at the next host start")]
     public static partial IGenericMessage RefusedRequestNotForgotten(ILogger logger, string pipelineName, string? reason);
 }

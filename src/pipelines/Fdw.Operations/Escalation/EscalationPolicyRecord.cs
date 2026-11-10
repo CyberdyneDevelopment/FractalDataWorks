@@ -24,6 +24,7 @@ internal sealed class EscalationPolicyRecord : IEscalationPolicy
     public string Name => _config.Name;
     public bool IsEnabled => _config.IsEnabled;
     public Guid? WorkflowId => _config.WorkflowId;
+    public Guid? ScheduleId => _config.ScheduleId;
     public int MaxEscalationLevel => _config.MaxEscalationLevel;
     public int CooldownMinutes => _config.CooldownMinutes;
     public int MaxRetries => _config.MaxRetries;

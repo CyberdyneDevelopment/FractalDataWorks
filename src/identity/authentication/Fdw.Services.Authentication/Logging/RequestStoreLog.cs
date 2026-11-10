@@ -30,7 +30,7 @@ internal static partial class RequestStoreLog
 
     /// <summary>No state was supplied.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91220, Level = LogLevel.Error,
+    [MessageLogging(EventId = 21220, Level = LogLevel.Warning,
         Message = "A state value is required to store or consume an authorization request")]
     internal static partial IGenericMessage StateMissing(
         ILogger<InMemoryAuthorizationRequestStore> logger);
@@ -44,14 +44,14 @@ internal static partial class RequestStoreLog
 
     /// <summary>A state value was already in use.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91222, Level = LogLevel.Error,
+    [MessageLogging(EventId = 41222, Level = LogLevel.Warning,
         Message = "A state value was reused; refusing to overwrite the pending request")]
     internal static partial IGenericMessage StateReused(
         ILogger<InMemoryAuthorizationRequestStore> logger);
 
     /// <summary>Nothing was pending under the state presented.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91223, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 21223, Level = LogLevel.Warning,
         Message = "No pending authorization request matches the state presented")]
     internal static partial IGenericMessage NoSuchRequest(
         ILogger<InMemoryAuthorizationRequestStore> logger);

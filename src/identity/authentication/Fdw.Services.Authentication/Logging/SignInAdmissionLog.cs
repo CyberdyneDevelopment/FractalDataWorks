@@ -15,7 +15,7 @@ internal static partial class SignInAdmissionLog
 {
     /// <summary>No method was named.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91280, Level = LogLevel.Error,
+    [MessageLogging(EventId = 21280, Level = LogLevel.Warning,
         Message = "A sign-in method must be named to ask whether a user may use it")]
     internal static partial IGenericMessage MethodMissing(ILogger<SignInMethodAdmission> logger);
 

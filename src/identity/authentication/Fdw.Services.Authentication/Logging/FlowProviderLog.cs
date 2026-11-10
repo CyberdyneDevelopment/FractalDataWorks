@@ -42,7 +42,7 @@ internal static partial class FlowProviderLog
     /// <param name="logger">The logger.</param>
     /// <param name="flowName">What they asked for.</param>
     /// <param name="known">The flows that are configured and valid.</param>
-    [MessageLogging(EventId = 91231, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 31231, Level = LogLevel.Warning,
         Message = "No flow named '{flowName}' is configured here. Configured: {known}")]
     internal static partial IGenericMessage NoSuchFlow(
         ILogger<AuthenticationFlowProvider> logger, string flowName, string known);
@@ -67,7 +67,7 @@ internal static partial class FlowProviderLog
 
     /// <summary>No flow name was supplied.</summary>
     /// <param name="logger">The logger.</param>
-    [MessageLogging(EventId = 91233, Level = LogLevel.Error,
+    [MessageLogging(EventId = 21233, Level = LogLevel.Warning,
         Message = "A flow name must be supplied")]
     internal static partial IGenericMessage NameMissing(ILogger<AuthenticationFlowProvider> logger);
 
@@ -107,7 +107,7 @@ internal static partial class FlowProviderLog
     /// <param name="flowName">What they asked for.</param>
     // Warning, not Error: nothing is broken. The host refused exactly as configured, and an operator
     // reading the log wants to see that somebody still tries a switched-off flow.
-    [MessageLogging(EventId = 91121, Level = LogLevel.Warning,
+    [MessageLogging(EventId = 121121, Level = LogLevel.Warning,
         Message = "Flow '{flowName}' is switched off (IsEnabled = 0) and was refused")]
     internal static partial IGenericMessage FlowDisabled(
         ILogger<AuthenticationFlowProvider> logger, string flowName);

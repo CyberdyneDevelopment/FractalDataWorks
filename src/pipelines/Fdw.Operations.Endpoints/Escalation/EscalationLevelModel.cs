@@ -12,20 +12,20 @@ public class EscalationLevelModel : IEscalationLevel
     public int Level { get; set; }
 
     /// <inheritdoc/>
+    public string Name { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
     public int DelayMinutes { get; set; }
 
     /// <inheritdoc/>
     public string NotificationChannel { get; set; } = string.Empty;
 
     /// <inheritdoc/>
-    public IReadOnlyList<string> Recipients { get; set; } = [];
+    public IReadOnlyList<IEscalationRecipient> Recipients { get; set; } = [];
 
     /// <inheritdoc/>
     public string? MessageTemplate { get; set; }
 
     /// <inheritdoc />
     public string Severity { get; set; } = string.Empty;
-
-    /// <inheritdoc />
-    public string RecipientType { get; set; } = string.Empty;
 }
