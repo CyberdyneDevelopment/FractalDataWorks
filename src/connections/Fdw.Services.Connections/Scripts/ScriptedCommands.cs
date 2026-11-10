@@ -22,7 +22,7 @@ public static class ScriptedCommands
     /// <param name="run">Runs a Run and answers the rows it affected.</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <returns>The command's answer, or why it was refused or failed.</returns>
-    /// <remarks>A connection routed here does not stream: a Stream command is refused, naming it.</remarks>
+    /// <remarks>A connection routed here does not stream: a Stream command is refused with <c>StreamNotRouted</c>, which says to route it here with the stream delegate.</remarks>
     public static Task<IGenericResult<T>> Route<T>(
         IScriptedDataCommand<T> command,
         Func<IScriptReadCommand, Task<IGenericResult<IReadOnlyList<IDictionary<string, object?>>>>> read,
@@ -60,7 +60,7 @@ public static class ScriptedCommands
     }
 
     // Why a stream that may be none: the first Route is for a connection that does not stream, and a Stream sent to it is refused
-    // by name below, as any command the connection has no reading for is.
+    // below with its own message, which says what the connection must change.
     private static async Task<IGenericResult<T>> Dispatch<T>(
         IScriptedDataCommand<T> command,
         Func<IScriptReadCommand, Task<IGenericResult<IReadOnlyList<IDictionary<string, object?>>>>> read,
@@ -77,8 +77,13 @@ public static class ScriptedCommands
 
         // Why only Read, Run and Stream: they are the commands of the family, and each has an answer a connection reads. A command
         // added to the family is refused here, by name, until the connections read its answer.
-        if (command is IScriptStreamCommand streaming && stream is not null)
+        if (command is IScriptStreamCommand streaming)
         {
+            if (stream is null)
+            {
+                return GenericResult<T>.Failure(ScriptedCommandsLog.StreamNotRouted(logger));
+            }
+
             var source = await stream(streaming).ConfigureAwait(false);
             return source.IsSuccess && source.Value is { } opened ? GenericResult<T>.Success((T)(object)opened) : source.ToNewResult<T>();
         }

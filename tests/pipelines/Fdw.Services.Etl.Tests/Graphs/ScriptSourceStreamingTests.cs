@@ -142,4 +142,22 @@ public sealed class ScriptSourceStreamingTests
             .ShouldBe(FlowScriptLog.TooManyRows(NullLogger.Instance, "src", "Warehouse", 3).Code);
         script.Released.ShouldBeTrue();
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AScriptSourceOnAConnectionThatDoesNotStreamFailsTheRunSayingWhatToChangeAndNamingTheStore()
+    {
+        var refusal = ScriptedCommandsLog.StreamNotRouted(NullLogger.Instance);
+        var (sink, _) = Sink("dst");
+        var graph = Graph([new FlowScriptSource("src", new ScriptingGateway([], fails: true, failure: [refusal]).Gateway, "Warehouse", "SELECT Id FROM dbo.T", [], 10, 2), sink], [Link("src", "dst")]);
+
+        var result = await new FlowExecutor().Run(graph, Options(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.FirstFailureMessage().ShouldNotBeNull().Message.Code.ShouldBe(refusal.Code);
+        var said = result.Messages.Select(message => message.Message).ToList();
+        said.ShouldContain(message => message.Contains("does not route Stream", StringComparison.Ordinal));
+        said.ShouldContain(message => message.Contains("Warehouse", StringComparison.Ordinal));
+    }
 }

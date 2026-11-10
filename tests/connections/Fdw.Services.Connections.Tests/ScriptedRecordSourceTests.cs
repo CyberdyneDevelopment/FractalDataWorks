@@ -8,6 +8,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Connections.Logging;
 using Fdw.Services.Connections.Scripts;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -220,7 +221,7 @@ public sealed class ScriptedRecordSourceTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public async Task AConnectionThatDoesNotStreamRefusesAStreamByName()
+    public async Task AConnectionThatDoesNotStreamRefusesAStreamSayingToRouteItWithTheStreamDelegate()
     {
         var command = new Mock<IScriptStreamCommand>();
         command.SetupGet(c => c.CommandType).Returns("Stream");
@@ -233,7 +234,9 @@ public sealed class ScriptedRecordSourceTests
             NullLogger.Instance);
 
         routed.IsSuccess.ShouldBeFalse();
-        routed.CurrentMessage.ShouldNotBeNull().ShouldContain("Stream");
+        routed.FirstFailureMessage().ShouldNotBeNull().Message.Code.ShouldBe(ScriptedCommandsLog.StreamNotRouted(NullLogger.Instance).Code);
+        routed.CurrentMessage.ShouldNotBeNull().ShouldContain("does not route Stream");
+        routed.CurrentMessage.ShouldContain("ScriptedCommands.Route with the stream delegate");
     }
 
     [Fact]
