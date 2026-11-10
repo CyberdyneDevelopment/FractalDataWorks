@@ -198,6 +198,6 @@ public static partial class SchemaDiscoveryLog
     /// <summary>
     /// Logs that a discovery request leaves out one of its choices (FDW-3823): no choice is taken in its place.
     /// </summary>
-    [MessageLogging(EventId = 71095, Level = LogLevel.Error, Message = "The discovery of '{owner}' states no '{choice}'; a discovery takes each of its choices from the request, and nothing stands in for one")]
+    [MessageLogging(EventId = 21102, Level = LogLevel.Warning, Message = "The discovery of '{owner}' states no '{choice}'; a discovery takes each of its choices from the request, and nothing stands in for one")]
     public static partial IGenericMessage DiscoveryChoiceNotStated(ILogger logger, string owner, string choice);
 }
