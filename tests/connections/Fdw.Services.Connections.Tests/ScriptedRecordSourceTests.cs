@@ -234,7 +234,8 @@ public sealed class ScriptedRecordSourceTests
             NullLogger.Instance);
 
         routed.IsSuccess.ShouldBeFalse();
-        routed.FirstFailureMessage().ShouldNotBeNull().Message.Code.ShouldBe(ScriptedCommandsLog.StreamNotRouted(NullLogger.Instance).Code);
+        // Why pinned: a connection set up without the stream route is a configuration fault, so the code is in category 6 (FDW-4843).
+        routed.FirstFailureMessage().ShouldNotBeNull().Message.Code.ShouldBe("CONNECTIONS-60010");
         routed.CurrentMessage.ShouldNotBeNull().ShouldContain("does not route Stream");
         routed.CurrentMessage.ShouldContain("ScriptedCommands.Route with the stream delegate");
     }
