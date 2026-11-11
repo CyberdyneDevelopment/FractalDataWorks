@@ -10,8 +10,15 @@ namespace Fdw.Roslyn.Commands.Tests;
 /// onto <c>MutationResult.PathChanges</c>. Uses an <see cref="AdhocWorkspace"/> with synthetic
 /// paths — the translator only performs string path computation, no disk I/O.
 /// </summary>
+/// <remarks>
+/// A Project path change is a filesystem path in the OS's own form (backslashes on Windows), so the paths here are built
+/// under a native root with <see cref="Path.Combine(string[])"/>. A .slnx path uses '/' on every OS.
+/// </remarks>
 public sealed class MoveProjectsTranslatorPathChangeTests
 {
+    // C:\repo on Windows, /repo elsewhere.
+    private static readonly string Root = Path.GetFullPath("/repo");
+
     private static Solution NewSolutionWithProject(string solutionPath, string projectPath, string projectName)
     {
         var workspace = new AdhocWorkspace();
@@ -34,7 +41,8 @@ public sealed class MoveProjectsTranslatorPathChangeTests
     [Trait("Category", "CoreFramework")]
     public async Task TranslateMapsProjectAndSlnxMovesToPathChanges()
     {
-        var solution = NewSolutionWithProject("/repo/repo.sln", "/repo/src/foo/Foo.csproj", "Foo");
+        var solution = NewSolutionWithProject(
+            Path.Combine(Root, "repo.sln"), Path.Combine(Root, "src", "foo", "Foo.csproj"), "Foo");
         var command = new MoveProjectsCommand
         {
             Moves = new[] { new ProjectMoveSpec("Foo", "Bar") }
@@ -47,7 +55,9 @@ public sealed class MoveProjectsTranslatorPathChangeTests
         var mutation = result.Value.ShouldNotBeNull();
 
         mutation.PathChanges.ShouldContain(p =>
-            p.Kind == "Project" && p.OldPath == "/repo/src/foo" && p.NewPath == "/repo/src/Bar/foo");
+            p.Kind == "Project"
+            && p.OldPath == Path.Combine(Root, "src", "foo")
+            && p.NewPath == Path.Combine(Root, "src", "Bar", "foo"));
         mutation.PathChanges.ShouldContain(p =>
             p.Kind == "SlnxProject" && p.OldPath == "src/foo/Foo.csproj" && p.NewPath == "src/Bar/foo/Foo.csproj");
 
@@ -61,17 +71,17 @@ public sealed class MoveProjectsTranslatorPathChangeTests
     public async Task TranslateMapsCsprojReferenceRewritesToPathChanges()
     {
         var workspace = new AdhocWorkspace();
-        var solutionInfo = SolutionInfo.Create(SolutionId.CreateNewId(), VersionStamp.Create(), filePath: "/repo/repo.sln");
+        var solutionInfo = SolutionInfo.Create(SolutionId.CreateNewId(), VersionStamp.Create(), filePath: Path.Combine(Root, "repo.sln"));
         var solution = workspace.AddSolution(solutionInfo);
 
         var fooId = ProjectId.CreateNewId();
         var fooInfo = ProjectInfo.Create(
-            fooId, VersionStamp.Create(), "Foo", "Foo", LanguageNames.CSharp, filePath: "/repo/src/foo/Foo.csproj");
+            fooId, VersionStamp.Create(), "Foo", "Foo", LanguageNames.CSharp, filePath: Path.Combine(Root, "src", "foo", "Foo.csproj"));
         solution = solution.AddProject(fooInfo);
 
         var barInfo = ProjectInfo.Create(
             ProjectId.CreateNewId(), VersionStamp.Create(), "Bar", "Bar", LanguageNames.CSharp,
-            filePath: "/repo/src/bar/Bar.csproj",
+            filePath: Path.Combine(Root, "src", "bar", "Bar.csproj"),
             projectReferences: new[] { new ProjectReference(fooId) });
         solution = solution.AddProject(barInfo);
 
