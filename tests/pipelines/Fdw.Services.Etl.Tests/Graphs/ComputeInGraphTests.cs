@@ -92,6 +92,8 @@ public sealed class ComputeInGraphTests
             new Dictionary<string, object?>(),
             [],
             NullLogger.Instance,
+            TimeSpan.Zero,
+            10,
             null,
             null,
             built);

@@ -51,6 +51,30 @@ namespace Fdw.Services.Etl.Graphs;
 public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraphPipelineFactory, GraphPipelineConfiguration>
 {
     /// <summary>
+    /// The key of how often, in seconds, a destination writes the rows it has committed to the run's record (FDW-4957); 0 writes after every
+    /// commit. Declared below; a host changes it with <c>ServiceTypeDefaults.Override(new GraphPipelineType(), CommittedReportSeconds, n)</c>
+    /// before Register, and the setting <c>PipelineCommittedReportSeconds</c> states it for an installation.
+    /// </summary>
+    public const string CommittedReportSeconds = "CommittedReportSeconds";
+
+    /// <summary>
+    /// The key of how many unmatched keys an update or delete destination's report carries (FDW-4988); 0 carries none, only the count, because keys are values
+    /// and may be private. Declared below; a host changes it with <c>ServiceTypeDefaults.Override(new GraphPipelineType(), UnmatchedKeySample, n)</c> before
+    /// Register, and the setting <c>PipelineUnmatchedKeySample</c> states it for an installation.
+    /// </summary>
+    public const string UnmatchedKeySample = "UnmatchedKeySample";
+
+    private IReadOnlyDictionary<string, object>? _declaredDefaults;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A destination writes what it has committed at most every 10 seconds, besides its first commit, a target emptied and its final figure (FDW-4957); a report
+    /// of unmatched keys carries at most 10 of them (FDW-4988).
+    /// </remarks>
+    public override IReadOnlyDictionary<string, object> DeclaredDefaults
+        => _declaredDefaults ??= ServiceTypeDefaults.With(base.DeclaredDefaults, (CommittedReportSeconds, 10), (UnmatchedKeySample, 10));
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="GraphPipelineType"/> class.
     /// Instance is created by source generator in EtlPipelineTypes collection.
     /// </summary>
@@ -89,6 +113,12 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
 
         Registration((builder, loggerFactory) =>
         {
+            if (!ServiceTypeDefaults.TryResolve(this, CommittedReportSeconds, out var declared) || declared is not int committedReportSeconds || committedReportSeconds < 0)
+                return GenericResult<IHostApplicationBuilder>.Failure(GraphLog.CommittedReportSecondsNotDeclared(
+                    (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GraphPipelineType>(), Name, CommittedReportSeconds));
+            if (!ServiceTypeDefaults.TryResolve(this, UnmatchedKeySample, out var declaredSample) || declaredSample is not int unmatchedKeySample || unmatchedKeySample < 0)
+                return GenericResult<IHostApplicationBuilder>.Failure(GraphLog.UnmatchedKeySampleNotDeclared(
+                    (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GraphPipelineType>(), Name, UnmatchedKeySample));
 
 
 
@@ -111,7 +141,12 @@ public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraph
                     sp.GetService<IEffectiveSettingsProvider>(),
                     sp.GetService<IExecutionTracker>(),
                     sp.GetService<RunningFlows>(),
-                    sp.GetService<IThresholdEvaluator>()),
+                    sp.GetService<IThresholdEvaluator>(),
+                    sp.GetService<TimeProvider>())
+                {
+                    CommittedReportSeconds = committedReportSeconds,
+                    UnmatchedKeySample = unmatchedKeySample,
+                },
                 ServiceLifetime.Scoped));
             builder.Services.TryAdd(new ServiceDescriptor(
                 typeof(IGraphPipelineProvider),

@@ -95,6 +95,13 @@ public static partial class OperationsLog
     public static partial IGenericMessage ExecutionItemPersistFailed(ILogger logger, Guid executionItemId, string errorMessage);
 
     /// <summary>
+    /// Logs when the last event sequence number of an execution item cannot be read (FDW-4945): the event is not written, because a
+    /// guessed number could repeat one the item already holds.
+    /// </summary>
+    [MessageLogging(EventId = 71005, Level = LogLevel.Error, Message = "The last event sequence number of execution item '{executionItemId}' could not be read; no event is written with a guessed number")]
+    public static partial IGenericMessage EventSequenceUnread(ILogger logger, Guid executionItemId);
+
+    /// <summary>
     /// Logs when an execution item is completed successfully.
     /// </summary>
     [MessageLogging(EventId = 11002, Level = LogLevel.Information, Message = "Execution item '{executionItemId}' completed successfully")]

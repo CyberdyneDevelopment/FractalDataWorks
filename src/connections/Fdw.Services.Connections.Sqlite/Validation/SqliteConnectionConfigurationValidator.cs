@@ -33,6 +33,6 @@ public sealed class SqliteConnectionConfigurationValidator : FdwConfigurationVal
         RuleFor(x => x.DefaultTimeout)
             .GreaterThan(0)
             .When(x => x.DefaultTimeout.HasValue)
-            .WithMessage("DefaultTimeout must be greater than 0 when it is stated; leave it out to take the instance's DefaultCommandTimeoutSeconds");
+            .WithMessage("DefaultTimeout must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
     }
 }

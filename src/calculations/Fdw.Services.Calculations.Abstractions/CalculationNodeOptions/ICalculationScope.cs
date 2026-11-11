@@ -15,7 +15,7 @@ public interface ICalculationScope
 
     /// <summary>Gets the type a result defined before the node being checked yields.</summary>
     /// <param name="result">The result name.</param>
-    /// <returns>The type, decimal for a number or DateTimeOffset for a date-time; null when no such result is defined.</returns>
+    /// <returns>The type, decimal for a number, DateOnly for a date or DateTimeOffset for a date-time; null when no such result is defined.</returns>
     Type? TypeOf(string result);
 
     /// <summary>Notes that the array reads an input field.</summary>

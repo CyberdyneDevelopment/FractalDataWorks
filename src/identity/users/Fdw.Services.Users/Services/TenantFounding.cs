@@ -12,13 +12,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Users.Services;
 
 /// <summary>
-/// Makes a tenant with its default organization and that organization's default workspace, appoints its first administrator, and removes
-/// what was made again when any step fails (FDW-1578, FDW-3668).
+/// Makes a tenant with its default organization and, when the setting <c>FoundingMakesDefaultWorkspace</c> is on, that organization's default
+/// workspace, appoints its first administrator, and removes what was made again when any step fails (FDW-1578, FDW-3668, FDW-4600).
 /// </summary>
 /// <remarks>
 /// The data layer has no transaction across these writes, so the order is: judge everything that can be judged first (the person exists,
-/// the caller may give the role), make the tenant, its default organization and that organization's default workspace (owned by the
-/// administrator), add the membership, give the role. A failure of any step after the tenant removes what was made, newest first; removing
+/// the caller may give the role, the setting), make the tenant, its default organization and, with the setting on, that organization's default
+/// workspace (owned by the administrator), add the membership, give the role. With the setting off the organization names no workspace and none is made. A failure of any step after the tenant removes what was made, newest first; removing
 /// the tenant removes its organization rows. A removal that itself fails is logged as critical, naming what is left, and the original failure is still the
 /// one reported. The membership is named {userId}:{tenantId}, as the claim provisioning names it.
 /// </remarks>
@@ -28,8 +28,8 @@ public sealed class TenantFounding : ITenantFounding
 
     private readonly ITenantWriter _tenants;
     private readonly IOrganizationWriter _organizations;
-    private readonly IOrganizationProvider _organizationReader;
     private readonly IDefaultWorkspaceFounding _defaultWorkspaces;
+    private readonly IWorkspaceFoundingPolicy _policy;
     private readonly IUserConfigurationProvider _users;
     private readonly IUserTenantConfigurationProvider _memberships;
     private readonly IGrantRule _grantRule;
@@ -39,8 +39,8 @@ public sealed class TenantFounding : ITenantFounding
     /// <summary>Initializes a new instance of the <see cref="TenantFounding"/> class.</summary>
     /// <param name="tenants">Makes and removes the tenant.</param>
     /// <param name="organizations">Makes the tenant's default organization.</param>
-    /// <param name="organizationReader">Reads the default organization back, for the workspace it names.</param>
     /// <param name="defaultWorkspaces">Makes and removes the default organization's default workspace.</param>
+    /// <param name="policy">Says whether founding makes a default workspace.</param>
     /// <param name="users">Finds the person.</param>
     /// <param name="memberships">Writes the person's membership of the tenant.</param>
     /// <param name="grantRule">Judges whether the caller may give the role.</param>
@@ -49,8 +49,8 @@ public sealed class TenantFounding : ITenantFounding
     public TenantFounding(
         ITenantWriter tenants,
         IOrganizationWriter organizations,
-        IOrganizationProvider organizationReader,
         IDefaultWorkspaceFounding defaultWorkspaces,
+        IWorkspaceFoundingPolicy policy,
         IUserConfigurationProvider users,
         IUserTenantConfigurationProvider memberships,
         IGrantRule grantRule,
@@ -59,8 +59,8 @@ public sealed class TenantFounding : ITenantFounding
     {
         _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
         _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _organizationReader = organizationReader ?? throw new ArgumentNullException(nameof(organizationReader));
         _defaultWorkspaces = defaultWorkspaces ?? throw new ArgumentNullException(nameof(defaultWorkspaces));
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _memberships = memberships ?? throw new ArgumentNullException(nameof(memberships));
         _grantRule = grantRule ?? throw new ArgumentNullException(nameof(grantRule));
@@ -93,6 +93,13 @@ public sealed class TenantFounding : ITenantFounding
             return allowed.ToNewResult<Guid>();
         }
 
+        // Judged before anything is made: whether this founding makes the default workspace. No setting row, host or option stating it is a coded failure.
+        var makesWorkspace = _policy.FoundingMakesDefaultWorkspace();
+        if (makesWorkspace.IsFailure)
+        {
+            return makesWorkspace.ToNewResult<Guid>();
+        }
+
         var made = await _tenants.Create(tenant, cancellationToken).ConfigureAwait(false);
         if (made.IsFailure)
         {
@@ -100,12 +107,14 @@ public sealed class TenantFounding : ITenantFounding
         }
 
         var tenantId = made.Value;
-        var defaults = await FoundDefaults(tenant, tenantId, administratorId, cancellationToken).ConfigureAwait(false);
-        if (!defaults.IsSuccess || defaults.Value is not { } workspace)
+        var defaults = await FoundDefaults(tenant, tenantId, administratorId, makesWorkspace.Value, cancellationToken).ConfigureAwait(false);
+        if (!defaults.IsSuccess)
         {
             await Undo(tenantId, null, null, cancellationToken).ConfigureAwait(false);
             return defaults.ToNewResult<Guid>();
         }
+
+        var workspace = defaults.Value;
 
         var membershipName = $"{administratorId}:{tenantId}";
         var member = await _memberships.Save(
@@ -130,34 +139,36 @@ public sealed class TenantFounding : ITenantFounding
         return made;
     }
 
-    // Makes the tenant's default organization and that organization's default workspace, the workspace the organization row names (FDW-3668).
-    // The administrator owns the workspace. A failure is logged here; the caller removes the tenant, which removes the organization rows.
-    private async Task<IGenericResult<NewDefaultWorkspace>> FoundDefaults(NewTenant tenant, Guid tenantId, Guid administratorId, CancellationToken cancellationToken)
+    // Makes the tenant's default organization and, with the setting on, that organization's default workspace, the workspace the organization row
+    // names (FDW-3668). The administrator owns the workspace. With the setting off the organization names none and the result carries no workspace
+    // (FDW-4600). A failure is logged here; the caller removes the tenant, which removes the organization rows.
+    private async Task<IGenericResult<NewDefaultWorkspace?>> FoundDefaults(
+        NewTenant tenant, Guid tenantId, Guid administratorId, bool makesWorkspace, CancellationToken cancellationToken)
     {
+        // The workspace's durable id is stated here, by the founding that makes the workspace, and written on the organization row as given.
+        Guid? workspaceId = makesWorkspace ? Guid.CreateVersion7() : null;
         var made = await _organizations.Create(
-            new NewOrganization(tenantId, tenant.Name, tenant.OrganizationSlug, IsDefault: true), cancellationToken).ConfigureAwait(false);
+            new NewOrganization(tenantId, tenant.Name, tenant.OrganizationSlug, IsDefault: true, DefaultWorkspaceId: workspaceId), cancellationToken).ConfigureAwait(false);
         if (made.IsFailure)
         {
             TenantFoundingLog.DefaultsNotMade(_logger, tenantId, "default organization", made.CurrentMessage);
-            return made.ToNewResult<NewDefaultWorkspace>();
+            return made.ToNewResult<NewDefaultWorkspace?>();
         }
 
-        var read = await _organizationReader.Get(made.Value, cancellationToken).ConfigureAwait(false);
-        if (!read.IsSuccess || read.Value is not { } organization)
+        if (workspaceId is not { } id)
         {
-            return GenericResult<NewDefaultWorkspace>.Failure(TenantFoundingLog.DefaultsNotMade(_logger, tenantId, "default organization", read.CurrentMessage));
+            return GenericResult<NewDefaultWorkspace?>.Success(null);
         }
 
-        var request = new NewDefaultWorkspace(
-            organization.DefaultWorkspaceId, tenantId, tenant.Name, organization.Id, administratorId);
+        var request = new NewDefaultWorkspace(id, tenantId, tenant.Name, made.Value, administratorId);
         var founded = await _defaultWorkspaces.Found(request, cancellationToken).ConfigureAwait(false);
         if (founded.IsFailure)
         {
             TenantFoundingLog.DefaultsNotMade(_logger, tenantId, "default workspace", founded.CurrentMessage);
-            return founded.ToNewResult<NewDefaultWorkspace>();
+            return founded.ToNewResult<NewDefaultWorkspace?>();
         }
 
-        return GenericResult<NewDefaultWorkspace>.Success(request);
+        return GenericResult<NewDefaultWorkspace?>.Success(request);
     }
 
     // Removes what Found made, newest first: the membership when it was saved, the default workspace when it was made, then the tenant, whose

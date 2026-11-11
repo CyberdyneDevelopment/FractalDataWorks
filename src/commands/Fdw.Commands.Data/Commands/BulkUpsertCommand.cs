@@ -19,7 +19,7 @@ namespace Fdw.Commands.Data;
 /// <typeparam name="T">The type of the source rows (a dictionary of column values or an entity).</typeparam>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "BulkUpsert", RestrictToCurrentCompilation = true)]
-public sealed class BulkUpsertCommand<T> : DataCommandBase<int, IEnumerable<T>>, IUpsertCommand, IBulkExpandableDataCommand
+public sealed class BulkUpsertCommand<T> : DataCommandBase<int, IEnumerable<T>>, ISetBasedRowsCommand, IUpsertCommand, IBulkExpandableDataCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkUpsertCommand{T}"/> class.
@@ -35,6 +35,9 @@ public sealed class BulkUpsertCommand<T> : DataCommandBase<int, IEnumerable<T>>,
 
     /// <summary>Gets the key, compare and write columns and the optional versioning and insert-only behaviour.</summary>
     public UpsertOptions Options { get; }
+
+    /// <inheritdoc/>
+    public int RowCount => Data.Count();
 
     /// <inheritdoc/>
     public IGenericResult<IReadOnlyList<ExpandedCommand>> Expand(IStorageContainer container)

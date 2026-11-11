@@ -76,31 +76,49 @@ public interface IDataGateway : IGenericService
     Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Opens a streaming, low-allocation record-source cursor over a read command against a container
-    /// in a DataStore, instead of materializing the whole result set.
+    /// Opens a container's rows as a stream read in a stable order, so no row is repeated or skipped however many the container holds
+    /// (FDW-4911).
     /// </summary>
     /// <remarks>
-    /// The gateway resolves the physical connection from the DataStore's registered ConnectionId and,
-    /// when that connection supports <c>IRecordSourceConnection</c>, returns a cursor whose
-    /// <see cref="DataRecord"/> rows expose their values as a <c>ReadOnlySpan&lt;object?&gt;</c> over a
-    /// shared schema flyweight (no per-row dictionary/key allocation). The returned
-    /// <see cref="IRecordSource{T}"/> OWNS the underlying reader and connection — the caller MUST dispose
-    /// it (use <c>await using</c>). Connections that cannot stream a cursor fail loud with a structured
-    /// non-success result; the caller falls back to the materializing <see cref="Execute{T}(IDataCommand, DataStoreTarget, CancellationToken)"/> path.
+    /// The gateway resolves the container and its store's connection. A connection that implements <c>IRecordSourceConnection</c> is read
+    /// through its cursor, one statement whose records are cut to the fields the same query returns through <c>Execute</c>. A connection
+    /// that states its store keeps its own order (<c>IStoreOrderedConnection</c>: a remote API paged by its protocol, a file) is paged in
+    /// that order, the store's guarantee. Any other connection is read in keyset pages: every field of the container's primary key,
+    /// ascending, each page asking for the rows after the last key, <c>DataGatewayServiceTypes.StableReadPageSize</c> rows at a time. A container that can be read neither way is refused with
+    /// <c>StableReadUnavailable</c>, naming it and what it needs; rows are never paged in no stated order and no key is guessed. The command's
+    /// own ordering and paging are not used by a keyset read; its filter, projection and field selection apply to every page. The result
+    /// cache is never read or written.
     /// <para>
-    /// The connection's outbound limits apply exactly as they do to <c>Execute</c>: rate and result-size
-    /// checks and the daily budget are enforced before the cursor opens. The other two last as long as the
-    /// cursor does: it occupies one of the connection's concurrency slots until it is disposed, so dispose
-    /// it promptly, and the query timeout bounds its whole lifetime -- enumeration ends with a timeout
-    /// failure once it fires.
+    /// The returned <see cref="IRecordSource{T}"/> OWNS what it reads through -- the caller MUST dispose it (use <c>await using</c>). The
+    /// connection's outbound limits apply exactly as they do to <c>Execute</c>: rate and result-size checks and the daily budget are enforced
+    /// before the read opens. The other two last as long as the read does: it occupies one of the connection's concurrency slots until it is
+    /// disposed, so dispose it promptly, and the query timeout bounds its whole lifetime -- enumeration ends with a timeout failure once it fires.
     /// </para>
     /// </remarks>
-    /// <param name="command">The read command (e.g. a <c>QueryCommand</c>).</param>
+    /// <param name="command">The read: a query command.</param>
     /// <param name="target">The DataStore/Path/Container address.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>On success, a disposable record-source cursor; on failure, a structured non-success result.</returns>
+    /// <returns>On success, a disposable record source; on failure, a structured non-success result.</returns>
     Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(
         IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens a data set's rows as a stream read in a stable order, so no row is repeated or skipped (FDW-4911).
+    /// </summary>
+    /// <remarks>
+    /// A data set whose kind pages in the store is read in keyset pages by its key fields, <c>DataGatewayServiceTypes.StableReadPageSize</c> rows
+    /// at a time; one that declares no key is refused with <c>DataSetNotPageable</c>. A kind that does not page in the store (an in-memory
+    /// join) builds its whole set to answer any read, so it is read once, unpaged, and refused with <c>UnpagedDataSetOverRowCap</c> when it
+    /// holds more rows than <c>DataGatewayServiceTypes.UnpagedDataSetRowCap</c>. The data set is resolved and admitted as for
+    /// <see cref="Execute{T}(IDataCommand, DataSetTarget, CancellationToken)"/>; each record carries the data set's declared fields. The caller
+    /// MUST dispose the returned source.
+    /// </remarks>
+    /// <param name="command">The read: a query command over the data set's field names.</param>
+    /// <param name="target">The data set to read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>On success, a disposable record source; on failure, a structured non-success result.</returns>
+    Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(
+        IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Executes a vectorized command (the rows nearest a vector, say) against a container whose store holds vectors.

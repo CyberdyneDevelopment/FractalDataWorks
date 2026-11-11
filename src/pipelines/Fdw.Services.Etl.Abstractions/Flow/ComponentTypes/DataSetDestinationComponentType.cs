@@ -38,6 +38,10 @@ public sealed class DataSetDestinationComponentType : ComponentTypeBase
             new StageMember("deletedAtColumn", "Text", false, "Soft delete: the column that takes the time a row was deleted."),
             new StageMember("softDeleteMarkerColumn", "Text", false, "Soft delete: the column a marker mode tests; stated with its value."),
             new StageMember("softDeleteMarkerValue", "Text", false, "Soft delete: the value of the marker column."),
+            new StageMember("stageContainer", "Text", false, "Absent-key soft delete: the container in the destination's data store each batch's keys are staged in; it declares the key columns and the stage key column. Required with AbsentFromSource."),
+            new StageMember("stageKeyColumn", "Text", false, "Absent-key soft delete: the stage container's column that tells this destination's run apart. Required with AbsentFromSource."),
+            new StageMember("unmatchedKeysRule", "UnmatchedKeysRules", false, "Update and delete-by-key loads: what a key that matched no row does (Fail rolls the batch back and fails the run; Warn commits and records the count and a sample). Required with those load kinds."),
+            new StageMember("sweepRejectedRowsRule", "SweepRejectedRowsRules", false, "Absent-key soft delete: what the end-of-run sweep does when rows were rejected upstream (Refuse or Proceed). Required with AbsentFromSource."),
             new StageMember("valueSources", "ValueSources", false, "Values written to target columns: a source field, the next value of a sequence, the current time or a constant."),
         ])
     {

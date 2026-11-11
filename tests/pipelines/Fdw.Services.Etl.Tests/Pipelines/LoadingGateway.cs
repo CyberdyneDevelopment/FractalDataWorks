@@ -1,5 +1,6 @@
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
@@ -10,7 +11,7 @@ namespace Fdw.Services.Etl.Tests.Pipelines;
 /// <summary>
 /// A gateway fake for the load tests (FDW-1109): serves a source a page at a time, accepts the pipeline's inserts, upserts
 /// and truncates by data set, and serves and records the watermark row by data store. It records what happened, in order,
-/// in a shared event list ("read@2", "insert:2", "upsert:2", "truncate", "watermark:read", "watermark:insert").
+/// in a shared event list ("open", "closed after 5", "insert:2", "upsert:2", "truncate", "watermark:read", "watermark:insert").
 /// </summary>
 internal sealed class LoadingGateway
 {
@@ -30,16 +31,12 @@ internal sealed class LoadingGateway
         var gateway = new Mock<IDataGateway>();
 
         gateway
-            .Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()))
+            .Setup(g => g.OpenRecordSource(It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()))
             .Returns((IDataCommand command, DataSetTarget target, CancellationToken cancellationToken) =>
             {
-                var paging = ((IQueryCommand)command).Paging;
-                var skip = paging is null ? 0 : paging.Skip;
-                events.Add($"read@{skip}");
-                IGenericResult<IEnumerable<Dictionary<string, object?>>> page =
-                    GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(source.Skip(skip).Take(paging?.Take ?? int.MaxValue).ToList());
-                return Task.FromResult(page);
+                events.Add("open");
+                return Task.FromResult<IGenericResult<IRecordSource<DataRecord>>>(
+                    GenericResult<IRecordSource<DataRecord>>.Success(new CountingRecordSource([.. source], events)));
             });
 
         gateway

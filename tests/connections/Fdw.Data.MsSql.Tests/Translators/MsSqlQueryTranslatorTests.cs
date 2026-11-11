@@ -146,6 +146,146 @@ public sealed class MsSqlQueryTranslatorTests
         sql.ShouldNotContain("[MsSqlConnection].[RowId]");
     }
 
+    // A Compound data set's read (FDW-4991): its own container, the joined one declared in the same store.
+    private static Mock<IDataContainer> CompoundStore()
+    {
+        var order = CreateContainer(name: "Order", schema: "dbo", fields: [CreateField("order_id").Object, CreateField("status").Object]);
+        var customer = CreateContainer(name: "Customer", schema: "dbo");
+        var path = new Mock<IDataNodePath>();
+        path.Setup(p => p.Containers).Returns([order.Object, customer.Object]);
+        var store = new Mock<IDataStore>();
+        store.Setup(s => s.Name).Returns("Store");
+        store.Setup(s => s.Paths).Returns([path.Object]);
+        path.Setup(p => p.Store).Returns(store.Object);
+        order.Setup(c => c.Parent).Returns(path.Object);
+        return order;
+    }
+
+    // A Compound read joining Customer by the given type, with the one join condition or none (FDW-5099).
+    private static QueryCommand<object> JoinedRead(string joinType, bool withCondition) => new()
+    {
+        Joins = [new JoinExpression { TargetContainerName = "Customer", JoinType = joinType, JoinConditions = withCondition ? [("customer_code", "code")] : [] }],
+        Projection = new ProjectionExpression
+        {
+            Fields =
+            [
+                new ProjectionField { PropertyName = "order_id", Alias = "OrderId", SourceContainer = "Order" },
+                new ProjectionField { PropertyName = "name", Alias = "CustomerName", SourceContainer = "Customer" },
+            ],
+        },
+    };
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5099")]
+    [InlineData("Inner", "INNER JOIN [dbo].[Customer] ON [Order].[customer_code] = [Customer].[code]")]
+    [InlineData("left", "LEFT JOIN [dbo].[Customer] ON [Order].[customer_code] = [Customer].[code]")]
+    [InlineData("RIGHT", "RIGHT JOIN [dbo].[Customer] ON [Order].[customer_code] = [Customer].[code]")]
+    [InlineData("Full", "FULL OUTER JOIN [dbo].[Customer] ON [Order].[customer_code] = [Customer].[code]")]
+    public async Task AJoinIsWrittenByItsJoinTypesOwnKeywordNotByTheTextItCarries(string joinType, string clause)
+    {
+        var result = await _sut.Translate(JoinedRead(joinType, withCondition: true), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.CommandText.ShouldContain(clause, Case.Sensitive);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5099")]
+    public async Task ACrossJoinIsWrittenWithNoCondition()
+    {
+        var result = await _sut.Translate(JoinedRead("Cross", withCondition: false), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var sql = result.Value!.CommandText;
+        sql.ShouldContain("CROSS JOIN [dbo].[Customer]", Case.Sensitive);
+        sql.ShouldNotContain(" ON ");
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5099")]
+    [InlineData("Inner JOIN [x] ON 1=1; DROP TABLE y --", true, "CMDDATA-22030")]
+    [InlineData("Outer", true, "CMDDATA-22030")]
+    [InlineData("", true, "CMDDATA-22030")]
+    [InlineData("None", true, "CMDDATA-22031")]
+    [InlineData("Inner", false, "CMDDATA-22032")]
+    [InlineData("Cross", true, "CMDDATA-22032")]
+    public async Task AJoinTheStatementCannotStateIsRefusedWithItsOwnCodeAndNothingIsWritten(string joinType, bool withCondition, string code)
+    {
+        var result = await _sut.Translate(JoinedRead(joinType, withCondition), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(message => string.Equals(message.Code, code, StringComparison.Ordinal));
+    }
+
+    private static QueryCommand<object> CompoundRead(IOrderingExpression? ordering, IPagingExpression? paging) => new()
+    {
+        Joins = [new JoinExpression { TargetContainerName = "Customer", JoinType = "Inner", JoinConditions = [("customer_code", "code")] }],
+        Projection = new ProjectionExpression
+        {
+            Fields =
+            [
+                new ProjectionField { PropertyName = "order_id", Alias = "OrderId", SourceContainer = "Order" },
+                new ProjectionField { PropertyName = "name", Alias = "CustomerName", SourceContainer = "Customer" },
+            ],
+        },
+        Filter = new FilterExpression
+        {
+            Root = new FilterCondition { PropertyName = "Customer.name", Operator = FilterOperators.ByName("Equal"), Value = "Ada" },
+        },
+        Ordering = ordering,
+        Paging = paging,
+    };
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataSets.FDW4991")]
+    public async Task AJoinedReadOrdersByQualifiedColumnsAndPages()
+    {
+        var ordering = new OrderingExpression
+        {
+            OrderedFields =
+            [
+                new OrderedField { PropertyName = "Customer.name", Direction = SortDirections.Descending },
+                new OrderedField { PropertyName = "Order.order_id", Direction = SortDirections.Ascending },
+            ],
+        };
+
+        var result = await _sut.Translate(CompoundRead(ordering, new PagingExpression { Skip = 6, Take = 3 }), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var sql = result.Value!.CommandText;
+        sql.ShouldContain("SELECT [Order].[order_id] AS [OrderId], [Customer].[name] AS [CustomerName]");
+        sql.ShouldContain("INNER JOIN [dbo].[Customer] ON [Order].[customer_code] = [Customer].[code]");
+        sql.ShouldContain("WHERE [Customer].[name] = @p0");
+        sql.ShouldEndWith("ORDER BY [Customer].[name] DESC, [Order].[order_id] ASC OFFSET 6 ROWS FETCH NEXT 3 ROWS ONLY");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataSets.FDW4991")]
+    public async Task APagedJoinThatStatesNoOrderIsRefused()
+    {
+        var result = await _sut.Translate(CompoundRead(null, new PagingExpression { Skip = 0, Take = 3 }), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        // A join repeats its primary rows, so the primary key is no order to page by: none is guessed.
+        result.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataSets.FDW4991")]
+    public async Task AnUnpagedJoinWithNoOrderSendsNeither()
+    {
+        var result = await _sut.Translate(CompoundRead(null, null), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.CommandText.ShouldNotContain("ORDER BY");
+        result.Value.CommandText.ShouldNotContain("OFFSET");
+    }
+
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]

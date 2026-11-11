@@ -16,7 +16,8 @@ namespace Fdw.Services.Settings;
 /// Fills each value a create request's configuration body leaves out (FDW-3580, FDW-3823): the service type's tuning default (the host's
 /// registration override, else the value the type or its domain declares, <see cref="ServiceTypeDefaults"/>), else, for a property that still
 /// names one with <see cref="DefaultSettingAttribute"/>, the instance setting read for the caller's tenant. A value the caller chooses has
-/// neither: its validator refuses the request.
+/// neither: its validator refuses the request. A property marked <see cref="ResolvedAtUseAttribute"/> is left out, and resolved when the
+/// service is built (FDW-4904).
 /// </summary>
 /// <remarks>
 /// Why on the body and before binding: an omitted member is only visible there. Once the body is bound, an unstated
@@ -62,6 +63,14 @@ public static class ConfigurationCreateDefaults
             // A choice only the caller makes has no default: refuse the body that leaves it out (FDW-3823).
             if (property.GetCustomAttribute<CallerChoiceAttribute>() is not null)
                 return GenericResult<JsonObject>.Failure(InstanceDefaultLog.ChoiceNotStated(logger, ownerKind, ownerName, property.Name));
+
+            // A default resolved where the service is built is not written into the row (FDW-4904): the factory takes the type's default as the
+            // host resolved it at registration, so a later registration override reaches this row too.
+            if (property.GetCustomAttribute<ResolvedAtUseAttribute>() is not null)
+            {
+                InstanceDefaultLog.LeftForUse(logger, ownerKind, ownerName, property.Name);
+                continue;
+            }
 
             // The type carries its tuning defaults (FDW-3823, Mike: "a default value set in the service type option or collection so
             // that in the registration we can change it"): the host's override, else the option's declared value.

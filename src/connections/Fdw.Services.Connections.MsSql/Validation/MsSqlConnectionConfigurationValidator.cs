@@ -36,7 +36,7 @@ public sealed class MsSqlConnectionConfigurationValidator : FdwConfigurationVali
         RuleFor(x => x.CommandTimeoutSeconds)
             .GreaterThan(0)
             .When(x => x.CommandTimeoutSeconds.HasValue)
-            .WithMessage("CommandTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the instance's DefaultCommandTimeoutSeconds");
+            .WithMessage("CommandTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
 
         RuleFor(x => x.MaxSerialInsert)
             .GreaterThan(0)
@@ -50,7 +50,27 @@ public sealed class MsSqlConnectionConfigurationValidator : FdwConfigurationVali
         RuleFor(x => x.ConnectionTimeoutSeconds)
             .GreaterThan(0)
             .When(x => x.ConnectionTimeoutSeconds is not null)
-            .WithMessage("ConnectionTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the instance's DefaultConnectionTimeoutSeconds");
+            .WithMessage("ConnectionTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
+
+        RuleFor(x => x.ProbeTimeoutSeconds)
+            .GreaterThan(0)
+            .When(x => x.ProbeTimeoutSeconds is not null)
+            .WithMessage("ProbeTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
+
+        RuleFor(x => x.SessionContextApplyTimeoutSeconds)
+            .GreaterThan(0)
+            .When(x => x.SessionContextApplyTimeoutSeconds is not null)
+            .WithMessage("SessionContextApplyTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
+
+        RuleFor(x => x.BulkCopyBatchSize)
+            .GreaterThan(0)
+            .When(x => x.BulkCopyBatchSize is not null)
+            .WithMessage("BulkCopyBatchSize must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
+
+        RuleFor(x => x.BulkCopyTimeoutSeconds)
+            .GreaterThan(0)
+            .When(x => x.BulkCopyTimeoutSeconds is not null)
+            .WithMessage("BulkCopyTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
 
         When(x => x.EnableConnectionPooling, () =>
         {

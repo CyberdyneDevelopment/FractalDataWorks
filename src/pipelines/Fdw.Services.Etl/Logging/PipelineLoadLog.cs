@@ -52,6 +52,21 @@ public static partial class PipelineLoadLog
         Message = "In {owner}: soft delete mode '{mode}' is not a soft delete mode")]
     public static partial IGenericMessage SoftDeleteModeUnknown(ILogger logger, string owner, string mode);
 
+    /// <summary>Logs a refused load configuration (FDW-4956): In owner: rejected-rows rule 'rule' is not a SweepRejectedRowsRules option.</summary>
+    [MessageLogging(EventId = 20034, Level = LogLevel.Warning,
+        Message = "In {owner}: rejected-rows rule '{rule}' is not a sweep rejected-rows rule (Refuse or Proceed)")]
+    public static partial IGenericMessage SweepRejectedRowsRuleUnknown(ILogger logger, string owner, string rule);
+
+    /// <summary>Logs a refused load configuration (FDW-4988): In owner: a load of kind 'kind' writes existing rows by key and states no unmatched keys rule.</summary>
+    [MessageLogging(EventId = 20035, Level = LogLevel.Warning,
+        Message = "In {owner}: a {kind} load finds rows by their keys, so it states what a key that matched no row does (Fail or Warn)")]
+    public static partial IGenericMessage UnmatchedKeysRuleMissing(ILogger logger, string owner, string kind);
+
+    /// <summary>Logs a refused load configuration (FDW-4988): In owner: unmatched keys rule 'rule' is not an UnmatchedKeysRules option.</summary>
+    [MessageLogging(EventId = 20036, Level = LogLevel.Warning,
+        Message = "In {owner}: unmatched keys rule '{rule}' is not an unmatched keys rule (Fail or Warn)")]
+    public static partial IGenericMessage UnmatchedKeysRuleUnknown(ILogger logger, string owner, string rule);
+
     /// <summary>Logs a refused load configuration: In owner: the soft delete options do not fit together: reason.</summary>
     [MessageLogging(EventId = 20023, Level = LogLevel.Warning,
         Message = "In {owner}: the soft delete options do not fit together: {reason}")]

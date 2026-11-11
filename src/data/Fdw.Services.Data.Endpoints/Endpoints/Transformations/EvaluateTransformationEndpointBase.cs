@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,7 +52,7 @@ public abstract class EvaluateTransformationEndpointBase : Endpoint<EvaluateTran
             s.Summary = "Evaluate a Built transformation";
             s.Description =
                 "Evaluates a Built transformation that keeps one result, with a value for each input it declares, and answers the value " +
-                "and its kind (Number or DateTime). The body is an object with an inputs member (an empty object for none). An unknown " +
+                "and its kind (Number, Date or DateTime). The body is an object with an inputs member (an empty object for none). An unknown " +
                 "name, a missing input or an input of the wrong type is refused with the reason.";
         });
     }
@@ -85,7 +86,7 @@ public abstract class EvaluateTransformationEndpointBase : Endpoint<EvaluateTran
         await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
     }
 
-    // A Number input takes a JSON number and a Flag input true or false; the calculation checks each against what it declares.
+    // A Number input takes a JSON number, a Flag input true or false and a Date input a text written yyyy-MM-dd; the calculation checks each against what it declares.
     private IGenericResult<IReadOnlyDictionary<string, object?>> Inputs(EvaluateTransformationRequest req)
     {
         var values = new Dictionary<string, object?>(req.Inputs.Count, StringComparer.Ordinal);
@@ -103,9 +104,12 @@ public abstract class EvaluateTransformationEndpointBase : Endpoint<EvaluateTran
                 case JsonValueKind.False:
                     values[input.Key] = false;
                     break;
+                case JsonValueKind.String when DateOnly.TryParseExact(input.Value.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date):
+                    values[input.Key] = date;
+                    break;
                 default:
                     return GenericResult<IReadOnlyDictionary<string, object?>>.Failure(
-                        FilterCalculationLog.InputWrongType(Logger, req.Name, input.Key, "Number or Flag", input.Value.ValueKind.ToString()));
+                        FilterCalculationLog.InputWrongType(Logger, req.Name, input.Key, "Number, Flag or Date", input.Value.ValueKind.ToString()));
             }
 #pragma warning restore FDW018
         }

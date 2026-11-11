@@ -134,6 +134,28 @@ public sealed class PipelineLoadStepConfiguration
     public string? SoftDeleteMarkerValue { get; set; }
 
     /// <summary>
+    /// Gets or sets the container the <c>AbsentFromSource</c> mode stages each batch's keys in (FDW-4956), in the target's data store.
+    /// </summary>
+    public string? StageContainer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the column of <see cref="StageContainer"/> that tells this load's run apart (FDW-4956).
+    /// </summary>
+    public string? StageKeyColumn { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the <c>AbsentFromSource</c> sweep does when rows were rejected upstream, resolved against <see cref="SweepRejectedRowsRules"/> (FDW-4956).
+    /// </summary>
+    [ValuesFrom(typeof(SweepRejectedRowsRules))]
+    public string? SweepRejectedRowsRule { get; set; }
+
+    /// <summary>
+    /// Gets or sets what a load that writes existing rows by key does with a key that matched no row, resolved against <see cref="UnmatchedKeysRules"/> (FDW-4988).
+    /// </summary>
+    [ValuesFrom(typeof(UnmatchedKeysRules))]
+    public string? UnmatchedKeysRule { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the step is enabled.
     /// </summary>
     public bool IsEnabled { get; set; }

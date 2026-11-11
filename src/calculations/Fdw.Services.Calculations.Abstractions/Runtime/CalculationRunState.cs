@@ -91,6 +91,17 @@ public sealed class CalculationRunState
         return default;
     }
 
+    /// <summary>Records a failure with a reason unless one is already recorded.</summary>
+    /// <param name="code">The id of the result code.</param>
+    /// <param name="node">The index of the failing node.</param>
+    /// <param name="reason">The reason to show.</param>
+    /// <returns>The default date, the placeholder the failed operation yields.</returns>
+    public DateOnly FailDateWith(int code, int node, string reason)
+    {
+        FailWith(code, node, reason);
+        return default;
+    }
+
     /// <summary>Records a failure unless one is already recorded.</summary>
     /// <param name="code">The id of the result code.</param>
     /// <param name="node">The index of the failing node.</param>

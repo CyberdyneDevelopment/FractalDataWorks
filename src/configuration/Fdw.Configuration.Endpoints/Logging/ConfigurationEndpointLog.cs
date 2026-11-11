@@ -122,4 +122,21 @@ public static partial class ConfigurationEndpointLog
     /// <summary>Logs that Configuration instance was not found, or is not visible to the caller.</summary>
     [MessageLogging(EventId = 31005, Level = LogLevel.Warning, Message = "Configuration instance was not found, or is not visible to the caller", ClientMessage = "Configuration instance was not found")]
     public static partial IGenericMessage GetConfigurationInstanceNotFound2(ILogger logger);
+
+    /// <summary>Logs a container left unread because its rows hang from another container's rows: it holds part of a configuration, not an instance (FDW-4644).</summary>
+    [MessageLogging(EventId = 11009, Level = LogLevel.Debug,
+        Message = "Container '{category}.{containerName}' is not read as a configuration instance: its declared keys hold its rows under another container's rows")]
+    public static partial IGenericMessage ChildContainerRefused(ILogger logger, string category, string containerName);
+
+    /// <summary>Logs a category whose every container holds part of another container's configuration, so it has no instance to answer (FDW-4644).</summary>
+    [MessageLogging(EventId = 31006, Level = LogLevel.Warning,
+        Message = "Category '{category}' holds no container of top-level configurations; its containers hold parts of other configurations and are not read as instances",
+        ClientMessage = "Configuration instance was not found")]
+    public static partial IGenericMessage CategoryHasNoTopLevelConfiguration(ILogger logger, string category);
+
+    /// <summary>Logs an instance whose values are not returned because its container declares no configuration type to say which of them are secret (FDW-4644).</summary>
+    [MessageLogging(EventId = 61000, Level = LogLevel.Error,
+        Message = "Container '{category}.{containerName}' declares no configuration type, so nothing says which of its values are secret; its values are not returned",
+        ClientMessage = "This configuration instance's values cannot be shown: its configuration type is not declared")]
+    public static partial IGenericMessage InstanceTypeNotDeclared(ILogger logger, string category, string containerName);
 }

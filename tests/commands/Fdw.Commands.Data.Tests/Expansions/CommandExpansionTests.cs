@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Deletes;
+using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Commands.Data.Updates;
 using Fdw.Commands.Data.Upserts;
 using Fdw.Commands.Data.ValueSources;
@@ -43,7 +45,7 @@ public sealed class CommandExpansionTests
     [Fact]
     public void ABulkUpdateExpandsToOneUpdateForEachRowFilteredOnItsKey()
     {
-        var command = new BulkUpdateCommand<Dictionary<string, object?>>([Row(1, "a"), Row(2, "b")], new BulkUpdateOptions(["Id"]));
+        var command = new BulkUpdateCommand<Dictionary<string, object?>>([Row(1, "a"), Row(2, "b")], new BulkUpdateOptions(["Id"], ["Name"]));
 
         var expansion = command.Expand(Container);
 
@@ -59,7 +61,7 @@ public sealed class CommandExpansionTests
     [Fact]
     public void ABulkUpdateWithTwoKeyColumnsFiltersOnBothTogether()
     {
-        var command = new BulkUpdateCommand<Dictionary<string, object?>>([Row(1, "a")], new BulkUpdateOptions(["Id", "Name"]));
+        var command = new BulkUpdateCommand<Dictionary<string, object?>>([Row(1, "a")], new BulkUpdateOptions(["Id", "Name"], ["Extra"]));
 
         var group = command.Expand(Container).Value!.Single().Command.ShouldBeOfType<UpdateCommand<Dictionary<string, object?>>>()
             .Filter!.Root.ShouldBeOfType<FilterGroup>();
@@ -71,7 +73,7 @@ public sealed class CommandExpansionTests
     [Fact]
     public void ABulkUpdateWhoseRowLacksAKeyValueFailsNamingTheKey()
     {
-        var command = new BulkUpdateCommand<Dictionary<string, object?>>([new Dictionary<string, object?> { ["Name"] = "a" }], new BulkUpdateOptions(["Id"]));
+        var command = new BulkUpdateCommand<Dictionary<string, object?>>([new Dictionary<string, object?> { ["Name"] = "a" }], new BulkUpdateOptions(["Id"], ["Name"]));
 
         var expansion = command.Expand(Container);
 
@@ -82,7 +84,7 @@ public sealed class CommandExpansionTests
     [Fact]
     public void ABulkUpdateOfARowWithAnEntityReadsTheKeyFromItsProperty()
     {
-        var command = new BulkUpdateCommand<Entity>([new Entity { Id = 7 }], new BulkUpdateOptions(["Id"]));
+        var command = new BulkUpdateCommand<Entity>([new Entity { Id = 7 }], new BulkUpdateOptions(["Id"], ["Name"]));
 
         command.Expand(Container).Value!.Single().Command.ShouldBeOfType<UpdateCommand<Entity>>()
             .Filter!.Root.ShouldBeOfType<FilterCondition>().Value.ShouldBe(7);
@@ -180,17 +182,86 @@ public sealed class CommandExpansionTests
     [Fact]
     public void BulkUpdateOptionsNeedAKeyColumnNamedOnce()
     {
-        new BulkUpdateOptions(["Id"]).FirstProblem().ShouldBeNull();
-        new BulkUpdateOptions([]).FirstProblem().ShouldNotBeNull();
-        new BulkUpdateOptions(["Id", "id"]).FirstProblem().ShouldNotBeNull();
-        new BulkUpdateOptions([" "]).FirstProblem().ShouldNotBeNull();
+        new BulkUpdateOptions(["Id"], ["Name"]).FirstProblem().ShouldBeNull();
+        new BulkUpdateOptions([], ["Name"]).FirstProblem().ShouldNotBeNull();
+        new BulkUpdateOptions(["Id", "id"], ["Name"]).FirstProblem().ShouldNotBeNull();
+        new BulkUpdateOptions([" "], ["Name"]).FirstProblem().ShouldNotBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void BulkUpdateOptionsNeedAColumnToSetThatIsNotAKey()
+    {
+        new BulkUpdateOptions(["Id"], ["Id"]).FirstProblem().ShouldNotBeNull();
+        new BulkUpdateOptions(["Id"], []).FirstProblem().ShouldNotBeNull();
+        new BulkUpdateOptions(["Id"], ["Name", "name"]).FirstProblem().ShouldNotBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void BulkUpdateOptionsStageTheKeysThenTheColumnsTheySetLeavingAKeyOutOfTheSet()
+    {
+        var options = new BulkUpdateOptions(["Id"], ["Name", "id", "Status"]);
+
+        options.SetColumns.ShouldBe(["Name", "Status"]);
+        options.StagedColumns.ShouldBe(["Id", "Name", "Status"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void ABulkUpdateThatSoftDeletesCarriesItOntoEveryUpdateItExpandsTo()
+    {
+        var soft = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.MarkerMatches)
+        {
+            FlagValue = true,
+            Marker = new SoftDeleteMarker("Status", "closed"),
+        };
+        var command = new BulkUpdateCommand<Dictionary<string, object?>>([Row(1, "a"), Row(2, "b")], new BulkUpdateOptions(["Id"], ["Name"])) { SoftDelete = soft };
+
+        command.Expand(Container).Value!
+            .Select(step => step.Command.ShouldBeOfType<UpdateCommand<Dictionary<string, object?>>>())
+            .ShouldAllBe(update => ReferenceEquals(update.SoftDelete, soft));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void ABulkDeleteExpandsToOneDeleteForEachRowFilteredOnItsKeyCarryingItsSoftDelete()
+    {
+        var soft = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.MarkerMatches)
+        {
+            FlagValue = true,
+            Marker = new SoftDeleteMarker("Status", "closed"),
+        };
+        var command = new BulkDeleteCommand<Dictionary<string, object?>>([Row(1, "a"), Row(2, "b")], new BulkDeleteOptions(["Id"])) { SoftDelete = soft };
+
+        var deletes = command.Expand(Container).Value!.Select(step => step.Command.ShouldBeOfType<DeleteCommand>()).ToList();
+
+        deletes.Count.ShouldBe(2);
+        deletes[1].Filter!.Root.ShouldBeOfType<FilterCondition>().Value.ShouldBe(2);
+        deletes.ShouldAllBe(delete => ReferenceEquals(delete.SoftDelete, soft));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void BulkDeleteOptionsNeedAKeyColumnNamedOnce()
+    {
+        new BulkDeleteOptions(["Id"]).FirstProblem().ShouldBeNull();
+        new BulkDeleteOptions([]).FirstProblem().ShouldNotBeNull();
+        new BulkDeleteOptions(["Id", "id"]).FirstProblem().ShouldNotBeNull();
+        new BulkDeleteOptions([" "]).FirstProblem().ShouldNotBeNull();
     }
 
     [Fact]
     public void TheBulkCommandsHaveTheirOwnCommandTypes()
     {
         new BulkUpsertCommand<Dictionary<string, object?>>([], new UpsertOptions(["Id"], [], ["Id"])).CommandType.ShouldBe("BulkUpsert");
-        new BulkUpdateCommand<Dictionary<string, object?>>([], new BulkUpdateOptions(["Id"])).CommandType.ShouldBe("BulkUpdate");
+        new BulkUpdateCommand<Dictionary<string, object?>>([], new BulkUpdateOptions(["Id"], ["Name"])).CommandType.ShouldBe("BulkUpdate");
+        new BulkDeleteCommand<Dictionary<string, object?>>([], new BulkDeleteOptions(["Id"])).CommandType.ShouldBe("BulkDelete");
     }
 
     private sealed class Entity

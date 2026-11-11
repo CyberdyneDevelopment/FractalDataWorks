@@ -39,6 +39,12 @@ namespace Fdw.Data.MsSql;
 public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
 {
     /// <summary>
+    /// The error number the sweep of a staged key set raises when the stage does not hold the rows the load appended (FDW-4956): a user error number
+    /// (50000 and up) the connection's error handlers claim, so the refusal reaches the caller as its own code and no row is flagged.
+    /// </summary>
+    public const int StageRowCountMismatchError = 51956;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlDeleteTranslator"/> class.
     /// </summary>
     public MsSqlDeleteTranslator()

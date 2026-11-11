@@ -148,8 +148,8 @@ public sealed class SimpleDataSetTypeTests
     }
 
     [Fact]
-    [Trait("Category", "DataSets.FDW3454")]
-    public async Task APageWithAStatedOrderingKeepsItAndAddsNoKeyOrder()
+    [Trait("Category", "DataSets.FDW5024")]
+    public async Task APageWithAStatedOrderingKeepsItAndEndsOnTheKeyFields()
     {
         var (context, received) = BuildContext(KeyedFields());
         var stated = new OrderingExpression { OrderedFields = [new OrderedField { PropertyName = "Name", Direction = SortDirections.Descending }] };
@@ -160,7 +160,8 @@ public sealed class SimpleDataSetTypeTests
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         var sent = received().ShouldBeAssignableTo<IQueryCommand>();
         sent.ShouldNotBeNull();
-        sent.Ordering.ShouldNotBeNull().OrderedFields.Select(field => field.PropertyName).ToList().ShouldBe(new[] { "Name" });
+        // FDW-5024: the stated order first, then the keys it leaves out, so rows sharing a Name still have one place across pages.
+        sent.Ordering.ShouldNotBeNull().OrderedFields.Select(field => field.PropertyName).ToList().ShouldBe(new[] { "Name", "Id", "Abbreviation" });
     }
 
     [Fact]

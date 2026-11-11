@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
@@ -12,42 +13,32 @@ using Fdw.Services.Data.Abstractions;
 namespace Fdw.Services.Etl.Tests.Pipelines;
 
 /// <summary>
-/// A gateway fake for pipeline tests: serves a source one skip/take page at a time, accepts bulk inserts
-/// and truncates, and records what happened -- in order -- in a shared event list ("read@2", "load:2",
-/// "truncate"). The order of those events is what the pipeline tests assert.
+/// A gateway fake for pipeline tests: serves a source as one stable read (FDW-4911), accepts bulk inserts and truncates, and records what
+/// happened -- in order -- in a shared event list ("open", "closed after 5", "load:2", "truncate"). The order of those events is what the
+/// pipeline tests assert.
 /// </summary>
 internal sealed class PagedSourceGateway
 {
     /// <summary>Initializes a new instance of the <see cref="PagedSourceGateway"/> class.</summary>
     /// <param name="source">The rows the source holds.</param>
     /// <param name="events">Receives one entry per gateway call, in call order.</param>
-    /// <param name="failReads">Whether every read fails instead of returning a page.</param>
-    /// <param name="onRead">Called with the requested skip after each read is recorded.</param>
-    /// <param name="ignoresPaging">Whether the source answers its whole set whatever skip and take it is asked for, as a source that cannot page does.</param>
+    /// <param name="failReads">Whether every open fails instead of returning the rows.</param>
     public PagedSourceGateway(
         IReadOnlyList<Dictionary<string, object?>> source,
         List<string> events,
-        bool failReads = false,
-        Action<int>? onRead = null,
-        bool ignoresPaging = false)
+        bool failReads = false)
     {
         var gateway = new Mock<IDataGateway>();
 
         gateway
-            .Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()))
+            .Setup(g => g.OpenRecordSource(It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()))
             .Returns((IDataCommand command, DataSetTarget target, CancellationToken cancellationToken) =>
             {
-                var paging = ((IQueryCommand)command).Paging;
-                var skip = paging is null ? 0 : paging.Skip;
-                events.Add($"read@{skip}");
-                onRead?.Invoke(skip);
-
-                IGenericResult<IEnumerable<Dictionary<string, object?>>> page = failReads
-                    ? GenericResult<IEnumerable<Dictionary<string, object?>>>.Failure(new GenericMessage("source unavailable"))
-                    : GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(
-                        (ignoresPaging ? source : source.Skip(skip).Take(paging?.Take ?? int.MaxValue)).ToList());
-                return Task.FromResult(page);
+                events.Add("open");
+                IGenericResult<IRecordSource<DataRecord>> opened = failReads
+                    ? GenericResult<IRecordSource<DataRecord>>.Failure(new GenericMessage("source unavailable"))
+                    : GenericResult<IRecordSource<DataRecord>>.Success(new CountingRecordSource([.. source], events));
+                return Task.FromResult(opened);
             });
 
         gateway

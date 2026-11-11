@@ -6,7 +6,7 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Calculations.Abstractions;
 
 /// <summary>
-/// TypeCollection of the kinds of value a calculation result can hold: a number, or a date-time.
+/// TypeCollection of the kinds of value a calculation result can hold: a number, a date, or a date-time.
 /// </summary>
 [TypeCollection(typeof(CalculationValueKindBase), typeof(ICalculationValueKind), typeof(CalculationValueKinds))]
 [ExcludeFromCodeCoverage]

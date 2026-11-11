@@ -108,6 +108,10 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         var children = ApplyRequestedChildren(existing, request, new DataSetRequestValues(request.Name, Logger));
         if (children.IsFailure) return children.ToNewResult<DataSetDetailResponse>();
 
+        // Checked over the merged set, so a source whose mappings the request leaves out is checked with its stored ones (FDW-5022).
+        if (DataSetQueryHelper.ValidateSaved(existing, Logger) is { IsFailure: true } refused)
+            return refused.ToNewResult<DataSetDetailResponse>();
+
         var saveResult = await _dataSetProvider.Update(existing, "DataSet", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
@@ -259,16 +263,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
 
             if (request.Filters is not null)
             {
-                existing.Filters = request.Filters
-                    .Select((f, i) => new DataSetFilterConditionConfiguration
-                    {
-                        FieldName = f.FieldName,
-                        Operator = f.Operator,
-                        Value = f.Value,
-                        DataType = f.DataType,
-                        Ordinal = i
-                    })
-                    .ToList();
+                existing.Filters = DataSetQueryHelper.MapFilters(request.Filters);
             }
 
             if (request.Joins is not null && existing is IJoinedDataSetConfiguration joined)

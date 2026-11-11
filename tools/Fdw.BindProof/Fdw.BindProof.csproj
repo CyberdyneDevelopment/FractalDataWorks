@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.BindProof</RootNamespace>
+    <AssemblyName>Fdw.BindProof</AssemblyName>
+    <IsPackable>false</IsPackable>
+
+    <!-- Why: a one-off proof run by the build owner, not a job (FDW-4784). It restores an OLD published package of the line. Central package
+         management stays on, because Directory.Build.props adds analyzer references that take their versions from it; only the package under
+         proof states its own version, on the command line, through VersionOverride. It is not in the main solution. -->
+    <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fdw.Results" VersionOverride="$(OldVersion)" />
+  </ItemGroup>
+
+  <Target Name="OldVersionMustBeStated" BeforeTargets="CollectPackageReferences;Restore" Condition="'$(OldVersion)' == ''">
+    <Error Code="BINDPROOF" Text="OldVersion is not set: pass the published Fdw.Results version to restore, for example -p:OldVersion=1.5.4. None is assumed." />
+  </Target>
+
+</Project>

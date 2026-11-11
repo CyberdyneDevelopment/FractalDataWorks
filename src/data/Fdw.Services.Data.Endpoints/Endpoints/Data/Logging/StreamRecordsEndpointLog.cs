@@ -57,6 +57,21 @@ public static partial class StreamRecordsEndpointLog
     [MessageLogging(EventId = 20001, Level = LogLevel.Warning, Message = "A stream of '{resource}' was refused: the request names no record format (available: {available})", ClientMessage = "The request names no record format: state it with ?format= or an Accept header. Available: {available}.")]
     public static partial IGenericMessage StreamRecordsFormatNotStated(ILogger logger, string resource, string available);
 
+    /// <summary>
+    /// Logs that a stream was refused because the request leaves out a choice its format needs (FDW-4983). The choices are the caller's,
+    /// so this is a refusal of the request, not a fault of the host.
+    /// </summary>
+    [MessageLogging(EventId = 20002, Level = LogLevel.Warning, Message = "A stream of '{resource}' as {format} was refused, the request leaves out a choice: {reason}", ClientMessage = "The request leaves out a choice the {format} format needs: {reason}")]
+    public static partial IGenericMessage StreamRecordsFormatChoiceNotStated(ILogger logger, string resource, string format, string reason);
+
+    /// <summary>Logs that a stream was refused because the request states a format choice that cannot be used as written (FDW-4983).</summary>
+    [MessageLogging(EventId = 20003, Level = LogLevel.Warning, Message = "A stream of '{resource}' as {format} was refused, the request states a choice that cannot be used: {reason}", ClientMessage = "The request states a {format} choice that cannot be used: {reason}")]
+    public static partial IGenericMessage StreamRecordsFormatChoiceNotUsable(ILogger logger, string resource, string format, string reason);
+
+    /// <summary>Logs that opening a stream's records or building its format's options threw, before any byte was written (FDW-4983).</summary>
+    [MessageLogging(EventId = 91202, Level = LogLevel.Error, Message = "Opening the stream of '{resource}' threw: {reason}")]
+    public static partial IGenericMessage StreamOpenThrew(ILogger logger, System.Exception exception, string resource, string reason);
+
     /// <summary>Logs that A stream of 'resource' was refused: no available record format satisfies the Accept header 'accept' (available: mediaTypes).</summary>
     [MessageLogging(EventId = 140001, Level = LogLevel.Warning, Message = "A stream of '{resource}' was refused: no available record format satisfies the Accept header '{accept}' (available: {mediaTypes})", ClientMessage = "No available record format satisfies the Accept header. Available: {mediaTypes}.")]
     public static partial IGenericMessage StreamRecordsAcceptNotSatisfied(ILogger logger, string resource, string accept, string mediaTypes);

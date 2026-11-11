@@ -36,6 +36,9 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private const string ContainerNameExecutionItem = "ExecutionItem";
     private const string ContainerNameExecutionEvent = "ExecutionEvent";
 
+    // The sequence number of an item's first event: the definition of the first, not a stand-in for a number that could not be read.
+    private const int FirstSequenceNumber = 1;
+
     private readonly IDataGatewayProvider _dataGateways;
     private readonly IAuthenticationContextAccessor _authContext;
 
@@ -188,6 +191,8 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         var sequenceNumber = await GetNextSequenceNumber(executionItemId, cancellationToken).ConfigureAwait(false);
+        if (sequenceNumber.IsFailure)
+            return sequenceNumber;
 
         item.State = newState.Name;
         ApplyTimingFields(item, newState);
@@ -199,7 +204,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         await RecordEventInternal(
-            executionItemId, sequenceNumber, "StateChange",
+            executionItemId, sequenceNumber.Value, "StateChange",
             currentState.Name, newState.Name, message, null, actor,
             cancellationToken).ConfigureAwait(false);
 
@@ -231,10 +236,12 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         var sequenceNumber = await GetNextSequenceNumber(executionItemId, cancellationToken).ConfigureAwait(false);
+        if (sequenceNumber.IsFailure)
+            return sequenceNumber.ToNewResult<IExecutionEvent>();
 
         var eventPoco = await RecordEventInternal(
             executionItemId,
-            sequenceNumber,
+            sequenceNumber.Value,
             eventType,
             null,
             null,
@@ -910,7 +917,9 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         return GenericResult<ExecutionItem>.Success(item);
     }
 
-    private async Task<int> GetNextSequenceNumber(Guid executionItemId, CancellationToken cancellationToken)
+    // The number the next event of an item takes: one past its newest event's, or the first number when it has none. A failed read
+    // fails the caller with its own code; a guessed number could repeat one the item holds (FDW-4945).
+    private async Task<IGenericResult<int>> GetNextSequenceNumber(Guid executionItemId, CancellationToken cancellationToken)
     {
         var queryCommand = new QueryCommand<ExecutionEvent>
         {
@@ -940,12 +949,10 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         var result = await Gateway.Execute<IEnumerable<ExecutionEvent>>(
             queryCommand, TargetFor(ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
-        {
-            return 1;
-        }
+            return GenericResult<int>.Failure(result.Messages.Append(OperationsLog.EventSequenceUnread(_logger, executionItemId)));
 
         var lastEvent = result.Value?.FirstOrDefault();
-        return lastEvent is null ? 1 : lastEvent.SequenceNumber + 1;
+        return GenericResult<int>.Success(lastEvent is null ? FirstSequenceNumber : lastEvent.SequenceNumber + 1);
     }
 
     private async Task EmitTerminalNotifications(

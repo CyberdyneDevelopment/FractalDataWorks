@@ -44,14 +44,13 @@ public sealed class CompoundDataSetTypeTests
         })],
     };
 
-    [Fact]
-    [Trait("Category", "DataSets.FDW3629")]
-    public async Task TheStoreIsAskedToJoinOnPhysicalNamesAndAliasEveryColumnToItsLogicalName()
+    // Reads a Compound data set joining Orders to Customers by the given join type; returns the result and the query the store was sent, if any.
+    private static async Task<(IGenericResult<IEnumerable<IDataRow>> Result, IQueryCommand? Sent)> Read(string joinType)
     {
         var container = new Mock<IDataContainer> { DefaultValue = DefaultValue.Mock };
         container.Setup(c => c.Parent.Store.ConnectionId).Returns(ConnectionId);
         var stores = new Mock<IDataStoreProvider>();
-        stores.Setup(s => s.Get("Store", "dbo", "Order", It.IsAny<CancellationToken>()))
+        stores.Setup(s => s.Get("Store", "dbo", "Order", It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDataContainer>.Success(container.Object));
 
         IDataCommand? received = null;
@@ -82,7 +81,7 @@ public sealed class CompoundDataSetTypeTests
                 Source("Orders", "Order", 1, ("CustomerId", "cust_id"), ("OrderTotal", "total")),
                 Source("Customers", "Customer", 2, ("CustomerName", "name"), ("Id", "id")),
             ],
-            Joins = [new DataSetJoinConfiguration { LeftSourceName = "Orders", LeftFieldName = "CustomerId", RightSourceName = "Customers", RightFieldName = "Id", JoinType = "Inner", Ordinal = 1 }],
+            Joins = [new DataSetJoinConfiguration { LeftSourceName = "Orders", LeftFieldName = "CustomerId", RightSourceName = "Customers", RightFieldName = "Id", JoinType = joinType, Ordinal = 1 }],
             Fields =
             [
                 new DataSetFieldConfiguration { Name = "OrderTotal" },
@@ -95,14 +94,63 @@ public sealed class CompoundDataSetTypeTests
 
         var result = await new CompoundDataSetType()
             .Execute<IEnumerable<IDataRow>>(context, new QueryCommand<IDataRow>(), TestContext.Current.CancellationToken);
+        return (result, received as IQueryCommand);
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW3629")]
+    public async Task TheStoreIsAskedToJoinOnPhysicalNamesAndAliasEveryColumnToItsLogicalName()
+    {
+        var (result, received) = await Read("Inner");
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
-        var sent = received.ShouldBeAssignableTo<IQueryCommand>().ShouldNotBeNull();
+        var sent = received.ShouldNotBeNull();
         var join = sent.Joins.ShouldHaveSingleItem();
         join.TargetContainerName.ShouldBe("Customer");
         join.JoinConditions.ShouldHaveSingleItem().ShouldBe(("cust_id", "id"));
         var projected = sent.Projection.ShouldNotBeNull().Fields;
         projected.Single(f => f.Alias == "OrderTotal").PropertyName.ShouldBe("total");
         projected.Single(f => f.Alias == "CustomerName").PropertyName.ShouldBe("name");
+    }
+
+    [Theory]
+    [Trait("Category", "DataSets.FDW5099")]
+    [InlineData("inner", "Inner")]
+    [InlineData("LEFT", "Left")]
+    [InlineData("Full", "Full")]
+    public async Task TheStoreIsSentTheJoinTypesOptionByItsOwnNameNotTheStoredText(string stored, string sentName)
+    {
+        var (result, received) = await Read(stored);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var join = received.ShouldNotBeNull().Joins.ShouldHaveSingleItem();
+        join.JoinType.ShouldBe(sentName);
+        join.JoinConditions.ShouldHaveSingleItem().ShouldBe(("cust_id", "id"));
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW5099")]
+    public async Task ACrossJoinIsSentWithNoJoinColumns()
+    {
+        var (result, received) = await Read("Cross");
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var join = received.ShouldNotBeNull().Joins.ShouldHaveSingleItem();
+        join.JoinType.ShouldBe("Cross");
+        join.JoinConditions.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [Trait("Category", "DataSets.FDW5099")]
+    [InlineData("None", "DATASETS-20028")]
+    [InlineData("Inner JOIN x ON 1=1 --", "DATASETS-20029")]
+    [InlineData("", "DATASETS-20030")]
+    public async Task AJoinTypeThatDoesNotJoinIsRefusedBeforeTheStoreIsAskedAnything(string joinType, string code)
+    {
+        var (result, received) = await Read(joinType);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Code!.Code.ShouldBe(code);
+        received.ShouldBeNull("nothing is sent to the store");
     }
 }

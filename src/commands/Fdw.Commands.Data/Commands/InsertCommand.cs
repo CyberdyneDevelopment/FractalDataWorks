@@ -44,7 +44,7 @@ namespace Fdw.Commands.Data;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Insert", RestrictToCurrentCompilation = true)]
-public sealed class InsertCommand<T> : DataCommandBase<int, IEnumerable<T>>, IReturningCommand, IBatchableDataCommand
+public sealed class InsertCommand<T> : DataCommandBase<int, IEnumerable<T>>, IReturningCommand, IBatchableDataCommand, IRowInputCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="InsertCommand{T}"/> class for one row.
@@ -68,6 +68,9 @@ public sealed class InsertCommand<T> : DataCommandBase<int, IEnumerable<T>>, IRe
 
     /// <inheritdoc />
     public IReadOnlyList<string>? ReturnColumns { get; init; }
+
+    /// <inheritdoc />
+    System.Collections.IEnumerable IRowInputCommand.InputRows => Data;
 
     /// <inheritdoc/>
     public IReadOnlyList<IDataCommand> InBatchesOf(int rows)

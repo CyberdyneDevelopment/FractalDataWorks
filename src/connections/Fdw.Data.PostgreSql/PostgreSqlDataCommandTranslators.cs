@@ -22,6 +22,9 @@ namespace Fdw.Data.PostgreSql;
 /// <item>PostgreSqlDataCommandTranslators.Query - SELECT statement translator</item>
 /// <item>PostgreSqlDataCommandTranslators.Insert - multi-row INSERT statement translator (one row or many)</item>
 /// <item>PostgreSqlDataCommandTranslators.Update - UPDATE statement translator</item>
+/// <item>PostgreSqlDataCommandTranslators.BulkUpdate - one set-based UPDATE ... FROM for a whole batch (FDW-4953)</item>
+/// <item>PostgreSqlDataCommandTranslators.BulkDelete - one set-based DELETE ... USING for a whole batch (FDW-4954)</item>
+/// <item>PostgreSqlDataCommandTranslators.Upsert, BulkUpsert - one command: update the changed rows, insert the new keys (FDW-4955)</item>
 /// <item>PostgreSqlDataCommandTranslators.Delete - DELETE statement translator</item>
 /// <item>PostgreSqlDataCommandTranslators.Find - LIKE/ILIKE search translator</item>
 /// <item>PostgreSqlDataCommandTranslators.CompoundQuery - JOIN query translator</item>

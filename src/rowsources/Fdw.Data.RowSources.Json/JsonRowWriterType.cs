@@ -50,6 +50,7 @@ public sealed class JsonRowWriterType : RecordWriterTypeBase
             Columns = [.. columns],
             WriteIndented = WriteIndented,
             SkipValidation = choices.Flag("SkipValidation"),
+            RecordsAreLines = false,
             BufferSize = BufferSize,
         });
     }

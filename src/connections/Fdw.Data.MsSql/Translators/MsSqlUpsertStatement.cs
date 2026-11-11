@@ -6,6 +6,7 @@ using Fdw.Commands.Data.ValueSources;
 using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql.ValueSources;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 using Microsoft.Data.SqlClient;
 using Fdw.Commands.Data.Logging;
 using Fdw.Messages;
@@ -106,8 +107,12 @@ internal sealed class MsSqlUpsertStatement
         return null;
     }
 
-    /// <summary>Builds the whole batch and adds its parameters (the rows are added by the caller) to <paramref name="command"/>.</summary>
-    internal string? Build(SqlCommand command)
+    /// <summary>
+    /// Builds the write as a set-based batch over <paramref name="rows"/> (FDW-4958): the update or close and the insert, read from the temporary
+    /// table, with their parameters added to <paramref name="command"/>; the caller renders it inline or staged.
+    /// </summary>
+    /// <returns>The batch, or <see langword="null"/> when a value source cannot be rendered.</returns>
+    internal MsSqlSetBasedBatch? Batch(SqlCommand command, IReadOnlyList<object> rows)
     {
         var context = new MsSqlValueSourceContext(command, _dialect, "s");
         var versioning = _options.Versioning;
@@ -116,10 +121,19 @@ internal sealed class MsSqlUpsertStatement
             return null;
 
         var declarations = versioning is null ? string.Empty : "DECLARE @fdw_now datetimeoffset(7) = SYSDATETIMEOFFSET(); ";
-        var identity = _options.WriteColumns.Any(c => MsSqlLoadColumns.IsIdentity(_container, c));
-        var staging = MsSqlRowStaging.Sql(_temp, _target, _options.WriteColumns, _dialect, identity);
         var change = versioning is null ? Update(command) : Close(command, versioning);
-        return MsSqlLoadBatch.Wrap(declarations, staging + "SET NOCOUNT OFF; " + change + insert, _temp, useTransaction: true);
+        return new MsSqlSetBasedBatch(
+            command,
+            _temp,
+            _target,
+            _dialect,
+            SetBasedColumns.Declared(_container, _options.WriteColumns),
+            SetBasedColumns.Declared(_container, _options.KeyColumns),
+            rows,
+            declarations,
+            change + insert,
+            UseTransaction: true,
+            IdentityInsert: _options.WriteColumns.Any(c => MsSqlLoadColumns.IsIdentity(_container, c)));
     }
 
     private string Update(SqlCommand command)

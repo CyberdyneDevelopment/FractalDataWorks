@@ -12,7 +12,7 @@ public interface ICalculationValueKind : ITypeOption<int, CalculationValueKindBa
     /// <summary>Gets the type the compiled code computes the value as.</summary>
     Type ClrType { get; }
 
-    /// <summary>Gets the data type name a data set field of this kind states, for example <c>Decimal</c> or <c>DateTimeOffset</c>.</summary>
+    /// <summary>Gets the data type name a data set field of this kind states, for example <c>Decimal</c>, <c>Date</c> or <c>DateTimeOffset</c>.</summary>
     string DataTypeName { get; }
 
     /// <summary>Turns a result carried in the results array back into the value.</summary>

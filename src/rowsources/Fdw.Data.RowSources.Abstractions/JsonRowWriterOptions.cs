@@ -20,4 +20,10 @@ public sealed class JsonRowWriterOptions : RowWriterOptions
     /// (System.Text.Json <c>SkipValidation</c>).
     /// </summary>
     public required bool SkipValidation { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether each record is written as its own line (JSON Lines) rather than as an element of one array
+    /// (FDW-4971). Set by the format type that builds the options; lines are never indented.
+    /// </summary>
+    public required bool RecordsAreLines { get; set; }
 }

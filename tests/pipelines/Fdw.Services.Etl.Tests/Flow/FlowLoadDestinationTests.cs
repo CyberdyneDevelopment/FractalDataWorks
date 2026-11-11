@@ -5,8 +5,9 @@ using Fdw.Services.Etl.Pipelines.Loads;
 namespace Fdw.Services.Etl.Tests.Flow;
 
 /// <summary>
-/// Tests for when a destination holds its batches back (FDW-1647): a soft delete flags the keys absent from the rows it is given, so
-/// it must be given them all; any other load runs as each batch arrives.
+/// Tests for when a destination holds its batches back (FDW-1647, FDW-4956): a file is written once, and an absent-key soft delete that does not stage its
+/// keys flags the keys absent from the rows it is given, so each must be given them all. One that stages its keys, a marker soft delete and any other load
+/// run as each batch arrives.
 /// </summary>
 public sealed class FlowLoadDestinationTests
 {
@@ -20,10 +21,25 @@ public sealed class FlowLoadDestinationTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void ALoadThatStatesASoftDeleteIsGivenEveryRowAtOnce()
+    public void AnAbsentKeySoftDeleteThatStagesNothingIsGivenEveryRowAtOnce()
     {
         FlowLoadDestination.NeedsWholeSet(Unit("AbsentFromSource")).ShouldBeTrue();
-        FlowLoadDestination.NeedsWholeSet(Unit("MarkerMatches")).ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnAbsentKeySoftDeleteThatStagesItsKeysRunsAsEachBatchArrives()
+    {
+        FlowLoadDestination.NeedsWholeSet(Unit("AbsentFromSource").WithStageKey("00000000000000000000000000000001/load")).ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AMarkerSoftDeleteRunsAsEachBatchArrives()
+    {
+        FlowLoadDestination.NeedsWholeSet(Unit("MarkerMatches")).ShouldBeFalse();
     }
 
     [Theory]

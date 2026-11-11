@@ -38,14 +38,14 @@ public sealed class GraphTestRunTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public async Task ASourceReadsOnlyTheCapAndAsksForNoMoreThanTheCapLeaves()
+    public async Task ASourceReadsOnlyTheCapAndStopsItsReadThere()
     {
         var graph = Graph([DataSetSource("src", batchSize: 2), Sink()], [Link("src", "keep")]);
 
         var (tally, events) = await Run(graph, 100, Test);
 
         tally.Extracted.ShouldBe(5);
-        events.Where(e => e.StartsWith("read@", System.StringComparison.Ordinal)).ShouldBe(["read@0", "read@2", "read@4"]);
+        events.Where(e => e == "open" || e.StartsWith("closed", System.StringComparison.Ordinal)).ShouldBe(["open", "closed after 5"]);
     }
 
     [Fact]
@@ -59,23 +59,6 @@ public sealed class GraphTestRunTests
 
         tally.Transformed.ShouldBe(5);
         events.Where(e => e.StartsWith("load", System.StringComparison.Ordinal) || e == "truncate").ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public async Task ASourceThatCannotPageIsCutToTheCap()
-    {
-        var events = new List<string>();
-        var gateway = new PagedSourceGateway(PagedSourceGateway.Rows(50), events, ignoresPaging: true);
-        var graph = Graph([DataSetSource("src", batchSize: 2), Sink()], [Link("src", "keep")]);
-        var built = GraphFlowBuilder.Build(graph, Context(graph, gateway, null, Test));
-        var tally = new FlowRunTally(new FlowExecutor());
-
-        var ran = await built.Value!.Run(StepContext(new FlowVariables(), tally), TestContext.Current.CancellationToken);
-
-        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
-        tally.Extracted.ShouldBe(5);
     }
 
     private static PipelineComponentConfiguration SqlSource(int maxRows) => new()

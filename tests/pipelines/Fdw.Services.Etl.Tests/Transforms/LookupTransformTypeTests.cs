@@ -272,6 +272,28 @@ public sealed class LookupTransformTypeTests
     }
 
     [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public async Task TransformBatchAsksForAKeyThatMatchedNothingOnlyOnceInARun()
+    {
+        // Arrange — the key has no match; one context is one run, handed two pages (FDW-4960).
+        var gateway = CreateGatewayMock(GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(new List<Dictionary<string, object?>>()));
+        var config = CreateConfig(LookupColumn("Name"));
+        var inputs = new List<IDictionary<string, object?>> { new Dictionary<string, object?> { ["DeviceId"] = "ZZ" } };
+        var run = CreateContext(gateway.Object);
+
+        // Act
+        var first = await _sut.TransformBatch(inputs, config, run, TestContext.Current.CancellationToken);
+        var second = await _sut.TransformBatch(inputs, config, run, TestContext.Current.CancellationToken);
+
+        // Assert — both pages succeed (a Left join), and the miss is asked for once.
+        first.IsSuccess.ShouldBeTrue(first.CurrentMessage);
+        second.IsSuccess.ShouldBeTrue(second.CurrentMessage);
+        gateway.Verify(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
+            It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task TransformBatchNeverServesAnotherRunsCachedRecords()

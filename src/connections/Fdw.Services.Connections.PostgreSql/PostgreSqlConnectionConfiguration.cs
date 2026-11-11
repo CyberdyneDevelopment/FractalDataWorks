@@ -119,9 +119,11 @@ public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConf
     /// Gets or sets the command timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3284).
     /// </summary>
     /// <remarks>
-    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultCommandTimeoutSeconds, and
-    /// is not built when that is not set either.
+    /// No number is assumed here or in the column. A connection that states none takes the default its connection type declares
+    /// (<c>PostgreSqlConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before Register (FDW-4904). A create that leaves it out stores
+    /// nothing (<see cref="ResolvedAtUseAttribute"/>), so the default is resolved each time the connection is built.
     /// </remarks>
+    [ResolvedAtUse]
     public int? CommandTimeout { get; set; }
 
     /// <inheritdoc/>
@@ -134,9 +136,11 @@ public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConf
     /// Gets or sets the connection timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3580).
     /// </summary>
     /// <remarks>
-    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultConnectionTimeoutSeconds,
-    /// and is not built when that is not set either, as the command timeout is read (FDW-3284).
+    /// No number is assumed here or in the column. A connection that states none takes the default its connection type declares
+    /// (<c>PostgreSqlConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before Register (FDW-4904). A create that leaves it out stores
+    /// nothing (<see cref="ResolvedAtUseAttribute"/>), so the default is resolved each time the connection is built.
     /// </remarks>
+    [ResolvedAtUse]
     public int? ConnectionTimeout { get; set; }
 
     /// <summary>

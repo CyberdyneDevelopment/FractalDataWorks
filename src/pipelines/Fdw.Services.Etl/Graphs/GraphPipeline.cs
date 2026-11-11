@@ -59,6 +59,7 @@ public sealed class GraphPipeline : EtlPipelineBase
     private readonly IExecutionTracker? _tracker;
     private readonly RunningFlows? _runningFlows;
     private readonly IThresholdEvaluator? _thresholds;
+    private readonly TimeProvider? _clock;
     private int _isExecuting;
 
     /// <summary>Initializes a new instance of the <see cref="GraphPipeline"/> class.</summary>
@@ -78,6 +79,7 @@ public sealed class GraphPipeline : EtlPipelineBase
     /// <param name="tracker">Records how the steps of a tracked run went as child executions of the run (optional: an untracked host passes none and nothing is recorded).</param>
     /// <param name="runningFlows">What the live view reads: the run is listed there, component by component, while it runs (optional: a host without the view passes none).</param>
     /// <param name="thresholds">Judges what each component took in, passed on, rejected and how long it ran against the thresholds of the run's tenant (a run refuses without it, and a host that runs pipelines refuses to start without it).</param>
+    /// <param name="clock">The run's clock, which its Compute stages' calculations read the time from (optional; a Compute calculation that reads the time fails with ClockMissing without it).</param>
     public GraphPipeline(
         GraphPipelineConfiguration configuration,
         ILogger<GraphPipeline> logger,
@@ -94,7 +96,8 @@ public sealed class GraphPipeline : EtlPipelineBase
         IEffectiveSettingsProvider? settings = null,
         IExecutionTracker? tracker = null,
         RunningFlows? runningFlows = null,
-        IThresholdEvaluator? thresholds = null)
+        IThresholdEvaluator? thresholds = null,
+        TimeProvider? clock = null)
         : base(logger)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -113,6 +116,7 @@ public sealed class GraphPipeline : EtlPipelineBase
         _tracker = tracker;
         _runningFlows = runningFlows;
         _thresholds = thresholds;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -139,15 +143,19 @@ public sealed class GraphPipeline : EtlPipelineBase
         PipelineExecutionOptions options,
         CancellationToken cancellationToken = default)
     {
+        // A run is the execution the executor tracks: its id is what a notification, a started pipeline, a loaded row and a load's key stage carry, so a
+        // run without one is refused rather than given an id no execution record names (FDW-4956).
+        if (options.ExecutionId is not { } executionId)
+        {
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(GraphLog.RunHasNoExecutionId(_logger, Name));
+        }
+
         if (Interlocked.CompareExchange(ref _isExecuting, 1, 0) != 0)
         {
             return GenericResult<IEtlPipelineExecutionResult>.Failure(
                 EtlLog.ExecutionFailed(_logger, Name, Guid.Empty, "Pipeline is already executing"));
         }
 
-        // A run the executor tracks is that execution, so the id a notification, a started pipeline or a loaded row carries is the
-        // one the execution list shows. A run nobody tracks has no execution to be, so it is its own new one (as the other engines').
-        var executionId = options.ExecutionId is { } tracked ? tracked : Guid.NewGuid();
         var result = new EtlPipelineExecutionResult(executionId);
         try
         {
@@ -243,6 +251,18 @@ public sealed class GraphPipeline : EtlPipelineBase
             return scope;
         }
 
+        var commitReportInterval = CommitReportInterval();
+        if (commitReportInterval.IsFailure)
+        {
+            return commitReportInterval;
+        }
+
+        var unmatchedKeySample = UnmatchedKeySampleSize();
+        if (unmatchedKeySample.IsFailure)
+        {
+            return unmatchedKeySample;
+        }
+
         var context = new FlowBuildContext(
             Name,
             _configuration.Id,
@@ -254,11 +274,14 @@ public sealed class GraphPipeline : EtlPipelineBase
             scope.Value,
             [],
             _logger,
+            commitReportInterval.Value,
+            unmatchedKeySample.Value,
             _etlGateway,
             _notifier,
             resolved.Value.Built,
             resolved.Value.Chains,
-            options.IsTestMode ? new GraphTestRun(options.MaxRowsPerSource, options.SkipDestinationWrites) : null);
+            options.IsTestMode ? new GraphTestRun(options.MaxRowsPerSource, options.SkipDestinationWrites) : null,
+            _clock);
 
         var pipeline = GraphFlowBuilder.Build(_configuration, context);
         if (pipeline.IsFailure || pipeline.Value is null)
@@ -369,6 +392,46 @@ public sealed class GraphPipeline : EtlPipelineBase
         return options.Parameters is null
             ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, object?>(options.Parameters, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Gets how often, in seconds, a destination writes what it has committed when the settings state no interval (FDW-4957): the default the graph
+    /// pipeline type declares, handed over by the factory. 0 writes after every commit.
+    /// </summary>
+    public required int CommittedReportSeconds { get; init; }
+
+    /// <summary>
+    /// Gets how many unmatched keys a report carries when the settings state no size (FDW-4988): the default the graph pipeline type declares, handed over by
+    /// the factory. 0 carries only the count.
+    /// </summary>
+    public required int UnmatchedKeySample { get; init; }
+
+    // How many unmatched keys a report of this run carries (FDW-4988): the installation's setting when one is stated, else the type's declared default. Read once
+    // per run; a stated value below zero refuses the run.
+    private IGenericResult<int> UnmatchedKeySampleSize()
+    {
+        if (_settings is not null && _settings.TryGetEffectiveValue<int>(SettingDefinitions.PipelineUnmatchedKeySample, out var stated))
+        {
+            return stated < 0
+                ? GenericResult<int>.Failure(GraphLog.UnmatchedKeySampleNegative(_logger, SettingDefinitions.PipelineUnmatchedKeySample, stated))
+                : GenericResult<int>.Success(stated);
+        }
+
+        return GenericResult<int>.Success(UnmatchedKeySample);
+    }
+
+    // The interval a destination of this run writes what it has committed at (FDW-4957): the installation's setting when one is stated, else the
+    // type's declared default. Read once per run; a stated value below zero refuses the run.
+    private IGenericResult<TimeSpan> CommitReportInterval()
+    {
+        if (_settings is not null && _settings.TryGetEffectiveValue<int>(SettingDefinitions.PipelineCommittedReportSeconds, out var stated))
+        {
+            return stated < 0
+                ? GenericResult<TimeSpan>.Failure(GraphLog.CommittedReportSecondsNegative(_logger, SettingDefinitions.PipelineCommittedReportSeconds, stated))
+                : GenericResult<TimeSpan>.Success(TimeSpan.FromSeconds(stated));
+        }
+
+        return GenericResult<TimeSpan>.Success(TimeSpan.FromSeconds(CommittedReportSeconds));
     }
 
     // A run that is tracked records how its steps went under its execution; an untracked run records nothing.

@@ -9,7 +9,7 @@ namespace Fdw.Data.RowSources.Tests;
 /// </summary>
 public class FileFormatNamesTests
 {
-    private static readonly string[] FileFormats = ["Json", "Xml", "Delimited", "FixedWidth", "Xlsx"];
+    private static readonly string[] FileFormats = ["Json", "JsonLines", "Xml", "Delimited", "FixedWidth", "Xlsx"];
 
     // A format that is not read as a file has no record source: Tabular is a SQL result set.
     private static readonly string[] NotFileFormats = ["Tabular"];
@@ -18,6 +18,7 @@ public class FileFormatNamesTests
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     [InlineData("Json")]
+    [InlineData("JsonLines")]
     [InlineData("Xml")]
     [InlineData("Delimited")]
     [InlineData("FixedWidth")]
@@ -79,7 +80,7 @@ public class FileFormatNamesTests
             .Where(n => FileFormats.Contains(n, StringComparer.Ordinal))
             .ToList();
 
-        // Assert: the sources that read a file are the five formats, no more and no fewer.
+        // Assert: the sources that read a file are the six formats, no more and no fewer.
         sources.OrderBy(n => n, StringComparer.Ordinal).ShouldBe(FileFormats.OrderBy(n => n, StringComparer.Ordinal));
     }
 }

@@ -103,4 +103,14 @@ public interface IRecordSourceType : ITypeOption<int, RecordSourceTypeBase>
     /// reach the reader as the file's own bytes.
     /// </remarks>
     bool ReadsBinary { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether this format parses its records as its content stream is read, holding about one record at a time
+    /// (FDW-4967).
+    /// </summary>
+    /// <remarks>
+    /// A caller that reads a file of any size asks this before choosing how to read it: an incremental format is read from a stream as it
+    /// is parsed; any other is read whole, and the caller says so.
+    /// </remarks>
+    bool ParsesIncrementally { get; }
 }

@@ -34,6 +34,7 @@ public sealed class SqlErrorHandlerStatusTests
     [InlineData(2627, 409)]
     [InlineData(547, 409)]
     [InlineData(33504, 403)]
+    [InlineData(51956, 409)] // FDW-4956: a staged key set the stage does not hold whole is refused, nothing flagged
     [InlineData(515, 500)]
     [InlineData(8003, 500)]
     [InlineData(18456, 502)] // FDW-4843: the platform's own login failing is a downstream fault, never the caller's 401
@@ -60,6 +61,7 @@ public sealed class SqlErrorHandlerStatusTests
     [InlineData(515)]
     [InlineData(8003)]
     [InlineData(33504)]
+    [InlineData(51956)]
     public void Sending_the_same_statement_again_fails_the_same_way(int sqlErrorNumber)
         => SqlErrorHandlers.ByErrorNumber(sqlErrorNumber).IsRetryable.ShouldBeFalse();
 

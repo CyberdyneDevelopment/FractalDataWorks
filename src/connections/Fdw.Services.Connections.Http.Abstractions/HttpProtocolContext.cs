@@ -34,4 +34,11 @@ public readonly record struct HttpProtocolContext(
     ILoggerFactory LoggerFactory,
     X509Certificate2? ResolvedCertificate,
     string? ResolvedPassword,
-    string? ResolvedApiKey);
+    string? ResolvedApiKey)
+{
+    /// <summary>
+    /// Gets a value indicating whether the request is one page of a read the connection's reader pages itself (FDW-4938): the reader writes
+    /// each page's position in the paging style the connection states, so the protocol writes no window of a query's paging into it.
+    /// </summary>
+    public bool PagedByReader { get; init; }
+}

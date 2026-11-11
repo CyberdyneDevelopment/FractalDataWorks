@@ -88,7 +88,11 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
         var declaration = EndpointAuthenticationDeclaration;
         if (declaration.DictionaryProperty is { } property && declaration.Method is { } method)
         {
-            _endpointBehavior.Authentication(property, Name, configuration => method((TConfiguration)(object)configuration));
+            _endpointBehavior.Authentication(
+                property,
+                Name,
+                configuration => method((TConfiguration)(object)configuration),
+                declaration.SharedProperties is { } shared ? configuration => shared((TConfiguration)(object)configuration) : null);
             return true;
         }
 

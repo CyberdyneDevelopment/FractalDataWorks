@@ -38,6 +38,7 @@
     <ProjectReference Include="..\..\workspaces\Fdw.Services.Workspaces.Abstractions\Fdw.Services.Workspaces.Abstractions.csproj" />
     <ProjectReference Include="..\..\foundation\services\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
     <ProjectReference Include="..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
+    <ProjectReference Include="..\..\data\Fdw.Data\Fdw.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

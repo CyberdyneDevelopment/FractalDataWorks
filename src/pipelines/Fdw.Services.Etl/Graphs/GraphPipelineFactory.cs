@@ -44,6 +44,7 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
     private readonly IExecutionTracker? _tracker;
     private readonly RunningFlows? _runningFlows;
     private readonly IThresholdEvaluator? _thresholds;
+    private readonly TimeProvider? _clock;
 
     /// <summary>Initializes a new instance of the <see cref="GraphPipelineFactory"/> class.</summary>
     /// <param name="logger">The factory's logger.</param>
@@ -62,6 +63,7 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
     /// <param name="tracker">Records how the steps of a tracked run went as child executions of the run (optional: an untracked host passes none and nothing is recorded).</param>
     /// <param name="runningFlows">What the live view reads; each pipeline made lists its run there while it runs (optional: a host without the view passes none).</param>
     /// <param name="thresholds">Passed to each pipeline made, to judge its components' figures against thresholds (a run refuses without it, and a host that runs pipelines refuses to start without it).</param>
+    /// <param name="clock">Passed to each pipeline made, as the clock its Compute stages' calculations read the time from (optional).</param>
     public GraphPipelineFactory(
         ILogger<GraphPipelineFactory> logger,
         ILoggerFactory loggerFactory,
@@ -78,7 +80,8 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
         IEffectiveSettingsProvider? settings = null,
         IExecutionTracker? tracker = null,
         RunningFlows? runningFlows = null,
-        IThresholdEvaluator? thresholds = null)
+        IThresholdEvaluator? thresholds = null,
+        TimeProvider? clock = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -96,7 +99,20 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
         _tracker = tracker;
         _runningFlows = runningFlows;
         _thresholds = thresholds;
+        _clock = clock;
     }
+
+    /// <summary>
+    /// Gets how often, in seconds, a destination writes what it has committed when the settings state no interval (FDW-4957): the default the graph
+    /// pipeline type declares, resolved when it registered this factory. 0 writes after every commit.
+    /// </summary>
+    public required int CommittedReportSeconds { get; init; }
+
+    /// <summary>
+    /// Gets how many unmatched keys a report carries when the settings state no size (FDW-4988): the default the graph pipeline type declares, resolved when
+    /// it registered this factory. 0 carries only the count.
+    /// </summary>
+    public required int UnmatchedKeySample { get; init; }
 
     /// <inheritdoc />
     public IGenericResult<IEtlPipeline> Create(GraphPipelineConfiguration configuration)
@@ -122,7 +138,12 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
                 _settings,
                 _tracker,
                 _runningFlows,
-                _thresholds);
+                _thresholds,
+                _clock)
+            {
+                CommittedReportSeconds = CommittedReportSeconds,
+                UnmatchedKeySample = UnmatchedKeySample,
+            };
 
             EtlLog.PipelineConfigurationLoaded(_logger, configuration.Name, "Graph");
             return GenericResult<IEtlPipeline>.Success(pipeline);

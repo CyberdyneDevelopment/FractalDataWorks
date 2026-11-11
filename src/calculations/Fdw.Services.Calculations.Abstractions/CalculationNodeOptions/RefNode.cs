@@ -44,7 +44,7 @@ public sealed class RefNode : CalculationNodeBase
 
         return scope.TypeOf(node.Name) == typeof(decimal)
             ? GenericResult.Success()
-            : Invalid(node, $"a Ref reads a number, and result '{node.Name}' is a date-time");
+            : Invalid(node, $"a Ref reads a number, and result '{node.Name}' is {(CalculationCoercion.IsDate(scope.TypeOf(node.Name)!) ? "a date" : "a date-time")}");
     }
 
     /// <inheritdoc />

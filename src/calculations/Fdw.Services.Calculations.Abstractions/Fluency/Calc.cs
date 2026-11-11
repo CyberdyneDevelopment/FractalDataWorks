@@ -163,6 +163,14 @@ public static class Calc
     public static CalculationNode AddTime(CalculationNode time, CalculationNode amount, string timeZone, string unit) =>
         CalculationNode.Zoned("AddTime", timeZone, unit, time, amount);
 
+    /// <summary>A date plus a signed whole amount of a unit. A date goes in and a date comes out; a date has no time zone.</summary>
+    /// <param name="date">The date, for example a Field read as a date.</param>
+    /// <param name="amount">The number of units; negative counts back.</param>
+    /// <param name="unit">Days, Weeks, Months or Years.</param>
+    /// <returns>The node.</returns>
+    public static CalculationNode AddDate(CalculationNode date, CalculationNode amount, string unit) =>
+        CalculationNode.Dated("AddDate", unit, date, amount);
+
     /// <summary>The number rounded to a stated number of places in a stated midpoint mode.</summary>
     /// <param name="operand">The number.</param>
     /// <param name="places">The decimal places, 0 to 28.</param>

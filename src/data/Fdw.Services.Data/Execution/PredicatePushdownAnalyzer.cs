@@ -51,17 +51,25 @@ public sealed class PredicatePushdownAnalyzer
     }
 
     /// <summary>
-    /// Decomposes a filter expression by source, routing each condition to its owning source.
+    /// Decomposes a filter by source: the parts a source can apply in its store and still give the same rows (FDW-5049).
     /// </summary>
-    /// <param name="filter">The filter expression to decompose.</param>
-    /// <param name="dataset">The dataset configuration with field definitions.</param>
+    /// <param name="filter">The filter expression to decompose, in the data set's logical names.</param>
+    /// <param name="dataset">The dataset configuration; its joins say which sources an outer join makes optional.</param>
     /// <param name="sources">The pre-resolved source configurations for this dataset.</param>
     /// <param name="fieldMappingsBySource">Pre-resolved field mappings keyed by source name.</param>
-    /// <returns>A result containing a dictionary of source-specific filters, or failure information.</returns>
+    /// <returns>Each source's share in its physical names (no entry for a source given none), or failure information.</returns>
     /// <remarks>
-    /// This method analyzes the filter tree and identifies which source owns each field.
-    /// Conditions are grouped by source and combined with the appropriate logical operator.
-    /// Only sources that support predicate pushdown will have filters generated.
+    /// <para>
+    /// Pushdown is only an optimisation: the caller applies its whole filter to the rows its sources join, so a part that is not pushed is
+    /// still applied, never dropped. A top-level AND conjunct (the whole filter when it is not an AND) is pushed to a source when every
+    /// field it names is mapped by that source and no other, the source states that its store applies filters
+    /// (<see cref="DataSetSourceConfiguration.SupportsPredicatePushdown"/>), and no outer join makes that source optional: a row an outer
+    /// join keeps with that source empty would be dropped by the source's own filter.
+    /// </para>
+    /// <para>
+    /// Before FDW-5049 a condition on a field no source mapped was dropped, one on a field several sources mapped went to the first only,
+    /// and a source that does not apply filters got none, while the caller applied nothing to the joined rows.
+    /// </para>
     /// </remarks>
     public IGenericResult<Dictionary<string, IFilterExpression>> DecomposeBySource(
         IFilterExpression? filter,
@@ -77,16 +85,31 @@ public sealed class PredicatePushdownAnalyzer
 
         try
         {
-            var sourcesByName = BuildSourcesByNameLookup(sources);
+            var optional = OptionalSources(dataset);
+            var pushed = new Dictionary<string, List<IFilterNode>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var conjunct in Conjuncts(filter!.Root!))
+            {
+                var fields = string.Join(", ", FieldNames(conjunct));
+                if (PushdownOwner(conjunct, sources, fieldMappingsBySource, optional) is not { } owner)
+                {
+                    PredicatePushdownLog.ConditionKeptForJoinedRows(_logger, dataset.Name, fields);
+                    continue;
+                }
 
-            // Extract conditions from the filter tree, grouped by source
-            var sourceConditions = new Dictionary<string, List<IFilterCondition>>(
+                fieldMappingsBySource.TryGetValue(owner.SourceName, out var mappings);
+                if (!pushed.TryGetValue(owner.SourceName, out var nodes))
+                    pushed[owner.SourceName] = nodes = [];
+                nodes.Add(TranslateNode(conjunct, mappings));
+                PredicatePushdownLog.ConditionRouted(_logger, fields, owner.SourceName);
+            }
+
+            var sourceFilters = pushed.ToDictionary(
+                share => share.Key,
+                share => (IFilterExpression)new FilterExpression
+                {
+                    Root = share.Value.Count == 1 ? share.Value[0] : new FilterGroup { Operator = LogicalOperator.And, Nodes = share.Value },
+                },
                 StringComparer.OrdinalIgnoreCase);
-            ExtractConditions(filter!.Root!, sourceConditions, dataset, sources, fieldMappingsBySource);
-
-            // Build filter expressions for each source
-            var sourceFilters = GenerateSourceFilters(sourceConditions, sourcesByName, fieldMappingsBySource, dataset);
-
             PredicatePushdownLog.DecompositionComplete(_logger, sourceFilters.Count);
             return GenericResult<Dictionary<string, IFilterExpression>>.Success(sourceFilters);
         }
@@ -97,6 +120,66 @@ public sealed class PredicatePushdownAnalyzer
                 DataServiceResultCodes.ByName("FilterDecompositionFailed"),
                 ResultDetails.Create("Error", ex.Message));
         }
+    }
+
+    // The parts of a filter that stand alone: each node of a top-level AND, or the whole filter.
+    private static IReadOnlyList<IFilterNode> Conjuncts(IFilterNode root) =>
+        root is FilterGroup group && ReferenceEquals(group.Operator, LogicalOperator.And) ? group.Nodes : [root];
+
+    // Every field a filter node names, once each.
+    private static IEnumerable<string> FieldNames(IFilterNode node) => node switch
+    {
+        IFilterCondition condition => [condition.PropertyName],
+        FilterGroup group => group.Nodes.SelectMany(FieldNames).Distinct(StringComparer.Ordinal),
+        _ => [],
+    };
+
+    // The one source a conjunct can be pushed to, or null when it must be applied to the joined rows: every field it names is mapped by
+    // that source and no other, the source applies filters in its store, and no outer join makes it optional.
+    private static DataSetSourceConfiguration? PushdownOwner(
+        IFilterNode conjunct,
+        IReadOnlyList<DataSetSourceConfiguration> sources,
+        IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource,
+        HashSet<string> optional)
+    {
+        DataSetSourceConfiguration? owner = null;
+        foreach (var field in FieldNames(conjunct))
+        {
+            var owners = sources
+                .Where(source => fieldMappingsBySource.TryGetValue(source.SourceName, out var mappings) && mappings.ContainsKey(field))
+                .ToList();
+            if (owners.Count != 1 || (owner is not null && !ReferenceEquals(owner, owners[0])))
+                return null;
+
+            owner = owners[0];
+        }
+
+        return owner is { SupportsPredicatePushdown: true } && !optional.Contains(owner.SourceName) ? owner : null;
+    }
+
+    // The sources an outer join may leave without a row: the right source of a join that keeps every left row, and every source joined
+    // before a join that keeps every right row. Which side a join keeps is its join type's own statement.
+    private static HashSet<string> OptionalSources(IDataSetImplementationConfiguration dataset)
+    {
+        var optional = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (dataset is not IJoinedDataSetConfiguration joinedSet)
+            return optional;
+
+        var joined = new List<string>();
+        foreach (var join in joinedSet.Joins.OrderBy(j => j.Ordinal))
+        {
+            if (!joined.Contains(join.LeftSourceName, StringComparer.OrdinalIgnoreCase))
+                joined.Add(join.LeftSourceName);
+
+            var kind = StatedJoinType.Of(join.JoinType);
+            if (kind.IncludesAllRight)
+                optional.UnionWith(joined);
+            if (kind.IncludesAllLeft)
+                optional.Add(join.RightSourceName);
+            joined.Add(join.RightSourceName);
+        }
+
+        return optional;
     }
 
     /// <summary>
@@ -126,65 +209,6 @@ public sealed class PredicatePushdownAnalyzer
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Builds a lookup dictionary for sources by name.
-    /// </summary>
-    private static Dictionary<string, DataSetSourceConfiguration> BuildSourcesByNameLookup(
-        IReadOnlyList<DataSetSourceConfiguration> sources)
-    {
-        var sourcesByName = new Dictionary<string, DataSetSourceConfiguration>(
-            StringComparer.OrdinalIgnoreCase);
-
-        foreach (var source in sources)
-        {
-            sourcesByName[source.SourceName] = source;
-        }
-
-        return sourcesByName;
-    }
-
-    /// <summary>
-    /// Generates source-specific filter expressions from decomposed conditions.
-    /// Only includes sources that support predicate pushdown.
-    /// </summary>
-    private Dictionary<string, IFilterExpression> GenerateSourceFilters(
-        Dictionary<string, List<IFilterCondition>> sourceConditions,
-        Dictionary<string, DataSetSourceConfiguration> sourcesByName,
-        IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource,
-        IDataSetImplementationConfiguration dataset)
-    {
-        var sourceFilters = new Dictionary<string, IFilterExpression>(
-            StringComparer.OrdinalIgnoreCase);
-
-        foreach (var (sourceName, conditions) in sourceConditions)
-        {
-            if (conditions.Count == 0)
-                continue;
-
-            if (!sourcesByName.TryGetValue(sourceName, out var sourceConfig))
-            {
-                PredicatePushdownLog.SourceNotFound(_logger, sourceName, dataset.Name);
-                continue;
-            }
-
-            if (!sourceConfig.SupportsPredicatePushdown)
-            {
-                PredicatePushdownLog.PushdownNotSupported(_logger, sourceName);
-                continue;
-            }
-
-            fieldMappingsBySource.TryGetValue(sourceName, out var fieldMappings);
-            var translatedConditions = TranslateFieldNames(conditions, fieldMappings);
-
-            var filterExpression = BuildFilterExpression(translatedConditions);
-            sourceFilters[sourceName] = filterExpression;
-
-            PredicatePushdownLog.FilterGenerated(_logger, sourceName, translatedConditions.Count);
-        }
-
-        return sourceFilters;
     }
 
     /// <summary>
@@ -252,100 +276,6 @@ public sealed class PredicatePushdownAnalyzer
     }
 
     /// <summary>
-    /// Extracts conditions from a filter node and routes them to appropriate sources.
-    /// </summary>
-    private void ExtractConditions(
-        IFilterNode node,
-        Dictionary<string, List<IFilterCondition>> sourceConditions,
-        IDataSetImplementationConfiguration dataset,
-        IReadOnlyList<DataSetSourceConfiguration> sources,
-        IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource)
-    {
-        switch (node)
-        {
-            case IFilterCondition condition:
-                // Find which source owns this field
-                var sourceName = FindSourceForField(condition.PropertyName, sources, fieldMappingsBySource);
-                if (sourceName != null)
-                {
-                    if (!sourceConditions.TryGetValue(sourceName, out var conditions))
-                    {
-                        conditions = [];
-                        sourceConditions[sourceName] = conditions;
-                    }
-
-                    conditions.Add(condition);
-                    PredicatePushdownLog.ConditionRouted(_logger, condition.PropertyName, sourceName);
-                }
-                else
-                {
-                    PredicatePushdownLog.FieldNotMapped(_logger, condition.PropertyName, dataset.Name);
-                }
-                break;
-
-            case FilterGroup group:
-                // Recursively extract conditions from child nodes
-                foreach (var childNode in group.Nodes)
-                {
-                    ExtractConditions(childNode, sourceConditions, dataset, sources, fieldMappingsBySource);
-                }
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Finds which source owns a specific field by checking field mappings.
-    /// </summary>
-    private static string? FindSourceForField(
-        string logicalFieldName,
-        IReadOnlyList<DataSetSourceConfiguration> sources,
-        IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource)
-    {
-        foreach (var source in sources)
-        {
-            if (fieldMappingsBySource.TryGetValue(source.SourceName, out var mappings) &&
-                mappings.ContainsKey(logicalFieldName))
-            {
-                return source.SourceName;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Translates logical field names to physical field names for a list of conditions.
-    /// </summary>
-    private static List<IFilterCondition> TranslateFieldNames(
-        List<IFilterCondition> conditions,
-        IReadOnlyDictionary<string, string>? fieldMappings)
-    {
-        if (fieldMappings == null)
-        {
-            return conditions;
-        }
-
-        var translated = new List<IFilterCondition>();
-
-        foreach (var condition in conditions)
-        {
-            // Translate logical → physical
-            var physicalFieldName = fieldMappings.TryGetValue(condition.PropertyName, out var physical)
-                ? physical
-                : condition.PropertyName;  // Fallback to logical name if no mapping
-
-            translated.Add(new FilterCondition
-            {
-                PropertyName = physicalFieldName,
-                Operator = condition.Operator,
-                Value = condition.Value
-            });
-        }
-
-        return translated;
-    }
-
-    /// <summary>
     /// Translates a filter node (condition or group) to use physical field names.
     /// </summary>
     private IFilterNode TranslateNode(
@@ -400,30 +330,5 @@ public sealed class PredicatePushdownAnalyzer
             Operator = group.Operator,
             Nodes = translatedNodes
         };
-    }
-
-    /// <summary>
-    /// Builds a filter expression from a list of conditions combined with AND logic.
-    /// </summary>
-    private static FilterExpression BuildFilterExpression(List<IFilterCondition> conditions)
-    {
-        if (conditions.Count == 0)
-        {
-            return new FilterExpression { Root = null };
-        }
-
-        if (conditions.Count == 1)
-        {
-            return new FilterExpression { Root = (IFilterNode)conditions[0] };
-        }
-
-        // Multiple conditions - combine with AND
-        var group = new FilterGroup
-        {
-            Operator = LogicalOperator.And,
-            Nodes = conditions.Cast<IFilterNode>().ToList()
-        };
-
-        return new FilterExpression { Root = group };
     }
 }

@@ -37,6 +37,7 @@ public sealed class TransformContext : ITransformContext
     /// <param name="parameters">The run's typed parameter values by name, including the last-successful watermark when there is one; none when the run has none.</param>
     /// <param name="builtCalculations">The calculations the run compiled for its Compute stages, by stage id; none when it has no Compute stage.</param>
     /// <param name="builtSets">The calculation sets the run compiled for its Compute stages that read and write tables, by stage id; none when it has none.</param>
+    /// <param name="clock">The run's clock; a calculation that reads the time takes one moment from it for the whole run. None when the run has none.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     public TransformContext(
         Guid executionId,
@@ -49,6 +50,7 @@ public sealed class TransformContext : ITransformContext
         IReadOnlyDictionary<string, object?>? parameters = null,
         IReadOnlyDictionary<Guid, ICompiledCalculation>? builtCalculations = null,
         IReadOnlyDictionary<Guid, ICompiledCalculationSet>? builtSets = null,
+        TimeProvider? clock = null,
         CancellationToken cancellationToken = default)
     {
         ExecutionId = executionId;
@@ -62,6 +64,12 @@ public sealed class TransformContext : ITransformContext
         Parameters = parameters is null ? EmptyParameters : parameters;
         BuiltCalculations = builtCalculations is null ? NoBuiltCalculations : builtCalculations;
         BuiltSets = builtSets is null ? NoBuiltSets : builtSets;
+        if (clock is not null)
+        {
+            // One moment for the run: the first record to ask fixes it, so every record of the run reads the same time.
+            var moment = new Lazy<DateTimeOffset>(clock.GetUtcNow);
+            Clock = () => moment.Value;
+        }
     }
 
     /// <inheritdoc />
@@ -81,6 +89,9 @@ public sealed class TransformContext : ITransformContext
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, object?> Parameters { get; }
+
+    /// <inheritdoc />
+    public Func<DateTimeOffset>? Clock { get; }
 
     /// <inheritdoc />
     public IReadOnlyDictionary<Guid, ICompiledCalculation> BuiltCalculations { get; }

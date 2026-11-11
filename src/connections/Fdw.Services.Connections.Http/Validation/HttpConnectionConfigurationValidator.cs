@@ -22,9 +22,8 @@ public sealed class HttpConnectionConfigurationValidator : FdwConfigurationValid
             .NotEmpty()
             .WithMessage("Protocol is required (e.g., Rest, Soap11, Soap12, GraphQL, OData)");
 
-        RuleFor(x => x.Lifetime)
-            .NotEmpty()
-            .WithMessage("Lifetime is required (Singleton, Scoped or Transient)");
+        // No rule for Lifetime (FDW-5139): it has no column and nothing reads it, so the stored row always comes back without one, and
+        // requiring it refused every update of every HTTP connection.
 
         RuleFor(x => x.AuthenticationType)
             .NotEmpty()

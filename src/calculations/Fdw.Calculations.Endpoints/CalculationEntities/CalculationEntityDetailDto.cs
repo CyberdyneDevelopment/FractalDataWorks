@@ -38,7 +38,7 @@ public sealed class CalculationEntityDetailDto
     public string? ResultFieldName { get; set; }
 
     /// <summary>Gets or sets the data type name for the result.</summary>
-    public string ResultDataTypeName { get; set; } = "Decimal";
+    public string ResultDataTypeName { get; set; } = string.Empty;
 
     /// <summary>Gets or sets whether this entity is enabled.</summary>
     public bool IsEnabled { get; set; }

@@ -28,6 +28,10 @@ public sealed class DelimitedRowSourceType : RecordSourceTypeBase
     }
 
     /// <inheritdoc />
+    /// <remarks>Reads lines through a StreamReader as the stream is read. (FDW-4967)</remarks>
+    public override bool ParsesIncrementally => true;
+
+    /// <inheritdoc />
     public override bool SupportsSync => true;
 
     /// <inheritdoc />

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
@@ -26,18 +26,18 @@ public sealed class FlowGatewaySourceFilesTests
 
     private static Dictionary<string, object?> Other(int id, string title) => new() { ["Id"] = id, ["Title"] = title };
 
-    // A gateway that reads a declared container at another address: the file named answers its rows a page at a time, as the paging asks.
+    // A gateway that reads a declared container at another address: the file named opens as one stable read of its rows (FDW-4911).
     private static IEtlDataGateway Gateway(Dictionary<string, List<Dictionary<string, object?>>> files, List<string> reads)
     {
         var gateway = new Mock<IEtlDataGateway>();
         gateway
-            .Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Setup(g => g.OpenRecordSource(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns((IDataCommand command, DataStoreTarget _, string? path, string? name, CancellationToken _) =>
             {
-                var paging = ((QueryCommand<Dictionary<string, object?>>)command).Paging!;
-                reads.Add($"{name}@{paging.Skip}");
-                IEnumerable<Dictionary<string, object?>> page = files[name!].Skip(paging.Skip).Take(paging.Take ?? int.MaxValue).ToList();
-                return Task.FromResult<IGenericResult<IEnumerable<Dictionary<string, object?>>>>(GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(page));
+                ((IQueryCommand)command).Paging.ShouldBeNull();
+                reads.Add($"open {name}");
+                return Task.FromResult<IGenericResult<IRecordSource<DataRecord>>>(
+                    GenericResult<IRecordSource<DataRecord>>.Success(new CountingRecordSource([.. files[name!]], reads)));
             });
         return gateway.Object;
     }
@@ -59,7 +59,7 @@ public sealed class FlowGatewaySourceFilesTests
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         Ids(rows).ShouldBe([1, 2, 3, 4, 5]);
-        reads.ShouldBe(["a.csv@0", "a.csv@2", "b.csv@0", "b.csv@2"]);
+        reads.ShouldBe(["open a.csv", "closed after 3", "open b.csv", "closed after 2"]);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public sealed class FlowGatewaySourceFilesTests
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         Ids(rows).ShouldBe([1, 2, 3, 4]);
-        reads.ShouldNotContain(read => read.StartsWith("c.csv", StringComparison.Ordinal));
+        reads.ShouldBe(["open a.csv", "closed after 3", "open b.csv", "closed after 1"]);
     }
 
     [Fact]

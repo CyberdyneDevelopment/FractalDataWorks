@@ -7,7 +7,6 @@ Welcome to the FractalDataWorks documentation. This wiki guides you through buil
 1. [Prerequisites](01-01-Prerequisites.md) - What you need to get started
 2. [Quick Start](01-02-Quick-Start.md) - Build your first FractalDataWorks application
 3. [What You Built](01-03-What-You-Built.md) - Understanding the generated solution
-4. [Local Package Development](01-04-Local-Package-Development.md) - Working with local NuGet packages
 
 ## Solution Structure
 

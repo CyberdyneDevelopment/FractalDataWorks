@@ -442,6 +442,9 @@ public sealed class GraphPayloadMappingTests
             ("softDeleteMode", "\"AbsentFromSource\""),
             ("deletedFlagColumn", "\"IsGone\""),
             ("deletedFlagValue", "true"),
+            ("stageContainer", "\"OrdersStage\""),
+            ("stageKeyColumn", "\"StageKey\""),
+            ("sweepRejectedRowsRule", "\"Refuse\""),
             ("valueSources", "[{\"column\":\"Number\",\"source\":{\"kind\":\"NextSequenceValue\",\"sequenceName\":\"OrderNumbers\",\"orderBy\":[\"Id\"]}},{\"column\":\"Origin\",\"source\":{\"kind\":\"Constant\",\"value\":\"orders\",\"valueType\":\"String\"}}]"));
 
         var read = GraphPayloadReader.Read(graph, System.Guid.NewGuid());
@@ -456,6 +459,9 @@ public sealed class GraphPayloadMappingTests
 
         var written = GraphPayloadWriter.Write(read.Value!).Components.Single(c => c.Name == "load");
         written.Settings["effectiveToColumn"].ShouldBe("ValidTo");
+        written.Settings["stageContainer"].ShouldBe("OrdersStage");
+        written.Settings["stageKeyColumn"].ShouldBe("StageKey");
+        written.Settings["sweepRejectedRowsRule"].ShouldBe("Refuse");
         var sources = (List<PipelineLoadColumnSource>)written.Settings["valueSources"]!;
         sources.Select(v => v.Column).ShouldBe(["Number", "Origin"]);
         sources[0].Source!.OrderBy.ShouldBe(["Id"]);

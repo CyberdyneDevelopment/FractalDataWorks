@@ -34,11 +34,12 @@ public sealed class DataSetReadGateTests
     }
 
     [Fact]
-    public void ACompoundSetIsRefusedForPagingAndGrouping()
+    public void ACompoundSetPagesInItsStoreAndIsStillRefusedForGrouping()
     {
         var compound = new CompoundDataSetConfiguration { Name = "TeamsWithStadiums", Implementation = "Compound" };
 
-        DataSetReadGate.Pageable(compound, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        // FDW-4991: one store, one joined query, so it pages there; a grouping over a join is still refused.
+        DataSetReadGate.Pageable(compound, NullLogger.Instance).IsSuccess.ShouldBeTrue();
         DataSetReadGate.Groupable(compound, NullLogger.Instance).CurrentMessage.ShouldNotBeNull().ShouldContain("kind 'Compound' does not run a grouped query in the store");
     }
 

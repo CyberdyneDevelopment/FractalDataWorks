@@ -24,6 +24,10 @@ public sealed class HttpRowSourceType : RecordSourceTypeBase
     }
 
     /// <inheritdoc />
+    /// <remarks>Creates no source from a content stream: an HTTP source wraps its responses. (FDW-4967)</remarks>
+    public override bool ParsesIncrementally => false;
+
+    /// <inheritdoc />
     public override bool SupportsSync => false;
 
     /// <inheritdoc />

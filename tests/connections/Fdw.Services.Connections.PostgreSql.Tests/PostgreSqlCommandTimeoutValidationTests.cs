@@ -5,7 +5,7 @@ using Fdw.Services.Connections.PostgreSql.Validation;
 namespace Fdw.Services.Connections.PostgreSql.Tests;
 
 /// <summary>
-/// A connection may state no command timeout (FDW-3284): the instance's setting then gives it one. A timeout it does state must be positive.
+/// A connection may state no command timeout (FDW-3284): the default its connection type declares then gives it one (FDW-4904). A timeout it does state must be positive.
 /// </summary>
 public sealed class PostgreSqlCommandTimeoutValidationTests
 {

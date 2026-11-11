@@ -88,6 +88,14 @@ public sealed class CalculationNode
     public static CalculationNode Zoned(string op, string timeZone, string? mode, params CalculationNode[] operands) =>
         new(op, timeZone, null, null, null, mode, operands);
 
+    /// <summary>Creates a node that moves a calendar date: a unit in <c>mode</c> and no time zone, because a date has none.</summary>
+    /// <param name="op">The operator, AddDate.</param>
+    /// <param name="unit">The unit: Days, Weeks, Months or Years.</param>
+    /// <param name="operands">The operands, in order.</param>
+    /// <returns>The node.</returns>
+    public static CalculationNode Dated(string op, string unit, params CalculationNode[] operands) =>
+        new(op, null, null, null, null, unit, operands);
+
     /// <summary>Creates a numeric Constant.</summary>
     /// <param name="value">The literal.</param>
     /// <returns>The node.</returns>

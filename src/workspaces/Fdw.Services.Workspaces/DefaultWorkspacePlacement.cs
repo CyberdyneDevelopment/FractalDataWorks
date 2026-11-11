@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Workspaces.Abstractions;
 using Fdw.Services.Workspaces.Commands;
 using Fdw.Services.Workspaces.Logging;
@@ -25,7 +26,9 @@ namespace Fdw.Services.Workspaces;
 /// The owner of a thing is the tenant the caller is acting in. The tenant's default organization names its default workspace
 /// (<c>DefaultWorkspaceId</c>), and the thing goes there. Nothing here guesses: a caller in no tenant, a tenant without a default
 /// organization, a default workspace that is not there and a kind that is not a workspace resource kind each fail with a code that says
-/// so, and the failure takes the thing with it. The default organization is read from <c>tenant.Organization</c> in the same unit of work,
+/// so, and the failure takes the thing with it. With the setting <c>FoundingMakesDefaultWorkspace</c> off (FDW-4600) no organization has a
+/// default workspace to name: nothing is placed and nothing is refused for the lack of one (a kind that is not a workspace resource kind
+/// is still refused, as it is the request's own fault). The default organization is read from <c>tenant.Organization</c> in the same unit of work,
 /// not through <c>IOrganizationProvider</c>: which provider a host registers follows its multitenancy option, and a single-tenant host (the ETL
 /// host and the scheduler) registers one that knows no organization, so a placement that asked it would refuse every create on those hosts. The
 /// row is inserted under the workspace's current configuration row without re-saving the workspace, so making a thousand data sets does not
@@ -39,6 +42,7 @@ public sealed class DefaultWorkspacePlacement : IConfigurationPlacement
     private const string OwnsRelationship = "Owns";
 
     private readonly IAuthenticationContextAccessor _authentication;
+    private readonly IWorkspaceFoundingPolicy _policy;
     private readonly string _dataStoreName;
     private readonly string _pathName;
     private readonly string _organizationPathName;
@@ -46,18 +50,21 @@ public sealed class DefaultWorkspacePlacement : IConfigurationPlacement
 
     /// <summary>Initializes a new instance of the <see cref="DefaultWorkspacePlacement"/> class.</summary>
     /// <param name="authentication">The accessor of the caller's authentication context: the tenant it acts in and the user it is.</param>
+    /// <param name="policy">Says whether founding makes a default workspace; when it does not, nothing is placed.</param>
     /// <param name="dataStoreName">The configuration connection the workspace and organization rows live on.</param>
     /// <param name="pathName">The schema the workspace rows live in.</param>
     /// <param name="organizationPathName">The schema the organization rows live in.</param>
     /// <param name="logger">The logger.</param>
     public DefaultWorkspacePlacement(
         IAuthenticationContextAccessor authentication,
+        IWorkspaceFoundingPolicy policy,
         string dataStoreName,
         string pathName,
         string organizationPathName,
         ILogger<DefaultWorkspacePlacement>? logger = null)
     {
         _authentication = authentication ?? throw new ArgumentNullException(nameof(authentication));
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
         _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
         _organizationPathName = organizationPathName ?? throw new ArgumentNullException(nameof(organizationPathName));
@@ -73,16 +80,33 @@ public sealed class DefaultWorkspacePlacement : IConfigurationPlacement
         if (ReferenceEquals(WorkspaceResourceKinds.ByName(request.Kind), WorkspaceResourceKinds.NotFound))
             return UnknownKind(request);
 
+        var makesWorkspace = _policy.FoundingMakesDefaultWorkspace();
+        if (makesWorkspace.IsFailure) return makesWorkspace;
+
+        if (!makesWorkspace.Value)
+        {
+            DefaultWorkspaceLog.NotPlaced(_logger, request.Name, request.Kind);
+            return GenericResult.Success();
+        }
+
         var caller = Caller(request);
         if (caller.IsFailure) return caller;
 
         var organization = await DefaultOrganization(request, caller.Value.TenantId, unit, cancellationToken).ConfigureAwait(false);
         if (organization.IsFailure || organization.Value is not { } defaultOrganization) return organization;
 
-        var parent = await ParentKeys(request, defaultOrganization, unit, cancellationToken).ConfigureAwait(false);
+        // Setting on: every organization names its default workspace, and one that names none is a failure that says so, as before.
+        if (defaultOrganization.DefaultWorkspaceId is not { } workspaceId || workspaceId == Guid.Empty)
+        {
+            return GenericResult.Failure(
+                WorkspacesResultCodes.ByName("DefaultWorkspaceMissing"), _logger,
+                ResultDetails.Create("name", request.Name, "organization", defaultOrganization.Name, "reason", "it names no default workspace"));
+        }
+
+        var parent = await ParentKeys(request, defaultOrganization, workspaceId, unit, cancellationToken).ConfigureAwait(false);
         if (parent.IsFailure || parent.Value is not { } foreignKey) return parent;
 
-        DefaultWorkspaceLog.Placing(_logger, request.Name, request.Kind, defaultOrganization.DefaultWorkspaceId, defaultOrganization.Id);
+        DefaultWorkspaceLog.Placing(_logger, request.Name, request.Kind, workspaceId, defaultOrganization.Id);
         return await Insert(request, caller.Value.UserId, foreignKey, unit, cancellationToken).ConfigureAwait(false);
     }
 
@@ -122,24 +146,20 @@ public sealed class DefaultWorkspacePlacement : IConfigurationPlacement
                 ResultDetails.Create("name", request.Name, "reason", "the tenant has no default organization"));
         }
 
-        return organization.DefaultWorkspaceId != Guid.Empty
-            ? GenericResult<DefaultOrganizationRow>.Success(organization)
-            : GenericResult<DefaultOrganizationRow>.Failure(
-                WorkspacesResultCodes.ByName("DefaultWorkspaceMissing"), _logger,
-                ResultDetails.Create("name", request.Name, "organization", organization.Name, "reason", "it names no default workspace"));
+        return GenericResult<DefaultOrganizationRow>.Success(organization);
     }
 
     // The key values of the default workspace's current configuration row, read in the unit, then the foreign key the resource container
     // declares to it, filled from them.
     private async Task<IGenericResult<IReadOnlyDictionary<string, object?>>> ParentKeys(
-        PlacementRequest request, DefaultOrganizationRow organization, ConfigurationWriteScope unit, CancellationToken cancellationToken)
+        PlacementRequest request, DefaultOrganizationRow organization, Guid workspaceId, ConfigurationWriteScope unit, CancellationToken cancellationToken)
     {
         var container = unit.Container(_pathName, ConfigurationContainer);
         if (container.IsFailure || container.Value is not { } parentContainer) return container.ToNewResult<IReadOnlyDictionary<string, object?>>();
 
         var configuration = new ImplementationConfigurationCommand<WorkspaceImplementationConfiguration>(ConfigurationContainer);
         var rows = await unit.Read<IEnumerable<Dictionary<string, object?>>>(
-            configuration.Get(_dataStoreName, _pathName, organization.DefaultWorkspaceId),
+            configuration.Get(_dataStoreName, _pathName, workspaceId),
             new DataStoreTarget(_dataStoreName, _pathName, ConfigurationContainer), cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure) return rows.ToNewResult<IReadOnlyDictionary<string, object?>>();
 
@@ -147,7 +167,7 @@ public sealed class DefaultWorkspacePlacement : IConfigurationPlacement
         {
             return GenericResult<IReadOnlyDictionary<string, object?>>.Failure(
                 WorkspacesResultCodes.ByName("DefaultWorkspaceMissing"), _logger,
-                ResultDetails.Create("name", request.Name, "organization", organization.Name, "reason", organization.DefaultWorkspaceId.ToString("D")));
+                ResultDetails.Create("name", request.Name, "organization", organization.Name, "reason", workspaceId.ToString("D")));
         }
 
         return unit.ForeignKeyValues(parentContainer, ResourceContainer, current);

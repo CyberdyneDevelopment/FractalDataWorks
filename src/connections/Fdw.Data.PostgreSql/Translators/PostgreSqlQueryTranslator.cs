@@ -111,8 +111,7 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
 
             if (command.Joins is { Count: > 0 })
             {
-                return Task.FromResult(GenericResult<NpgsqlCommand>.Success(
-                    BuildJoinedSelectStatement(container, dbPath, command.Joins, command.Filter, command.Projection, returnedFieldNames)));
+                return Task.FromResult(BuildJoinedSelectStatement(container, dbPath, command, returnedFieldNames));
             }
 
             return Task.FromResult(
@@ -194,47 +193,41 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
     /// Never emits <c>SELECT *</c>.
     /// </summary>
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // JOIN iteration + condition validation + WHERE.
-    private static NpgsqlCommand BuildJoinedSelectStatement(
+    private static IGenericResult<NpgsqlCommand> BuildJoinedSelectStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
-        IReadOnlyList<IJoinExpression> joins,
-        IFilterExpression? filter,
-        IProjectionExpression? projection,
+        IQueryCommand query,
         IReadOnlyList<string> returnedFieldNames)
     {
+        var joins = query.Joins;
+        var filter = query.Filter;
         var primaryTable = dbPath.ObjectName;
+
+        // Every identifier a join names is checked before any of it is written into the statement (SQL injection prevention): one that
+        // is not a plain name is a coded refusal of the query, never a throw (FDW-4991).
+        if (InvalidJoinIdentifier(joins) is { } invalid)
+            return GenericResult<NpgsqlCommand>.Failure(
+                PostgreSqlTranslatorLog.JoinIdentifierInvalid(NullLogger<PostgreSqlQueryTranslator>.Instance, container.Name, invalid));
+
+        // Each join is stated by its join type's own SQL keyword, never by the text it carries; one the statement cannot state is a coded
+        // refusal of the query (FDW-5099).
+        if (JoinRefusal(joins, container.Name) is { } joinRefusal)
+            return GenericResult<NpgsqlCommand>.Failure(joinRefusal);
+
         var dialect = dbPath.Dialect;
 
         var sql = new StringBuilder();
-        sql.Append(BuildSelectClause(container, projection, returnedFieldNames, primaryTable, dialect));
+        sql.Append(BuildSelectClause(container, query.Projection, returnedFieldNames, primaryTable, dialect));
         sql.Append(CultureInfo.InvariantCulture, $" FROM {BuildQualifiedTableName(dbPath)}");
 
         foreach (var join in joins)
         {
-            if (!IsValidColumnName(join.TargetContainerName))
-            {
-                throw new ArgumentException(
-                    $"Invalid JOIN target container name '{join.TargetContainerName}'. Only alphanumeric characters and underscores allowed.",
-                    nameof(joins));
-            }
-
             var targetQuoted = string.IsNullOrEmpty(dbPath.Schema)
                 ? dialect.QuoteIdentifier(join.TargetContainerName)
                 : $"{dialect.QuoteIdentifier(dbPath.Schema)}.{dialect.QuoteIdentifier(join.TargetContainerName)}";
 
-            sql.Append(CultureInfo.InvariantCulture, $" {join.JoinType} JOIN {targetQuoted} ON ");
-
-            var conditions = join.JoinConditions.Select(c =>
-            {
-                if (!IsValidColumnName(c.LeftField) || !IsValidColumnName(c.RightField))
-                {
-                    throw new ArgumentException(
-                        $"Invalid JOIN condition column ('{c.LeftField}', '{c.RightField}'). Only alphanumeric characters and underscores allowed.",
-                        nameof(joins));
-                }
-                return $"{dialect.QuoteIdentifier(primaryTable)}.{dialect.QuoteIdentifier(c.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(c.RightField)}";
-            });
-            sql.Append(string.Join(" AND ", conditions));
+            // The left column is qualified with the container the join continues from, as on MsSql and Sqlite (FDW-5099).
+            sql.Append(JoinClause(join, targetQuoted, primaryTable, dialect));
         }
 
         var command = CreateCommand(sql.ToString());
@@ -245,7 +238,14 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
             command.CommandText += $" WHERE {whereClause}";
         }
 
-        return command;
+        // The command's ordering and paging follow the WHERE, qualified the same way; a paged join that states no order is refused (FDW-4991).
+        var (refused, orderAndPaging) = BuildJoinedOrderAndPaging(query.Ordering, query.Paging, dialect, primaryTable);
+        if (refused)
+            return GenericResult<NpgsqlCommand>.Failure(
+                PostgreSqlTranslatorLog.PagedQueryHasNoOrder(NullLogger<PostgreSqlQueryTranslator>.Instance, container.Name));
+
+        command.CommandText += orderAndPaging;
+        return GenericResult<NpgsqlCommand>.Success(command);
     }
 
     /// <summary>

@@ -94,7 +94,7 @@ internal static class RealMsSqlLoadSupport
             {
                 var plan = MsSqlInsertTranslator.Plan(command, container);
                 return plan.IsSuccess
-                    ? GenericResult<int>.Success(await MsSqlBulkCopy.Write(plan.Value!, connection, transaction, cancellationToken))
+                    ? GenericResult<int>.Success(await MsSqlBulkCopy.Write(plan.Value!, new MsSqlBulkCopySettings(1000, 300, TableLock: false), connection, transaction, cancellationToken))
                     : plan.ToNewResult<int>();
             }
 

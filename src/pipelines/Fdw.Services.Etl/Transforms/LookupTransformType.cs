@@ -38,6 +38,10 @@ public sealed class LookupTransformType : TransformTypeBase
     // run, so the cache lives exactly as long as the run does and every page of that run shares it.
     private const string RecordCacheKey = "Fdw.Services.Etl.Transforms.LookupTransformType.RecordCache";
 
+    // Where a run's keys that matched nothing live, beside its records (FDW-4960): a key a batch query asked for and did not get back
+    // is left out of every later batch's query in the run, so a miss is asked for once, as a hit is.
+    private const string MissCacheKey = "Fdw.Services.Etl.Transforms.LookupTransformType.MissCache";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LookupTransformType"/> class.
     /// </summary>
@@ -229,6 +233,22 @@ public sealed class LookupTransformType : TransformTypeBase
         }
     }
 
+    private static ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> MissCacheOf(ITransformContext context)
+    {
+        // Got or created under the same lock as the record cache, for the same reason: SharedState is a plain Dictionary.
+        lock (context.SharedState)
+        {
+            if (!context.SharedState.TryGetValue(MissCacheKey, out var existing))
+            {
+                var created = new ConcurrentDictionary<string, ConcurrentDictionary<string, byte>>(StringComparer.OrdinalIgnoreCase);
+                context.SharedState[MissCacheKey] = created;
+                return created;
+            }
+
+            return (ConcurrentDictionary<string, ConcurrentDictionary<string, byte>>)existing!;
+        }
+    }
+
     // A lookup that cannot load its reference data cannot tell a missing key from a key it never looked up, so the
     // stage fails: StageRunner.RunBatch returns the first stage failure and the run stops with the reason.
     private static async Task<IGenericResult> Preload(
@@ -265,10 +285,11 @@ public sealed class LookupTransformType : TransformTypeBase
         CancellationToken cancellationToken)
     {
         var recordCache = RecordCacheOf(context).GetOrAdd(cacheKey, _ => new ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>(StringComparer.OrdinalIgnoreCase));
+        var missCache = MissCacheOf(context).GetOrAdd(cacheKey, _ => new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase));
 
         var keysToLookup = inputList
             .Select(r => r.TryGetValue(sample.SourceKeyField, out var v) ? v?.ToString() : null)
-            .Where(k => k != null && !recordCache.ContainsKey(k!))
+            .Where(k => k != null && !recordCache.ContainsKey(k!) && !missCache.ContainsKey(k!))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -288,6 +309,11 @@ public sealed class LookupTransformType : TransformTypeBase
         foreach (var kvp in batchResult.Value!)
         {
             recordCache.TryAdd(kvp.Key, kvp.Value);
+        }
+
+        foreach (var missed in keysToLookup.OfType<string>().Where(key => !batchResult.Value.ContainsKey(key)))
+        {
+            missCache.TryAdd(missed, 0);
         }
 
         EtlLog.LookupBatchPreloaded(context.Logger, transformName, batchResult.Value!.Count, SourceName(sample));

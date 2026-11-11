@@ -101,9 +101,11 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     /// Gets or sets the default command timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3284).
     /// </summary>
     /// <remarks>
-    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultCommandTimeoutSeconds, and
-    /// is not built when that is not set either.
+    /// No number is assumed here or in the column. A connection that states none takes the default its connection type declares
+    /// (<c>SqliteConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before Register (FDW-4904). A create that leaves it out stores
+    /// nothing (<see cref="ResolvedAtUseAttribute"/>), so the default is resolved each time the connection is built.
     /// </remarks>
+    [ResolvedAtUse]
     public int? DefaultTimeout { get; set; }
 
     // ========================================

@@ -42,16 +42,6 @@
     <Using Include="Moq" />
   </ItemGroup>
 
-  <!-- Local NuGet Development Configuration (inherits IsLocalConfiguration from parent) -->
-  <PropertyGroup>
-    <!-- Default config filename - can be overridden in project files -->
-    <LocalNugetConfigFileName Condition="'$(LocalNugetConfigFileName)' == ''">Fdw.Local.nuget.config</LocalNugetConfigFileName>
-  </PropertyGroup>
-
-  <!-- Use local NuGet config when using a -Local configuration and LocalNugetFolder is set -->
-  <PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
-    <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
-  </PropertyGroup>
 
   <!--
     The connection-role holders (PlatformConnection, ServerConnection, AuthConnection) have no default: a host declares

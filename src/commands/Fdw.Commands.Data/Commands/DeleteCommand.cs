@@ -42,7 +42,7 @@ namespace Fdw.Commands.Data;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Delete", RestrictToCurrentCompilation = true)]
-public sealed class DeleteCommand : DataCommandBase<int>, IDeleteScopeCommand, ISoftDeletableCommand
+public sealed class DeleteCommand : DataCommandBase<int>, IDeleteScopeCommand, ISoftDeletableCommand, IScopeNarrowableCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteCommand"/> class.
@@ -75,4 +75,17 @@ public sealed class DeleteCommand : DataCommandBase<int>, IDeleteScopeCommand, I
     /// <see cref="Filter"/> matches and, when the options carry a source set, the keys absent from it.
     /// </summary>
     public SoftDeleteOptions? SoftDelete { get; init; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A delete of every row narrowed to a scope deletes the scope's rows: <see cref="AllRows"/> is cleared and the scope is its filter, so the
+    /// copy still states which rows it deletes (DeleteScope). Soft-delete and metadata are kept (FDW-5069).
+    /// </remarks>
+    public IDataCommand NarrowedTo(IFilterExpression scope) => new DeleteCommand
+    {
+        Filter = ScopedFilter.And(scope, Filter),
+        AllRows = false,
+        SoftDelete = SoftDelete,
+        Metadata = Metadata,
+    };
 }

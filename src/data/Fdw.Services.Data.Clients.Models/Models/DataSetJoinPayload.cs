@@ -13,6 +13,6 @@ public sealed class DataSetJoinPayload
     public string RightSource { get; set; } = string.Empty;
     /// <summary>Gets or sets the right field name.</summary>
     public string RightField { get; set; } = string.Empty;
-    /// <summary>Gets or sets the join type.</summary>
-    public string JoinType { get; set; } = "Inner";
+    /// <summary>Gets or sets the join type (Inner, Left, Right, Full, Cross). Required: a join without one is refused, never taken as Inner (FDW-5099).</summary>
+    public string JoinType { get; set; } = string.Empty;
 }

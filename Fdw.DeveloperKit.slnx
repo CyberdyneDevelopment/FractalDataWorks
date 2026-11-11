@@ -1,13 +1,9 @@
 <Solution>
   <Configurations>
     <BuildType Name="Debug" />
-    <BuildType Name="Debug-Local" />
     <BuildType Name="Develop" />
-    <BuildType Name="Develop-Local" />
     <BuildType Name="Release" />
-    <BuildType Name="Release-Local" />
     <BuildType Name="Test" />
-    <BuildType Name="Test-Local" />
   </Configurations>
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <!-- Solution Items                                                                    -->
@@ -525,11 +521,7 @@
   </Folder>
   <Folder Name="/tests/_cross/">
     <Project Path="tests/_cross/Fdw.ContractParity.Tests/Fdw.ContractParity.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/_cross/Fdw.Integration.Tests/Fdw.Integration.Tests.csproj" />
@@ -540,39 +532,23 @@
   <Folder Name="/tests/ai/" />
   <Folder Name="/tests/ai/aegis/">
     <Project Path="tests/ai/aegis/Fdw.Aegis.Abstractions.Tests/Fdw.Aegis.Abstractions.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/ai/aegis/Fdw.Aegis.McpServer.Tests/Fdw.Aegis.McpServer.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/ai/agents/">
     <Project Path="tests/ai/agents/Fdw.Aui.Tests/Fdw.Aui.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/calculations/">
     <Project Path="tests/calculations/Fdw.Services.Calculations.Tests/Fdw.Services.Calculations.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/calculations/Fdw.Web.Calculations.Clients.Tests/Fdw.Web.Calculations.Clients.Tests.csproj" />
@@ -585,16 +561,16 @@
     <Project Path="tests/commands/Fdw.Commands.Abstractions.Tests/Fdw.Commands.Abstractions.Tests.csproj" />
     <Project Path="tests/commands/Fdw.Commands.Data.Abstractions.Tests/Fdw.Commands.Data.Abstractions.Tests.csproj" />
     <Project Path="tests/commands/Fdw.Commands.Data.Fluency.Tests/Fdw.Commands.Data.Fluency.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/commands/Fdw.Commands.Data.Tests/Fdw.Commands.Data.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/configuration/">
+    <Project Path="tests/configuration/Fdw.Configuration.Endpoints.Tests/Fdw.Configuration.Endpoints.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/configuration/Fdw.Configuration.SourceGenerators.Tests/Fdw.Configuration.SourceGenerators.Tests.csproj" />
     <Project Path="tests/configuration/Fdw.Configuration.Tests/Fdw.Configuration.Tests.csproj" />
     <Project Path="tests/configuration/Fdw.Services.Settings.Tests/Fdw.Services.Settings.Tests.csproj" />
@@ -607,38 +583,22 @@
     <Project Path="tests/connections/Fdw.Services.Connections.Clients.Tests/Fdw.Services.Connections.Clients.Tests.csproj" />
     <Project Path="tests/connections/Fdw.Services.Connections.Http.Abstractions.Tests/Fdw.Services.Connections.Http.Abstractions.Tests.csproj" />
     <Project Path="tests/connections/Fdw.Services.Connections.Http.Tests/Fdw.Services.Connections.Http.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/connections/Fdw.Services.Connections.Limits.Tests/Fdw.Services.Connections.Limits.Tests.csproj" />
     <Project Path="tests/connections/Fdw.Services.Connections.PostgreSql.Tests/Fdw.Services.Connections.PostgreSql.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/connections/Fdw.Services.Connections.RoslynWorkspace.Abstractions.Tests/Fdw.Services.Connections.RoslynWorkspace.Abstractions.Tests.csproj" />
     <Project Path="tests/connections/Fdw.Services.Connections.RoslynWorkspace.Tests/Fdw.Services.Connections.RoslynWorkspace.Tests.csproj" />
     <Project Path="tests/connections/Fdw.Services.Connections.Sql.Tests/Fdw.Services.Connections.Sql.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/connections/Fdw.Services.Connections.TestDouble/Fdw.Services.Connections.TestDouble.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/connections/Fdw.Services.Connections.Tests/Fdw.Services.Connections.Tests.csproj" />
@@ -648,11 +608,7 @@
     <Project Path="tests/data/Fdw.Data.Builders.Tests/Fdw.Data.Builders.Tests.csproj" />
     <Project Path="tests/data/Fdw.Data.DataContainers.Abstractions.Tests/Fdw.Data.DataContainers.Abstractions.Tests.csproj" />
     <Project Path="tests/data/Fdw.Data.DataNodes.Tests/Fdw.Data.DataNodes.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/data/Fdw.Data.Importers.Abstractions.Tests/Fdw.Data.Importers.Abstractions.Tests.csproj" />
@@ -661,27 +617,15 @@
     <Project Path="tests/data/Fdw.Services.Data.Abstractions.Tests/Fdw.Services.Data.Abstractions.Tests.csproj" />
     <Project Path="tests/data/Fdw.Services.Data.Clients.Tests/Fdw.Services.Data.Clients.Tests.csproj" />
     <Project Path="tests/data/Fdw.Services.Data.Endpoints.Tests/Fdw.Services.Data.Endpoints.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/data/Fdw.Services.Data.Etl.Tests/Fdw.Services.Data.Etl.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/data/Fdw.Services.Data.Tests/Fdw.Services.Data.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/data/Fdw.Services.Execution.Abstractions.Tests/Fdw.Services.Execution.Abstractions.Tests.csproj" />
@@ -695,37 +639,21 @@
   </Folder>
   <Folder Name="/tests/documents/">
     <Project Path="tests/documents/Fdw.Documents.Abstractions.Tests/Fdw.Documents.Abstractions.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/documents/Fdw.Documents.Records.Abstractions.Tests/Fdw.Documents.Records.Abstractions.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/documents/Fdw.Documents.Records.Tests/Fdw.Documents.Records.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/endpoints/">
     <Project Path="tests/endpoints/Fdw.Web.Api.Tests/Fdw.Web.Api.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/endpoints/Fdw.Web.Clients.Abstractions.Tests/Fdw.Web.Clients.Abstractions.Tests.csproj" />
@@ -740,11 +668,7 @@
   <Folder Name="/tests/foundation/analyzers/">
     <Project Path="tests/foundation/analyzers/Fdw.Analyzers.Tests/Fdw.Analyzers.Tests.csproj" />
     <Project Path="tests/foundation/analyzers/Fdw.Conventions.Analyzers.Tests/Fdw.Conventions.Analyzers.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/foundation/analyzers/Fdw.ServiceTypes.Analyzers.Tests/Fdw.ServiceTypes.Analyzers.Tests.csproj" />
@@ -762,19 +686,11 @@
   <Folder Name="/tests/foundation/registration/">
     <Project Path="tests/foundation/registration/Fdw.Registration.SourceGenerators.Tests/Fdw.Registration.SourceGenerators.Tests.csproj" />
     <Project Path="tests/foundation/registration/Fdw.Services.Registration.SourceGenerators.Tests/Fdw.Services.Registration.SourceGenerators.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/foundation/registration/Fdw.Services.Registration.Tests/Fdw.Services.Registration.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
@@ -784,19 +700,11 @@
   </Folder>
   <Folder Name="/tests/foundation/security/">
     <Project Path="tests/foundation/security/Fdw.Security.Encryption.Tests/Fdw.Security.Encryption.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/foundation/security/Fdw.Security.Hashing.Tests/Fdw.Security.Hashing.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
@@ -810,11 +718,7 @@
   </Folder>
   <Folder Name="/tests/hosts/">
     <Project Path="tests/hosts/Fdw.SignalR.Tests/Fdw.SignalR.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
@@ -823,27 +727,15 @@
     <Project Path="tests/identity/authentication/Fdw.Services.Authentication.Abstractions.Tests/Fdw.Services.Authentication.Abstractions.Tests.csproj" />
     <Project Path="tests/identity/authentication/Fdw.Services.Authentication.Tests/Fdw.Services.Authentication.Tests.csproj" />
     <Project Path="tests/identity/authentication/Fdw.Services.ExternalIdentityProviders.Tests/Fdw.Services.ExternalIdentityProviders.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/identity/authentication/Fdw.Services.Identity.Tests/Fdw.Services.Identity.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/identity/authentication/Fdw.Services.SessionState.Tests/Fdw.Services.SessionState.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
@@ -856,11 +748,7 @@
     <Project Path="tests/identity/multitenancy/Fdw.Services.Multitenancy.Abstractions.Tests/Fdw.Services.Multitenancy.Abstractions.Tests.csproj" />
     <Project Path="tests/identity/multitenancy/Fdw.Services.Multitenancy.Clients.Tests/Fdw.Services.Multitenancy.Clients.Tests.csproj" />
     <Project Path="tests/identity/multitenancy/Fdw.Services.Multitenancy.Endpoints.Tests/Fdw.Services.Multitenancy.Endpoints.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
@@ -868,21 +756,13 @@
     <Project Path="tests/identity/users/Fdw.Services.Users.Abstractions.Tests/Fdw.Services.Users.Abstractions.Tests.csproj" />
     <Project Path="tests/identity/users/Fdw.Services.Users.Clients.Tests/Fdw.Services.Users.Clients.Tests.csproj" />
     <Project Path="tests/identity/users/Fdw.Services.Users.Tests/Fdw.Services.Users.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/notifications/">
     <Project Path="tests/notifications/Fdw.Services.Messaging.Tests/Fdw.Services.Messaging.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/notifications/Fdw.Services.Notifications.Abstractions.Tests/Fdw.Services.Notifications.Abstractions.Tests.csproj" />
@@ -893,11 +773,7 @@
     <Project Path="tests/observability/quality/Fdw.Services.Quality.Abstractions.Tests/Fdw.Services.Quality.Abstractions.Tests.csproj" />
     <Project Path="tests/observability/quality/Fdw.Services.Quality.Clients.Tests/Fdw.Services.Quality.Clients.Tests.csproj" />
     <Project Path="tests/observability/quality/Fdw.Services.Quality.Tests/Fdw.Services.Quality.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
@@ -906,11 +782,7 @@
     <Project Path="tests/observability/resiliency/Fdw.Services.RateLimiting.Tests/Fdw.Services.RateLimiting.Tests.csproj" />
     <Project Path="tests/observability/resiliency/Fdw.Services.Resiliency.Abstractions.Tests/Fdw.Services.Resiliency.Abstractions.Tests.csproj" />
     <Project Path="tests/observability/resiliency/Fdw.Services.Resiliency.Polly.Tests/Fdw.Services.Resiliency.Polly.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/observability/resiliency/Fdw.Services.Resiliency.Tests/Fdw.Services.Resiliency.Tests.csproj" />
@@ -921,85 +793,49 @@
   <Folder Name="/tests/pipelines/">
     <Project Path="tests/pipelines/Fdw.Operations.Clients.Tests/Fdw.Operations.Clients.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Operations.Endpoints.Tests/Fdw.Operations.Endpoints.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/pipelines/Fdw.Operations.Tests/Fdw.Operations.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/pipelines/Fdw.Orchestration.Abstractions.Tests/Fdw.Orchestration.Abstractions.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Orchestration.Pipelines.Abstractions.Tests/Fdw.Orchestration.Pipelines.Abstractions.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Orchestration.Pipelines.Tests/Fdw.Orchestration.Pipelines.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/pipelines/Fdw.Services.Etl.Abstractions.Tests/Fdw.Services.Etl.Abstractions.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Services.Etl.Projects.Tests/Fdw.Services.Etl.Projects.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/pipelines/Fdw.Services.Etl.Tests/Fdw.Services.Etl.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/pipelines/Fdw.Services.EtlMappers.Abstractions.Tests/Fdw.Services.EtlMappers.Abstractions.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Services.EtlMappers.Dynamic.Tests/Fdw.Services.EtlMappers.Dynamic.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/pipelines/Fdw.Services.EtlMappers.Pooled.Tests/Fdw.Services.EtlMappers.Pooled.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/pipelines/Fdw.Services.EtlMappers.Tests/Fdw.Services.EtlMappers.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Services.Pipelines.Abstractions.Tests/Fdw.Services.Pipelines.Abstractions.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Services.Pipelines.Clients.Tests/Fdw.Services.Pipelines.Clients.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Services.Pipelines.Tests/Fdw.Services.Pipelines.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/rowsources/">
     <Project Path="tests/rowsources/Fdw.Data.RowSources.Abstractions.Tests/Fdw.Data.RowSources.Abstractions.Tests.csproj" />
     <Project Path="tests/rowsources/Fdw.Data.RowSources.RoundTrip.Tests/Fdw.Data.RowSources.RoundTrip.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/rowsources/Fdw.Data.RowSources.Tests/Fdw.Data.RowSources.Tests.csproj" />
@@ -1019,86 +855,50 @@
   <Folder Name="/tests/secrets/" />
   <Folder Name="/tests/secrets/credentials/">
     <Project Path="tests/secrets/credentials/Fdw.Services.Credentials.Tests/Fdw.Services.Credentials.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/secrets/secretmanagers/">
     <Project Path="tests/secrets/secretmanagers/Fdw.Services.SecretManagers.Abstractions.Tests/Fdw.Services.SecretManagers.Abstractions.Tests.csproj" />
     <Project Path="tests/secrets/secretmanagers/Fdw.Services.SecretManagers.TestDouble/Fdw.Services.SecretManagers.TestDouble.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/secrets/secretmanagers/Fdw.Services.SecretManagers.Tests/Fdw.Services.SecretManagers.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/tags/">
     <Project Path="tests/tags/Fdw.Services.Tags.Tests/Fdw.Services.Tags.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/tooling/" />
   <Folder Name="/tests/tooling/devsession/">
     <Project Path="tests/tooling/devsession/Fdw.DevSession.Tests/Fdw.DevSession.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/tooling/mcp/">
     <Project Path="tests/tooling/mcp/Fdw.Mcp.Bus.Tests/Fdw.Mcp.Bus.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/tooling/mcp/Fdw.Mcp.Hosting.SampleTools/Fdw.Mcp.Hosting.SampleTools.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/tooling/mcp/Fdw.Mcp.Hosting.Tests/Fdw.Mcp.Hosting.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/tooling/mcp/Fdw.WebMcp.Hosting.Tests/Fdw.WebMcp.Hosting.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/tooling/mcp/Fdw.WebMcp.Mcp.Tests/Fdw.WebMcp.Mcp.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
@@ -1108,19 +908,11 @@
     <Project Path="tests/tooling/roslyn/Fdw.CodeBuilder.Analysis.Tests/Fdw.CodeBuilder.Analysis.Tests.csproj" />
     <Project Path="tests/tooling/roslyn/Fdw.CodeBuilder.CSharp.Tests/Fdw.CodeBuilder.CSharp.Tests.csproj" />
     <Project Path="tests/tooling/roslyn/Fdw.Roslyn.Commands.Refactoring.Tests/Fdw.Roslyn.Commands.Refactoring.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/tooling/roslyn/Fdw.Roslyn.Commands.Tests/Fdw.Roslyn.Commands.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/tooling/roslyn/Fdw.Sql.Workspace.Tests/Fdw.Sql.Workspace.Tests.csproj" />
@@ -1128,21 +920,13 @@
   </Folder>
   <Folder Name="/tests/tooling/shells/">
     <Project Path="tests/tooling/shells/Fdw.VsCodeShell.Tests/Fdw.VsCodeShell.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/transformations/">
     <Project Path="tests/transformations/Fdw.Data.Transformations.Tests/Fdw.Data.Transformations.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
     </Project>
   </Folder>
   <Folder Name="/tests/ui/">
@@ -1152,19 +936,11 @@
   </Folder>
   <Folder Name="/tests/workspaces/">
     <Project Path="tests/workspaces/Fdw.Protocols.Tds.Tests/Fdw.Protocols.Tds.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/workspaces/Fdw.Tds.Endpoints.Tests/Fdw.Tds.Endpoints.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>

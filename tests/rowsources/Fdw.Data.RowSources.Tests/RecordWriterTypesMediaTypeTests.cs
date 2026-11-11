@@ -13,6 +13,7 @@ public class RecordWriterTypesMediaTypeTests
     [Theory]
     [Trait("Priority", "P1")]
     [InlineData("application/json", "Json")]
+    [InlineData("application/jsonl", "JsonLines")]
     [InlineData("application/xml", "Xml")]
     [InlineData("text/csv", "Delimited")]
     public void A_registered_media_type_resolves_to_its_format(string mediaType, string expectedFormat)
@@ -106,6 +107,7 @@ public class RecordWriterTypesMediaTypeTests
     [Theory]
     [Trait("Priority", "P1")]
     [InlineData("Json", "json")]
+    [InlineData("JsonLines", "jsonl")]
     [InlineData("Xml", "xml")]
     [InlineData("Delimited", "csv")]
     [InlineData("FixedWidth", "txt")]

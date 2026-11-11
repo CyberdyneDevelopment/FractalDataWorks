@@ -419,25 +419,25 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void UpdateBuildsOneUpdatePerRowMatchedOnTheKeyWritingOnlyTheWriteColumns()
+    public void UpdateBuildsOneBulkUpdateForTheWholeBatchMatchedOnTheKeyWritingOnlyTheWriteColumns()
     {
         // Arrange
         var row = Row(Column("Key", "Id"), Column("Write", "Name"));
         row.ValueSources = [Stamp("ModifiedAt")];
 
         // Act
-        var commands = Built("Update", Input(row, Rows(2)));
+        var commands = Built("Update", Input(row, Rows(250)));
 
-        // Assert
-        commands.Count.ShouldBe(2);
-        var second = commands[1].ShouldBeOfType<UpdateCommand<IDictionary<string, object?>>>();
-        second.Data.Keys.OrderBy(k => k, StringComparer.Ordinal).ShouldBe(new[] { "ModifiedAt", "Name" });
-        second.Data["Name"].ShouldBe("n2");
-        var condition = second.Filter!.Root.ShouldBeOfType<FilterCondition>();
-        condition.PropertyName.ShouldBe("Id");
-        condition.Operator.Name.ShouldBe("Equal");
-        condition.Value.ShouldBe(2);
-        second.SoftDelete.ShouldBeNull();
+        // Assert: one command for 250 rows, never one per row (FDW-4953)
+        var update = commands.ShouldHaveSingleItem().ShouldBeOfType<BulkUpdateCommand<IDictionary<string, object?>>>();
+        update.Data.Count().ShouldBe(250);
+        update.Options.KeyColumns.ShouldBe(new[] { "Id" });
+        update.Options.SetColumns.ShouldBe(new[] { "Name", "ModifiedAt" });
+        var second = update.Data.ElementAt(1);
+        second.Keys.OrderBy(k => k, StringComparer.Ordinal).ShouldBe(new[] { "Id", "ModifiedAt", "Name" });
+        second["Id"].ShouldBe(2);
+        second["Name"].ShouldBe("n2");
+        update.SoftDelete.ShouldBeNull();
     }
 
     [Fact]
@@ -462,18 +462,17 @@ public sealed class LoadStepCommandBuilderTests
         var row = Row(Column("Key", "Id"), Column("Key", "Status", 1), Column("Write", "Name"));
 
         // Act
-        var command = Built("Update", Input(row, Rows(1)))[0].ShouldBeOfType<UpdateCommand<IDictionary<string, object?>>>();
+        var command = Built("Update", Input(row, Rows(1)))[0].ShouldBeOfType<BulkUpdateCommand<IDictionary<string, object?>>>();
 
         // Assert
-        var group = command.Filter!.Root.ShouldBeOfType<FilterGroup>();
-        group.Operator.Name.ShouldBe("And");
-        group.Nodes.Cast<FilterCondition>().Select(c => c.PropertyName).ShouldBe(new[] { "Id", "Status" });
+        command.Options.KeyColumns.ShouldBe(new[] { "Id", "Status" });
+        command.Data.Single().Keys.OrderBy(k => k, StringComparer.Ordinal).ShouldBe(new[] { "Id", "Name", "Status" });
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void UpdateWithAMarkerSoftDeleteCarriesTheSoftDeleteOnEveryUpdate()
+    public void UpdateWithAMarkerSoftDeleteCarriesTheSoftDeleteOnTheBulkUpdate()
     {
         // Arrange
         var row = Row(Column("Key", "Id"), Column("Write", "Name"));
@@ -487,8 +486,7 @@ public sealed class LoadStepCommandBuilderTests
         var commands = Built("Update", Input(row, Rows(2)));
 
         // Assert
-        commands.Cast<UpdateCommand<IDictionary<string, object?>>>().ShouldAllBe(c => c.SoftDelete != null);
-        var soft = commands.Cast<UpdateCommand<IDictionary<string, object?>>>().First().SoftDelete!;
+        var soft = commands.ShouldHaveSingleItem().ShouldBeOfType<BulkUpdateCommand<IDictionary<string, object?>>>().SoftDelete.ShouldNotBeNull();
         soft.Marker!.Column.ShouldBe("Status");
         soft.Marker.Value.ShouldBe("closed");
     }
@@ -524,6 +522,28 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
+    public void UpdateRefusesALoadThatWritesOnlyItsKeys()
+    {
+        // Arrange
+        var row = Row(Column("Key", "Id"), Column("Write", "Id", 1));
+
+        // Act / Assert
+        var result = LoadStepCommandBuilders.ByName("Update").Build(Input(row));
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("not a key column");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void UpdateOfNoRowsBuildsNothing()
+    {
+        Built("Update", Input(Row(Column("Key", "Id"), Column("Write", "Name")), [])).ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
     public void UpdateRefusesASequenceValueSource()
     {
         // Arrange
@@ -539,19 +559,34 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void DeleteBuildsOneHardDeletePerRowMatchedOnTheKey()
+    public void DeleteBuildsOneBulkDeleteForTheWholeBatchMatchedOnTheKey()
     {
         // Arrange
         var row = Row(Column("Key", "Id"));
 
         // Act
-        var commands = Built("Delete", Input(row, Rows(2)));
+        var commands = Built("Delete", Input(row, Rows(250)));
 
-        // Assert
-        commands.Count.ShouldBe(2);
-        var first = commands[0].ShouldBeOfType<DeleteCommand>();
-        first.SoftDelete.ShouldBeNull();
-        first.Filter!.Root.ShouldBeOfType<FilterCondition>().Value.ShouldBe(1);
+        // Assert: one command for 250 rows, never one per row (FDW-4954)
+        var delete = commands.ShouldHaveSingleItem().ShouldBeOfType<BulkDeleteCommand<IDictionary<string, object?>>>();
+        delete.SoftDelete.ShouldBeNull();
+        delete.Options.KeyColumns.ShouldBe(new[] { "Id" });
+        delete.Data.Count().ShouldBe(250);
+        delete.Data.First().Keys.ShouldBe(new[] { "Id" });
+        delete.Data.First()["Id"].ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void DeleteRefusesARowWithNoValueForTheKey()
+    {
+        // Arrange
+        var rows = Rows(2);
+        rows[1]["Id"] = null;
+
+        // Act / Assert
+        Refused("Delete", Input(Row(Column("Key", "Id")), rows), "PIPELINERUN-20227", "Id");
     }
 
     [Fact]
@@ -571,8 +606,9 @@ public sealed class LoadStepCommandBuilderTests
         var commands = Built("Delete", Input(row, Rows(2)));
 
         // Assert
-        commands.Count.ShouldBe(2);
-        commands.Cast<DeleteCommand>().ShouldAllBe(c => c.SoftDelete != null && c.Filter != null);
+        var delete = commands.ShouldHaveSingleItem().ShouldBeOfType<BulkDeleteCommand<IDictionary<string, object?>>>();
+        delete.SoftDelete.ShouldNotBeNull().Marker!.Column.ShouldBe("Status");
+        delete.Data.Count().ShouldBe(2);
     }
 
     [Fact]

@@ -10,7 +10,7 @@ namespace Fdw.Services.Scheduling.Abstractions.Configuration;
 /// </summary>
 /// <remarks>
 /// The three fields live on the schedule's implementation row, so the write goes through the provider that owns that container and not through whatever container a job
-/// was told to write. It changes those columns on the current row and writes no new version: a schedule's version and its failure counts key on the row's ModifyDate.
+/// was told to write. It changes those columns on the current row and writes no new version. The update restamps the row's ModifyDate like any other UPDATE; nothing in scheduling reads ModifyDate as a version key.
 /// </remarks>
 public interface IScheduleRunRecorder
 {

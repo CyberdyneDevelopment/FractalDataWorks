@@ -22,6 +22,6 @@ public sealed class FilterMatchesSoftDeleteMode : SoftDeleteModeBase
     {
         if (options.Marker is not null)
             return Problem("a filter-matches soft delete takes no marker");
-        return options.AbsentFromSource is not null ? Problem("a filter-matches soft delete takes no source set") : null;
+        return options.AbsentFromSource is not null || options.AbsentFromStage is not null ? Problem("a filter-matches soft delete takes no source set") : null;
     }
 }

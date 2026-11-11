@@ -146,16 +146,13 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
         var bindings = ofChild.Where(b => b.Key.IsOwner).ToList();
         if (bindings.Count == 0)
         {
-            var physical = parent.Keys
-                .FirstOrDefault(k => string.Equals(k.KeyType.Name, "Physical", StringComparison.Ordinal) && k.KeyFields.Count > 0)?
-                .KeyFields[0].LocalField.Name;
-            if (physical is null)
+            if (parent.PhysicalKeyField() is null)
                 return GenericResult<ReferencingKeyBinding>.Failure(
                     DefaultConfigurationProviderLog.PhysicalKeyNotDeclared(logger, parent.Name, childContainer));
 
-            bindings = ofChild
-                .Where(b => string.Equals(b.Key.KeyFields[0].ReferencedField?.Name, physical, StringComparison.Ordinal))
-                .ToList();
+            // No key is declared the owner here, so the one rule the read side also uses (DataContainerOwnership, FDW-4644) picks the key to
+            // the parent's Physical key.
+            bindings = ofChild.Where(b => b.Key.HoldsOwnerUnder(parent)).ToList();
         }
         if (bindings.Count == 0)
             return GenericResult<ReferencingKeyBinding>.Failure(
@@ -185,10 +182,20 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
     /// A record's own rows are read back mid-operation -- to find what a delete must retire, or
     /// whether a name already has a domain row. Reading those through the gateway instead would use a
     /// second connection, which blocks on the locks this unit is holding and waits until the command
-    /// times out. Nothing is recorded for invalidation: a read changes nothing.
+    /// times out. Nothing is recorded for invalidation: a read changes nothing. A command that is not a query is
+    /// refused, since a write run here would drop no cached read of what it changed (FDW-4782); a write goes
+    /// through <see cref="Write"/> or the scope's other write paths.
     /// </remarks>
     public Task<IGenericResult<T>> Read<T>(IDataCommand command, DataStoreTarget target, CancellationToken ct)
-        => _transaction.Execute<T>(command, target, ct);
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(target);
+
+        return command is IQueryCommand
+            ? _transaction.Execute<T>(command, target, ct)
+            : Task.FromResult<IGenericResult<T>>(GenericResult<T>.Failure(
+                DefaultConfigurationProviderLog.WriteScopeReadNotAQuery(_logger, command.CommandType, target.Container)));
+    }
 
     /// <summary>Runs one write whose row type is only known at runtime inside the unit of work.</summary>
     internal async Task<IGenericResult> Execute(IDataCommand command, DataStoreTarget target, CancellationToken ct)

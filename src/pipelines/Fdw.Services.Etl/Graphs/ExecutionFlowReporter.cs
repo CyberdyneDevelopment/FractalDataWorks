@@ -181,6 +181,8 @@ public sealed class ExecutionFlowReporter : IFlowReporter
             ["targetEmptied"] = commit.TargetEmptied,
             ["wholeSet"] = commit.WholeSet,
             ["repeatsToSameResult"] = commit.RepeatsToSameResult,
+            ["unmatchedKeys"] = commit.UnmatchedKeys,
+            ["unmatchedSample"] = commit.UnmatchedSample,
         }, cancellationToken);
     }
 

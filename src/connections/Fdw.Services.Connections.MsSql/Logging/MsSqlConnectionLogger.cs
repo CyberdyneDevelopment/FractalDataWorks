@@ -412,6 +412,16 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage SqlBlockPredicateViolation(ILogger logger, Exception ex, string commandText);
 
     /// <summary>
+    /// Logs the sweep of a staged key set refused because the stage did not hold the rows the load appended (FDW-4956); nothing was flagged.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="ex">The SQL exception.</param>
+    /// <param name="counts">The database's words: the rows the stage holds for the load and the rows it appended.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(EventId = 40002, Level = LogLevel.Error, Message = "The absent-key sweep was refused and flagged nothing: {counts}")]
+    public static partial IGenericMessage SqlStageRowCountMismatch(ILogger logger, Exception ex, string counts);
+
+    /// <summary>
     /// Logs when a foreign key constraint refused a statement (error 547): a referenced row is missing, or the row is still referenced.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
@@ -605,4 +615,9 @@ public static partial class MsSqlConnectionLogger
     // is not a database failure, and nothing was sent.
     [MessageLogging(EventId = 20001, Level = LogLevel.Error, Message = "Input '{name}' is invalid: {reason}")]
     public static partial IGenericMessage SessionContextInputInvalid(ILogger logger, string name, string reason);
+
+    /// <summary>Logs a session context batch asked to run under a timeout below one second (FDW-4904); zero would mean "no timeout", so nothing is sent.</summary>
+    [MessageLogging(EventId = 61006, Level = LogLevel.Error,
+        Message = "The session context batch was given a timeout of {timeoutSeconds} seconds; it must be at least one second")]
+    public static partial IGenericMessage SessionContextTimeoutNotPositive(ILogger logger, int timeoutSeconds);
 }

@@ -75,7 +75,7 @@ public sealed partial class MsSqlInsertTranslator
     }
 
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // DataTable conversion with type inference from field metadata and switch-based type mapping
-    private static IGenericResult<DataTable> ConvertToDataTable(IEnumerable collection, List<IField> fields, string container)
+    internal static IGenericResult<DataTable> ConvertToDataTable(IEnumerable collection, List<IField> fields, string container)
     {
         var dataTable = new DataTable();
 

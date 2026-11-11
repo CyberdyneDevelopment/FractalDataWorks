@@ -21,8 +21,8 @@ namespace Fdw.Services.Etl.Transforms;
 /// supplies for its inputs, in process.
 /// </summary>
 /// <remarks>
-/// The calculation is compiled by the same engine and against the same limit settings as a Compute stage, and may yield a date-time,
-/// which a Compute stage may not. The current time comes from the <see cref="TimeProvider"/> the host registered, once per
+/// The calculation is compiled by the same engine and against the same limit settings as a Compute stage, and may yield a number, a date or a date-time.
+/// The current time comes from the <see cref="TimeProvider"/> the host registered, once per
 /// evaluation. Every input the calculation declares needs a value and every value needs a declared input; a missing one fails the
 /// evaluation naming the calculation and the input, and nothing is assumed.
 /// </remarks>
@@ -33,6 +33,7 @@ public sealed class BuiltFilterCalculations : IFilterCalculations
     {
         ["Number"] = typeof(decimal),
         ["Flag"] = typeof(bool),
+        ["Date"] = typeof(DateOnly),
     };
 
     private readonly ITransformationConfigurationProvider _transformations;

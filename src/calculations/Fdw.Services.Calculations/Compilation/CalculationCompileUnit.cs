@@ -48,8 +48,8 @@ internal sealed class CalculationCompileUnit
     {
         var rootIndex = _labels.Count;
         var body = Emit(result.Expression, typeof(decimal));
-        var moment = CalculationCoercion.IsDateTime(body.Type);
-        var slot = Expression.Variable(moment ? typeof(DateTimeOffset) : typeof(decimal), result.Name);
+        var moment = CalculationCoercion.IsMoment(body.Type);
+        var slot = Expression.Variable(moment ? body.Type : typeof(decimal), result.Name);
         var steps = new List<Expression>
         {
             Expression.Assign(Expression.Property(_state, nameof(CalculationRunState.Current)), Expression.Constant(resultIndex)),
@@ -80,12 +80,20 @@ internal sealed class CalculationCompileUnit
             _state,
             _results).Compile();
 
-    // A number goes into the results array as it is; a date-time goes in as its UTC ticks (CalculationValueKindBase explains why).
-    private static Expression Carried(ParameterExpression slot) =>
-        slot.Type == typeof(decimal)
-            ? slot
-            : Expression.Call(typeof(CalculationRuntime).GetMethod(nameof(CalculationRuntime.Carry))
-                ?? throw new InvalidOperationException("CalculationRuntime.Carry was not found"), slot);
+    // A number goes into the results array as it is; a date goes in as its day number and a date-time as its UTC ticks
+    // (CalculationValueKindBase explains why).
+    private static Expression Carried(ParameterExpression slot)
+    {
+        if (slot.Type == typeof(decimal))
+        {
+            return slot;
+        }
+
+        var carry = CalculationCoercion.IsDate(slot.Type) ? nameof(CalculationRuntime.CarryDate) : nameof(CalculationRuntime.Carry);
+        return Expression.Call(
+            typeof(CalculationRuntime).GetMethod(carry) ?? throw new InvalidOperationException($"CalculationRuntime.{carry} was not found"),
+            slot);
+    }
 
     private static ICalculationValueKind KindOf(Type type)
     {
@@ -125,7 +133,7 @@ internal sealed class CalculationCompileUnit
 
     private ParameterExpression FieldSlot(string field, Type type, int node)
     {
-        var key = (type == typeof(bool) ? "flag:" : "number:") + field;
+        var key = FieldSlotKind(type) + ":" + field;
         if (_fieldSlots.TryGetValue(key, out var existing))
         {
             return existing;
@@ -138,9 +146,15 @@ internal sealed class CalculationCompileUnit
         return slot;
     }
 
+    // One slot per field and way of reading it, so a field read as a number and as a date by two nodes gets two slots.
+    private static string FieldSlotKind(Type type) =>
+        type == typeof(bool) ? "flag" : type == typeof(DateOnly) ? "date" : "number";
+
     private MethodCallExpression ReadCall(string field, Type type, int node)
     {
-        var reader = type == typeof(bool) ? nameof(CalculationRuntime.ReadFlag) : nameof(CalculationRuntime.ReadNumber);
+        var reader = type == typeof(bool) ? nameof(CalculationRuntime.ReadFlag)
+            : type == typeof(DateOnly) ? nameof(CalculationRuntime.ReadDate)
+            : nameof(CalculationRuntime.ReadNumber);
         return Expression.Call(
             typeof(CalculationRuntime).GetMethod(reader) ?? throw new InvalidOperationException($"CalculationRuntime.{reader} was not found"),
             _record,

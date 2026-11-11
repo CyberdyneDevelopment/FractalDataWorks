@@ -63,6 +63,15 @@ public sealed class FlowExecutor : IFlowExecutor
 
         var stopwatch = Stopwatch.StartNew();
         var run = FlowRun.Build(graph, options.LinkCapacity, options.PauseGate);
+        foreach (var component in graph.Components)
+        {
+            if (component is IFlowRejectionsBound bound)
+            {
+                var name = component.Name;
+                bound.BindRejections(() => run.RejectedUpstreamOf(graph, name));
+            }
+        }
+
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Why the graph is opened here: the live view lists a graph's components from the moment it is wired, so a component that waits for its stage is seen waiting.

@@ -143,6 +143,16 @@ public static partial class FlowLog
         Message = "Flow source '{component}' could not read rows (skipping {skipped}): {reason}")]
     public static partial IGenericMessage SourceReadFailed(ILogger logger, string component, int skipped, string? reason);
 
+    /// <summary>Logs a source whose rows could not be opened for reading in a stable order (FDW-4911).</summary>
+    [MessageLogging(EventId = 70933, Level = LogLevel.Error,
+        Message = "Flow source '{component}' could not open its rows: {reason}")]
+    public static partial IGenericMessage SourceOpenFailed(ILogger logger, string component, string? reason);
+
+    /// <summary>Logs a source whose read failed part way, after some rows went out (FDW-4911).</summary>
+    [MessageLogging(EventId = 70934, Level = LogLevel.Error,
+        Message = "Flow source '{component}' failed after {rows} rows: {reason}")]
+    public static partial IGenericMessage SourceRecordFailed(ILogger logger, string component, int rows, string? reason);
+
     /// <summary>Logs a source whose read succeeded and returned no row set.</summary>
     [MessageLogging(EventId = 20926, Level = LogLevel.Error,
         Message = "Flow source '{component}' read succeeded but returned no row set")]

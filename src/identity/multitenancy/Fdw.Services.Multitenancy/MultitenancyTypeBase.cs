@@ -88,6 +88,7 @@ public abstract class MultitenancyTypeBase<TFactory> :
 
         services.TryAddSingleton<IConfigurationPlacement>(sp => new DefaultWorkspacePlacement(
             sp.GetRequiredService<IAuthenticationContextAccessor>(),
+            sp.GetRequiredService<IWorkspaceFoundingPolicy>(),
             MultitenancyTypes.ConfigurationConnection,
             WorkspacePathName,
             OrganizationPathName,

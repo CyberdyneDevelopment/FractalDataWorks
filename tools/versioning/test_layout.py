@@ -85,7 +85,7 @@ class LayoutTests(unittest.TestCase):
             repo = self.repo(shape(base_files()))
             base = repo.git("rev-parse", "HEAD")
             repo.commit(shape({"public/src/C/C.cs": "class C { int x; }\n"}), "change")
-            plans.append(release.release_plan(snapshot(repo.root), changeset.baseline_from_ref(repo.root, base), FakeFeed(held), [], "1.4",
+            plans.append(release.release_plan(snapshot(repo.root), changeset.baseline_from_ref(repo.root, base) | {"assemblyVersionFloors": {"A": "1.4.1.0"}, "packagesWithoutRuntimeAssembly": []}, FakeFeed(held), [], "1.4",
                                               lambda dirs: "patch", "Fdw.Bundle"))
         for key in ("versions", "trees", "manifest"):
             self.assertEqual(plans[0][key], plans[1][key], key)

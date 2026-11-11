@@ -26,6 +26,7 @@ internal static class BuiltTransformationSupport
 {
     private const string NumberType = "Number";
     private const string FlagType = "Flag";
+    private const string DateType = "Date";
 
     /// <summary>Checks and builds the configuration for a request.</summary>
     /// <param name="settings">Supplies the limits on a calculation.</param>
@@ -103,7 +104,9 @@ internal static class BuiltTransformationSupport
             return BuiltTransformationEndpointLog.InputRepeated(logger, input.Name);
         }
 
-        return string.Equals(input.ValueType, NumberType, StringComparison.Ordinal) || string.Equals(input.ValueType, FlagType, StringComparison.Ordinal)
+        return string.Equals(input.ValueType, NumberType, StringComparison.Ordinal)
+            || string.Equals(input.ValueType, FlagType, StringComparison.Ordinal)
+            || string.Equals(input.ValueType, DateType, StringComparison.Ordinal)
             ? null
             : BuiltTransformationEndpointLog.InputTypeUnknown(logger, input.Name, input.ValueType);
     }
@@ -125,8 +128,8 @@ internal static class BuiltTransformationSupport
         }
 
         var array = new CalculationArrayDefinition(name, definitions);
-        // Why a date-time result is accepted here: a definition saves when the engine can run it. What a result may be is the reader's
-        // rule: a query filter reads a date-time, and a Compute stage reads numbers and refuses a date-time when the run starts.
+        // Why a date or date-time result is accepted here: a definition saves when the engine can run it. Every reader (a query filter,
+        // a Compute stage) reads a result back through its value kind, so none of them refuses one.
         var checkedArray = CalculationArrayValidator.Validate(array, limits, allowDateTimeResults: true);
         return checkedArray.IsFailure
             ? checkedArray.ToNewResult<CalculationArrayDefinition>()

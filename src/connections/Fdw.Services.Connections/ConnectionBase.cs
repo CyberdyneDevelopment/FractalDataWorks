@@ -163,6 +163,13 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
                 return timed.ToNewResult<T>();
         }
 
+        // A write that reports its unmatched keys (FDW-4988) answers a summary set and a set of keys, read apart; it is placed after the timeout, so its limit applies.
+        if (UnmatchedKeysAnswer.Applies<T>(command))
+        {
+            var native = translationResult.Value;
+            return await UnmatchedKeysAnswer.Execute<T>(command, Logger, () => ExecuteResultSets(native, container, cancellationToken)).ConfigureAwait(false);
+        }
+
         // A command that names columns to return answers the rows it wrote, and a result of rows asks for the rows a command
         // reads: the native command is run for rows, not for a count.
         if (command is IReturningCommand { ReturnColumns.Count: > 0 } || typeof(T) == typeof(global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>))
@@ -191,6 +198,11 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     // its own result, answers that result); a command that cannot expand fails by name.
     private async Task<IGenericResult<T>> ExecuteWithoutTranslator<T>(IDataCommand command, IDataContainer container, CancellationToken cancellationToken)
     {
+        // Why refused (FDW-4988): an expansion runs one command per row and answers a summed count, so it cannot tell a key that matched no row from one whose
+        // write affected nothing; a write that reports its unmatched keys needs a kind that translates it.
+        if (command is IReportsUnmatchedKeys { UnmatchedKeySample: not null })
+            return GenericResult<T>.Failure(ConnectionLogger.UnmatchedKeysNeedTranslator(Logger, command.CommandType, Configuration.Name));
+
         if (command is IAssembledExpandableDataCommand<T> assembled)
             return await ExecuteAssembledExpansion(assembled, container, cancellationToken).ConfigureAwait(false);
 
@@ -365,6 +377,19 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     protected virtual Task<IGenericResult<global::System.Collections.Generic.IEnumerable<object>>> ExecuteRowsByType(
         TCommand command, IStorageContainer container, global::System.Type elementType, CancellationToken cancellationToken)
         => Task.FromResult(GenericResult<global::System.Collections.Generic.IEnumerable<object>>.Failure(ConnectionLogger.ExecutionFailed(Logger)));
+
+    /// <summary>
+    /// Executes a native command and reads each result set apart (FDW-4988), each row as a dictionary of its columns: the answer of a write that reports its
+    /// unmatched keys is a summary set and a set of keys. The base implementation fails loud; a kind that can read result sets overrides it.
+    /// </summary>
+    /// <param name="command">The native command to execute.</param>
+    /// <param name="container">The container the command writes to.</param>
+    /// <param name="cancellationToken">Cancellation token for the operation.</param>
+    /// <returns>The result sets in the order the batch selected them, or why they could not be read.</returns>
+    protected virtual Task<IGenericResult<global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>>>> ExecuteResultSets(
+        TCommand command, IStorageContainer container, CancellationToken cancellationToken)
+        => Task.FromResult(GenericResult<global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>>>.Failure(
+            ConnectionLogger.ResultSetsNotSupported(Logger, Configuration.Name)));
 
     /// <summary>
     /// Opens the unit of work an assembled command runs its steps in. A connection whose units cannot overlap overrides it to

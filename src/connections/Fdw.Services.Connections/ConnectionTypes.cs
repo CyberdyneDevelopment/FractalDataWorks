@@ -86,6 +86,26 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     /// </remarks>
     public static string ConfigurationConnection => PlatformConnection.Name;
 
+    /// <summary>
+    /// The shortest the connection health monitor waits between checks (FDW-970), however soon a connection falls due.
+    /// </summary>
+    /// <remarks>
+    /// This is where the default is declared, and a host changes it before <c>Register</c> runs (FDW-4904); a value that is not positive is
+    /// refused there. It is a tuning number: a shorter one checks a connection closer to when it falls due, a longer one reads the
+    /// connection catalog less often.
+    /// </remarks>
+    public static TimeSpan HealthCheckShortestWait { get; set; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// The longest the connection health monitor waits between checks (FDW-970), which is also the longest a newly enabled health check
+    /// waits to be noticed.
+    /// </summary>
+    /// <remarks>
+    /// This is where the default is declared, and a host changes it before <c>Register</c> runs (FDW-4904); a value below
+    /// <see cref="HealthCheckShortestWait"/> is refused there.
+    /// </remarks>
+    public static TimeSpan HealthCheckLongestWait { get; set; } = TimeSpan.FromMinutes(5);
+
     static ConnectionTypes()
     {
         var collectOptions = RegisterFunc;
@@ -98,6 +118,16 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ConnectionTypes>() ?? NullLogger<ConnectionTypes>.Instance;
+
+            // The bounds are read once, here, so a change made after Register does not apply half-way; bounds the monitor cannot use are
+            // refused here, where a host sets them, and not found later as a worker that throws when it is built.
+            var shortestWait = HealthCheckShortestWait;
+            var longestWait = HealthCheckLongestWait;
+            if (shortestWait <= TimeSpan.Zero || longestWait < shortestWait)
+            {
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    ConnectionHealthMonitorWorkerLog.ScanBoundsInvalid(log, shortestWait, longestWait));
+            }
 
             ConnectionProviderLogger.DomainConfigurationRegistering(
                 loggerFactory?.CreateLogger<ConnectionConfigurationProvider>()
@@ -198,14 +228,13 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                     ConnectionDisablingOption.Instance,
                     sp.GetService<ILogger<ConnectionDisabler>>()));
 
-            // The health monitor's scan bounds are stated here, where it is registered, and a host that
-            // wants others replaces this body. After each check it waits until the soonest enabled
-            // connection falls due, never less than the first and never more than the second, which is
-            // also the longest a newly enabled health check waits to be noticed (FDW-970).
+            // The health monitor's scan bounds are declared on this collection (HealthCheckShortestWait, HealthCheckLongestWait), where a
+            // host changes them before Register (FDW-4904). After each check it waits until the soonest enabled connection falls due, never
+            // less than the first and never more than the second (FDW-970).
             builder.Services.AddHostedService(sp => new ConnectionHealthMonitorWorker(
                 sp.GetRequiredService<IServiceScopeFactory>(),
-                TimeSpan.FromSeconds(15),
-                TimeSpan.FromMinutes(5),
+                shortestWait,
+                longestWait,
                 sp.GetService<ILogger<ConnectionHealthMonitorWorker>>()));
 
             builder.Services.TryAddSingleton<IDataConnectionProvider>(sp =>

@@ -39,6 +39,18 @@ public sealed class LoadUnit
     /// <summary>Gets where the load writes when it states a file or files and not the container as declared (FDW-3193); <see langword="null"/> otherwise.</summary>
     public LoadAddressing? Addressing { get; private init; }
 
+    /// <summary>
+    /// Gets the key this load stages its keys under (FDW-4956): an absent-key soft delete appends each batch's keys to its stage container with this
+    /// value and sweeps once at the end; <see langword="null"/> for a load that stages nothing.
+    /// </summary>
+    public string? StageKey { get; private init; }
+
+    /// <summary>
+    /// Gets how many unmatched keys this load's report carries (FDW-4988), for a load that finds existing rows by key; <see langword="null"/> for one that
+    /// matches nothing by key.
+    /// </summary>
+    public int? UnmatchedKeySample { get; private init; }
+
     /// <summary>Makes the unit of a load step.</summary>
     /// <param name="step">The step row; the validator has already checked it.</param>
     /// <returns>The unit.</returns>
@@ -73,5 +85,23 @@ public sealed class LoadUnit
     /// <param name="addressing">Where it writes; <see langword="null"/> leaves the load as it is.</param>
     /// <returns>The load with the addressing.</returns>
     public LoadUnit WithAddressing(LoadAddressing? addressing)
-        => addressing is null ? this : new LoadUnit(Owner, Kind, Row) { DataSet = DataSet, DataStore = DataStore, Path = Path, Container = Container, Addressing = addressing };
+        => addressing is null ? this : new LoadUnit(Owner, Kind, Row) { DataSet = DataSet, DataStore = DataStore, Path = Path, Container = Container, Addressing = addressing, StageKey = StageKey, UnmatchedKeySample = UnmatchedKeySample };
+
+    /// <summary>Makes the same load staging its keys under <paramref name="stageKey"/> (FDW-4956).</summary>
+    /// <param name="stageKey">The value that tells this load's stage rows apart: the run's execution id and the component's name.</param>
+    /// <returns>The load with the stage key.</returns>
+    public LoadUnit WithStageKey(string stageKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(stageKey);
+        return new LoadUnit(Owner, Kind, Row) { DataSet = DataSet, DataStore = DataStore, Path = Path, Container = Container, Addressing = Addressing, StageKey = stageKey, UnmatchedKeySample = UnmatchedKeySample };
+    }
+
+    /// <summary>Makes the same load reporting up to <paramref name="unmatchedKeySample"/> keys that matched no row (FDW-4988).</summary>
+    /// <param name="unmatchedKeySample">How many unmatched keys a report carries; zero carries only the count.</param>
+    /// <returns>The load with the sample size.</returns>
+    public LoadUnit WithUnmatchedKeySample(int unmatchedKeySample)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(unmatchedKeySample);
+        return new LoadUnit(Owner, Kind, Row) { DataSet = DataSet, DataStore = DataStore, Path = Path, Container = Container, Addressing = Addressing, StageKey = StageKey, UnmatchedKeySample = unmatchedKeySample };
+    }
 }

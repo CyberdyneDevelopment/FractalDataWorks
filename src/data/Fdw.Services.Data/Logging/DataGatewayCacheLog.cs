@@ -34,6 +34,17 @@ public static partial class DataGatewayCacheLog
         Message = "DataGateway read for key '{cacheKey}' joined the read already in flight")]
     public static partial IGenericMessage InFlightJoined(ILogger logger, string cacheKey);
 
+    /// <summary>
+    /// Logs a read whose result was not kept, because a tag it depends on was invalidated after the read began: the
+    /// result may be from before that write (FDW-4782).
+    /// </summary>
+    // Why Debug: a per-read outcome, like the cache miss it replaces.
+    [MessageLogging(
+        EventId = 11307,
+        Level = LogLevel.Debug,
+        Message = "DataGateway result for key '{cacheKey}' was not cached: tag '{tag}' was invalidated while it was being read")]
+    public static partial IGenericMessage StaleResultNotKept(ILogger logger, string cacheKey, string tag);
+
     /// <summary>Logs tag-based cache invalidation with eviction count.</summary>
     [MessageLogging(
         EventId = 11029,

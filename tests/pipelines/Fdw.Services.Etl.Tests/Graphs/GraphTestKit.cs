@@ -198,6 +198,8 @@ internal static class GraphTestKit
             parameters ?? new Dictionary<string, object?>(),
             [],
             NullLogger.Instance,
+            TimeSpan.Zero,
+            10,
             etlGateway,
             notifier,
             null,

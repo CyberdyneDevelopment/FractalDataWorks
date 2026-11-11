@@ -84,4 +84,9 @@ public static partial class ConnectionHealthMonitorWorkerLog
     // Why Debug: a per-scan outcome, like the count of due connections it follows; nothing an operator acts on.
     [MessageLogging(EventId = 10001, Level = LogLevel.Debug, Message = "Next connection health scan in {seconds} second(s)")]
     public static partial IGenericMessage NextScanScheduled(ILogger logger, double seconds);
+
+    /// <summary>Logs scan bounds the host set that the monitor cannot use (FDW-4904); the host does not start.</summary>
+    [MessageLogging(EventId = 61008, Level = LogLevel.Critical,
+        Message = "ConnectionTypes.HealthCheckShortestWait is {shortest} and HealthCheckLongestWait is {longest}; the shortest must be positive and the longest at least the shortest")]
+    public static partial IGenericMessage ScanBoundsInvalid(ILogger logger, TimeSpan shortest, TimeSpan longest);
 }

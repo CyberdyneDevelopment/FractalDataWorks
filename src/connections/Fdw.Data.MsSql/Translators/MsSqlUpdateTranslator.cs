@@ -145,23 +145,6 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
     }
 
     /// <summary>
-    /// The DDL convention's Modify* audit columns and the expressions their column defaults use.
-    /// </summary>
-    /// <remarks>
-    /// Why: the audit block is DB-filled and never app-set (system-provided), so an INSERT leaves it to
-    /// the column defaults. An in-place UPDATE fires no default, so without a restamp ModifyDate/ModifyBy
-    /// keep their insert-time values forever. Restamping with the same expressions an INSERT would use
-    /// keeps the columns honest. The configuration translators already stamp ModifyDate this way on their
-    /// own UPDATEs. The set is the convention's closed list, matched by name.
-    /// </remarks>
-    private static readonly (string Column, string Expression)[] ModifyAuditColumns =
-    [
-        ("ModifyDate", "SYSDATETIMEOFFSET()"),
-        ("ModifyBy", "SUSER_SNAME()"),
-        ("ModifyOnBehalfOf", "SUSER_SNAME()"),
-    ];
-
-    /// <summary>
     /// The columns an update may set: the container's fields without the PK, identity, computed and system-provided columns. System-provided columns (e.g. RowId via
     /// newsequentialid(), audit CreateDate/ModifyDate, IsCurrent/IsDeleted version flags) must not appear in SET: including RowId there violates child FK constraints
     /// (FK_*_RowId) on version-on-write parents.
@@ -210,8 +193,7 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
 
         // Build SET clause
         var prefix = dialect.ParameterPrefix;
-        var auditStamps = ModifyAuditColumns
-            .Where(a => container.Schema.Fields.Any(f => string.Equals(f.Name, a.Column, StringComparison.OrdinalIgnoreCase)))
+        var auditStamps = MsSqlModifyAuditColumns.Declared(container)
             .Select(a => $"{dialect.QuoteIdentifier(a.Column)} = {a.Expression}");
         var setClause = string.Join(", ", fieldNames.Select(f => $"{dialect.QuoteIdentifier(f)} = {prefix}set_{f}").Concat(auditStamps).Concat(soft.SetClauses(null, onlyWhenMarked: true)));
 
@@ -274,7 +256,7 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         var settable = new List<(string Name, object? Value, Type? Type)>();
         foreach (var field in updateFields)
         {
-            if (ModifyAuditColumns.Any(a => string.Equals(a.Column, field.Name, StringComparison.OrdinalIgnoreCase))
+            if (MsSqlModifyAuditColumns.Is(field.Name)
                 || !RowValues.TryReadForBinding(data, field.Name, field.FieldType.ClrType, out var value, out var bindingType))
             {
                 continue;

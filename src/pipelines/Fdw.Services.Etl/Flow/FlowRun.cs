@@ -69,6 +69,34 @@ internal sealed class FlowRun
         return run;
     }
 
+    /// <summary>
+    /// Gets how many rows the components upstream of <paramref name="component"/> rejected through their error outputs (FDW-4956): every component with a
+    /// path of links to it. Once its input has ended, every one of them has closed its outputs, so the figure is final.
+    /// </summary>
+    /// <param name="graph">The graph this run wired.</param>
+    /// <param name="component">The component whose upstream is counted.</param>
+    /// <returns>The rows rejected upstream, zero when none was.</returns>
+    public long RejectedUpstreamOf(FlowGraph graph, string component)
+    {
+        ArgumentNullException.ThrowIfNull(graph);
+        var upstream = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var waiting = new Stack<string>();
+        waiting.Push(component);
+        while (waiting.Count > 0)
+        {
+            var next = waiting.Pop();
+            foreach (var link in graph.Links.Where(link => Same(link.ToComponent, next)))
+            {
+                if (upstream.Add(link.FromComponent))
+                {
+                    waiting.Push(link.FromComponent);
+                }
+            }
+        }
+
+        return _rejected.CountOf(upstream);
+    }
+
     /// <summary>Gets the nodes of a component.</summary>
     /// <param name="component">The component's name.</param>
     /// <returns>Its input and output nodes in this run.</returns>

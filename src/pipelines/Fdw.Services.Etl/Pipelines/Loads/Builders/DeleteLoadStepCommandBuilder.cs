@@ -12,8 +12,8 @@ using Fdw.Services.Etl.Logging;
 namespace Fdw.Services.Etl.Pipelines.Loads.Builders;
 
 /// <summary>
-/// Deletes the rows the output rows match on the key columns, one delete per row, or flags them deleted instead: by marker,
-/// or by the keys absent from the output rows as a single set-based command.
+/// Deletes the rows the output rows match on the key columns, the whole batch in one set-based bulk delete (FDW-4954), or flags
+/// them deleted instead: by marker, or by the keys absent from the output rows as a single set-based command.
 /// </summary>
 [TypeOption(typeof(LoadStepCommandBuilders), "Delete")]
 public sealed class DeleteLoadStepCommandBuilder : LoadStepCommandBuilderBase
@@ -30,6 +30,10 @@ public sealed class DeleteLoadStepCommandBuilder : LoadStepCommandBuilderBase
     {
         var keys = LoadColumns.Keys(input.Row);
         var absentMode = IsAbsentMode(input.Row);
+
+        // A load that stages its keys (FDW-4956) deletes nothing per batch: the executor appends the batch's keys to the stage and the sweep runs once.
+        if (absentMode && input.KeysStaged)
+            return Built();
         if (input.Rows.Count == 0)
             return absentMode
                 ? GenericResult<IReadOnlyList<IDataCommand>>.Failure(PipelineRunLog.AbsentSetEmpty(input.Logger, input.Owner))
@@ -39,7 +43,7 @@ public sealed class DeleteLoadStepCommandBuilder : LoadStepCommandBuilderBase
         if (matched.IsFailure)
             return matched.ToNewResult<IReadOnlyList<IDataCommand>>();
 
-        return absentMode ? Absent(input, keys, matched.Value!) : PerRow(input, keys, matched.Value!);
+        return absentMode ? Absent(input, keys, matched.Value!) : ByKey(input, keys, matched.Value!);
     }
 
     private static bool IsAbsentMode(PipelineLoadStepConfiguration row)
@@ -57,7 +61,8 @@ public sealed class DeleteLoadStepCommandBuilder : LoadStepCommandBuilderBase
             : Built(new DeleteCommand { SoftDelete = soft.Value });
     }
 
-    private static IGenericResult<IReadOnlyList<IDataCommand>> PerRow(
+    // The whole batch is one set-based delete over its keys (FDW-4954); a soft delete flags the matched rows instead.
+    private static IGenericResult<IReadOnlyList<IDataCommand>> ByKey(
         LoadCommandInput input, IReadOnlyList<string> keys, List<IDictionary<string, object?>> keyRows)
     {
         Fdw.Commands.Data.SoftDeletes.SoftDeleteOptions? options = null;
@@ -69,16 +74,15 @@ public sealed class DeleteLoadStepCommandBuilder : LoadStepCommandBuilderBase
             options = soft.Value;
         }
 
-        var commands = new List<IDataCommand>(keyRows.Count);
-        foreach (var row in keyRows)
-        {
-            var filter = LoadKeyFilters.ForRow(input.Owner, keys, row, input.Logger);
-            if (filter.IsFailure)
-                return filter.ToNewResult<IReadOnlyList<IDataCommand>>();
-            commands.Add(new DeleteCommand { Filter = filter.Value, SoftDelete = options });
-        }
+        var present = LoadKeyFilters.KeysPresent(input.Owner, keys, keyRows, input.Logger);
+        if (present.IsFailure)
+            return present.ToNewResult<IReadOnlyList<IDataCommand>>();
 
-        return Built(commands);
+        var bulk = new Fdw.Commands.Data.Deletes.BulkDeleteOptions(keys);
+        var problem = bulk.FirstProblem();
+        return problem is not null
+            ? GenericResult<IReadOnlyList<IDataCommand>>.Failure(PipelineRunLog.LoadOptionsRefused(input.Logger, input.Owner, LoadKind, problem.Message))
+            : Built(new BulkDeleteCommand<IDictionary<string, object?>>(keyRows, bulk) { SoftDelete = options, UnmatchedKeySample = input.UnmatchedKeySample });
     }
 
     /// <inheritdoc/>

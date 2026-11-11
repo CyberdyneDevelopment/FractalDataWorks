@@ -21,7 +21,10 @@ using Fdw.Services.Connections.Http.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
 using Fdw.Services.Connections.Http.Abstractions.Results;
+using Fdw.Services.Connections.Http.Logging;
+using Fdw.Services.Connections.Http.Paging;
 using Fdw.Services.Connections.Http.Security;
+using System.Linq;
 using Fdw.Services.Connections.RowQuery;
 using Microsoft.Extensions.Logging;
 
@@ -45,7 +48,7 @@ namespace Fdw.Services.Connections.Http.Protocols;
 /// Derived classes override virtual methods to customize:
 /// <list type="bullet">
 /// <item><description><see cref="BuildFilterQueryString"/> - Customize filter-to-querystring translation</description></item>
-/// <item><description><see cref="BuildPaginationQueryString"/> - Customize pagination parameters</description></item>
+/// <item><description><see cref="BuildPaginationQueryString"/> - The window a query's paging names, in the connection's paging style</description></item>
 /// <item><description><see cref="BuildOrderingQueryString"/> - Customize ordering parameters</description></item>
 /// <item><description><see cref="ParseErrorResponse"/> - Handle API-specific error formats</description></item>
 /// <item><description><see cref="ConfigureAuthenticationHeaders"/> - Add authentication headers</description></item>
@@ -55,6 +58,10 @@ namespace Fdw.Services.Connections.Http.Protocols;
 /// </remarks>
 public abstract class RestProtocolBase : HttpProtocolBase
 {
+    // The window a query's paging names, carried on the request to the response it answers, so the rows the remote cannot be asked to skip
+    // or that come back beyond the rows asked for are cut where the response is read (FDW-4938).
+    private static readonly HttpRequestOptionsKey<HttpPagingWindow?> PagingWindowKey = new("Fdw.HttpPagingWindow");
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RestProtocolBase"/> class.
     /// </summary>
@@ -84,6 +91,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
             }
 
             var path = pathResult.Value!;
+            HttpPagingWindow? window = null;
 
             // Build query string for GET requests
             if (method == HttpMethod.Get && command is IQueryCommand queryCommand)
@@ -115,15 +123,17 @@ public abstract class RestProtocolBase : HttpProtocolBase
                         });
                 }
 
-                var queryString = BuildFullQueryString(queryCommand, context);
-                if (!string.IsNullOrEmpty(queryString))
+                var addressed = WithQueryString(path, queryCommand, context);
+                if (addressed.IsFailure)
                 {
-                    var separator = path.Contains('?', StringComparison.Ordinal) ? "&" : "?";
-                    path = $"{path}{separator}{queryString}";
+                    return addressed.ToNewResult<HttpRequestMessage>();
                 }
+
+                (path, window) = addressed.Value;
             }
 
             var request = new HttpRequestMessage(method, path);
+            request.Options.Set(PagingWindowKey, window);
 
             // Add request body for non-GET requests
             if (method != HttpMethod.Get)
@@ -182,12 +192,12 @@ public abstract class RestProtocolBase : HttpProtocolBase
         {
             if (IsRowCollectionType(resultType))
             {
-                return ExtractRowsFromContent(RowContent(content, container), container);
+                return Windowed(ExtractRowsFromContent(RowContent(content, container), container), WindowOf(response));
             }
 
             if (RecordMapperFor(resultType) is { } mapper)
             {
-                return MaterializeRecords(RowContent(content, container), container, mapper, context);
+                return MaterializeRecords(RowContent(content, container), container, mapper, context, WindowOf(response));
             }
         }
 
@@ -205,8 +215,8 @@ public abstract class RestProtocolBase : HttpProtocolBase
     /// </summary>
     /// <param name="command">The query command.</param>
     /// <param name="context">The protocol context.</param>
-    /// <returns>The complete query string (without leading ?).</returns>
-    protected virtual string BuildFullQueryString(IQueryCommand command, HttpProtocolContext context)
+    /// <returns>The complete query string (without leading ?), or the refusal of a window the connection's paging style cannot ask for.</returns>
+    protected virtual IGenericResult<string> BuildFullQueryString(IQueryCommand command, HttpProtocolContext context)
     {
         var parts = new List<string>();
 
@@ -219,9 +229,14 @@ public abstract class RestProtocolBase : HttpProtocolBase
 
         // Add pagination parameters
         var pagingPart = BuildPaginationQueryString(command, context);
-        if (!string.IsNullOrEmpty(pagingPart))
+        if (pagingPart.IsFailure)
         {
-            parts.Add(pagingPart);
+            return pagingPart;
+        }
+
+        if (!string.IsNullOrEmpty(pagingPart.Value))
+        {
+            parts.Add(pagingPart.Value);
         }
 
         // Add ordering parameters
@@ -238,7 +253,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
             parts.Add(fieldsPart);
         }
 
-        return string.Join("&", parts);
+        return GenericResult<string>.Success(string.Join("&", parts));
     }
 
     /// <summary>
@@ -382,41 +397,95 @@ public abstract class RestProtocolBase : HttpProtocolBase
     }
 
     /// <summary>
-    /// Builds query string parameters for pagination.
+    /// Builds the query parameters that ask the remote for the window of rows a query's paging names, in the paging style the connection
+    /// states (FDW-4938): the parameter names are the connection's, never this protocol's.
     /// </summary>
     /// <remarks>
-    /// Override this method to support different pagination styles:
-    /// <list type="bullet">
-    /// <item><description>Offset-based: offset=20&amp;limit=10</description></item>
-    /// <item><description>Page-based: page=3&amp;per_page=10</description></item>
-    /// <item><description>Cursor-based: cursor=abc123&amp;limit=10</description></item>
-    /// <item><description>OData: $skip=20&amp;$top=10</description></item>
-    /// </list>
+    /// A query with no paging asks for no window. A query read page by page by the connection's reader (<see cref="HttpProtocolContext.PagedByReader"/>)
+    /// gets none either: the reader writes each page's position. A connection that states no style, or a window its style cannot ask for (a
+    /// page number that would start inside a page, a pointer-following style asked to skip), is refused, never approximated.
     /// </remarks>
     /// <param name="command">The query command with paging.</param>
-    /// <param name="context">The protocol context.</param>
-    /// <returns>The pagination query string portion.</returns>
-    protected virtual string BuildPaginationQueryString(IQueryCommand command, HttpProtocolContext context)
+    /// <param name="context">The protocol context, carrying the connection's configuration.</param>
+    /// <returns>The pagination query string portion, empty for none, or the refusal.</returns>
+    protected virtual IGenericResult<string> BuildPaginationQueryString(IQueryCommand command, HttpProtocolContext context)
     {
-        if (command.Paging is null)
+        var window = PagingWindowOf(command, context);
+        if (window.IsFailure)
         {
-            return string.Empty;
+            return window.ToNewResult<string>();
         }
 
-        var parts = new List<string>();
+        return GenericResult<string>.Success(window.Value is null
+            ? string.Empty
+            : string.Join("&", window.Value.Parameters.Select(parameter => parameter.Name + "=" + Uri.EscapeDataString(parameter.Value))));
+    }
 
-        // Default: offset/limit style
-        if (command.Paging.Skip > 0)
+    /// <summary>The window a query's paging names, as the connection's paging style asks for it; null when the protocol writes none.</summary>
+    /// <param name="command">The query command.</param>
+    /// <param name="context">The protocol context.</param>
+    /// <returns>The window, null for none, or the refusal.</returns>
+    private static IGenericResult<HttpPagingWindow?> PagingWindowOf(IQueryCommand command, HttpProtocolContext context)
+    {
+        if (command.Paging is not { } paging || context.PagedByReader)
         {
-            parts.Add($"offset={command.Paging.Skip}");
+            return GenericResult<HttpPagingWindow?>.Success(null);
         }
 
-        if (command.Paging.Take > 0)
+        var logger = context.LoggerFactory.CreateLogger<RestProtocolBase>();
+        // The factory builds every context from the connection's own configuration; one that is not an HTTP connection's states no style.
+        if (context.Configuration is not HttpConnectionConfigurationBase connection)
         {
-            parts.Add($"limit={command.Paging.Take}");
+            return GenericResult<HttpPagingWindow?>.Failure(HttpPagingLog.PagingStyleNotStated(logger, context.Configuration.GetType().Name));
         }
 
-        return string.Join("&", parts);
+        var window = HttpPaging.WindowFor(
+            connection.PagingStyle,
+            new HttpPagingSettings(connection.Name, new Dictionary<string, string?>(connection.AdditionalProperties, StringComparer.OrdinalIgnoreCase), logger),
+            paging.Skip,
+            paging.Take);
+        return window.IsFailure ? window.ToNewResult<HttpPagingWindow?>() : GenericResult<HttpPagingWindow?>.Success(window.Value);
+    }
+
+    // A GET's address with its query string, and the window its paging names (null for none), carried on the request to its response.
+    private IGenericResult<(string Path, HttpPagingWindow? Window)> WithQueryString(string path, IQueryCommand command, HttpProtocolContext context)
+    {
+        var window = PagingWindowOf(command, context);
+        if (window.IsFailure)
+        {
+            return window.ToNewResult<(string, HttpPagingWindow?)>();
+        }
+
+        var queryString = BuildFullQueryString(command, context);
+        if (queryString.IsFailure)
+        {
+            return queryString.ToNewResult<(string, HttpPagingWindow?)>();
+        }
+
+        return GenericResult<(string, HttpPagingWindow?)>.Success(string.IsNullOrEmpty(queryString.Value)
+            ? (path, window.Value)
+            : ($"{path}{(path.Contains('?', StringComparison.Ordinal) ? "&" : "?")}{queryString.Value}", window.Value));
+    }
+
+    // The window the request a response answers carried; null when it carried none.
+    private static HttpPagingWindow? WindowOf(HttpResponseMessage response)
+        => response.RequestMessage is { } sent && sent.Options.TryGetValue(PagingWindowKey, out var window) ? window : null;
+
+    // Cuts a response's rows to its query's window: the rows the remote could not be asked to skip, and any beyond the rows asked for.
+    private static IGenericResult<object?> Windowed(IGenericResult<object?> extracted, HttpPagingWindow? window)
+    {
+        if (window is null || extracted.IsFailure || extracted.Value is not List<Dictionary<string, object?>> rows)
+        {
+            return extracted;
+        }
+
+        var kept = rows.Skip(window.SkipHere);
+        if (window.Take is int take)
+        {
+            kept = kept.Take(take);
+        }
+
+        return GenericResult<object?>.Success(kept.ToList());
     }
 
     /// <summary>
@@ -642,7 +711,6 @@ public abstract class RestProtocolBase : HttpProtocolBase
     {
         // Check for common pagination headers
         int? totalCount = null;
-        string? nextCursor = null;
 
         if (response.Headers.TryGetValues("X-Total-Count", out var totalValues))
         {
@@ -652,22 +720,9 @@ public abstract class RestProtocolBase : HttpProtocolBase
             }
         }
 
-        // Check for Link header (RFC 5988)
-        if (response.Headers.TryGetValues("Link", out var linkValues))
-        {
-            var linkHeader = string.Join(",", linkValues);
-            // Parse for rel="next" - simplified parsing
-            if (linkHeader.Contains("rel=\"next\"", StringComparison.OrdinalIgnoreCase) || linkHeader.Contains("rel=next", StringComparison.OrdinalIgnoreCase))
-            {
-                // Extract URL - this is simplified, real impl would parse properly
-                var startIndex = linkHeader.IndexOf('<', StringComparison.Ordinal);
-                var endIndex = linkHeader.IndexOf('>', StringComparison.Ordinal);
-                if (startIndex >= 0 && endIndex > startIndex)
-                {
-                    nextCursor = linkHeader.Substring(startIndex + 1, endIndex - startIndex - 1);
-                }
-            }
-        }
+        // The Link header (RFC 8288) lists several links; the next page is the one whose rel names "next", not the first one listed
+        // (FDW-4938: a header listing prev before next used to yield the previous page).
+        var nextCursor = global::Fdw.Services.Connections.Http.Paging.LinkHeader.Target(response.Headers, "next");
 
         if (totalCount.HasValue || !string.IsNullOrEmpty(nextCursor))
         {
@@ -816,7 +871,8 @@ public abstract class RestProtocolBase : HttpProtocolBase
         string content,
         IStorageContainer container,
         IPocoMapper mapper,
-        HttpProtocolContext context)
+        HttpProtocolContext context,
+        HttpPagingWindow? window)
     {
         if (container is not IDataContainer declared)
             return GenericResult<object?>.Failure(
@@ -824,7 +880,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
                 ResultDetails.Create().With("ErrorMessage",
                     $"'{container.Name}' is not a data container, and records of '{mapper.TargetType.Name}' are checked against a data container's declared fields."));
 
-        var extracted = ExtractRowsFromContent(content, container);
+        var extracted = Windowed(ExtractRowsFromContent(content, container), window);
         if (!extracted.IsSuccess || extracted.Value is not IReadOnlyList<IReadOnlyDictionary<string, object?>> rows)
             return extracted;
 

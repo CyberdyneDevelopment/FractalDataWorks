@@ -24,6 +24,10 @@ public sealed class DataReaderRowSourceType : RecordSourceTypeBase
     }
 
     /// <inheritdoc />
+    /// <remarks>Reads a data reader forward, one row at a time. (FDW-4967)</remarks>
+    public override bool ParsesIncrementally => true;
+
+    /// <inheritdoc />
     public override bool SupportsSync => true;
 
     /// <inheritdoc />

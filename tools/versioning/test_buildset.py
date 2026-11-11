@@ -11,6 +11,7 @@ from test_changeset import Repo, base_files, proj, src
 
 PACKAGES = '<Project>\n  <ItemGroup>\n    <PackageVersion Include="Existing.Pkg" Version="2.0.0" />\n  </ItemGroup>\n</Project>\n'
 TREES = {n: f"tree-{n}" for n in ("A", "B", "C", "D", "E", "G", "H", "Gen.SourceGenerators")}
+AV = {"A": "1.4.1.0", "B": "1.4.1.0", "C": "2.0.0.0"}
 VERSIONS = {"A": "1.4.4", "B": "1.4.3", "D": "1.4.2", "Gen.SourceGenerators": "1.4.1", "Other.Name": "1.4.0"}
 
 
@@ -157,9 +158,107 @@ class BuildSetTests(unittest.TestCase):
         cmds = self.prepare(["B", "C"], release="1.4.9")["commands"]
         packs = [c for c in cmds if c[1] == "pack"]
         self.assertEqual([c[2] for c in packs], ["src/B/B.csproj", "src/C/C.csproj"])
+        builds = [c for c in cmds if c[1] == "build"]
+        self.assertEqual([c[2] for c in builds], ["src/B/B.csproj", "src/C/C.csproj"])
+        self.assertTrue(all("--no-build" in c for c in packs))
+        self.assertFalse(any("--no-build" in c for c in builds))
+        self.assertEqual([c[3:] for c in builds], [[a for a in c[3:] if a != "--no-build"] for c in packs])
+        self.assertLess(cmds.index(builds[0]), cmds.index(packs[0]))
         self.assertTrue(all("-p:Version=1.4.9" in c for c in packs))
         self.assertTrue(all(any(a.startswith("-p:CustomAfterMicrosoftCommonTargets=") for a in c) for c in packs))
         self.assertIn(["dotnet", "test", "tests/B.Tests/B.Tests.csproj", "-c", "Release"], cmds)
+
+    def per_package(self, members, package_versions, versions=None, assembly_versions=None):
+        return buildset.prepare(self.repo.root, members, VERSIONS if versions is None else versions, TREES, None, package_versions,
+                                AV if assembly_versions is None else assembly_versions)
+
+    def test_each_member_gets_its_own_version_from_the_targets_file(self):
+        self.commit()
+        report = self.per_package(["B", "C"], {"B": "1.4.4", "C": "2.0.0-rc.1"})
+        packs = [c for c in report["commands"] if c[1] == "pack"]
+        self.assertFalse(any(a.startswith("-p:Version=") for c in packs for a in c))
+        self.assertEqual(report["package_versions"], {"B": "1.4.4", "C": "2.0.0-rc.1"})
+        root = ET.fromstring(self.text(os.path.join(buildset.BUILD_DIR, buildset.TARGETS)).encode())
+        groups = {g.get("Condition"): g.find("Version").text for g in root.findall("PropertyGroup")}
+        self.assertEqual(groups, {"'$(MSBuildProjectName)' == 'B'": "1.4.4", "'$(MSBuildProjectName)' == 'C'": "2.0.0-rc.1"})
+        files = {g.get("Condition"): (g.find("FileVersion").text, g.find("AssemblyVersion").text) for g in root.findall("PropertyGroup")}
+        self.assertEqual(files, {"'$(MSBuildProjectName)' == 'B'": ("1.4.4.0", "1.4.1.0"), "'$(MSBuildProjectName)' == 'C'": ("2.0.0.0", "2.0.0.0")})
+        self.assertIsNotNone(root.find("ItemGroup/None"))
+
+    def test_one_release_number_leaves_the_targets_file_without_versions(self):
+        self.commit()
+        self.prepare(["B"])
+        root = ET.fromstring(self.text(os.path.join(buildset.BUILD_DIR, buildset.TARGETS)).encode())
+        self.assertEqual(root.findall("PropertyGroup"), [])
+
+    def test_a_member_without_a_version_is_refused_and_nothing_is_written(self):
+        self.commit()
+        with self.assertRaises(buildset.BuildSetError) as raised:
+            self.per_package(["B", "C"], {"B": "1.4.4"})
+        self.assertIn("C", str(raised.exception))
+        self.assertEqual(self.repo.git("status", "--porcelain", "--untracked-files=no").strip(), "")
+
+    def test_a_version_for_a_name_outside_the_set_is_refused(self):
+        self.commit()
+        with self.assertRaises(buildset.BuildSetError):
+            self.per_package(["B"], {"B": "1.4.4", "C": "1.0.0"})
+
+    def test_a_text_that_is_not_a_version_is_refused(self):
+        self.commit()
+        with self.assertRaises(buildset.BuildSetError):
+            self.per_package(["B"], {"B": "1.4</Version>"})
+
+    def test_both_a_release_and_package_versions_is_refused(self):
+        self.commit()
+        with self.assertRaises(buildset.BuildSetError):
+            buildset.prepare(self.repo.root, ["B"], VERSIONS, TREES, "1.4.5", {"B": "1.4.5"}, AV)
+        with self.assertRaises(buildset.BuildSetError):
+            buildset.prepare(self.repo.root, ["B"], VERSIONS, TREES, None, None, AV)
+
+    def test_a_stable_member_with_a_prerelease_dependency_is_refused(self):
+        self.commit()
+        with self.assertRaises(buildset.BuildSetError) as raised:
+            self.per_package(["B"], {"B": "1.4.4"}, versions=VERSIONS | {"A": "1.4.4-rc.1"})
+        self.assertIn("NU5104", str(raised.exception))
+
+    def test_prerelease_members_may_depend_on_prerelease_versions(self):
+        self.commit()
+        self.assertEqual(self.per_package(["B"], {"B": "1.4.4-rc.1"}, versions=VERSIONS | {"A": "1.4.4-rc.1"})["versions_added"], {"A": "1.4.4-rc.1"})
+
+    def test_the_file_version_is_the_package_version_with_a_zero_fourth_part(self):
+        self.assertEqual(buildset.file_version("1.5.3"), "1.5.3.0")
+        self.assertEqual(buildset.file_version("2.0.0-rc.1"), "2.0.0.0")
+
+    def test_package_versions_without_assembly_versions_are_refused(self):
+        self.commit()
+        for missing in (None, {}, {"A": "1.4.1.0"}):
+            with self.assertRaisesRegex(buildset.BuildSetError, "no assembly version"):
+                buildset.prepare(self.repo.root, ["B"], VERSIONS, TREES, None, {"B": "1.4.4"}, missing)
+
+    def test_an_assembly_version_that_is_not_x_y_z_w_is_refused(self):
+        self.commit()
+        for bad in ("1.5", "1.5.1", "x.y.z.w", ""):
+            with self.assertRaisesRegex(buildset.BuildSetError, "x.y.z.w", msg=bad):
+                self.per_package(["B"], {"B": "1.4.4"}, assembly_versions={"B": bad})
+
+    def test_the_command_needs_the_assembly_versions_with_package_versions(self):
+        self.commit()
+        with self.assertRaises(SystemExit) as raised:
+            buildset.main(["prepare", "--repo", self.repo.root, "--set", "B", "--versions", __file__, "--trees", __file__, "--package-versions", __file__])
+        self.assertIn("--assembly-versions", str(raised.exception))
+
+    def test_the_command_takes_a_package_versions_file(self):
+        self.commit()
+        paths = {}
+        for name, data in (("versions", VERSIONS), ("trees", TREES), ("pv", {"B": "1.4.4"}), ("av", {"B": "1.4.1.0"})):
+            paths[name] = os.path.join(self._tmp.name, "..", f"{os.path.basename(self._tmp.name)}-{name}.json")
+            with open(paths[name], "w") as f:
+                json.dump(data, f)
+            self.addCleanup(os.remove, paths[name])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            buildset.main(["prepare", "--repo", self.repo.root, "--set", "B", "--versions", paths["versions"], "--trees", paths["trees"], "--package-versions", paths["pv"], "--assembly-versions", paths["av"]])
+        self.assertEqual(json.loads(out.getvalue())["package_versions"], {"B": "1.4.4"})
 
     def test_an_embed_of_a_sibling_outside_the_set_is_reported(self):
         self.commit()

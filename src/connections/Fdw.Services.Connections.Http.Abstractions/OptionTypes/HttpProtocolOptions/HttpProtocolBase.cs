@@ -441,6 +441,15 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
                 rows.Add(row);
             }
 
+            // Why the reader is asked: a reader that ends on malformed content says so rather than throwing (FDW-4971); the rows read
+            // before it are not an answer.
+            if (src is IReportsReadFailure { ReadFailure: { } failure })
+            {
+                return GenericResult<object?>.Failure(
+                    HttpResultCodes.ByName("ResponseRowExtractionFailed"),
+                    ResultDetails.Create().With("ErrorMessage", failure.Message));
+            }
+
             return GenericResult<object?>.Success(rows);
         }
         catch (Exception ex)

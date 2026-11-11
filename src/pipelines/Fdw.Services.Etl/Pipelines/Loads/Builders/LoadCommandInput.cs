@@ -52,4 +52,15 @@ public sealed class LoadCommandInput
 
     /// <summary>Gets the logger the refusals are written to.</summary>
     public ILogger Logger { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the load stages its keys (FDW-4956): an absent-key soft delete then builds no per-batch delete, because the
+    /// executor appends the batch's keys to the stage and the destination sweeps once at the end.
+    /// </summary>
+    public bool KeysStaged { get; init; }
+
+    /// <summary>
+    /// Gets how many keys that matched no row the load's update or delete reports (FDW-4988), or <see langword="null"/> for a load that does not report them.
+    /// </summary>
+    public int? UnmatchedKeySample { get; init; }
 }

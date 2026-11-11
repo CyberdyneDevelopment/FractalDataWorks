@@ -6,14 +6,15 @@ using Fdw.Services.Calculations.Abstractions.Runtime;
 namespace Fdw.Services.Calculations.Abstractions.CalculationNodeOptions;
 
 /// <summary>
-/// The conversions between the types a calculation expression has: decimal, a possibly empty decimal, a condition, and a
-/// date-time.
+/// The conversions between the types a calculation expression has: decimal, a possibly empty decimal, a condition, a date,
+/// and a date-time.
 /// </summary>
 /// <remarks>
-/// Why only these: every value in a tree is an exact number, a number that may be empty, a true/false condition, or a date-time. A
+/// Why only these: every value in a tree is an exact number, a number that may be empty, a true/false condition, a date, or a date-time. A
 /// number converts to a possibly empty number for free; a possibly empty number converts to a number only by failing with
 /// EmptyOperand when it is empty, so an empty value is never silently read as zero. A condition never converts to a number.
-/// A date-time is its own type: it converts to nothing and nothing converts to it, so a date-time is never read as a number.
+/// A date and a date-time are each their own type: they convert to nothing and nothing converts to them, so a date is never read as a
+/// date-time or as a number.
 /// </remarks>
 public static class CalculationCoercion
 {
@@ -29,6 +30,16 @@ public static class CalculationCoercion
     /// <param name="type">The type.</param>
     /// <returns>True for DateTimeOffset.</returns>
     public static bool IsDateTime(Type type) => type == typeof(DateTimeOffset);
+
+    /// <summary>Gets a value indicating whether the type is a calendar date with no time of day.</summary>
+    /// <param name="type">The type.</param>
+    /// <returns>True for DateOnly.</returns>
+    public static bool IsDate(Type type) => type == typeof(DateOnly);
+
+    /// <summary>Gets a value indicating whether the type is a date or a date-time, so not a number and not a condition.</summary>
+    /// <param name="type">The type.</param>
+    /// <returns>True for DateOnly and DateTimeOffset.</returns>
+    public static bool IsMoment(Type type) => IsDate(type) || IsDateTime(type);
 
     /// <summary>Gets a value indicating whether a value of one type can be used where another is required.</summary>
     /// <param name="actual">The type the value has.</param>

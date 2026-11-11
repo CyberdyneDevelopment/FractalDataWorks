@@ -1412,4 +1412,86 @@ public static partial class ServiceTypeLog
     public static partial IGenericMessage ServiceLifetimeFindingsTolerated(
         ILogger logger,
         int count);
+
+    /// <summary>
+    /// Logs a type that declares no whole-seconds default for a field its configuration may leave out (FDW-4904): a connect, command or
+    /// request timeout. The host does not start.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61028,
+        Level = LogLevel.Critical,
+        Message = "The {typeName} type declares no default in whole seconds for {field}; declare one in the type's DeclaredDefaults or state it with ServiceTypeDefaults.Override before Register")]
+    public static partial IGenericMessage DeclaredSecondsNotDeclared(
+        ILogger logger,
+        string typeName,
+        string field);
+
+    /// <summary>
+    /// Logs a whole-seconds default that is below one second (FDW-4904). Zero reaches a database driver as "no timeout", so it is refused.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61029,
+        Level = LogLevel.Critical,
+        Message = "The {typeName} type's default for {field} is {seconds} seconds; it must be at least one second")]
+    public static partial IGenericMessage DeclaredSecondsNotPositive(
+        ILogger logger,
+        string typeName,
+        string field,
+        int seconds);
+
+    /// <summary>
+    /// Logs a configuration that states a timeout below one second (FDW-4904). Zero reaches a database driver as "no timeout", so the service is
+    /// not built.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61031,
+        Level = LogLevel.Error,
+        Message = "The {typeName} configuration states {field} as {seconds} seconds; it must be at least one second, or left out to take the type's default")]
+    public static partial IGenericMessage StatedSecondsNotPositive(
+        ILogger logger,
+        string typeName,
+        string field,
+        int seconds);
+
+    /// <summary>Logs a type that declares no whole-number default for a configuration field (FDW-4959).</summary>
+    [MessageLogging(
+        EventId = 61033,
+        Level = LogLevel.Critical,
+        Message = "The {typeName} type declares no whole-number default for {field}; declare one in the type's DeclaredDefaults or state it with ServiceTypeDefaults.Override before Register")]
+    public static partial IGenericMessage DeclaredCountNotDeclared(
+        ILogger logger,
+        string typeName,
+        string field);
+
+    /// <summary>Logs a whole-number default below one (FDW-4959).</summary>
+    [MessageLogging(
+        EventId = 61034,
+        Level = LogLevel.Critical,
+        Message = "The {typeName} type's default for {field} is {value}; it must be at least one")]
+    public static partial IGenericMessage DeclaredCountNotPositive(
+        ILogger logger,
+        string typeName,
+        string field,
+        int value);
+
+    /// <summary>Logs a type that declares no true-or-false default for a configuration field (FDW-4959).</summary>
+    [MessageLogging(
+        EventId = 61035,
+        Level = LogLevel.Critical,
+        Message = "The {typeName} type declares no true-or-false default for {field}; declare one in the type's DeclaredDefaults or state it with ServiceTypeDefaults.Override before Register")]
+    public static partial IGenericMessage DeclaredFlagNotDeclared(
+        ILogger logger,
+        string typeName,
+        string field);
+
+    /// <summary>Logs a configuration that states a whole number below one for a field that needs at least one (FDW-4959).</summary>
+    [MessageLogging(
+        EventId = 61036,
+        Level = LogLevel.Error,
+        Message = "The {typeName} configuration states {field} as {value}; it must be at least one, or left out to take the type's default")]
+    public static partial IGenericMessage StatedCountNotPositive(
+        ILogger logger,
+        string typeName,
+        string field,
+        int value);
 }

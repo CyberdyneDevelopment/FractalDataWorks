@@ -19,12 +19,14 @@ internal static class FilterCalculationLiterals
     {
         [typeof(decimal)] = [typeof(byte), typeof(short), typeof(int), typeof(long), typeof(decimal), typeof(double), typeof(float)],
         [typeof(DateTimeOffset)] = [typeof(DateTime), typeof(DateTimeOffset)],
+        [typeof(DateOnly)] = [typeof(DateOnly), typeof(DateTime)],
     };
 
     private static readonly Dictionary<Type, string> Words = new()
     {
         [typeof(decimal)] = "a number",
         [typeof(DateTimeOffset)] = "a date-time",
+        [typeof(DateOnly)] = "a date",
     };
 
     /// <summary>Reads the value a filter supplies for a calculation's input.</summary>
@@ -32,7 +34,7 @@ internal static class FilterCalculationLiterals
     /// <param name="input">The input's name, for a refusal.</param>
     /// <param name="calculation">The calculation's name, for a refusal.</param>
     /// <param name="refusals">Builds the refusal.</param>
-    /// <returns>A decimal for a number, a bool for a flag, or the refusal.</returns>
+    /// <returns>A decimal for a number, a bool for a flag, a DateOnly for a text of the form yyyy-MM-dd, or the refusal.</returns>
     public static IGenericResult<object?> Input(JsonElement value, string input, string calculation, IQueryRefusals refusals)
     {
 #pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
@@ -44,8 +46,10 @@ internal static class FilterCalculationLiterals
                 return GenericResult<object?>.Success(true);
             case JsonValueKind.False:
                 return GenericResult<object?>.Success(false);
+            case JsonValueKind.String when DateOnly.TryParseExact(value.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date):
+                return GenericResult<object?>.Success(date);
             default:
-                return refusals.Invalid<object?>($"input '{input}' of calculation '{calculation}' must be a number or true or false");
+                return refusals.Invalid<object?>($"input '{input}' of calculation '{calculation}' must be a number, true or false, or a date written yyyy-MM-dd");
         }
 #pragma warning restore FDW018
     }
@@ -75,9 +79,12 @@ internal static class FilterCalculationLiterals
 
     /// <summary>Writes a calculation's result as the literal a filter holds.</summary>
     /// <param name="value">What the calculation yielded, already checked against the field.</param>
-    /// <returns>A JSON string in ISO 8601 for a date-time, a JSON number for a number.</returns>
+    /// <returns>A JSON string in ISO 8601 for a date-time, yyyy-MM-dd for a date, a JSON number for a number.</returns>
     public static JsonElement Literal(FilterCalculationValue value)
-        => value.Value is DateTimeOffset moment
-            ? JsonSerializer.SerializeToElement(moment.ToString("O", CultureInfo.InvariantCulture))
-            : JsonSerializer.SerializeToElement((decimal)value.Value);
+        => value.Value switch
+        {
+            DateTimeOffset moment => JsonSerializer.SerializeToElement(moment.ToString("O", CultureInfo.InvariantCulture)),
+            DateOnly date => JsonSerializer.SerializeToElement(date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            _ => JsonSerializer.SerializeToElement((decimal)value.Value),
+        };
 }

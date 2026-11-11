@@ -18,6 +18,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
+using Fdw.Web.RestEndpoints.Query;
 using IDataField = Fdw.Data.DataSets.Abstractions.IDataField;
 using System.Collections.Immutable;
 
@@ -80,6 +81,12 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (sources.Count == 0)
             return GenericResult<T>.Failure(DataGatewayLogger.DataSetNoSources(ctx.Logger, ctx.Config.Name));
 
+        // A join to a source the data set does not have, or by a type that is missing, unknown or joins nothing, is refused before any source
+        // is read, never run as an inner join (FDW-5022, FDW-5049, FDW-5087, FDW-5099).
+        var joinSources = JoinedDataSetRules.Validate(federated, ctx.Logger);
+        if (joinSources.IsFailure)
+            return joinSources.ToNewResult<T>();
+
         if (string.IsNullOrWhiteSpace(federated.FederationStrategy))
             return GenericResult<T>.Failure(
                 DataGatewayLogger.FederationStrategyMissing(ctx.Logger, ctx.Config.Name, "no FederationStrategy is configured"));
@@ -107,8 +114,17 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         {
             // Ordering and paging are NOT applied here: the join is in memory, so they would have to
             // follow it, and PagesInStore stays false until they do (FDW-876, FDW-884).
-            IFilterExpression? inputFilter = (command as IQueryCommand)?.Filter;
+            // The data set's own filter ANDed with the caller's (FDW-4997), decomposed to each source like any filter.
+            var readFilter = DataSetReadFilter.For(ctx, command);
+            if (readFilter.IsFailure)
+                return readFilter.ToNewResult<T>();
+
+            var inputFilter = readFilter.Value;
             var fieldMappings = PreResolveFieldMappings(sources);
+
+            // A condition on a field the joined rows do not carry would match nothing or be ignored; it is refused (FDW-5049).
+            if (UncarriedField(ctx.Config, inputFilter?.Root, fieldMappings) is { } uncarried)
+                return GenericResult<T>.Failure(DataGatewayLogger.FederatedFieldNotCarried(ctx.Logger, ctx.Config.Name, uncarried));
 
             var decomposed = ctx.Pushdown.DecomposeBySource(inputFilter, ctx.Config, sources, fieldMappings);
             if (!decomposed.IsSuccess)
@@ -128,11 +144,11 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             if (!joined.IsSuccess || joined.Value is null)
                 return joined.ToNewResult<T>();
 
-            // Each source's attached chains run on the joined logical records (FDW-877).
+            // Each source's attached chains run on the joined logical records (FDW-877), after the whole read filter has cut them.
             var chains = await DataSetExecutionHelpers.ResolveChains(ctx, sources, ct).ConfigureAwait(false);
             if (chains.IsFailure)
                 return chains.ToNewResult<T>();
-            var transformed = await DataSetExecutionHelpers.ApplyFieldTransformations(ctx, joined.Value, chains.Value!, ctx.Config.Name, ct).ConfigureAwait(false);
+            var transformed = await DataSetExecutionHelpers.ApplyFieldTransformations(ctx, KeptRows(joined.Value, inputFilter), chains.Value!, ctx.Config.Name, ct).ConfigureAwait(false);
             if (transformed.IsFailure)
                 return transformed.ToNewResult<T>();
 
@@ -145,6 +161,33 @@ public sealed class FederatedDataSetType : DataSetTypeBase
                 DataGatewayLogger.FederatedExecutionException(ctx.Logger, ex, ctx.Config.Name));
         }
     }
+
+    // The whole read filter applied to the joined logical rows (FDW-5049): a part no source applied in its store (its field is held by more
+    // than one source, by a source that does not filter, or by one an outer join may leave empty) is applied here, never dropped. A part a
+    // source did apply keeps the same rows, so applying it again changes nothing.
+    private static List<DataRecord> KeptRows(List<DataRecord> rows, IFilterExpression? filter) =>
+        filter?.Root is { } root ? [.. rows.Where(row => InMemoryQuery.Matches(row.ToDictionary(), root))] : rows;
+
+    // The first field a filter names that the joined rows do not carry: neither a stored field of the data set nor a logical name one of
+    // its sources maps; null when every one is carried.
+    private static string? UncarriedField(
+        IDataSetImplementationConfiguration dataSet, IFilterNode? node, Dictionary<string, IReadOnlyDictionary<string, string>> fieldMappings)
+    {
+        if (node is null)
+            return null;
+
+        var carried = dataSet.Fields.Where(f => f.IsCurrent && !f.IsDeleted && !f.IsCalculated).Select(f => f.Name)
+            .Concat(fieldMappings.Values.SelectMany(mappings => mappings.Keys))
+            .ToHashSet(StringComparer.Ordinal);
+        return FilterFieldNames(node).FirstOrDefault(name => !carried.Contains(name));
+    }
+
+    private static IEnumerable<string> FilterFieldNames(IFilterNode node) => node switch
+    {
+        IFilterCondition condition => [condition.PropertyName],
+        FilterGroup group => group.Nodes.SelectMany(FilterFieldNames),
+        _ => [],
+    };
 
     private static Dictionary<string, IReadOnlyDictionary<string, string>> PreResolveFieldMappings(
         IReadOnlyList<DataSetSourceConfiguration> sources)
@@ -316,23 +359,38 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             var leftRecords = accumulated is null ? left.Records : accumulated;
             var leftSchema = accumulatedSchema is null ? left.Schema : accumulatedSchema;
 
-            // A join field missing from its side would read as null on every record and match nothing: refused, never an empty result (FDW-3629).
-            if (leftSchema.GetFieldOrdinal(join.LeftFieldName) < 0)
-                return GenericResult<List<DataRecord>>.Failure(
-                    DataGatewayLogger.JoinFieldNotFound(ctx.Logger, ctx.Config.Name, join.LeftSourceName, join.LeftFieldName));
-            if (right.Schema.GetFieldOrdinal(join.RightFieldName) < 0)
-                return GenericResult<List<DataRecord>>.Failure(
-                    DataGatewayLogger.JoinFieldNotFound(ctx.Logger, ctx.Config.Name, join.RightSourceName, join.RightFieldName));
+            // The join type's own statement decides the rows (FDW-5087); JoinedDataSetRules refused, before any pull, a type that does not join.
+            var kind = StatedJoinType.Of(join.JoinType);
+            if (kind.RequiresConditions)
+            {
+                // A join field missing from its side would read as null on every record and match nothing: refused, never an empty result (FDW-3629).
+                if (leftSchema.GetFieldOrdinal(join.LeftFieldName) < 0)
+                    return GenericResult<List<DataRecord>>.Failure(
+                        DataGatewayLogger.JoinFieldNotFound(ctx.Logger, ctx.Config.Name, join.LeftSourceName, join.LeftFieldName));
+                if (right.Schema.GetFieldOrdinal(join.RightFieldName) < 0)
+                    return GenericResult<List<DataRecord>>.Failure(
+                        DataGatewayLogger.JoinFieldNotFound(ctx.Logger, ctx.Config.Name, join.RightSourceName, join.RightFieldName));
 
-            // Both sides' keys usually carry the same logical name; the key is kept once, from the left, as SQL's JOIN ... USING does, so a
-            // left join that matches nothing still reads its own key and not the right side's null (FDW-3629).
-            var sharedKey = string.Equals(join.LeftFieldName, join.RightFieldName, StringComparison.OrdinalIgnoreCase)
-                ? right.Schema.GetFieldOrdinal(join.RightFieldName)
-                : -1;
-            var combinedSchema = CombineSchema(leftSchema, right.Schema, sharedKey);
-
-            accumulated = HashJoin(leftRecords, right.Records, combinedSchema, join.LeftFieldName, join.RightFieldName, join.JoinType, sharedKey);
-            accumulatedSchema = combinedSchema;
+                // Both sides' keys usually carry the same logical name; the key is kept once, from the left, as SQL's JOIN ... USING does, so a
+                // left join that matches nothing still reads its own key and not the right side's null (FDW-3629), and a right row that
+                // matches nothing carries its key in the left key's place (FDW-5087).
+                var sharedKey = string.Equals(join.LeftFieldName, join.RightFieldName, StringComparison.OrdinalIgnoreCase)
+                    ? right.Schema.GetFieldOrdinal(join.RightFieldName)
+                    : -1;
+                accumulatedSchema = CombineSchema(leftSchema, right.Schema, sharedKey);
+                accumulated = HashJoin(
+                    leftRecords,
+                    right.Records,
+                    accumulatedSchema,
+                    new JoinSides(join.LeftFieldName, join.RightFieldName, leftSchema.GetFieldOrdinal(join.LeftFieldName), leftSchema.FieldCount, sharedKey),
+                    kind);
+            }
+            else
+            {
+                // No condition, both sides kept: every left row with every right row (Cross).
+                accumulatedSchema = CombineSchema(leftSchema, right.Schema, -1);
+                accumulated = CrossJoin(leftRecords, right.Records, accumulatedSchema);
+            }
 
             DataGatewayLogger.JoinCompleted(
                 ctx.Logger, join.LeftSourceName, join.LeftFieldName, join.RightSourceName, join.RightFieldName, join.JoinType, accumulated.Count);
@@ -341,45 +399,84 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return GenericResult<List<DataRecord>>.Success(accumulated ?? []);
     }
 
+    // Where a join reads its keys and lays out a combined row: the key field on each side, the left key's place and the left's width in the
+    // combined row, and the right column the left already holds (-1 when the keys are named apart).
+    private readonly record struct JoinSides(string LeftField, string RightField, int LeftKeyOrdinal, int LeftWidth, int SharedKey);
+
+    // The rows of a join on a condition, as its type states which sides it keeps (FDW-5087): every matching pair, then each left row that
+    // matched nothing when it keeps every left row, then each right row that matched nothing when it keeps every right row.
     private static List<DataRecord> HashJoin(
-        List<DataRecord> leftRecords,
-        List<DataRecord> rightRecords,
-        RecordSchema combinedSchema,
-        string leftField,
-        string rightField,
-        string joinType,
-        int sharedKey)
+        List<DataRecord> leftRecords, List<DataRecord> rightRecords, RecordSchema combinedSchema, JoinSides sides, IJoinType kind)
     {
-        var rightLookup = new Dictionary<object, List<DataRecord>>();
-        foreach (var right in rightRecords)
+        var rightLookup = new Dictionary<object, List<int>>();
+        for (var index = 0; index < rightRecords.Count; index++)
         {
-            var key = right[rightField];
-            if (key is null) continue;
+            if (rightRecords[index][sides.RightField] is not { } key)
+                continue;
             if (!rightLookup.TryGetValue(key, out var bucket))
-            {
-                bucket = [];
-                rightLookup[key] = bucket;
-            }
-            bucket.Add(right);
+                rightLookup[key] = bucket = [];
+            bucket.Add(index);
         }
 
-        var isLeftOuter = joinType.Equals("Left", StringComparison.OrdinalIgnoreCase);
+        var matchedRight = new bool[rightRecords.Count];
         var results = new List<DataRecord>();
         foreach (var left in leftRecords)
         {
-            var key = left[leftField];
-            if (key is not null && rightLookup.TryGetValue(key, out var matches))
+            if (left[sides.LeftField] is { } key && rightLookup.TryGetValue(key, out var matches))
             {
-                foreach (var right in matches)
-                    results.Add(Merge(left, right, combinedSchema, sharedKey));
+                foreach (var index in matches)
+                {
+                    results.Add(Merge(left, rightRecords[index], combinedSchema, sides.SharedKey));
+                    matchedRight[index] = true;
+                }
             }
-            else if (isLeftOuter)
+            else if (kind.IncludesAllLeft)
             {
                 results.Add(MergeLeftOuter(left, combinedSchema));
             }
         }
 
+        if (kind.IncludesAllRight)
+        {
+            for (var index = 0; index < rightRecords.Count; index++)
+            {
+                if (!matchedRight[index])
+                    results.Add(MergeRightOuter(rightRecords[index], combinedSchema, sides));
+            }
+        }
+
         return results;
+    }
+
+    // Every left row paired with every right row: a join on no condition that keeps both sides (Cross, FDW-5087).
+    private static List<DataRecord> CrossJoin(List<DataRecord> leftRecords, List<DataRecord> rightRecords, RecordSchema combinedSchema)
+    {
+        var results = new List<DataRecord>(leftRecords.Count * rightRecords.Count);
+        foreach (var left in leftRecords)
+        {
+            foreach (var right in rightRecords)
+                results.Add(Merge(left, right, combinedSchema, -1));
+        }
+
+        return results;
+    }
+
+    // A right row that matched no left row: the left's columns null, except the shared key, which the right row's own key fills.
+    private static DataRecord MergeRightOuter(DataRecord right, RecordSchema combinedSchema, JoinSides sides)
+    {
+        var values = new object?[combinedSchema.FieldCount];
+        var rightValues = right.Values;
+        if (sides.SharedKey >= 0)
+            values[sides.LeftKeyOrdinal] = rightValues[sides.SharedKey];
+
+        var next = sides.LeftWidth;
+        for (var i = 0; i < rightValues.Length; i++)
+        {
+            if (i != sides.SharedKey)
+                values[next++] = rightValues[i];
+        }
+
+        return new DataRecord(combinedSchema, values);
     }
 
     // The left values, then the right values without the shared key, which the left already holds.

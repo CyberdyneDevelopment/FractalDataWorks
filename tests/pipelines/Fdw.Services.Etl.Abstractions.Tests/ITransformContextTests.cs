@@ -258,6 +258,7 @@ public class ITransformContextTests
         public IReadOnlyDictionary<string, object?> Parameters { get; set; } = new Dictionary<string, object?>();
         public IDictionary<string, object?> SharedState { get; set; } = new Dictionary<string, object?>();
         public IReadOnlyDictionary<string, object?> Variables { get; set; } = new Dictionary<string, object?>();
+        public Func<DateTimeOffset>? Clock { get; set; }
         public object? CalculationEngine { get; set; }
         public object? ConnectionProvider { get; set; }
         public object? DataGateway { get; set; }

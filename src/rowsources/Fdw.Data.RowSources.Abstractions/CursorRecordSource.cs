@@ -73,6 +73,11 @@ public class CursorRecordSource : IRecordSource<DataRecord>
         {
             yield return Project();
         }
+
+        if (Failure() is { } failure)
+        {
+            yield return failure;
+        }
     }
 
     /// <inheritdoc />
@@ -85,21 +90,30 @@ public class CursorRecordSource : IRecordSource<DataRecord>
             {
                 yield return Project();
             }
+        }
+        else
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!_reader.Read())
+                {
+                    break;
+                }
 
-            yield break;
+                yield return Project();
+            }
         }
 
-        while (true)
+        if (Failure() is { } failure)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!_reader.Read())
-            {
-                yield break;
-            }
-
-            yield return Project();
+            yield return failure;
         }
     }
+
+    // A reader that ended because its input is malformed says why (FDW-4971); its failure is the last element.
+    private IGenericResult<DataRecord>? Failure() =>
+        _reader is IReportsReadFailure { ReadFailure: { } failure } ? GenericResult<DataRecord>.Failure(failure) : null;
 
     private IGenericResult<DataRecord> Project()
     {

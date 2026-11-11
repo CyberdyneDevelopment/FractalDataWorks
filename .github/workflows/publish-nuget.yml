@@ -19,6 +19,17 @@
 # NUGET_PUBLISH_TIMEOUT_MINUTES) with the defaults declared once in the "Resolve push settings"
 # step. Prerelease versions (the prerelease branch) still publish here, as Mike ruled 2026-11-05.
 #
+# Two release schemes, chosen by the setting RELEASE_SCHEME (dispatch input, then variable NUGET_RELEASE_SCHEME,
+# then the declared default allocated, since the cut-over after 1.5.5): `allocated` is the job `release` (FDW-3350 /
+# FDW-4784: only the packages that changed, each at its own next version from its own last stable one, decided by
+# tools/versioning from the package's public surface before anything is pushed, then a bundle that pins them exactly);
+# `lockstep` is the job `publish` (every package at the hand-set version), kept for a patch branch cut from a lockstep
+# release (the 1.5.x line) and chosen with the dispatch input or the variable.
+#
+# The first allocated release has no bundle to read its baseline from: pass `baseline_file`
+# (tools/versioning/baseline/release-FDW-1.5.5.json) in the dispatch. Every later release reads it from the latest stable bundle,
+# so the default stays empty and a stale file is never used by accident.
+#
 # Requires a Trusted Publishing policy on nuget.org (Account -> Trusted Publishing) owned by the
 # `aicolab` account, naming this repository owner, this repository, and this workflow's FILE NAME
 # (`publish-nuget.yml`, no path). Renaming this file invalidates the policy.
@@ -73,6 +84,34 @@ on:
         description: 'Push only: the publish job''s timeout-minutes (GitHub-hosted runners allow at most 360). Empty = variable NUGET_PUBLISH_TIMEOUT_MINUTES, else the declared default.'
         type: string
         default: ''
+      release_scheme:
+        description: 'lockstep (every package at the hand-set version) or allocated (only the packages that changed, at the next free release number, then a bundle). Empty = variable NUGET_RELEASE_SCHEME, else the default declared in the "Resolve push settings" step.'
+        type: string
+        default: ''
+      release_bump:
+        description: 'Allocated only: patch, minor or major. The mirror has no commits to read it from, so the person cutting the release states it. Empty = variable NUGET_RELEASE_BUMP; no default, an allocated run without one fails.'
+        type: string
+        default: ''
+      baseline_file:
+        description: 'Allocated only: path of the project manifest of the last release tree, for the first release under this scheme. Empty = variable NUGET_BASELINE_FILE; when both are empty the baseline is read from the latest stable bundle on nuget.org.'
+        type: string
+        default: ''
+      bundle_id:
+        description: 'Allocated only: the release bundle package id. Empty = variable NUGET_BUNDLE_ID, else the declared default.'
+        type: string
+        default: ''
+      max_level:
+        description: 'Allocated only: the highest level any package may take in this release (patch, minor or major). A package whose public API says more takes it; levels.json keeps what the surface said for the release notes. Empty = variable NUGET_MAX_LEVEL; empty there too = no cap. A decision of the release owner (FDW-5164), never a default.'
+        type: string
+        default: ''
+      levels_max_rounds:
+        description: 'Allocated only: how many packages that join a release after the first pass (because a package they reference went major) may be added before the release fails. Empty = variable NUGET_LEVELS_MAX_ROUNDS, else the declared default.'
+        type: string
+        default: ''
+      full_build_wait_minutes:
+        description: 'Allocated stable release only: how long to wait for a green full-build CI run of this exact commit before the release fails. Empty = variable NUGET_FULL_BUILD_WAIT_MINUTES, else the declared default.'
+        type: string
+        default: ''
       package_ids:
         description: 'Unlist only: comma or newline separated exact package IDs (e.g. after a partial run hit nuget.org''s delete-quota mid-way -- pass just the remaining ones). Leave empty to auto-discover every packable Fdw.* package via a fresh pack.'
         type: string
@@ -86,6 +125,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read # the stable allocated release reads the CI runs of its commit
   id-token: write # required: lets the job mint the OIDC token nuget.org exchanges for a key
 
 jobs:
@@ -114,41 +154,16 @@ jobs:
       quota-retry-after-margin-seconds: ${{ steps.settings.outputs.quota-retry-after-margin-seconds }}
       key-max-age-seconds: ${{ steps.settings.outputs.key-max-age-seconds }}
       publish-timeout-minutes: ${{ steps.settings.outputs.publish-timeout-minutes }}
+      release-scheme: ${{ steps.settings.outputs.release-scheme }}
+      release-bump: ${{ steps.settings.outputs.release-bump }}
+      baseline-file: ${{ steps.settings.outputs.baseline-file }}
+      bundle-id: ${{ steps.settings.outputs.bundle-id }}
+      full-build-wait-minutes: ${{ steps.settings.outputs.full-build-wait-minutes }}
+      levels-max-rounds: ${{ steps.settings.outputs.levels-max-rounds }}
+      max-level: ${{ steps.settings.outputs.max-level }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # Why the version is read rather than computed: the package number is hand-set in
-      # Directory.Build.props (VersionPrefix + VersionSuffix) and deliberately not derived from
-      # git tags, so it is identical wherever it is built.
-      - name: Resolve version
-        id: version
-        run: |
-          set -euo pipefail
-          PREFIX=$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
-          SUFFIX=$(grep -oPm1 '(?<=<VersionSuffix>)[^<]+' Directory.Build.props || true)
-          if [ -n "$SUFFIX" ]; then VERSION="${PREFIX}-${SUFFIX}"; else VERSION="${PREFIX}"; fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Version in this tree: $VERSION"
-
-      # Why a stable branch must not carry a prerelease suffix, and vice versa: `main` is the
-      # stable channel. Publishing 1.0.0-rc.1 from it would put a prerelease on the stable line,
-      # and nuget.org can never take it back — versions are immutable and only unlistable.
-      - name: Check version matches the branch channel
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
-          if [ "${{ github.ref_name }}" = "main" ] && [[ "$VERSION" == *-* ]]; then
-            echo "FAIL: branch 'main' is the stable channel but the version is '$VERSION'."
-            echo "Clear <VersionSuffix> in Directory.Build.props before publishing from main."
-            exit 1
-          fi
-          if [ "${{ github.ref_name }}" = "prerelease" ] && [[ "$VERSION" != *-* ]]; then
-            echo "FAIL: branch 'prerelease' expects a prerelease version but got '$VERSION'."
-            echo "Set <VersionSuffix> in Directory.Build.props before publishing from prerelease."
-            exit 1
-          fi
-          echo "Version '$VERSION' matches branch '${{ github.ref_name }}'."
 
       # The push settings are configuration, never script. Precedence: the dispatch input, then the
       # repository variable (Settings -> Variables -> Actions), then the default declared HERE and
@@ -168,18 +183,39 @@ jobs:
           DEFAULT_QUOTA_RETRY_AFTER_MARGIN_SECONDS: '5'
           DEFAULT_KEY_MAX_AGE_SECONDS: '3000'
           DEFAULT_PUBLISH_TIMEOUT_MINUTES: '345'
+          DEFAULT_RELEASE_SCHEME: 'allocated'
+          DEFAULT_RELEASE_BUMP: ''
+          DEFAULT_BASELINE_FILE: ''
+          DEFAULT_BUNDLE_ID: 'Fdw.Bundle'
+          DEFAULT_FULL_BUILD_WAIT_MINUTES: '120'
+          DEFAULT_LEVELS_MAX_ROUNDS: '200'
+          DEFAULT_MAX_LEVEL: ''
           INPUT_QUOTA_MAX_WAITS: ${{ inputs.quota_max_waits }}
           INPUT_QUOTA_WAIT_SECONDS: ${{ inputs.quota_wait_seconds }}
           INPUT_QUOTA_BACKOFF_FACTOR: ${{ inputs.quota_backoff_factor }}
           INPUT_QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ inputs.quota_retry_after_margin_seconds }}
           INPUT_KEY_MAX_AGE_SECONDS: ${{ inputs.key_max_age_seconds }}
           INPUT_PUBLISH_TIMEOUT_MINUTES: ${{ inputs.publish_timeout_minutes }}
+          INPUT_RELEASE_SCHEME: ${{ inputs.release_scheme }}
+          INPUT_RELEASE_BUMP: ${{ inputs.release_bump }}
+          INPUT_BASELINE_FILE: ${{ inputs.baseline_file }}
+          INPUT_BUNDLE_ID: ${{ inputs.bundle_id }}
+          INPUT_FULL_BUILD_WAIT_MINUTES: ${{ inputs.full_build_wait_minutes }}
+          INPUT_LEVELS_MAX_ROUNDS: ${{ inputs.levels_max_rounds }}
+          INPUT_MAX_LEVEL: ${{ inputs.max_level }}
           VAR_QUOTA_MAX_WAITS: ${{ vars.NUGET_QUOTA_MAX_WAITS }}
           VAR_QUOTA_WAIT_SECONDS: ${{ vars.NUGET_QUOTA_WAIT_SECONDS }}
           VAR_QUOTA_BACKOFF_FACTOR: ${{ vars.NUGET_QUOTA_BACKOFF_FACTOR }}
           VAR_QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ vars.NUGET_QUOTA_RETRY_AFTER_MARGIN_SECONDS }}
           VAR_KEY_MAX_AGE_SECONDS: ${{ vars.NUGET_KEY_MAX_AGE_SECONDS }}
           VAR_PUBLISH_TIMEOUT_MINUTES: ${{ vars.NUGET_PUBLISH_TIMEOUT_MINUTES }}
+          VAR_RELEASE_SCHEME: ${{ vars.NUGET_RELEASE_SCHEME }}
+          VAR_RELEASE_BUMP: ${{ vars.NUGET_RELEASE_BUMP }}
+          VAR_BASELINE_FILE: ${{ vars.NUGET_BASELINE_FILE }}
+          VAR_BUNDLE_ID: ${{ vars.NUGET_BUNDLE_ID }}
+          VAR_FULL_BUILD_WAIT_MINUTES: ${{ vars.NUGET_FULL_BUILD_WAIT_MINUTES }}
+          VAR_LEVELS_MAX_ROUNDS: ${{ vars.NUGET_LEVELS_MAX_ROUNDS }}
+          VAR_MAX_LEVEL: ${{ vars.NUGET_MAX_LEVEL }}
         run: |
           set -euo pipefail
           resolve() {
@@ -193,6 +229,15 @@ jobs:
             if [ "$kind" = number ] && ! [[ "$value" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
               echo "::error::Push setting $name is '$value' (from the $source) but must be a number."; exit 1
             fi
+            if [ "$kind" = scheme ] && [ "$value" != lockstep ] && [ "$value" != allocated ]; then
+              echo "::error::Release setting $name is '$value' (from the $source) but must be lockstep or allocated."; exit 1
+            fi
+            if [ "$kind" = bump ] && [ -n "$value" ] && [ "$value" != patch ] && [ "$value" != minor ] && [ "$value" != major ]; then
+              echo "::error::Release setting $name is '$value' (from the $source) but must be patch, minor or major."; exit 1
+            fi
+            if [ "$kind" = text ] && [ -z "$value" ]; then
+              echo "::error::Release setting $name is empty."; exit 1
+            fi
             echo "$output=$value" >> "$GITHUB_OUTPUT"
             echo "  $name = $value ($source)"
           }
@@ -202,10 +247,51 @@ jobs:
           resolve QUOTA_RETRY_AFTER_MARGIN_SECONDS integer quota-retry-after-margin-seconds
           resolve KEY_MAX_AGE_SECONDS integer key-max-age-seconds
           resolve PUBLISH_TIMEOUT_MINUTES integer publish-timeout-minutes
+          resolve RELEASE_SCHEME scheme release-scheme
+          resolve RELEASE_BUMP bump release-bump
+          resolve BASELINE_FILE optional baseline-file
+          resolve BUNDLE_ID text bundle-id
+          resolve FULL_BUILD_WAIT_MINUTES integer full-build-wait-minutes
+          resolve LEVELS_MAX_ROUNDS integer levels-max-rounds
+          resolve MAX_LEVEL bump max-level
           TIMEOUT=$(grep -oP '^publish-timeout-minutes=\K.*' "$GITHUB_OUTPUT")
           if [ "$TIMEOUT" -lt 1 ] || [ "$TIMEOUT" -gt 360 ]; then
             echo "::error::Push setting PUBLISH_TIMEOUT_MINUTES is $TIMEOUT but a GitHub-hosted job runs 1 to 360 minutes."; exit 1
           fi
+
+      # Why the version is read rather than computed: the package number is hand-set in
+      # Directory.Build.props (VersionPrefix + VersionSuffix) and deliberately not derived from
+      # git tags, so it is identical wherever it is built.
+      - name: Resolve version
+        id: version
+        if: ${{ steps.settings.outputs.release-scheme == 'lockstep' }}
+        run: |
+          set -euo pipefail
+          PREFIX=$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
+          SUFFIX=$(grep -oPm1 '(?<=<VersionSuffix>)[^<]+' Directory.Build.props || true)
+          if [ -n "$SUFFIX" ]; then VERSION="${PREFIX}-${SUFFIX}"; else VERSION="${PREFIX}"; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version in this tree: $VERSION"
+
+      # Why a stable branch must not carry a prerelease suffix, and vice versa: `main` is the
+      # stable channel. Publishing 1.0.0-rc.1 from it would put a prerelease on the stable line,
+      # and nuget.org can never take it back — versions are immutable and only unlistable.
+      - name: Check version matches the branch channel
+        if: ${{ steps.settings.outputs.release-scheme == 'lockstep' }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "${{ github.ref_name }}" = "main" ] && [[ "$VERSION" == *-* ]]; then
+            echo "FAIL: branch 'main' is the stable channel but the version is '$VERSION'."
+            echo "Clear <VersionSuffix> in Directory.Build.props before publishing from main."
+            exit 1
+          fi
+          if [ "${{ github.ref_name }}" = "prerelease" ] && [[ "$VERSION" != *-* ]]; then
+            echo "FAIL: branch 'prerelease' expects a prerelease version but got '$VERSION'."
+            echo "Set <VersionSuffix> in Directory.Build.props before publishing from prerelease."
+            exit 1
+          fi
+          echo "Version '$VERSION' matches branch '${{ github.ref_name }}'."
 
       # Fdw.Abstractions is the probe: it is packable, its id is not overridden, and every release
       # contains it, so its presence at a given version stands for the whole set. A 404 from the
@@ -213,6 +299,7 @@ jobs:
       # case and must proceed.
       - name: Is this version already on nuget.org?
         id: exists
+        if: ${{ steps.settings.outputs.release-scheme == 'lockstep' }}
         env:
           PROBE_PACKAGE: fdw.abstractions
         run: |
@@ -458,6 +545,331 @@ jobs:
       - name: Dry run summary
         if: ${{ inputs.dry_run }}
         run: echo "Dry run - packed ${{ needs.check.outputs.version }} but did not push."
+
+  # The allocated release (FDW-3350 / FDW-3364), chosen by the release scheme setting. It builds and pushes only the
+  # packages that changed since the last release, at one release number N (main) or N-rc.<k> (prerelease), decides
+  # every package BEFORE anything is pushed (a version nuget.org holds with other contents stops the run, and nothing
+  # is pushed), pushes through the same sign-in rounds and quota retry as `publish`, and publishes the bundle last,
+  # only after every package is on nuget.org, so no host ever sees half a release. The steps are in
+  # scripts/release-allocated.sh. `publish` above is the lockstep path and does not run when this one is chosen.
+  release:
+    name: Allocated release
+    needs: check
+    if: needs.check.outputs.release-scheme == 'allocated'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(needs.check.outputs.publish-timeout-minutes) }}
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+    steps:
+      - name: Note the job start
+        id: clock
+        run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The release line is the major.minor of the hand-set VersionPrefix: a minor or major release moves it by hand,
+      # a patch never does.
+      - name: Resolve the release line
+        id: line
+        run: |
+          set -euo pipefail
+          PREFIX=$(grep -oPm1 '(?<=<VersionPrefix>)[^<]+' Directory.Build.props)
+          echo "line=${PREFIX%.*}" >> "$GITHUB_OUTPUT"
+          echo "Release line: ${PREFIX%.*}"
+
+      - name: Plan the release
+        id: plan
+        env:
+          BRANCH: ${{ github.ref_name }}
+          LINE: ${{ steps.line.outputs.line }}
+          BUMP: ${{ needs.check.outputs.release-bump }}
+          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
+          BASELINE_FILE: ${{ needs.check.outputs.baseline-file }}
+          WORK_DIR: release-work
+        run: bash scripts/release-allocated.sh plan
+
+      # The safety net (FDW-3356). The fast path builds only the packages that changed, so a behaviour change
+      # that leaves a package's API untouched passes it. A stable release therefore waits for a green CI run of
+      # THIS commit (ci.yml builds every project from source and runs every test on main). It waits while a
+      # run is queued or running, fails at once when every run for the commit failed, and fails when none is
+      # green within the wait. Candidates (prerelease) are not gated: they are the proof the stable one rests on.
+      - name: Require a green full build of this commit (stable only)
+        if: ${{ steps.plan.outputs.should-release == 'true' && github.ref_name == 'main' && !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WAIT_MINUTES: ${{ needs.check.outputs.full-build-wait-minutes }}
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+          while true; do
+            runs=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --limit 20 --json status,conclusion,url)
+            green=$(jq '[.[] | select(.conclusion == "success")] | length' <<<"$runs")
+            active=$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")
+            total=$(jq 'length' <<<"$runs")
+            if [ "$green" -gt 0 ]; then
+              echo "A full-build CI run of $GITHUB_SHA is green."
+              exit 0
+            fi
+            if [ "$total" -gt 0 ] && [ "$active" -eq 0 ]; then
+              echo "::error::Every full-build CI run of $GITHUB_SHA failed: $(jq -r '[.[].url] | join(", ")' <<<"$runs"). The stable release is not built. Fix the failure and push again."
+              exit 1
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::No green full-build CI run of $GITHUB_SHA within ${WAIT_MINUTES} minutes ($total run(s) seen, $active still running). The stable release is not built. Rerun this workflow once CI has finished green."
+              exit 1
+            fi
+            echo "Waiting for the full-build CI run of $GITHUB_SHA ($total seen, $active active)..."
+            sleep 60
+          done
+
+      # Each package's own version (FDW-4784): the changed packages are packed once at a stand-in version only to read
+      # their public surface (Fdw.ApiSurface), compared with the surface of their last stable version on nuget.org by
+      # tools/versioning/release.py decide, which gives every package the lowest level its API change needs. A package
+      # that joins because one it references went major is made the same way. The Fdw.ApiSurface command line is used
+      # in scripts/release-allocated.sh at the lines marked ASSUMES-DUMPER-CLI.
+      - name: Decide each package's version from its public surface
+        id: levels
+        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        env:
+          BRANCH: ${{ github.ref_name }}
+          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
+          WORK_DIR: release-work
+          DUMPER_PROJECT: tools/Fdw.ApiSurface
+          FIRST_VERSIONS_FILE: tools/versioning/first-versions.json
+          SETTINGS_FILE: tools/versioning/apisurface-settings.json
+          LEVELS_MAX_ROUNDS: ${{ needs.check.outputs.levels-max-rounds }}
+          MAX_LEVEL: ${{ needs.check.outputs.max-level }}
+        run: bash scripts/release-allocated.sh levels
+
+      - name: Build and test the build set
+        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        env:
+          MEMBERS: ${{ steps.levels.outputs.members }}
+          WORK_DIR: release-work
+        run: bash scripts/release-allocated.sh build
+
+      # The assembly versions are frozen at a floor for the whole 1.x line (FDW-4784): a package that is not rebuilt still asks for its
+      # dependencies at the version it was built against, and the runtime will not bind a lower one. This proves it before anything is pushed.
+      - name: Check that packages left as they are still bind
+        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        env:
+          WORK_DIR: release-work
+        run: bash scripts/release-allocated.sh bindings
+
+      - name: Decide every package before pushing any
+        id: decide
+        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        env:
+          WORK_DIR: release-work
+        run: bash scripts/release-allocated.sh decide
+
+      - name: NuGet login 1 (OIDC to short-lived key)
+        id: rlogin1
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push packages to nuget.org (round 1)
+        id: rpush1
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' }}
+        env:
+          NUGET_API_KEY: ${{ steps.rlogin1.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 2 (OIDC to short-lived key)
+        id: rlogin2
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush1.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push packages to nuget.org (round 2)
+        id: rpush2
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush1.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.rlogin2.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 3 (OIDC to short-lived key)
+        id: rlogin3
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush2.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push packages to nuget.org (round 3)
+        id: rpush3
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush2.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.rlogin3.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 4 (OIDC to short-lived key)
+        id: rlogin4
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush3.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push packages to nuget.org (round 4)
+        id: rpush4
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush3.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.rlogin4.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 5 (OIDC to short-lived key)
+        id: rlogin5
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush4.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push packages to nuget.org (round 5)
+        id: rpush5
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush4.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.rlogin5.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: NuGet login 6 (OIDC to short-lived key)
+        id: rlogin6
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush5.outputs.complete == 'false' }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push packages to nuget.org (round 6)
+        id: rpush6
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && steps.rpush5.outputs.complete == 'false' }}
+        env:
+          NUGET_API_KEY: ${{ steps.rlogin6.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: artifacts
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-push-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: Confirm every package is on nuget.org
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.decide.outputs.to-push != '0' && !(steps.rpush1.outputs.complete == 'true' || steps.rpush2.outputs.complete == 'true' || steps.rpush3.outputs.complete == 'true' || steps.rpush4.outputs.complete == 'true' || steps.rpush5.outputs.complete == 'true' || steps.rpush6.outputs.complete == 'true') }}
+        run: |
+          echo "::error::The push used all 6 sign-in rounds and packages are still unpushed. The bundle is NOT published. Rerun the workflow: packages already on nuget.org with the same contents are skipped."
+          exit 1
+
+      - name: Pack the bundle
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run }}
+        env:
+          VERSION: ${{ steps.levels.outputs.version }}
+          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
+          WORK_DIR: release-work
+        run: bash scripts/release-allocated.sh bundle
+
+      - name: NuGet login (bundle)
+        id: blogin
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run }}
+        uses: NuGet/login@v1
+        with:
+          user: aicolab
+
+      - name: Push the bundle to nuget.org
+        id: bpush
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run }}
+        env:
+          NUGET_API_KEY: ${{ steps.blogin.outputs.NUGET_API_KEY }}
+          ARTIFACTS_DIR: bundle
+          NUGET_SOURCE: https://api.nuget.org/v3/index.json
+          STATE_DIR: ${{ runner.temp }}/nuget-bundle-state
+          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
+          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
+          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
+          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
+          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
+          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
+          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
+        run: bash scripts/push-nuget.sh
+
+      - name: Confirm the bundle is on nuget.org
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && steps.bpush.outputs.complete != 'true' }}
+        run: |
+          echo "::error::The bundle was not pushed. Every package is on nuget.org, so rerun the workflow: it skips them and publishes the bundle."
+          exit 1
+
+      - name: Dry run summary
+        if: ${{ inputs.dry_run }}
+        run: echo "Dry run - planned, built, tested and decided release ${{ steps.levels.outputs.version }} but did not push."
 
   unlist:
     name: Unlist ${{ inputs.unlist_version }}

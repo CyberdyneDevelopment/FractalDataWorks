@@ -44,6 +44,10 @@ public sealed class JsonRowSourceType : RecordSourceTypeBase
     public bool AllowComments { get; set; }
 
     /// <inheritdoc />
+    /// <remarks>Reads one record at a time through Utf8JsonReader as the stream is read (FDW-4971).</remarks>
+    public override bool ParsesIncrementally => true;
+
+    /// <inheritdoc />
     public override bool SupportsSync => true;
 
     /// <inheritdoc />
@@ -77,6 +81,7 @@ public sealed class JsonRowSourceType : RecordSourceTypeBase
             // The separator is a choice only where nested objects are flattened; a container that does not flatten names none.
             FlattenSeparator = flatten ? choices.Text("FlattenSeparator") : string.Empty,
             RowArrayPath = choices.OptionalText("RecordSelector"),
+            RecordsAreLines = false,
             BufferSize = BufferSize,
             MaxDepth = MaxDepth,
             MaxStringLength = MaxStringLength,

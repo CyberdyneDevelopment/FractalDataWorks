@@ -3,10 +3,12 @@ using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Results;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Data;
 
@@ -33,6 +35,27 @@ public partial class DataGatewayServiceTypes : ServiceTypeCollectionBase<
     /// </remarks>
     public static string ConfigurationConnection => ServerConnection.Name;
 
+    /// <summary>
+    /// How many rows a page of a stable read asks for (FDW-4911): keyset pages of a container whose connection cannot open a cursor or of a
+    /// data set that pages in the store, and pages in the store's own order of a container whose connection states one.
+    /// </summary>
+    /// <remarks>
+    /// This is where the default is declared, and a host changes it at registration, before <c>Register</c> runs; a value below one is
+    /// refused there, and again by a read that would use it. It is a tuning number: a larger one makes fewer round trips, a smaller one
+    /// holds fewer rows a page. It is the page size the readers used before it was a setting.
+    /// </remarks>
+    public static int StableReadPageSize { get; set; } = 1000;
+
+    /// <summary>
+    /// The most rows a stable read of a data set whose kind does not page in the store (an in-memory join) may take in its one unpaged read
+    /// (FDW-4911). A set that holds more is refused with <c>UnpagedDataSetOverRowCap</c>.
+    /// </summary>
+    /// <remarks>
+    /// This is where the default is declared, and a host changes it at registration, before <c>Register</c> runs; a value below one is
+    /// refused there, and again by a read that would use it. No code caps it.
+    /// </remarks>
+    public static int UnpagedDataSetRowCap { get; set; } = 100_000;
+
     static DataGatewayServiceTypes()
     {
         var collectOptions = RegisterFunc;
@@ -42,6 +65,16 @@ public partial class DataGatewayServiceTypes : ServiceTypeCollectionBase<
         // into it, which is why this runs ahead of the option collect.
         Registration((builder, loggerFactory) =>
         {
+            // A page of no rows reads nothing, and a cap of no rows refuses every read: refused here, where a host sets them.
+            var log = loggerFactory?.CreateLogger<DataGatewayServiceTypes>() ?? NullLogger<DataGatewayServiceTypes>.Instance;
+            if (StableReadPageSize < 1)
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    DataServiceResultCodes.ByName("StableReadPageSizeInvalid"), log, ResultDetails.Create("pageSize", StableReadPageSize));
+
+            if (UnpagedDataSetRowCap < 1)
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    DataServiceResultCodes.ByName("UnpagedDataSetRowCapInvalid"), log, ResultDetails.Create("rowCap", UnpagedDataSetRowCap));
+
             builder.Services.TryAddSingleton<DataGatewayDomainConfigurationProvider>(sp =>
                 new DataGatewayDomainConfigurationProvider(
                     sp.GetRequiredService<ILogger<DataGatewayDomainConfigurationProvider>>(),

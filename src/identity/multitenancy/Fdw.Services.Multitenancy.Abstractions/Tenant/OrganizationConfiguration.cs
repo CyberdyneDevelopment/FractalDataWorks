@@ -58,9 +58,10 @@ public sealed class OrganizationConfiguration
 
     /// <summary>
     /// Gets or sets the durable id of this organization's own default workspace (FDW-3668): the workspace where a thing the
-    /// organization owns and that is placed in no workspace goes. Every organization has one, created with it.
+    /// organization owns and that is placed in no workspace goes. Set when the organization was founded with the setting
+    /// <c>FoundingMakesDefaultWorkspace</c> on; <see langword="null"/> when it was founded with it off and has none (FDW-4600).
     /// </summary>
-    public Guid DefaultWorkspaceId { get; set; }
+    public Guid? DefaultWorkspaceId { get; set; }
 
     /// <summary>
     /// Gets or sets the optional visibility group identifier.

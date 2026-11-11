@@ -16,7 +16,7 @@ namespace Fdw.Services.Connections.Http.Protocols;
 /// <para>
 /// Uses JSON:API conventions (https://jsonapi.org):
 /// <list type="bullet">
-/// <item><description>Pagination: page[number]=3&amp;page[size]=10</description></item>
+/// <item><description>Pagination: in the paging style the connection states, typically PageNumber with page[number] and page[size] (FDW-4938)</description></item>
 /// <item><description>Ordering: sort=name,-created_at</description></item>
 /// <item><description>Filtering: filter[name]=value</description></item>
 /// <item><description>Field selection: fields[type]=id,name</description></item>
@@ -32,28 +32,8 @@ public sealed class JsonApiProtocol : RestProtocolBase
     /// Initializes a new instance of the <see cref="JsonApiProtocol"/> class.
     /// </summary>
     public JsonApiProtocol()
-        : base("JsonApi", "JSON:API specification with page[number], filter[field], sort conventions")
+        : base("JsonApi", "JSON:API specification with filter[field] and sort conventions; paging in the style the connection states")
     {
-    }
-
-    /// <inheritdoc/>
-    protected override string BuildPaginationQueryString(IQueryCommand command, HttpProtocolContext context)
-    {
-        if (command.Paging is null)
-        {
-            return string.Empty;
-        }
-
-        var parts = new List<string>();
-
-        // JSON:API uses page-based pagination
-        var pageSize = command.Paging.Take > 0 ? command.Paging.Take : 25;
-        var pageNumber = (command.Paging.Skip / pageSize) + 1;
-
-        parts.Add($"page[number]={pageNumber}");
-        parts.Add($"page[size]={pageSize}");
-
-        return string.Join("&", parts);
     }
 
     /// <inheritdoc/>

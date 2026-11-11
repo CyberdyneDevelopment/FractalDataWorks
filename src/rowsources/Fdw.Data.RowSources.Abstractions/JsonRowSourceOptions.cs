@@ -49,4 +49,10 @@ public sealed class JsonRowSourceOptions : RowSourceOptions
     /// Gets or sets the separator for flattened field names.
     /// </summary>
     public required string FlattenSeparator { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether each top-level value of the document is a record (JSON Lines) rather than the objects of one
+    /// array (FDW-4971). Set by the format type that builds the options; the records path does not apply to lines.
+    /// </summary>
+    public required bool RecordsAreLines { get; set; }
 }

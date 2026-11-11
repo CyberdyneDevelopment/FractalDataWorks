@@ -27,8 +27,8 @@ public partial class OrganizationDomainConfiguration : DomainConfiguration
     public bool IsActive { get; set; }
 
     /// <summary>
-    /// Gets or sets the durable id of this organization's own default workspace (FDW-3668). Every organization has one, created
-    /// with it; no other organization names the same workspace.
+    /// Gets or sets the durable id of this organization's own default workspace (FDW-3668). Set when the organization was founded
+    /// with the setting <c>FoundingMakesDefaultWorkspace</c> on; <see langword="null"/> when it has none (FDW-4600).
     /// </summary>
-    public Guid DefaultWorkspaceId { get; set; }
+    public Guid? DefaultWorkspaceId { get; set; }
 }

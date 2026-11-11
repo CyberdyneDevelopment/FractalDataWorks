@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Data.RowSources;
 using Fdw.Data.RowSources.Abstractions;
+using Fdw.Data.RowSources.Abstractions.Logging;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Endpoints.Logging;
@@ -178,12 +179,11 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
             // Why the open's own result is the answer (FDW-1162): nothing is written yet, so it still carries a real
             // status. Its code decides that status -- a refusal is a 400 that says why, a missing data set a 404 -- where
             // answering every one of them 500 with the internal message reported a refused caller as a server fault.
-            var opened = await OpenRecords(req, ct).ConfigureAwait(false);
+            var opened = await Open(req, resource, ct).ConfigureAwait(false);
             if (opened.IsFailure || opened.Value is null)
             {
                 StreamRecordsEndpointLog.StreamNotStarted(Logger, resource);
-                var (statusCode, problem) = ResultHttpStatusMapper.Map(opened, HttpContext);
-                await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
+                await Answer(opened).ConfigureAwait(false);
                 return;
             }
 
@@ -192,21 +192,95 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
             StreamRecordsEndpointLog.FormatNegotiated(Logger, resource, format.Format, format.MediaType);
 
             // Why before the stream starts (FDW-3823): a choice the request leaves out is still answered with a status naming it.
-            var options = format.CreateOptions(ColumnsOf(source), FormatChoices(req), resource);
-            if (options.IsFailure)
+            var options = Options(format, source, req, resource);
+            if (options.IsFailure || options.Value is not { } built)
             {
                 StreamRecordsEndpointLog.StreamNotStarted(Logger, resource);
-                var (optionsStatus, optionsProblem) = ResultHttpStatusMapper.Map(options, HttpContext);
-                await Send.ResultAsync(TypedResults.Json(optionsProblem, statusCode: optionsStatus)).ConfigureAwait(false);
+                await Answer(options).ConfigureAwait(false);
                 return;
             }
 
-            await Stream(source, format, options.Value!, resource, ct).ConfigureAwait(false);
+            // Why the first record is read before the status is written (FDW-4983): a read refused on its first page has written
+            // nothing yet, so its own status still answers it, where a 200 cut short hid the refusal in a trailer.
+            await using var records = source.Read(ct).GetAsyncEnumerator(ct);
+            var first = await First(records, resource, ct).ConfigureAwait(false);
+            if (first is { IsFailure: true })
+            {
+                StreamRecordsEndpointLog.StreamNotStarted(Logger, resource);
+                await Answer(first).ConfigureAwait(false);
+                return;
+            }
+
+            await Stream(records, first, format, built, resource, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException disconnected) when (ct.IsCancellationRequested)
+        {
+            // The client went away before anything was written: the client's decision, with nobody left to answer.
+            StreamRecordsEndpointLog.ClientDisconnected(Logger, disconnected, resource, 0);
         }
         finally
         {
             slot.Release();
         }
+    }
+
+    // Opening the records is the endpoint's own code: whatever it throws is answered as a coded failure, never a bare 500 (FDW-4983).
+    private async Task<IGenericResult<IRecordSource<DataRecord>>> Open(TRequest req, string resource, CancellationToken ct)
+    {
+        try
+        {
+            return await OpenRecords(req, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return GenericResult<IRecordSource<DataRecord>>.Failure(StreamRecordsEndpointLog.StreamOpenThrew(Logger, ex, resource, ex.Message));
+        }
+    }
+
+    // The format's options from the request's choices. A choice the request leaves out or states unusably is the caller's to fix, so each
+    // is its own refusal naming the format and the choice (FDW-4983): the format's own messages were written for a container's metadata,
+    // a fault of the host, and answered 500 with no detail. Any other failure of a format answers with that format's own code.
+    private IGenericResult<RowWriterOptions> Options(IRecordWriterType format, IRecordSource<DataRecord> source, TRequest req, string resource)
+    {
+        try
+        {
+            var options = format.CreateOptions(ColumnsOf(source), FormatChoices(req), resource);
+            return options.IsSuccess ? options : ChoiceRefusal(options, options.FailureReason().Message, format.Format, resource);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return GenericResult<RowWriterOptions>.Failure(StreamRecordsEndpointLog.StreamOpenThrew(Logger, ex, resource, ex.Message));
+        }
+    }
+
+    // The refusal for a failed options build, by its reason; the reason's text is read by the caller, where the build is known to have failed.
+    private IGenericResult<RowWriterOptions> ChoiceRefusal(IGenericResult<RowWriterOptions> failed, string reason, string format, string resource) =>
+        failed.FirstFailureMessage()?.Number switch
+        {
+            RowSourceLog.FormatChoiceNotStatedId => GenericResult<RowWriterOptions>.Failure(
+                StreamRecordsEndpointLog.StreamRecordsFormatChoiceNotStated(Logger, resource, format, reason)),
+            RowSourceLog.FormatChoiceNotUsableId => GenericResult<RowWriterOptions>.Failure(
+                StreamRecordsEndpointLog.StreamRecordsFormatChoiceNotUsable(Logger, resource, format, reason)),
+            _ => failed,
+        };
+
+    // The first record, or null when there is none; a read that throws is a coded failure, as an open that throws is.
+    private async Task<IGenericResult<DataRecord>?> First(IAsyncEnumerator<IGenericResult<DataRecord>> records, string resource, CancellationToken ct)
+    {
+        try
+        {
+            return await records.MoveNextAsync().ConfigureAwait(false) ? records.Current : null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return GenericResult<DataRecord>.Failure(StreamRecordsEndpointLog.StreamOpenThrew(Logger, ex, resource, ex.Message));
+        }
+    }
+
+    private Task<FastEndpoints.Void> Answer(IGenericResult failure)
+    {
+        var (statusCode, problem) = ResultHttpStatusMapper.Map(failure, HttpContext);
+        return Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode));
     }
 
     private static List<string> ColumnsOf(IRecordSource<DataRecord> source)
@@ -221,7 +295,12 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     }
 
     private async Task Stream(
-        IRecordSource<DataRecord> source, IRecordWriterType format, RowWriterOptions options, string resource, CancellationToken ct)
+        IAsyncEnumerator<IGenericResult<DataRecord>> records,
+        IGenericResult<DataRecord>? first,
+        IRecordWriterType format,
+        RowWriterOptions options,
+        string resource,
+        CancellationToken ct)
     {
         HttpContext.Response.StatusCode = 200;
         HttpContext.Response.ContentType = format.MediaType;
@@ -245,7 +324,8 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
 
         try
         {
-            await foreach (var record in source.Read(ct).ConfigureAwait(false))
+            // The first record was read before the status was written; the rest follow it from the same reader.
+            for (var record = first; record is not null; record = await records.MoveNextAsync().ConfigureAwait(false) ? records.Current : null)
             {
                 if (record.IsFailure)
                 {

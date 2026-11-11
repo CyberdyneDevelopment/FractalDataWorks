@@ -21,6 +21,7 @@ public static class CalculationRuntime
     private static readonly int RequiredValueEmptyId = CalculationTreeResultCodes.ByName("RequiredValueEmpty").Id;
     private static readonly int FieldNotNumericId = CalculationTreeResultCodes.ByName("FieldNotNumeric").Id;
     private static readonly int FieldNotFlagId = CalculationTreeResultCodes.ByName("FieldNotFlag").Id;
+    private static readonly int FieldNotDateId = CalculationTreeResultCodes.ByName("FieldNotDate").Id;
     private static readonly int ClockMissingId = CalculationTreeResultCodes.ByName("ClockMissing").Id;
     private static readonly int AmountNotWholeId = CalculationTreeResultCodes.ByName("AmountNotWhole").Id;
     private static readonly int TimeOutOfRangeId = CalculationTreeResultCodes.ByName("TimeOutOfRange").Id;
@@ -81,6 +82,37 @@ public static class CalculationRuntime
         }
 
         return number == 1m || state.FailFlagWith(FieldNotFlagId, node, $"field '{field}' must be true, false, 0 or 1");
+    }
+
+    /// <summary>Reads a field of the record as a calendar date. Accepts a date, or a date-time with no time of day, which is what the Date data type holds.</summary>
+    /// <param name="record">The record.</param>
+    /// <param name="field">The field name.</param>
+    /// <param name="state">The run state a failure is recorded in.</param>
+    /// <param name="node">The index of the reading node.</param>
+    /// <returns>The date, or the default date when the read failed.</returns>
+    public static DateOnly ReadDate(IReadOnlyDictionary<string, object?> record, string field, CalculationRunState state, int node)
+    {
+        if (!record.TryGetValue(field, out var raw))
+        {
+            return state.FailDateWith(FieldNotDateId, node, $"field '{field}' is not in the record");
+        }
+
+        switch (raw)
+        {
+            case DateOnly date:
+                return date;
+            case DateTime moment when moment.TimeOfDay == TimeSpan.Zero:
+                return DateOnly.FromDateTime(moment);
+            case DateTime moment:
+                return state.FailDateWith(FieldNotDateId, node, $"field '{field}' holds {moment:O}, which has a time of day; a date has none");
+            case null:
+            case DBNull:
+                return state.FailDateWith(EmptyOperandId, node, $"date field '{field}' is empty");
+            case string text when string.IsNullOrWhiteSpace(text):
+                return state.FailDateWith(EmptyOperandId, node, $"date field '{field}' is empty");
+            default:
+                return state.FailDateWith(FieldNotDateId, node, $"field '{field}' holds a {raw.GetType().Name}; only a date, or a date-time with no time of day, is a date");
+        }
     }
 
     /// <summary>Turns a possibly empty number into a number; an empty one fails with EmptyOperand.</summary>
@@ -179,6 +211,30 @@ public static class CalculationRuntime
     /// <param name="moment">The moment.</param>
     /// <returns>The ticks.</returns>
     public static decimal Carry(DateTimeOffset moment) => moment.UtcTicks;
+
+    /// <summary>Adds a whole amount of a calendar unit to a date.</summary>
+    /// <param name="unit">The unit.</param>
+    /// <param name="date">The date.</param>
+    /// <param name="amount">The whole amount; negative counts back.</param>
+    /// <param name="state">The run state a failure is recorded in.</param>
+    /// <param name="node">The index of the AddDate node.</param>
+    /// <returns>The moved date, or the default date when the result is out of range.</returns>
+    public static DateOnly AddDate(IDateUnit unit, DateOnly date, long amount, CalculationRunState state, int node)
+    {
+        try
+        {
+            return unit.AddToDate(date, amount);
+        }
+        catch (Exception exception) when (exception is ArgumentOutOfRangeException or OverflowException)
+        {
+            return state.FailDateWith(TimeOutOfRangeId, node, exception.Message);
+        }
+    }
+
+    /// <summary>Carries a date in the decimal results array as its day number, which a decimal holds exactly.</summary>
+    /// <param name="date">The date.</param>
+    /// <returns>The day number.</returns>
+    public static decimal CarryDate(DateOnly date) => date.DayNumber;
 
     /// <summary>Tests equality; false when either operand is empty.</summary>
     /// <param name="left">The left operand.</param>

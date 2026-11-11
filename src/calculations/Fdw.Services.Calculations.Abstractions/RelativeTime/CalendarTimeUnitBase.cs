@@ -6,7 +6,7 @@ namespace Fdw.Services.Calculations.Abstractions.RelativeTime;
 /// A unit of calendar time: it moves the wall-clock reading of a time zone, so a day is a calendar day and a month or a year
 /// keeps its place in the calendar, across a change of the clocks.
 /// </summary>
-public abstract class CalendarTimeUnitBase : TimeUnitBase
+public abstract class CalendarTimeUnitBase : TimeUnitBase, IDateUnit
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CalendarTimeUnitBase"/> class.
@@ -21,6 +21,10 @@ public abstract class CalendarTimeUnitBase : TimeUnitBase
     /// <inheritdoc />
     public sealed override DateTimeOffset Add(DateTimeOffset moment, long amount, TimeZoneInfo zone) =>
         ZonedMoments.FromWall(AddTo(ZonedMoments.WallOf(moment, zone), amount), zone);
+
+    /// <inheritdoc />
+    public DateOnly AddToDate(DateOnly date, long amount) =>
+        DateOnly.FromDateTime(AddTo(date.ToDateTime(TimeOnly.MinValue), amount));
 
     /// <summary>Adds the amount to a wall-clock reading.</summary>
     /// <param name="wall">The reading.</param>

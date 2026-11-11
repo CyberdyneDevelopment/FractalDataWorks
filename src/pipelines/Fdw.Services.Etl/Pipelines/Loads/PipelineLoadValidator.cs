@@ -128,6 +128,18 @@ public static class PipelineLoadValidator
         return GenericResult.Failure(PipelineLoadLog.LoadOptionPairIncomplete(logger, owner, option, hasFirst ? secondName : firstName));
     }
 
+    // Whether the row states any soft-delete option: the mode, its flag, time and marker columns, or a stage (FDW-4956). One stated without its mode is refused.
+    private static bool StatesAnySoftDeleteOption(PipelineLoadStepConfiguration row) =>
+        Has(row.SoftDeleteMode)
+        || Has(row.DeletedFlagColumn)
+        || row.DeletedFlagValue is not null
+        || Has(row.DeletedAtColumn)
+        || Has(row.SoftDeleteMarkerColumn)
+        || Has(row.SoftDeleteMarkerValue)
+        || Has(row.StageContainer)
+        || Has(row.StageKeyColumn)
+        || Has(row.SweepRejectedRowsRule);
+
     internal static IGenericResult ValidateSoftDelete(
         string owner,
         PipelineLoadStepConfiguration row,
@@ -136,13 +148,7 @@ public static class PipelineLoadValidator
         ILogger logger)
     {
         var hasMode = Has(row.SoftDeleteMode);
-        var hasAny = hasMode
-            || Has(row.DeletedFlagColumn)
-            || row.DeletedFlagValue is not null
-            || Has(row.DeletedAtColumn)
-            || Has(row.SoftDeleteMarkerColumn)
-            || Has(row.SoftDeleteMarkerValue);
-        if (!hasAny)
+        if (!StatesAnySoftDeleteOption(row))
             return GenericResult.Success();
         if (!shape.AllowsSoftDelete)
             return GenericResult.Failure(PipelineLoadLog.LoadStepOptionNotApplicable(logger, owner, "a soft delete", shapeName));
@@ -159,7 +165,76 @@ public static class PipelineLoadValidator
 
         var marker = ValidatePair(
             owner, "a soft delete marker", nameof(row.SoftDeleteMarkerColumn), row.SoftDeleteMarkerColumn, nameof(row.SoftDeleteMarkerValue), row.SoftDeleteMarkerValue, logger);
-        return marker.IsFailure ? marker : ValidateMarkerUse(owner, row, mode, logger);
+        if (marker.IsFailure)
+            return marker;
+        if (ReferenceEquals(mode, SoftDeleteModes.AbsentFromStage))
+            return GenericResult.Failure(PipelineLoadLog.SoftDeleteOptionsInconsistent(
+                logger, owner, "AbsentFromStage is the sweep an AbsentFromSource load runs; a load states AbsentFromSource"));
+        return ValidateMarkerUse(owner, row, mode, logger);
+    }
+
+    /// <summary>
+    /// Checks the unmatched keys rule of a load (FDW-4988). A load whose kind writes existing rows by key (an update, a delete by key) states what a key that
+    /// matched no row does, Fail or Warn; any other load, and an absent-from-source delete, which matches nothing by key, takes none.
+    /// </summary>
+    /// <param name="owner">What the load is, for messages.</param>
+    /// <param name="row">The load row.</param>
+    /// <param name="kind">The load kind.</param>
+    /// <param name="logger">The logger the refusal is written to.</param>
+    /// <returns>Success, or the refusal that names what is wrong.</returns>
+    internal static IGenericResult ValidateUnmatchedKeys(string owner, PipelineLoadStepConfiguration row, ILoadStepKind kind, ILogger logger)
+    {
+        if (!MatchesByKey(row, kind))
+        {
+            return Has(row.UnmatchedKeysRule)
+                ? GenericResult.Failure(PipelineLoadLog.LoadStepOptionNotApplicable(logger, owner, "an unmatched keys rule", kind.Name))
+                : GenericResult.Success();
+        }
+
+        if (!Has(row.UnmatchedKeysRule))
+            return GenericResult.Failure(PipelineLoadLog.UnmatchedKeysRuleMissing(logger, owner, kind.Name));
+        return ReferenceEquals(UnmatchedKeysRules.ByName(row.UnmatchedKeysRule!), UnmatchedKeysRules.NotFound)
+            ? GenericResult.Failure(PipelineLoadLog.UnmatchedKeysRuleUnknown(logger, owner, row.UnmatchedKeysRule!))
+            : GenericResult.Success();
+    }
+
+    /// <summary>Whether a load finds existing rows by their keys, so a key can match no row (FDW-4988): its kind does, and it is not an absent-from-source delete.</summary>
+    /// <param name="row">The load row.</param>
+    /// <param name="kind">The load kind.</param>
+    /// <returns><see langword="true"/> when the load can miss a key.</returns>
+    internal static bool MatchesByKey(PipelineLoadStepConfiguration row, ILoadStepKind kind) =>
+        kind.WritesExistingRowsByKey
+        && !(Has(row.SoftDeleteMode) && ReferenceEquals(SoftDeleteModes.ByName(row.SoftDeleteMode!), SoftDeleteModes.AbsentFromSource));
+
+    /// <summary>
+    /// Checks the stage of a load (FDW-4956). A graph destination that writes a database with an AbsentFromSource soft delete stages each batch's keys in a
+    /// container it names and sweeps once at the end, so it holds no rows: its stage container, stage key column and rejected-rows rule are each required.
+    /// Every other load (another mode, a file destination, a load step given its rows whole) stages nothing and takes none of them.
+    /// </summary>
+    /// <param name="owner">What the load is, for messages.</param>
+    /// <param name="row">The load row.</param>
+    /// <param name="stagesKeys">Whether the load stages its keys.</param>
+    /// <param name="logger">The logger the refusal is written to.</param>
+    /// <returns>Success, or the refusal that names what is wrong.</returns>
+    internal static IGenericResult ValidateStage(string owner, PipelineLoadStepConfiguration row, bool stagesKeys, ILogger logger)
+    {
+        if (!stagesKeys)
+        {
+            return Has(row.StageContainer) || Has(row.StageKeyColumn) || Has(row.SweepRejectedRowsRule)
+                ? GenericResult.Failure(PipelineLoadLog.SoftDeleteOptionsInconsistent(
+                    logger, owner, "only an absent-from-source soft delete into a database stages its keys, so this load takes no stage container, stage key column or rejected-rows rule"))
+                : GenericResult.Success();
+        }
+
+        if (!Has(row.StageContainer))
+            return GenericResult.Failure(PipelineLoadLog.SoftDeleteOptionsInconsistent(logger, owner, "an absent-from-source soft delete names the container its keys are staged in"));
+        if (!Has(row.StageKeyColumn))
+            return GenericResult.Failure(PipelineLoadLog.SoftDeleteOptionsInconsistent(logger, owner, "an absent-from-source soft delete names its stage container's stage key column"));
+        if (!Has(row.SweepRejectedRowsRule))
+            return GenericResult.Failure(PipelineLoadLog.SoftDeleteOptionsInconsistent(logger, owner, "an absent-from-source soft delete states what its sweep does when rows were rejected upstream"));
+        return ReferenceEquals(SweepRejectedRowsRules.ByName(row.SweepRejectedRowsRule!), SweepRejectedRowsRules.NotFound)
+            ? GenericResult.Failure(PipelineLoadLog.SweepRejectedRowsRuleUnknown(logger, owner, row.SweepRejectedRowsRule!))
+            : GenericResult.Success();
     }
 
     private static IGenericResult ValidateMarkerUse(string owner, PipelineLoadStepConfiguration row, ISoftDeleteMode mode, ILogger logger)

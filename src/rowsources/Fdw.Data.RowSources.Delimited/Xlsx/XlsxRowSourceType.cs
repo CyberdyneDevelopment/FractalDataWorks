@@ -30,6 +30,10 @@ public sealed class XlsxRowSourceType : RecordSourceTypeBase
     }
 
     /// <inheritdoc />
+    /// <remarks>Reads the sheet through a ZipArchive over a seekable stream, its rows through an XmlReader. (FDW-4967)</remarks>
+    public override bool ParsesIncrementally => true;
+
+    /// <inheritdoc />
     public override bool SupportsSync => true;
 
     /// <inheritdoc />

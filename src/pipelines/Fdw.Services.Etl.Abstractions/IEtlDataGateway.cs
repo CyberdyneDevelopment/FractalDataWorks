@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 
@@ -26,5 +27,18 @@ public interface IEtlDataGateway : IDataGateway
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The command's result. A call with neither override is the same as <see cref="IDataGateway.Execute{T}(IDataCommand, DataStoreTarget, CancellationToken)"/>.</returns>
     Task<IGenericResult<T>> Execute<T>(
+        IDataCommand command, DataStoreTarget target, string? pathOverride, string? containerNameOverride, CancellationToken cancellationToken = default);
+
+    /// <summary>Opens a declared container's rows as a stream read in a stable order, at a different physical path and/or name (FDW-4911).</summary>
+    /// <param name="command">The read: a query command.</param>
+    /// <param name="target">The declared data store, path and container: the shape, keys and connection the read goes by.</param>
+    /// <param name="pathOverride">The physical path to use in place of the declared container's; none keeps the declared path.</param>
+    /// <param name="containerNameOverride">The physical container name (the file) to use in place of the declared one; none keeps the declared name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// A disposable record source, read as <see cref="IDataGateway.OpenRecordSource(IDataCommand, DataStoreTarget, CancellationToken)"/> reads,
+    /// at the address given. A call with neither override is the same as that member.
+    /// </returns>
+    Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(
         IDataCommand command, DataStoreTarget target, string? pathOverride, string? containerNameOverride, CancellationToken cancellationToken = default);
 }

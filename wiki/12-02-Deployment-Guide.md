@@ -16,7 +16,7 @@ The deployment story is owned by each reference repo and the `infrastructure` re
 
 ## Build and Pack
 
-The framework is packed to NuGet via `public/scripts/pack-local.sh` (local feed); CI publishes the packages to the package feed. See [17-01 Build Pipeline Guide](17-01-Build-Pipeline-Guide.md) for the framework build pipeline.
+CI packs the framework and publishes the packages to the package feed. See [17-01 Build Pipeline Guide](17-01-Build-Pipeline-Guide.md) for the framework build pipeline.
 
 Reference apps are built and published from their own repos. Each repo has its own pipeline; refer to that repo's `README.md` for canonical instructions.
 

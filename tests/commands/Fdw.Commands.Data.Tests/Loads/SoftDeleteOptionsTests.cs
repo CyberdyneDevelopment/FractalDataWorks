@@ -50,6 +50,45 @@ public sealed class SoftDeleteOptionsTests
         new SoftDeleteOptions("", SoftDeleteModes.AbsentFromSource) { AbsentFromSource = Keys("Code"), FlagValue = true }
             .FirstProblem().ShouldNotBeNull();
 
+    private static StagedKeySet Staged(long expected = 3, string stageKeyColumn = "StageKey", string stageKey = "run/dst", params string[] keys) =>
+        new(Mock.Of<Fdw.Data.Abstractions.IStorageContainer>(), stageKeyColumn, stageKey, keys.Length == 0 ? ["Code"] : keys, expected);
+
+    [Fact]
+    public void AbsentFromStageWithItsStageIsConsistent() =>
+        new SoftDeleteOptions("IsDeleted", SoftDeleteModes.AbsentFromStage) { AbsentFromStage = Staged(), FlagValue = true }.FirstProblem().ShouldBeNull();
+
+    [Fact]
+    public void AbsentFromStageNeedsItsStage() =>
+        new SoftDeleteOptions("IsDeleted", SoftDeleteModes.AbsentFromStage) { FlagValue = true }.FirstProblem()!.Message.ShouldContain("names its stage");
+
+    [Theory]
+    [InlineData(0L, "StageKey", "run/dst", "at least one")]
+    [InlineData(-1L, "StageKey", "run/dst", "at least one")]
+    [InlineData(3L, " ", "run/dst", "stage key column")]
+    [InlineData(3L, "StageKey", "", "states its stage key")]
+    public void AbsentFromStageRefusesAStageItCannotTrust(long expected, string stageKeyColumn, string stageKey, string reason) =>
+        new SoftDeleteOptions("IsDeleted", SoftDeleteModes.AbsentFromStage) { AbsentFromStage = Staged(expected, stageKeyColumn, stageKey), FlagValue = true }
+            .FirstProblem()!.Message.ShouldContain(reason);
+
+    [Fact]
+    public void AbsentFromStageTakesNoSourceSet() =>
+        new SoftDeleteOptions("IsDeleted", SoftDeleteModes.AbsentFromStage) { AbsentFromStage = Staged(), AbsentFromSource = Keys("Code"), FlagValue = true }
+            .FirstProblem().ShouldNotBeNull();
+
+    [Fact]
+    public void AbsentFromStageIsASourceSetModeAKindThatCannotStageRefuses() =>
+        SoftDeleteModes.AbsentFromStage.NeedsSourceSet.ShouldBeTrue();
+
+    [Fact]
+    public void TheOtherModesTakeNoStage()
+    {
+        new SoftDeleteOptions("IsDeleted", SoftDeleteModes.AbsentFromSource) { AbsentFromSource = Keys("Code"), AbsentFromStage = Staged(), FlagValue = true }
+            .FirstProblem().ShouldNotBeNull();
+        new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { AbsentFromStage = Staged(), FlagValue = true }.FirstProblem().ShouldNotBeNull();
+        new SoftDeleteOptions("IsDeleted", SoftDeleteModes.MarkerMatches) { Marker = new SoftDeleteMarker("Status", "gone"), AbsentFromStage = Staged(), FlagValue = true }
+            .FirstProblem().ShouldNotBeNull();
+    }
+
     [Fact]
     public void FilterMatchesNeedsNothingMore() =>
         new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { FlagValue = true }.FirstProblem().ShouldBeNull();

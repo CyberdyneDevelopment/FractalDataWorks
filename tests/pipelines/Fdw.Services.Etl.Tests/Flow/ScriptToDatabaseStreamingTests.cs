@@ -93,7 +93,7 @@ public sealed class ScriptToDatabaseStreamingTests
             new TypeResolver(new Dictionary<Guid, IConnectionType> { [connectionId] = ConnectionType(AllCapabilities) }),
             NullLogger.Instance);
         var source = new FlowScriptSource("src", new ScriptingGateway([], stream: script).Gateway, "Warehouse", "SELECT Id FROM dbo.Big", [], rows, batchSize);
-        var destination = new FlowLoadDestination("dst", executor, "export", InsertIds(), null, new Dictionary<string, object?>(), Now);
+        var destination = new FlowLoadDestination("dst", executor, "export", InsertIds(), null, new Dictionary<string, object?>(), Now, TimeSpan.Zero);
 
         var result = await new FlowExecutor().Run(Graph([source, destination], [Link("src", "dst")]), Options(linkCapacity), TestContext.Current.CancellationToken);
 

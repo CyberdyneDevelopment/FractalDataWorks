@@ -69,6 +69,7 @@ public class RowSourceTypeBaseTests
     {
         public TestRowSourceType() : base("TestSource") { }
 
+        public override bool ParsesIncrementally => true;
         public override bool SupportsSync => true;
         public override bool SupportsAsync => true;
         public override bool SupportsReset => false;

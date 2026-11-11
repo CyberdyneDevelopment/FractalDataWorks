@@ -47,6 +47,14 @@ public sealed class CompoundDataSetType : DataSetTypeBase
     public override IDataQuery CreateQuery() => new DataQueryBuilder<object>(Name);
 
     /// <inheritdoc />
+    /// <remarks>
+    /// One store, one query: the join, the filter, the order and the page are all that query's (FDW-4991). A page follows the caller's
+    /// order with the data set's key fields as a tie-break, else the key fields, so a join that repeats its primary rows still gives every
+    /// row one place. Grouping stays refused: the translators take no aggregation over a join.
+    /// </remarks>
+    public override bool PagesInStore => true;
+
+    /// <inheritdoc />
     public override async Task<IGenericResult<T>> Execute<T>(
         IDataSetExecutionContext context, IDataCommand command, CancellationToken ct = default)
     {
@@ -60,6 +68,11 @@ public sealed class CompoundDataSetType : DataSetTypeBase
 
         if (ctx.Config is not ICompoundDataSetConfiguration compound)
             return DataSetExecutionHelpers.KindMismatch<T>(ctx, "Compound");
+
+        // Every column the joined query reads is one its mappings name; a set stored before FDW-5022 that leaves one to a guess is refused.
+        var mapped = CompoundMappingRules.Validate(compound, ctx.Logger);
+        if (mapped.IsFailure)
+            return mapped.ToNewResult<T>();
 
         var sources = ctx.Config.Sources;
         if (sources is null || sources.Count == 0)
@@ -78,25 +91,71 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (primaryContainerName == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceNoContainer(ctx.Logger, primarySource.SourceName, ctx.Config.Name));
 
-        var joinResult = BuildJoinExpressions<T>(ctx, compound.Joins, sources);
+        var (owners, ownersError) = FieldOwners<T>(ctx, sources);
+        if (ownersError is not null) return ownersError;
+
+        var joinResult = BuildJoinExpressions<T>(ctx, compound.Joins, sources, primaryContainerName);
         if (joinResult.HasError) return joinResult.ErrorResult!;
 
-        var projResult = BuildProjection<T>(ctx, sources, primarySource);
-        if (projResult.HasError) return projResult.ErrorResult!;
+        if (KeyOnOptionalSide(ctx, command, owners, compound.Joins, primarySource.SourceName) is { } optionalKey)
+            return GenericResult<T>.Failure(DataGatewayLogger.CompoundKeyOnOptionalSide(ctx.Logger, ctx.Config.Name, optionalKey));
 
-        var filterResult = TranslateCompoundFilter<T>(ctx, command, primarySource);
-        if (filterResult.HasError) return filterResult.ErrorResult!;
+        var read = ReadExpressions<T>(ctx, command, owners);
+        if (read.ErrorResult is { } readError) return readError;
 
-        return await ExecuteCompoundQuery<T>(
-            ctx, command, primarySource, primaryContainerName,
-            joinResult.Joins!, projResult.Projection, filterResult.TranslatedFilter, ct)
-            .ConfigureAwait(false);
+        var sourceQuery = new QueryCommand<T>
+        {
+            Joins = joinResult.Joins!,
+            Projection = Projection(owners),
+            Filter = read.Filter,
+            Ordering = read.Ordering,
+            Paging = (command as IQueryCommand)?.Paging,
+        };
+        return await ExecuteCompoundQuery(ctx, sourceQuery, primarySource, primaryContainerName, ct).ConfigureAwait(false);
     }
+
+    // The container and physical column of the source that holds a field, as the joined query names it.
+    private sealed record FieldOwner(string Field, string SourceName, string Container, string Physical)
+    {
+        public string Qualified => string.Concat(Container, ".", Physical);
+    }
+
+    // Which source holds each of the data set's stored fields: the one source whose field mappings name it, which CompoundMappingRules has
+    // already checked (FDW-5022). Calculated fields have no column; they are applied after the read.
+    private static (List<FieldOwner> Owners, IGenericResult<T>? ErrorResult) FieldOwners<T>(
+        DataSetExecutionContext ctx,
+        IList<DataSetSourceConfiguration> sources)
+    {
+        var owners = new List<FieldOwner>();
+        foreach (var field in ctx.Config.Fields.Where(f => f.IsCurrent && !f.IsDeleted && !f.IsCalculated))
+        {
+            var owningSource = sources.First(source => source.FieldMappings.ContainsKey(field.Name));
+            var physicalColumn = owningSource.FieldMappings[field.Name];
+            var sourceContainerName = DataSetExecutionHelpers.GetContainerName(owningSource);
+            if (sourceContainerName == null)
+                return ([], GenericResult<T>.Failure(
+                    DataGatewayLogger.SourceNoContainer(ctx.Logger, owningSource.SourceName, ctx.Config.Name)));
+
+            owners.Add(new FieldOwner(field.Name, owningSource.SourceName, sourceContainerName, physicalColumn));
+        }
+
+        return (owners, null);
+    }
+
+    // Every stored field, each qualified with its source's container and aliased to the data set's name for it.
+    private static ProjectionExpression? Projection(List<FieldOwner> owners) =>
+        owners.Count == 0
+            ? null
+            : new ProjectionExpression
+            {
+                Fields = [.. owners.Select(owner => new ProjectionField { PropertyName = owner.Physical, Alias = owner.Field, SourceContainer = owner.Container })],
+            };
 
     private static (bool HasError, List<IJoinExpression>? Joins, IGenericResult<T>? ErrorResult) BuildJoinExpressions<T>(
         DataSetExecutionContext ctx,
         IList<DataSetJoinConfiguration> joins,
-        IList<DataSetSourceConfiguration> sources)
+        IList<DataSetSourceConfiguration> sources,
+        string primaryContainerName)
     {
         var sourceLookup = sources.ToDictionary(s => s.SourceName, StringComparer.OrdinalIgnoreCase);
         var joinExpressions = new List<IJoinExpression>(joins.Count);
@@ -111,6 +170,11 @@ public sealed class CompoundDataSetType : DataSetTypeBase
                 return (true, null, GenericResult<T>.Failure(
                     DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.RightSourceName)));
 
+            var leftContainerName = DataSetExecutionHelpers.GetContainerName(leftSource);
+            if (leftContainerName == null)
+                return (true, null, GenericResult<T>.Failure(
+                    DataGatewayLogger.SourceNoContainer(ctx.Logger, leftSource.SourceName, ctx.Config.Name)));
+
             var rightContainerName = DataSetExecutionHelpers.GetContainerName(rightSource);
             if (rightContainerName == null)
                 return (true, null, GenericResult<T>.Failure(
@@ -119,108 +183,111 @@ public sealed class CompoundDataSetType : DataSetTypeBase
             joinExpressions.Add(new JoinExpression
             {
                 TargetContainerName = rightContainerName,
-                JoinType = join.JoinType,
-                JoinConditions =
-                [
-                    (leftSource.FieldMappings.TryGetValue(join.LeftFieldName, out var lp) ? lp : join.LeftFieldName,
-                     rightSource.FieldMappings.TryGetValue(join.RightFieldName, out var rp) ? rp : join.RightFieldName),
-                ],
+                // A join whose left side is not the primary source continues from the container an earlier join brought in (FDW-4991).
+                SourceContainerName = string.Equals(leftContainerName, primaryContainerName, StringComparison.Ordinal) ? null : leftContainerName,
+                // The join type's own option, by its name; the translator states it by the option's SQL keyword, never by the stored text
+                // (FDW-5099). A type with no condition (Cross) takes no join columns.
+                JoinType = StatedJoinType.Of(join.JoinType).Name,
+                // Both columns are mapped: CompoundMappingRules refused a join column its source does not map (FDW-5022).
+                JoinConditions = StatedJoinType.Of(join.JoinType).RequiresConditions
+                    ? [(leftSource.FieldMappings[join.LeftFieldName], rightSource.FieldMappings[join.RightFieldName])]
+                    : [],
             });
         }
 
         return (false, joinExpressions, null);
     }
 
-    private static (bool HasError, IProjectionExpression? Projection, IGenericResult<T>? ErrorResult) BuildProjection<T>(
-        DataSetExecutionContext ctx,
-        IList<DataSetSourceConfiguration> sources,
-        DataSetSourceConfiguration primarySource)
+    /// <summary>The first key field of a page that an outer join may leave without a value, or null when every key field always has one (FDW-5024).</summary>
+    /// <remarks>
+    /// A page is cut by its key, and a keyset page asks for the rows after the last key, so a key that can be NULL repeats or skips rows.
+    /// A source is optional when a join keeps every row of its other side: the right source of a join that keeps every left row, and every
+    /// source joined before a join that keeps every right row. Which side a join keeps is its join type's own statement.
+    /// </remarks>
+    private static string? KeyOnOptionalSide(
+        DataSetExecutionContext ctx, IDataCommand command, List<FieldOwner> owners, IList<DataSetJoinConfiguration> joins, string primarySourceName)
     {
-        // Calculated fields are excluded from the SQL projection and applied post-execution.
-        var nonCalculatedFields = ctx.Config.Fields.Where(f => !f.IsCalculated).ToList();
-        if (nonCalculatedFields.Count == 0)
-            return (false, null, null);
+        if ((command as IQueryCommand)?.Paging is null)
+            return null;
 
-        var projectionFields = new List<ProjectionField>(nonCalculatedFields.Count);
-        foreach (var field in nonCalculatedFields)
+        var joined = new List<string> { primarySourceName };
+        var optional = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var join in joins.OrderBy(j => j.Ordinal))
         {
-            // Find which source owns this logical field via FieldMappings (key=logical, value=physical).
-            DataSetSourceConfiguration? owningSource = null;
-            string? physicalColumn = null;
-
-            foreach (var source in sources)
-            {
-                if (source.FieldMappings.TryGetValue(field.Name, out var phys))
-                {
-                    owningSource = source;
-                    physicalColumn = phys;
-                    break;
-                }
-            }
-
-            if (owningSource == null)
-            {
-                owningSource = primarySource;
-                physicalColumn = field.Name;
-            }
-
-            var sourceContainerName = DataSetExecutionHelpers.GetContainerName(owningSource);
-            if (sourceContainerName == null)
-                return (true, null, GenericResult<T>.Failure(
-                    DataGatewayLogger.SourceNoContainer(ctx.Logger, owningSource.SourceName, ctx.Config.Name)));
-
-            projectionFields.Add(new ProjectionField
-            {
-                PropertyName = physicalColumn!,
-                Alias = field.Name,
-                SourceContainer = sourceContainerName,
-            });
+            var kind = StatedJoinType.Of(join.JoinType);
+            if (kind.IncludesAllRight)
+                optional.UnionWith(joined);
+            if (kind.IncludesAllLeft)
+                optional.Add(join.RightSourceName);
+            joined.Add(join.RightSourceName);
         }
 
-        return projectionFields.Count > 0
-            ? (false, new ProjectionExpression { Fields = projectionFields }, null)
-            : (false, null, null);
+        return ctx.Config.Fields
+            .Where(field => field.IsCurrent && !field.IsDeleted && field.IsKey && !field.IsCalculated)
+            .Select(field => field.Name)
+            .FirstOrDefault(key => owners.Any(owner =>
+                string.Equals(owner.Field, key, StringComparison.OrdinalIgnoreCase) && optional.Contains(owner.SourceName)));
     }
 
-    private static (bool HasError, IFilterExpression? TranslatedFilter, IGenericResult<T>? ErrorResult) TranslateCompoundFilter<T>(
-        DataSetExecutionContext ctx,
-        IDataCommand command,
-        DataSetSourceConfiguration primarySource)
+    /// <summary>The read's filter and order in the joined query's names: each field qualified with the container of the source that holds it.</summary>
+    /// <remarks>
+    /// The order is <see cref="DataSetKeyOrder.For"/>: the caller's with the key fields as a tie-break, else the key fields when the read
+    /// is a page. A field none of the sources holds is refused, never sent to the primary table (FDW-4991).
+    /// </remarks>
+    private static (IFilterExpression? Filter, IOrderingExpression? Ordering, IGenericResult<T>? ErrorResult) ReadExpressions<T>(
+        DataSetExecutionContext ctx, IDataCommand command, List<FieldOwner> owners)
     {
-        if (command is not IQueryCommand { Filter: not null } queryCommand)
-            return (false, null, null);
+        var ordering = DataSetKeyOrder.For(ctx.Config, command, ctx.Logger);
+        if (ordering.IsFailure)
+            return (null, null, ordering.ToNewResult<T>());
 
-        var fieldMappings = primarySource.FieldMappings.Count > 0 ? primarySource.FieldMappings : null;
-        var filterResult = ctx.Pushdown.TranslateToPhysical(queryCommand.Filter, fieldMappings);
-        if (!filterResult.IsSuccess)
-            return (true, null, GenericResult<T>.Failure(
-                DataGatewayLogger.FilterTranslationFailed(ctx.Logger, primarySource.SourceName, filterResult.FailureReason().Message)));
+        var qualified = owners
+            .GroupBy(owner => owner.Field, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Qualified, StringComparer.OrdinalIgnoreCase);
+        // The data set's own filter ANDed with the caller's (FDW-4997), qualified like any filter of the joined query.
+        var readFilter = DataSetReadFilter.For(ctx, command);
+        if (readFilter.IsFailure)
+            return (null, null, readFilter.ToNewResult<T>());
 
-        return (false, filterResult.Value, null);
+        var filter = readFilter.Value;
+
+        var unowned = UnownedField(filter?.Root, qualified);
+        if (unowned is null && ordering.Value is { } stated)
+            unowned = stated.OrderedFields.Select(field => field.PropertyName).FirstOrDefault(name => !qualified.ContainsKey(name));
+        if (unowned is not null)
+            return (null, null, GenericResult<T>.Failure(DataGatewayLogger.CompoundFieldNotOwned(ctx.Logger, ctx.Config.Name, unowned)));
+
+        if (filter is null)
+            return (null, PredicatePushdownAnalyzer.TranslateOrderingToPhysical(ordering.Value, qualified), null);
+
+        var translated = ctx.Pushdown.TranslateToPhysical(filter, qualified);
+        return translated.IsSuccess
+            ? (translated.Value, PredicatePushdownAnalyzer.TranslateOrderingToPhysical(ordering.Value, qualified), null)
+            : (null, null, GenericResult<T>.Failure(
+                DataGatewayLogger.FilterTranslationFailed(ctx.Logger, ctx.Config.Name, translated.FailureReason().Message)));
     }
+
+    // The first field a filter names that no source holds, or null when every one is held.
+    private static string? UnownedField(IFilterNode? node, IReadOnlyDictionary<string, string> qualified) => node switch
+    {
+        IFilterCondition condition => qualified.ContainsKey(condition.PropertyName) ? null : condition.PropertyName,
+        FilterGroup group => group.Nodes.Select(child => UnownedField(child, qualified)).FirstOrDefault(name => name is not null),
+        _ => null,
+    };
 
     private static async Task<IGenericResult<T>> ExecuteCompoundQuery<T>(
         DataSetExecutionContext ctx,
-        IDataCommand command,
+        QueryCommand<T> sourceQuery,
         DataSetSourceConfiguration primarySource,
         string primaryContainerName,
-        List<IJoinExpression> joinExpressions,
-        IProjectionExpression? projection,
-        IFilterExpression? translatedFilter,
         CancellationToken ct)
     {
-        var sourceQuery = new QueryCommand<T>
-        {
-            Joins = joinExpressions,
-            Projection = projection,
-            Filter = translatedFilter,
-            Ordering = (command as IQueryCommand)?.Ordering,
-            Paging = (command as IQueryCommand)?.Paging,
-        };
-
-        // Resolve primary container from the DataStore provider.
-        var containerResult = await ctx.DataStoreProvider
-            .Get(primarySource.DataStoreName, primarySource.PathValue, primaryContainerName, ct)
+        // The joined containers are resolved with the primary: the translator finds a join target among the containers resolved with it
+        // (FDW-4328), as the gateway resolves them for any command that joins.
+        var joined = ContainersJoined.By(sourceQuery, primaryContainerName);
+        var containerResult = await (joined.Count == 0
+                ? ctx.DataStoreProvider.Get(primarySource.DataStoreName, primarySource.PathValue, primaryContainerName, ct)
+                : ctx.DataStoreProvider.Get(primarySource.DataStoreName, primarySource.PathValue, primaryContainerName, joined, ct))
             .ConfigureAwait(false);
         if (!containerResult.IsSuccess || containerResult.Value == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, primarySource.SourceName));

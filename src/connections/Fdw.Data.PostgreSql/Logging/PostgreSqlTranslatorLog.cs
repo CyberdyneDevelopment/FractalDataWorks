@@ -24,6 +24,17 @@ public static partial class PostgreSqlTranslatorLog
         string expectedType,
         string actualType);
 
+    /// <summary>Logs that a query's join names an identifier that is not a plain name (FDW-4991): it is refused, never written into the statement.</summary>
+    [MessageLogging(
+        EventId = 21021,
+        Level = LogLevel.Error,
+        Message = "Query on container '{containerName}' names '{identifier}' in a join, which is not a plain name (letters, digits and underscores, not starting with a digit)",
+        ClientMessage = "The query on '{containerName}' names '{identifier}' in a join, which is not a plain name: use letters, digits and underscores, not starting with a digit")]
+    public static partial IGenericMessage JoinIdentifierInvalid(
+        ILogger logger,
+        string containerName,
+        string identifier);
+
     /// <summary>
     /// Logs a query that pages its rows with no ordering when its container declares no primary key to order by (FDW-3454).
     /// </summary>

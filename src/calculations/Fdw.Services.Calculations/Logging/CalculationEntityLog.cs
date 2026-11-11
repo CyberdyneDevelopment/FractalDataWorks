@@ -99,6 +99,11 @@ internal static partial class CalculationEntityLog
         Message = "Calculation input '{alias}' is a DataSet input, and no IDataSetRowReader is registered to read it")]
     public static partial IGenericMessage DataSetRowReaderNotRegistered(ILogger logger, string alias);
 
+    [MessageLogging(EventId = 21028, Level = LogLevel.Warning,
+        Message = "Calculation '{name}' states no result data type; a calculation states the data type of its result, and none is assumed",
+        ClientMessage = "Calculation '{name}' states no result data type; state one, for example Decimal or Date")]
+    public static partial IGenericMessage ResultDataTypeMissing(ILogger logger, string name);
+
     [MessageLogging(EventId = 21023, Level = LogLevel.Warning,
         Message = "Calculation '{name}' is a {entityType} calculation with no input rows to compute over",
         ClientMessage = "Calculation '{name}' has no input rows to compute over; give it a DataSet input that provides rows")]

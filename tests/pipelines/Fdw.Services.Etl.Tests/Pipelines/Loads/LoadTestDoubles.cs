@@ -165,7 +165,8 @@ internal static class LoadTestDoubles
         /// <param name="name">The connection's name in the events.</param>
         /// <param name="events">Receives "begin:name", "exec:name:Verb", "commit:name" and "rollback:name" in order.</param>
         /// <param name="failVerb">The verb of the command whose execution fails, or <see langword="null"/> when none does.</param>
-        internal RecordingConnection(string name, List<string> events, string? failVerb = null)
+        /// <param name="answer">What a command that reports its unmatched keys answers (FDW-4988); a test that sends none leaves it out.</param>
+        internal RecordingConnection(string name, List<string> events, string? failVerb = null, Func<IDataCommand, Fdw.Commands.Data.Abstractions.BulkWriteAnswer>? answer = null)
         {
             _name = name;
             _events = events;
@@ -183,6 +184,16 @@ internal static class LoadTestDoubles
                     return string.Equals(command.CommandType, failVerb, StringComparison.Ordinal)
                         ? GenericResult<int>.Failure(new Fdw.Messages.GenericMessage($"{command.CommandType} failed"))
                         : GenericResult<int>.Success(1);
+                });
+            transaction
+                .Setup(t => t.Execute<Fdw.Commands.Data.Abstractions.BulkWriteAnswer>(It.IsAny<IDataCommand>(), It.IsAny<IDataContainer>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((IDataCommand command, IDataContainer container, CancellationToken token) =>
+                {
+                    _events.Add($"answer:{_name}:{command.CommandType}");
+                    Commands.Add(command);
+                    return answer is null
+                        ? GenericResult<Fdw.Commands.Data.Abstractions.BulkWriteAnswer>.Failure(new Fdw.Messages.GenericMessage("this test sends no reporting command"))
+                        : GenericResult<Fdw.Commands.Data.Abstractions.BulkWriteAnswer>.Success(answer(command));
                 });
             transaction
                 .Setup(t => t.Commit(It.IsAny<CancellationToken>()))

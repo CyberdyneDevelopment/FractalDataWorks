@@ -153,6 +153,10 @@ public abstract class MsSqlSessionContextBase : TypeOptionBase<ISessionContext>,
     /// </summary>
     /// <param name="connection">The open connection to write the session context onto.</param>
     /// <param name="plan">The decision from <see cref="Plan"/> for the same authentication context.</param>
+    /// <param name="timeoutSeconds">
+    /// The longest the batch may run, in whole seconds of at least one: the connection's <c>SessionContextApplyTimeoutSeconds</c>, else the default its
+    /// connection type declares (FDW-4904). Its own bound and not the command timeout, so a batch that cannot land fails fast.
+    /// </param>
     /// <param name="logger">The logger of the connection performing the open.</param>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     /// <returns>
@@ -162,6 +166,7 @@ public abstract class MsSqlSessionContextBase : TypeOptionBase<ISessionContext>,
     public async Task<IGenericResult> Apply(
         SqlConnection connection,
         SessionContextPlan plan,
+        int timeoutSeconds,
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
@@ -171,6 +176,7 @@ public abstract class MsSqlSessionContextBase : TypeOptionBase<ISessionContext>,
             connection,
             statement.Sql,
             statement.Parameters.Select(parameter => parameter.ToSqlParameter()).ToList(),
+            timeoutSeconds,
             logger,
             cancellationToken).ConfigureAwait(false);
         if (set.IsFailure)
@@ -247,18 +253,25 @@ public abstract class MsSqlSessionContextBase : TypeOptionBase<ISessionContext>,
     /// <param name="connection">The open connection to run the batch on.</param>
     /// <param name="sql">The batch text.</param>
     /// <param name="parameters">The parameters the batch text references.</param>
+    /// <param name="timeoutSeconds">The longest the batch may run, in whole seconds of at least one (FDW-4904).</param>
     /// <param name="logger">The logger of the connection performing the open.</param>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     protected static async Task<IGenericResult> Execute(
         SqlConnection connection,
         string sql,
         IReadOnlyList<SqlParameter> parameters,
+        int timeoutSeconds,
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
+        // Its own short bound and not the connection's command timeout (FDW-4904): an ETL connection may state an hour, and a session context
+        // batch that cannot land must not hold the connection that long. Zero would mean "no timeout", so it is refused, naming it.
+        if (timeoutSeconds < 1)
+            return GenericResult.Failure(MsSqlConnectionLogger.SessionContextTimeoutNotPositive(logger, timeoutSeconds));
+
         try
         {
-            var cmd = new SqlCommand(sql, connection) { CommandTimeout = 5 };
+            var cmd = new SqlCommand(sql, connection) { CommandTimeout = timeoutSeconds };
             await using (cmd.ConfigureAwait(false))
             {
                 for (var i = 0; i < parameters.Count; i++)

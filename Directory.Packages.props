@@ -6,14 +6,9 @@
          fixed by waiting for the intermediate package to bump. -->
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-    <!-- Detect -Local configuration (must be defined here since Directory.Packages.props is evaluated first) -->
-    <IsLocalConfiguration>false</IsLocalConfiguration>
-    <IsLocalConfiguration Condition="$(Configuration.EndsWith('-Local'))">true</IsLocalConfiguration>
   </PropertyGroup>
   <!--
     NOTE: Fdw is a package PRODUCER, not consumer.
-    The pack-local.ps1/sh scripts generate Directory.Packages.props in LocalNugetFolder
-    for CONSUMER projects to import.
   -->
   <ItemGroup>
     <!-- Microsoft packages -->
@@ -29,7 +24,9 @@
     <PackageVersion Include="Corvus.UriTemplates" Version="2.3.2" />
     <PackageVersion Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="10.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="*" />
+    <!-- Why 10.*: a framework package floats within the framework's own major, never across it. "*" picked 11.0.0, which does not fit net10 (NU1202).
+         A new major is taken on purpose, with the target framework (FDW-4939). -->
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.*" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="BenchmarkDotNet.Annotations" Version="0.15.6" />
     <PackageVersion Include="FastEndpoints" Version="8.1.0" />
@@ -104,6 +101,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
+    <PackageVersion Include="Portable.System.DateTimeOnly" Version="9.0.2" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.15.0" />
     <PackageVersion Include="RecordParser" Version="2.3.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />

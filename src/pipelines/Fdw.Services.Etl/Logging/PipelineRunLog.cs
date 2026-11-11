@@ -173,6 +173,61 @@ public static partial class PipelineRunLog
         Message = "In {owner}: the source produced no rows, so a soft delete of keys absent from it would flag every row; refused")]
     public static partial IGenericMessage AbsentSetEmpty(ILogger logger, string owner);
 
+    /// <summary>Logs a load that stages its keys but names no stage container (FDW-4956).</summary>
+    [MessageLogging(EventId = 20242, Level = LogLevel.Warning,
+        Message = "In {owner}: an absent-from-source soft delete stages its keys, and it names no stage container")]
+    public static partial IGenericMessage StageNotNamed(ILogger logger, string owner);
+
+    /// <summary>Logs a stage container that is not on the target's connection (FDW-4956): a batch's keys must commit in the same transaction as its rows.</summary>
+    [MessageLogging(EventId = 20243, Level = LogLevel.Warning,
+        Message = "In {owner}: the stage container '{stage}' is not on the connection of '{target}', so a batch's keys could not commit with its rows")]
+    public static partial IGenericMessage StageOnAnotherConnection(ILogger logger, string owner, string stage, string target);
+
+    /// <summary>Logs a stage container that does not declare a column the stage needs (FDW-4956): an insert would drop the value, and the sweep could not match it.</summary>
+    [MessageLogging(EventId = 20244, Level = LogLevel.Warning,
+        Message = "In {owner}: the stage container '{stage}' does not declare the column '{column}' (it declares the key columns and the stage key column)")]
+    public static partial IGenericMessage StageColumnNotDeclared(ILogger logger, string owner, string stage, string column);
+
+    /// <summary>Logs an absent-key sweep refused because rows were rejected upstream and the destination's rule is Refuse (FDW-4956).</summary>
+    [MessageLogging(EventId = 20245, Level = LogLevel.Warning,
+        Message = "In {owner}: {rejected} row(s) were rejected upstream, so their keys never reached the stage and would be flagged as gone; the rejected-rows rule is Refuse, and nothing was flagged")]
+    public static partial IGenericMessage SweepRefusedRejectedRows(ILogger logger, string owner, long rejected);
+
+    /// <summary>Logs an absent-key sweep that ran (FDW-4956).</summary>
+    [MessageLogging(EventId = 20246, Level = LogLevel.Information,
+        Message = "In {owner}: the sweep checked {staged} staged key row(s) and flagged {flagged} target row(s) as gone from the source")]
+    public static partial IGenericMessage KeysSwept(ILogger logger, string owner, long staged, int flagged);
+
+    /// <summary>Logs an absent-key sweep not run because no batch was staged (FDW-4956): an empty source never flags the whole target.</summary>
+    [MessageLogging(EventId = 20247, Level = LogLevel.Information,
+        Message = "In {owner}: the source produced no rows, so the absent-key sweep was not run (an empty source never flags every row)")]
+    public static partial IGenericMessage SweepSkippedNothingStaged(ILogger logger, string owner);
+
+    /// <summary>Logs an absent-key sweep not run because the run was stopped before every row arrived (FDW-4956).</summary>
+    [MessageLogging(EventId = 20248, Level = LogLevel.Information,
+        Message = "In {owner}: the run was stopped before every row arrived, so the absent-key sweep was not run")]
+    public static partial IGenericMessage SweepSkippedRunStopped(ILogger logger, string owner);
+
+    /// <summary>Logs a stage whose rows for this load could not be removed (FDW-4956); they carry the run's execution id, so they can be found and removed later.</summary>
+    [MessageLogging(EventId = 20249, Level = LogLevel.Warning,
+        Message = "In {owner}: the stage rows under '{stageKey}' could not be removed: {reason}")]
+    public static partial IGenericMessage StageNotCleared(ILogger logger, string owner, string stageKey, string? reason);
+
+    /// <summary>Logs an absent-key sweep with no reader of the rows rejected upstream (FDW-4956): the sweep is not judged blind.</summary>
+    [MessageLogging(EventId = 20250, Level = LogLevel.Error,
+        Message = "In {owner}: the destination was not told how many rows were rejected upstream, so the absent-key sweep cannot be judged; refused")]
+    public static partial IGenericMessage SweepUnjudged(ILogger logger, string owner);
+
+    /// <summary>Logs a batch whose keys matched no row under the Fail rule (FDW-4988); its unit of work rolled back.</summary>
+    [MessageLogging(EventId = 20251, Level = LogLevel.Error,
+        Message = "In {owner}: {unmatched} key(s) of the batch matched no row in the target and the unmatched keys rule is Fail, so the batch was rolled back: {sample}")]
+    public static partial IGenericMessage UnmatchedKeysFailed(ILogger logger, string owner, long unmatched, string sample);
+
+    /// <summary>Logs a batch whose keys matched no row under the Warn rule (FDW-4988); the batch committed.</summary>
+    [MessageLogging(EventId = 20252, Level = LogLevel.Warning,
+        Message = "In {owner}: {unmatched} key(s) of the batch matched no row in the target ({total} so far in this run); the unmatched keys rule is Warn, so the batch committed: {sample}")]
+    public static partial IGenericMessage UnmatchedKeysWarned(ILogger logger, string owner, long unmatched, long total, string sample);
+
     /// <summary>Logs a pipeline that states a legacy truncate flag its load definition contradicts.</summary>
     [MessageLogging(EventId = 20229, Level = LogLevel.Warning,
         Message = "Pipeline '{pipelineName}' sets TruncateBeforeLoad, which contradicts its load definition ({detail}); state the truncation as load mode Replace or as a Truncate load step")]

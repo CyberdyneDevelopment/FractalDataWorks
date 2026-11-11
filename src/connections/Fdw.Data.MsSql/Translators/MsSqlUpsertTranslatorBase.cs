@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +19,7 @@ namespace Fdw.Data.MsSql.Translators;
 /// Shared translation of <see cref="IUpsertCommand"/> to one set-based T-SQL batch. The upsert and bulk upsert
 /// translators differ only in the command name they answer to.
 /// </summary>
-public abstract class MsSqlUpsertTranslatorBase : MsSqlDataCommandTranslatorBase
+public abstract class MsSqlUpsertTranslatorBase : MsSqlDataCommandTranslatorBase, IMsSqlStagingTranslator
 {
     private readonly string _translatorName;
 
@@ -107,31 +106,66 @@ public abstract class MsSqlUpsertTranslatorBase : MsSqlDataCommandTranslatorBase
         IDatabasePath path,
         string containerName)
     {
-        var dialect = path.Dialect;
-        var problem = MsSqlUpsertStatement.Problem(options, container, dialect);
-        if (problem is not null)
-            return Refused(containerName, problem.Message);
+        var batch = Batch(options, rows, container, path, containerName);
+        if (batch.IsFailure)
+            return batch.ToNewResult<SqlCommand>();
 
-        // The rows are read once; a value a date column cannot take is refused here, with MSSQL-21030, not left for the database to fail converting the staged JSON (FDW-4726).
-        var all = rows.Cast<object>().ToList();
-        var refused = MsSqlDateValues.Refusal(container, options.WriteColumns, all);
-        if (refused is not null)
-            return refused.ToNewResult<SqlCommand>();
+        var command = batch.Value!.Inline(out var rowsProblem);
+        if (command is null)
+            return Refused(containerName, rowsProblem ?? string.Empty);
 
-        var json = MsSqlRowStaging.Serialize(all, options.WriteColumns, out var rowsProblem);
-        if (rowsProblem is not null)
-            return Refused(containerName, rowsProblem);
-
-        var command = CreateCommand(string.Empty);
-        var sql = new MsSqlUpsertStatement(options, container, dialect, BuildQualifiedTableName(path)).Build(command);
-        if (sql is null)
-            return Refused(containerName, "a value source could not be rendered");
-
-        command.CommandText = sql;
-        command.Parameters.Add(new SqlParameter(MsSqlRowStaging.RowsParameter, SqlDbType.NVarChar, -1) { Value = json });
         MsSqlUpsertTranslatorLog.Translated(
             NullLogger<MsSqlUpsertTranslatorBase>.Instance, _translatorName, containerName, options.KeyColumns.Count, options.Versioning is not null);
         return GenericResult<SqlCommand>.Success(command);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>The same write as the inline translation, with the rows bulk copied into the temporary table instead of sent as JSON (FDW-4958).</remarks>
+    public IGenericResult<MsSqlStagedWrite> Stage(IDataCommand command, IStorageContainer container)
+    {
+        ArgumentNullException.ThrowIfNull(container);
+        try
+        {
+            if (container.Path is not IDatabasePath path)
+                return GenericResult<MsSqlStagedWrite>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath"));
+            if (command is not IUpsertCommand upsert)
+                return GenericResult<MsSqlStagedWrite>.Failure(
+                    MsSqlTranslatorLog.InvalidCommandType(NullLogger<MsSqlUpsertTranslatorBase>.Instance, _translatorName, nameof(IUpsertCommand), command.GetType().Name));
+            if (GetCommandData(command) is not IEnumerable rows)
+                return GenericResult<MsSqlStagedWrite>.Failure(MsSqlDataResultCodes.ByName("MissingInputData"), ResultDetails.Create("CommandType", _translatorName));
+
+            var batch = Batch(upsert.Options, rows, container, path, container.Name);
+            return batch.IsFailure ? batch.ToNewResult<MsSqlStagedWrite>() : batch.Value!.AsStaged(container);
+        }
+        catch (Exception ex)
+        {
+            MsSqlUpsertTranslatorLog.TranslationFailed(NullLogger<MsSqlUpsertTranslatorBase>.Instance, ex, _translatorName, container.Name, ex.Message);
+            return GenericResult<MsSqlStagedWrite>.Failure(MsSqlDataResultCodes.ByName("UpsertTranslationFailed"), ResultDetails.Create("ErrorMessage", ex.Message));
+        }
+    }
+
+    private IGenericResult<MsSqlSetBasedBatch> Batch(
+        UpsertOptions options,
+        IEnumerable rows,
+        IStorageContainer container,
+        IDatabasePath path,
+        string containerName)
+    {
+        var dialect = path.Dialect;
+        var problem = MsSqlUpsertStatement.Problem(options, container, dialect);
+        if (problem is not null)
+            return Refused(containerName, problem.Message).ToNewResult<MsSqlSetBasedBatch>();
+
+        // The rows are read once; a value a date column cannot take is refused here, with MSSQL-21030, not left for the database to fail converting the staged rows (FDW-4726).
+        var all = rows.Cast<object>().ToList();
+        var refused = MsSqlDateValues.Refusal(container, options.WriteColumns, all);
+        if (refused is not null)
+            return refused.ToNewResult<MsSqlSetBasedBatch>();
+
+        var batch = new MsSqlUpsertStatement(options, container, dialect, BuildQualifiedTableName(path)).Batch(CreateCommand(string.Empty), all);
+        return batch is null
+            ? Refused(containerName, "a value source could not be rendered").ToNewResult<MsSqlSetBasedBatch>()
+            : GenericResult<MsSqlSetBasedBatch>.Success(batch);
     }
 
     private IGenericResult<SqlCommand> Refused(string containerName, string reason)

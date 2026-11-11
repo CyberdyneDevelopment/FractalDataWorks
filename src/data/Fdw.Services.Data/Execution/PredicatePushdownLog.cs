@@ -26,6 +26,11 @@ public static partial class PredicatePushdownLog
         Message = "Routed condition on field '{fieldName}' to source '{sourceName}'")]
     public static partial IGenericMessage ConditionRouted(ILogger logger, string fieldName, string sourceName);
 
+    /// <summary>Logs that a part of a filter is applied to the rows a data set's sources join, not pushed to one source (FDW-5049).</summary>
+    [MessageLogging(EventId = 11015, Level = LogLevel.Debug,
+        Message = "A condition of data set '{dataSetName}' on {fields} is applied to the joined rows: no one source that applies filters holds every field it names outside an outer join's optional side")]
+    public static partial IGenericMessage ConditionKeptForJoinedRows(ILogger logger, string dataSetName, string fields);
+
     /// <summary>Logs that a field was not found in any source mappings.</summary>
     [MessageLogging(EventId = 31000, Level = LogLevel.Warning,
         Message = "Field '{fieldName}' not found in any source mappings for DataSet '{dataSetName}'")]

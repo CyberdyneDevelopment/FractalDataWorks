@@ -40,6 +40,10 @@ internal static class DestinationOptions
         row.DeletedAtColumn = component.DeletedAtColumn;
         row.SoftDeleteMarkerColumn = component.SoftDeleteMarkerColumn;
         row.SoftDeleteMarkerValue = component.SoftDeleteMarkerValue;
+        row.StageContainer = component.StageContainer;
+        row.StageKeyColumn = component.StageKeyColumn;
+        row.SweepRejectedRowsRule = component.SweepRejectedRowsRule;
+        row.UnmatchedKeysRule = component.UnmatchedKeysRule;
         row.ValueSources = [.. component.ValueSources.OrderBy(source => source.Ordinal).Select(ValueSource)];
         return row;
     }
@@ -88,10 +92,23 @@ internal static class DestinationOptions
             (null, ColumnListsBound(component) ? GenericResult.Success() : PipelineLoadValidator.ValidateColumnLists(owner, row, kind, kind.Name, logger)),
             ("effectiveFromColumn", PipelineLoadValidator.ValidateVersioning(owner, row, kind, kind.Name, logger)),
             ("softDeleteMode", PipelineLoadValidator.ValidateSoftDelete(owner, row, kind, kind.Name, logger)),
+            ("stageContainer", PipelineLoadValidator.ValidateStage(owner, row, StagesKeys(component), logger)),
+            ("unmatchedKeysRule", PipelineLoadValidator.ValidateUnmatchedKeys(owner, row, kind, logger)),
             ("valueSources", PipelineLoadValidator.ValidateValueSources(owner, row, hasSourceDataSet: false, logger)),
         };
         return [.. checks.Where(check => check.Result.IsFailure).Select(check => Problem(component, check.Setting, check.Result))];
     }
+
+    /// <summary>
+    /// Whether a destination stages its keys (FDW-4956): it states the AbsentFromSource soft delete and writes a database, not a file. Its stage container,
+    /// stage key column and rejected-rows rule are then required.
+    /// </summary>
+    /// <param name="component">The destination.</param>
+    /// <returns><see langword="true"/> when the destination stages its keys.</returns>
+    internal static bool StagesKeys(PipelineComponentConfiguration component) =>
+        !string.IsNullOrWhiteSpace(component.SoftDeleteMode)
+        && ReferenceEquals(Fdw.Commands.Data.SoftDeletes.SoftDeleteModes.ByName(component.SoftDeleteMode), Fdw.Commands.Data.SoftDeletes.SoftDeleteModes.AbsentFromSource)
+        && LoadAddressing.Of(component.TargetKind, component.PhysicalPath, component.PhysicalName, component.SplitField) is null;
 
     // Why the column check waits: a column list a run supplies (FDW-1745) is not known when the graph is saved, and the load validator judges the lists whole.
     // The run builds the destination from the lists it was given, and the same validator judges them then.

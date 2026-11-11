@@ -356,6 +356,10 @@ public sealed class CalculationEntityService : ICalculationEntityService
                     _logger, name,
                     $"Typed configuration '{typedConfiguration.GetType().Name}' does not implement ICalculationTypedConfiguration"));
 
+        if (string.IsNullOrWhiteSpace(output.ResultDataTypeName))
+            return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
+                CalculationEntityLog.ResultDataTypeMissing(_logger, name));
+
         typed.Id = id;
         typed.Name = name;
         typed.Description = description;

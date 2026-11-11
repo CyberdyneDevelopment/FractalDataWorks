@@ -41,7 +41,7 @@ public sealed class GraphActionComponentTests
 
         ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
         tally.Extracted.ShouldBe(15);
-        events.Count.ShouldBe(9);
+        events.Count.ShouldBe(6); // each pass opens the source once and closes it after its 5 rows (FDW-4911)
     }
 
     [Fact]

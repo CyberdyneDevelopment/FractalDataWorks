@@ -48,6 +48,9 @@ public sealed class SoftDeleteOptions
     /// <summary>Gets the source set for <c>AbsentFromSource</c>; <see langword="null"/> for the other mode.</summary>
     public AbsentKeySet? AbsentFromSource { get; init; }
 
+    /// <summary>Gets the staged keys for <c>AbsentFromStage</c> (FDW-4956); <see langword="null"/> for the other modes.</summary>
+    public StagedKeySet? AbsentFromStage { get; init; }
+
     /// <summary>Gets a value indicating whether the options flag rows by absence from a source set.</summary>
     public bool HasAbsentSet => Mode.NeedsSourceSet;
 

@@ -196,6 +196,20 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
     /// <summary>Gets or sets the value a marker mode looks for (FDW-1636, the destination options of the old load step).</summary>
     public string? SoftDeleteMarkerValue { get; set; }
 
+    /// <summary>Gets or sets the container an absent-key soft delete stages each batch's keys in (FDW-4956): a table in the destination's data store with the key
+    /// columns and <see cref="StageKeyColumn"/>. Required with the AbsentFromSource mode, refused with the others.</summary>
+    public string? StageContainer { get; set; }
+
+    /// <summary>Gets or sets the column of <see cref="StageContainer"/> that tells one destination's run apart from every other's (FDW-4956).</summary>
+    public string? StageKeyColumn { get; set; }
+
+    /// <summary>Gets or sets what the absent-key sweep does when rows were rejected upstream, a <c>SweepRejectedRowsRules</c> option name (FDW-4956).</summary>
+    public string? SweepRejectedRowsRule { get; set; }
+
+    /// <summary>Gets or sets what an update or delete destination does with a key that matched no row, an <c>UnmatchedKeysRules</c> option name (FDW-4988).
+    /// Required with a load kind that writes existing rows by key, refused with the others.</summary>
+    public string? UnmatchedKeysRule { get; set; }
+
     /// <summary>Gets or sets the horizontal position the console draws the component at; the engine never reads it.</summary>
     public int? LayoutX { get; set; }
 

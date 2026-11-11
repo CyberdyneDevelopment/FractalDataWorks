@@ -42,7 +42,7 @@ public static class KeyListJsonWriter
         return JsonSerializer.Serialize(written);
     }
 
-    private static object? Written(object? value)
+    internal static object? Written(object? value)
     {
         if (value is DateTimeOffset offset)
             return offset.ToString("O", CultureInfo.InvariantCulture);

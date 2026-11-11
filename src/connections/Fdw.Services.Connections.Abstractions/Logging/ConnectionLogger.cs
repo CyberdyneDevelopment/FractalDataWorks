@@ -154,4 +154,32 @@ public static partial class ConnectionLogger
         Level = LogLevel.Error,
         Message = "Command type '{commandType}' names columns to return, which are answered as a list of row dictionaries, and a result of type '{resultType}' was asked for")]
     public static partial IGenericMessage ReturnedColumnsResultNotRows(ILogger logger, string commandType, string resultType);
+
+    /// <summary>Logs a BulkWriteAnswer asked of a command that does not report its unmatched keys (FDW-4988).</summary>
+    [MessageLogging(
+        EventId = 20002,
+        Level = LogLevel.Error,
+        Message = "A BulkWriteAnswer was asked of command type '{commandType}', which does not report its unmatched keys; state its UnmatchedKeySample to ask for them")]
+    public static partial IGenericMessage AnswerNotAskedFor(ILogger logger, string commandType);
+
+    /// <summary>Logs a write that reports its unmatched keys run for a result other than a BulkWriteAnswer (FDW-4988).</summary>
+    [MessageLogging(
+        EventId = 20003,
+        Level = LogLevel.Error,
+        Message = "Command type '{commandType}' reports its unmatched keys, which are answered as a BulkWriteAnswer, and a result of type '{resultType}' was asked for")]
+    public static partial IGenericMessage UnmatchedKeysResultNotAnswer(ILogger logger, string commandType, string resultType);
+
+    /// <summary>Logs a write that reports its unmatched keys on a kind with no translator for it (FDW-4988).</summary>
+    [MessageLogging(
+        EventId = 90006,
+        Level = LogLevel.Error,
+        Message = "Command type '{commandType}' reports its unmatched keys, and connection '{connectionName}' has no translator for it; a command expanded row by row cannot tell a key that matched no row")]
+    public static partial IGenericMessage UnmatchedKeysNeedTranslator(ILogger logger, string commandType, string connectionName);
+
+    /// <summary>Logs a connection asked to read result sets apart that cannot (FDW-4988).</summary>
+    [MessageLogging(
+        EventId = 91001,
+        Level = LogLevel.Error,
+        Message = "Connection '{connectionName}' cannot read a batch's result sets apart, which a write that reports its unmatched keys answers")]
+    public static partial IGenericMessage ResultSetsNotSupported(ILogger logger, string connectionName);
 }

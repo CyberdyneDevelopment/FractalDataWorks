@@ -59,4 +59,8 @@ public abstract class LoadStepKindBase : TypeOptionBase<LoadStepKindBase>, ILoad
     /// <inheritdoc/>
     /// <remarks>False unless a kind states otherwise, so a kind that does not say is treated as one that adds its rows again and a cut-off run is not started again over it.</remarks>
     public virtual bool RepeatsToSameResult => false;
+
+    /// <inheritdoc/>
+    /// <remarks>False unless a kind states otherwise: only a kind that finds existing rows by their keys can miss one.</remarks>
+    public virtual bool WritesExistingRowsByKey => false;
 }

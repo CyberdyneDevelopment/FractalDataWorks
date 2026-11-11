@@ -17,14 +17,10 @@
 ### Configurations
 
 ```xml
-<Configurations>Debug;Debug-Local;Develop;Develop-Local;Release;Release-Local;Test;Test-Local</Configurations>
-<IsLocalConfiguration>false</IsLocalConfiguration>
-<IsLocalConfiguration Condition="$(Configuration.EndsWith('-Local'))">true</IsLocalConfiguration>
-<BaseConfiguration>$(Configuration)</BaseConfiguration>
-<BaseConfiguration Condition="'$(IsLocalConfiguration)' == 'true'">$(Configuration.Replace('-Local', ''))</BaseConfiguration>
+<Configurations>Debug;Develop;Release;Test</Configurations>
 ```
 
-`-Local` configurations resolve packages from `$(LocalNugetFolder)` (see [Local Package Development](01-04-Local-Package-Development.md)). `BaseConfiguration` strips the suffix so consumers can branch on the underlying build mode.
+The conditions that switch analyzers, defines and warning levels read `$(Configuration)` directly. The `-Local` configurations (a local NuGet folder feed) are retired: packages come from the published feeds, and the version a consumer restores follows its tier.
 
 ### Central Package Management
 
@@ -62,30 +58,18 @@ Source Link is disabled outside CI to avoid local "no source control info" warni
 
 ### Versioning
 
-The version is a single hand-set number — MinVer and tag-driven stamping are removed. The repo's
-`Directory.Build.props` declares it once and every package in the repo is stamped with it:
+A package's version is not typed in a project file. MinVer and tag-driven stamping are removed, and since the per-package
+versioning (after 1.5.5) a release gives each package that changed its own version: the next patch, minor or major from its own
+last stable version, at the lowest level its public API change needs (decided from the built public surface compared with the last
+stable package). `Directory.Build.props` declares only the line, `major.minor`, which development builds and consumers float on:
 
 ```xml
-<VersionPrefix>1.0.0</VersionPrefix>
-<VersionSuffix>rc.1</VersionSuffix>
+<VersionPrefix>1.5.1</VersionPrefix>
 ```
 
-Branching, building, and committing never change the number; bumping it is a deliberate edit of
-these two properties (kept in lockstep across all ecosystem repos), never a side effect of a commit.
-
-### Local NuGet config selection
-
-```xml
-<PropertyGroup>
-  <LocalNugetConfigFileName Condition="'$(LocalNugetConfigFileName)' == ''">Fdw.Local.nuget.config</LocalNugetConfigFileName>
-</PropertyGroup>
-
-<PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
-  <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
-</PropertyGroup>
-```
-
-The local config is selected only when **both** the configuration ends in `-Local` and `LocalNugetFolder` is set.
+Branching, building, and committing never change the line; moving it is a deliberate edit of this property, never a side effect of
+a commit. A development build is `N-internal.<date>.<commit count>` or `N-develop.<date>.<commit count>`; a release publishes plain
+versions, and a `Fdw.Bundle` package pins the whole release exactly.
 
 ## Sample Solution Override
 
@@ -95,4 +79,3 @@ The `public/samples/ReferenceSolution/Directory.Build.props` file is intentional
 
 - [Package Management](02-03-Package-Management.md) - Central version control
 - [Naming Conventions](02-04-Naming-Conventions.md) - Project naming patterns
-- [Local Package Development](01-04-Local-Package-Development.md) - Working with local NuGet packages

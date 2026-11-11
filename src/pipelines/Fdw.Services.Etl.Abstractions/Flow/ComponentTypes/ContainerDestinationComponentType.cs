@@ -29,6 +29,7 @@ public sealed class ContainerDestinationComponentType : ComponentTypeBase
             new StageMember("keyColumns", "ColumnList", false, "The destination columns that match a row; the load kind says whether it needs them."),
             new StageMember("compareColumns", "ColumnList", false, "The columns that make a matched row count as changed; the load kind says whether it takes them."),
             new StageMember("writeColumns", "ColumnList", false, "The destination columns written; the load kind says whether it needs them."),
+            new StageMember("unmatchedKeysRule", "UnmatchedKeysRules", false, "Update and delete-by-key loads: what a key that matched no row does (Fail rolls the batch back and fails the run; Warn commits and records the count and a sample). Required with those load kinds."),
         ])
     {
     }

@@ -7,6 +7,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql.Results;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 using Microsoft.Data.SqlClient;
 using Fdw.Commands.Data.Logging;
 using Fdw.Messages;
@@ -63,10 +64,16 @@ internal static class MsSqlSoftDeleteSql
             names.Add(options.Marker.Column);
         if (options.AbsentFromSource is not null)
             names.AddRange(options.AbsentFromSource.KeyColumns);
+        if (options.AbsentFromStage is not null)
+            names.AddRange(options.AbsentFromStage.KeyColumns);
 
         var unknown = MsSqlLoadColumns.UnknownOrUnsafe(container, names);
         if (unknown is not null)
             return Inconsistent(unknown);
+
+        var stage = options.AbsentFromStage is null ? null : StageProblem(options.AbsentFromStage);
+        if (stage is not null)
+            return stage;
 
         var computed = names.FirstOrDefault(n => MsSqlLoadColumns.IsComputed(container, n));
         if (computed is not null)
@@ -75,6 +82,17 @@ internal static class MsSqlSoftDeleteSql
         return MsSqlLoadColumns.IsIdentity(container, options.DeletedFlagColumn)
             ? Inconsistent($"column '{options.DeletedFlagColumn}' is an identity column and cannot be the deleted-flag column")
             : null;
+    }
+
+    // Why the stage is checked here: the sweep reads the key columns and the stage key column from it, so a stage that is not a table, or that does not declare
+    // one of them, is refused by name before anything is sent.
+    private static IGenericMessage? StageProblem(StagedKeySet staged)
+    {
+        if (staged.Stage.Path is not IDatabasePath)
+            return Inconsistent($"the stage container {staged.Stage.Name} is not a database table");
+
+        var unknown = MsSqlLoadColumns.UnknownOrUnsafe(staged.Stage, [.. staged.KeyColumns, staged.StageKeyColumn]);
+        return unknown is null ? null : Inconsistent($"in the stage container {staged.Stage.Name}: {unknown}");
     }
 
     // The options' own problems and this container's are the same kind of refusal: the options cannot be used here.
@@ -113,6 +131,12 @@ internal static class MsSqlSoftDeleteSql
         predicates.Add(soft.NotYetFlagged("t"));
 
         var update = $"UPDATE t SET {string.Join(", ", soft.SetClauses("t", onlyWhenMarked: false))} FROM {target} AS t WHERE ";
+        if (soft.Options?.AbsentFromStage is { } staged)
+        {
+            command.CommandText = StagedSweep(staged, dialect, command, update, predicates);
+            return command;
+        }
+
         var absent = soft.Options?.AbsentFromSource;
         if (absent is null)
         {
@@ -131,5 +155,23 @@ internal static class MsSqlSoftDeleteSql
         command.CommandText = MsSqlLoadBatch.Wrap(string.Empty, staging + "SET NOCOUNT OFF; " + update + string.Join(" AND ", predicates) + "; ", temp, useTransaction: false);
         command.Parameters.Add(new SqlParameter(MsSqlRowStaging.RowsParameter, System.Data.SqlDbType.NVarChar, -1) { Value = json });
         return command;
+    }
+
+    // The sweep of a staged key set (FDW-4956), one batch: the stage rows of this load are counted and must be exactly the rows it appended, else the batch
+    // raises StageRowCountMismatchError and flags nothing; then the target rows whose keys have no stage row are flagged. A short stage would make present keys
+    // look gone, so the count is read in the same batch, inside the caller's transaction.
+    private static string StagedSweep(StagedKeySet staged, ISqlDialect dialect, SqlCommand command, string update, List<string> predicates)
+    {
+        var stage = SqlNames.QualifiedTable((IDatabasePath)staged.Stage.Path);
+        var stageKey = dialect.QuoteIdentifier(staged.StageKeyColumn);
+        command.Parameters.Add(new SqlParameter("@fdw_stage_key", System.Data.SqlDbType.NVarChar, -1) { Value = staged.StageKey });
+        command.Parameters.Add(new SqlParameter("@fdw_stage_expected", System.Data.SqlDbType.BigInt) { Value = staged.ExpectedRows });
+        var keys = string.Join(" AND ", staged.KeyColumns.Select(k => $"k.{dialect.QuoteIdentifier(k)} = t.{dialect.QuoteIdentifier(k)}"));
+        predicates.Add($"NOT EXISTS (SELECT 1 FROM {stage} AS k WHERE k.{stageKey} = @fdw_stage_key AND {keys})");
+        return $"DECLARE @fdw_stage_found bigint = (SELECT COUNT_BIG(*) FROM {stage} WHERE {stageKey} = @fdw_stage_key); "
+               + "IF @fdw_stage_found <> @fdw_stage_expected BEGIN "
+               + "DECLARE @fdw_stage_message nvarchar(400) = CONCAT(N'The stage holds ', @fdw_stage_found, N' row(s) for this load; it appended ', @fdw_stage_expected); "
+               + $"THROW {MsSqlDeleteTranslator.StageRowCountMismatchError}, @fdw_stage_message, 1; END; "
+               + update + string.Join(" AND ", predicates) + ";";
     }
 }

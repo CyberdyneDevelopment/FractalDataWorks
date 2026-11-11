@@ -64,6 +64,10 @@ class NugetOrg:
         pid, ver = package_id.lower(), version.lower()
         return self._get(f"{self.base}/{pid}/{ver}/{pid}.{ver}.nupkg")
 
+    def download(self, package_id, version):
+        """The bytes of a held package, or None when the package or version is not there."""
+        return self._package(package_id, version)
+
     def held_tree(self, package_id, version):
         body = self._package(package_id, version)
         return tree_from_nupkg(body) if body else None

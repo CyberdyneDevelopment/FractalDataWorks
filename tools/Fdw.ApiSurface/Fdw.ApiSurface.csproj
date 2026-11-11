@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.ApiSurface</RootNamespace>
+    <AssemblyName>Fdw.ApiSurface</AssemblyName>
+
+    <!-- Why: a release-time helper run with dotnet run and the project option, like Fdw.PasswordHasher. It is not in the
+         main solution and is not a package, so a release neither builds nor pushes it. It reads a package's
+         assemblies without loading them (System.Reflection.Metadata) and writes the public surface that
+         public/tools/versioning/apisurface.py compares. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -18,8 +19,17 @@ namespace Fdw.Configuration.Endpoints;
 /// <summary>
 /// Base endpoint for getting a specific configuration instance with all values.
 /// </summary>
+/// <remarks>
+/// Only containers that hold configurations of their own are read: a container whose rows hang from another container's rows (an
+/// implementation body, a typed child list, a key/value property collection) is refused (FDW-4644). A value is masked when the owning
+/// configuration type declares its member <see cref="SecretValueAttribute"/>, and by nothing else: a column whose name only looks secret
+/// is not masked by its name (FDW-3002). The owning type comes from <see cref="ConfigurationTypeOf"/>; a container whose type is not
+/// declared answers <c>InstanceTypeNotDeclared</c> and none of its values is returned.
+/// </remarks>
 public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigurationInstanceRequest, ConfigurationInstanceDetailResponse>
 {
+    private const string SecretMask = "********";
+
     private static readonly HashSet<string> SystemFields = new(StringComparer.OrdinalIgnoreCase)
         { "Id", "Name", "Type", "ServiceType", "CreatedAt", "ModifiedAt" };
 
@@ -72,10 +82,17 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
             return;
         }
 
-        ConfigurationInstanceDetailResponse? detail;
+        var topLevel = TopLevelConfigurationContainers.Of(containers, _logger);
+        if (topLevel.Count == 0)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConfigurationEndpointLog.CategoryHasNoTopLevelConfiguration(_logger, req.Category)), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        IGenericResult<ConfigurationInstanceDetailResponse?> found;
         try
         {
-            detail = await FindInstanceDetail(req, containers, ct).ConfigureAwait(false);
+            found = await FindInstanceDetail(req, topLevel, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -84,7 +101,13 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
             return;
         }
 
-        if (detail is not null)
+        if (found.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(found, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (found.Value is { } detail)
         {
             await Send.OkAsync(detail, ct).ConfigureAwait(false);
             return;
@@ -94,9 +117,20 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
         await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(ConfigurationEndpointLog.GetConfigurationInstanceNotFound2(_logger)), HttpContext)).ConfigureAwait(false);
     }
 
-    private async Task<ConfigurationInstanceDetailResponse?> FindInstanceDetail(
+    /// <summary>The configuration type that owns the rows of <paramref name="container"/>, whose secret members are masked.</summary>
+    /// <param name="container">A container that holds configurations of its own.</param>
+    /// <returns>The owning type, or a failure when the container does not declare one.</returns>
+    /// <remarks>
+    /// A data container does not yet carry the configuration type it stores, so no container declares one here and every container
+    /// answers <c>InstanceTypeNotDeclared</c>: without the type nothing says which of its values are secret, so none is returned.
+    /// A derived endpoint that knows a container's type returns it.
+    /// </remarks>
+    protected virtual IGenericResult<Type> ConfigurationTypeOf(IDataContainer container)
+        => GenericResult<Type>.Failure(ConfigurationEndpointLog.InstanceTypeNotDeclared(_logger, container.Parent.Name, container.Name));
+
+    private async Task<IGenericResult<ConfigurationInstanceDetailResponse?>> FindInstanceDetail(
         GetConfigurationInstanceRequest req,
-        IReadOnlyList<IDataContainer> containers,
+        List<IDataContainer> containers,
         CancellationToken ct)
     {
         foreach (var container in containers)
@@ -110,12 +144,20 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
                 var result = await Gateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, ct)
                     .ConfigureAwait(false);
 
-                if (!result.IsSuccess || result.Value?.Any() != true)
+                if (!result.IsSuccess || result.Value?.FirstOrDefault() is not { } record)
                 {
                     continue;
                 }
 
-                return MapToDetail(result.Value.First(), container, req.Name, req.Category);
+                var owner = ConfigurationTypeOf(container);
+                if (owner.IsFailure)
+                    return owner.ToNewResult<ConfigurationInstanceDetailResponse?>();
+                if (owner.Value is not { } ownerType)
+                    return GenericResult<ConfigurationInstanceDetailResponse?>.Failure(
+                        ConfigurationEndpointLog.InstanceTypeNotDeclared(_logger, container.Parent.Name, container.Name));
+
+                return GenericResult<ConfigurationInstanceDetailResponse?>.Success(
+                    MapToDetail(record, container, ownerType, req.Name, req.Category));
             }
             catch (Exception ex)
             {
@@ -124,12 +166,13 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
             }
         }
 
-        return null;
+        return GenericResult<ConfigurationInstanceDetailResponse?>.Success(null);
     }
 
     private ConfigurationInstanceDetailResponse MapToDetail(
         Dictionary<string, object?> record,
         IDataContainer container,
+        Type ownerType,
         string requestedName,
         string category)
     {
@@ -156,7 +199,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
             Name = name,
             ServiceType = serviceType,
             Category = category,
-            Values = ExtractValues(record),
+            Values = ExtractValues(record, SecretMembers(ownerType)),
             CreatedAt = createdAt,
             ModifiedAt = modifiedAt
         };
@@ -165,7 +208,11 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
     private InvalidOperationException RowIncomplete(IDataContainer container, string requestedName, string column) =>
         new(ConfigurationEndpointLog.InstanceRowIncomplete(_logger, requestedName, container.Name, column).Message);
 
-    private static Dictionary<string, object?> ExtractValues(Dictionary<string, object?> record)
+    /// <summary>The row's values with each value of a declared secret member masked.</summary>
+    /// <param name="record">The stored row.</param>
+    /// <param name="secretMembers">The names of the owning type's members that carry <see cref="SecretValueAttribute"/>.</param>
+    /// <returns>The values, system fields left out.</returns>
+    private static Dictionary<string, object?> ExtractValues(Dictionary<string, object?> record, HashSet<string> secretMembers)
     {
         var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
 
@@ -176,22 +223,20 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
                 continue;
             }
 
-            var isSecret = IsSecretProperty(kvp.Key);
-            values[kvp.Key] = isSecret && kvp.Value is not null ? "********" : kvp.Value;
+            values[kvp.Key] = secretMembers.Contains(kvp.Key) && kvp.Value is not null ? SecretMask : kvp.Value;
         }
 
         return values;
     }
 
-    private static bool IsSecretProperty(string? propertyName)
-    {
-        if (propertyName is null)
-        {
-            return false;
-        }
-
-        return propertyName.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Contains("Secret", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Contains("ApiKey", StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>The names of the public instance properties of <paramref name="ownerType"/> that carry <see cref="SecretValueAttribute"/>.</summary>
+    /// <param name="ownerType">The owning configuration type.</param>
+    /// <returns>The member names, compared ignoring case as the row's columns are.</returns>
+    /// <remarks>Whether a member is secret is decided by the attribute alone, inherited from a base class too, never by its name (FDW-3002).</remarks>
+    private static HashSet<string> SecretMembers(Type ownerType)
+        => new HashSet<string>(
+            ownerType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(property => Attribute.IsDefined(property, typeof(SecretValueAttribute), inherit: true))
+                .Select(property => property.Name),
+            StringComparer.OrdinalIgnoreCase);
 }

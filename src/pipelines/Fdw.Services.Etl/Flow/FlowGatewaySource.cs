@@ -4,7 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
-using Fdw.Data;
+using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
@@ -15,13 +16,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Etl.Flow;
 
 /// <summary>
-/// A source component that reads a data set or one container of a data store through the data gateway, a page at a time, and
-/// sends each page out as a batch (FDW-1386). It has no input node.
+/// A source component that reads a data set or one container of a data store through the data gateway as one stream in a stable order,
+/// and sends its rows out in batches (FDW-1386, FDW-4911). It has no input node.
 /// </summary>
 /// <remarks>
-/// It reads exactly as a pipeline's extract does: a query command with a skip and a take, run as the run's principal, so row-level
-/// security and the refusal of host-declared stores apply unchanged. A read that fails ends the run; an empty page ends the
-/// source. It never names a connection type.
+/// It opens its rows with the gateway's <c>OpenRecordSource</c>, run as the run's principal, so row-level security and the refusal of
+/// host-declared stores apply unchanged. The gateway reads them in a stable order: through the connection's cursor, or in keyset pages by
+/// the declared key; a source that can be read neither way is refused when it opens, and the refusal names it. Rows are never read in
+/// pages of no stated order, which could repeat or skip a row between pages. A read that fails ends the run. It never names a connection type.
 /// </remarks>
 public sealed class FlowGatewaySource : IFlowComponent
 {
@@ -55,17 +57,19 @@ public sealed class FlowGatewaySource : IFlowComponent
 
     // One thing to read: the container a single source reads (File is null), or one file of a list of files (FDW-3089).
     private sealed record Target(
-        string? File, Func<IDataGateway, QueryCommand<Dictionary<string, object?>>, CancellationToken, Task<IGenericResult<IEnumerable<Dictionary<string, object?>>>>> Read);
+        string? File, Func<IDataGateway, IDataCommand, CancellationToken, Task<IGenericResult<IRecordSource<DataRecord>>>> Open);
 
     // The first file of a list and its fields, which every later file must have.
     private sealed record FirstFile(string Name, HashSet<string> Fields);
 
-    // What the stream has done so far: how many rows went out, and the first file once there is one.
+    // What the stream has done so far: how many rows went out, the first file once there is one, and the target whose fields were last checked.
     private sealed class StreamState
     {
         public int Written { get; set; }
 
         public FirstFile? First { get; set; }
+
+        public Target? Checked { get; set; }
     }
 
     /// <inheritdoc />
@@ -81,7 +85,7 @@ public sealed class FlowGatewaySource : IFlowComponent
     /// <param name="name">The component's name.</param>
     /// <param name="gateway">The data gateway.</param>
     /// <param name="dataSet">The data set to read.</param>
-    /// <param name="pageSize">How many rows go in a batch; at least one.</param>
+    /// <param name="pageSize">How many rows go in a batch; at least one. The gateway's own read is not cut by it.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="rowCap">The most rows to read, for a test run; none reads every row.</param>
     /// <returns>The source.</returns>
@@ -91,7 +95,7 @@ public sealed class FlowGatewaySource : IFlowComponent
         var target = new DataSetTarget(dataSet);
         return new FlowGatewaySource(
             name, gateway, pageSize, rowCap,
-            [new Target(null, (g, command, token) => g.Execute<IEnumerable<Dictionary<string, object?>>>(command, target, token))],
+            [new Target(null, (g, command, token) => g.OpenRecordSource(command, target, token))],
             logger);
     }
 
@@ -101,7 +105,7 @@ public sealed class FlowGatewaySource : IFlowComponent
     /// <param name="dataStore">The data store.</param>
     /// <param name="path">The path in the store, or <see langword="null"/> when the store states none.</param>
     /// <param name="container">The container to read.</param>
-    /// <param name="pageSize">How many rows go in a batch; at least one.</param>
+    /// <param name="pageSize">How many rows go in a batch; at least one. The gateway's own read is not cut by it.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="rowCap">The most rows to read, for a test run; none reads every row.</param>
     /// <param name="physicalPath">The path to read in place of the declared container's (FDW-1952); needs the ETL data gateway.</param>
@@ -118,7 +122,7 @@ public sealed class FlowGatewaySource : IFlowComponent
         {
             return new FlowGatewaySource(
                 name, gateway, pageSize, rowCap,
-                [new Target(null, (g, command, token) => g.Execute<IEnumerable<Dictionary<string, object?>>>(command, target, token))],
+                [new Target(null, (g, command, token) => g.OpenRecordSource(command, target, token))],
                 logger);
         }
 
@@ -129,20 +133,20 @@ public sealed class FlowGatewaySource : IFlowComponent
 
         return new FlowGatewaySource(
             name, gateway, pageSize, rowCap,
-            [new Target(null, (g, command, token) => ((IEtlDataGateway)g).Execute<IEnumerable<Dictionary<string, object?>>>(command, target, physicalPath, physicalName, token))],
+            [new Target(null, (g, command, token) => ((IEtlDataGateway)g).OpenRecordSource(command, target, physicalPath, physicalName, token))],
             logger);
     }
 
     /// <summary>
     /// Makes a source that reads a list of files of one container of a data store, one file after another, as one stream (FDW-3089): the rows of every
-    /// file go out on its one output, in the order of the list, with no more held than a page. Every file must have the fields of the first.
+    /// file go out on its one output, in the order of the list, with no more held than a batch. Every file must have the fields of the first.
     /// </summary>
     /// <param name="name">The component's name.</param>
     /// <param name="gateway">The data gateway; it must be the ETL data gateway, which reads a declared container at another address.</param>
     /// <param name="dataStore">The data store.</param>
     /// <param name="path">The path in the store, or <see langword="null"/> when the store states none.</param>
     /// <param name="container">The declared container each file is read as.</param>
-    /// <param name="pageSize">How many rows go in a batch; at least one.</param>
+    /// <param name="pageSize">How many rows go in a batch; at least one. The gateway's own read is not cut by it.</param>
     /// <param name="files">The names of the files to read, in order; at least one.</param>
     /// <param name="physicalPath">The path to read the files at in place of the declared container's, or <see langword="null"/> to read the declared path.</param>
     /// <param name="logger">The logger.</param>
@@ -164,7 +168,7 @@ public sealed class FlowGatewaySource : IFlowComponent
         return new FlowGatewaySource(
             name, gateway, pageSize, rowCap,
             [.. files.Select(file => new Target(
-                file, (g, command, token) => ((IEtlDataGateway)g).Execute<IEnumerable<Dictionary<string, object?>>>(command, target, physicalPath, file, token)))],
+                file, (g, command, token) => ((IEtlDataGateway)g).OpenRecordSource(command, target, physicalPath, file, token)))],
             logger);
     }
 
@@ -191,91 +195,107 @@ public sealed class FlowGatewaySource : IFlowComponent
         return GenericResult.Success();
     }
 
-    // Reads one target a page at a time and sends each page out, the rule a pipeline's own extract keeps: another page only follows a page of
-    // exactly the size asked for. A source that cannot page answers its whole set whatever it was asked, which is more than a page, so it ends there.
+    // Opens one target and streams it. The gateway's record source owns what it reads through, so it is disposed whatever happens; a test
+    // run's row cap ends the read early, and disposing it then stops the store's read.
     private async Task<IGenericResult> ReadTarget(Target target, IFlowOutput output, StreamState state, CancellationToken cancellationToken)
     {
-        var skipped = 0;
-        var checkedFields = false;
-        while (true)
+        var opened = await target.Open(_gateway, new QueryCommand<Dictionary<string, object?>>(), cancellationToken).ConfigureAwait(false);
+        if (opened.IsFailure || opened.Value is not { } source)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            return FlowFailures.Caused(FlowLog.SourceOpenFailed(_logger, _name, FlowFailures.ReasonOf(opened)), opened);
+        }
 
-            // Why the page is cut to what the cap leaves: a test run reads the first rows only, and asks for no more than that.
-            var take = _rowCap is { } cap ? Math.Min(_pageSize, cap - state.Written) : _pageSize;
-            if (take < 1)
-            {
-                return GenericResult.Success();
-            }
-
-            var command = new QueryCommand<Dictionary<string, object?>>
-            {
-                Paging = new PagingExpression { Skip = skipped, Take = take },
-            };
-
-            var read = await target.Read(_gateway, command, cancellationToken).ConfigureAwait(false);
-            if (read.IsFailure)
-            {
-                return FlowFailures.Caused(FlowLog.SourceReadFailed(_logger, _name, skipped, FlowFailures.ReasonOf(read)), read);
-            }
-
-            if (read.Value is not { } page)
-            {
-                return GenericResult.Failure(FlowLog.SourceReturnedNothing(_logger, _name));
-            }
-
-            var rows = page.Cast<IDictionary<string, object?>>().ToList();
-            if (rows.Count == 0)
-            {
-                return GenericResult.Success();
-            }
-
-            if (target.File is not null && !checkedFields)
-            {
-                var same = SameFields(target.File, rows[0], state);
-                if (same.IsFailure)
-                {
-                    return same;
-                }
-
-                checkedFields = true;
-            }
-
-            var last = rows.Count != take;
-            if (_rowCap is { } limit && rows.Count > limit - state.Written)
-            {
-                // Why: a source that cannot page answers more than the cap in one go; a test run keeps the first rows of it.
-                rows = rows.Take(limit - state.Written).ToList();
-            }
-
-            await output.Write(new FlowBatch(rows), cancellationToken).ConfigureAwait(false);
-            state.Written += rows.Count;
-            if (last)
-            {
-                return GenericResult.Success();
-            }
-
-            skipped += rows.Count;
+        await using (source.ConfigureAwait(false))
+        {
+            return await Stream(target, source, output, state, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    // The first row of a file stands for the file's fields. The first file sets the fields every later file must have; a file that differs fails the
+    // Sends the records out in batches of the batch size; the last batch holds what is left. Only a batch is held at a time.
+    private async Task<IGenericResult> Stream(Target target, IRecordSource<DataRecord> source, IFlowOutput output, StreamState state, CancellationToken cancellationToken)
+    {
+        var names = source.Schema.Fields.Select(field => field.Name).ToArray();
+        var batch = new List<IDictionary<string, object?>>();
+        await foreach (var record in source.Read(cancellationToken).ConfigureAwait(false))
+        {
+            if (record.IsFailure)
+            {
+                return FlowFailures.Caused(FlowLog.SourceRecordFailed(_logger, _name, state.Written + batch.Count, FlowFailures.ReasonOf(record)), record);
+            }
+
+            var fields = FieldsAtFirstRecord(target, names, state);
+            if (fields.IsFailure)
+            {
+                return fields;
+            }
+
+            batch.Add(Row(names, record.Value));
+            var capped = _rowCap is { } cap && state.Written + batch.Count >= cap;
+            if (batch.Count < _pageSize && !capped)
+            {
+                continue;
+            }
+
+            await output.Write(new FlowBatch(batch), cancellationToken).ConfigureAwait(false);
+            state.Written += batch.Count;
+            batch = [];
+            if (capped)
+            {
+                return GenericResult.Success();
+            }
+        }
+
+        if (batch.Count > 0)
+        {
+            await output.Write(new FlowBatch(batch), cancellationToken).ConfigureAwait(false);
+            state.Written += batch.Count;
+        }
+
+        return GenericResult.Success();
+    }
+
+    // A file's fields are checked at its first record: a file with no rows has no fields to compare, as before, and a file whose fields differ
+    // fails before a row of it goes out. A source that reads no list of files has nothing to compare.
+    private IGenericResult FieldsAtFirstRecord(Target target, string[] names, StreamState state)
+    {
+        if (target.File is not { } file || ReferenceEquals(state.Checked, target))
+        {
+            return GenericResult.Success();
+        }
+
+        state.Checked = target;
+        return SameFields(file, names, state);
+    }
+
+    // A record as the row a component takes: its fields by name, matched without regard to case as a store's rows are.
+    private static Dictionary<string, object?> Row(string[] names, DataRecord record)
+    {
+        var row = new Dictionary<string, object?>(names.Length, StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < names.Length; i++)
+        {
+            row[names[i]] = record[i];
+        }
+
+        return row;
+    }
+
+    // A file's fields are the fields its read carries. The first file sets the fields every later file must have; a file that differs fails the
     // run naming the file and the fields that differ, and no file is skipped (FDW-3089).
-    private IGenericResult SameFields(string file, IDictionary<string, object?> firstRow, StreamState state)
+    private IGenericResult SameFields(string file, string[] fields, StreamState state)
     {
         if (state.First is not { } first)
         {
-            state.First = new FirstFile(file, new HashSet<string>(firstRow.Keys, StringComparer.Ordinal));
+            state.First = new FirstFile(file, new HashSet<string>(fields, StringComparer.Ordinal));
             return GenericResult.Success();
         }
 
-        if (first.Fields.SetEquals(firstRow.Keys))
+        if (first.Fields.SetEquals(fields))
         {
             return GenericResult.Success();
         }
 
-        var missing = first.Fields.Except(firstRow.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
-        var extra = firstRow.Keys.Except(first.Fields, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+        var missing = first.Fields.Except(fields, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+        var extra = fields.Except(first.Fields, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
         var difference = string.Concat(
             missing.Count > 0 ? $"missing {string.Join(", ", missing)}" : string.Empty,
             missing.Count > 0 && extra.Count > 0 ? "; " : string.Empty,

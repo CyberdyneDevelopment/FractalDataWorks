@@ -30,8 +30,8 @@ public static class CalculationArrayValidator
     /// <param name="array">The array.</param>
     /// <param name="limits">The stated limits.</param>
     /// <param name="allowDateTimeResults">
-    /// True when the caller reads a date-time result back through the result's value kind. A caller written before date-times existed
-    /// reads every result as a number, so it passes false and a tree whose result is a date-time is refused.
+    /// True when the caller reads a date or date-time result back through the result's value kind. A caller written before dates and
+    /// date-times existed reads every result as a number, so it passes false and a tree whose result is a date or date-time is refused.
     /// </param>
     /// <returns>Success, or the first refusal.</returns>
     public static IGenericResult Validate(CalculationArrayDefinition array, CalculationLimits limits, bool allowDateTimeResults)
@@ -143,16 +143,22 @@ public static class CalculationArrayValidator
         }
 
         var actual = type.Value!;
-        var date = CalculationCoercion.IsDateTime(actual);
-        if (!CalculationCoercion.IsNumber(actual) && !(date && allowDateTimeResults))
+        var moment = CalculationCoercion.IsMoment(actual);
+        if (!CalculationCoercion.IsNumber(actual) && !(moment && allowDateTimeResults))
         {
-            var allowed = allowDateTimeResults ? "a number or a date-time" : "a number";
-            return Mismatch(result.Expression, $"result '{result.Name}' must be {allowed}, not {(date ? "a date-time" : "a condition")}");
+            var allowed = allowDateTimeResults ? "a number, a date or a date-time" : "a number";
+            return Mismatch(result.Expression, $"result '{result.Name}' must be {allowed}, not {Describe(actual)}");
         }
 
-        context.Define(result.Name, date ? typeof(DateTimeOffset) : typeof(decimal));
+        context.Define(result.Name, moment ? actual : typeof(decimal));
         return GenericResult.Success();
     }
+
+    private static string Describe(Type type) =>
+        CalculationCoercion.IsDate(type) ? "a date"
+        : CalculationCoercion.IsDateTime(type) ? "a date-time"
+        : CalculationCoercion.IsNumber(type) ? "a number"
+        : "a condition";
 
     private static IGenericResult<Type> CheckNode(CalculationNode node, Type expected, int depth, CalculationValidationContext context)
     {
@@ -205,7 +211,12 @@ public static class CalculationArrayValidator
             var compatible = required is null ? CalculationCoercion.IsNumber(child.Value!) : CalculationCoercion.CanCoerce(child.Value!, required);
             if (!compatible)
             {
-                return Mismatch(node.Operands[i], $"operand {i + 1} of {node.Describe()} has the wrong type").ToNewResult<Type>();
+                // An operator that states no operand type takes any number, so that is what the operand was expected to be.
+                var expectedWord = required is null ? "a number" : Describe(required);
+                return Mismatch(
+                    node.Operands[i],
+                    $"operand {i + 1} of {node.Describe()} must be {expectedWord}, not {Describe(child.Value!)}")
+                    .ToNewResult<Type>();
             }
 
             types.Add(child.Value!);

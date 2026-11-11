@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\..\src\data\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <ProjectReference Include="..\..\..\src\connections\Fdw.Services.Connections.MsSql\Fdw.Services.Connections.MsSql.csproj" />
     <ProjectReference Include="..\..\..\src\connections\Fdw.Services.Connections.Endpoints\Fdw.Services.Connections.Endpoints.csproj" />
+    <ProjectReference Include="..\..\..\src\connections\Fdw.Services.Connections.Http\Fdw.Services.Connections.Http.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FluentValidation" />

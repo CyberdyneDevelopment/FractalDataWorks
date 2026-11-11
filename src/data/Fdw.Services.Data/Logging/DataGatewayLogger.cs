@@ -313,6 +313,85 @@ public static partial class DataGatewayLogger
         string errors);
 
     /// <summary>
+    /// Logs that a read of a Compound data set names a field none of its sources owns (FDW-4991): its joined query qualifies every field
+    /// with the container of the source that holds it, and one no source holds would reach no column.
+    /// </summary>
+    [MessageLogging(
+        EventId = 21200,
+        Level = LogLevel.Warning,
+        Message = "A read of Compound data set '{dataSetName}' names field '{fieldName}', which none of its sources holds",
+        ClientMessage = "Field '{fieldName}' is not a field of data set '{dataSetName}'")]
+    public static partial IGenericMessage CompoundFieldNotOwned(
+        ILogger logger,
+        string dataSetName,
+        string fieldName);
+
+    /// <summary>
+    /// Logs that a read of a Federated data set names a field its joined rows do not carry (FDW-5049): neither a stored field of the data
+    /// set nor a logical name one of its sources maps. Such a condition used to be dropped, so the read answered rows it excludes.
+    /// </summary>
+    [MessageLogging(
+        EventId = 21202,
+        Level = LogLevel.Warning,
+        Message = "A read of Federated data set '{dataSetName}' filters on field '{fieldName}', which none of its fields or source mappings carries",
+        ClientMessage = "Field '{fieldName}' is not a field of data set '{dataSetName}'")]
+    public static partial IGenericMessage FederatedFieldNotCarried(
+        ILogger logger,
+        string dataSetName,
+        string fieldName);
+
+    /// <summary>
+    /// Logs that a page of a Compound data set is refused because one of its key fields is held by a source an outer join may leave
+    /// without a row (FDW-5024): that key can be NULL, so a page cut by it repeats or skips rows.
+    /// </summary>
+    [MessageLogging(
+        EventId = 21201,
+        Level = LogLevel.Warning,
+        Message = "A page of Compound data set '{dataSetName}' is refused: key field '{fieldName}' comes from a source an outer join may leave without a row",
+        ClientMessage = "Data set '{dataSetName}' cannot be read a page at a time: its key field '{fieldName}' comes from a source an outer join may leave empty, so it can be null; key it on fields every joined row has")]
+    public static partial IGenericMessage CompoundKeyOnOptionalSide(
+        ILogger logger,
+        string dataSetName,
+        string fieldName);
+
+    /// <summary>
+    /// Logs that a write through a data set with its own filters is refused because it cannot be narrowed to them (FDW-5069): a bulk
+    /// update or delete, or an upsert, chooses its rows inside the connection, so it could touch rows outside the data set.
+    /// </summary>
+    [MessageLogging(
+        EventId = 21203,
+        Level = LogLevel.Warning,
+        Message = "A {commandType} through data set '{dataSetName}' is refused: the data set has its own filters, and a {commandType} cannot be narrowed to them",
+        ClientMessage = "Data set '{dataSetName}' has its own filters, so a {commandType} through it is refused: it cannot be limited to the rows the data set holds; write row by row or through its source")]
+    public static partial IGenericMessage FilteredDataSetWriteNotScopable(
+        ILogger logger,
+        string dataSetName,
+        string commandType);
+
+    /// <summary>Logs that an insert through a data set is refused because one of its rows is outside the data set's own filters (FDW-5069).</summary>
+    [MessageLogging(
+        EventId = 21204,
+        Level = LogLevel.Warning,
+        Message = "An insert through data set '{dataSetName}' is refused: row {rowIndex} is outside the data set's own filters",
+        ClientMessage = "Row {rowIndex} is outside data set '{dataSetName}': it does not satisfy the data set's own filters, so it is not inserted through it")]
+    public static partial IGenericMessage FilteredDataSetInsertRowOutsideFilter(
+        ILogger logger,
+        string dataSetName,
+        int rowIndex);
+
+    /// <summary>Logs that an insert through a filtered data set is refused because one of its rows cannot be read as values to check (FDW-5069).</summary>
+    [MessageLogging(
+        EventId = 21205,
+        Level = LogLevel.Warning,
+        Message = "An insert through data set '{dataSetName}' is refused: row {rowIndex} cannot be read to check it against the data set's own filters: {reason}",
+        ClientMessage = "Row {rowIndex} could not be checked against the own filters of data set '{dataSetName}': {reason}")]
+    public static partial IGenericMessage FilteredDataSetInsertRowUnreadable(
+        ILogger logger,
+        string dataSetName,
+        int rowIndex,
+        string reason);
+
+    /// <summary>
     /// Logs when a join references an unknown source.
     /// </summary>
     [MessageLogging(

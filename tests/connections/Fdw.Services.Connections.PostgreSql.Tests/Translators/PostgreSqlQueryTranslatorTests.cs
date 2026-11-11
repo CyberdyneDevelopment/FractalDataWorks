@@ -521,4 +521,44 @@ public sealed class PostgreSqlQueryTranslatorTests
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldNotContain("SELECT *");
     }
+
+    // A joined read (FDW-4991): ordered by qualified columns and paged, or refused when it pages with no order.
+    private static QueryCommand<object> JoinedRead(IOrderingExpression? ordering, IPagingExpression? paging) => new()
+    {
+        Joins = [new JoinExpression { TargetContainerName = "customers", JoinType = "INNER", JoinConditions = [("customer_code", "code")] }],
+        Ordering = ordering,
+        Paging = paging,
+    };
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataSets.FDW4991")]
+    public async Task AJoinedReadOrdersByQualifiedColumnsAndPages()
+    {
+        var ordering = new OrderingExpression
+        {
+            OrderedFields =
+            [
+                new OrderedField { PropertyName = "customers.name", Direction = SortDirections.Descending },
+                new OrderedField { PropertyName = "id", Direction = SortDirections.Ascending },
+            ],
+        };
+
+        var result = await _sut.Translate(
+            JoinedRead(ordering, new PagingExpression { Skip = 4, Take = 2 }), CreateContainer("orders").Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.CommandText.ShouldEndWith("ORDER BY \"customers\".\"name\" DESC, \"orders\".\"id\" ASC LIMIT 2 OFFSET 4");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataSets.FDW4991")]
+    public async Task APagedJoinThatStatesNoOrderIsRefused()
+    {
+        var result = await _sut.Translate(
+            JoinedRead(null, new PagingExpression { Skip = 0, Take = 2 }), CreateContainer("orders").Object, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+    }
 }

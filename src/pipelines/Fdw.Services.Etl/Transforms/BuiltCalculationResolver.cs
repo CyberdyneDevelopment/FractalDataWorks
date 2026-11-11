@@ -123,7 +123,7 @@ public static class BuiltCalculationResolver
         var array = BuiltTransformationConverter.ToArray(built.Value!, limits.Value!);
         var compiled = array.IsFailure
             ? array.ToNewResult<CompiledCalculation>()
-            : new CalculationCompiler().Compile(array.Value!, limits.Value!);
+            : new CalculationCompiler().Compile(array.Value!, limits.Value!, allowDateTimeResults: true);
         if (compiled.IsFailure)
         {
             ComputeLog.CalculationRefused(resolution.Logger, stageName, built.Value!.Name);

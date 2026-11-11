@@ -69,6 +69,10 @@ public static class ComponentSettingBindings
         new("deletedAtColumn", "Text", c => c.DeletedAtColumn, (c, v) => c.DeletedAtColumn = (string?)v),
         new("softDeleteMarkerColumn", "Text", c => c.SoftDeleteMarkerColumn, (c, v) => c.SoftDeleteMarkerColumn = (string?)v),
         new("softDeleteMarkerValue", "Text", c => c.SoftDeleteMarkerValue, (c, v) => c.SoftDeleteMarkerValue = (string?)v),
+        new("stageContainer", "Text", c => c.StageContainer, (c, v) => c.StageContainer = (string?)v),
+        new("stageKeyColumn", "Text", c => c.StageKeyColumn, (c, v) => c.StageKeyColumn = (string?)v),
+        new("sweepRejectedRowsRule", "Text", c => c.SweepRejectedRowsRule, (c, v) => c.SweepRejectedRowsRule = (string?)v),
+        new("unmatchedKeysRule", "Text", c => c.UnmatchedKeysRule, (c, v) => c.UnmatchedKeysRule = (string?)v),
     ];
 
     /// <summary>Gets every scalar setting.</summary>

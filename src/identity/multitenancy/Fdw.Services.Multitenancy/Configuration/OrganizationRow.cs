@@ -32,8 +32,8 @@ public sealed partial class OrganizationRow
     /// <summary>Gets or sets a value indicating whether the organization is active.</summary>
     public bool IsActive { get; set; }
 
-    /// <summary>Gets or sets the organization's default workspace; empty when it has none.</summary>
-    public Guid DefaultWorkspaceId { get; set; }
+    /// <summary>Gets or sets the organization's default workspace; null when it has none.</summary>
+    public Guid? DefaultWorkspaceId { get; set; }
 
     /// <summary>Gets or sets the visibility group of the row.</summary>
     public Guid? VisibilityGroupId { get; set; }

@@ -114,8 +114,37 @@ public sealed class ConnectionEndpointBehavior : IConnectionEndpointBehavior<ICo
         string dictionaryProperty,
         string connectionTypeName,
         Func<IConnectionImplementationConfiguration, IConnectionAuthenticationType> authentication)
+        => Authentication(dictionaryProperty, connectionTypeName, authentication, sharedProperties: null);
+
+    /// <summary>
+    /// Declares which authentication method a connection's authentication dictionary belongs to, and the plain settings a second owner the
+    /// configuration names keeps in it (FDW-4938: an HTTP connection's paging style). A key the second owner expects is accepted and shown as
+    /// it is; a key neither expects is refused and masked as <see cref="Authentication(string, string, Func{IConnectionImplementationConfiguration, IConnectionAuthenticationType})"/>
+    /// does; a key the method expects stays the method's to mask.
+    /// </summary>
+    /// <param name="dictionaryProperty">The configuration property holding the authentication dictionary.</param>
+    /// <param name="connectionTypeName">The connection type's name, for the refusal.</param>
+    /// <param name="authentication">Answers the authentication method the configuration names.</param>
+    /// <param name="sharedProperties">Answers the names the second owner expects; <see langword="null"/> when there is none.</param>
+    public void Authentication(
+        string dictionaryProperty,
+        string connectionTypeName,
+        Func<IConnectionImplementationConfiguration, IConnectionAuthenticationType> authentication,
+        Func<IConnectionImplementationConfiguration, IReadOnlyList<string>>? sharedProperties)
     {
-        MaskEntries(dictionaryProperty, (configuration, entries) => authentication(configuration).MaskSecrets(entries, ConnectionSecretMask.Value));
+        ArgumentNullException.ThrowIfNull(authentication);
+        MaskEntries(dictionaryProperty, (configuration, entries) =>
+        {
+            var method = authentication(configuration);
+            var masked = method.MaskSecrets(entries, ConnectionSecretMask.Value);
+            foreach (var shared in Shared(configuration))
+            {
+                if (entries.TryGetValue(shared, out var value) && !method.ExpectedProperties.Contains(shared, StringComparer.OrdinalIgnoreCase))
+                    masked[shared] = value;
+            }
+
+            return masked;
+        });
         Validate((configuration, logger) =>
         {
             if (ConfigurationType.GetProperty(dictionaryProperty)?.GetValue(configuration) is not IEnumerable<KeyValuePair<string, string?>> entries)
@@ -126,12 +155,20 @@ public sealed class ConnectionEndpointBehavior : IConnectionEndpointBehavior<ICo
             if (string.IsNullOrEmpty(method.Name))
                 return GenericResult.Success();
 
-            var unexpected = method.UnexpectedProperties(entries.Select(entry => entry.Key));
+            // Why a blank entry is not counted (FDW-5014): an entry with no value states nothing. A merge keeps every key it has seen, so a
+            // change of method or paging style clears the old one's settings by sending them blank, and those keys must not refuse the save.
+            var shared = Shared(configuration);
+            var unexpected = method.UnexpectedProperties(entries.Where(entry => !string.IsNullOrEmpty(entry.Value)).Select(entry => entry.Key))
+                .Where(key => !shared.Contains(key, StringComparer.OrdinalIgnoreCase))
+                .ToList();
             return unexpected.Count == 0
                 ? GenericResult.Success()
                 : GenericResult.Failure(ConnectionEndpointBehaviorLog.AuthenticationPropertyNotExpected(
                     logger, connectionTypeName, method.Name, string.Join(", ", unexpected)));
         });
+
+        IReadOnlyList<string> Shared(IConnectionImplementationConfiguration configuration)
+            => sharedProperties is null ? [] : sharedProperties(configuration);
     }
 
     /// <inheritdoc />

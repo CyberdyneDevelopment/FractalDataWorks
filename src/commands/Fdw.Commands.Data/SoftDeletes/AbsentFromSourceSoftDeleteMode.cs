@@ -25,6 +25,8 @@ public sealed class AbsentFromSourceSoftDeleteMode : SoftDeleteModeBase
     {
         if (options.Marker is not null)
             return Problem("an absent-from-source soft delete takes no marker");
+        if (options.AbsentFromStage is not null)
+            return Problem("an absent-from-source soft delete takes a source set, not a stage");
         if (options.AbsentFromSource is null)
             return Problem("an absent-from-source soft delete names the source set");
         return options.AbsentFromSource.KeyColumns.Count == 0

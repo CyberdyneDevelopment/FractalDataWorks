@@ -85,6 +85,7 @@ class Project:
     kind: str                 # "src" or "tests"
     path: str                 # directory, relative to the repo root
     package_id: str
+    assembly: str             # the assembly name it builds (its AssemblyName, or the project name)
     packable: bool
     refs: set = field(default_factory=set)           # project names referenced
     analyzer_refs: set = field(default_factory=set)  # referenced with OutputItemType="Analyzer"
@@ -148,6 +149,7 @@ def snapshot(root, ref="HEAD"):
         projects[name] = Project(
             name=name, kind=kind, path=directory,
             package_id=prop(text, "PackageId") or prop(text, "AssemblyName") or name,
+            assembly=prop(text, "AssemblyName") or name,
             packable=kind == "src" and (prop(text, "IsPackable") or "true").lower() != "false",
             refs=refs, analyzer_refs=analyzer, embeds=set(EMBED.findall(text)))
         tree_ids[name] = trees[directory]

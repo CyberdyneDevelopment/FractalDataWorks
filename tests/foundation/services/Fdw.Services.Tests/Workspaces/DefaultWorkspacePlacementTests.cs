@@ -10,6 +10,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Workspaces;
 using Fdw.Services.Workspaces.Abstractions;
 using Fdw.Services.Workspaces.Results;
@@ -45,6 +46,8 @@ public sealed class DefaultWorkspacePlacementTests
 
         public Accessor Authentication { get; } = new();
 
+        public Mock<IWorkspaceFoundingPolicy> Policy { get; } = new();
+
         public List<IDataCommand> Inserts { get; } = [];
 
         public Rig(bool configurationRow = true)
@@ -53,6 +56,7 @@ public sealed class DefaultWorkspacePlacementTests
             caller.SetupGet(c => c.ActiveTenantId).Returns(Tenant);
             caller.SetupGet(c => c.UserId).Returns(User.ToString("D"));
             Authentication.Current = caller.Object;
+            Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Success(true));
 
             DefaultOrganizations([new DefaultOrganizationRow { Id = Organization, Name = "Default Organization", DefaultWorkspaceId = DefaultWorkspace }]);
 
@@ -72,7 +76,7 @@ public sealed class DefaultWorkspacePlacementTests
                 .ReturnsAsync(GenericResult<IEnumerable<DefaultOrganizationRow>>.Success(rows));
 
         public DefaultWorkspacePlacement Placement() =>
-            new(Authentication, Store, "workspace", "tenant", NullLogger<DefaultWorkspacePlacement>.Instance);
+            new(Authentication, Policy.Object, Store, "workspace", "tenant", NullLogger<DefaultWorkspacePlacement>.Instance);
 
         public async Task<ConfigurationWriteScope> Unit()
         {
@@ -253,6 +257,50 @@ public sealed class DefaultWorkspacePlacementTests
 
         placed.IsFailure.ShouldBeTrue();
         placed.Code.ShouldBeOfType<DefaultWorkspaceMissingCode>();
+        rig.Inserts.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Workspaces")]
+    public async Task WithTheSettingOffNothingIsPlacedAndNothingIsRefusedForTheLackOfAWorkspace()
+    {
+        var rig = new Rig();
+        rig.Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Success(false));
+        rig.Authentication.Current = null;
+        rig.DefaultOrganizations([]);
+
+        var placed = await rig.Placement().Place(Request(), await rig.Unit(), TestContext.Current.CancellationToken);
+
+        placed.IsSuccess.ShouldBeTrue(placed.CurrentMessage);
+        rig.Inserts.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Workspaces")]
+    public async Task WithTheSettingOffAKindThatIsNotAWorkspaceResourceKindIsStillRefused()
+    {
+        var rig = new Rig();
+        rig.Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Success(false));
+
+        var placed = await rig.Placement().Place(Request("Sandwich"), await rig.Unit(), TestContext.Current.CancellationToken);
+
+        placed.IsFailure.ShouldBeTrue();
+        placed.Code.ShouldBeOfType<PlacementKindUnknownCode>();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Workspaces")]
+    public async Task ASettingThatCannotBeReadRefusesThePlacementAndNothingIsWritten()
+    {
+        var rig = new Rig();
+        rig.Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Failure(new GenericMessage("no setting")));
+
+        var placed = await rig.Placement().Place(Request(), await rig.Unit(), TestContext.Current.CancellationToken);
+
+        placed.IsFailure.ShouldBeTrue();
         rig.Inserts.ShouldBeEmpty();
     }
 

@@ -42,6 +42,13 @@ public interface ITransformContext : IExecutionContext
     object? DataGateway { get; }
 
     /// <summary>
+    /// Gets what a calculation reads as the current time: one moment, fixed the first time it is asked and the same for every record
+    /// of the run this context belongs to. <see langword="null"/> when the run was given no clock, in which case a calculation that
+    /// reads the time fails with ClockMissing.
+    /// </summary>
+    Func<DateTimeOffset>? Clock { get; }
+
+    /// <summary>
     /// Gets the calculations the run compiled for its Compute stages, by the id of the stage. A Compute stage has an entry; a
     /// stage that is not a Compute stage has none. The run resolves and compiles them once, when it starts, so a stage never
     /// reaches the Transformation domain per record.

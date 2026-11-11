@@ -11,21 +11,22 @@ using Fdw.Data.RowSources.Abstractions;
 namespace Fdw.Data.RowSources.Json.Abstractions;
 
 /// <summary>
-/// Streaming JSON row source that reads array elements without loading entire document.
+/// Streaming JSON row source: reads records one at a time as the stream is read, never the whole document (FDW-4971).
 /// </summary>
 /// <remarks>
-/// Uses System.Text.Json Utf8JsonReader for efficient streaming.
-/// Supports reading arrays at any nesting level via RowArrayPath option.
+/// The records are the objects of the top-level array, of the array at <see cref="JsonRowSourceOptions.RowArrayPath"/>, or, when
+/// <see cref="JsonRowSourceOptions.RecordsAreLines"/> is set, each top-level value (JSON Lines). They are found by
+/// <see cref="JsonRecordScanner"/> over <see cref="Utf8JsonReader"/>; each record is parsed alone and flattened into the row exactly as before.
+/// A malformed document ends the read with <see cref="ReadFailure"/> set, after every record before it.
 /// </remarks>
-public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReader
+public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReader, IReportsReadFailure
 {
     private readonly Stream _stream;
     private readonly JsonRowSourceOptions _options;
     private readonly Dictionary<string, int> _fieldOrdinals;
     private readonly List<string> _fieldNames;
     private readonly Dictionary<string, object?> _currentRowValues;
-    private JsonDocument? _document;
-    private JsonElement.ArrayEnumerator _arrayEnumerator;
+    private JsonRecordScanner? _scanner;
     private bool _hasCurrentRow;
     private bool _initialized;
     private bool _disposed;
@@ -39,6 +40,8 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        if (options.BufferSize < 1)
+            throw new ArgumentOutOfRangeException(nameof(options), options.BufferSize, "A JSON reader's buffer holds at least one byte.");
         _fieldOrdinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         _fieldNames = [];
         _currentRowValues = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -49,6 +52,9 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
 
     /// <inheritdoc />
     public int FieldCount => _fieldNames.Count;
+
+    /// <inheritdoc />
+    public Fdw.Messages.IGenericMessage? ReadFailure => _scanner?.Failure;
 
     /// <inheritdoc />
     public bool CanReset => false;
@@ -149,87 +155,18 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
 
     private void Initialize()
     {
-        var docOptions = new JsonDocumentOptions
-        {
-            AllowTrailingCommas = _options.AllowTrailingCommas,
-            CommentHandling = _options.AllowComments
-                ? JsonCommentHandling.Skip
-                : JsonCommentHandling.Disallow,
-            MaxDepth = _options.MaxDepth
-        };
-
-        _document = JsonDocument.Parse(_stream, docOptions);
-
-        var root = _document.RootElement;
-
-        // Navigate to array using path if specified
-        if (!string.IsNullOrEmpty(_options.RowArrayPath))
-        {
-            root = NavigateToPath(root, _options.RowArrayPath!);
-        }
-
-        if (root.ValueKind != JsonValueKind.Array)
-        {
-            _arrayEnumerator = default;
-        }
-        else
-        {
-            _arrayEnumerator = root.EnumerateArray();
-        }
-
+        _scanner = new JsonRecordScanner(
+            _stream,
+            _options.RowArrayPath,
+            _options.RecordsAreLines,
+            _options.BufferSize,
+            new JsonReaderOptions
+            {
+                AllowTrailingCommas = _options.AllowTrailingCommas,
+                CommentHandling = _options.AllowComments ? JsonCommentHandling.Skip : JsonCommentHandling.Disallow,
+                MaxDepth = _options.MaxDepth,
+            });
         _initialized = true;
-    }
-
-    private static JsonElement NavigateToPath(JsonElement element, string path)
-    {
-        // Remove optional $ prefix
-        var cleanPath = path.StartsWith("$.", StringComparison.Ordinal)
-            ? path.Substring(2)
-            : path.StartsWith("$", StringComparison.Ordinal)
-                ? path.Substring(1)
-                : path;
-
-        if (string.IsNullOrEmpty(cleanPath))
-        {
-            return element;
-        }
-
-        var segments = cleanPath.Split('.');
-
-        foreach (var segment in segments)
-        {
-            if (string.IsNullOrEmpty(segment))
-            {
-                continue;
-            }
-
-            if (element.ValueKind == JsonValueKind.Array)
-            {
-                if (!int.TryParse(segment, System.Globalization.NumberStyles.None,
-                        System.Globalization.CultureInfo.InvariantCulture, out var index)
-                    || index >= element.GetArrayLength())
-                {
-                    return default;
-                }
-
-                element = element[index];
-                continue;
-            }
-
-            if (element.ValueKind != JsonValueKind.Object)
-            {
-                return default;
-            }
-
-            if (!element.TryGetProperty(segment, out var child))
-            {
-                return default;
-            }
-
-            element = child;
-        }
-
-        return element;
     }
 
     private bool ReadNextRow()
@@ -237,19 +174,19 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
         _currentRowValues.Clear();
         _hasCurrentRow = false;
 
-        if (!_arrayEnumerator.MoveNext())
+        if (_scanner is null || !_scanner.TryNext(out var record))
         {
             return false;
         }
 
-        var rowElement = _arrayEnumerator.Current;
-
-        if (rowElement.ValueKind != JsonValueKind.Object)
+        // Why each record is parsed alone: only its bytes are held, and the row it becomes is flattened exactly as a whole document's was.
+        using var document = JsonDocument.Parse(record, new JsonDocumentOptions
         {
-            return false;
-        }
-
-        ReadObjectProperties(rowElement, string.Empty);
+            AllowTrailingCommas = _options.AllowTrailingCommas,
+            CommentHandling = _options.AllowComments ? JsonCommentHandling.Skip : JsonCommentHandling.Disallow,
+            MaxDepth = _options.MaxDepth,
+        });
+        ReadObjectProperties(document.RootElement, string.Empty);
         _hasCurrentRow = true;
         return true;
     }
@@ -405,7 +342,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
         }
 
         _disposed = true;
-        _document?.Dispose();
         _currentRowValues.Clear();
         _fieldOrdinals.Clear();
         _fieldNames.Clear();

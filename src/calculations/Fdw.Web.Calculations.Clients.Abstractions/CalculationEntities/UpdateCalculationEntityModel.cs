@@ -48,7 +48,7 @@ public sealed class UpdateCalculationEntityModel
     /// <summary>
     /// Gets or sets the data type name for the result (e.g. "Decimal", "Int32").
     /// </summary>
-    public string ResultDataTypeName { get; set; } = "Decimal";
+    public string ResultDataTypeName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether the entity should be enabled.

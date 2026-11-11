@@ -784,6 +784,18 @@ public static partial class DefaultConfigurationProviderLog
     public static partial IGenericMessage WriteScopeRollbackFailed(ILogger logger, string reason);
 
     /// <summary>
+    /// Logged when a command that is not a query is sent through a write scope's Read (FDW-4782). Read records nothing for
+    /// invalidation, so a write run through it would leave every cached read of its container stale; it is refused instead.
+    /// </summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="commandType">The command's type.</param>
+    /// <param name="container">The container it targets.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 91101, Level = LogLevel.Error,
+        Message = "A {commandType} command on '{container}' was sent through a configuration write scope's Read, which runs queries only; a write goes through the scope's write path so its cached reads are dropped after the commit")]
+    public static partial IGenericMessage WriteScopeReadNotAQuery(ILogger logger, string commandType, string container);
+
+    /// <summary>
     /// Logged when a registered implementation provider cannot write inside the domain's unit of
     /// work. Reading one does not require it, so the demand is made here rather than at registration.
     /// </summary>

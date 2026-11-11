@@ -11,6 +11,12 @@ namespace Fdw.Data.RowSources.Abstractions.Logging;
 [MessageLoggingTypeCode("ABSTRACTIONS2")]
 public static partial class RowSourceLog
 {
+    /// <summary>The number of <see cref="FormatChoiceNotStated"/>, so a caller that states the choices can tell this reason apart (FDW-4983).</summary>
+    public const int FormatChoiceNotStatedId = 91003;
+
+    /// <summary>The number of <see cref="FormatChoiceNotUsable"/>, so a caller that states the choices can tell this reason apart (FDW-4983).</summary>
+    public const int FormatChoiceNotUsableId = 91004;
+
     // ======================================================================
     // Initialization (8300-8309)
     // ======================================================================
@@ -124,6 +130,32 @@ public static partial class RowSourceLog
         long rowNumber);
 
     /// <summary>
+    /// A JSON record could not be read: the document is malformed at that record (FDW-4971).
+    /// </summary>
+    [MessageLogging(
+        EventId = 21000,
+        Level = LogLevel.Error,
+        Message = "JSON record {record} is malformed at line {line}, byte {position}: {reason}; the records before it were read")]
+    public static partial IGenericMessage JsonRecordMalformed(
+        ILogger logger,
+        long record,
+        long? line,
+        long? position,
+        string reason);
+
+    /// <summary>
+    /// A field a record source read from its rows is a leaf: it has no child node of the name asked for (FDW-4911).
+    /// </summary>
+    [MessageLogging(
+        EventId = 31001,
+        Level = LogLevel.Warning,
+        Message = "Field '{fieldName}' is a field of the rows read and has no child '{childName}'")]
+    public static partial IGenericMessage RecordFieldHasNoChild(
+        ILogger logger,
+        string fieldName,
+        string childName);
+
+    /// <summary>
     /// Logs that a field was not found in the source.
     /// </summary>
     [MessageLogging(
@@ -223,7 +255,7 @@ public static partial class RowSourceLog
     /// Logs that what a row format reads or writes does not state one of the format's choices (FDW-3823): no choice is taken in its place.
     /// </summary>
     [MessageLogging(
-        EventId = 91003,
+        EventId = FormatChoiceNotStatedId,
         Level = LogLevel.Error,
         Message = "'{owner}' states no '{choice}' for its {format} rows; a {format} reader or writer takes it from what it reads or writes, and nothing stands in for it")]
     public static partial IGenericMessage FormatChoiceNotStated(
@@ -236,7 +268,7 @@ public static partial class RowSourceLog
     /// Logs that a stated row-format choice cannot be used as it is written (FDW-3823).
     /// </summary>
     [MessageLogging(
-        EventId = 91004,
+        EventId = FormatChoiceNotUsableId,
         Level = LogLevel.Error,
         Message = "'{owner}' states '{value}' as the '{choice}' of its {format} rows, which is not {expected}")]
     public static partial IGenericMessage FormatChoiceNotUsable(

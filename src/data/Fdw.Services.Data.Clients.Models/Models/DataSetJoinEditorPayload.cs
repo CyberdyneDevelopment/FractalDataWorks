@@ -16,8 +16,8 @@ public sealed class DataSetJoinEditorPayload
     /// <summary>Gets or sets the alias name of the right-hand source.</summary>
     public string RightSourceName { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the join type (Inner, Left, Right, Full, Cross).</summary>
-    public string JoinType { get; set; } = "Inner";
+    /// <summary>Gets or sets the join type (Inner, Left, Right, Full, Cross). Required: a join without one is refused, never taken as Inner (FDW-5099).</summary>
+    public string JoinType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the join key field name on the left source.</summary>
     public string LeftKeyField { get; set; } = string.Empty;

@@ -8,9 +8,9 @@ namespace Fdw.Services.Multitenancy.Abstractions.Tests;
 public class OrganizationConfigurationTests
 {
     [Fact]
-    public void ANewOrganizationHoldsTheEmptyIdUntilItsDefaultWorkspaceIsSet()
+    public void ANewOrganizationNamesNoDefaultWorkspaceUntilOneIsSet()
     {
-        new OrganizationConfiguration().DefaultWorkspaceId.ShouldBe(Guid.Empty);
+        new OrganizationConfiguration().DefaultWorkspaceId.ShouldBeNull();
     }
 
     [Fact]

@@ -18,6 +18,8 @@ namespace Fdw.Services.Etl.Transforms;
 /// <summary>
 /// Stage that applies a Built transformation to each record: it reads the inputs the transformation declares from the fields
 /// the stage maps to them, runs the compiled calculation, and adds the transformation's kept results to the record as columns.
+/// A number is written as a decimal, a date as a <see cref="DateOnly"/> and a date-time as a <see cref="DateTimeOffset"/>: each
+/// result is read back through its value kind, so a column holds the type the calculation yields.
 /// </summary>
 /// <remarks>
 /// Why the stage only runs what the run resolved: naming a Transformation, turning it into a calculation and compiling it
@@ -78,7 +80,7 @@ public sealed class ComputeTransformType : TransformTypeBase
                 ComputeLog.CalculationNotResolved(context.Logger, config.Name)));
         }
 
-        return Task.FromResult(Apply(input, config, calculation, new CalculationRunState(), context));
+        return Task.FromResult(Apply(input, config, calculation, new CalculationRunState { Clock = context.Clock }, context));
     }
 
     /// <inheritdoc />
@@ -116,7 +118,7 @@ public sealed class ComputeTransformType : TransformTypeBase
         }
 
         // One run state for the batch: the calculation resets it before every record, so it carries no state between them.
-        var state = new CalculationRunState();
+        var state = new CalculationRunState { Clock = context.Clock };
         var results = new List<IDictionary<string, object?>>();
         foreach (var input in inputs)
         {
@@ -203,7 +205,7 @@ public sealed class ComputeTransformType : TransformTypeBase
         var output = new Dictionary<string, object?>(input, StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < results.Length; index++)
         {
-            output[calculation.EmittedNames[index]] = results[index];
+            output[calculation.EmittedNames[index]] = calculation.EmittedKinds[index].Read(results[index]);
         }
 
         return GenericResult<IDictionary<string, object?>>.Success(output);

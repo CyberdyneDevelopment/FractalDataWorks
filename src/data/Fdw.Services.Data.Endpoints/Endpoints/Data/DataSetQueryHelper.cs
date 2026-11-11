@@ -171,6 +171,8 @@ internal static class DataSetQueryHelper
             .Select(k => k.KeyName)
             .ToList(),
         Filters = config.Filters
+            .Where(f => f.IsCurrent && !f.IsDeleted)
+            .OrderBy(f => f.Ordinal)
             .Select(f => new DataSetFilterConditionPayload
             {
                 FieldName = f.FieldName,
@@ -495,6 +497,18 @@ internal static class DataSetQueryHelper
 
     /// <summary>Maps join requests onto the cascade child collection saved to <c>data.DataSetJoin</c>.</summary>
     /// <remarks>A join's position in the request is its <c>Ordinal</c>: joins run in the order they were authored.</remarks>
+    /// <summary>Maps a request's filter conditions onto the cascade child collection saved to <c>data.DataSetFilter</c> (FDW-4997).</summary>
+    /// <remarks>Mapped as stated, in the order the request lists them; <see cref="ValidateSaved"/> checks them before anything is written.</remarks>
+    internal static List<DataSetFilterConditionConfiguration> MapFilters(IEnumerable<DataSetFilterConditionPayload> filters) =>
+        [.. filters.Select((f, i) => new DataSetFilterConditionConfiguration
+        {
+            FieldName = f.FieldName,
+            Operator = f.Operator,
+            Value = f.Value,
+            DataType = f.DataType,
+            Ordinal = i
+        })];
+
     internal static List<DataSetJoinConfiguration> MapJoins(IList<DataSetJoinPayload> joins) =>
         joins.Select((j, i) => new DataSetJoinConfiguration
         {
@@ -610,6 +624,29 @@ internal static class DataSetQueryHelper
         }
 
         return GenericResult<bool>.Success(true);
+    }
+
+    /// <summary>
+    /// The rules a data set's own parts keep before it is saved, run over the whole configuration as it will be stored: its filter conditions
+    /// can be kept (<see cref="DataSetFilters"/>, FDW-4997), every join names two of its sources (<see cref="JoinedDataSetRules"/>), and a
+    /// Compound one's mappings name every column it reads (<see cref="CompoundMappingRules"/>, FDW-5022). Each join states a type that
+    /// joins (FDW-5087, FDW-5099): a join with no type, an unknown one or None is refused, never stored as Inner. The same rules run again
+    /// when the data set is read.
+    /// </summary>
+    /// <param name="config">The data set as it will be saved: built from a create request, or a stored one with an update merged over it.</param>
+    /// <param name="logger">The logger a refusal is written to.</param>
+    /// <returns>Success, or the first refusal.</returns>
+    internal static IGenericResult ValidateSaved(IDataSetImplementationConfiguration config, ILogger logger)
+    {
+        // A filter condition the data set cannot keep is refused, never stored to be dropped at read (FDW-4997).
+        var filters = DataSetFilters.Expression(config, logger);
+        if (filters.IsFailure)
+            return filters;
+
+        if (config is ICompoundDataSetConfiguration compound)
+            return CompoundMappingRules.Validate(compound, logger);
+
+        return config is IJoinedDataSetConfiguration joined ? JoinedDataSetRules.Validate(joined, logger) : GenericResult.Success();
     }
 
     /// <summary>

@@ -11,6 +11,6 @@ public sealed class CalculationOutputSpec
     /// <summary>Gets the name of the field that will hold the result.</summary>
     public string ResultFieldName { get; init; } = string.Empty;
 
-    /// <summary>Gets the data type name of the result field (e.g. "Decimal").</summary>
-    public string ResultDataTypeName { get; init; } = "Decimal";
+    /// <summary>Gets the data type name of the result field (e.g. "Decimal" or "Date"). It is stated, never assumed: an empty one is refused.</summary>
+    public string ResultDataTypeName { get; init; } = string.Empty;
 }

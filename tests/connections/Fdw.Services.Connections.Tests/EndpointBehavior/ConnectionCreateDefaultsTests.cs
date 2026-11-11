@@ -31,7 +31,7 @@ public class ConnectionCreateDefaultsTests
         option.SetupGet(o => o.Name).Returns("DefaultsTest");
         option.SetupGet(o => o.Category).Returns("DefaultsTestConnection");
         option.As<IDeclaresDefaults>().SetupGet(o => o.DeclaredDefaults).Returns(
-            new Dictionary<string, object>(StringComparer.Ordinal) { ["Port"] = 1433, ["Encrypt"] = true });
+            new Dictionary<string, object>(StringComparer.Ordinal) { ["Port"] = 1433, ["Encrypt"] = true, ["CommandTimeoutSeconds"] = 30 });
         return option.Object;
     }
 
@@ -89,5 +89,30 @@ public class ConnectionCreateDefaultsTests
 
         filled.IsSuccess.ShouldBeFalse();
         filled.CurrentMessage.ShouldNotBeNull().ShouldContain(nameof(DefaultsTestConfiguration.TrustServerCertificate));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public void AnOmittedTimeoutIsLeftEmptySoTheTypesDefaultReachesItWhenItIsBuilt()
+    {
+        // FDW-4904: a timeout is resolved where the connection is built, so a later registration override reaches it; Port is still filled.
+        var filled = ConnectionCreateDefaults.Fill(
+            Json("""{ "host": "db.example", "trustServerCertificate": false }"""), Behavior(), ConnectionType(), Settings(), Tenant, "ops", NullLogger.Instance);
+
+        filled.IsSuccess.ShouldBeTrue();
+        filled.Value.TryGetProperty("commandTimeoutSeconds", out _).ShouldBeFalse();
+        filled.Value.GetProperty("port").GetInt32().ShouldBe(1433);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public void AStatedTimeoutIsKept()
+    {
+        var filled = ConnectionCreateDefaults.Fill(
+            Json("""{ "host": "db.example", "trustServerCertificate": false, "commandTimeoutSeconds": 600 }"""), Behavior(), ConnectionType(), Settings(), Tenant,
+            "ops", NullLogger.Instance);
+
+        filled.IsSuccess.ShouldBeTrue();
+        filled.Value.GetProperty("commandTimeoutSeconds").GetInt32().ShouldBe(600);
     }
 }

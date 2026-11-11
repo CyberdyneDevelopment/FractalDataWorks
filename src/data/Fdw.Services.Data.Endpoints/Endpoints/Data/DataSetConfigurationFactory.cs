@@ -25,8 +25,8 @@ internal static class DataSetConfigurationFactory
     /// <param name="values">Refuses a value the caller must choose and leaves out (FDW-3931).</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <returns>
-    /// The configuration, <c>ImplementationInvalid</c> when the kind has no implementation here, or the refusal naming a setting a value the
-    /// request must state and leaves out (<c>ValueRequired</c>).
+    /// The configuration, <c>ImplementationInvalid</c> when the kind has no implementation here, the refusal naming a setting a value the
+    /// request must state and leaves out (<c>ValueRequired</c>), or a refusal of its parts from <see cref="DataSetQueryHelper.ValidateSaved"/>.
     /// </returns>
     internal static IGenericResult<IDataSetImplementationConfiguration> Create(
         CreateDataSetRequest request, Guid? categoryId, Guid ownerUserId, DataSetRequestValues values, ILogger logger)
@@ -77,6 +77,12 @@ internal static class DataSetConfigurationFactory
         config.Fields = fields.Value!;
         config.Sources = sources.Value!;
         config.Caching = caching.Value;
+        config.Filters = DataSetQueryHelper.MapFilters(request.Filters);
+
+        // Joins name the data set's own sources, and a Compound data set's mappings name every column it reads (FDW-5022).
+        if (DataSetQueryHelper.ValidateSaved(config, logger) is { IsFailure: true } refused)
+            return refused.ToNewResult<IDataSetImplementationConfiguration>();
+
         return GenericResult<IDataSetImplementationConfiguration>.Success(config);
     }
 }

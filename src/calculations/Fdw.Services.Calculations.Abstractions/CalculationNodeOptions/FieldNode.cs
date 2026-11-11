@@ -9,7 +9,8 @@ using Fdw.Services.Calculations.Abstractions.Trees;
 namespace Fdw.Services.Calculations.Abstractions.CalculationNodeOptions;
 
 /// <summary>
-/// The value of an input field of the record: a possibly empty exact number, or, where a condition is needed, a flag.
+/// The value of an input field of the record: a possibly empty exact number, or, where a condition is needed, a flag, or, where a date
+/// is needed, a date.
 /// </summary>
 [TypeOption(typeof(CalculationNodeTypes), "Field", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
@@ -27,8 +28,7 @@ public sealed class FieldNode : CalculationNodeBase
     public override IReadOnlyList<string> Members { get; } = new[] { "name" };
 
     /// <inheritdoc />
-    public override Type ResultType(CalculationNode node, Type expected, IReadOnlyList<Type> operandTypes) =>
-        expected == typeof(bool) ? typeof(bool) : typeof(decimal?);
+    public override Type ResultType(CalculationNode node, Type expected, IReadOnlyList<Type> operandTypes) => SlotType(expected);
 
     /// <inheritdoc />
     public override IGenericResult Check(CalculationNode node, ICalculationScope scope)
@@ -42,9 +42,13 @@ public sealed class FieldNode : CalculationNodeBase
         return GenericResult.Success();
     }
 
+    // The parent decides how the field is read: a condition reads a flag, a date reads a date, anything else a possibly empty number.
+    private static Type SlotType(Type expected) =>
+        expected == typeof(bool) || expected == typeof(DateOnly) ? expected : typeof(decimal?);
+
     /// <inheritdoc />
     public override Expression Emit(NodeEmission emission) =>
         emission.Node.Name is { } name
-            ? emission.Slot(name, emission.Expected == typeof(bool) ? typeof(bool) : typeof(decimal?))
+            ? emission.Slot(name, SlotType(emission.Expected))
             : throw new InvalidOperationException("A Field node without a name reached Emit; Check refuses it");
 }

@@ -63,11 +63,14 @@ def plan(current, baseline, api_breaks=()):
             if base_globals.get(f) != current.globals[f]:
                 for n in sorted(src):
                     add(n, f"repo-wide build file changed: {f}")
+    generators = {}  # a changed generator that is itself a package -> the packages it caused to be rebuilt
     for b in sorted(differs & current.build_time):
         # Directory.Build.props references these for every project, so no project lists them itself.
         above = src if b in current.always_built else dependents(projects, b)
         for d in sorted(above):
             add(d, f"{b} is a generator, analyzer or code-fix project and changed")
+        if projects[b].packable:
+            generators[b] = sorted(d for d in above if projects[d].packable and d != b)
     for x in sorted(n for n in differs - current.build_time if not projects[n].packable):
         for d in sorted(dependents(projects, x)):
             add(d, f"{x} cannot be a package and changed")
@@ -112,7 +115,7 @@ def plan(current, baseline, api_breaks=()):
     removed = sorted(set(base_trees) - set(projects)) if baseline else []
     return {"build_set": sorted(members), "reasons": {n: reasons[n] for n in sorted(members)},
             "built_from_source_only": sorted(source_only), "tests": tests, "removed": removed,
-            "packages": {n: projects[n].package_id for n in sorted(members)},
+            "packages": {n: projects[n].package_id for n in sorted(members)}, "generators": generators,
             "total_src_projects": len(src)}
 
 

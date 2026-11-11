@@ -314,9 +314,12 @@ public sealed partial class DataGatewayService : IDataGateway
         TimeSpan cacheCeiling,
         CancellationToken cancellationToken)
     {
+        // The clock before a read that will be cached: a write that lands while it runs keeps its result out of the
+        // cache (FDW-4782).
+        long? readFrom = cacheKey is null ? null : _cache!.Now();
         var result = await ExecuteCore<T>(command, target, cancellationToken).ConfigureAwait(false);
 
-        ApplyCacheOutcome(command, target, result, isQuery, cacheKey, cacheCeiling);
+        ApplyCacheOutcome(command, target, result, isQuery, cacheKey, cacheCeiling, readFrom);
         return result;
     }
 
@@ -341,20 +344,22 @@ public sealed partial class DataGatewayService : IDataGateway
         IGenericResult<T> result,
         bool isQuery,
         string? cacheKey,
-        TimeSpan cacheCeiling)
+        TimeSpan cacheCeiling,
+        long? readFrom)
     {
         if (!CacheEnabled || !result.IsSuccess)
             return;
 
         if (isQuery)
         {
-            if (cacheKey is not null)
+            if (cacheKey is not null && readFrom is { } from)
             {
-                _cache!.Set(
+                _ = _cache!.Set(
                     cacheKey,
                     result,
                     CacheKeyBuilder.GetInvalidationTags(command, target),
-                    CachePolicy.GetDuration(command, cacheCeiling));
+                    CachePolicy.GetDuration(command, cacheCeiling),
+                    from);
             }
 
             return;
@@ -574,42 +579,26 @@ public sealed partial class DataGatewayService : IDataGateway
         }
     }
 
+    // The container and its connection, resolved as for any command; then StableRead chooses how the rows are read (a cursor, keyset pages,
+    // or a refusal), the same choice every gateway makes. A keyset page runs on the connection as any command does, never through the cache.
     private async Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSourceCore(
         IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(target.DataStore))
-            return GenericResult<IRecordSource<DataRecord>>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
-
         DataGatewayLogger.OpeningRecordSource(_logger, target.DataStore, target.Container);
 
-        var containerResult = await ResolveContainerResult(target, ContainersJoined.By(command, target.Container), cancellationToken).ConfigureAwait(false);
-        if (!containerResult.IsSuccess)
-            return containerResult.ToNewResult<IRecordSource<DataRecord>>();
+        var resolved = await ResolveTargetConnection(command, target, cancellationToken).ConfigureAwait(false);
+        if (!resolved.IsSuccess)
+            return resolved.ToNewResult<IRecordSource<DataRecord>>();
 
-        var dataContainer = containerResult.Value;
-        if (dataContainer is null)
-            return GenericResult<IRecordSource<DataRecord>>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
-
-        // The store's row alone, for its ConnectionId, as in ExecuteCore.
-        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
-        if (!storeResult.IsSuccess || storeResult.Value is null)
-            return GenericResult<IRecordSource<DataRecord>>.Failure(DataGatewayLogger.DataStoreNotFoundForSource(_logger, target.DataStore));
-
-        var store = storeResult.Value;
-        if (store.ConnectionId == Guid.Empty)
-            return GenericResult<IRecordSource<DataRecord>>.Failure(DataGatewayLogger.DataStoreHasNoConnectionId(_logger, target.DataStore));
-
-        var connectionResult = await _connectionProvider.Get(store.ConnectionId, cancellationToken).ConfigureAwait(false);
-        if (!connectionResult.IsSuccess || connectionResult.Value == null)
-            return ConnectionFailures.Caused<IRecordSource<DataRecord>>(
-                connectionResult,
-                DataGatewayLogger.DataStoreConnectionNotResolved(_logger, target.DataStore, store.ConnectionId.ToString(), connectionResult.NoValueReason().Message));
-
-        if (connectionResult.Value is not IRecordSourceConnection recordSourceConnection)
-            return GenericResult<IRecordSource<DataRecord>>.Failure(
-                DataGatewayLogger.RecordSourceNotSupported(_logger, target.DataStore));
-
-        var result = await recordSourceConnection.OpenRecordSource(command, dataContainer, cancellationToken).ConfigureAwait(false);
+        var (container, connection, connectionId) = resolved.Value;
+        var result = await StableRead.OpenContainer(
+            command,
+            container,
+            connection,
+            (page, ct) => RunOnContainer(page, target, connectionId, c => connection.Execute<IEnumerable<Dictionary<string, object?>>>(page, container, c), ct),
+            $"container '{container.Name}' of data store '{target.DataStore}'",
+            _logger,
+            cancellationToken).ConfigureAwait(false);
         if (result.IsSuccess)
             DataGatewayLogger.RecordSourceOpened(_logger, target.DataStore, target.Container);
 
@@ -619,36 +608,59 @@ public sealed partial class DataGatewayService : IDataGateway
     /// <inheritdoc/>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
     {
+        var resolved = await ResolveDataSet(target, cancellationToken).ConfigureAwait(false);
+        if (!resolved.IsSuccess)
+            return resolved.ToNewResult<T>();
+
+        var (strategy, context) = resolved.Value;
+        return await strategy.Execute<T>(context, command, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(
+        IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
+    {
+        var resolved = await ResolveDataSet(target, cancellationToken).ConfigureAwait(false);
+        if (!resolved.IsSuccess)
+            return resolved.ToNewResult<IRecordSource<DataRecord>>();
+
+        var (strategy, context) = resolved.Value;
+        return await StableRead.OpenDataSet(command, strategy, context, _logger, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The data set, admitted, and the kind that runs it: what every command on a data set needs before it runs.
+    private async Task<IGenericResult<(IDataSetType Strategy, DataSetExecutionContext Context)>> ResolveDataSet(
+        DataSetTarget target, CancellationToken cancellationToken)
+    {
         var cfgResult = await _dataSetProvider.Get(target.DataSet, cancellationToken).ConfigureAwait(false);
         if (!cfgResult.IsSuccess)
-            return cfgResult.ToNewResult<T>();
+            return cfgResult.ToNewResult<(IDataSetType, DataSetExecutionContext)>();
         if (cfgResult.Value is null)
-            return GenericResult<T>.Failure(
+            return GenericResult<(IDataSetType, DataSetExecutionContext)>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, DataGatewayLogger.DataSetNotVisibleReason));
 
         var config = cfgResult.Value;
 
         if (_dataStoreProvider is null)
-            return GenericResult<T>.Failure(
+            return GenericResult<(IDataSetType, DataSetExecutionContext)>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "IDataStoreProvider is not available; cannot execute a DataSet"));
 
         var sourcesAdmitted = await AdmitSources(config, cancellationToken).ConfigureAwait(false);
         if (sourcesAdmitted.IsFailure)
-            return sourcesAdmitted.ToNewResult<T>();
+            return sourcesAdmitted.ToNewResult<(IDataSetType, DataSetExecutionContext)>();
 
         if (string.IsNullOrWhiteSpace(config.Implementation))
-            return GenericResult<T>.Failure(
+            return GenericResult<(IDataSetType, DataSetExecutionContext)>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "DataSet configuration has no Implementation (strategy kind)"));
 
         var strategy = DataSetTypes.ByName(config.Implementation);
         if (ReferenceEquals(strategy, DataSetTypes.NotFound))
-            return GenericResult<T>.Failure(
+            return GenericResult<(IDataSetType, DataSetExecutionContext)>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, $"DataSet strategy type '{config.Implementation}' is not a registered DataSetTypes member"));
 
         DataGatewayLogger.RoutingToDataSet(_logger, target.DataSet);
-        var context = new DataSetExecutionContext(
-            config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger);
-        return await strategy.Execute<T>(context, command, cancellationToken).ConfigureAwait(false);
+        return GenericResult<(IDataSetType, DataSetExecutionContext)>.Success(
+            (strategy, new DataSetExecutionContext(config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger)));
     }
 
 

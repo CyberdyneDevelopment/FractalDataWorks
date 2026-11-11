@@ -1197,7 +1197,8 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             .Where("IsCurrent", true)
             .Where("IsDeleted", false)
             .Value(new DomainRowRename { Name = name });
-        var renamed = await unit.Read<int>(update.Command, update.Target, ct).ConfigureAwait(false);
+        // Through the scope's write path, so the domain row's cached reads are dropped after the commit (FDW-4782).
+        var renamed = await unit.Execute<int>(update.Command, update.Target, ct).ConfigureAwait(false);
         if (!renamed.IsSuccess) return renamed.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
         if (renamed.Value != 1)
             return GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Failure(

@@ -240,6 +240,25 @@ public static class SettingDefinitions
     public const string PipelineComponentsPublishSeconds = "PipelineComponentsPublishSeconds";
 
     /// <summary>
+    /// How often, in seconds, a pipeline destination writes the rows it has committed to the run's record (FDW-4957). DataType: Int32. At least 0.
+    /// </summary>
+    /// <remarks>
+    /// Not set: the default the graph pipeline type declares applies (<c>GraphPipelineType.CommittedReportSeconds</c>), which a host changes at
+    /// registration. 0 writes after every commit. Whatever the interval, the first commit, a target emptied and the final figure are written at
+    /// once. Read once at the start of each run.
+    /// </remarks>
+    public const string PipelineCommittedReportSeconds = "PipelineCommittedReportSeconds";
+
+    /// <summary>
+    /// How many keys that matched no row an update or delete destination's report carries (FDW-4988); 0 carries only the count.
+    /// </summary>
+    /// <remarks>
+    /// Keys are values and may be private, so the sample is configuration. Not set: the default the graph pipeline type declares applies (10, overridable
+    /// with ServiceTypeDefaults.Override before Register). Below 0 refuses the run. Read once at the start of each run.
+    /// </remarks>
+    public const string PipelineUnmatchedKeySample = "PipelineUnmatchedKeySample";
+
+    /// <summary>
     /// How often, in seconds, the console reads the escalation alerts again while the alerts page is open (FDW-3863). DataType: Int32. Must be positive.
     /// </summary>
     /// <remarks>
@@ -306,26 +325,16 @@ public static class SettingDefinitions
     public const string ResetWatchIntervalSeconds = "ResetWatchIntervalSeconds";
 
     /// <summary>
-    /// The command timeout, in seconds, of a connection or secret manager that states none of its own (FDW-3284).
+    /// How often a host with a result cache looks at the configuration changes the other hosts published, in seconds (FDW-4782).
     /// DataType: Int32. Must be positive.
     /// </summary>
     /// <remarks>
-    /// Required, with no number assumed in code or in a column: a connection or secret manager that states no command timeout and finds no
-    /// positive row is not built, and the failure names it and this setting. A connection that states its own timeout never reads it.
-    /// The connections a host needs before it can read its settings (the platform configuration and the auth database in
-    /// <c>configurationSchema.json</c>) state their own.
+    /// Optional: when it is not set, the interval the host declares at registration applies (the data gateway domain's
+    /// <c>ConfigurationGatewayTypes.CacheChangePollInterval</c>). A number that is not positive stops a host that keeps a result cache
+    /// from starting. It is read once, at host start, for the host; a change takes effect at the next start. A configuration write in
+    /// another host is dropped from this host's cache within one interval.
     /// </remarks>
-    public const string DefaultCommandTimeoutSeconds = "DefaultCommandTimeoutSeconds";
-
-    /// <summary>
-    /// The connect timeout, in seconds, of a connection that states none of its own (FDW-3580).
-    /// </summary>
-    /// <remarks>
-    /// Required, with no number assumed in code or in a column: a connection that states no connect timeout and finds no positive row is not
-    /// built, and the failure names it and this setting. A connection that states its own timeout never reads it. The connections a host needs
-    /// before it can read its settings (the platform configuration and the auth database in <c>configurationSchema.json</c>) state their own.
-    /// </remarks>
-    public const string DefaultConnectionTimeoutSeconds = "DefaultConnectionTimeoutSeconds";
+    public const string CacheChangePollIntervalSeconds = "CacheChangePollIntervalSeconds";
 
     /// <summary>
     /// Maximum number of rows returned by data preview endpoints.
@@ -418,9 +427,10 @@ public static class SettingDefinitions
             [PipelineTriggerKeyRetentionSeconds] = new("Int32", "How long the ETL host remembers the key of a scheduled fire, in seconds. A retry of the same fire within that time gets the run the first call started instead of a second run; a fire older than it is refused as expired. Required: a scheduled fire is refused while it is not set."),
             [MaxPipelineRunRestarts] = new("Int32", "How many times the ETL host starts the same pipeline run again after the host stopped while it ran. Not set: a cut-off run is left Interrupted and not started again; 0 does the same. Read at host start."),
             [PipelineComponentsPublishSeconds] = new("Int32", "How often, in seconds, the ETL host publishes the components of the runs in flight; read at host start."),
+            [PipelineUnmatchedKeySample] = new("Int32", "How many keys that matched no row an update or delete destination's report carries; 0 carries only the count. Not set: the default the graph pipeline type declares applies. Read at the start of each run."),
+            [PipelineCommittedReportSeconds] = new("Int32", "How often, in seconds, a pipeline destination writes the rows it has committed to the run's record; 0 writes after every commit. The first commit, a target emptied and the final figure are always written at once. Not set: the default the graph pipeline type declares applies. Read at the start of each run."),
             [ResetWatchIntervalSeconds] = new("Int32", "How often, in seconds, a host looks at its configuration databases to see whether one was reset; the host then empties its result cache. Read at host start."),
-            [DefaultCommandTimeoutSeconds] = new("Int32", "The command timeout, in seconds, of a connection or secret manager that states none of its own. Not set: such a connection is not built."),
-            [DefaultConnectionTimeoutSeconds] = new("Int32", "The connect timeout, in seconds, of a connection that states none of its own. Not set: such a connection is not built."),
+            [CacheChangePollIntervalSeconds] = new("Int32", "How often, in seconds, a host with a result cache looks at the configuration changes the other hosts published, and drops them from its cache. Not set: the interval the host declares applies. Not positive: a host with a cache does not start. Read at host start."),
             [MaxPreviewRows] = new("Int32", "Maximum number of rows returned by data preview endpoints."),
             [DefaultTimeoutMs] = new("Int32", "Default timeout in milliseconds for data operations."),
             [EnableLineageTracking] = new("Boolean", "Whether data lineage tracking is enabled."),

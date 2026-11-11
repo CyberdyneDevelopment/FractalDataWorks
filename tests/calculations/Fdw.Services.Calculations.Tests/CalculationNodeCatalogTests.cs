@@ -21,6 +21,7 @@ public sealed class CalculationNodeCatalogTests
     [InlineData("Round", new[] { "places", "mode" })]
     [InlineData("Now", new[] { "name", "mode" })]
     [InlineData("AddTime", new[] { "name", "mode" })]
+    [InlineData("AddDate", new[] { "mode" })]
     public void AnOperationThatReadsExtraMembersNamesThem(string op, string[] members)
     {
         CalculationNodeTypes.ByName(op).Members.ShouldBe(members);
@@ -29,7 +30,7 @@ public sealed class CalculationNodeCatalogTests
     [Fact]
     public void EveryOtherOperationTakesOnlyOperands()
     {
-        var withMembers = new[] { "Constant", "Field", "Ref", "Round", "Now", "AddTime" };
+        var withMembers = new[] { "Constant", "Field", "Ref", "Round", "Now", "AddTime", "AddDate" };
 
         CalculationNodeTypes.All()
             .Where(type => !withMembers.Contains(type.Name, StringComparer.Ordinal))
@@ -72,9 +73,16 @@ public sealed class CalculationNodeCatalogTests
     }
 
     [Fact]
+    public void AddDateOffersOnlyTheCalendarUnitsBecauseADateHasNoClock()
+    {
+        CalculationNodeTypes.ByName("AddDate").Modes.ShouldBe(new[] { "Days", "Weeks", "Months", "Years" }, ignoreOrder: true);
+        CalculationNodeTypes.ByName("AddDate").OperandNames.ShouldBe(new[] { "date", "amount" });
+    }
+
+    [Fact]
     public void OnlyRoundAndTheTimeOperationsOfferModes()
     {
-        var withModes = new[] { "Round", "Now", "AddTime" };
+        var withModes = new[] { "Round", "Now", "AddTime", "AddDate" };
 
         CalculationNodeTypes.All()
             .Where(type => !withModes.Contains(type.Name, StringComparer.Ordinal))

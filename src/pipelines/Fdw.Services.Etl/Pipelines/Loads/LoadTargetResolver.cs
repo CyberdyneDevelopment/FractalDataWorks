@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
@@ -109,6 +110,58 @@ public sealed class LoadTargetResolver
         return addressing.Splits
             ? declared
             : declared.Value.Readdressed(unit.Owner, _logger, addressing.PhysicalPath, addressing.PhysicalName);
+    }
+
+    /// <summary>
+    /// Resolves the stage container of a load that stages its keys (FDW-4956): the container the load's row names, in the target's own data store and
+    /// path. It must sit on the target's connection, so a batch's keys commit in the same transaction as its rows, and it must declare the key columns
+    /// and the stage key column, because an insert drops a value its container does not declare.
+    /// </summary>
+    /// <param name="unit">The load; it names its stage container and stage key column.</param>
+    /// <param name="target">The load's resolved target.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The stage, or a failure saying why it cannot be used.</returns>
+    public async Task<IGenericResult<LoadTarget>> ForStage(LoadUnit unit, LoadTarget target, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(unit);
+        ArgumentNullException.ThrowIfNull(target);
+        if (string.IsNullOrWhiteSpace(unit.Row.StageContainer) || string.IsNullOrWhiteSpace(unit.Row.StageKeyColumn))
+            return GenericResult<LoadTarget>.Failure(PipelineRunLog.StageNotNamed(_logger, unit.Owner));
+
+        var stage = unit.DataSet is not null
+            ? await StageBesideDataSet(unit.Owner, unit.DataSet, unit.Row.StageContainer, cancellationToken).ConfigureAwait(false)
+            : await ForContainer(unit.Owner, unit.DataStore!, unit.Path!, unit.Row.StageContainer, cancellationToken).ConfigureAwait(false);
+        if (stage.IsFailure)
+            return stage;
+        if (stage.Value!.ConnectionId != target.ConnectionId)
+            return GenericResult<LoadTarget>.Failure(PipelineRunLog.StageOnAnotherConnection(_logger, unit.Owner, stage.Value.Description, target.Description));
+
+        var declared = stage.Value.Container.Schema.Fields;
+        var missing = LoadColumns.Keys(unit.Row).Append(unit.Row.StageKeyColumn)
+            .FirstOrDefault(column => !declared.Any(field => string.Equals(field.Name, column, StringComparison.OrdinalIgnoreCase)));
+        return missing is null
+            ? stage
+            : GenericResult<LoadTarget>.Failure(PipelineRunLog.StageColumnNotDeclared(_logger, unit.Owner, stage.Value.Description, missing));
+    }
+
+    // The stage of a data set load sits in the data store and path of the data set's one source (FDW-4956).
+    private async Task<IGenericResult<LoadTarget>> StageBesideDataSet(string owner, string dataSetName, string stageContainer, CancellationToken cancellationToken)
+    {
+        if (_dataSets is null || _dataStores is null)
+            return GenericResult<LoadTarget>.Failure(PipelineRunLog.LoadServiceMissing(_logger, owner, "data set and data store providers"));
+
+        var set = await _dataSets.Get(dataSetName, cancellationToken).ConfigureAwait(false);
+        if (set.IsFailure)
+            return set.ToNewResult<LoadTarget>();
+
+        var sources = set.Value!.Sources;
+        if (sources.Count != 1)
+            return GenericResult<LoadTarget>.Failure(PipelineRunLog.LoadTargetUnusable(
+                _logger, owner, dataSetName, $"a data set a load reads or writes has exactly one source, and this one has {sources.Count}"));
+
+        var source = sources[0];
+        return await Resolve(owner, string.Concat(source.DataStoreName, "/", stageContainer), source.DataStoreName, source.PathValue, stageContainer, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task<IGenericResult<LoadTarget>> Resolve(

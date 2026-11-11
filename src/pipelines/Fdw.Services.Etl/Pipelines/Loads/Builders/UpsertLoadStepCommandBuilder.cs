@@ -70,7 +70,8 @@ public sealed class UpsertLoadStepCommandBuilder : LoadStepCommandBuilderBase
     // rows no longer hold: both run in the load's unit of work.
     private static IGenericResult<DeleteCommand?> SoftDeleteAbsent(LoadCommandInput input)
     {
-        if (string.IsNullOrWhiteSpace(input.Row.SoftDeleteMode))
+        // A load that stages its keys (FDW-4956) builds no delete per batch: the executor appends the batch's keys to the stage and the sweep runs once.
+        if (string.IsNullOrWhiteSpace(input.Row.SoftDeleteMode) || input.KeysStaged)
             return GenericResult<DeleteCommand?>.Success(null);
 
         var keys = LoadColumns.Keys(input.Row);

@@ -99,6 +99,13 @@ class ChangeSetTests(unittest.TestCase):
         result = self.plan({"public/src/Gen.SourceGenerators/G.cs": "class G { int x; }\n"})
         self.assertEqual(result["build_set"], ["D", "E", "Gen.SourceGenerators"])
 
+    def test_a_changed_generator_that_is_a_package_names_the_packages_it_caused(self):
+        result = self.plan({"public/src/Gen.SourceGenerators/G.cs": "class G { int x; }\n"})
+        self.assertEqual(result["generators"], {"Gen.SourceGenerators": ["D", "E"]})
+
+    def test_a_changed_analyzer_that_cannot_be_a_package_is_not_a_generator_with_a_level(self):
+        self.assertEqual(self.plan({"public/src/Lint/Lint.cs": "class L {}\n"})["generators"], {})
+
     def test_a_changed_style_analyzer_that_cannot_be_a_package_adds_everything(self):
         files = {"public/src/Lint/Lint.cs": "class L {}\n"}
         result = self.plan(files)

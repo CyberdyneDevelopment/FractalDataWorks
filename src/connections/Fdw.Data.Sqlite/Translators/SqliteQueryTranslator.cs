@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -91,8 +90,7 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
 
             if (command.Joins is { Count: > 0 })
             {
-                return Task.FromResult(GenericResult<SqliteCommand>.Success(
-                    BuildJoinedSelectStatement(container, dbPath, dialect, command.Joins, command.Filter, command.Projection, returnedFieldNames)));
+                return Task.FromResult(BuildJoinedSelectStatement(container, dbPath, dialect, command, returnedFieldNames));
             }
 
             return Task.FromResult(
@@ -159,56 +157,37 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
     }
 
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
-    private static SqliteCommand BuildJoinedSelectStatement(
+    private static IGenericResult<SqliteCommand> BuildJoinedSelectStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
         ISqlDialect dialect,
-        IReadOnlyList<IJoinExpression> joins,
-        IFilterExpression? filter,
-        IProjectionExpression? projection,
+        IQueryCommand query,
         List<string>? returnedFieldNames)
     {
+        var joins = query.Joins;
+        var filter = query.Filter;
         var primaryTable = dbPath.ObjectName;
 
+        // Every identifier a join names is checked before any of it is written into the statement (SQL injection prevention): one that
+        // is not a plain name is a coded refusal of the query, never a throw (FDW-4991).
+        if (InvalidJoinIdentifier(joins) is { } invalid)
+            return GenericResult<SqliteCommand>.Failure(
+                SqliteConnectionLog.JoinIdentifierInvalid(NullLogger<SqliteQueryTranslator>.Instance, container.Name, invalid));
+
+        // Each join is stated by its join type's own SQL keyword, never by the text it carries; one the statement cannot state is a coded
+        // refusal of the query (FDW-5099).
+        if (JoinRefusal(joins, container.Name) is { } joinRefusal)
+            return GenericResult<SqliteCommand>.Failure(joinRefusal);
+
         var sql = new StringBuilder();
-        sql.Append(BuildSelectClause(container, projection, returnedFieldNames, primaryTable, dialect));
+        sql.Append(BuildSelectClause(container, query.Projection, returnedFieldNames, primaryTable, dialect));
         sql.Append(" FROM ");
         sql.Append(BuildQualifiedTableName(dbPath));
 
         foreach (var join in joins)
         {
-            if (!IsValidColumnName(join.TargetContainerName))
-            {
-                throw new ArgumentException(
-                    $"Invalid JOIN target container name '{join.TargetContainerName}'.",
-                    nameof(joins));
-            }
-
             var targetQuoted = dialect.QuoteIdentifier(join.TargetContainerName);
-            sql.Append(CultureInfo.InvariantCulture, $" {join.JoinType} JOIN {targetQuoted} ON ");
-
-            // The left side belongs to the primary container unless the join continues from an
-            // earlier join's target.
-            if (join.SourceContainerName is { } source && !IsValidColumnName(source))
-            {
-                throw new ArgumentException(
-                    $"Invalid JOIN source container name '{source}'.",
-                    nameof(joins));
-            }
-
-            var leftTable = join.SourceContainerName is { } joinedSource ? joinedSource : primaryTable;
-
-            var conditions = join.JoinConditions.Select(c =>
-            {
-                if (!IsValidColumnName(c.LeftField) || !IsValidColumnName(c.RightField))
-                {
-                    throw new ArgumentException(
-                        $"Invalid JOIN condition column ('{c.LeftField}', '{c.RightField}').",
-                        nameof(joins));
-                }
-                return $"{dialect.QuoteIdentifier(leftTable)}.{dialect.QuoteIdentifier(c.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(c.RightField)}";
-            });
-            sql.Append(string.Join(" AND ", conditions));
+            sql.Append(JoinClause(join, targetQuoted, primaryTable, dialect));
         }
 
         var command = CreateCommand(sql.ToString());
@@ -219,7 +198,14 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
             command.CommandText += $" WHERE {whereClause}";
         }
 
-        return command;
+        // The command's ordering and paging follow the WHERE, qualified the same way; a paged join that states no order is refused (FDW-4991).
+        var (refused, orderAndPaging) = BuildJoinedOrderAndPaging(query.Ordering, query.Paging, dialect, primaryTable);
+        if (refused)
+            return GenericResult<SqliteCommand>.Failure(
+                SqliteConnectionLog.PagedQueryHasNoOrder(NullLogger<SqliteQueryTranslator>.Instance, container.Name));
+
+        command.CommandText += orderAndPaging;
+        return GenericResult<SqliteCommand>.Success(command);
     }
 
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // Why: multi-source branch + PropertyNames + schema + container fallback = branches over default 15.

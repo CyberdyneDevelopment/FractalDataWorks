@@ -6,10 +6,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Logging;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Connections.Sql;
 
@@ -263,6 +266,126 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
         }
 
         return string.Join(", ", clauses);
+    }
+
+    /// <summary>
+    /// The first identifier a command's joins name that is not a plain name, or null when every one is (FDW-4991): each join's target and
+    /// source container and both columns of each of its conditions.
+    /// </summary>
+    /// <param name="joins">The command's joins.</param>
+    /// <returns>The first identifier <see cref="IsValidColumnName"/> refuses, or null.</returns>
+    /// <remarks>
+    /// Why before anything is written: a join's names are put into the statement as identifiers, not parameters, so each must be a plain
+    /// name (SQL injection prevention). Checked once here, so a translator answers a bad one with its own coded refusal rather than a throw.
+    /// </remarks>
+    protected static string? InvalidJoinIdentifier(IReadOnlyList<IJoinExpression> joins)
+    {
+        ArgumentNullException.ThrowIfNull(joins);
+        foreach (var join in joins)
+        {
+            if (!IsValidColumnName(join.TargetContainerName))
+                return join.TargetContainerName;
+            if (join.SourceContainerName is { } source && !IsValidColumnName(source))
+                return source;
+
+            foreach (var (left, right) in join.JoinConditions)
+            {
+                if (!IsValidColumnName(left))
+                    return left;
+                if (!IsValidColumnName(right))
+                    return right;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Describes the first join of a query this translator cannot write (FDW-5099), or returns <see langword="null"/> when it can write
+    /// every one.
+    /// </summary>
+    /// <param name="joins">The command's joins.</param>
+    /// <param name="containerName">The queried container, for the message.</param>
+    /// <returns>
+    /// <c>JoinTypeNotRecognised</c> for a join type no <see cref="JoinTypes"/> option is named, <c>JoinTypeNotPerformed</c> for an option
+    /// no SQL join keyword states (None), <c>JoinConditionsDoNotFit</c> for a join on a condition with none or a join of every row with every
+    /// row (Cross) with some, or <see langword="null"/>.
+    /// </returns>
+    /// <remarks>
+    /// Why before anything is written: the statement states each join by its option's own <see cref="IJoinType.SqlKeyword"/>, never by the
+    /// text the join carries, so a join type is never put into SQL as given (SQL injection prevention), and one the statement cannot state
+    /// is refused rather than written as some other join.
+    /// </remarks>
+    protected static IGenericMessage? JoinRefusal(IReadOnlyList<IJoinExpression> joins, string containerName)
+    {
+        ArgumentNullException.ThrowIfNull(joins);
+        foreach (var join in joins)
+        {
+            var kind = StatedJoinType.Of(join.JoinType);
+            if (ReferenceEquals(kind, JoinTypes.NotFound))
+                return QueryCommandLog.JoinTypeNotRecognised(NullLogger.Instance, containerName, join.JoinType, PerformedJoinTypeNames());
+            if (!PerformsJoin(kind))
+                return QueryCommandLog.JoinTypeNotPerformed(NullLogger.Instance, containerName, kind.Name, PerformedJoinTypeNames());
+            if (kind.RequiresConditions == (join.JoinConditions.Count == 0))
+                return QueryCommandLog.JoinConditionsDoNotFit(NullLogger.Instance, containerName, kind.Name, join.JoinConditions.Count);
+        }
+
+        return null;
+    }
+
+    /// <summary>Gets whether an SQL statement can state a join of this type: one that joins two sources and has an SQL join keyword.</summary>
+    /// <param name="kind">The join type.</param>
+    /// <returns>True for Inner, Left, Right, Full and Cross; false for None and for <see cref="JoinTypes.NotFound"/>.</returns>
+    protected static bool PerformsJoin(IJoinType kind) => StatedJoinType.Joins(kind) && !string.IsNullOrEmpty(kind.SqlKeyword);
+
+    // The join types an SQL statement can state, for a refusal's message.
+    private static string PerformedJoinTypeNames() => string.Join(", ", JoinTypes.All().Where(PerformsJoin).Select(kind => kind.Name));
+
+    /// <summary>
+    /// Writes one join of a query (FDW-5099): its option's own SQL keyword and the target, then, for a join on a condition, <c>ON</c> each
+    /// condition, the left column qualified with the container the join continues from (the primary table unless the join names one).
+    /// </summary>
+    /// <param name="join">A join <see cref="JoinRefusal"/> accepted.</param>
+    /// <param name="targetQuoted">The target table, quoted and qualified as the dialect writes it.</param>
+    /// <param name="primaryTable">The queried (primary) table.</param>
+    /// <param name="dialect">The SQL dialect for quoting.</param>
+    /// <returns>The join clause with its leading space.</returns>
+    protected static string JoinClause(IJoinExpression join, string targetQuoted, string primaryTable, ISqlDialect dialect)
+    {
+        ArgumentNullException.ThrowIfNull(join);
+        ArgumentNullException.ThrowIfNull(dialect);
+        var kind = StatedJoinType.Of(join.JoinType);
+        if (!kind.RequiresConditions)
+            return $" {kind.SqlKeyword} {targetQuoted}";
+
+        var leftTable = join.SourceContainerName is { } joinedSource ? joinedSource : primaryTable;
+        return $" {kind.SqlKeyword} {targetQuoted} ON " + string.Join(" AND ", join.JoinConditions.Select(condition =>
+            $"{dialect.QuoteIdentifier(leftTable)}.{dialect.QuoteIdentifier(condition.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(condition.RightField)}"));
+    }
+
+    /// <summary>
+    /// The ORDER BY and paging clauses of a joined SELECT (FDW-4991): each ordered column qualified as the WHERE clause qualifies it, a bare
+    /// one with the primary table and a dotted <c>Container.Col</c> with its own.
+    /// </summary>
+    /// <param name="ordering">The command's ordering, if any.</param>
+    /// <param name="paging">The command's paging, if any.</param>
+    /// <param name="dialect">The SQL dialect for quoting and the paging clause.</param>
+    /// <param name="primaryTableQualifier">The primary table's name, which a bare column belongs to.</param>
+    /// <returns>
+    /// The clauses to append after the WHERE clause, each with its leading space, or <see cref="string.Empty"/> when the command neither
+    /// orders nor pages; <c>Refused</c> when it pages and states no order. A join has no one declared order to page by: the primary
+    /// container's key is not unique once a join repeats its rows, so the order is the caller's to state and none is guessed.
+    /// </returns>
+    protected static (bool Refused, string Clauses) BuildJoinedOrderAndPaging(
+        IOrderingExpression? ordering, IPagingExpression? paging, ISqlDialect dialect, string primaryTableQualifier)
+    {
+        var ordered = ordering?.OrderedFields is { Count: > 0 } fields ? fields : null;
+        if (ordered is null)
+            return paging is null ? (false, string.Empty) : (true, string.Empty);
+
+        var clauses = string.Join(", ", ordered.Select(field =>
+            $"{QualifyColumn(field.PropertyName, dialect, primaryTableQualifier)} {(field.Direction.IsAscending ? "ASC" : "DESC")}"));
+        return (false, paging is null ? $" ORDER BY {clauses}" : $" ORDER BY {clauses} {dialect.BuildPagingClause(paging)}");
     }
 
     // -----------------------------------------------------------------------

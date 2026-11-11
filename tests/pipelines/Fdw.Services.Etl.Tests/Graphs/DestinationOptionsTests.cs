@@ -24,6 +24,14 @@ public sealed class DestinationOptionsTests
         return destination;
     }
 
+    // An absent-key soft delete into a database stages its keys (FDW-4956), so it states its stage.
+    private static void Staged(PipelineComponentConfiguration destination)
+    {
+        destination.StageContainer = "OrdersStage";
+        destination.StageKeyColumn = "StageKey";
+        destination.SweepRejectedRowsRule = "Refuse";
+    }
+
     private static void AddColumns(PipelineComponentConfiguration component, string setting, params string[] columns)
     {
         for (var ordinal = 0; ordinal < columns.Length; ordinal++)
@@ -47,6 +55,7 @@ public sealed class DestinationOptionsTests
         destination.SoftDeleteMode = "AbsentFromSource";
         destination.DeletedFlagColumn = "IsGone";
         destination.DeletedFlagValue = true;
+        Staged(destination);
         destination.ValueSources.Add(new PipelineComponentValueSourceConfiguration
         {
             Ordinal = 1, ColumnName = "Number", SourceKind = "NextSequenceValue", SequenceName = "OrderNumbers",
@@ -65,6 +74,9 @@ public sealed class DestinationOptionsTests
         row.SoftDeleteMode.ShouldBe("AbsentFromSource");
         row.DeletedFlagColumn.ShouldBe("IsGone");
         row.DeletedFlagValue.ShouldBe(true);
+        row.StageContainer.ShouldBe("OrdersStage");
+        row.StageKeyColumn.ShouldBe("StageKey");
+        row.SweepRejectedRowsRule.ShouldBe("Refuse");
         row.ValueSources.Select(source => source.ColumnName).ShouldBe(["Origin", "Number"]);
         row.ValueSources[1].SequenceOrderColumns.Single().ColumnName.ShouldBe("Id");
         row.Columns.Count(column => column.Role == "Write").ShouldBe(2);
@@ -98,6 +110,7 @@ public sealed class DestinationOptionsTests
         destination.SoftDeleteMode = "AbsentFromSource";
         destination.DeletedFlagColumn = "IsGone";
         destination.DeletedFlagValue = true;
+        Staged(destination);
 
         Paths(destination).ShouldBeEmpty();
     }
@@ -135,6 +148,75 @@ public sealed class DestinationOptionsTests
     {
         var destination = Upsert();
         destination.SoftDeleteMode = "AbsentFromSource";
+        Staged(destination);
+
+        Paths(destination).ShouldBe(["components/load/settings/softDeleteMode"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnAbsentKeySoftDeleteIntoADatabaseThatNamesNoStageIsAProblemOnTheStageSetting()
+    {
+        var destination = Upsert();
+        destination.SoftDeleteMode = "AbsentFromSource";
+        destination.DeletedFlagColumn = "IsGone";
+        destination.DeletedFlagValue = true;
+
+        Paths(destination).ShouldBe(["components/load/settings/stageContainer"]);
+        DestinationOptions.StagesKeys(destination).ShouldBeTrue();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData(null, "StageKey", "Refuse")]
+    [InlineData("OrdersStage", null, "Refuse")]
+    [InlineData("OrdersStage", "StageKey", null)]
+    [InlineData("OrdersStage", "StageKey", "Sometimes")]
+    public void AnAbsentKeySoftDeleteMissingAnyPartOfItsStageIsAProblem(string? stage, string? stageKey, string? rule)
+    {
+        var destination = Upsert();
+        destination.SoftDeleteMode = "AbsentFromSource";
+        destination.DeletedFlagColumn = "IsGone";
+        destination.DeletedFlagValue = true;
+        destination.StageContainer = stage;
+        destination.StageKeyColumn = stageKey;
+        destination.SweepRejectedRowsRule = rule;
+
+        Paths(destination).ShouldBe(["components/load/settings/stageContainer"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AMarkerSoftDeleteThatNamesAStageIsAProblem()
+    {
+        var destination = Upsert();
+        destination.LoadKind = "Delete";
+        destination.UnmatchedKeysRule = "Warn";
+        destination.Columns.Clear();
+        AddColumns(destination, "keyColumns", "Id");
+        destination.SoftDeleteMode = "MarkerMatches";
+        destination.DeletedFlagColumn = "IsGone";
+        destination.DeletedFlagValue = true;
+        destination.SoftDeleteMarkerColumn = "Status";
+        destination.SoftDeleteMarkerValue = "closed";
+        Staged(destination);
+
+        Paths(destination).ShouldBe(["components/load/settings/stageContainer"]);
+        DestinationOptions.StagesKeys(destination).ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnAbsentFromStageModeStatedByADestinationIsAProblem()
+    {
+        var destination = Upsert();
+        destination.SoftDeleteMode = "AbsentFromStage";
+        destination.DeletedFlagColumn = "IsGone";
+        destination.DeletedFlagValue = true;
 
         Paths(destination).ShouldBe(["components/load/settings/softDeleteMode"]);
     }
@@ -167,5 +249,79 @@ public sealed class DestinationOptionsTests
     public void AComponentThatStatesNoLoadKindHasNothingToCheck()
     {
         Paths(new PipelineComponentConfiguration { Name = "keep", ComponentType = "Filter" }).ShouldBeEmpty();
+    }
+    private static PipelineComponentConfiguration ByKey(string kind)
+    {
+        var destination = Upsert();
+        destination.LoadKind = kind;
+        destination.Columns.Clear();
+        AddColumns(destination, "keyColumns", "Id");
+        if (kind == "Update")
+        {
+            AddColumns(destination, "writeColumns", "Id", "Amount");
+        }
+
+        return destination;
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData("Update")]
+    [InlineData("Delete")]
+    public void ALoadThatFindsRowsByKeyWithoutAnUnmatchedKeysRuleIsAProblemOnTheSetting(string kind)
+    {
+        Paths(ByKey(kind)).ShouldBe(["components/load/settings/unmatchedKeysRule"]);
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData("Update", "Fail")]
+    [InlineData("Delete", "Warn")]
+    public void ALoadThatFindsRowsByKeyWithItsRuleHasNoProblem(string kind, string rule)
+    {
+        var destination = ByKey(kind);
+        destination.UnmatchedKeysRule = rule;
+
+        Paths(destination).ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnUnknownUnmatchedKeysRuleIsAProblem()
+    {
+        var destination = ByKey("Update");
+        destination.UnmatchedKeysRule = "Sometimes";
+
+        Paths(destination).ShouldBe(["components/load/settings/unmatchedKeysRule"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnUpsertThatStatesAnUnmatchedKeysRuleIsAProblem()
+    {
+        var destination = Upsert();
+        destination.UnmatchedKeysRule = "Warn";
+
+        Paths(destination).ShouldBe(["components/load/settings/unmatchedKeysRule"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnAbsentFromSourceDeleteMatchesNothingByKeySoItTakesNoUnmatchedKeysRule()
+    {
+        var destination = ByKey("Delete");
+        destination.SoftDeleteMode = "AbsentFromSource";
+        destination.DeletedFlagColumn = "IsGone";
+        destination.DeletedFlagValue = true;
+        Staged(destination);
+
+        Paths(destination).ShouldBeEmpty();
+        destination.UnmatchedKeysRule = "Warn";
+        Paths(destination).ShouldBe(["components/load/settings/unmatchedKeysRule"]);
     }
 }

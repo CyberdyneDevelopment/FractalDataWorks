@@ -28,7 +28,14 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     private readonly IMemoryCache _cache;
     private readonly ILogger<DataGatewayResultCache> _logger;
 
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _tagToKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, object>> _tagToKeys = new(StringComparer.OrdinalIgnoreCase);
+
+    // The cache's clock, the clock reading at which each tag was last invalidated, and the reading at which the whole
+    // cache last was. A read takes the clock before it runs; its result is kept only when nothing it depends on was
+    // invalidated after that, so a write that lands while the read runs is not undone by the read finishing after it.
+    private readonly ConcurrentDictionary<string, long> _tagChangedAt = new(StringComparer.OrdinalIgnoreCase);
+    private long _clock;
+    private long _allChangedAt;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _inFlight = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -120,22 +127,110 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
         }
     }
 
-    /// <summary>Stores a typed result under the given key, tracking its invalidation tags.</summary>
+    /// <summary>
+    /// The cache's clock now: what a read takes before it runs, and hands to <see cref="Set{T}(string, IGenericResult{T}, IReadOnlyList{string}, TimeSpan, long)"/>
+    /// when it keeps its result, so that a write which lands while the read runs keeps that result out of the cache.
+    /// </summary>
+    /// <returns>A number that only grows; every invalidation moves it on.</returns>
+    public long Now() => Interlocked.Read(ref _clock);
+
+    /// <summary>
+    /// Whether <paramref name="tag"/>, or the whole cache, was invalidated after <paramref name="readFrom"/>, a value
+    /// <see cref="Now"/> returned.
+    /// </summary>
+    /// <param name="tag">The invalidation tag.</param>
+    /// <param name="readFrom">The clock the read took before it ran.</param>
+    /// <returns><c>true</c> when a result read from that moment may already be out of date.</returns>
+    public bool ChangedSince(string tag, long readFrom)
+        => Interlocked.Read(ref _allChangedAt) > readFrom
+            || (_tagChangedAt.TryGetValue(tag, out var changedAt) && changedAt > readFrom);
+
+    /// <summary>
+    /// Stores a typed result that is current now, tracking its invalidation tags. A result that came from a read
+    /// takes the overload with the clock the read took before it ran, so a write during the read is not lost.
+    /// </summary>
     public void Set<T>(string cacheKey, IGenericResult<T> value, IReadOnlyList<string> tags, TimeSpan duration)
+        => Set(cacheKey, value, tags, duration, Now());
+
+    /// <summary>
+    /// Stores a typed result read from <paramref name="readFrom"/>, tracking its invalidation tags. When any of the
+    /// tags (or the whole cache) was invalidated after <paramref name="readFrom"/>, the result may be from before
+    /// that write and is not kept.
+    /// </summary>
+    /// <param name="cacheKey">The key.</param>
+    /// <param name="value">The result.</param>
+    /// <param name="tags">The tags whose invalidation drops it.</param>
+    /// <param name="duration">How long it is kept.</param>
+    /// <param name="readFrom">What <see cref="Now"/> returned before the read that produced <paramref name="value"/> ran.</param>
+    /// <returns><c>true</c> when the result was kept.</returns>
+    public bool Set<T>(string cacheKey, IGenericResult<T> value, IReadOnlyList<string> tags, TimeSpan duration, long readFrom)
     {
+        ArgumentNullException.ThrowIfNull(tags);
+        return Keep(cacheKey, value, tags, duration, _ => readFrom);
+    }
+
+    /// <summary>
+    /// Stores a typed result built from several reads, each tag with the clock the read under it took before it ran.
+    /// When any tag (or the whole cache) was invalidated after its own read began, the result is not kept.
+    /// </summary>
+    /// <param name="cacheKey">The key.</param>
+    /// <param name="value">The result.</param>
+    /// <param name="readFrom">Each tag whose invalidation drops the result, with the clock its read took.</param>
+    /// <param name="duration">How long it is kept.</param>
+    /// <returns><c>true</c> when the result was kept.</returns>
+    public bool Set<T>(string cacheKey, IGenericResult<T> value, IReadOnlyDictionary<string, long> readFrom, TimeSpan duration)
+    {
+        ArgumentNullException.ThrowIfNull(readFrom);
+        return Keep(cacheKey, value, [.. readFrom.Keys], duration, tag => readFrom[tag]);
+    }
+
+    // Tracks, then stores, then looks again: an invalidation either finds the key tracked and removes the entry, or
+    // moved a tag's clock past the read, which this sees and removes the entry itself. Whichever order the two run in,
+    // the entry does not outlive the write.
+    private bool Keep<T>(string cacheKey, IGenericResult<T> value, IReadOnlyList<string> tags, TimeSpan duration, Func<string, long> readFrom)
+    {
+        for (var i = 0; i < tags.Count; i++)
+        {
+            if (ChangedSince(tags[i], readFrom(tags[i])))
+            {
+                DataGatewayCacheLog.StaleResultNotKept(_logger, cacheKey, tags[i]);
+                return false;
+            }
+        }
+
+        // The entry's own identity in the tag sets: a callback for an entry that was replaced or removed takes out
+        // only its own tracking, never that of the entry now under the same key.
+        var identity = new object();
+        TrackKeyForTags(cacheKey, tags, identity);
+
         var entryOptions = new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = duration };
-
-        entryOptions.RegisterPostEvictionCallback((key, _, _, _) => RemoveKeyFromAllTags(key?.ToString()));
-
+        entryOptions.RegisterPostEvictionCallback((_, _, _, _) => UntrackKey(cacheKey, tags, identity));
         _ = _cache.Set(cacheKey, value, entryOptions);
-        TrackKeyForTags(cacheKey, tags);
+
+        for (var i = 0; i < tags.Count; i++)
+        {
+            if (ChangedSince(tags[i], readFrom(tags[i])))
+            {
+                _cache.Remove(cacheKey);
+                DataGatewayCacheLog.StaleResultNotKept(_logger, cacheKey, tags[i]);
+                return false;
+            }
+        }
 
         DataGatewayCacheLog.CacheMiss(_logger, cacheKey, duration);
+        return true;
     }
 
     /// <inheritdoc />
     public void InvalidateByTag(string tag)
     {
+        ArgumentNullException.ThrowIfNull(tag);
+
+        // The clock moves first, whether or not anything is cached under the tag: a read in flight for it must not
+        // keep what it read once it finishes.
+        var changedAt = Interlocked.Increment(ref _clock);
+        _ = _tagChangedAt.AddOrUpdate(tag, changedAt, (_, before) => Math.Max(before, changedAt));
+
         if (!_tagToKeys.TryRemove(tag, out var keys))
         {
             DataGatewayCacheLog.TagInvalidated(_logger, tag, 0);
@@ -155,6 +250,7 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     /// <inheritdoc />
     public void InvalidateByTags(IEnumerable<string> tags)
     {
+        ArgumentNullException.ThrowIfNull(tags);
         foreach (var tag in tags)
             InvalidateByTag(tag);
     }
@@ -162,6 +258,10 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     /// <inheritdoc />
     public void InvalidateAll()
     {
+        // The epoch moves first, for the reason given on InvalidateByTag: no read in flight keeps what it read.
+        var changedAt = Interlocked.Increment(ref _clock);
+        InterlockedMax(ref _allChangedAt, changedAt);
+
         var totalCount = 0;
         foreach (var kvp in _tagToKeys)
         {
@@ -176,20 +276,36 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
         DataGatewayCacheLog.AllInvalidated(_logger, totalCount);
     }
 
-    private void TrackKeyForTags(string cacheKey, IReadOnlyList<string> tags)
+    private static void InterlockedMax(ref long location, long value)
     {
-        foreach (var tag in tags)
+        var current = Interlocked.Read(ref location);
+        while (value > current)
         {
-            var keySet = _tagToKeys.GetOrAdd(tag, _ => new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase));
-            keySet.TryAdd(cacheKey, 0);
+            var seen = Interlocked.CompareExchange(ref location, value, current);
+            if (seen == current)
+                return;
+
+            current = seen;
         }
     }
 
-    private void RemoveKeyFromAllTags(string? cacheKey)
+    private void TrackKeyForTags(string cacheKey, IReadOnlyList<string> tags, object identity)
     {
-        if (cacheKey is null) return;
+        for (var i = 0; i < tags.Count; i++)
+        {
+            var keySet = _tagToKeys.GetOrAdd(tags[i], _ => new ConcurrentDictionary<string, object>(StringComparer.Ordinal));
+            keySet[cacheKey] = identity;
+        }
+    }
 
-        foreach (var kvp in _tagToKeys)
-            kvp.Value.TryRemove(cacheKey, out _);
+    // Takes the entry out of the tag sets it was tracked in, only where it is still the entry tracked: the entry a
+    // newer Set put under the same key keeps its tracking, so it is still dropped by the next invalidation.
+    private void UntrackKey(string cacheKey, IReadOnlyList<string> tags, object identity)
+    {
+        for (var i = 0; i < tags.Count; i++)
+        {
+            if (_tagToKeys.TryGetValue(tags[i], out var keySet))
+                _ = keySet.TryRemove(new KeyValuePair<string, object>(cacheKey, identity));
+        }
     }
 }

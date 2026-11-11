@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+      - main
+      - prerelease
       - develop
     paths-ignore:
       - 'README.md'
@@ -16,6 +18,11 @@ on:
     branches:
       - master
       - develop
+  # Nightly full build from source with every test (FDW-3356): the safety net for the allocated release, which
+  # builds only the packages that changed. A behaviour change that leaves a package's API untouched passes that
+  # fast path and is caught here. Scheduled workflows run on the default branch only.
+  schedule:
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       full_build:

@@ -83,6 +83,11 @@ public static partial class GraphLog
         Message = "Graph pipeline '{pipeline}' cannot run: {missing} is required")]
     public static partial IGenericMessage RunDependencyMissing(ILogger logger, string pipeline, string missing);
 
+    /// <summary>Logs a graph run refused because its options carry no execution id (FDW-4956): nothing it writes could be tied to an execution.</summary>
+    [MessageLogging(EventId = 20970, Level = LogLevel.Error,
+        Message = "Graph pipeline '{pipeline}' cannot run: its options carry no execution id, and a run is the execution that tracks it")]
+    public static partial IGenericMessage RunHasNoExecutionId(ILogger logger, string pipeline);
+
     /// <summary>Logs a graph run that finished.</summary>
     [MessageLogging(EventId = 20963, Level = LogLevel.Information,
         Message = "Graph pipeline '{pipeline}' ran {components} components: {extracted} rows read, {loaded} rows loaded")]
@@ -113,4 +118,30 @@ public static partial class GraphLog
         Message = "The host runs graph pipelines but registered no IDataSetWriterRuns, which the status of a data set is judged by; register the graph pipeline service type's registration; the host does not start",
         ClientMessage = "The graph pipeline service type needs the data set writer runs to be registered, and they are not")]
     public static partial IGenericMessage DataSetWriterRunsNotRegistered(ILogger logger);
+
+    /// <summary>
+    /// Logs a graph pipeline type with no usable default for how often a destination writes what it has committed (FDW-4957): none declared, or
+    /// below zero. The number is in the Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60351, Level = LogLevel.Critical,
+        Message = "The {typeName} pipeline type declares no whole number of at least 0 for {field}; declare one in its DeclaredDefaults or state it with ServiceTypeDefaults.Override before Register; the host does not start")]
+    public static partial IGenericMessage CommittedReportSecondsNotDeclared(ILogger logger, string typeName, string field);
+
+    /// <summary>Logs the setting for how often a destination writes what it has committed stated below zero (FDW-4957); the run does not start.</summary>
+    [MessageLogging(EventId = 60352, Level = LogLevel.Error,
+        Message = "The setting {setting} is {seconds}; it must be at least 0 (0 writes every commit), or not set to take the pipeline type's default")]
+    public static partial IGenericMessage CommittedReportSecondsNegative(ILogger logger, string setting, int seconds);
+
+    /// <summary>
+    /// Logs a graph pipeline type with no usable default for how many unmatched keys a report carries (FDW-4988): none declared, or below zero. The number
+    /// is in the Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60353, Level = LogLevel.Critical,
+        Message = "The {typeName} pipeline type declares no whole number of at least 0 for {field}; declare one in its DeclaredDefaults or state it with ServiceTypeDefaults.Override before Register; the host does not start")]
+    public static partial IGenericMessage UnmatchedKeySampleNotDeclared(ILogger logger, string typeName, string field);
+
+    /// <summary>Logs the setting for how many unmatched keys a report carries stated below zero (FDW-4988); the run does not start.</summary>
+    [MessageLogging(EventId = 60354, Level = LogLevel.Error,
+        Message = "The setting {setting} is {size}; it must be at least 0 (0 carries only the count), or not set to take the pipeline type's default")]
+    public static partial IGenericMessage UnmatchedKeySampleNegative(ILogger logger, string setting, int size);
 }

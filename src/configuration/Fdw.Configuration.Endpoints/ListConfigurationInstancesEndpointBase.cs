@@ -9,6 +9,7 @@ using Fdw.Configuration.Endpoints.Logging;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Conventions;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Results;
@@ -41,7 +42,7 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
     {
         _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
         _containerLookup = containerLookup;
-        _logger = logger;
+        _logger = logger ?? NullLogger<ListConfigurationInstancesEndpointBase>.Instance;
     }
 
     /// <inheritdoc/>
@@ -61,9 +62,10 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
     {
         ConfigurationEndpointLog.ListingInstances(_logger, req.Category ?? LogPlaceholders.Null);
 
-        var containers = string.IsNullOrEmpty(req.Category)
-            ? _containerLookup.All()
-            : _containerLookup.ByCategory(req.Category);
+        // A container whose rows hang from another container's rows holds part of a configuration, never an instance (FDW-4644).
+        var containers = TopLevelConfigurationContainers.Of(
+            string.IsNullOrEmpty(req.Category) ? _containerLookup.All() : _containerLookup.ByCategory(req.Category),
+            _logger);
 
         var tableGroups = containers
             .GroupBy(c => $"{c.Parent.Name}.{c.Name}", StringComparer.Ordinal)

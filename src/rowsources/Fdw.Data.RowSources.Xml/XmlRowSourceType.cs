@@ -36,6 +36,10 @@ public sealed class XmlRowSourceType : RecordSourceTypeBase
     public int MaxCharactersFromEntities { get; set; }
 
     /// <inheritdoc />
+    /// <remarks>Reads elements through an XmlReader as the stream is read. (FDW-4967)</remarks>
+    public override bool ParsesIncrementally => true;
+
+    /// <inheritdoc />
     public override bool SupportsSync => true;
 
     /// <inheritdoc />

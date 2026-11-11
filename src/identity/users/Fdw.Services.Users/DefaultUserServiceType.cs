@@ -110,8 +110,8 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new TenantFounding(
                     sp.GetRequiredService<ITenantWriter>(),
                     sp.GetRequiredService<IOrganizationWriter>(),
-                    sp.GetRequiredService<IOrganizationProvider>(),
                     sp.GetRequiredService<IDefaultWorkspaceFounding>(),
+                    sp.GetRequiredService<IWorkspaceFoundingPolicy>(),
                     sp.GetRequiredService<IUserConfigurationProvider>(),
                     sp.GetRequiredService<IUserTenantConfigurationProvider>(),
                     sp.GetRequiredService<IGrantRule>(),
@@ -122,6 +122,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 new OrganizationFounding(
                     sp.GetRequiredService<IOrganizationWriter>(),
                     sp.GetRequiredService<IDefaultWorkspaceFounding>(),
+                    sp.GetRequiredService<IWorkspaceFoundingPolicy>(),
                     sp.GetRequiredService<IOrganizationProvider>(),
                     sp.GetRequiredService<IOrganizationBootstrap>(),
                     sp.GetRequiredService<IUserConfigurationProvider>(),

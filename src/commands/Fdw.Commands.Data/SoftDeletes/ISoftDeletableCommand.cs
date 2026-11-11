@@ -3,8 +3,8 @@ using Fdw.Commands.Data.Abstractions;
 namespace Fdw.Commands.Data.SoftDeletes;
 
 /// <summary>
-/// A command that can flag rows deleted instead of removing them: <see cref="DeleteCommand"/> and
-/// <see cref="UpdateCommand{T}"/>. When <see cref="SoftDelete"/> is set the translator sets the configured
+/// A command that can flag rows deleted instead of removing them: <see cref="DeleteCommand"/>,
+/// <see cref="UpdateCommand{T}"/>, <see cref="BulkUpdateCommand{T}"/> and <see cref="BulkDeleteCommand{T}"/>. When <see cref="SoftDelete"/> is set the translator sets the configured
 /// deleted-flag column rather than removing or only updating the row.
 /// </summary>
 public interface ISoftDeletableCommand : IDataCommand

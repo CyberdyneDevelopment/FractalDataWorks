@@ -50,6 +50,9 @@ public class CalculationEntityServiceTests
         Steps = []
     };
 
+    // An output that states its result data type, as a calculation must; the default spec states none.
+    private static readonly CalculationOutputSpec Stated = new() { ResultDataTypeName = "Decimal" };
+
     private static CalculationEntityService ServiceOver(
         CalculationStore store, ICalculationInputResolver? resolver = null)
         => new(store.Provider, resolver ?? Mock.Of<ICalculationInputResolver>(), null);
@@ -347,6 +350,23 @@ public class CalculationEntityServiceTests
     }
 
     [Fact]
+    public async Task CreateCalculationThatStatesNoResultDataTypeIsRefusedWithItsOwnCodeAndNothingIsAssumed()
+    {
+        var store = new CalculationStore();
+        var typedConfig = SampleConfig(Guid.NewGuid());
+
+        var result = await ServiceOver(store).CreateCalculation(
+            "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("CALCULATIONS-21028");
+        result.CurrentMessage.ShouldNotBeNull();
+        result.CurrentMessage.ShouldContain("states no result data type");
+        new CalculationOutputSpec().ResultDataTypeName.ShouldBe(string.Empty);
+        store.SavedTimes(Times.Never());
+    }
+
+    [Fact]
     public async Task CreateCalculationTypedConfigurationNotCalculationTypedReturnsFailure()
     {
         var store = new CalculationStore();
@@ -368,7 +388,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], Stated, true, typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldBe("save failed");
@@ -383,7 +403,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", "desc", "Windowed", [], new CalculationOutputSpec(), true, typedConfig, TestContext.Current.CancellationToken);
+            "Name", "desc", "Windowed", [], Stated, true, typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Id.ShouldBe(saved.Id);
@@ -401,7 +421,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).CreateCalculation(
-            "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig, TestContext.Current.CancellationToken);
+            "Name", null, "Windowed", [], Stated, true, typedConfig, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("CALCULATIONS-71011");
@@ -415,7 +435,7 @@ public class CalculationEntityServiceTests
         var store = new CalculationStore();
 
         var result = await ServiceOver(store).UpdateCalculation(
-            Guid.NewGuid(), "Name", null, "Bogus", [], new CalculationOutputSpec(), true, null,
+            Guid.NewGuid(), "Name", null, "Bogus", [], Stated, true, null,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -436,7 +456,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            saved.Id, "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
+            saved.Id, "Name", null, "Windowed", [], Stated, true, typedConfig,
             TestContext.Current.CancellationToken);
 
         store.DeletedTimes(Times.Never());
@@ -452,7 +472,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            held.Id, "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
+            held.Id, "Name", null, "Windowed", [], Stated, true, typedConfig,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -466,7 +486,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            Guid.NewGuid(), "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
+            Guid.NewGuid(), "Name", null, "Windowed", [], Stated, true, typedConfig,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -482,7 +502,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            saved.Id, "Renamed", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
+            saved.Id, "Renamed", null, "Windowed", [], Stated, true, typedConfig,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
@@ -497,7 +517,7 @@ public class CalculationEntityServiceTests
         var typedConfig = new WindowedCalculationConfiguration { TargetField = "WeightLbs", WindowFunction = "Sum" };
 
         var result = await ServiceOver(store).UpdateCalculation(
-            held.Id, "Name", null, "Windowed", [], new CalculationOutputSpec(), true, typedConfig,
+            held.Id, "Name", null, "Windowed", [], Stated, true, typedConfig,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();

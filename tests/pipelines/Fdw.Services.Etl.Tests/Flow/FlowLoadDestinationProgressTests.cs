@@ -69,10 +69,14 @@ public sealed class FlowLoadDestinationProgressTests
 
     private static IDictionary<string, object?> Player(string team, string name) => Fields(("Team", team), ("Name", name));
 
-    private async Task<(FlowLoadDestination Destination, CommitReporter Reporter, IGenericResult Result)> Load(bool replace, bool tracked = true)
+    private Task<(FlowLoadDestination Destination, CommitReporter Reporter, IGenericResult Result)> Load(bool replace, bool tracked = true)
+        => Load(replace, TimeSpan.Zero, [Player("Chiefs", "Mahomes"), Player("Broncos", "Nix"), Player("Chiefs", "Kelce")], tracked);
+
+    private async Task<(FlowLoadDestination Destination, CommitReporter Reporter, IGenericResult Result)> Load(
+        bool replace, TimeSpan commitReportInterval, IDictionary<string, object?>[] rows, bool tracked = true)
     {
-        var destination = new FlowLoadDestination("dst", Executor(), "export", Unit("Insert"), replace ? Unit("Truncate") : null, new Dictionary<string, object?>(), Now);
-        var graph = Graph([FromRows("src", Player("Chiefs", "Mahomes"), Player("Broncos", "Nix"), Player("Chiefs", "Kelce")), destination], [Link("src", "dst")]);
+        var destination = new FlowLoadDestination("dst", Executor(), "export", Unit("Insert"), replace ? Unit("Truncate") : null, new Dictionary<string, object?>(), Now, commitReportInterval);
+        var graph = Graph([FromRows("src", rows), destination], [Link("src", "dst")]);
         var reporter = new CommitReporter();
         var context = new FlowStepContext(new FlowVariables(), new FlowExecutor(), new FlowRunOptions { LinkCapacity = 2 }, null, null, tracked ? reporter : null, null);
 
@@ -122,5 +126,58 @@ public sealed class FlowLoadDestinationProgressTests
         ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
         reporter.Commits.ShouldBeEmpty();
         destination.RowsLoaded.ShouldBeGreaterThan(0);
+    }
+
+    private static IDictionary<string, object?>[] Players(int count)
+        => [.. Enumerable.Range(1, count).Select(i => Player("Chiefs", $"Player {i}"))];
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task AnIntervalOfZeroWritesEveryCommit()
+    {
+        var (destination, reporter, ran) = await Load(replace: false, TimeSpan.Zero, Players(9));
+
+        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
+        reporter.Commits.Count.ShouldBeGreaterThan(2);
+        reporter.Commits[^1].RowsCommitted.ShouldBe(destination.RowsLoaded);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ALongIntervalWritesTheFirstCommitAndTheFinalFigureOnly()
+    {
+        // FDW-4957: only the latest total matters, so the batches between the first and the last are not each written.
+        var (destination, reporter, ran) = await Load(replace: false, TimeSpan.FromHours(1), Players(9));
+
+        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
+        reporter.Commits.Count.ShouldBe(2);
+        reporter.Commits[0].RowsCommitted.ShouldBeLessThan(reporter.Commits[1].RowsCommitted);
+        reporter.Commits[1].RowsCommitted.ShouldBe(destination.RowsLoaded);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ALongIntervalStillWritesTheTargetEmptiedAtOnceBeforeAnyRow()
+    {
+        // The retry check reads whether the target was emptied, so that is never held back.
+        var (destination, reporter, ran) = await Load(replace: true, TimeSpan.FromHours(1), Players(9));
+
+        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
+        reporter.Commits[0].TargetEmptied.ShouldBeTrue();
+        reporter.Commits[0].RowsCommitted.ShouldBe(0L);
+        reporter.Commits[^1].RowsCommitted.ShouldBe(destination.RowsLoaded);
+        reporter.Commits.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void ANegativeIntervalIsRefused()
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() => new FlowLoadDestination(
+            "dst", Executor(), "export", Unit("Insert"), null, new Dictionary<string, object?>(), Now, TimeSpan.FromSeconds(-1)));
     }
 }

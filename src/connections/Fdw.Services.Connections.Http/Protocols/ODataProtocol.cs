@@ -16,7 +16,7 @@ namespace Fdw.Services.Connections.Http.Protocols;
 /// <para>
 /// Uses OData query conventions:
 /// <list type="bullet">
-/// <item><description>Pagination: $skip=20&amp;$top=10</description></item>
+/// <item><description>Pagination: in the paging style the connection states, typically OffsetLimit with $skip and $top, or BodyNextLink with @odata.nextLink (FDW-4938)</description></item>
 /// <item><description>Ordering: $orderby=name asc,createdAt desc</description></item>
 /// <item><description>Filtering: $filter=name eq 'value'</description></item>
 /// <item><description>Field selection: $select=id,name,email</description></item>
@@ -31,31 +31,8 @@ public sealed class ODataProtocol : RestProtocolBase
     /// Initializes a new instance of the <see cref="ODataProtocol"/> class.
     /// </summary>
     public ODataProtocol()
-        : base("OData", "OData protocol with $filter, $orderby, $skip, $top query options")
+        : base("OData", "OData protocol with $filter and $orderby query options; paging in the style the connection states ($skip/$top or @odata.nextLink)")
     {
-    }
-
-    /// <inheritdoc/>
-    protected override string BuildPaginationQueryString(IQueryCommand command, HttpProtocolContext context)
-    {
-        if (command.Paging is null)
-        {
-            return string.Empty;
-        }
-
-        var parts = new List<string>();
-
-        if (command.Paging.Skip > 0)
-        {
-            parts.Add($"$skip={command.Paging.Skip}");
-        }
-
-        if (command.Paging.Take > 0)
-        {
-            parts.Add($"$top={command.Paging.Take}");
-        }
-
-        return string.Join("&", parts);
     }
 
     /// <inheritdoc/>

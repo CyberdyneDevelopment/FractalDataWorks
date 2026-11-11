@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Build and pack Fdw framework
 #
-# Usage: ./build-all.sh [-c|--configuration Debug|Release]
-# Requires: LocalNugetFolder environment variable
+# Usage: ./build-all.sh -o|--output <directory> [-c|--configuration Debug|Release]
+# The packages are written to the output directory, which is required: nothing is assumed.
 
 set -e
 
 CONFIGURATION="Debug"
+OUTPUT=""
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT_DIR="$SCRIPT_DIR/.."
 
@@ -17,8 +18,13 @@ while [[ $# -gt 0 ]]; do
             CONFIGURATION="$2"
             shift 2
             ;;
+        -o|--output)
+            OUTPUT="$2"
+            shift 2
+            ;;
         *)
-            shift
+            echo "ERROR: unknown argument '$1'. Usage: $0 -o <directory> [-c Debug|Release]" >&2
+            exit 1
             ;;
     esac
 done
@@ -28,18 +34,17 @@ export DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
 export PATH="$HOME/.dotnet/tools:$PATH"
 
 # Validate environment
-if [ -z "$LocalNugetFolder" ]; then
-    echo "ERROR: LocalNugetFolder environment variable not set." >&2
-    echo "Run: source scripts/setup-local-nuget.sh" >&2
+if [ -z "$OUTPUT" ]; then
+    echo "ERROR: no output directory. Pass -o <directory>; the packages are written there." >&2
     exit 1
 fi
 
-mkdir -p "$LocalNugetFolder"
+mkdir -p "$OUTPUT"
 
 echo "============================================"
 echo "  Fdw - Build All"
 echo "  Configuration: $CONFIGURATION"
-echo "  LocalNugetFolder: $LocalNugetFolder"
+echo "  Output: $OUTPUT"
 echo "============================================"
 echo ""
 
@@ -55,9 +60,9 @@ if [ -z "$VERSION" ] || [[ "$VERSION" != [0-9]* ]]; then
     echo "nbgv not available - will detect version from packed packages"
 fi
 
-# Clean old FDW packages from local folder
-find "$LocalNugetFolder" -maxdepth 1 -name "Fdw.*.nupkg" -delete 2>/dev/null || true
-find "$LocalNugetFolder" -maxdepth 1 -name "Fdw.*.snupkg" -delete 2>/dev/null || true
+# Clean old FDW packages from the output directory
+find "$OUTPUT" -maxdepth 1 -name "Fdw.*.nupkg" -delete 2>/dev/null || true
+find "$OUTPUT" -maxdepth 1 -name "Fdw.*.snupkg" -delete 2>/dev/null || true
 
 # Clean NuGet cache for FDW packages
 CACHE_ROOT="$HOME/.nuget/packages"
@@ -67,7 +72,7 @@ if [ -d "$CACHE_ROOT" ]; then
     done
 fi
 
-dotnet pack "$ROOT_DIR/Fdw.DeveloperKit.slnx" -c "$CONFIGURATION" -o "$LocalNugetFolder"
+dotnet pack "$ROOT_DIR/Fdw.DeveloperKit.slnx" -c "$CONFIGURATION" -o "$OUTPUT"
 if [ $? -ne 0 ]; then
     echo "ERROR: FDW pack failed" >&2
     exit 1
@@ -75,7 +80,7 @@ fi
 
 # Detect version from packed package filename (most reliable when nbgv unavailable)
 if [ -z "$VERSION" ]; then
-    ACTUAL_PKG=$(ls "$LocalNugetFolder"/Fdw.Abstractions.*.nupkg 2>/dev/null | head -1)
+    ACTUAL_PKG=$(ls "$OUTPUT"/Fdw.Abstractions.*.nupkg 2>/dev/null | head -1)
     if [ -n "$ACTUAL_PKG" ]; then
         VERSION=$(basename "$ACTUAL_PKG" .nupkg | sed 's/^Fdw\.Abstractions\.//')
     fi
@@ -85,7 +90,7 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 echo "FDW Version: $VERSION"
-echo "FDW packages packed to $LocalNugetFolder"
+echo "FDW packages packed to $OUTPUT"
 
 # =============================================
 # Summary

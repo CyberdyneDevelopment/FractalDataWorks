@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
@@ -12,6 +13,7 @@ using Fdw.Services.Etl.Abstractions.OptionTypes;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs.Building;
+using Fdw.Services.Etl.Tests.Pipelines;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Etl.Tests.Graphs;
@@ -119,11 +121,11 @@ public sealed class PhysicalAddressTests
     {
         string? seenName = null;
         var gateway = new Mock<IEtlDataGateway>();
-        gateway.Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
+        gateway.Setup(g => g.OpenRecordSource(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Callback<IDataCommand, DataStoreTarget, string?, string?, CancellationToken>((_, _, _, name, _) => seenName = name)
-            .Returns(Task.FromResult<IGenericResult<IEnumerable<Dictionary<string, object?>>>>(
-                GenericResult<IEnumerable<Dictionary<string, object?>>>.Success([])));
+            .Returns(Task.FromResult<IGenericResult<IRecordSource<DataRecord>>>(
+                GenericResult<IRecordSource<DataRecord>>.Success(new CountingRecordSource([], []))));
         var deferred = GraphFlowBuilder.Build(Flow(Source(null, "{{FileName}}")), On(gateway.Object));
         var variables = new FlowVariables();
         variables.Declare("FileName", null);

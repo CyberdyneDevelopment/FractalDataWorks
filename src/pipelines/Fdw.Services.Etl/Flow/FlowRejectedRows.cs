@@ -57,6 +57,18 @@ internal sealed class FlowRejectedRows
         }
     }
 
+    /// <summary>Gets how many rows the error outputs of the named components have carried so far (FDW-4956).</summary>
+    /// <param name="components">The components, by name; the comparison ignores case, as the counts' keys do.</param>
+    /// <returns>The rows rejected by those components, every error output added.</returns>
+    public long CountOf(IReadOnlySet<string> components)
+    {
+        ArgumentNullException.ThrowIfNull(components);
+        lock (_gate)
+        {
+            return _counted.Values.Where(counted => components.Contains(counted.Component)).Sum(counted => counted.Count);
+        }
+    }
+
     /// <summary>Gets what has been counted so far, by component and then output.</summary>
     /// <returns>One entry for each error output that carried at least one row.</returns>
     public IReadOnlyList<FlowRejection> Snapshot()

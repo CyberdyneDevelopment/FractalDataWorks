@@ -52,4 +52,9 @@ public static partial class InstanceDefaultLog
         Message = "The {ownerKind} '{ownerName}' states no {field}, which is the caller's choice and has no default",
         ClientMessage = "The {ownerKind} '{ownerName}' states no {field}; it is required")]
     public static partial IGenericMessage ChoiceNotStated(ILogger logger, string ownerKind, string ownerName, string field);
+
+    /// <summary>Logs a create body that leaves out a value resolved where the service is built, which is not written into the row (FDW-4904).</summary>
+    [MessageLogging(EventId = 62057, Level = LogLevel.Trace,
+        Message = "The {ownerKind} '{ownerName}' states no {field}; it is left empty and takes its type's default when it is built")]
+    public static partial IGenericMessage LeftForUse(ILogger logger, string ownerKind, string ownerName, string field);
 }

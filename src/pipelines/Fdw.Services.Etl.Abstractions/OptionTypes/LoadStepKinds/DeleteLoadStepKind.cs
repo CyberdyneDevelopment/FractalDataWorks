@@ -13,4 +13,7 @@ public sealed class DeleteLoadStepKind : LoadStepKindBase
 
     /// <inheritdoc/>
     public override bool RepeatsToSameResult => true;
+
+    /// <inheritdoc/>
+    public override bool WritesExistingRowsByKey => true;
 }

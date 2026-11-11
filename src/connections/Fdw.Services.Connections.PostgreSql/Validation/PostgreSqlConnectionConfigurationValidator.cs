@@ -31,7 +31,7 @@ public sealed class PostgreSqlConnectionConfigurationValidator : FdwConfiguratio
         RuleFor(x => x.CommandTimeout)
             .GreaterThan(0)
             .When(x => x.CommandTimeout.HasValue)
-            .WithMessage("CommandTimeout must be greater than 0 when it is stated; leave it out to take the instance's DefaultCommandTimeoutSeconds");
+            .WithMessage("CommandTimeout must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
 
         RuleFor(x => x.MaxSerialInsert)
             .GreaterThan(0)
@@ -45,7 +45,7 @@ public sealed class PostgreSqlConnectionConfigurationValidator : FdwConfiguratio
         RuleFor(x => x.ConnectionTimeout)
             .GreaterThan(0)
             .When(x => x.ConnectionTimeout is not null)
-            .WithMessage("ConnectionTimeout must be greater than 0 when it is stated; leave it out to take the instance's DefaultConnectionTimeoutSeconds");
+            .WithMessage("ConnectionTimeout must be greater than 0 when it is stated; leave it out to take the default its connection type declares");
 
         RuleFor(x => x.DefaultSchema)
             .NotEmpty()

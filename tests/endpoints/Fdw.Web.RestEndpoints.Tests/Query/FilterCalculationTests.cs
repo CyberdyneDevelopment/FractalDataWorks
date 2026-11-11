@@ -119,6 +119,21 @@ public sealed class FilterCalculationTests
     }
 
     [Fact]
+    public async Task ADateCalculationIsNotComparedWithAMomentField()
+    {
+        var refusals = new Refusals();
+        var calculations = new FakeCalculations().Yields("Due", typeof(DateOnly), new DateOnly(2026, 10, 21));
+
+        var filter = await Translated(Leaf("createdAt", "Equal", "{\"calculation\":\"Due\"}"), calculations, refusals);
+
+        filter.IsFailure.ShouldBeTrue();
+        var reason = refusals.Reasons.ShouldHaveSingleItem();
+        reason.ShouldContain("'Due'");
+        reason.ShouldContain("a date");
+        reason.ShouldContain("DateTimeOffset");
+    }
+
+    [Fact]
     public async Task AResultOfTheWrongTypeForTheFieldIsRefusedNamingBoth()
     {
         var refusals = new Refusals();

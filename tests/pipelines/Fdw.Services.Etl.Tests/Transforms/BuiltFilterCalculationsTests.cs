@@ -182,7 +182,7 @@ public sealed class BuiltFilterCalculationsTests
     }
 
     [Fact]
-    public async Task AComputeStageRefusesACalculationThatYieldsADateTime()
+    public async Task AComputeStageAcceptsACalculationThatYieldsADateTime()
     {
         var yesterday = Yesterday();
         var stage = new PipelineTransformConfiguration
@@ -200,8 +200,8 @@ public sealed class BuiltFilterCalculationsTests
         var resolved = await BuiltCalculationResolver.Resolve(
             [stage], provider.Object, Settings().Object, NullLogger.Instance, TestContext.Current.CancellationToken);
 
-        resolved.IsFailure.ShouldBeTrue();
-        resolved.Code?.Name.ShouldBe("OperandTypeMismatch");
+        resolved.IsSuccess.ShouldBeTrue();
+        resolved.Value!.Calculations[stage.Id].EmittedKinds[0].ClrType.ShouldBe(typeof(DateTimeOffset));
     }
 
     private sealed class FixedClock : TimeProvider

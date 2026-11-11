@@ -40,6 +40,7 @@ public sealed class JsonStreamRowWriter : IRowWriter
     private readonly System.Text.Decoder _decoder = System.Text.Encoding.UTF8.GetDecoder();
     private byte[] _byteBuffer = new byte[1024];
     private char[] _charBuffer = new char[1024];
+    private readonly bool _lines;
     private bool _arrayStarted;
     private bool _disposed;
 
@@ -52,6 +53,10 @@ public sealed class JsonStreamRowWriter : IRowWriter
     {
         _target = target ?? throw new ArgumentNullException(nameof(target));
         var opts = options ?? throw new ArgumentNullException(nameof(options));
+        if (opts.RecordsAreLines && opts.WriteIndented)
+            throw new ArgumentException("JSON Lines writes each record on one line, so it is never indented.", nameof(options));
+
+        _lines = opts.RecordsAreLines;
         _bridge = new MemoryStream();
         _writer = new Utf8JsonWriter(_bridge, new JsonWriterOptions
         {
@@ -64,7 +69,7 @@ public sealed class JsonStreamRowWriter : IRowWriter
     public void Write(IReadOnlyDictionary<string, object?> row)
     {
         if (row is null) throw new ArgumentNullException(nameof(row));
-        if (!_arrayStarted)
+        if (!_arrayStarted && !_lines)
         {
             _writer.WriteStartArray();
             _arrayStarted = true;
@@ -79,6 +84,12 @@ public sealed class JsonStreamRowWriter : IRowWriter
 
         _writer.WriteEndObject();
         DrainBridge();
+        if (_lines)
+        {
+            // Why the writer is reset after a line: each line is its own JSON value, and the writer refuses a second top-level value.
+            _target.Write('\n');
+            _writer.Reset();
+        }
     }
 
     /// <inheritdoc />
@@ -135,6 +146,13 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void Flush()
     {
+        if (_lines)
+        {
+            DrainBridge();
+            _target.Flush();
+            return;
+        }
+
         if (!_arrayStarted)
         {
             _writer.WriteStartArray();

@@ -36,7 +36,7 @@ public sealed class GraphFlowBuilderTests
 
         ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
         tally.Extracted.ShouldBe(5);
-        events.ShouldBe(["read@0", "read@2", "read@4"]);
+        events.ShouldBe(["open", "closed after 5"]);
     }
 
     [Fact]

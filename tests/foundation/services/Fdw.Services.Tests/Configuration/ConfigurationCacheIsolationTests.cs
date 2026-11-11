@@ -226,6 +226,9 @@ public sealed class ConfigurationCacheIsolationTests
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Transactions are not used by configuration reads.");
 

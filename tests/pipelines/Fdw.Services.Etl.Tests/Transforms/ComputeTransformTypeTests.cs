@@ -127,6 +127,117 @@ public sealed class ComputeTransformTypeTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
+    public async Task ADateResultIsWrittenAsADateNotAsANumber()
+    {
+        var array = CalculationArray.Named("Due")
+            .Result("due", AddDate(Field("start"), 30, "Days"))
+            .Build(Limits, allowDateTimeResults: true)
+            .Value!;
+        var built = BuiltTransformationConverter.ToConfiguration(
+            "Due", array, [new BuiltTransformationInputConfiguration { Name = "start", ValueType = "Date", ExecutionOrder = 0 }]);
+        built.Id = BuiltId;
+        var stage = new PipelineTransformConfiguration
+        { IsEnabled = true,
+            Id = Guid.NewGuid(),
+            Name = "Due",
+            OperationType = "Compute",
+            ComputeTransformationId = BuiltId,
+            ComputeInputs = [new PipelineTransformComputeInputConfiguration { InputName = "start", SourceField = "src_start" }],
+        };
+        var resolved = await BuiltCalculationResolver.Resolve([stage], Provider(built).Object, Settings(200, 5000, 32).Object, NullLogger.Instance, TestContext.Current.CancellationToken);
+        resolved.IsSuccess.ShouldBeTrue();
+        var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), builtCalculations: resolved.Value!.Calculations);
+
+        var dateOnly = await new ComputeTransformType().Transform(
+            new Dictionary<string, object?> { ["id"] = 7, ["src_start"] = new DateOnly(2026, 10, 22) }, stage, context, TestContext.Current.CancellationToken);
+        var dateColumn = await new ComputeTransformType().Transform(
+            new Dictionary<string, object?> { ["id"] = 8, ["src_start"] = new DateTime(2026, 10, 22) }, stage, context, TestContext.Current.CancellationToken);
+
+        dateOnly.IsSuccess.ShouldBeTrue();
+        dateOnly.Value!["due"].ShouldBe(new DateOnly(2026, 11, 21));
+        dateOnly.Value["id"].ShouldBe(7);
+        dateColumn.IsSuccess.ShouldBeTrue();
+        dateColumn.Value!["due"].ShouldBe(new DateOnly(2026, 11, 21));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ADateFieldWithATimeOfDayFailsTheRecordInsteadOfTruncating()
+    {
+        var array = CalculationArray.Named("Due").Result("due", AddDate(Field("start"), 1, "Days")).Build(Limits, allowDateTimeResults: true).Value!;
+        var built = BuiltTransformationConverter.ToConfiguration(
+            "Due", array, [new BuiltTransformationInputConfiguration { Name = "start", ValueType = "Date", ExecutionOrder = 0 }]);
+        built.Id = BuiltId;
+        var stage = new PipelineTransformConfiguration
+        { IsEnabled = true,
+            Id = Guid.NewGuid(),
+            Name = "Due",
+            OperationType = "Compute",
+            ComputeTransformationId = BuiltId,
+            ComputeInputs = [new PipelineTransformComputeInputConfiguration { InputName = "start", SourceField = "src_start" }],
+        };
+        var resolved = await BuiltCalculationResolver.Resolve([stage], Provider(built).Object, Settings(200, 5000, 32).Object, NullLogger.Instance, TestContext.Current.CancellationToken);
+        var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), builtCalculations: resolved.Value!.Calculations);
+
+        var result = await new ComputeTransformType().Transform(
+            new Dictionary<string, object?> { ["src_start"] = new DateTime(2026, 10, 22, 9, 30, 0) }, stage, context, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Code?.Name.ShouldBe("FieldNotDate");
+    }
+
+    private static async Task<(TransformContext Context, PipelineTransformConfiguration Stage)> NowRun(TimeProvider? clock)
+    {
+        var array = CalculationArray.Named("Stamp").Result("stamp", Now("UTC")).Build(Limits, allowDateTimeResults: true).Value!;
+        var built = BuiltTransformationConverter.ToConfiguration("Stamp", array, []);
+        built.Id = BuiltId;
+        var stage = new PipelineTransformConfiguration
+        { IsEnabled = true,
+            Id = Guid.NewGuid(),
+            Name = "Stamp",
+            OperationType = "Compute",
+            ComputeTransformationId = BuiltId,
+        };
+        var resolved = await BuiltCalculationResolver.Resolve([stage], Provider(built).Object, Settings(200, 5000, 32).Object, NullLogger.Instance, TestContext.Current.CancellationToken);
+        resolved.IsSuccess.ShouldBeTrue();
+        var context = new TransformContext(
+            Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), builtCalculations: resolved.Value!.Calculations, clock: clock);
+        return (context, stage);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ANowCalculationReadsTheRunsClockAndEveryRecordSeesTheSameMoment()
+    {
+        var (context, stage) = await NowRun(new SteppingClock(new DateTimeOffset(2026, 11, 9, 12, 0, 0, TimeSpan.Zero)));
+
+        var first = await new ComputeTransformType().Transform(new Dictionary<string, object?> { ["id"] = 1 }, stage, context, TestContext.Current.CancellationToken);
+        var second = await new ComputeTransformType().Transform(new Dictionary<string, object?> { ["id"] = 2 }, stage, context, TestContext.Current.CancellationToken);
+
+        first.IsSuccess.ShouldBeTrue();
+        first.Value!["stamp"].ShouldBe(new DateTimeOffset(2026, 11, 9, 12, 0, 0, TimeSpan.Zero));
+        second.IsSuccess.ShouldBeTrue();
+        second.Value!["stamp"].ShouldBe(first.Value["stamp"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ANowCalculationInARunWithNoClockFailsTheRecordWithClockMissing()
+    {
+        var (context, stage) = await NowRun(null);
+
+        var result = await new ComputeTransformType().Transform(new Dictionary<string, object?> { ["id"] = 1 }, stage, context, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Code?.Name.ShouldBe("ClockMissing");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
     public async Task ADivisionByZeroFailsTheRecordWithItsCode()
     {
         var (context, stage) = await ResolvedRun();
@@ -233,5 +344,20 @@ public sealed class ComputeTransformTypeTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Count().ShouldBe(2);
+    }
+
+    // A clock that moves on every read, to show the stage reads it once for the run and not once per record.
+    private sealed class SteppingClock : TimeProvider
+    {
+        private DateTimeOffset _now;
+
+        public SteppingClock(DateTimeOffset start) => _now = start;
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            var read = _now;
+            _now = _now.AddSeconds(5);
+            return read;
+        }
     }
 }

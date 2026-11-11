@@ -42,6 +42,9 @@ public sealed class FlowBuildContext
     /// <param name="built">The Built transformations the graph's Compute tools apply, compiled for the run (optional; absent when the graph has no Compute tool).</param>
     /// <param name="fieldChains">The chains of named transformations the field mappings of the graph's tools run, resolved for the run (optional; absent when no mapping states one).</param>
     /// <param name="test">How a test run differs from a real run (optional; absent for a real run).</param>
+    /// <param name="clock">The run's clock, which a stage's transform context offers a calculation that reads the time (optional; absent when the host has none).</param>
+    /// <param name="commitReportInterval">How often a destination writes the rows it has committed to the run's record (FDW-4957); zero writes after every commit.</param>
+    /// <param name="unmatchedKeySample">How many unmatched keys an update or delete destination's report carries (FDW-4988); zero carries only the count.</param>
     public FlowBuildContext(
         string pipelineName,
         Guid pipelineId,
@@ -53,11 +56,14 @@ public sealed class FlowBuildContext
         IReadOnlyDictionary<string, object?> parameters,
         IReadOnlyList<PipelineLinkConfiguration> links,
         ILogger logger,
+        TimeSpan commitReportInterval,
+        int unmatchedKeySample,
         IEtlGateway? etlGateway = null,
         IRuleNotifier? notifier = null,
         BuiltCompilation? built = null,
         IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>? fieldChains = null,
-        GraphTestRun? test = null)
+        GraphTestRun? test = null,
+        TimeProvider? clock = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pipelineName);
         ArgumentNullException.ThrowIfNull(links);
@@ -68,6 +74,7 @@ public sealed class FlowBuildContext
         Built = built;
         FieldChains = fieldChains is null ? NoChains : fieldChains;
         Test = test;
+        Clock = clock;
         ExecutionId = executionId;
         ConnectionProvider = connectionProvider;
         Gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
@@ -76,6 +83,10 @@ public sealed class FlowBuildContext
         StartedAt = startedAt;
         Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentOutOfRangeException.ThrowIfLessThan(commitReportInterval, TimeSpan.Zero);
+        CommitReportInterval = commitReportInterval;
+        ArgumentOutOfRangeException.ThrowIfNegative(unmatchedKeySample);
+        UnmatchedKeySample = unmatchedKeySample;
         _inputs = links.ToLookup(link => link.ToComponent, link => link.ToInput, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -94,6 +105,7 @@ public sealed class FlowBuildContext
         Built = shared.Built;
         FieldChains = shared.FieldChains;
         Test = shared.Test;
+        Clock = shared.Clock;
         ExecutionId = shared.ExecutionId;
         ConnectionProvider = shared.ConnectionProvider;
         Gateway = shared.Gateway;
@@ -102,6 +114,8 @@ public sealed class FlowBuildContext
         StartedAt = shared.StartedAt;
         Parameters = parameters;
         Logger = shared.Logger;
+        CommitReportInterval = shared.CommitReportInterval;
+        UnmatchedKeySample = shared.UnmatchedKeySample;
     }
 
     /// <summary>
@@ -148,6 +162,15 @@ public sealed class FlowBuildContext
 
     /// <summary>Gets how a test run differs from a real run; none for a real run.</summary>
     public GraphTestRun? Test { get; }
+
+    /// <summary>Gets the run's clock; <see langword="null"/> when the host registered none.</summary>
+    public TimeProvider? Clock { get; }
+
+    /// <summary>Gets how often a destination writes the rows it has committed to the run's record (FDW-4957); zero writes after every commit.</summary>
+    public TimeSpan CommitReportInterval { get; }
+
+    /// <summary>Gets how many unmatched keys an update or delete destination's report carries (FDW-4988); zero carries only the count.</summary>
+    public int UnmatchedKeySample { get; }
 
     /// <summary>Gets the chains of named transformations the mappings on the graph's component inputs run, by mapping id; none when no mapping states one.</summary>
     public IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> FieldChains { get; }
@@ -198,7 +221,8 @@ public sealed class FlowBuildContext
         dataGateway: Gateway,
         parameters: Parameters,
         builtCalculations: Built?.Calculations,
-        builtSets: Built?.Sets);
+        builtSets: Built?.Sets,
+        clock: Clock);
 
     /// <summary>Gives how many rows the destinations built so far have loaded, across the whole run.</summary>
     /// <returns>The rows loaded.</returns>

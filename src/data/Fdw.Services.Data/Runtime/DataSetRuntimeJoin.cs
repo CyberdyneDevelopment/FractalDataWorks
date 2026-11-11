@@ -41,7 +41,7 @@ internal sealed class DataSetRuntimeJoin : IDataSetJoin
         Left = left;
         Right = right;
 
-        var resolvedType = JoinTypes.ByName(config.JoinType);
+        var resolvedType = StatedJoinType.Of(config.JoinType);
         if (ReferenceEquals(resolvedType, JoinTypes.NotFound))
             throw new ArgumentException(
                 $"Unknown join type '{config.JoinType}'. Valid values: {string.Join(", ", JoinTypes.All().Select(t => t.Name))}",

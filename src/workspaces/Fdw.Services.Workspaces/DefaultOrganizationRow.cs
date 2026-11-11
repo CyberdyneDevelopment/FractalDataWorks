@@ -23,6 +23,6 @@ public sealed partial class DefaultOrganizationRow : IGenericConfiguration
     /// <summary>Gets or sets the organization's name.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the Id of the workspace that is the organization's default.</summary>
-    public Guid DefaultWorkspaceId { get; set; }
+    /// <summary>Gets or sets the Id of the workspace that is the organization's default; null when it has none.</summary>
+    public Guid? DefaultWorkspaceId { get; set; }
 }

@@ -9,16 +9,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <!-- Build configuration settings -->
     <!-- Base configs: Debug, Develop, Release, Test -->
-    <!-- Local variants (-Local suffix): Use local NuGet packages -->
-    <Configurations>Debug;Debug-Local;Develop;Develop-Local;Release;Release-Local;Test;Test-Local</Configurations>
+    <Configurations>Debug;Develop;Release;Test</Configurations>
 
-    <!-- Detect if this is a -Local configuration -->
-    <IsLocalConfiguration>false</IsLocalConfiguration>
-    <IsLocalConfiguration Condition="$(Configuration.EndsWith('-Local'))">true</IsLocalConfiguration>
-    <!-- Extract base configuration name (strip -Local suffix) -->
-    <BaseConfiguration>$(Configuration)</BaseConfiguration>
-    <BaseConfiguration Condition="'$(IsLocalConfiguration)' == 'true'">$(Configuration.Replace('-Local', ''))</BaseConfiguration>
-    
+
     <!-- Build settings -->
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
@@ -103,8 +96,8 @@
           CopyToOutputDirectory="Never" />
   </ItemGroup>
 
-  <!-- Debug / Debug-Local: Minimal checks for fast development -->
-  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Debug'">
+  <!-- Debug: Minimal checks for fast development -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
@@ -117,8 +110,8 @@
     <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
   </PropertyGroup>
 
-  <!-- Develop / Develop-Local: Development with analyzers, warnings not errors -->
-  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Develop'">
+  <!-- Develop: Development with analyzers, warnings not errors -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Develop'">
     <DefineConstants>TRACE;DEVELOP</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
@@ -132,8 +125,8 @@
     <ReportAnalyzer>true</ReportAnalyzer>
   </PropertyGroup>
 
-  <!-- Release / Release-Local: Production ready, strict checks -->
-  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Release'">
+  <!-- Release: Production ready, strict checks -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DefineConstants>TRACE;RELEASE</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
@@ -153,8 +146,8 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
-  <!-- Test / Test-Local: Test builds -->
-  <PropertyGroup Condition="'$(BaseConfiguration)' == 'Test'">
+  <!-- Test: Test builds -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Test'">
     <DefineConstants>TRACE;TEST</DefineConstants>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
@@ -185,31 +178,21 @@
     <PackageReference Include="System.Collections.Immutable" />
   </ItemGroup>
 
-  <!-- Local NuGet Development Configuration -->
+
+  <!-- Version: EXPLICIT and hand-set, and since the allocated release (FDW-4784) only the LINE. The major.minor of VersionPrefix is the line that
+       development builds and consumers float on (<FdwLine>); a release gives each package that changed its OWN version, decided by
+       the release tooling from the built public API (public/tools/versioning, scripts/release-allocated.sh), and passes it for that
+       project only. Nothing here stamps a released package. Moving the line is the /version-bump skill.
+
+       Why not MinVer/tag inference: the line must change only when we decide it changes.
+
+       When no release passes a version (a local build), the package version is VersionPrefix + optional -VersionSuffix
+       => 1.0.2 + rc.1 = 1.0.2-rc.1 (SemVer 2.0, 3-digit + prerelease). AssemblyVersion/FileVersion are the 4-part form
+       (1.0.0.0) because assembly identity is always 4-part and cannot carry a prerelease tag; NuGet normalizes the trailing zero
+       revision away. A release sets both per assembly: FileVersion from the package's x.y.z, AssemblyVersion never below the floor
+       the baseline release recorded (a dll that is not rebuilt asks for its dependencies at the version it was built against). -->
   <PropertyGroup>
-    <!-- Default config filename - can be overridden in project files -->
-    <LocalNugetConfigFileName Condition="'$(LocalNugetConfigFileName)' == ''">Fdw.Local.nuget.config</LocalNugetConfigFileName>
-  </PropertyGroup>
-
-  <!-- Use local NuGet config when using a -Local configuration and LocalNugetFolder is set -->
-  <PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
-    <RestoreConfigFile>$(LocalNugetFolder)/$(LocalNugetConfigFileName)</RestoreConfigFile>
-  </PropertyGroup>
-
-  <!-- Version: EXPLICIT and hand-set. This is the single source of truth for the version of
-       every FDW package, and for the <FdwVersion> the whole ecosystem pins. Every versioned repo
-       in the workspace is LOCKSTEP to this number (see workspace CLAUDE.md "Versioning").
-
-       Why not MinVer/tag inference: the version must change only when we decide it changes.
-       Height-based inference bumped the version on every commit and constantly drifted FDW out
-       of sync with the apps pinning it. Bump prefix/suffix here, pack, and propagate — nothing else.
-
-       The package version is VersionPrefix + optional -VersionSuffix => 1.0.2 + rc.1 = 1.0.2-rc.1
-       (SemVer 2.0, 3-digit + prerelease). AssemblyVersion/FileVersion are the 4-part form
-       (1.0.0.0) because assembly identity is always 4-part and cannot carry a prerelease tag;
-       NuGet normalizes the trailing zero revision away, so the PACKAGE is 1.0.0-rc.1. -->
-  <PropertyGroup>
-    <VersionPrefix>1.5.5</VersionPrefix>
+    <VersionPrefix>1.5.6</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>
@@ -233,7 +216,7 @@
   <!-- Release-only suppressions -->
   <PropertyGroup>
     <!-- CS1570: Invalid XML comment — source generators emit XML docs that consuming projects can't control -->
-    <NoWarn Condition="'$(BaseConfiguration)' == 'Release'">$(NoWarn);CS1570</NoWarn>
+    <NoWarn Condition="'$(Configuration)' == 'Release'">$(NoWarn);CS1570</NoWarn>
   </PropertyGroup>
 
   <!-- Analyzers - Applied to all projects except samples -->

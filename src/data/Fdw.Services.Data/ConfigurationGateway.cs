@@ -62,6 +62,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
 
     private readonly DataGatewayResultCache? _cache;
     private readonly MainDataGatewayConfiguration? _options;
+    private readonly ICacheChangePublisher? _publisher;
 
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
 
@@ -91,6 +92,10 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
     /// layer's own accessor is: a null accessor yields a null context, which every session-context
     /// scheme must govern, so the partition still names exactly what the session will apply.
     /// </param>
+    /// <param name="publisher">
+    /// Tells the other processes which configuration changed, so their caches drop it too (FDW-4782). Null only
+    /// for a gateway whose store no other process caches, such as the server tier's file store.
+    /// </param>
     public ConfigurationGateway(
         string connectionName,
         IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> connectionProvider,
@@ -98,7 +103,8 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
         MainDataGatewayConfiguration? options = null,
-        IAuthenticationContextAccessor? authenticationContextAccessor = null)
+        IAuthenticationContextAccessor? authenticationContextAccessor = null,
+        ICacheChangePublisher? publisher = null)
     {
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)
             ? throw new ArgumentNullException(nameof(connectionName))
@@ -109,6 +115,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         _cache = cache;
         _options = options;
         _authenticationContextAccessor = authenticationContextAccessor;
+        _publisher = publisher;
 
         _connectionTypeLazy = new Lazy<IGenericResult<IConnectionType>>(
             ResolveConnectionType,
@@ -134,17 +141,23 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
     /// <inheritdoc/>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
     {
-        bool isQuery = command is IQueryCommand;
-
-        // Recorded on entry, from the command, whoever ends up running the read: a call answered from the cache,
-        // or one that joins a read already in flight, still made this read, and a derived value being built
-        // depends on it.
-        RecordForDerivedBuild(command, target);
-
         string? cacheKey = null;
+        IReadOnlyList<string> readTags = [];
         var cacheCeiling = TimeSpan.MaxValue;
-        if (CacheEnabled && isQuery)
+        if (CacheEnabled && command is IQueryCommand query)
         {
+            // Everything the read reads is a tag its entry is dropped by: its own container and each container it
+            // joins (FDW-4782). A join to a container the schema does not declare fails, as the rows read does.
+            var tags = RowTags(query, target);
+            if (!tags.IsSuccess || tags.Value is not { } joinedTags)
+                return tags.ToNewResult<T>();
+
+            readTags = joinedTags;
+
+            // Recorded on entry, whoever ends up running the read: a call answered from the cache, or one that
+            // joins a read already in flight, still made this read, and a derived value being built depends on it.
+            RecordForDerivedBuild(readTags);
+
             var key = CacheKeyFor(command, target, typeof(T).FullName);
             if (!key.IsSuccess)
                 return key.ToNewResult<T>();
@@ -165,24 +178,33 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         {
             return await _cache!.Coalesce(
                 cacheKey,
-                () => ReadAndCache<T>(command, target, isQuery, cacheKey, cacheCeiling, cancellationToken),
+                () => ReadAndCache<T>(command, target, cacheKey, readTags, cacheCeiling, cancellationToken),
                 cancellationToken).ConfigureAwait(false);
         }
 
-        return await ReadAndCache<T>(command, target, isQuery, cacheKey, cacheCeiling, cancellationToken).ConfigureAwait(false);
+        return await ReadAndCache<T>(command, target, cacheKey, readTags, cacheCeiling, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IGenericResult<T>> ReadAndCache<T>(
         IDataCommand command,
         DataStoreTarget target,
-        bool isQuery,
         string? cacheKey,
+        IReadOnlyList<string> readTags,
         TimeSpan cacheCeiling,
         CancellationToken cancellationToken)
     {
+        if (cacheKey is null)
+        {
+            var written = await ExecuteCore<T>(command, target, cancellationToken).ConfigureAwait(false);
+            ApplyWriteOutcome(command, target, written);
+            return written;
+        }
+
+        // The clock before the read: a write that lands while it runs keeps its result out of the cache (FDW-4782).
+        var readFrom = _cache!.Now();
         var result = await ExecuteCore<T>(command, target, cancellationToken).ConfigureAwait(false);
 
-        ApplyCacheOutcome(command, target, result, isQuery, cacheKey, cacheCeiling);
+        KeepRead(command, result, cacheKey, readTags, cacheCeiling, readFrom);
         return result;
     }
 
@@ -285,18 +307,13 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         return GenericResult<T>.Success(entry.Value);
     }
 
-    // Records, in the derived-value build running on this async flow if there is one, the tags a query would be
-    // cached under. Nothing is worked out when no build is running.
-    private void RecordForDerivedBuild(IDataCommand command, DataStoreTarget target)
-    {
-        if (command is IQueryCommand && _derivedScope.Value is { } building)
-            building.Note(CacheKeyBuilder.GetInvalidationTags(command, target));
-    }
-
+    // Records, in the derived-value build running on this async flow if there is one, the tags a read is cached
+    // under and the cache's clock as the read begins: the build is not kept when one of them is invalidated after
+    // the read under it began (FDW-4782). A scope exists only while the cache is on.
     private void RecordForDerivedBuild(IReadOnlyList<string> tags)
     {
         if (_derivedScope.Value is { } building)
-            building.Note(tags);
+            building.Note(tags, _cache!.Now());
     }
 
     private async Task<IGenericResult<DerivedEntry<T>>> BuildAndKeep<T>(
@@ -326,7 +343,8 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         if (!built.IsSuccess || built.Value is not { } value)
             return built.ToNewResult<DerivedEntry<T>>();
 
-        var entry = new DerivedEntry<T>(value, scope.Tags());
+        var readFrom = scope.ReadFrom();
+        var entry = new DerivedEntry<T>(value, [.. readFrom.Keys]);
         var result = GenericResult<DerivedEntry<T>>.Success(entry);
 
         // Kept only when something could drop it: a build that read nothing through this gateway has no
@@ -345,7 +363,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         }
 
         // The same duration a read is kept for: the default, capped by what the connection type permits.
-        _cache!.Set(cacheKey, result, entry.Tags, ceiling < CachePolicy.DefaultDuration ? ceiling : CachePolicy.DefaultDuration);
+        _ = _cache!.Set(cacheKey, result, readFrom, ceiling < CachePolicy.DefaultDuration ? ceiling : CachePolicy.DefaultDuration);
         return result;
     }
 
@@ -355,48 +373,58 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
     public void InvalidateCachedResults(DataStoreTarget target)
     {
         ArgumentNullException.ThrowIfNull(target);
-
-        if (!CacheEnabled)
-            return;
-
-        _cache!.InvalidateByTag(CacheKeyBuilder.TagFor(target));
+        Invalidated([CacheKeyBuilder.TagFor(target)]);
     }
 
     private bool CacheEnabled => _cache is not null && _options is not null && _options.EnableCache;
 
-    private void ApplyCacheOutcome<T>(
-        IDataCommand command,
-        DataStoreTarget target,
-        IGenericResult<T> result,
-        bool isQuery,
-        string? cacheKey,
-        TimeSpan cacheCeiling)
+    // The one place a change to configuration this gateway reaches is acted on: published to the other processes
+    // (whether or not this one keeps a cache, since theirs may), and dropped from this process's cache (FDW-4782).
+    private void Invalidated(IReadOnlyList<string> tags)
     {
-        if (!CacheEnabled || !result.IsSuccess)
+        _publisher?.Publish(tags);
+
+        if (CacheEnabled)
+            _cache!.InvalidateByTags(tags);
+    }
+
+    // A command that is not a query and succeeded has changed what it targets: every entry tagged with it is dropped,
+    // here and in the other processes. Every write overload comes through here, generic or not.
+    private void ApplyWriteOutcome(IDataCommand command, DataStoreTarget target, IGenericResult result)
+    {
+        if (command is IQueryCommand || !result.IsSuccess)
             return;
 
-        if (isQuery)
+        Invalidated(CacheKeyBuilder.GetInvalidationTags(command, target));
+    }
+
+    private void KeepRead<T>(
+        IDataCommand command,
+        IGenericResult<T> result,
+        string cacheKey,
+        IReadOnlyList<string> readTags,
+        TimeSpan cacheCeiling,
+        long readFrom)
+    {
+        if (!result.IsSuccess)
+            return;
+
+        // A successful-but-empty read is not a fact worth remembering. Whatever produced it --
+        // the deny principal seeing nothing before RequestContextMiddleware establishes a real
+        // context, a row genuinely not existing yet, a container that hasn't propagated -- caching
+        // it makes that transient emptiness durable for up to CachePolicy.DefaultDuration, so every read
+        // in that window repeats the same wrong answer instead of getting a chance to see the
+        // real one. IsSuccess only proves the query ran; it says nothing about whether the answer
+        // is one worth keeping.
+        if (!IsEmptyResult(result.Value))
         {
-            // A successful-but-empty read is not a fact worth remembering. Whatever produced it --
-            // the deny principal seeing nothing before RequestContextMiddleware establishes a real
-            // context, a row genuinely not existing yet, a container that hasn't propagated -- caching
-            // it makes that transient emptiness durable for up to CachePolicy.DefaultDuration, so every read
-            // in that window repeats the same wrong answer instead of getting a chance to see the
-            // real one. IsSuccess only proves the query ran; it says nothing about whether the answer
-            // is one worth keeping.
-            if (cacheKey is not null && !IsEmptyResult(result.Value))
-            {
-                _cache!.Set(
-                    cacheKey,
-                    result,
-                    CacheKeyBuilder.GetInvalidationTags(command, target),
-                    CachePolicy.GetDuration(command, cacheCeiling));
-            }
-
-            return;
+            _ = _cache!.Set(
+                cacheKey,
+                result,
+                readTags,
+                CachePolicy.GetDuration(command, cacheCeiling),
+                readFrom);
         }
-
-        _cache!.InvalidateByTags(CacheKeyBuilder.GetInvalidationTags(command, target));
     }
 
     // Only collection-shaped results (IEnumerable<T> query results, not a single row or a scalar)
@@ -517,17 +545,19 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         }
 
         var container = containerResult.Value;
+        var connection = connectionResult.Value;
 
-        if (connectionResult.Value is not IRecordSourceConnection recordSourceConnection)
-        {
-            return GenericResult<IRecordSource<DataRecord>>.Failure(
-                ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
-                    "Connection does not support streaming record sources (IRecordSourceConnection)"));
-        }
-
+        // The same choice every gateway makes (FDW-4911): a cursor, keyset pages by the declared primary key, or a refusal.
         try
         {
-            return await recordSourceConnection.OpenRecordSource(command, container, cancellationToken).ConfigureAwait(false);
+            return await StableRead.OpenContainer(
+                command,
+                container,
+                connection,
+                (page, ct) => connection.Execute<IEnumerable<Dictionary<string, object?>>>(page, container, ct),
+                $"container '{container.Name}' of data store '{target.DataStore}'",
+                _logger,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -546,7 +576,14 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container, "DataStoreTarget.DataStore is required"));
         }
 
-        if (!CacheEnabled || _cache is not { } cache || command is not IQueryCommand query)
+        if (command is not IQueryCommand query)
+        {
+            var written = await ReadRows(command, target, rowType, cancellationToken).ConfigureAwait(false);
+            ApplyWriteOutcome(command, target, written);
+            return written;
+        }
+
+        if (!CacheEnabled || _cache is not { } cache)
             return await ReadRows(command, target, rowType, cancellationToken).ConfigureAwait(false);
 
         // The typed-list child read a configuration aggregate makes once per owner row: cached like every other
@@ -573,14 +610,16 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
             cacheKey,
             async () =>
             {
+                // The clock before the read, for the reason given on the typed read (FDW-4782).
+                var readFrom = cache.Now();
                 var read = await ReadRows(command, target, rowType, cancellationToken).ConfigureAwait(false);
 
                 // Kept even when it is empty: an owner with no children of a kind is a fact about an owner that
                 // was just read, and a write to the child table drops it. A root read that finds nothing is not
-                // kept (see ApplyCacheOutcome), because that one may just be a row that does not exist yet.
+                // kept (see KeepRead), because that one may just be a row that does not exist yet.
                 if (read.IsSuccess)
                 {
-                    cache.Set(cacheKey, read, rowTags, CachePolicy.GetDuration(command, key.Value.Ceiling));
+                    _ = cache.Set(cacheKey, read, rowTags, CachePolicy.GetDuration(command, key.Value.Ceiling), readFrom);
                 }
 
                 return read;
@@ -691,21 +730,33 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
 
         var container = containerResult.Value;
 
+        IGenericResult result;
         try
         {
-            return await connection.Execute(command, container, cancellationToken).ConfigureAwait(false);
+            result = await connection.Execute(command, container, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             return GenericResult.Failure(
                 ConfigurationGatewayLog.ExecuteException(_logger, ex, target.Container));
         }
+
+        ApplyWriteOutcome(command, target, result);
+        return result;
     }
 
     /// <inheritdoc/>
     public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(GenericResult<T>.Failure(
+            ConfigurationGatewayLog.DataSetTargetNotSupported(_logger, target.DataSet)));
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Refused as <see cref="Execute{T}(IDataCommand, DataSetTarget, CancellationToken)"/> refuses: configuration has no data sets.</remarks>
+    public Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(GenericResult<IRecordSource<DataRecord>>.Failure(
             ConfigurationGatewayLog.DataSetTargetNotSupported(_logger, target.DataSet)));
     }
 

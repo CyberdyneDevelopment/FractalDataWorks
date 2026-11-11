@@ -139,9 +139,11 @@ public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfigura
     /// Gets or sets the command timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3284).
     /// </summary>
     /// <remarks>
-    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultCommandTimeoutSeconds, and
-    /// is not built when that is not set either.
+    /// No number is assumed here or in the column. A connection that states none takes the default its connection type declares
+    /// (<c>MsSqlConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before Register (FDW-4904). A create that leaves it out stores
+    /// nothing (<see cref="ResolvedAtUseAttribute"/>), so the default is resolved each time the connection is built.
     /// </remarks>
+    [ResolvedAtUse]
     public int? CommandTimeoutSeconds { get; set; }
 
     /// <inheritdoc/>
@@ -154,10 +156,73 @@ public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfigura
     /// Gets or sets the connection timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3580).
     /// </summary>
     /// <remarks>
-    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultConnectionTimeoutSeconds,
-    /// and is not built when that is not set either, as the command timeout is read (FDW-3284).
+    /// No number is assumed here or in the column. A connection that states none takes the default its connection type declares
+    /// (<c>MsSqlConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before Register (FDW-4904). A create that leaves it out stores
+    /// nothing (<see cref="ResolvedAtUseAttribute"/>), so the default is resolved each time the connection is built.
     /// </remarks>
+    [ResolvedAtUse]
     public int? ConnectionTimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the longest the health probe's <c>SELECT 1</c> may run, in seconds, or <see langword="null"/> when the connection states none
+    /// (FDW-4904).
+    /// </summary>
+    /// <remarks>
+    /// Its own bound and not the command timeout: a connection may state a long command timeout for its work, and a probe of a server that does
+    /// not answer must report it unhealthy promptly. A connection that states none takes the default its connection type declares
+    /// (<c>MsSqlConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before Register; a create
+    /// that leaves it out stores nothing (<see cref="ResolvedAtUseAttribute"/>).
+    /// </remarks>
+    [ResolvedAtUse]
+    public int? ProbeTimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the longest the separate <c>sp_set_session_context</c> batch may run, in seconds, or <see langword="null"/> when the connection
+    /// states none (FDW-4904): the batch a bulk copy, a stored procedure, a transaction or the probe runs before its own work.
+    /// </summary>
+    /// <remarks>
+    /// Its own bound and not the command timeout: a batch that cannot land must fail fast however long the connection's work may run. A
+    /// connection that states none takes the default its connection type declares (<c>MsSqlConnectionType</c>'s DeclaredDefaults), which a host
+    /// changes with <c>ServiceTypeDefaults.Override</c> before Register; a create that leaves it out stores nothing
+    /// (<see cref="ResolvedAtUseAttribute"/>). The batched path carries the keys inside the command it runs, and so takes that command's timeout.
+    /// </remarks>
+    [ResolvedAtUse]
+    public int? SessionContextApplyTimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the rows a SQL Server bulk copy sends to the server in each batch, or <see langword="null"/> when the connection states none
+    /// (FDW-4959).
+    /// </summary>
+    /// <remarks>
+    /// A connection that states none takes the default its connection type declares (<c>MsSqlConnectionType</c>'s DeclaredDefaults), which a host
+    /// changes with <c>ServiceTypeDefaults.Override</c> before Register; a create that leaves it out stores nothing
+    /// (<see cref="ResolvedAtUseAttribute"/>).
+    /// </remarks>
+    [ResolvedAtUse]
+    public int? BulkCopyBatchSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the longest a SQL Server bulk copy may run, in seconds, or <see langword="null"/> when the connection states none (FDW-4959).
+    /// </summary>
+    /// <remarks>
+    /// Its own bound and not the command timeout: a bulk copy moves far more rows than one command. A connection that states none takes the
+    /// default its connection type declares (<c>MsSqlConnectionType</c>'s DeclaredDefaults), which a host changes with
+    /// <c>ServiceTypeDefaults.Override</c> before Register; a create that leaves it out stores nothing (<see cref="ResolvedAtUseAttribute"/>).
+    /// </remarks>
+    [ResolvedAtUse]
+    public int? BulkCopyTimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a SQL Server bulk copy takes a table lock for its duration, or <see langword="null"/> when the connection states none
+    /// (FDW-4959).
+    /// </summary>
+    /// <remarks>
+    /// A table lock loads faster and blocks other writers of the table while it lasts. A connection that states none takes the default its
+    /// connection type declares (<c>MsSqlConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before
+    /// Register; a create that leaves it out stores nothing (<see cref="ResolvedAtUseAttribute"/>).
+    /// </remarks>
+    [ResolvedAtUse]
+    public bool? BulkCopyTableLock { get; set; }
 
     /// <summary>
     /// Gets or sets the default schema to use for operations.

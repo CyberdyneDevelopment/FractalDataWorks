@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Abstractions;
 using Fdw.Collections;
@@ -9,6 +10,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Caching;
 using Fdw.Services.Data.Configuration;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.SecretManagers;
@@ -58,12 +60,31 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
     /// </remarks>
     public static int KeyChunkSize { get; set; } = 1000;
 
+    /// <summary>
+    /// How often a host that keeps a result cache looks at the configuration changes the other hosts published, and drops them from
+    /// its cache (FDW-4782), when the setting <c>CacheChangePollIntervalSeconds</c> states no number.
+    /// </summary>
+    /// <remarks>
+    /// This is where the default is declared, and a host changes it at registration, before <c>Register</c> runs; a value that is not
+    /// positive is refused there. A number the setting states wins. It is a tuning number: a shorter one shows another host's write
+    /// sooner, a longer one reads the change tokens less often.
+    /// </remarks>
+    public static TimeSpan CacheChangePollInterval { get; set; } = TimeSpan.FromSeconds(10);
+
 
     /// <summary>
     /// The connection an endpoint's bare, unnamed <see cref="IConfigurationGateway"/> resolves
     /// through: the one the host declared as <c>ConnectionRoles.Platform</c>.
     /// </summary>
     public static string ConfigurationConnection => PlatformConnection.Name;
+
+    /// <summary>
+    /// Whether configuration changes are published to the other hosts and looked at from them (FDW-4782): only when the platform
+    /// store is not the server tier. A host whose platform store is the server tier's file store (such as an MCP host that keeps all
+    /// its configuration there) has no store the other hosts' caches read, and that tier is not changed at runtime.
+    /// </summary>
+    public static bool PublishesCacheChanges
+        => !string.Equals(ConfigurationConnection, ServerTierConnectionName, StringComparison.Ordinal);
 
     /// <summary>
     /// Sets this collection's phases: the schema and the gateways over it, both in Register.
@@ -93,6 +114,16 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                         loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
                             ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance,
                         KeyChunkSize));
+            }
+
+            // An interval of no time looks without pause: refused here, where a host sets it.
+            if (CacheChangePollInterval <= TimeSpan.Zero)
+            {
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    CacheChangeLog.DeclaredIntervalInvalid(
+                        loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
+                            ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance,
+                        CacheChangePollInterval));
             }
 
             var schema = ConfigurationSchemaLoader.Load(SchemaFileName);
@@ -126,6 +157,17 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             var serverTierCache = new DataGatewayResultCache(new MemoryCache(new MemoryCacheOptions()), loggerFactory);
             var serverTierOptions = new MainDataGatewayConfiguration { IsEnabled = true, EnableCache = true };
 
+            // Tells the other hosts which configuration a write here changed, by a token per tag in the platform store
+            // (FDW-4782). Every gateway but the server tier's hands it the tags it changed, whether or not this host keeps
+            // a cache, since the other hosts may. Asked for the platform gateway at each flush, not now: the gateways are
+            // what take it.
+            builder.Services.TryAddSingleton<ICacheChangePublisher>(sp =>
+                new CacheChangePublisher(
+                    () => sp.GetRequiredService<IConfigurationGatewayProvider>().Get(ConfigurationConnection),
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
+                    CacheChangeTokens.Target,
+                    sp.GetService<ILogger<CacheChangePublisher>>()));
+
             builder.Services.TryAddSingleton(sp =>
                 new ConfigurationGatewayProvider(
                     connectionName => Build(sp, connectionName, loggerFactory, serverTierCache, serverTierOptions),
@@ -137,6 +179,11 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             // cannot be reached. Takes the cache the gateways take, and how often to look from the setting ResetWatchIntervalSeconds
             // (FDW-3207); a host with no cache or no settings says so and watches nothing.
             builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, DatabaseResetWatcher>(DatabaseResetWatcher.Create));
+
+            // Drops from this host's cache the configuration other hosts changed, from the tokens they publish (FDW-4782).
+            // A host with no cache looks at nothing; a host with one looks as often as the setting
+            // CacheChangePollIntervalSeconds states, or CacheChangePollInterval declares when it states nothing.
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, CacheChangePoller>(CacheChangePoller.Create));
 
             // The declared connections themselves, for platform plumbing that needs one by name -- the credential
             // vault over AuthDb. Same source and factory resolution as the gateways above, so a connection the host
@@ -184,10 +231,45 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                         log, ConfigurationConnection, bareGateway.CurrentMessage ?? string.Empty));
             }
 
+            // The container the cache change tokens live in has to be one the host declares: without it no write here
+            // reaches the other hosts, and nothing would say so until their caches served old values (FDW-4782).
+            var tokenLog = loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
+                ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance;
+            var tokenContainer = PublishesCacheChanges
+                ? TokenContainerDeclared(bareGateway.Value, tokenLog)
+                : GenericResult.Success();
+            if (tokenContainer.IsFailure)
+            {
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    CacheChangeLog.TokenContainerNotDeclared(
+                        tokenLog,
+                        CacheChangeTokens.ContainerName,
+                        CacheChangeTokens.PathName,
+                        CacheChangeTokens.Target.DataStore,
+                        tokenContainer.FailureReason().Message));
+            }
+
             builder.Services.TryAddScoped(_ => bareGateway.Value);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
+    }
+
+    // Whether the platform store declares the token container: the store, its path, then the container.
+    private static IGenericResult TokenContainerDeclared(IConfigurationGateway gateway, ILogger logger)
+    {
+        var store = gateway.DataStores.FirstOrDefault(
+            s => string.Equals(s.Name, CacheChangeTokens.Target.DataStore, StringComparison.OrdinalIgnoreCase));
+        if (store is null)
+            return GenericResult.Failure(ConfigurationGatewayLog.ResolveContainerStoreNotFound(
+                logger, CacheChangeTokens.Target.DataStore, gateway.DataStores.Count, string.Join(", ", gateway.DataStores.Select(s => s.Name))));
+
+        var path = store.Path(CacheChangeTokens.PathName);
+        if (!path.IsSuccess || path.Value is null)
+            return path;
+
+        var container = path.Value.Container(CacheChangeTokens.ContainerName);
+        return container.IsSuccess && container.Value is not null ? GenericResult.Success() : container;
     }
 
     /// <summary>The connection this framework's own configuration is read through.</summary>
@@ -250,7 +332,12 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 string.Equals(connectionName, ServerTierConnectionName, System.StringComparison.Ordinal)
                     ? serverTierOptions
                     : services.GetService<MainDataGatewayConfiguration>(),
-                services.GetService<IAuthenticationContextAccessor>()));
+                services.GetService<IAuthenticationContextAccessor>(),
+                // The server tier is a file store no other host caches, and is not changed at runtime: it publishes nothing,
+                // and nothing is published at all when the platform store is that tier (there is no token container to write).
+                string.Equals(connectionName, ServerTierConnectionName, System.StringComparison.Ordinal) || !PublishesCacheChanges
+                    ? null
+                    : services.GetService<ICacheChangePublisher>()));
     }
 
 

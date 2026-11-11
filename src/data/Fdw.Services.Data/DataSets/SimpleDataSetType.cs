@@ -9,6 +9,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -31,7 +32,7 @@ namespace Fdw.Services.Data;
 /// for one execution from the <see cref="DataSetExecutionContext"/>.
 /// </remarks>
 [TypeOption(typeof(DataSetTypes), "Simple")]
-public sealed class SimpleDataSetType : DataSetTypeBase
+public sealed class SimpleDataSetType : DataSetTypeBase, IStreamingDataSetType
 {
     /// <summary>Initializes a new instance of the <see cref="SimpleDataSetType"/> class.</summary>
     public SimpleDataSetType()
@@ -80,16 +81,99 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         DataGatewayLogger.ExecutingSimpleDataSet(ctx.Logger, ctx.Config.Name);
         var sourceConfig = sources[0];
 
-        return isWrite
-            ? await ExecuteSourceQuery<T>(ctx, command, sourceConfig, ct).ConfigureAwait(false)
-            : await ExecuteRead<T>(ctx, command, sourceConfig, ct).ConfigureAwait(false);
+        if (!isWrite)
+            return await ExecuteRead<T>(ctx, command, sourceConfig, ct).ConfigureAwait(false);
+
+        // A write through a data set with its own filters touches only the rows they keep (FDW-5069).
+        var write = DataSetWriteScope.For(ctx, command, ResolveFieldMappingsForSource(ctx, sourceConfig), sourceConfig.SourceName);
+        return write.IsFailure || write.Value is not { } scoped
+            ? write.ToNewResult<T>()
+            : await ExecuteSourceQuery<T>(ctx, scoped, sourceConfig, ct).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The one source's connection opens a cursor over the caller's filter and order in the store's names, with no paging; each batch of
+    /// its rows is shaped as a page of the data set is (renames, field transformations, calculated fields), so a streamed row is the row a
+    /// page would carry (FDW-4911). A read that aggregates, a data set that does not have exactly one source, or a source whose connection
+    /// opens no cursor cannot be streamed, and the answer says so with no source.
+    /// </remarks>
+    public async Task<IGenericResult<IRecordSource<DataRecord>?>> OpenStream(
+        DataSetExecutionContext context, IDataCommand command, int batchSize, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var (answer, plan) = StreamQuery(context, command);
+        if (plan is null)
+            return answer;
+
+        var resolved = await ResolveSource(context, plan.Source, cancellationToken).ConfigureAwait(false);
+        if (resolved.IsFailure)
+            return resolved.ToNewResult<IRecordSource<DataRecord>?>();
+
+        var (container, connection) = resolved.Value;
+        if (connection is not IRecordSourceConnection cursorConnection)
+            return GenericResult<IRecordSource<DataRecord>?>.Success(null);
+
+        var opened = await cursorConnection.OpenRecordSource(plan.Query, container, cancellationToken).ConfigureAwait(false);
+        if (opened.IsFailure || opened.Value is not { } cursor)
+            return opened.ToNewResult<IRecordSource<DataRecord>?>();
+
+        DataGatewayLogger.ExecutingSimpleDataSet(context.Logger, context.Config.Name);
+        IRecordSource<DataRecord> narrowed = StableRead.ReturnedFieldNames(plan.Query, container) is { Count: > 0 } returned ? new NarrowedRecordSource(cursor, returned) : cursor;
+        return GenericResult<IRecordSource<DataRecord>?>.Success(new BatchShapedRecordSource(
+            StableRead.DataSetSchema(context.Config),
+            narrowed,
+            (batch, ct) => ShapeRows<IEnumerable<Dictionary<string, object?>>>(
+                context, GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(batch), plan.Mappings, plan.Source, ct),
+            batchSize));
+    }
+
+    // What a stream of the one source reads, or, with no plan, the answer when there is none to read: the caller's filter and order in the store's names,
+    // no paging. A write, more than one source or an aggregating read cannot be streamed; a filter that cannot be translated fails.
+    private static (IGenericResult<IRecordSource<DataRecord>?> Answer, StreamPlan? Plan) StreamQuery(DataSetExecutionContext context, IDataCommand command)
+    {
+        if (context.Config.Sources is not { Count: 1 } sources || command is IDataCommandWithInput or DeleteCommand)
+            return (GenericResult<IRecordSource<DataRecord>?>.Success(null), null);
+
+        var sourceConfig = sources[0];
+        var fieldMappings = ResolveFieldMappingsForSource(context, sourceConfig);
+        var aggregation = ResolveAggregation<IEnumerable<Dictionary<string, object?>>>(context, command, fieldMappings);
+        if (aggregation.ErrorResult is { } aggregationError)
+            return (aggregationError.ToNewResult<IRecordSource<DataRecord>?>(), null);
+
+        if (aggregation.Aggregation is not null)
+            return (GenericResult<IRecordSource<DataRecord>?>.Success(null), null);
+
+        // The data set's own filter goes with a stream as with a page (FDW-4997).
+        var readFilter = DataSetReadFilter.For(context, command);
+        if (readFilter.IsFailure)
+            return (readFilter.ToNewResult<IRecordSource<DataRecord>?>(), null);
+
+        var filter = TranslateFilterForSource<IEnumerable<Dictionary<string, object?>>>(context, readFilter.Value, fieldMappings, sourceConfig.SourceName);
+        if (filter.ErrorResult is { } filterError)
+            return (filterError.ToNewResult<IRecordSource<DataRecord>?>(), null);
+
+        var query = new QueryCommand<Dictionary<string, object?>>
+        {
+            Filter = filter.TranslatedFilter,
+            Ordering = PredicatePushdownAnalyzer.TranslateOrderingToPhysical((command as IQueryCommand)?.Ordering, fieldMappings),
+        };
+        return (GenericResult<IRecordSource<DataRecord>?>.Success(null), new StreamPlan(sourceConfig, fieldMappings, query));
+    }
+
+    // The one source a stream reads, its field mappings, and the query it is asked.
+    private sealed record StreamPlan(DataSetSourceConfiguration Source, IReadOnlyDictionary<string, string>? Mappings, QueryCommand<Dictionary<string, object?>> Query);
 
     private static async Task<IGenericResult<T>> ExecuteRead<T>(
         DataSetExecutionContext ctx, IDataCommand command, DataSetSourceConfiguration sourceConfig, CancellationToken ct)
     {
         var fieldMappings = ResolveFieldMappingsForSource(ctx, sourceConfig);
-        var filterResult = TranslateFilterForSource<T>(ctx, command, fieldMappings, sourceConfig.SourceName);
+        // The data set's own filter ANDed with the caller's: what every read of it is cut by (FDW-4997).
+        var readFilter = DataSetReadFilter.For(ctx, command);
+        if (readFilter.IsFailure)
+            return readFilter.ToNewResult<T>();
+
+        var filterResult = TranslateFilterForSource<T>(ctx, readFilter.Value, fieldMappings, sourceConfig.SourceName);
         if (filterResult.HasError)
             return filterResult.ErrorResult!;
 
@@ -326,14 +410,14 @@ public sealed class SimpleDataSetType : DataSetTypeBase
 
     private static (bool HasError, IFilterExpression? TranslatedFilter, IGenericResult<T>? ErrorResult) TranslateFilterForSource<T>(
         DataSetExecutionContext ctx,
-        IDataCommand command,
+        IFilterExpression? readFilter,
         IReadOnlyDictionary<string, string>? fieldMappings,
         string sourceName)
     {
-        if (command is not IQueryCommand { Filter: not null } queryCommand)
+        if (readFilter is null)
             return (false, null, null);
 
-        var translationResult = ctx.Pushdown.TranslateToPhysical(queryCommand.Filter, fieldMappings);
+        var translationResult = ctx.Pushdown.TranslateToPhysical(readFilter, fieldMappings);
         if (!translationResult.IsSuccess)
         {
             return (true, null, GenericResult<T>.Failure(
@@ -352,29 +436,41 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         DataSetSourceConfiguration sourceConfig,
         CancellationToken ct)
     {
+        var resolved = await ResolveSource(ctx, sourceConfig, ct).ConfigureAwait(false);
+        if (resolved.IsFailure)
+            return resolved.ToNewResult<T>();
+
+        var (container, connection) = resolved.Value;
+        return await RunOnConnection<T>(ctx, connection, container, command, sourceConfig, ct).ConfigureAwait(false);
+    }
+
+    // The source's container and the connection its store reaches it by: what a read of the source needs, paged or streamed.
+    private static async Task<IGenericResult<(IDataContainer Container, IDataConnection Connection)>> ResolveSource(
+        DataSetExecutionContext ctx, DataSetSourceConfiguration sourceConfig, CancellationToken ct)
+    {
         DataGatewayLogger.ExecuteSourceQueryEntering(ctx.Logger, sourceConfig.SourceName, sourceConfig.DataStoreName);
 
         var containerName = GetContainerName(sourceConfig);
         if (string.IsNullOrEmpty(containerName))
-            return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
+            return GenericResult<(IDataContainer, IDataConnection)>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
 
         var containerResult = await ctx.DataStoreProvider
             .Get(sourceConfig.DataStoreName, sourceConfig.PathValue, containerName, ct)
             .ConfigureAwait(false);
         if (!containerResult.IsSuccess || containerResult.Value == null)
-            return GenericResult<T>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
+            return GenericResult<(IDataContainer, IDataConnection)>.Failure(DataGatewayLogger.SourceContainerBuildFailed(ctx.Logger, sourceConfig.SourceName));
 
         if (containerResult.Value.Parent?.Store?.ConnectionId is not { } connectionId || connectionId == Guid.Empty)
-            return GenericResult<T>.Failure(
+            return GenericResult<(IDataContainer, IDataConnection)>.Failure(
                 DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName,
                     "the container's DataStore carries no ConnectionId"));
 
         var connectionResult = await ctx.ConnectionProvider.Get(connectionId, ct).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
-            return ConnectionFailures.Caused<T>(
+            return ConnectionFailures.Caused<(IDataContainer, IDataConnection)>(
                 connectionResult, DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.NoValueReason().Message));
 
-        return await RunOnConnection<T>(ctx, connectionResult.Value, containerResult.Value, command, sourceConfig, ct).ConfigureAwait(false);
+        return GenericResult<(IDataContainer, IDataConnection)>.Success((containerResult.Value, connectionResult.Value));
     }
 
     /// <summary>Sends the command to the source's connection and logs how it went.</summary>

@@ -24,7 +24,7 @@ public sealed class TenantFoundingTests
     private static readonly Guid Administrator = new("22222222-0000-0000-0000-000000000001");
     private static readonly Guid NewTenantId = new("11111111-0000-0000-0000-000000000009");
     private static readonly Guid DefaultOrganizationId = new("44444444-0000-0000-0000-000000000009");
-    private static readonly Guid DefaultWorkspaceId = new("66666666-0000-0000-0000-000000000009");
+    private static readonly Guid MadeWorkspaceId = new("66666666-0000-0000-0000-000000000009");
     private static readonly NewTenant Beta = new("Beta", "beta", null, null, true, "main");
 
     private static IGenericResult Failed(string reason) => GenericResult.Failure(new GenericMessage(reason));
@@ -33,7 +33,8 @@ public sealed class TenantFoundingTests
     {
         public Mock<ITenantWriter> Tenants { get; } = new();
         public Mock<IOrganizationWriter> Organizations { get; } = new();
-        public Mock<IOrganizationProvider> OrganizationReader { get; } = new();
+        public Mock<IWorkspaceFoundingPolicy> Policy { get; } = new();
+        public NewOrganization? OrganizationMade { get; private set; }
         public Mock<IDefaultWorkspaceFounding> DefaultWorkspaces { get; } = new();
         public Mock<IUserConfigurationProvider> Users { get; } = new();
         public Mock<IUserTenantConfigurationProvider> Memberships { get; } = new();
@@ -48,14 +49,11 @@ public sealed class TenantFoundingTests
                 .ReturnsAsync(GenericResult.Success());
             Tenants.Setup(t => t.Create(It.IsAny<NewTenant>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(NewTenantId));
             Tenants.Setup(t => t.Delete(NewTenantId, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
-            Organizations.Setup(o => o.Create(It.IsAny<NewOrganization>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(DefaultOrganizationId));
-            OrganizationReader.Setup(o => o.Get(DefaultOrganizationId, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(
-                new OrganizationConfiguration
-                {
-                    Id = DefaultOrganizationId, TenantId = NewTenantId, Name = "Beta", Slug = "main", IsDefault = true,
-                    DefaultWorkspaceId = DefaultWorkspaceId,
-                }));
-            DefaultWorkspaces.Setup(w => w.Found(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(DefaultWorkspaceId));
+            Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Success(true));
+            Organizations.Setup(o => o.Create(It.IsAny<NewOrganization>(), It.IsAny<CancellationToken>()))
+                .Callback<NewOrganization, CancellationToken>((made, _) => OrganizationMade = made)
+                .ReturnsAsync(GenericResult<Guid>.Success(DefaultOrganizationId));
+            DefaultWorkspaces.Setup(w => w.Found(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(MadeWorkspaceId));
             DefaultWorkspaces.Setup(w => w.Remove(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
             Memberships.Setup(m => m.Save(It.IsAny<UserTenantImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult.Success());
@@ -64,7 +62,7 @@ public sealed class TenantFoundingTests
         }
 
         public TenantFounding Founding() =>
-            new(Tenants.Object, Organizations.Object, OrganizationReader.Object, DefaultWorkspaces.Object, Users.Object, Memberships.Object, GrantRule.Object,
+            new(Tenants.Object, Organizations.Object, DefaultWorkspaces.Object, Policy.Object, Users.Object, Memberships.Object, GrantRule.Object,
                 Roles.Object, NullLogger<TenantFounding>.Instance);
 
         public void NothingMade() =>
@@ -102,10 +100,54 @@ public sealed class TenantFoundingTests
         rig.Organizations.Verify(o => o.Create(
             It.Is<NewOrganization>(n => n.TenantId == NewTenantId && n.Name == "Beta" && n.Slug == "main" && n.IsDefault),
             It.IsAny<CancellationToken>()), Times.Once);
+        var stated = rig.OrganizationMade.ShouldNotBeNull().DefaultWorkspaceId.ShouldNotBeNull();
         rig.DefaultWorkspaces.Verify(w => w.Found(
-            It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == DefaultWorkspaceId && n.TenantId == NewTenantId && n.OwnerName == "Beta"
+            It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == stated && n.TenantId == NewTenantId && n.OwnerName == "Beta"
                 && n.OrganizationId == DefaultOrganizationId && n.OwnerUserId == Administrator),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task WithTheSettingOffATenantIsMadeWithAnOrganizationNamingNoWorkspaceAndNoWorkspaceIsMade()
+    {
+        var rig = new Rig();
+        rig.Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Success(false));
+
+        var result = await rig.Founding().Found(Beta, Administrator, "Admin", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        rig.OrganizationMade.ShouldNotBeNull().DefaultWorkspaceId.ShouldBeNull();
+        rig.DefaultWorkspaces.Verify(w => w.Found(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>()), Times.Never);
+        rig.Roles.Verify(r => r.Assign(Administrator, "Admin", NewTenantId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task WithTheSettingOffALaterFailureRemovesTheTenantAndRemovesNoWorkspace()
+    {
+        var rig = new Rig();
+        rig.Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Success(false));
+        rig.Roles.Setup(r => r.Assign(Administrator, "Admin", NewTenantId, It.IsAny<CancellationToken>())).ReturnsAsync(Failed("role refused"));
+
+        var result = await rig.Founding().Found(Beta, Administrator, "Admin", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        rig.Tenants.Verify(t => t.Delete(NewTenantId, It.IsAny<CancellationToken>()), Times.Once);
+        rig.DefaultWorkspaces.Verify(w => w.Remove(It.IsAny<NewDefaultWorkspace>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task ASettingThatCannotBeReadMakesNothing()
+    {
+        var rig = new Rig();
+        rig.Policy.Setup(p => p.FoundingMakesDefaultWorkspace()).Returns(GenericResult<bool>.Failure(new GenericMessage("no setting")));
+
+        var result = await rig.Founding().Found(Beta, Administrator, "Admin", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        rig.NothingMade();
     }
 
     [Theory]
@@ -219,7 +261,7 @@ public sealed class TenantFoundingTests
         result.IsFailure.ShouldBeTrue();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("membership refused");
         rig.Tenants.Verify(t => t.Delete(NewTenantId, It.IsAny<CancellationToken>()), Times.Once);
-        rig.DefaultWorkspaces.Verify(w => w.Remove(It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == DefaultWorkspaceId), It.IsAny<CancellationToken>()), Times.Once);
+        rig.DefaultWorkspaces.Verify(w => w.Remove(It.Is<NewDefaultWorkspace>(n => n.WorkspaceId == rig.OrganizationMade!.DefaultWorkspaceId), It.IsAny<CancellationToken>()), Times.Once);
         rig.Memberships.Verify(m => m.Delete(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         rig.Roles.Verify(r => r.Assign(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }

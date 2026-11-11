@@ -10,7 +10,10 @@ using Fdw.Services.Etl.Logging;
 
 namespace Fdw.Services.Etl.Pipelines.Loads.Builders;
 
-/// <summary>Updates the write columns of the row each output row matches on the key columns, one update per row, optionally flagging marker rows deleted.</summary>
+/// <summary>
+/// Updates the write columns of the row each output row matches on the key columns, the whole batch in one set-based bulk update
+/// (FDW-4953), optionally flagging marker rows deleted.
+/// </summary>
 [TypeOption(typeof(LoadStepCommandBuilders), "Update")]
 public sealed class UpdateLoadStepCommandBuilder : LoadStepCommandBuilderBase
 {
@@ -38,23 +41,27 @@ public sealed class UpdateLoadStepCommandBuilder : LoadStepCommandBuilderBase
         if (soft.IsFailure)
             return soft.ToNewResult<IReadOnlyList<IDataCommand>>();
 
+        // Each row carries its keys and the columns it writes; the batch is one set-based update (FDW-4953).
         var keys = LoadColumns.Keys(input.Row);
-        var data = LoadRows.Shape(input.Owner, input.Rows, LoadColumns.Writes(input.Row), values.Value!, input.Logger);
-        var matched = LoadRows.Shape(input.Owner, input.Rows, keys, [], input.Logger);
-        if (data.IsFailure || matched.IsFailure)
-            return data.IsFailure ? data.ToNewResult<IReadOnlyList<IDataCommand>>() : matched.ToNewResult<IReadOnlyList<IDataCommand>>();
+        var writes = LoadColumns.Writes(input.Row);
+        var shaped = LoadRows.Shape(input.Owner, input.Rows, Staged(keys, writes), values.Value!, input.Logger);
+        if (shaped.IsFailure)
+            return shaped.ToNewResult<IReadOnlyList<IDataCommand>>();
+        var present = LoadKeyFilters.KeysPresent(input.Owner, keys, shaped.Value!, input.Logger);
+        if (present.IsFailure)
+            return present.ToNewResult<IReadOnlyList<IDataCommand>>();
 
-        var commands = new List<IDataCommand>(data.Value!.Count);
-        for (var index = 0; index < data.Value.Count; index++)
-        {
-            var filter = LoadKeyFilters.ForRow(input.Owner, keys, matched.Value![index], input.Logger);
-            if (filter.IsFailure)
-                return filter.ToNewResult<IReadOnlyList<IDataCommand>>();
-            commands.Add(new UpdateCommand<IDictionary<string, object?>>(data.Value[index]) { Filter = filter.Value, SoftDelete = soft.Value });
-        }
+        var options = new Fdw.Commands.Data.Updates.BulkUpdateOptions(keys, [.. writes, .. values.Value!.Select(value => value.Key)]);
+        var problem = options.FirstProblem();
+        if (problem is not null)
+            return GenericResult<IReadOnlyList<IDataCommand>>.Failure(PipelineRunLog.LoadOptionsRefused(input.Logger, input.Owner, LoadKind, problem.Message));
 
-        return Built(commands);
+        return Built(new BulkUpdateCommand<IDictionary<string, object?>>(shaped.Value!, options) { SoftDelete = soft.Value, UnmatchedKeySample = input.UnmatchedKeySample });
     }
+
+    // The key columns, then the write columns that are not keys: a write column that is also a key is matched on, never set.
+    private static List<string> Staged(IReadOnlyList<string> keys, IReadOnlyList<string> writes)
+        => [.. keys, .. writes.Where(write => !keys.Contains(write, StringComparer.OrdinalIgnoreCase))];
 
     private static IGenericResult<Fdw.Commands.Data.SoftDeletes.SoftDeleteOptions?> SoftDelete(LoadCommandInput input)
     {

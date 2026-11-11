@@ -50,6 +50,15 @@ public static partial class DefaultWorkspaceLog
         Message = "Placing {kind} '{name}' in default workspace {workspaceId} of organization {organizationId}")]
     public static partial IGenericMessage Placing(ILogger logger, string name, string kind, Guid workspaceId, Guid organizationId);
 
+    /// <summary>Logs that a new thing is placed in no workspace because the setting <c>FoundingMakesDefaultWorkspace</c> is off (FDW-4600).</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="name">The thing's name.</param>
+    /// <param name="kind">What it is.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 11706, Level = LogLevel.Information,
+        Message = "Placing {kind} '{name}' in no workspace: the setting FoundingMakesDefaultWorkspace is off")]
+    public static partial IGenericMessage NotPlaced(ILogger logger, string name, string kind);
+
     /// <summary>Logs that the caller's authentication context was swapped for a run in the workspace's tenant.</summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="tenantId">The tenant the run acts in.</param>

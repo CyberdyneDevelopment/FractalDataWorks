@@ -18,4 +18,10 @@ public interface ILoadStepKind : ITypeOption<int, ILoadStepKind>, ILoadOptionSha
     /// adds the rows again. A run that is cut off is started again only when each destination that committed rows repeats to the same result.
     /// </summary>
     bool RepeatsToSameResult { get; }
+
+    /// <summary>
+    /// Gets whether the step writes rows that already exist, found by their keys (FDW-4988): an update and a delete do, so a key that matches no row is
+    /// counted and reported as its destination's unmatched keys rule says. An insert, an upsert and a truncate match nothing that can be missing.
+    /// </summary>
+    bool WritesExistingRowsByKey { get; }
 }

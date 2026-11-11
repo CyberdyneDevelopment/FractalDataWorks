@@ -21,7 +21,7 @@ public sealed class MarkerMatchesSoftDeleteMode : SoftDeleteModeBase
     /// <inheritdoc />
     public override IGenericMessage? Problem(SoftDeleteOptions options)
     {
-        if (options.AbsentFromSource is not null)
+        if (options.AbsentFromSource is not null || options.AbsentFromStage is not null)
             return Problem("a marker-matches soft delete takes no source set");
         return options.Marker is null || string.IsNullOrWhiteSpace(options.Marker.Column) || options.Marker.Value is null
             ? Problem("a marker-matches soft delete names a marker column and a marker value")

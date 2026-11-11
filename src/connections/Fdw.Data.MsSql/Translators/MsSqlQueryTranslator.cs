@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -171,8 +170,8 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         }
         else if (command.Joins is { Count: > 0 })
         {
-            sqlCommand = BuildJoinedSelectStatement(
-                container, dbPath, dialect, command.Joins, command.Filter, command.Projection, returnedFieldNames);
+            return BuildJoinedSelectStatement(
+                container, dbPath, dialect, command, returnedFieldNames);
         }
         else
         {
@@ -290,34 +289,41 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
     /// FROM the child, joined to each target container on the supplied column pairs, with a
     /// table-qualified WHERE. Used by the configuration typed-body read (child joined to its parent
     /// on the FK from metadata, filtered by the parent's durable Id). Never emits <c>SELECT *</c>;
-    /// only the primary container's columns are projected (the joined parent is not projected).
+    /// only the primary container's columns are projected (the joined parent is not projected), unless a
+    /// multi-source projection names each column's container (a Compound data set). The command's ordering
+    /// and paging follow the WHERE, qualified the same way; a paged join that states no order is refused
+    /// (FDW-4991).
     /// </summary>
-    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // JOIN iteration + condition validation + WHERE.
-    private static SqlCommand BuildJoinedSelectStatement(
+    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // JOIN iteration + condition validation + WHERE + order/paging.
+    private static IGenericResult<SqlCommand> BuildJoinedSelectStatement(
         IDataContainer container,
         IDatabasePath dbPath,
         ISqlDialect dialect,
-        IReadOnlyList<IJoinExpression> joins,
-        IFilterExpression? filter,
-        IProjectionExpression? projection,
+        IQueryCommand query,
         List<string>? returnedFieldNames)
     {
+        var joins = query.Joins;
+        var filter = query.Filter;
         var primaryTable = dbPath.ObjectName;
 
+        // Every identifier a join names is checked before any of it is written into the statement (SQL injection prevention): one that
+        // is not a plain name is a coded refusal of the query, never a throw (FDW-4991).
+        if (InvalidJoinIdentifier(joins) is { } invalid)
+            return GenericResult<SqlCommand>.Failure(
+                MsSqlTranslatorLog.JoinIdentifierInvalid(NullLogger<MsSqlQueryTranslator>.Instance, container.Name, invalid));
+
+        // Each join is stated by its join type's own SQL keyword, never by the text it carries; one the statement cannot state is a coded
+        // refusal of the query (FDW-5099).
+        if (JoinRefusal(joins, container.Name) is { } joinRefusal)
+            return GenericResult<SqlCommand>.Failure(joinRefusal);
+
         var sql = new StringBuilder();
-        sql.Append(BuildSelectClause(container, projection, returnedFieldNames, primaryTable, dialect));
+        sql.Append(BuildSelectClause(container, query.Projection, returnedFieldNames, primaryTable, dialect));
         sql.Append(" FROM ");
         sql.Append(BuildQualifiedTableName(dbPath));
 
         foreach (var join in joins)
         {
-            if (!IsValidColumnName(join.TargetContainerName))
-            {
-                throw new ArgumentException(
-                    $"Invalid JOIN target container name '{join.TargetContainerName}'. Only alphanumeric characters and underscores allowed.",
-                    nameof(joins));
-            }
-
             // The join target is qualified with its own path's schema: a child and its owner can be
             // declared in different paths (transform.FieldMappingTransformation hangs from
             // data.DataSetFieldMapping), so the primary path's schema is not the target's.
@@ -326,33 +332,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                 ? $"{dialect.QuoteIdentifier(targetPath.Schema!)}.{dialect.QuoteIdentifier(join.TargetContainerName)}"
                 : $"{dialect.QuoteIdentifier(targetPath.Database)}.{dialect.QuoteIdentifier(targetPath.Schema!)}.{dialect.QuoteIdentifier(join.TargetContainerName)}";
 
-            sql.Append(CultureInfo.InvariantCulture, $" {join.JoinType} JOIN {targetQuoted} ON ");
-
-            // The left side belongs to the primary container unless the join continues from an
-            // earlier join's target.
-            if (join.SourceContainerName is { } source && !IsValidColumnName(source))
-            {
-                throw new ArgumentException(
-                    $"Invalid JOIN source container name '{source}'. Only alphanumeric characters and underscores allowed.",
-                    nameof(joins));
-            }
-
-            var leftTable = join.SourceContainerName is { } joinedSource ? joinedSource : primaryTable;
-
-            var conditions = join.JoinConditions.Select(c =>
-            {
-                // SQL INJECTION PREVENTION: validate both identifiers. Left = the source container's
-                // column, Right = the join target's column.
-                if (!IsValidColumnName(c.LeftField) || !IsValidColumnName(c.RightField))
-                {
-                    throw new ArgumentException(
-                        $"Invalid JOIN condition column ('{c.LeftField}', '{c.RightField}'). Only alphanumeric characters and underscores allowed.",
-                        nameof(joins));
-                }
-
-                return $"{dialect.QuoteIdentifier(leftTable)}.{dialect.QuoteIdentifier(c.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(c.RightField)}";
-            });
-            sql.Append(string.Join(" AND ", conditions));
+            sql.Append(JoinClause(join, targetQuoted, primaryTable, dialect));
         }
 
         var command = CreateCommand(sql.ToString());
@@ -364,9 +344,15 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v), primaryTable);
             command.CommandText += $" WHERE {whereClause}";
         }
-        return command;
-    }
 
+        var (refused, orderAndPaging) = BuildJoinedOrderAndPaging(query.Ordering, query.Paging, dialect, primaryTable);
+        if (refused)
+            return GenericResult<SqlCommand>.Failure(
+                MsSqlTranslatorLog.PagedQueryHasNoOrder(NullLogger<MsSqlQueryTranslator>.Instance, container.Name));
+
+        command.CommandText += orderAndPaging;
+        return GenericResult<SqlCommand>.Success(command);
+    }
 
     /// <summary>
     /// Builds the SELECT clause for a query — explicit projection, schema fields, or container

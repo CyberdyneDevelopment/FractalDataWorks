@@ -39,7 +39,7 @@ namespace Fdw.Commands.Data;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Update", RestrictToCurrentCompilation = true)]
-public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableCommand, ISoftDeletableCommand, IReturningCommand
+public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableCommand, ISoftDeletableCommand, IReturningCommand, IScopeNarrowableCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateCommand{T}"/> class.
@@ -65,4 +65,14 @@ public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableComma
 
     /// <inheritdoc />
     public IReadOnlyList<string>? ReturnColumns { get; init; }
+
+    /// <inheritdoc />
+    /// <remarks>The copy updates the same data with the same soft-delete, returned columns and metadata (FDW-5069).</remarks>
+    public IDataCommand NarrowedTo(IFilterExpression scope) => new UpdateCommand<T>(Data)
+    {
+        Filter = ScopedFilter.And(scope, Filter),
+        SoftDelete = SoftDelete,
+        ReturnColumns = ReturnColumns,
+        Metadata = Metadata,
+    };
 }

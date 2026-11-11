@@ -37,6 +37,10 @@ public abstract class RecordSourceTypeBase : TypeOptionBase<RecordSourceTypeBase
     public abstract string Format { get; }
 
     /// <inheritdoc />
+    /// <remarks>Abstract: every format states it, and none is assumed.</remarks>
+    public abstract bool ParsesIncrementally { get; }
+
+    /// <inheritdoc />
     /// <remarks>False unless the format overrides it: the text formats (Json, Xml, Delimited, FixedWidth) are read as text.</remarks>
     public virtual bool ReadsBinary => false;
 

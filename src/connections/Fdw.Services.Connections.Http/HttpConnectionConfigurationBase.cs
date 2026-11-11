@@ -7,6 +7,7 @@ using Fdw.Conventions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
 using Fdw.Services.Connections.Http.Limits;
+using Fdw.Services.Connections.Http.Paging;
 using Fdw.Services.Connections.Http.Security;
 
 namespace Fdw.Services.Connections.Http;
@@ -92,7 +93,8 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     /// Valid values: "Singleton", "Scoped", "Transient".
     /// </summary>
     /// <remarks>
-    /// FDW chooses no value for it: the connection states it, and the validator refuses an empty one (FDW-3580).
+    /// Not stored and not read (FDW-5139): conn.HttpConnectionConfiguration has no column for it, so a read leaves it empty, and the
+    /// validator does not require it. Removing it, with HttpConnectionType's declared default for it, is the follow-up.
     /// </remarks>
     public string Lifetime { get; set; } = string.Empty;
 
@@ -121,12 +123,29 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     public string Protocol { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets how the remote pages its rows: the name of an <see cref="HttpPagingStyles"/> option (SingleResponse, OffsetLimit,
+    /// PageNumber, LinkHeader, BodyNextLink, ContinuationToken), or <see langword="null"/> when the connection states none.
+    /// </summary>
+    /// <remarks>
+    /// FDW chooses no style (FDW-4938): it is a choice only the caller makes, so a create (and a test of an unsaved configuration) that leaves
+    /// it out is refused, naming it (FDW-5014). A stored row from before the column states none; a paged or streamed read of it is refused,
+    /// naming it, and every other use of it works as before. The style's own settings (page size, parameter names, the path to a next link or
+    /// token) are entries of <see cref="AdditionalProperties"/> named <c>Paging...</c> (<see cref="HttpPagingProperties"/>), and the style
+    /// refuses a connection that leaves out one it needs.
+    /// </remarks>
+    [CallerChoice]
+    [ValuesFrom(typeof(HttpPagingStyles))]
+    public string? PagingStyle { get; set; }
+
+    /// <summary>
     /// Gets or sets the timeout for HTTP requests in seconds, or <see langword="null"/> when the connection states none.
     /// </summary>
     /// <remarks>
-    /// No number is assumed: a connection that states none leaves <c>HttpClient.Timeout</c> unset, so the platform's own
-    /// timeout applies (FDW-3580).
+    /// No number is assumed here or in the column. A connection that states none takes the default its connection type declares
+    /// (<c>HttpConnectionType</c>'s DeclaredDefaults), which a host changes with <c>ServiceTypeDefaults.Override</c> before Register (FDW-4904). A create that leaves it out stores
+    /// nothing (<see cref="ResolvedAtUseAttribute"/>), so the default is resolved each time the connection is built.
     /// </remarks>
+    [ResolvedAtUse]
     public int? TimeoutSeconds { get; set; }
 
     /// <summary>
@@ -155,7 +174,7 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     /// <summary>
     /// Gets or sets the authentication key-value configuration for the selected method (SecretManagerName
     /// plus the method's own secret-name keys). Each <see cref="HttpAuthenticationTypes"/> option parses
-    /// its own keys.
+    /// its own keys. The paging style the connection names keeps its plain <c>Paging...</c> settings here too (FDW-4938).
     /// </summary>
     /// <remarks>
     /// Populated by the gateway cascade from <c>conn.HttpConnectionAuthentication</c>.
