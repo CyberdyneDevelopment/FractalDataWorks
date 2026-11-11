@@ -944,4 +944,8 @@
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Fdw.ApiSurface/Fdw.ApiSurface.csproj" />
+    <Project Path="tools/Fdw.PasswordHasher/Fdw.PasswordHasher.csproj" />
+  </Folder>
 </Solution>

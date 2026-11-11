@@ -11,6 +11,12 @@ namespace Fdw.Conventions.Analyzers;
 /// Analyzer that identifies enum declarations and enum-based dispatch patterns
 /// that should be replaced with TypeCollections.
 /// </summary>
+/// <remarks>
+/// The rule is that no enum is DEFINED outside the TypeCollection layer. FDW018 (switch) and the enum part of FDW019 (if/else chain)
+/// therefore report only an enum the compilation defines in its own source: a framework or package enum
+/// (<c>System.Reflection.MethodAttributes</c>, <c>HandleKind</c>) is not ours to replace, and a TypeCollection cannot stand in for it.
+/// FDW017 reports the declaration where an enum is defined, so an enum of our own cannot hide behind another assembly.
+/// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class TypeCollectionOpportunityAnalyzer : DiagnosticAnalyzer
 {
@@ -31,7 +37,7 @@ public sealed class TypeCollectionOpportunityAnalyzer : DiagnosticAnalyzer
 
     private const string Title018 = "Switch on enum type suggests TypeCollection ByName lookup";
     private const string MessageFormat018 = "Switch on enum type '{0}' suggests a TypeCollection ByName() lookup. Use '{0}Collection.ByName(value)' for type-safe dispatch.";
-    private const string Description018 = "Switch statements on enum types can be replaced with TypeCollection ByName() lookups for type-safe, extensible dispatch.";
+    private const string Description018 = "Switch statements on an enum type defined in this compilation can be replaced with TypeCollection ByName() lookups for type-safe, extensible dispatch. Enums defined in the framework or a package are not reported.";
 
     private const string Title019 = "If/else chain comparing enum values suggests TypeCollection ByName dispatch";
     private const string MessageFormat019 = "If/else chain with {0} branches comparing '{1}' suggests a TypeCollection ByName() dispatch";
@@ -109,28 +115,28 @@ public sealed class TypeCollectionOpportunityAnalyzer : DiagnosticAnalyzer
     {
         var switchStmt = (SwitchStatementSyntax)context.Node;
 
-        var typeInfo = context.SemanticModel.GetTypeInfo(switchStmt.Expression, context.CancellationToken);
-        if (typeInfo.Type?.TypeKind != TypeKind.Enum)
+        var enumType = context.SemanticModel.GetTypeInfo(switchStmt.Expression, context.CancellationToken).Type;
+        if (enumType is null || !IsEnumDefinedInSource(enumType))
             return;
 
         context.ReportDiagnostic(Diagnostic.Create(
             Rule018,
             switchStmt.SwitchKeyword.GetLocation(),
-            typeInfo.Type.Name));
+            enumType.Name));
     }
 
     private static void AnalyzeSwitchExpression(SyntaxNodeAnalysisContext context)
     {
         var switchExpr = (SwitchExpressionSyntax)context.Node;
 
-        var typeInfo = context.SemanticModel.GetTypeInfo(switchExpr.GoverningExpression, context.CancellationToken);
-        if (typeInfo.Type?.TypeKind != TypeKind.Enum)
+        var enumType = context.SemanticModel.GetTypeInfo(switchExpr.GoverningExpression, context.CancellationToken).Type;
+        if (enumType is null || !IsEnumDefinedInSource(enumType))
             return;
 
         context.ReportDiagnostic(Diagnostic.Create(
             Rule018,
             switchExpr.SwitchKeyword.GetLocation(),
-            typeInfo.Type.Name));
+            enumType.Name));
     }
 
     private static void AnalyzeIfStatement(SyntaxNodeAnalysisContext context)
@@ -217,8 +223,23 @@ public sealed class TypeCollectionOpportunityAnalyzer : DiagnosticAnalyzer
         if (expr is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
             return true;
 
-        var typeInfo = context.SemanticModel.GetTypeInfo(expr, context.CancellationToken);
-        return typeInfo.Type?.TypeKind == TypeKind.Enum;
+        var type = context.SemanticModel.GetTypeInfo(expr, context.CancellationToken).Type;
+        return type is not null && IsEnumDefinedInSource(type);
+    }
+
+    /// <summary>True when the type is an enum with a declaration in this compilation's source; an enum read from metadata (framework, package, another assembly) is not.</summary>
+    private static bool IsEnumDefinedInSource(ITypeSymbol type)
+    {
+        if (type.TypeKind != TypeKind.Enum)
+            return false;
+
+        foreach (var location in type.Locations)
+        {
+            if (location.IsInSource)
+                return true;
+        }
+
+        return false;
     }
 
     private static string? GetSimpleVariableName(ExpressionSyntax expr)
