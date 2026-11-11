@@ -38,18 +38,8 @@ public sealed class HttpConnectionCommand : IConnectionCommand
         string? body = null,
         IReadOnlyDictionary<string, string>? headers = null)
     {
-        if (method is null)
-        {
-            HttpConnectionCommandLog.HttpMethodMissing(NullLogger<HttpConnectionCommand>.Instance);
-        }
-
-        if (relativePath is null)
-        {
-            HttpConnectionCommandLog.RelativePathMissing(NullLogger<HttpConnectionCommand>.Instance);
-        }
-
-        Method = method ?? throw new ArgumentNullException(nameof(method));
-        RelativePath = relativePath ?? throw new ArgumentNullException(nameof(relativePath));
+        Method = method;
+        RelativePath = relativePath;
         QueryParameters = queryParameters ?? ImmutableDictionary<string, string>.Empty;
         Body = body;
         Headers = headers ?? ImmutableDictionary<string, string>.Empty;

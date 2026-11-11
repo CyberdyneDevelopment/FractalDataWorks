@@ -68,11 +68,11 @@ internal static class ImplementationGuideAssembler
     /// <param name="guide">The guide.</param>
     /// <returns>The reference rules.</returns>
     public static IReadOnlyList<GuideReferenceRuleInfo> References(GuideBodyModel guide) =>
-        guide.References.Require.Select(r => Reference(r, GuideReferenceRuleKind.Require))
-            .Concat(guide.References.Forbid.Select(r => Reference(r, GuideReferenceRuleKind.Forbid)))
+        guide.References.Require.Select(r => Reference(r, GuideReferenceRuleKinds.Require))
+            .Concat(guide.References.Forbid.Select(r => Reference(r, GuideReferenceRuleKinds.Forbid)))
             .ToList();
 
-    private static GuideReferenceRuleInfo Reference(GuideReferenceModel rule, GuideReferenceRuleKind kind) =>
+    private static GuideReferenceRuleInfo Reference(GuideReferenceModel rule, IGuideReferenceRuleKind kind) =>
         new()
         {
             Kind = kind,

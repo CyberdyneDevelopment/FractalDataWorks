@@ -55,11 +55,9 @@
     <NoWarn>$(NoWarn);CA1716</NoWarn>      <!-- Identifiers should not match keywords — FDW uses Execute, Default etc. C#-only repo -->
     <NoWarn>$(NoWarn);CA1000</NoWarn>      <!-- No static members on generic types — TypeCollection pattern requires them -->
     <NoWarn>$(NoWarn);CA1848</NoWarn>      <!-- Use LoggerMessage delegates — FDW uses its own MessageLogging source generator -->
-    <NoWarn>$(NoWarn);CA1510</NoWarn>      <!-- Use ArgumentNullException.ThrowIfNull — unavailable in netstandard2.0 targets -->
     <NoWarn>$(NoWarn);CA1834</NoWarn>      <!-- Use StringBuilder.Append(char) — unavailable in netstandard2.0 targets -->
     <NoWarn>$(NoWarn);MA0051</NoWarn>      <!-- Method is too long — replaced by FDW006 (lines) + FDW007 (complexity) with [ConventionOverride] support -->
     <NoWarn>$(NoWarn);MA0048</NoWarn>      <!-- File name must match type name — replaced by FDW005 with MoveTypeToFile code fix support -->
-    <NoWarn>$(NoWarn);MA0196</NoWarn>      <!-- inheritdoc on members that don't inherit — suppressed pending ResolveInheritDoc Roslyn MCP command -->
     <NoWarn>$(NoWarn);FDW011</NoWarn>     <!-- Misplaced implementation type (warning) — not enforced yet, pending architectural review -->
     <NoWarn>$(NoWarn);NU5123</NoWarn>     <!-- NuGet long path warning — only affects legacy systems without long path support -->
 
@@ -132,14 +130,6 @@
     <DebugSymbols>true</DebugSymbols>
     <Optimize>true</Optimize>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- FDW012-015 (GenericResult handling): warnings-only during gradual adoption, promote to errors after remediation -->
-    <!-- FDW016 (UncheckedResultValueAccess): suppressed for gradual adoption -->
-    <!-- FDW017-019 (TypeCollection opportunities): suppressed for gradual adoption -->
-    <!-- FDW010 (MisplacedImplementationType): implementation-specific types in base/abstractions assemblies; kept non-error so existing violations surface but don't break the build, pending architectural review. NOTE: FDW010 is NOT a fallback rule — the no-`??`-fallback rule is enforced by convention/review + FDW002/003/004. -->
-    <!-- FDW022 (SwallowedException): warnings-only during gradual adoption, promote to error after remediation. FDW023 (broad catch survey) is Info, never an error. -->
-    <!-- TC001 (MissingTypeOptionAnalyzer, Fdw.Collections.Analyzers): Warning-by-design; newly wired globally, fires on pre-existing TypeCollection-derived types missing [TypeOption] — warnings-only during gradual adoption, promote to error after remediation. -->
-    <!-- FDW048 (LocalStatusClassMapper): component-local value-to-CSS-class helpers — warnings-only until the mapping moves to a shared component/helper, promote to error after remediation. -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);FDW010;FDW012;FDW013;FDW014;FDW015;FDW016;FDW017;FDW018;FDW019;FDW022;FDW048;TC001</WarningsNotAsErrors>
     <WarningLevel>4</WarningLevel>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <RunAnalyzers>true</RunAnalyzers>
@@ -212,12 +202,6 @@
   <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\README.md')">
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
-
-  <!-- Release-only suppressions -->
-  <PropertyGroup>
-    <!-- CS1570: Invalid XML comment — source generators emit XML docs that consuming projects can't control -->
-    <NoWarn Condition="'$(Configuration)' == 'Release'">$(NoWarn);CS1570</NoWarn>
-  </PropertyGroup>
 
   <!-- Analyzers - Applied to all projects except samples -->
   <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('/samples/')) AND !$(MSBuildProjectDirectory.Contains('\samples\'))">

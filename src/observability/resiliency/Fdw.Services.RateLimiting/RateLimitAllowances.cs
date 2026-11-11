@@ -32,24 +32,8 @@ public static class RateLimitAllowances
     /// <param name="tenantId">The company the request belongs to, or null for a request that belongs to none.</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <returns>The allowance, or the refusal naming the first setting that cannot be used.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the settings, the policy or the logger is null.</exception>
     public static IGenericResult<RateLimitAllowance> Read(IEffectiveSettingsProvider settings, IRateLimitPolicy policy, Guid? tenantId, ILogger logger)
     {
-        if (settings is null)
-        {
-            throw new ArgumentNullException(nameof(settings));
-        }
-
-        if (policy is null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
-        if (logger is null)
-        {
-            throw new ArgumentNullException(nameof(logger));
-        }
-
         var reader = new RateLimitAllowanceReader(settings, policy, tenantId, logger);
         var allowance = new RateLimitAllowance(
             reader.Positive(RateLimitAllowanceFields.RequestsPerWindow),

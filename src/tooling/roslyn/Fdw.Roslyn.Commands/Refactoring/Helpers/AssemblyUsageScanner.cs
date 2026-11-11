@@ -28,8 +28,6 @@ public static class AssemblyUsageScanner
         string? ownAssembly,
         CancellationToken cancellationToken = default)
     {
-        if (document is null) throw new ArgumentNullException(nameof(document));
-
         var usage = new Dictionary<string, AssemblyUsage>(StringComparer.Ordinal);
 
         var semanticModel = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);

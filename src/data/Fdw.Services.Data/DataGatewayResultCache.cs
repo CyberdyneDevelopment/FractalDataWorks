@@ -46,7 +46,7 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     /// <param name="loggerFactory">Optional logger factory; falls back to <see cref="NullLoggerFactory"/> when null.</param>
     public DataGatewayResultCache(IMemoryCache cache, ILoggerFactory? loggerFactory)
     {
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cache = cache;
         _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DataGatewayResultCache>();
     }
 
@@ -165,7 +165,6 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     /// <returns><c>true</c> when the result was kept.</returns>
     public bool Set<T>(string cacheKey, IGenericResult<T> value, IReadOnlyList<string> tags, TimeSpan duration, long readFrom)
     {
-        ArgumentNullException.ThrowIfNull(tags);
         return Keep(cacheKey, value, tags, duration, _ => readFrom);
     }
 
@@ -180,7 +179,6 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     /// <returns><c>true</c> when the result was kept.</returns>
     public bool Set<T>(string cacheKey, IGenericResult<T> value, IReadOnlyDictionary<string, long> readFrom, TimeSpan duration)
     {
-        ArgumentNullException.ThrowIfNull(readFrom);
         return Keep(cacheKey, value, [.. readFrom.Keys], duration, tag => readFrom[tag]);
     }
 
@@ -224,8 +222,6 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     /// <inheritdoc />
     public void InvalidateByTag(string tag)
     {
-        ArgumentNullException.ThrowIfNull(tag);
-
         // The clock moves first, whether or not anything is cached under the tag: a read in flight for it must not
         // keep what it read once it finishes.
         var changedAt = Interlocked.Increment(ref _clock);
@@ -250,7 +246,6 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     /// <inheritdoc />
     public void InvalidateByTags(IEnumerable<string> tags)
     {
-        ArgumentNullException.ThrowIfNull(tags);
         foreach (var tag in tags)
             InvalidateByTag(tag);
     }

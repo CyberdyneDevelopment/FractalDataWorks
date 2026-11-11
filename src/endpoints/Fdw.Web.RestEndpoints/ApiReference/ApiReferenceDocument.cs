@@ -58,8 +58,6 @@ public sealed class ApiReferenceDocument
     /// <returns>The copy, or a failure when the JSON is not an OpenAPI document with paths.</returns>
     public static IGenericResult<ApiReferenceDocument> Parse(string json, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(json);
-
         JsonNode? node;
         try
         {
@@ -81,8 +79,6 @@ public sealed class ApiReferenceDocument
     /// <returns>The number of paths taken out.</returns>
     public int KeepPaths(Func<string, bool> keep, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(keep);
-
         var outside = _paths.Select(entry => entry.Key).Where(path => !keep(path)).ToList();
         foreach (var path in outside)
             _paths.Remove(path);
@@ -97,8 +93,6 @@ public sealed class ApiReferenceDocument
     /// <returns>The number of operations taken out, or a failure when an operation has no record of who may call it.</returns>
     public IGenericResult<int> KeepAdmitted(ApiReferenceCaller caller, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(caller);
-
         var removed = 0;
         foreach (var (path, node) in _paths.ToList())
         {
@@ -134,8 +128,6 @@ public sealed class ApiReferenceDocument
     /// <param name="operation">The operation. It must not belong to any document yet.</param>
     public void AddOperation(string path, string method, JsonObject operation)
     {
-        ArgumentNullException.ThrowIfNull(operation);
-
         if (_paths[path] is not JsonObject item)
         {
             item = new JsonObject();
@@ -161,8 +153,6 @@ public sealed class ApiReferenceDocument
     /// </remarks>
     public IGenericResult SetServer(HttpRequest request, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         if (!request.Host.HasValue)
         {
             return GenericResult.Failure(
@@ -327,8 +317,6 @@ public sealed class ApiReferenceDocument
     /// <param name="tags">Each tag's name and, when it has one, its description.</param>
     public void ReplaceTags(IReadOnlyList<KeyValuePair<string, string?>> tags)
     {
-        ArgumentNullException.ThrowIfNull(tags);
-
         var list = new JsonArray();
         foreach (var (name, description) in tags)
         {

@@ -57,12 +57,12 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         IPipelineStatusBroadcaster broadcaster,
         ILogger<OrchestrationNodeOrchestrator>? logger = null)
     {
-        _nodeProvider = nodeProvider ?? throw new ArgumentNullException(nameof(nodeProvider));
-        _policyResolver = policyResolver ?? throw new ArgumentNullException(nameof(policyResolver));
-        _resiliencyExecutor = resiliencyExecutor ?? throw new ArgumentNullException(nameof(resiliencyExecutor));
-        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
-        _starter = starter ?? throw new ArgumentNullException(nameof(starter));
-        _broadcaster = broadcaster ?? throw new ArgumentNullException(nameof(broadcaster));
+        _nodeProvider = nodeProvider;
+        _policyResolver = policyResolver;
+        _resiliencyExecutor = resiliencyExecutor;
+        _tracker = tracker;
+        _starter = starter;
+        _broadcaster = broadcaster;
         _logger = logger ?? NullLogger<OrchestrationNodeOrchestrator>.Instance;
     }
 

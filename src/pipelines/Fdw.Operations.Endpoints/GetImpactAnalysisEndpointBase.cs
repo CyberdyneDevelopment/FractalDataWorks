@@ -33,7 +33,7 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
     private readonly CategoryConfigurationProvider _categories;
     private readonly ILogger<GetImpactAnalysisEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetImpactAnalysisEndpointBase"/> class.</summary>
     protected GetImpactAnalysisEndpointBase(
         DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories, ILogger<GetImpactAnalysisEndpointBase> logger)
     {
@@ -117,8 +117,6 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
     protected virtual async Task<IGenericResult<IReadOnlyList<ImpactedDataSetResponse>>> Impact(
         Func<DataSetSourceConfiguration, bool> matches, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(matches);
-
         var dataSets = await _dataSetProvider.Get(ct).ConfigureAwait(false);
         if (dataSets.IsFailure || dataSets.Value is not { } all)
             return dataSets.ToNewResult<IReadOnlyList<ImpactedDataSetResponse>>();

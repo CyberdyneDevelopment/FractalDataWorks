@@ -13,7 +13,6 @@ public static class ThresholdCriteria
     /// <returns>The field names.</returns>
     public static IReadOnlyList<string> FieldsNamed(IFilterNode criteria)
     {
-        ArgumentNullException.ThrowIfNull(criteria);
         var fields = new List<string>();
         Collect(criteria, fields);
         return fields;
@@ -24,7 +23,6 @@ public static class ThresholdCriteria
     /// <returns>Every condition, at any depth.</returns>
     public static IReadOnlyList<FilterCondition> ConditionsOf(IFilterNode criteria)
     {
-        ArgumentNullException.ThrowIfNull(criteria);
         var conditions = new List<FilterCondition>();
         CollectConditions(criteria, conditions);
         return conditions;

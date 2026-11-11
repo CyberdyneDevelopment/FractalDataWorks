@@ -28,8 +28,6 @@ public static class GraphShapeValidator
     /// <returns>The problems, each with its path; empty when the graph is sound.</returns>
     public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(logger);
         if (graph.Components.Count == 0)
         {
             return [new GraphProblem([], $"graph pipeline '{graph.Name}' has no components, so there is nothing to run")];
@@ -232,8 +230,6 @@ public static class GraphShapeValidator
     /// <returns>Success, or the first refusal.</returns>
     public static IGenericResult Validate(GraphPipelineConfiguration graph, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(logger);
         var problems = Problems(graph, logger);
         return problems.Count == 0
             ? GenericResult.Success()

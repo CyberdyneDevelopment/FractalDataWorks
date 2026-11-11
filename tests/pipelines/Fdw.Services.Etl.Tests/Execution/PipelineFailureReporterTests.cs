@@ -54,7 +54,7 @@ public sealed class PipelineFailureReporterTests
             Task.FromResult<IGenericResult<IReadOnlyList<IThresholdDefinition>>>(GenericResult<IReadOnlyList<IThresholdDefinition>>.Success(attached));
     }
 
-    private static IThresholdDefinition Threshold(string name, params string[] countedOutcomes) =>
+    private static Threshold<PipelineRunThresholdType> Threshold(string name, params string[] countedOutcomes) =>
         new Threshold<PipelineRunThresholdType>(
             new PipelineRunThresholdType(), name, true, false,
             new Dictionary<string, object?> { [PipelineRunThresholdType.CountedOutcomes] = countedOutcomes.Cast<object?>().ToList() }, []);

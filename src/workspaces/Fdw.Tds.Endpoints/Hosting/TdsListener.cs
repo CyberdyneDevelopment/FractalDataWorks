@@ -47,8 +47,8 @@ public sealed class TdsListener : BackgroundService
     /// <param name="logger">The logger.</param>
     public TdsListener(ITdsEndpointOptionsSource source, IServiceScopeFactory scopes, ILogger<TdsListener>? logger)
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+        _source = source;
+        _scopes = scopes;
         _logger = logger ?? NullLogger<TdsListener>.Instance;
     }
 

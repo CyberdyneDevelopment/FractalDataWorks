@@ -33,7 +33,7 @@ public abstract class ApproveWorkspaceMembershipRequestEndpointBase : Endpoint<A
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly ILogger<ApproveWorkspaceMembershipRequestEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ApproveWorkspaceMembershipRequestEndpointBase"/> class.</summary>
     protected ApproveWorkspaceMembershipRequestEndpointBase(
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,

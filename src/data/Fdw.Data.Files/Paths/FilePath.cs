@@ -28,7 +28,7 @@ public sealed class FilePath : PathBase, IDataPath<IStorageContainer>, IFilePath
         IEnumerable<IStorageContainer>? containers = null)
         : base("FilePath")
     {
-        PathValue = path ?? throw new ArgumentNullException(nameof(path));
+        PathValue = path;
         _containers = containers?.ToList() ?? [];
         IsPattern = path.Contains('*', StringComparison.Ordinal) || path.Contains('?', StringComparison.Ordinal);
     }

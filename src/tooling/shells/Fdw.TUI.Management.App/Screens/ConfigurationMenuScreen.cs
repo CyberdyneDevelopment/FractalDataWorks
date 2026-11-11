@@ -112,24 +112,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         IRenderContext renderContext)
         : base(console, theme, screenFactory)
     {
-        ArgumentNullException.ThrowIfNull(connectionManager);
-        ArgumentNullException.ThrowIfNull(connectionApiClient);
-        ArgumentNullException.ThrowIfNull(dataStoreApiClient);
-        ArgumentNullException.ThrowIfNull(dataSetApiClient);
-        ArgumentNullException.ThrowIfNull(pipelineClient);
-        ArgumentNullException.ThrowIfNull(secretManagerApiClient);
-        ArgumentNullException.ThrowIfNull(notificationApiClient);
-        ArgumentNullException.ThrowIfNull(scheduleClient);
-        ArgumentNullException.ThrowIfNull(settingsApiClient);
-        ArgumentNullException.ThrowIfNull(userApiClient);
-        ArgumentNullException.ThrowIfNull(roleApiClient);
-        ArgumentNullException.ThrowIfNull(tenantApiClient);
-        ArgumentNullException.ThrowIfNull(qualityApiClient);
-        ArgumentNullException.ThrowIfNull(projectApiClient);
-        ArgumentNullException.ThrowIfNull(nodeApiClient);
-        ArgumentNullException.ThrowIfNull(renderer);
-        ArgumentNullException.ThrowIfNull(renderContext);
-
         _connectionManager = connectionManager;
         _connectionApiClient = connectionApiClient;
         _dataStoreApiClient = dataStoreApiClient;

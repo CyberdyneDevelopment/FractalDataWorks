@@ -35,7 +35,6 @@ public sealed class FlowForLoop : IFlowStep
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(variable);
-        ArgumentNullException.ThrowIfNull(body);
         if (step == 0)
         {
             throw new ArgumentException("A for loop's step is not zero.", nameof(step));
@@ -60,8 +59,6 @@ public sealed class FlowForLoop : IFlowStep
     /// <inheritdoc />
     public async Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         var round = 0;
         for (var counter = _start; _step > 0 ? counter <= _end : counter >= _end; counter += _step)
         {

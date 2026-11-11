@@ -77,7 +77,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
     /// Initializes a new instance of the <see cref="RoslynWorkspace"/> class.
     /// </summary>
     /// <param name="initialSolution">The initial solution to manage.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="initialSolution"/> is null.</exception>
     public RoslynWorkspace(Solution initialSolution)
         : this(initialSolution, initialSolution, initialSolution.FilePath ?? string.Empty, [], null)
     {
@@ -99,8 +98,8 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
         IReadOnlyList<string>? loadDiagnostics = null)
     {
         LoadDiagnostics = loadDiagnostics ?? [];
-        _currentSolution = filteredSolution ?? throw new ArgumentNullException(nameof(filteredSolution));
-        _fullSolution = fullSolution ?? throw new ArgumentNullException(nameof(fullSolution));
+        _currentSolution = filteredSolution;
+        _fullSolution = fullSolution;
         _baselineSolution = filteredSolution;
         _lastApplied = filteredSolution;
         _solutionPath = solutionPath;
@@ -196,7 +195,7 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
     /// <inheritdoc/>
     public void Update(Solution state)
     {
-        _currentSolution = state ?? throw new ArgumentNullException(nameof(state));
+        _currentSolution = state;
     }
 
     /// <inheritdoc/>

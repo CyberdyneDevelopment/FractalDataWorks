@@ -29,15 +29,13 @@ public sealed class ScriptService : IScriptService
     /// <param name="logger">The logger.</param>
     public ScriptService(IEtlGateway gateway, ILogger<ScriptService>? logger = null)
     {
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
+        _gateway = gateway;
         _logger = logger ?? NullLogger<ScriptService>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<ScriptResultPayload>> Run(ScriptPayload script, ScriptRunPayload run, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(script);
-        ArgumentNullException.ThrowIfNull(run);
         var kind = ScriptKinds.ByName(script.Kind);
         if (ReferenceEquals(kind, ScriptKinds.NotFound))
         {

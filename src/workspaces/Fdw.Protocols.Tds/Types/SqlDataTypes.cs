@@ -24,7 +24,6 @@ public abstract partial class SqlDataTypes : TypeCollectionBase<SqlDataTypeBase,
     /// <returns>True when a SQL type holds values of that .NET type.</returns>
     public static bool ForClrType(Type clrType, [NotNullWhen(true)] out ISqlDataType? dataType)
     {
-        ArgumentNullException.ThrowIfNull(clrType);
         dataType = All().FirstOrDefault(t => t.Holds(clrType));
         return dataType is not null;
     }

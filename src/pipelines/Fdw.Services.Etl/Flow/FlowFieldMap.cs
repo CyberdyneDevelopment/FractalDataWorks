@@ -40,7 +40,6 @@ public sealed class FlowFieldMap
     /// <returns>The mapping.</returns>
     public FlowFieldMap WithConversion(FlowFieldConversion conversion)
     {
-        ArgumentNullException.ThrowIfNull(conversion);
         return new FlowFieldMap(Target, Source, Constant, IsConstant, conversion);
     }
 

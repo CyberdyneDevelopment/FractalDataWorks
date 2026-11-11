@@ -17,9 +17,6 @@ public static class PipelineRunRestartLimit
     /// <returns>The number of times, zero or more; a failure naming the setting when it is not set or is negative.</returns>
     public static IGenericResult<int> Read(IEffectiveSettingsProvider settings, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(logger);
-
         return settings.TryGetEffectiveValue<int>(SettingDefinitions.MaxPipelineRunRestarts, out var limit) && limit >= 0
             ? GenericResult<int>.Success(limit)
             : GenericResult<int>.Failure(PipelineRunRecoveryLog.RestartLimitMissing(logger, SettingDefinitions.MaxPipelineRunRestarts));

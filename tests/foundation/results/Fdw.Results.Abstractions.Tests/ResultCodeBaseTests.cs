@@ -87,46 +87,6 @@ public sealed class ResultCodeBaseTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void ConstructorWithNullCodeThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new TestResultCode(1, "Test", null!, 100, _errorSeverity, "Domain", "Message"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorWithNullSeverityThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new TestResultCode(1, "Test", "CODE", 100, null!, "Domain", "Message"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorWithNullDomainThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new TestResultCode(1, "Test", "CODE", 100, _errorSeverity, null!, "Message"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorWithNullMessageTemplateThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new TestResultCode(1, "Test", "CODE", 100, _errorSeverity, "Domain", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void ConstructorWithIsRetryableTrueCreatesRetryableCode()
     {
         // Act

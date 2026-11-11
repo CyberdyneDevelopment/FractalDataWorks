@@ -39,8 +39,8 @@ public sealed class DeclaredConnectionProvider : IDeclaredConnectionProvider
         IServiceProvider services,
         ILogger<DeclaredConnectionProvider>? logger = null)
     {
-        _schema = schema ?? throw new ArgumentNullException(nameof(schema));
-        _services = services ?? throw new ArgumentNullException(nameof(services));
+        _schema = schema;
+        _services = services;
         _logger = logger ?? NullLogger<DeclaredConnectionProvider>.Instance;
     }
 

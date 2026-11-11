@@ -6,7 +6,7 @@ namespace Fdw.Services.Etl.Tests.Pipelines.Loads;
 /// <summary>Tests for how the rows of a Files destination are split into the files they go to (FDW-3193).</summary>
 public sealed class LoadFileSplitTests
 {
-    private static IDictionary<string, object?> Row(object? team, string name) =>
+    private static Dictionary<string, object?> Row(object? team, string name) =>
         new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase) { ["Team"] = team, ["Name"] = name };
 
     [Fact]

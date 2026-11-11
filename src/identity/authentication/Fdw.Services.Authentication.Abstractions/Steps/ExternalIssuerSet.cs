@@ -21,7 +21,7 @@ public sealed class ExternalIssuerSet
     /// <param name="isComplete">Whether every federating step stated its issuer.</param>
     public ExternalIssuerSet(IReadOnlyList<string> issuers, bool isComplete)
     {
-        Issuers = issuers ?? throw new ArgumentNullException(nameof(issuers));
+        Issuers = issuers;
         IsComplete = isComplete;
     }
 

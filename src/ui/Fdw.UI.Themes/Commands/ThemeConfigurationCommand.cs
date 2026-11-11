@@ -8,6 +8,6 @@ namespace Fdw.UI.Themes.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Theme")]
 public sealed class ThemeConfigurationCommand : ConfigurationCommandBase<ThemeImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ThemeConfigurationCommand"/> class.</summary>
     public ThemeConfigurationCommand() : base("Theme") { }
 }

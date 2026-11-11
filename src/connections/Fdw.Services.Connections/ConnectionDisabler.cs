@@ -44,20 +44,15 @@ public sealed class ConnectionDisabler : IConnectionDisabler
         ConnectionDisablingOption options,
         ILogger<ConnectionDisabler>? logger = null)
     {
-        _states = states ?? throw new ArgumentNullException(nameof(states));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _states = states;
+        _tenants = tenants;
+        _options = options;
         _logger = logger ?? NullLogger<ConnectionDisabler>.Instance;
     }
 
     /// <inheritdoc/>
     public async Task<IGenericResult> Disable(EscalationFiring firing, CancellationToken cancellationToken = default)
     {
-        if (firing is null)
-        {
-            throw new ArgumentNullException(nameof(firing));
-        }
-
         var connection = ConnectionOf(firing);
         if (connection.IsFailure)
         {

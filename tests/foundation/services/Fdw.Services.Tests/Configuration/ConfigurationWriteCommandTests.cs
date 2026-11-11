@@ -95,7 +95,7 @@ public sealed class ConfigurationWriteCommandTests
     private static ConfigurationSaveCommand<SettingRow> Save(bool replaces, IReadOnlyDictionary<string, object?>? fieldValues = null, Guid? id = null)
         => new(new SettingRow { Id = id ?? RowId, Name = "alpha", Value = "one" }, fieldValues ?? new Dictionary<string, object?>(), replaces);
 
-    private static IReadOnlyList<(string Field, object? Value)> Conditions(IFilterExpression? filter)
+    private static List<(string Field, object? Value)> Conditions(IFilterExpression? filter)
         => filter!.Root.ShouldBeOfType<FilterGroup>().Nodes.Cast<FilterCondition>().Select(c => (c.PropertyName, c.Value)).ToList();
 
     private static IReadOnlyList<ExpandedCommand> Steps(IGenericResult<IReadOnlyList<ExpandedCommand>> expansion)
@@ -104,7 +104,7 @@ public sealed class ConfigurationWriteCommandTests
         return expansion.Value!;
     }
 
-    private static IReadOnlyDictionary<string, object?> Row(string field, object value) => new Dictionary<string, object?> { [field] = value };
+    private static Dictionary<string, object?> Row(string field, object value) => new Dictionary<string, object?> { [field] = value };
 
     // ── Save ─────────────────────────────────────────────────────────────────
 

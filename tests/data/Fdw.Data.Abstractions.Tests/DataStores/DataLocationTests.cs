@@ -61,36 +61,6 @@ public sealed class DataLocationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenStoreIdIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new DataLocation(null!, "path1", "SqlTable"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenPathIdIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new DataLocation("store1", null!, "SqlTable"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenContainerTypeIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new DataLocation("store1", "path1", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void WithParametersReturnsNewLocationWithCombinedParameters()
     {
         // Arrange

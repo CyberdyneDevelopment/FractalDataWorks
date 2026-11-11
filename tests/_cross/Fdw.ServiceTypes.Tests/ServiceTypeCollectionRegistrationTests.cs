@@ -87,12 +87,6 @@ public class ServiceTypeCollectionRegistrationTests
         Should.NotThrow(() => BetaCollection.RegisterMember(option));
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisteringNullThrows()
-        => Should.Throw<ArgumentNullException>(() => AlphaCollection.RegisterMember(null!));
-
     private sealed class NullHost : IHost
     {
         public IServiceProvider Services { get; } = new NullServiceProvider();

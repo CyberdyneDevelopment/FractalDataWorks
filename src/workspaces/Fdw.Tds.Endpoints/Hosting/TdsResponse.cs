@@ -26,7 +26,7 @@ public sealed class TdsResponse
     /// <param name="connectionToken">The connection's token, which writes honour.</param>
     public TdsResponse(TdsMessageWriter writer, int flushThreshold, CancellationToken connectionToken)
     {
-        _writer = writer ?? throw new ArgumentNullException(nameof(writer));
+        _writer = writer;
         _flushThreshold = flushThreshold;
         _connectionToken = connectionToken;
         Payload = new TdsPayloadWriter(flushThreshold + writer.PacketSize);

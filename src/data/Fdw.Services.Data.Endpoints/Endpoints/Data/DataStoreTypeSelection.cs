@@ -25,9 +25,6 @@ public static class DataStoreTypeSelection
     /// </returns>
     public static IGenericResult<string> Select(CreateDataStoreRequest request, string connectionImplementation, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var kind = ConnectionTypes.ByName(connectionImplementation);
         if (kind == ConnectionTypes.NotFound)
         {

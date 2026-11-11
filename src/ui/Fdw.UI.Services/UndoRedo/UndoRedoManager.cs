@@ -47,11 +47,6 @@ public sealed class UndoRedoManager : IUndoRedoManager
     /// <inheritdoc />
     public void Execute(ICommand command)
     {
-        if (command == null)
-        {
-            throw new ArgumentNullException(nameof(command));
-        }
-
         ThrowIfDisposed();
 
         command.Execute();

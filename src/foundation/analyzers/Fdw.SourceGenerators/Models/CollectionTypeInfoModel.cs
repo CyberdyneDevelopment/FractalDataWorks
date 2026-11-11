@@ -77,7 +77,7 @@ public class CollectionTypeInfoModel<TId> : IInputInfoModel, IEquatable<Collecti
     /// Gets or sets the collection strategy determining dictionary types and generation patterns.
     /// Immutable uses FrozenDictionary, Mutable uses ConcurrentDictionary, Factory uses Dictionary with Register().
     /// </summary>
-    public CollectionStrategy CollectionStrategy { get; set; } = CollectionStrategy.Immutable;
+    public ICollectionStrategy CollectionStrategy { get; set; } = CollectionStrategies.Immutable;
 
     /// <summary>
     /// Gets or sets the string comparison mode for name-based lookups.
@@ -230,14 +230,8 @@ public class CollectionTypeInfoModel<TId> : IInputInfoModel, IEquatable<Collecti
     /// Writes the contents of this type info model to a TextWriter for hash generation.
     /// </summary>
     /// <param name="writer">The TextWriter to write to.</param>
-    /// <exception cref="ArgumentNullException">Thrown when the writer is null.</exception>
     public void WriteToHash(TextWriter writer)
     {
-        if (writer == null)
-        {
-            throw new ArgumentNullException(nameof(writer), "The TextWriter cannot be null.");
-        }
-
         // Write basic properties
         writer.Write(Namespace);
         writer.Write(ClassName);

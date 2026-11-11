@@ -60,10 +60,6 @@ public sealed class ConfigurationRowReader
         IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, string containerName, ILogger? logger = null,
         IReadOnlyList<string>? alsoReads = null)
     {
-        ArgumentNullException.ThrowIfNull(gateways);
-        ArgumentNullException.ThrowIfNull(dataStoreName);
-        ArgumentNullException.ThrowIfNull(pathName);
-        ArgumentNullException.ThrowIfNull(containerName);
         _gateways = gateways;
         _dataStoreName = dataStoreName;
         _pathName = pathName;

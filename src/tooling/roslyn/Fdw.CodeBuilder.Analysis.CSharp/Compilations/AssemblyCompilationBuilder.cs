@@ -80,9 +80,6 @@ public class AssemblyCompilationBuilder
     /// </summary>
     public AssemblyCompilationBuilder WithReference(Microsoft.CodeAnalysis.Compilation compilation)
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
-
         // Create a metadata reference from the compilation
         using var stream = new MemoryStream();
         var emitResult = compilation.Emit(stream);
@@ -104,9 +101,6 @@ public class AssemblyCompilationBuilder
     /// </summary>
     public AssemblyCompilationBuilder WithReference(Assembly assembly)
     {
-        if (assembly == null)
-            throw new ArgumentNullException(nameof(assembly));
-
         _references.Add(MetadataReference.CreateFromFile(assembly.Location));
         return this;
     }
@@ -116,9 +110,6 @@ public class AssemblyCompilationBuilder
     /// </summary>
     public AssemblyCompilationBuilder WithReference(MetadataReference reference)
     {
-        if (reference == null)
-            throw new ArgumentNullException(nameof(reference));
-
         _references.Add(reference);
         return this;
     }
@@ -152,7 +143,7 @@ public class AssemblyCompilationBuilder
     /// </summary>
     public AssemblyCompilationBuilder WithOptions(CSharpCompilationOptions options)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _options = options;
         return this;
     }
 

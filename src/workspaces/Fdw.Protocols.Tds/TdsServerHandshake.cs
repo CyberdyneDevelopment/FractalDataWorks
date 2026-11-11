@@ -50,8 +50,8 @@ public sealed class TdsServerHandshake
     /// <param name="logger">The logger.</param>
     public TdsServerHandshake(X509Certificate2 certificate, TdsServerVersion version, ILogger? logger)
     {
-        _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
-        _version = version ?? throw new ArgumentNullException(nameof(version));
+        _certificate = certificate;
+        _version = version;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -61,8 +61,6 @@ public sealed class TdsServerHandshake
     /// <returns>The encrypted stream every later message travels in, or the refusal.</returns>
     public async Task<IGenericResult<SslStream>> Secure(Stream network, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(network);
-
         var first = await FirstByte(network, cancellationToken).ConfigureAwait(false);
         if (first.IsFailure)
             return first.ToNewResult<SslStream>();

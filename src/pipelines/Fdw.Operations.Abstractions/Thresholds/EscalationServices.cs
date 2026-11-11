@@ -12,10 +12,6 @@ public static class EscalationServices
     public static TService? Find<TService>(IServiceProvider services)
         where TService : class
     {
-        if (services is null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
         return services.GetService(typeof(TService)) as TService;
     }
 }

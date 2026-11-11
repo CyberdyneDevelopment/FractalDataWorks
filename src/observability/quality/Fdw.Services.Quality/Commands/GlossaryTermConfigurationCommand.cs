@@ -8,6 +8,6 @@ namespace Fdw.Services.Quality.Commands;
 [TypeOption(typeof(ConfigurationCommands), "GlossaryTerm")]
 public sealed class GlossaryTermConfigurationCommand : ConfigurationCommandBase<GlossaryTermImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="GlossaryTermConfigurationCommand"/> class.</summary>
     public GlossaryTermConfigurationCommand() : base("GlossaryTerm") { }
 }

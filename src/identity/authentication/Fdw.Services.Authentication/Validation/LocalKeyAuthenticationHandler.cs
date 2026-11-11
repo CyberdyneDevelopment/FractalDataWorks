@@ -59,17 +59,17 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
         ITokenRevocationStore revocations,
         ILogger<LocalKeyAuthenticationHandler>? logger = null)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
-        _revocations = revocations ?? throw new ArgumentNullException(nameof(revocations));
+        _configuration = configuration;
+        _credentials = credentials;
+        _revocations = revocations;
         _log = logger ?? NullLogger<LocalKeyAuthenticationHandler>.Instance;
     }
 
     /// <inheritdoc />
     public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context)
     {
-        _scheme = scheme ?? throw new ArgumentNullException(nameof(scheme));
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _scheme = scheme;
+        _context = context;
         return Task.CompletedTask;
     }
 

@@ -31,8 +31,6 @@ public abstract partial class SqlScalarFunctions : TypeCollectionBase<SqlScalarF
     /// <returns>The value (null for NULL), or the refusal.</returns>
     public static IGenericResult<object?> Call(FunctionCall call, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        ArgumentNullException.ThrowIfNull(scope);
         var name = call.FunctionName.Value;
 
         // An aggregate a grouped query already computed answers its own value here.

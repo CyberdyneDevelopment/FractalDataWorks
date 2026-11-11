@@ -24,7 +24,6 @@ public sealed class DefaultSchemaDiscoveryFactory : ISchemaDiscoveryFactory
     public void Register<TConnection>(ISchemaDiscoverer discoverer)
         where TConnection : IGenericConnection
     {
-        if (discoverer is null) throw new ArgumentNullException(nameof(discoverer));
         _byConnectionType[typeof(TConnection)] = discoverer;
     }
 
@@ -34,8 +33,6 @@ public sealed class DefaultSchemaDiscoveryFactory : ISchemaDiscoveryFactory
     /// </summary>
     public void Register(Type connectionType, ISchemaDiscoverer discoverer)
     {
-        if (connectionType is null) throw new ArgumentNullException(nameof(connectionType));
-        if (discoverer is null) throw new ArgumentNullException(nameof(discoverer));
         _byConnectionType[connectionType] = discoverer;
     }
 

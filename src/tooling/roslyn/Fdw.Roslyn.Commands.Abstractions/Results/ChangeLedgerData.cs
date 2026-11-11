@@ -19,7 +19,7 @@ public sealed class ChangeLedgerData
         int addedCount,
         int removedCount)
     {
-        Entries = entries ?? throw new ArgumentNullException(nameof(entries));
+        Entries = entries;
         TotalEntries = totalEntries;
         RenameCount = renameCount;
         MoveCount = moveCount;

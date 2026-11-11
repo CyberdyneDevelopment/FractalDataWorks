@@ -61,8 +61,6 @@ public sealed class SettingsService : ISettingsService
     /// <inheritdoc />
     public void SaveSettings(ApplicationSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-
         Directory.CreateDirectory(SettingsDirectory);
 
         var json = JsonSerializer.Serialize(settings, JsonOptions);

@@ -57,7 +57,7 @@ public sealed class WaitThresholdReporter
     /// <param name="logger">The logger.</param>
     public WaitThresholdReporter(IServiceScopeFactory scopes, ILogger<WaitThresholdReporter>? logger = null)
     {
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+        _scopes = scopes;
         _logger = logger ?? NullLogger<WaitThresholdReporter>.Instance;
     }
 
@@ -67,7 +67,6 @@ public sealed class WaitThresholdReporter
     /// <returns>A task that ends when every subject has been reported.</returns>
     public async Task Report(PipelineRunQueueSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
         var waiting = new Dictionary<WaitSubject, (Guid SubjectId, long Count)>();
         CountPipelines(snapshot, waiting);
         CountSchedules(snapshot, waiting);

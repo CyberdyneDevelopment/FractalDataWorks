@@ -42,7 +42,7 @@ public sealed class TdsMessageWriter
     /// <param name="logger">The logger.</param>
     public TdsMessageWriter(Stream stream, ILogger? logger)
     {
-        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+        _stream = stream;
         _logger = logger ?? NullLogger.Instance;
     }
 

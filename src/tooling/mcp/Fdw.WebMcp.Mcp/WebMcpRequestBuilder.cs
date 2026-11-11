@@ -36,9 +36,6 @@ public static class WebMcpRequestBuilder
         IReadOnlyDictionary<string, JsonElement>? arguments,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(plan);
-        ArgumentNullException.ThrowIfNull(logger);
-
         // MCP lets a caller omit `arguments` entirely, and an omitted set IS an empty set -- it is
         // not a missing value being stood in for. A tool that needs a value still refuses below,
         // naming it, rather than proceeding on a default.

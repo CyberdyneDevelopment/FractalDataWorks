@@ -14,8 +14,6 @@ public static class ConfigurationPlacementSource
     /// <returns>A placement that places, or one that refuses every member and says why.</returns>
     public static IConfigurationPlacement From(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
-
         return services.GetService<IConfigurationPlacement>() is { } registered
             ? registered
             : new UnavailablePlacement(services.GetService<ILoggerFactory>()?.CreateLogger<UnavailablePlacement>());

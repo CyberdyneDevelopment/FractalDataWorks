@@ -125,4 +125,16 @@ public static partial class RoleConfigurationProviderLog
     [MessageLogging(EventId = 71008, Level = LogLevel.Error,
         Message = "Failed to load filtered roles from provider")]
     public static partial IGenericMessage FilteredRolesQueryFailed(ILogger logger);
+
+    /// <summary>
+    /// Logs that a role's assignments and grants were removed in the unit that deletes the role (FDW-5222).
+    /// </summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="roleId">The identifier of the role being deleted.</param>
+    /// <param name="assignments">How many assignments of the role to people were removed.</param>
+    /// <param name="grants">How many permission grants of the role were removed.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 11796, Level = LogLevel.Information,
+        Message = "Role '{roleId}' is being deleted: removed {assignments} assignments and {grants} permission grants with it")]
+    public static partial IGenericMessage RoleReferencesRemoved(ILogger logger, string roleId, int assignments, int grants);
 }

@@ -33,9 +33,6 @@ public static class HostIdentityGate
         bool callerIsPlatformAdmin,
         ILogger logger)
     {
-        if (connectionType is null) throw new ArgumentNullException(nameof(connectionType));
-        if (connection is null) throw new ArgumentNullException(nameof(connection));
-
         var actsAsHost = connectionType.UsesHostIdentity(connection);
         if (actsAsHost.IsFailure)
             return actsAsHost;

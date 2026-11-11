@@ -25,7 +25,7 @@ public abstract class GetDataSetStandInsEndpointBase : Endpoint<DataSetNameReque
     private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ILogger<GetDataSetStandInsEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataSetStandInsEndpointBase"/> class.</summary>
     protected GetDataSetStandInsEndpointBase(
         DataSetConfigurationProvider dataSets,
         IConfigurationGatewayProvider configurationGateways,

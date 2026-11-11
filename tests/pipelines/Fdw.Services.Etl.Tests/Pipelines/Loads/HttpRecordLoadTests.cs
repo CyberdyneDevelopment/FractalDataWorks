@@ -56,7 +56,7 @@ public sealed class HttpRecordLoadTests
         return (executor, writer);
     }
 
-    private Task<IGenericResult<int>> Run(PipelineLoadExecutor executor, PipelineLoadStepConfiguration step, int rows) =>
+    private static Task<IGenericResult<int>> Run(PipelineLoadExecutor executor, PipelineLoadStepConfiguration step, int rows) =>
         executor.Run("copy", [LoadUnit.ForStep(step)], Rows(rows), NoParameters, Now, TestContext.Current.CancellationToken);
 
     [Fact]

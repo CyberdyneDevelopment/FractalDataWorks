@@ -23,15 +23,6 @@ public class PropertyExpectationsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    public void Constructor_WithNull_ThrowsArgumentNullException()
-    {
-        // Arrange & Act & Assert
-        Should.Throw<ArgumentNullException>(() => new PropertyExpectations(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "SourceGen")]
     public void HasType_WithCorrectType_DoesNotThrow()
     {
         // Arrange

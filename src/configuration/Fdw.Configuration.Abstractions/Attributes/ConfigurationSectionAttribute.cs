@@ -45,7 +45,7 @@ public sealed class ConfigurationSectionAttribute : Attribute
     /// <param name="name">The unique identifier for this section.</param>
     public ConfigurationSectionAttribute(string name)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
     }
 
     /// <summary>

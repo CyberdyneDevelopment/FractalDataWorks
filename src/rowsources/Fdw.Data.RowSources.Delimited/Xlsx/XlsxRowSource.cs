@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Fdw.Data.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
@@ -26,6 +27,7 @@ namespace Fdw.Data.RowSources.Delimited.Xlsx;
 /// </remarks>
 public sealed class XlsxRowSource : IRowSourceReader
 {
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the workbook stream; whoever opened it and asked the format for this reader (StreamedFileRecordSource for a file) disposes it.")]
     private readonly Stream _content;
     private readonly XlsxRowSourceOptions _options;
     private readonly List<string> _fieldNames;
@@ -39,12 +41,11 @@ public sealed class XlsxRowSource : IRowSourceReader
     /// <summary>Initializes a new instance of the <see cref="XlsxRowSource"/> class.</summary>
     /// <param name="content">The workbook's bytes; it is left open.</param>
     /// <param name="options">The columns and worksheet to read.</param>
-    /// <exception cref="ArgumentNullException">The content or the options are missing.</exception>
     /// <exception cref="ArgumentException">No column names are supplied.</exception>
     public XlsxRowSource(Stream content, XlsxRowSourceOptions options)
     {
-        _content = content ?? throw new ArgumentNullException(nameof(content));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _content = content;
+        _options = options;
         if (_options.Columns.Count == 0)
         {
             throw new ArgumentException("XlsxRowSourceOptions.Columns must contain at least one column name.", nameof(options));

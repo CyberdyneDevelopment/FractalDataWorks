@@ -90,7 +90,7 @@ public sealed class RunThresholdFlowExecutorTests
         var executor = new RunThresholdFlowExecutor(
             new FinishesComponents(new Component("a"), new Component("b")), "load", Guid.NewGuid(), Guid.NewGuid(), Ids, evaluator, NullLogger.Instance);
 
-        var outcome = await executor.Execute(new FlowGraph([], [], []), new FlowRunOptions { LinkCapacity = 2 });
+        var outcome = await executor.Execute(new FlowGraph([], [], []), new FlowRunOptions { LinkCapacity = 2 }, TestContext.Current.CancellationToken);
 
         outcome.Result.IsSuccess.ShouldBeTrue();
         evaluator.Reported.ShouldBe(["load/a", "load/b"]);
@@ -105,7 +105,7 @@ public sealed class RunThresholdFlowExecutorTests
         var executor = new RunThresholdFlowExecutor(
             new FinishesComponents(new Component("a")), "load", Guid.NewGuid(), null, Ids, new SlowEvaluator(), NullLogger.Instance);
 
-        await executor.Execute(new FlowGraph([], [], []), new FlowRunOptions { LinkCapacity = 2, Progress = told });
+        await executor.Execute(new FlowGraph([], [], []), new FlowRunOptions { LinkCapacity = 2, Progress = told }, TestContext.Current.CancellationToken);
 
         told.Components.ShouldBe(["a"]);
     }

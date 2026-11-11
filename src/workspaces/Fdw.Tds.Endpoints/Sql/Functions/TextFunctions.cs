@@ -18,8 +18,6 @@ public static class TextFunctions
     /// <returns>The characters, or error 537 for a negative length.</returns>
     public static IGenericResult<object?> Substring(SqlFunctionCall call, string text, long start, long length)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        ArgumentNullException.ThrowIfNull(text);
         if (length < 0)
             return call.Refuse(new SqlServerMessage(537, 3, 16, "Invalid length parameter passed to the LEFT or SUBSTRING function.", call.Line));
 
@@ -35,8 +33,6 @@ public static class TextFunctions
     /// <returns>The characters, or error 536 for a negative count.</returns>
     public static IGenericResult<object?> Left(SqlFunctionCall call, string text, long count)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        ArgumentNullException.ThrowIfNull(text);
         return count < 0
             ? call.Refuse(new SqlServerMessage(536, 1, 16, "Invalid length parameter passed to the left function.", call.Line))
             : SqlFunctionCall.Ok(text[..(int)Math.Min(count, text.Length)]);
@@ -49,8 +45,6 @@ public static class TextFunctions
     /// <returns>The characters, or error 536 for a negative count.</returns>
     public static IGenericResult<object?> Right(SqlFunctionCall call, string text, long count)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        ArgumentNullException.ThrowIfNull(text);
         return count < 0
             ? call.Refuse(new SqlServerMessage(536, 2, 16, "Invalid length parameter passed to the right function.", call.Line))
             : SqlFunctionCall.Ok(text[^(int)Math.Min(count, text.Length)..]);
@@ -63,8 +57,6 @@ public static class TextFunctions
     /// <returns>The position, or 0.</returns>
     public static long IndexOf(string find, string text, long start)
     {
-        ArgumentNullException.ThrowIfNull(find);
-        ArgumentNullException.ThrowIfNull(text);
         var from = (int)Math.Max(start, 1) - 1;
         if (find.Length == 0 || from > text.Length)
             return 0;
@@ -78,8 +70,6 @@ public static class TextFunctions
     /// <returns>The delimited name, or null for a name over 128 characters or another delimiter, as SQL Server answers.</returns>
     public static string? Quote(string name, string quote)
     {
-        ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(quote);
         if (name.Length > 128)
             return null;
 

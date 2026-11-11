@@ -22,11 +22,11 @@ public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSet
     private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly IDataSetResolver _resolver;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataSetFieldsEndpointBase"/> class.</summary>
     protected GetDataSetFieldsEndpointBase(ILogger<GetDataSetFieldsEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider, IDataSetResolver resolver) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _resolver = resolver;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

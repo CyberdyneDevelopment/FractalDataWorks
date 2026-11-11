@@ -64,12 +64,6 @@ public sealed class HttpPagedRecordSource : IRecordSource<DataRecord>
         HttpPagingPlan plan,
         ILogger? logger)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(protocol);
-        ArgumentNullException.ThrowIfNull(container);
-        ArgumentNullException.ThrowIfNull(fields);
-        ArgumentNullException.ThrowIfNull(plan);
         _client = client;
         _query = query;
         _protocol = protocol;

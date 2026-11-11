@@ -35,18 +35,6 @@ public class DataQueryBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void Constructor_WithNullDataSetName_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() =>
-            new DataQueryBuilder<TestRecord>(null!));
-
-        exception.ParamName.ShouldBe("dataSetName");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void Where_WithValidPredicate_ReturnsNewQuery()
     {
         // Arrange
@@ -61,21 +49,6 @@ public class DataQueryBuilderTests
         result.ShouldNotBeSameAs(query);
         result.DataSetName.ShouldBe("TestDataSet");
         result.SourceType.ShouldBe(typeof(TestRecord));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Where_WithNullPredicate_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var query = new DataQueryBuilder<TestRecord>("TestDataSet");
-
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() =>
-            query.Where(null!));
-
-        exception.ParamName.ShouldBe("predicate");
     }
 
     [Fact]
@@ -117,21 +90,6 @@ public class DataQueryBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void Select_WithNullSelector_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var query = new DataQueryBuilder<TestRecord>("TestDataSet");
-
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() =>
-            query.Select<string>(null!));
-
-        exception.ParamName.ShouldBe("selector");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void Select_CreatesMethodCallExpression()
     {
         // Arrange
@@ -168,21 +126,6 @@ public class DataQueryBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void OrderBy_WithNullKeySelector_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var query = new DataQueryBuilder<TestRecord>("TestDataSet");
-
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() =>
-            query.OrderBy<int>(null!));
-
-        exception.ParamName.ShouldBe("keySelector");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void OrderBy_CreatesMethodCallExpression()
     {
         // Arrange
@@ -214,21 +157,6 @@ public class DataQueryBuilderTests
         result.ShouldNotBeNull();
         result.ShouldNotBeSameAs(query);
         result.DataSetName.ShouldBe("TestDataSet");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void OrderByDescending_WithNullKeySelector_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var query = new DataQueryBuilder<TestRecord>("TestDataSet");
-
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() =>
-            query.OrderByDescending<int>(null!));
-
-        exception.ParamName.ShouldBe("keySelector");
     }
 
     [Fact]

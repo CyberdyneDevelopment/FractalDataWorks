@@ -60,7 +60,7 @@ public sealed class ExecutionFlowReporter : IFlowReporter
     /// <param name="logger">The logger.</param>
     public ExecutionFlowReporter(IExecutionTracker tracker, Guid runId, Guid? tenantId, ILogger? logger = null)
     {
-        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
+        _tracker = tracker;
         _runId = runId;
         _tenantId = tenantId;
         _logger = logger ?? NullLogger.Instance;
@@ -95,7 +95,6 @@ public sealed class ExecutionFlowReporter : IFlowReporter
     /// <inheritdoc />
     public async Task StepFinished(Guid stage, IGenericResult outcome, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(outcome);
         var completed = await _tracker
             .Complete(stage, outcome.IsSuccess, outcome.IsSuccess ? "Completed" : "Failed", outcome.CurrentMessage, cancellationToken)
             .ConfigureAwait(false);
@@ -119,7 +118,6 @@ public sealed class ExecutionFlowReporter : IFlowReporter
     /// <inheritdoc />
     public async Task FlowFinished(Guid stage, FlowRunReport report, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(report);
         foreach (var component in report.Components.OrderBy(c => c.StartedAt).ThenBy(c => c.Name, StringComparer.Ordinal))
         {
             var figures = FlowFigures.Of(report, component.Name);
@@ -173,7 +171,6 @@ public sealed class ExecutionFlowReporter : IFlowReporter
     /// </remarks>
     public Task DestinationCommitted(Guid stage, DestinationCommit commit, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(commit);
         return Record(stage, DestinationCommittedEvent, $"Destination '{commit.Destination}' has committed {commit.RowsCommitted} row(s)", new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["destination"] = commit.Destination,

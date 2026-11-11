@@ -32,8 +32,6 @@ public static class SchedulePipeline
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        if (pipelines is null) throw new ArgumentNullException(nameof(pipelines));
-
         var pipeline = await pipelines.Get(pipelineId, cancellationToken).ConfigureAwait(false);
         if (pipeline.IsFailure)
         {

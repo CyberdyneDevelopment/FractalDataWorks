@@ -25,7 +25,7 @@ public abstract class GetWorkspaceMapEndpointBase : CrudGetEndpointBase<Workspac
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IDataSetVariationConfigurationProvider _variations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetWorkspaceMapEndpointBase"/> class.</summary>
     protected GetWorkspaceMapEndpointBase(
         ILogger<GetWorkspaceMapEndpointBase> logger,
         IWorkspaceConfigurationProvider provider,

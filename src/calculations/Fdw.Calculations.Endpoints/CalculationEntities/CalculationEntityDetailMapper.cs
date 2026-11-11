@@ -20,8 +20,6 @@ public static class CalculationEntityDetailMapper
     /// </returns>
     public static IGenericResult<CalculationEntityDetailDto?> Found(IGenericResult<ICalculationEntity> read)
     {
-        ArgumentNullException.ThrowIfNull(read);
-
         if (read.IsFailure)
         {
             return FailureCategory.IsMissing(read)
@@ -50,8 +48,6 @@ public static class CalculationEntityDetailMapper
     /// <returns>The detail DTO, with the entity's inputs and output.</returns>
     public static CalculationEntityDetailDto ToDetail(ICalculationEntity entity)
     {
-        ArgumentNullException.ThrowIfNull(entity);
-
         return new CalculationEntityDetailDto
         {
             Id = entity.Id,

@@ -10,6 +10,6 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 [TypeOption(typeof(ConfigurationCommands), "HealthMonitor")]
 public sealed class HealthMonitorConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="HealthMonitorConfigurationCommand"/> class.</summary>
     public HealthMonitorConfigurationCommand() : base("HealthMonitor") { }
 }

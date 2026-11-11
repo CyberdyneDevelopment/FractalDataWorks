@@ -17,7 +17,7 @@ public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<Notifica
 {
     private readonly INotificationConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetNotificationEndpointBase"/> class.</summary>
     protected GetNotificationEndpointBase(ILogger<GetNotificationEndpointBase> logger, INotificationConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

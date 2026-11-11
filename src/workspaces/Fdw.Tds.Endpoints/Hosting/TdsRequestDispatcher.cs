@@ -61,9 +61,9 @@ public sealed class TdsRequestDispatcher
     /// <param name="logger">The logger.</param>
     public TdsRequestDispatcher(TdsEndpointOptions options, IServiceScopeFactory scopes, ILogger logger)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _options = options;
+        _scopes = scopes;
+        _logger = logger;
     }
 
     /// <summary>Answers a request.</summary>
@@ -76,8 +76,6 @@ public sealed class TdsRequestDispatcher
     public async Task<IGenericResult<bool>> Answer(
         TdsMessage message, TdsSession session, TdsMessageWriter writer, CancellationToken request, CancellationToken connection)
     {
-        ArgumentNullException.ThrowIfNull(message);
-        ArgumentNullException.ThrowIfNull(session);
         var response = new TdsResponse(writer, FlushThreshold, connection);
         if (message.ResetsConnection)
         {

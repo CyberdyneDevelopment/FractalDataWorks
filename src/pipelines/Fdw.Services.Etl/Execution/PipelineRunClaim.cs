@@ -30,9 +30,6 @@ public sealed record PipelineRunClaim(PipelineRunIdentity Run, IReadOnlySet<stri
     /// <returns>The claim.</returns>
     public static PipelineRunClaim Writing(PipelineRunIdentity run, IEnumerable<string> writeKeys, PipelineRunLimitValues limits, PipelineRunCap? cap)
     {
-        ArgumentNullException.ThrowIfNull(run);
-        ArgumentNullException.ThrowIfNull(writeKeys);
-        ArgumentNullException.ThrowIfNull(limits);
         return new PipelineRunClaim(run, new HashSet<string>(writeKeys, StringComparer.OrdinalIgnoreCase), false, limits.PerServer, limits.PerTenant, cap);
     }
 
@@ -43,8 +40,6 @@ public sealed record PipelineRunClaim(PipelineRunIdentity Run, IReadOnlySet<stri
     /// <returns>The claim.</returns>
     public static PipelineRunClaim RunningAlone(PipelineRunIdentity run, PipelineRunLimitValues limits, PipelineRunCap? cap)
     {
-        ArgumentNullException.ThrowIfNull(run);
-        ArgumentNullException.ThrowIfNull(limits);
         return new PipelineRunClaim(run, new HashSet<string>(StringComparer.OrdinalIgnoreCase), true, limits.PerServer, limits.PerTenant, cap);
     }
 }

@@ -989,8 +989,9 @@ public sealed class MessageServiceTests
         var page = await fixture.Service.GetMessages(new MessageQuery { UserId = ana }, TestContext.Current.CancellationToken);
 
         page.IsSuccess.ShouldBeTrue();
-        page.Value!.Single(m => m.Id == dismissed.Id).DismissedAt.ShouldBe(at.UtcDateTime);
-        page.Value.Single(m => m.Id == kept.Id).DismissedAt.ShouldBeNull();
+        var messages = page.Value.ShouldNotBeNull();
+        messages.Single(m => m.Id == dismissed.Id).DismissedAt.ShouldBe(at.UtcDateTime);
+        messages.Single(m => m.Id == kept.Id).DismissedAt.ShouldBeNull();
     }
 
     [Fact]

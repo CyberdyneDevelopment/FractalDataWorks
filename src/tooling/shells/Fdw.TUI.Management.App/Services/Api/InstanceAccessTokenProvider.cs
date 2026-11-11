@@ -23,7 +23,7 @@ public sealed class InstanceAccessTokenProvider : IAccessTokenProvider
     /// </summary>
     public InstanceAccessTokenProvider(IConnectionManager connectionManager)
     {
-        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
+        _connectionManager = connectionManager;
     }
 
     /// <inheritdoc />

@@ -48,7 +48,7 @@ public sealed class ConnectionHealthService : IConnectionHealthService
     /// <param name="logger">Optional logger; falls back to <see cref="NullLogger{T}"/>.</param>
     public ConnectionHealthService(IConfigurationGatewayProvider configurationGateways, ILogger<ConnectionHealthService>? logger = null)
     {
-        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
+        _configurationGateways = configurationGateways;
         _logger = logger ?? NullLogger<ConnectionHealthService>.Instance;
     }
 

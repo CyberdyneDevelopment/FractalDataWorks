@@ -41,9 +41,8 @@ public sealed class ConnectionAuthenticationDeclarationTests
     }
 
     [Fact]
-    public void ADeclarationNeedsADictionaryPropertyAndAMethod()
+    public void ADeclarationNeedsADictionaryProperty()
     {
         Should.Throw<System.ArgumentException>(() => ConnectionAuthentication<MsSqlConnectionConfiguration>.Of(" ", configuration => MsSqlAuthenticationTypes.ByName(configuration.AuthenticationType)));
-        Should.Throw<System.ArgumentNullException>(() => ConnectionAuthentication<MsSqlConnectionConfiguration>.Of(nameof(MsSqlConnectionConfiguration.AdditionalProperties), null!));
     }
 }

@@ -30,10 +30,6 @@ public static class AccountAuthority
     public static bool Administers(
         ClaimsPrincipal caller, IUserImplementationConfiguration account, ISystemRoleConfiguration roles)
     {
-        ArgumentNullException.ThrowIfNull(caller);
-        ArgumentNullException.ThrowIfNull(account);
-        ArgumentNullException.ThrowIfNull(roles);
-
         if (roles.IsPlatformAdmin(caller))
             return true;
 
@@ -51,9 +47,6 @@ public static class AccountAuthority
     /// <param name="account">The account being acted on.</param>
     public static bool IsSelf(ClaimsPrincipal caller, IUserImplementationConfiguration account)
     {
-        ArgumentNullException.ThrowIfNull(caller);
-        ArgumentNullException.ThrowIfNull(account);
-
         return CallerClaims.TryGetUserId(caller, out var callerGuid) && callerGuid == account.Id;
     }
 

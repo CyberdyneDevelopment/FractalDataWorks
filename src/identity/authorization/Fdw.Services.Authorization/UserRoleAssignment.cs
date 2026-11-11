@@ -35,15 +35,16 @@ public sealed class UserRoleAssignment : IUserRoleAssignment
     /// <param name="logger">The logger.</param>
     public UserRoleAssignment(IRoleConfigurationProvider roles, IUserRoleConfigurationProvider userRoles, ILogger<UserRoleAssignment>? logger)
     {
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _userRoles = userRoles ?? throw new ArgumentNullException(nameof(userRoles));
+        _roles = roles;
+        _userRoles = userRoles;
         _logger = logger ?? NullLogger<UserRoleAssignment>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult> Assign(Guid userId, string roleName, Guid tenantId, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
+        if (string.IsNullOrWhiteSpace(roleName))
+            return GenericResult.Failure(UserRoleAssignmentLog.AssignedRoleNameRequired(_logger, userId));
 
         var found = await _roles.Get(roleName, cancellationToken).ConfigureAwait(false);
         if (!found.IsSuccess)

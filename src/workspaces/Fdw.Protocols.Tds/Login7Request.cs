@@ -107,7 +107,6 @@ public sealed class Login7Request
     /// <returns>The login, or the refusal.</returns>
     public static IGenericResult<Login7Request> Parse(byte[] payload, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(payload);
         if (payload.Length < FixedLength)
             return Malformed(logger, $"it is {payload.Length} bytes, shorter than the 94-byte fixed part");
 

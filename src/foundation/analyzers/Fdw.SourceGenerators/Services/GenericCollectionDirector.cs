@@ -21,10 +21,9 @@ public sealed class GenericCollectionDirector<TId>
     /// Initializes a new instance of the <see cref="GenericCollectionDirector{TId}"/> class.
     /// </summary>
     /// <param name="builder">The collection builder to orchestrate.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="builder"/> is null.</exception>
     public GenericCollectionDirector(IGenericCollectionBuilder<TId> builder)
     {
-        _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+        _builder = builder;
     }
 
     /// <summary>
@@ -37,7 +36,6 @@ public sealed class GenericCollectionDirector<TId>
     /// <param name="returnType">The return type for generated collection methods and properties.</param>
     /// <param name="compilation">The compilation context from the source generator.</param>
     /// <returns>The generated source code for the complete collection.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="returnType"/> is null or empty.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the builder configuration is invalid.</exception>
     public string ConstructFullCollection(
@@ -69,7 +67,6 @@ public sealed class GenericCollectionDirector<TId>
     /// <param name="returnType">The return type for generated collection methods and properties.</param>
     /// <param name="compilation">The compilation context from the source generator.</param>
     /// <returns>The generated source code for the simplified collection.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="returnType"/> is null or empty.</exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the definition does not inherit from collection base or when the builder configuration is invalid.
@@ -88,7 +85,7 @@ public sealed class GenericCollectionDirector<TId>
         }
 
         // For simplified collections, always use static pattern as base class handles instantiation
-        var mode = CollectionGenerationMode.StaticCollection;
+        var mode = CollectionGenerationModes.StaticCollection;
 
         return _builder
             .Configure(mode)
@@ -105,51 +102,22 @@ public sealed class GenericCollectionDirector<TId>
         string returnType,
         Compilation compilation)
     {
-        if (definition == null)
-        {
-            throw new ArgumentNullException(nameof(definition));
-        }
-
-        if (values == null)
-        {
-            throw new ArgumentNullException(nameof(values));
-        }
-
         if (string.IsNullOrEmpty(returnType))
         {
             throw new ArgumentException("Return type cannot be null or empty.", nameof(returnType));
         }
 
-        if (compilation == null)
-        {
-            throw new ArgumentNullException(nameof(compilation));
-        }
     }
 
-    private static CollectionGenerationMode DetermineGenerationMode(GenericTypeInfoModel<TId> definition)
+    private static ICollectionGenerationMode DetermineGenerationMode(GenericTypeInfoModel<TId> definition)
     {
-        if (definition == null)
-        {
-            throw new ArgumentNullException(nameof(definition));
-        }
         // If explicitly configured for static generation
         if (definition.GenerateStaticCollection)
         {
-            return CollectionGenerationMode.StaticCollection;
+            return CollectionGenerationModes.StaticCollection;
         }
 
-        // Use CollectionStrategy to determine generation mode
-        // Pragma: source generators cannot use TypeCollections (bootstrapping problem)
-#pragma warning disable FDW018
-        switch (definition.CollectionStrategy)
-        {
-            case CollectionStrategy.Factory:
-                return CollectionGenerationMode.FactoryCollection;
-            case CollectionStrategy.Immutable:
-            case CollectionStrategy.Mutable:
-            default:
-                return CollectionGenerationMode.InstanceCollection;
-        }
-#pragma warning restore FDW018
+        // The strategy states the shape of collection it generates
+        return definition.CollectionStrategy.GenerationMode;
     }
 }

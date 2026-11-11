@@ -75,7 +75,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         TimeSpan longestScan,
         ILogger<ConnectionHealthMonitorWorker>? logger = null)
     {
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        _scopeFactory = scopeFactory;
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(shortestScan, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfLessThan(longestScan, shortestScan);
         _shortestScan = shortestScan;

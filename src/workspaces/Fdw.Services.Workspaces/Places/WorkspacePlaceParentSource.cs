@@ -24,7 +24,7 @@ public sealed class WorkspacePlaceParentSource : IPlaceParentSource
     /// <param name="logger">The logger.</param>
     public WorkspacePlaceParentSource(IWorkspaceConfigurationProvider workspaces, ILogger<WorkspacePlaceParentSource>? logger)
     {
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
+        _workspaces = workspaces;
         _logger = logger ?? NullLogger<WorkspacePlaceParentSource>.Instance;
     }
 

@@ -132,57 +132,6 @@ public sealed class CrossJoinExecutorTests
         results.ShouldBeEmpty();
     }
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenLeftRecordsIsNull()
-    {
-        var right = new List<Dictionary<string, object>> { RightRow(100, "X") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute<Dictionary<string, object>, Dictionary<string, object>, Merged>(
-                null!, right, Extractor, Condition, Merge).ToList());
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenRightRecordsIsNull()
-    {
-        var left = new List<Dictionary<string, object>> { LeftRow(1, "Alice") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute<Dictionary<string, object>, Dictionary<string, object>, Merged>(
-                left, null!, Extractor, Condition, Merge).ToList());
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenFieldExtractorIsNull()
-    {
-        // Arrange - even though CrossJoinExecutor never calls the extractor, the guard still
-        // enforces the argument is non-null.
-        var left = new List<Dictionary<string, object>> { LeftRow(1, "Alice") };
-        var right = new List<Dictionary<string, object>> { RightRow(100, "X") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute(left, right, null!, Condition, Merge).ToList());
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenResultSelectorIsNull()
-    {
-        var left = new List<Dictionary<string, object>> { LeftRow(1, "Alice") };
-        var right = new List<Dictionary<string, object>> { RightRow(100, "X") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute<Dictionary<string, object>, Dictionary<string, object>, Merged>(
-                left, right, Extractor, Condition, null!).ToList());
-    }
-
     private static Dictionary<string, object> LeftRow(int id, string name) =>
         new() { ["Id"] = id, ["Name"] = name };
 

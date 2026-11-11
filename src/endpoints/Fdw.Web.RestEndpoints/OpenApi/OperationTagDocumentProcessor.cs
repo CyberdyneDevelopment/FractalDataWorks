@@ -18,7 +18,6 @@ public sealed class OperationTagDocumentProcessor : IDocumentProcessor
     /// <inheritdoc />
     public void Process(DocumentProcessorContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
         foreach (var (path, pathItem) in context.Document.Paths)
         {
             foreach (var operation in pathItem.Values)

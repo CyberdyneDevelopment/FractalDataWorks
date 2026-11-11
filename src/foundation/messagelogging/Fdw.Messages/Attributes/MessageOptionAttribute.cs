@@ -15,10 +15,9 @@ public sealed class MessageOptionAttribute : Attribute
     /// Initializes a new instance of the <see cref="MessageOptionAttribute"/> class.
     /// </summary>
     /// <param name="collectionType">The collection type this message option belongs to.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="collectionType"/> is null.</exception>
     public MessageOptionAttribute(Type collectionType)
     {
-        CollectionType = collectionType ?? throw new ArgumentNullException(nameof(collectionType));
+        CollectionType = collectionType;
     }
 
     /// <summary>

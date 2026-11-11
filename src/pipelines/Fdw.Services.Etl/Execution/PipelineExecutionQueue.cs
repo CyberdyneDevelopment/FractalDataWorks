@@ -47,8 +47,8 @@ public sealed class PipelineExecutionQueue : IPipelineExecutionQueue
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
         _capacity = capacity;
-        _store = store ?? throw new ArgumentNullException(nameof(store));
-        _stops = stops ?? throw new ArgumentNullException(nameof(stops));
+        _store = store;
+        _stops = stops;
         _logger = logger ?? NullLogger<PipelineExecutionQueue>.Instance;
         _channel = Channel.CreateBounded<PipelineExecutionRequest>(
             new BoundedChannelOptions(capacity)
@@ -69,7 +69,6 @@ public sealed class PipelineExecutionQueue : IPipelineExecutionQueue
         PipelineExecutionRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
         var stop = await _stops.Check(request, cancellationToken).ConfigureAwait(false);
         if (stop.IsFailure || stop.Value is null)
         {
@@ -115,7 +114,6 @@ public sealed class PipelineExecutionQueue : IPipelineExecutionQueue
     /// <exception cref="InvalidOperationException">The setting is missing or not positive; the host does not start without it.</exception>
     public static PipelineExecutionQueue Create(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineExecutionQueue>();
         using var scope = services.CreateScope();
         var accessor = scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>();

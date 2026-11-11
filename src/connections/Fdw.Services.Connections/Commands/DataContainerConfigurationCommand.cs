@@ -7,6 +7,6 @@ namespace Fdw.Services.Connections.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataContainer")]
 public sealed class DataContainerConfigurationCommand : ConfigurationCommandBase<DataContainerConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataContainerConfigurationCommand"/> class.</summary>
     public DataContainerConfigurationCommand() : base("DataContainer") { }
 }

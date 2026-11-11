@@ -18,7 +18,8 @@ public static class FlowPredicate
     /// <returns>The filter, or the failure that says why the expression cannot be read.</returns>
     public static IGenericResult<Func<IDictionary<string, object?>, bool>> FromExpression(string expression, ILogger logger)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(expression);
+        if (string.IsNullOrWhiteSpace(expression))
+            return GenericResult<Func<IDictionary<string, object?>, bool>>.Failure(FlowLog.FilterExpressionRequired(logger));
 
         var parsed = RecordPredicates.Parse(expression, logger);
         if (parsed.IsFailure || parsed.Value is null)

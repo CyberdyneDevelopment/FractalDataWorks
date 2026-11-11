@@ -41,10 +41,10 @@ public sealed class RoleGrants : IRoleGrants
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<RoleGrants>? logger)
     {
-        _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
-        _permissionProvider = permissionProvider ?? throw new ArgumentNullException(nameof(permissionProvider));
-        _rolePermissionProvider = rolePermissionProvider ?? throw new ArgumentNullException(nameof(rolePermissionProvider));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _roleProvider = roleProvider;
+        _permissionProvider = permissionProvider;
+        _rolePermissionProvider = rolePermissionProvider;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<RoleGrants>.Instance;
     }
 

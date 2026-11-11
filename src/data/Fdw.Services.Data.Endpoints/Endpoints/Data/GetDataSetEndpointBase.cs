@@ -18,12 +18,12 @@ public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRe
     private readonly IDataSetResolver _resolver;
     private readonly ICategoryConfigurationProvider _categories;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataSetEndpointBase"/> class.</summary>
     protected GetDataSetEndpointBase(
         ILogger<GetDataSetEndpointBase> logger, IDataSetResolver resolver, ICategoryConfigurationProvider categories) : base(logger)
     {
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
-        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
+        _resolver = resolver;
+        _categories = categories;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

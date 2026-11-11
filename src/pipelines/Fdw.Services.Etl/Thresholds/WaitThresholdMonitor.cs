@@ -38,16 +38,15 @@ public sealed class WaitThresholdMonitor : BackgroundService, IPipelineWaitObser
     /// <param name="logger">The logger.</param>
     public WaitThresholdMonitor(IWaitThresholdSource source, WaitHoldGate gate, WaitThresholdReporter reporter, ILogger<WaitThresholdMonitor>? logger = null)
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _gate = gate ?? throw new ArgumentNullException(nameof(gate));
-        _reporter = reporter ?? throw new ArgumentNullException(nameof(reporter));
+        _source = source;
+        _gate = gate;
+        _reporter = reporter;
         _logger = logger ?? NullLogger<WaitThresholdMonitor>.Instance;
     }
 
     /// <inheritdoc/>
     public void WaitingChanged(PipelineRunQueueSnapshot snapshot)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
         _snapshot = snapshot;
         _ = _changes.Writer.TryWrite(snapshot);
     }
@@ -55,7 +54,6 @@ public sealed class WaitThresholdMonitor : BackgroundService, IPipelineWaitObser
     /// <inheritdoc/>
     public async Task<IGenericResult<PipelineRunStopCheck>> Check(PipelineExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
         var configuration = await _source.Read(cancellationToken).ConfigureAwait(false);
         if (configuration.IsFailure || configuration.Value is null)
         {
@@ -97,7 +95,6 @@ public sealed class WaitThresholdMonitor : BackgroundService, IPipelineWaitObser
     /// <returns>A task that ends when the snapshot has been reported.</returns>
     public Task Evaluate(PipelineRunQueueSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
         return _reporter.Report(snapshot, cancellationToken);
     }
 }

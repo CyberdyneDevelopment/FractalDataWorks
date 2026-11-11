@@ -15,6 +15,6 @@ namespace Fdw.Services.Messaging.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Messaging")]
 public sealed class MessagingConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="MessagingConfigurationCommand"/> class.</summary>
     public MessagingConfigurationCommand() : base("Messaging") { }
 }

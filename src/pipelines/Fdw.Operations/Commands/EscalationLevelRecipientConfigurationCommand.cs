@@ -8,6 +8,6 @@ namespace Fdw.Operations.Commands;
 [TypeOption(typeof(ConfigurationCommands), "EscalationLevelRecipient")]
 public sealed class EscalationLevelRecipientConfigurationCommand : ConfigurationCommandBase<EscalationLevelRecipientConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="EscalationLevelRecipientConfigurationCommand"/> class.</summary>
     public EscalationLevelRecipientConfigurationCommand() : base("EscalationLevelRecipient") { }
 }

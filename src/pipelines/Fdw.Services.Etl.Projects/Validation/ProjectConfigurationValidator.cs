@@ -19,8 +19,6 @@ public sealed class ProjectConfigurationValidator : AbstractValidator<ProjectCon
     /// <param name="serverDefaults">Reads the server's policy defaults, which a project may tighten but not relax.</param>
     public ProjectConfigurationValidator(IServerPolicyDefaultConfigurationProvider serverDefaults)
     {
-        if (serverDefaults == null) throw new ArgumentNullException(nameof(serverDefaults));
-
         RuleFor(x => x.Name)
             .NotEmpty()
             .WithMessage("Project name is required.")

@@ -41,8 +41,6 @@ public sealed record PipelineReach(
     /// <returns>The pipeline's reach, or the failure that names the parameter the run was not given, or that says the pipeline is a template.</returns>
     public static IGenericResult<PipelineReach> Of(GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-
         // Why here: a trigger and a schedule's firing both judge what a run reaches before they queue it, so a template is refused once, for both (FDW-3379).
         if (graph.IsTemplate)
         {

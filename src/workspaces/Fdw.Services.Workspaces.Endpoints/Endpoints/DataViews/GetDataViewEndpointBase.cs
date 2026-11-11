@@ -18,10 +18,10 @@ public abstract class GetDataViewEndpointBase : CrudGetEndpointBase<DataViewName
 {
     private readonly IDataSetVariationConfigurationProvider _variations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataViewEndpointBase"/> class.</summary>
     protected GetDataViewEndpointBase(ILogger<GetDataViewEndpointBase> logger, IDataSetVariationConfigurationProvider variations) : base(logger)
     {
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
+        _variations = variations;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

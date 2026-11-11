@@ -13,9 +13,9 @@ public sealed class DocumentSummary
     /// </summary>
     public DocumentSummary(string name, string filePath, IReadOnlyList<string> folders)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-        Folders = folders ?? throw new ArgumentNullException(nameof(folders));
+        Name = name;
+        FilePath = filePath;
+        Folders = folders;
     }
 
     /// <summary>

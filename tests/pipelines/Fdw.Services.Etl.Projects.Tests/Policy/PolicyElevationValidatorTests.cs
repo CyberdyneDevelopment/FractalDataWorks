@@ -442,30 +442,6 @@ public sealed class PolicyElevationValidatorTests
     // Stage: guard clauses
     // ============================================================
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ValidateStageThrowsWhenStageIsNull()
-    {
-        // Arrange
-        var parent = CreateParentEffective();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => _sut.Validate((StageConfiguration)null!, parent));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ValidateStageThrowsWhenParentEffectiveIsNull()
-    {
-        // Arrange
-        var stage = CreateStage();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => _sut.Validate(stage, null!));
-    }
-
     // ============================================================
     // Step: mirrors Stage semantics — representative coverage
     // ============================================================
@@ -563,29 +539,5 @@ public sealed class PolicyElevationValidatorTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ValidateStepThrowsWhenStepIsNull()
-    {
-        // Arrange
-        var parent = CreateParentEffective();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => _sut.Validate((StepConfiguration)null!, parent));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ValidateStepThrowsWhenParentEffectiveIsNull()
-    {
-        // Arrange
-        var step = CreateStep();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => _sut.Validate(step, null!));
     }
 }

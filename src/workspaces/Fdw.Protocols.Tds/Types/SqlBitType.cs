@@ -26,7 +26,6 @@ public sealed class SqlBitType : SqlDataTypeBase
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTypeIds.BitN);
         writer.WriteByte(1);
     }

@@ -13,8 +13,8 @@ public sealed class PreparedStatement
     /// <param name="text">The statement text.</param>
     public PreparedStatement(string parameterDeclarations, string text)
     {
-        ParameterDeclarations = parameterDeclarations ?? throw new ArgumentNullException(nameof(parameterDeclarations));
-        Text = text ?? throw new ArgumentNullException(nameof(text));
+        ParameterDeclarations = parameterDeclarations;
+        Text = text;
     }
 
     /// <summary>Gets the parameter list as declared.</summary>

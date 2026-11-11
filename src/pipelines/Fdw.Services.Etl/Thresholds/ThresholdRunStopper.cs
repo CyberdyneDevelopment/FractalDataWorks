@@ -19,7 +19,7 @@ public sealed class ThresholdRunStopper : IRunStopper
     /// <param name="control">What the host holds of each run it has queued.</param>
     public ThresholdRunStopper(PipelineRunControl control)
     {
-        _control = control ?? throw new ArgumentNullException(nameof(control));
+        _control = control;
     }
 
     /// <inheritdoc/>

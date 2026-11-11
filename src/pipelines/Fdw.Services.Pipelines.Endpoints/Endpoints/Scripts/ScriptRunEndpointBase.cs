@@ -26,7 +26,7 @@ public abstract class ScriptRunEndpointBase<TRequest> : Endpoint<TRequest, Scrip
     protected ScriptRunEndpointBase(ILogger? logger, IScriptService scripts)
     {
         RunLogger = logger ?? NullLogger.Instance;
-        Scripts = scripts ?? throw new ArgumentNullException(nameof(scripts));
+        Scripts = scripts;
     }
 
     /// <summary>Gets the logger.</summary>

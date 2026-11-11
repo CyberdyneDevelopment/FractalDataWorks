@@ -136,7 +136,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <summary>Sets the body run during Configure.</summary>
     /// <param name="method">The body.</param>
     public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
-        => ConfigurationMethod = method ?? throw new ArgumentNullException(nameof(method));
+        => ConfigurationMethod = method;
 
     /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
     /// <remarks>Prefer this to <see cref="Configuration"/>, which assigns and so discards anything
@@ -190,7 +190,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <summary>Sets the body run during Register.</summary>
     /// <param name="method">The body.</param>
     public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
-        => RegistrationMethod = method ?? throw new ArgumentNullException(nameof(method));
+        => RegistrationMethod = method;
 
     /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
     /// <remarks>Prefer this to <see cref="Registration"/>, which assigns and so discards anything
@@ -244,7 +244,7 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <summary>Sets the body run during Initialize.</summary>
     /// <param name="method">The body.</param>
     public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
-        => InitializationMethod = method ?? throw new ArgumentNullException(nameof(method));
+        => InitializationMethod = method;
 
     /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
     /// <remarks>Prefer this to <see cref="Initialization"/>, which assigns and so discards anything

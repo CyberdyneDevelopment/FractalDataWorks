@@ -11,6 +11,6 @@ namespace Fdw.Services.Etl.Projects.Commands;
 [TypeOption(typeof(ConfigurationCommands), "OrchestrationNodePipelinePrerequisite")]
 public sealed class OrchestrationNodePipelinePrerequisiteConfigurationCommand : ConfigurationCommandBase<OrchestrationNodePipelinePrerequisiteConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="OrchestrationNodePipelinePrerequisiteConfigurationCommand"/> class.</summary>
     public OrchestrationNodePipelinePrerequisiteConfigurationCommand() : base("OrchestrationNodePipelinePrerequisite") { }
 }

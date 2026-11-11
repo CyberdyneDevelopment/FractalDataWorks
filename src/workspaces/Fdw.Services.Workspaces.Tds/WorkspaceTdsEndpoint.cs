@@ -51,8 +51,8 @@ public sealed class WorkspaceTdsEndpoint : TdsEndpointBase
     public WorkspaceTdsEndpoint(IWorkspaceReadService workspaces, IDataGatewayProvider dataGateways, ILogger<WorkspaceTdsEndpoint>? logger)
         : base(logger)
     {
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _workspaces = workspaces;
+        _dataGateways = dataGateways;
     }
 
     /// <inheritdoc/>
@@ -94,8 +94,6 @@ public sealed class WorkspaceTdsEndpoint : TdsEndpointBase
     public override async Task<IGenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>> Rows(
         SqlTable table, QueryCommand<Dictionary<string, object?>> command, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(table);
-        ArgumentNullException.ThrowIfNull(command);
         var rows = await _dataGateways.ByName(GatewayName)
             .Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataSetTarget(table.Target), cancellationToken)
             .ConfigureAwait(false);

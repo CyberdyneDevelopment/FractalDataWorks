@@ -98,7 +98,7 @@ public sealed class InheritedSettingsTests
     {
         Platform("MaxRows", "500");
 
-        var view = await Create().Get(SettingScope.ForTenant(Tenant), "MaxRows");
+        var view = await Create().Get(SettingScope.ForTenant(Tenant), "MaxRows", TestContext.Current.CancellationToken);
 
         view.IsSuccess.ShouldBeTrue();
         view.Value!.Value.ShouldBe("500");
@@ -114,8 +114,8 @@ public sealed class InheritedSettingsTests
         ForTenant("MaxRows", "300");
         ForOrganization("MaxRows", "100");
 
-        var atTenant = await Create().Get(SettingScope.ForTenant(Tenant), "MaxRows");
-        var atOrganization = await Create().Get(SettingScope.ForOrganization(Finance), "MaxRows");
+        var atTenant = await Create().Get(SettingScope.ForTenant(Tenant), "MaxRows", TestContext.Current.CancellationToken);
+        var atOrganization = await Create().Get(SettingScope.ForOrganization(Finance), "MaxRows", TestContext.Current.CancellationToken);
 
         atTenant.Value!.Value.ShouldBe("300");
         atTenant.Value.SetAt.ShouldBe(SettingScope.TenantLevel);
@@ -131,7 +131,7 @@ public sealed class InheritedSettingsTests
         ForTenant("MaxRows", "300");
         ForOrganization("MaxRows", "100");
 
-        var atOrganization = await Create().Get(SettingScope.ForOrganization(Finance), "MaxRows");
+        var atOrganization = await Create().Get(SettingScope.ForOrganization(Finance), "MaxRows", TestContext.Current.CancellationToken);
 
         atOrganization.Value!.Value.ShouldBe("500");
         atOrganization.Value.SetAt.ShouldBe(SettingScope.PlatformLevel);
@@ -146,7 +146,7 @@ public sealed class InheritedSettingsTests
         ForTenant("MaxRows", "300", locked: true);
         ForOrganization("MaxRows", "100");
 
-        var atOrganization = await Create().Get(SettingScope.ForOrganization(Finance), "MaxRows");
+        var atOrganization = await Create().Get(SettingScope.ForOrganization(Finance), "MaxRows", TestContext.Current.CancellationToken);
 
         atOrganization.Value!.Value.ShouldBe("300");
         atOrganization.Value.SetAt.ShouldBe(SettingScope.TenantLevel);
@@ -159,7 +159,7 @@ public sealed class InheritedSettingsTests
     {
         Platform("MaxRows", "500", locked: true);
 
-        var set = await Create().Set(SettingScope.ForTenant(Tenant), "MaxRows", "300", false);
+        var set = await Create().Set(SettingScope.ForTenant(Tenant), "MaxRows", "300", false, TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
         _tenantProvider.Verify(p => p.Save(It.IsAny<ITenantSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -172,7 +172,7 @@ public sealed class InheritedSettingsTests
         Platform("MaxRows", "500");
         ForTenant("MaxRows", "300", locked: true);
 
-        var set = await Create().Set(SettingScope.ForOrganization(Finance), "MaxRows", "100", false);
+        var set = await Create().Set(SettingScope.ForOrganization(Finance), "MaxRows", "100", false, TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
         _organizationProvider.Verify(p => p.Save(It.IsAny<IOrganizationSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -185,7 +185,7 @@ public sealed class InheritedSettingsTests
         Platform("MaxRows", "500");
         ForTenant("MaxRows", "300", locked: true);
 
-        var platform = await Create().Set(SettingScope.ForPlatform(), "MaxRows", "400", false);
+        var platform = await Create().Set(SettingScope.ForPlatform(), "MaxRows", "400", false, TestContext.Current.CancellationToken);
 
         platform.IsSuccess.ShouldBeTrue();
         _server.Single().SettingValue.ShouldBe("400");
@@ -197,7 +197,7 @@ public sealed class InheritedSettingsTests
     {
         Platform("MaxRows", "500");
 
-        var set = await Create().Set(SettingScope.ForTenant(Tenant), "MaxRows", "300", true);
+        var set = await Create().Set(SettingScope.ForTenant(Tenant), "MaxRows", "300", true, TestContext.Current.CancellationToken);
 
         set.IsSuccess.ShouldBeTrue();
         set.Value!.Value.ShouldBe("300");
@@ -214,7 +214,7 @@ public sealed class InheritedSettingsTests
     {
         Platform("MaxRows", "500");
 
-        var set = await Create().Set(SettingScope.ForOrganization(Finance), "MaxRows", "100", false);
+        var set = await Create().Set(SettingScope.ForOrganization(Finance), "MaxRows", "100", false, TestContext.Current.CancellationToken);
 
         set.IsSuccess.ShouldBeTrue();
         var row = _organizations.Single();
@@ -228,7 +228,7 @@ public sealed class InheritedSettingsTests
     {
         Platform("MaxRows", "500");
 
-        var set = await Create().Set(SettingScope.ForOrganization(Finance), "MaxRows", "100", true);
+        var set = await Create().Set(SettingScope.ForOrganization(Finance), "MaxRows", "100", true, TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
         _organizations.ShouldBeEmpty();
@@ -241,7 +241,7 @@ public sealed class InheritedSettingsTests
         Platform("MaxRows", "500");
         ForTenant("MaxRows", "300", locked: true);
 
-        var lifted = await Create().Lift(SettingScope.ForTenant(Tenant), "MaxRows");
+        var lifted = await Create().Lift(SettingScope.ForTenant(Tenant), "MaxRows", TestContext.Current.CancellationToken);
 
         lifted.IsSuccess.ShouldBeTrue();
         lifted.Value!.IsLocked.ShouldBeFalse();
@@ -256,7 +256,7 @@ public sealed class InheritedSettingsTests
         Platform("MaxRows", "500");
         ForTenant("MaxRows", "300");
 
-        var lifted = await Create().Lift(SettingScope.ForTenant(Tenant), "MaxRows");
+        var lifted = await Create().Lift(SettingScope.ForTenant(Tenant), "MaxRows", TestContext.Current.CancellationToken);
 
         lifted.IsFailure.ShouldBeTrue();
     }
@@ -265,7 +265,7 @@ public sealed class InheritedSettingsTests
     [Trait("Priority", "P0")]
     public async Task ASettingThePlatformDoesNotDefineIsNotFoundBelowThePlatform()
     {
-        var set = await Create().Set(SettingScope.ForTenant(Tenant), "Nothing", "1", false);
+        var set = await Create().Set(SettingScope.ForTenant(Tenant), "Nothing", "1", false, TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
         _tenants.ShouldBeEmpty();
@@ -279,7 +279,7 @@ public sealed class InheritedSettingsTests
         _scope.Setup(s => s.TenantOf(It.IsAny<string>(), other, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<Guid>.Failure(new GenericMessage("the caller does not act in the organization")));
 
-        var listed = await Create().List(SettingScope.ForOrganization(other));
+        var listed = await Create().List(SettingScope.ForOrganization(other), TestContext.Current.CancellationToken);
 
         listed.IsFailure.ShouldBeTrue();
         _serverProvider.Verify(p => p.Get(It.IsAny<CancellationToken>()), Times.Never);
@@ -293,7 +293,7 @@ public sealed class InheritedSettingsTests
         Platform("MaxDepth", "5", locked: true);
         ForTenant("MaxRows", "300");
 
-        var listed = await Create().List(SettingScope.ForTenant(Tenant));
+        var listed = await Create().List(SettingScope.ForTenant(Tenant), TestContext.Current.CancellationToken);
 
         listed.Value!.Count.ShouldBe(2);
         listed.Value.Single(s => s.Name == "MaxRows").SetAt.ShouldBe(SettingScope.TenantLevel);
@@ -329,10 +329,10 @@ public sealed class InheritedSettingsTests
         var settings = Create();
         var organization = SettingScope.ForOrganization(other);
 
-        await settings.List(organization);
-        await settings.Get(organization, "MaxRows");
-        await settings.Set(organization, "MaxRows", "1", false);
-        await settings.Lift(organization, "MaxRows");
+        await settings.List(organization, TestContext.Current.CancellationToken);
+        await settings.Get(organization, "MaxRows", TestContext.Current.CancellationToken);
+        await settings.Set(organization, "MaxRows", "1", false, TestContext.Current.CancellationToken);
+        await settings.Lift(organization, "MaxRows", TestContext.Current.CancellationToken);
 
         _scope.Verify(s => s.TenantOf(OrganizationRights.Read, other, It.IsAny<CancellationToken>()), Times.Exactly(2));
         _scope.Verify(s => s.TenantOf(OrganizationRights.Write, other, It.IsAny<CancellationToken>()), Times.Exactly(2));

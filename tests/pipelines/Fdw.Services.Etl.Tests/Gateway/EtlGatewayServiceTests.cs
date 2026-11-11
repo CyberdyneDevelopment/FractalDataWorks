@@ -145,17 +145,6 @@ public sealed class EtlGatewayServiceTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void TheGatewayCannotBeBuiltWithoutADataStoreProvider()
-    {
-        Should.Throw<ArgumentNullException>(() => new EtlGatewayService(
-            new Mock<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>().Object,
-            new Mock<IDataConnectionProvider>().Object,
-            null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task AnUnsoundScriptIsRefusedBeforeAnythingIsResolved()
     {
@@ -196,7 +185,7 @@ public sealed class EtlGatewayServiceTests
 
     // What the caller is shown: the mapper puts a message's client text in the answer, and a message with none leaves the caller the
     // category's generic title (FDW-3338: a script on a connection that could not be built answered "The request was invalid").
-    private static IReadOnlyList<string> ClientTexts(IGenericResult result)
+    private static List<string> ClientTexts(IGenericResult result)
         => result.Messages.OfType<IClientMessage>().Select(message => message.ClientText).ToList();
 
     [Fact]

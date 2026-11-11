@@ -45,8 +45,6 @@ public abstract class SqlStatementHandlerBase<TStatement> : SqlStatementHandlerB
     /// <inheritdoc/>
     public sealed override Task<IGenericResult<SqlStatementOutcome>> Execute(TSqlStatement statement, SqlExecutionContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(statement);
-        ArgumentNullException.ThrowIfNull(context);
         return Run((TStatement)statement, context, cancellationToken);
     }
 

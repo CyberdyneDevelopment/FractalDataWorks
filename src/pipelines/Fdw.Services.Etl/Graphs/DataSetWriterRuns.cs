@@ -29,8 +29,8 @@ public sealed class DataSetWriterRuns : IDataSetWriterRuns
     /// <param name="runs">Where the latest run of each writer is read.</param>
     public DataSetWriterRuns(IDataSetWriters writers, IExecutionTracker runs)
     {
-        _writers = writers ?? throw new ArgumentNullException(nameof(writers));
-        _runs = runs ?? throw new ArgumentNullException(nameof(runs));
+        _writers = writers;
+        _runs = runs;
     }
 
     /// <inheritdoc/>

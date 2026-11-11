@@ -33,36 +33,6 @@ public class CollectionAttributeTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void MutableTypeCollectionAttribute_ThrowsOnNullBaseType()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new MutableTypeCollectionAttribute(null!, typeof(TestReturn), typeof(TestCollection)))
-            .ParamName.ShouldBe("baseType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MutableTypeCollectionAttribute_ThrowsOnNullDefaultReturnType()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new MutableTypeCollectionAttribute(typeof(TestBase), null!, typeof(TestCollection)))
-            .ParamName.ShouldBe("defaultReturnType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MutableTypeCollectionAttribute_ThrowsOnNullCollectionType()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new MutableTypeCollectionAttribute(typeof(TestBase), typeof(TestReturn), null!))
-            .ParamName.ShouldBe("collectionType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void MutableTypeCollectionAttribute_BaseTypeName_ReturnsFullName()
     {
         var attr = new MutableTypeCollectionAttribute(typeof(TestBase), typeof(TestReturn), typeof(TestCollection));
@@ -129,36 +99,6 @@ public class CollectionAttributeTests
         attr.BaseType.ShouldBe(typeof(TestBase));
         attr.DefaultReturnType.ShouldBe(typeof(TestReturn));
         attr.CollectionType.ShouldBe(typeof(TestCollection));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeInstanceCollectionAttribute_ThrowsOnNullBaseType()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new TypeInstanceCollectionAttribute(null!, typeof(TestReturn), typeof(TestCollection)))
-            .ParamName.ShouldBe("baseType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeInstanceCollectionAttribute_ThrowsOnNullDefaultReturnType()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new TypeInstanceCollectionAttribute(typeof(TestBase), null!, typeof(TestCollection)))
-            .ParamName.ShouldBe("defaultReturnType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TypeInstanceCollectionAttribute_ThrowsOnNullCollectionType()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new TypeInstanceCollectionAttribute(typeof(TestBase), typeof(TestReturn), null!))
-            .ParamName.ShouldBe("collectionType");
     }
 
     [Fact]

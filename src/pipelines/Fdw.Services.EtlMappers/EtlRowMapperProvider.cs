@@ -33,8 +33,6 @@ public sealed class EtlRowMapperProvider : IEtlRowMapperProvider
     {
         if (string.IsNullOrWhiteSpace(implementation))
             throw new ArgumentNullException(nameof(implementation));
-        if (factory == null)
-            throw new ArgumentNullException(nameof(factory));
 
         _factories[implementation] = factory;
         EtlRowMapperLog.MapperTypeRegistered(_logger, implementation, factory.GetType().Name);

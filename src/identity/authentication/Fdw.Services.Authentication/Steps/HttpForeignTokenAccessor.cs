@@ -20,7 +20,7 @@ public sealed class HttpForeignTokenAccessor : IForeignTokenAccessor
     /// <summary>Initializes a new instance of the <see cref="HttpForeignTokenAccessor"/> class.</summary>
     /// <param name="context">Supplies the current request.</param>
     public HttpForeignTokenAccessor(IHttpContextAccessor context)
-        => _context = context ?? throw new ArgumentNullException(nameof(context));
+        => _context = context;
 
     /// <inheritdoc />
     public string? Token

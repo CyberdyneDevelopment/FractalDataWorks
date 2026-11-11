@@ -32,7 +32,7 @@ public class InsertSingleBuilder<T>
     /// <returns>The builder for method chaining.</returns>
     public InsertSingleBuilder<T> DataStore(string dataStoreName)
     {
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _dataStoreName = dataStoreName;
         return this;
     }
 
@@ -43,7 +43,7 @@ public class InsertSingleBuilder<T>
     /// <returns>The builder for method chaining.</returns>
     public InsertSingleBuilder<T> Path(string pathName)
     {
-        _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
+        _pathName = pathName;
         return this;
     }
 
@@ -55,7 +55,7 @@ public class InsertSingleBuilder<T>
     /// <returns>This builder.</returns>
     public InsertSingleBuilder<T> Returning(params string[] columns)
     {
-        _returnColumns = columns ?? throw new ArgumentNullException(nameof(columns));
+        _returnColumns = columns;
         return this;
     }
 

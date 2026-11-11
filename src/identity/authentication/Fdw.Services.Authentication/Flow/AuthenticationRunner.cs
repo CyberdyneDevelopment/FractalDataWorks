@@ -86,9 +86,9 @@ public sealed class AuthenticationRunner : IAuthenticationRunner
         _sessions = sessions;
         _executions = executions;
         _flows = flows;
-        _step = step ?? throw new ArgumentNullException(nameof(step));
+        _step = step;
         _tenants = tenants;
-        _signIns = signIns ?? throw new ArgumentNullException(nameof(signIns));
+        _signIns = signIns;
         _logger = logger ?? NullLogger<AuthenticationRunner>.Instance;
     }
 

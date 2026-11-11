@@ -32,9 +32,9 @@ public sealed class DataLocation : IEquatable<DataLocation>
         IDictionary<string, object>? parameters = null,
         IDictionary<string, object>? metadata = null)
     {
-        StoreId = storeId ?? throw new ArgumentNullException(nameof(storeId));
-        PathId = pathId ?? throw new ArgumentNullException(nameof(pathId));
-        ContainerType = containerType ?? throw new ArgumentNullException(nameof(containerType));
+        StoreId = storeId;
+        PathId = pathId;
+        ContainerType = containerType;
 
         Parameters = parameters != null
             ? new Dictionary<string, object>(parameters, StringComparer.Ordinal)

@@ -28,6 +28,7 @@ namespace Fdw.Configuration
         AllowMultiple = false,
         Inherited = false)]
     [global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    [global::Microsoft.CodeAnalysis.EmbeddedAttribute]
     internal sealed class ManagedConfigurationAttribute : global::System.Attribute
     {
         /// <summary>

@@ -47,9 +47,6 @@ public sealed class RemoveGlobalUsingsTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        if (command is null) throw new ArgumentNullException(nameof(command));
-        if (solution is null) throw new ArgumentNullException(nameof(solution));
-
         RemoveGlobalUsingsTranslatorLog.Removing(Logger, command.Project ?? string.Empty, command.DryRun);
 
         if (string.IsNullOrWhiteSpace(command.Project))

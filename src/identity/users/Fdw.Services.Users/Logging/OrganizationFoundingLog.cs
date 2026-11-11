@@ -53,4 +53,9 @@ public static partial class OrganizationFoundingLog
     /// <summary>Logs that the organization whose roles are to be copied belongs to another tenant.</summary>
     [MessageLogging(EventId = 102736, Level = LogLevel.Warning, Message = "An organization was not made in tenant '{tenantId}': organization '{templateId}', whose roles are to be copied, belongs to another tenant")]
     public static partial IGenericMessage TemplateInOtherTenant(ILogger logger, Guid tenantId, Guid templateId);
+
+    /// <summary>Error: founding an organization needs the founder's role name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "Founding an organization needs the name of the role its founder holds, and the name given is empty")]
+    public static partial IGenericMessage FounderRoleNameRequired(ILogger logger);
 }

@@ -50,10 +50,6 @@ public sealed class RankedRowSearch
     /// <param name="logger">The logger a search is traced through.</param>
     public RankedRowSearch(ConfigurationRowReader reader, string nameColumn, string descriptionColumn, string keyColumn, ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(reader);
-        ArgumentNullException.ThrowIfNull(nameColumn);
-        ArgumentNullException.ThrowIfNull(descriptionColumn);
-        ArgumentNullException.ThrowIfNull(keyColumn);
         _reader = reader;
         _nameColumn = nameColumn;
         _descriptionColumn = descriptionColumn;

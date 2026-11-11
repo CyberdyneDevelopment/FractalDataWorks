@@ -67,7 +67,6 @@ public static class SqlConversions
     /// <returns>The conversion target, or the refusal.</returns>
     public static IGenericResult<SqlConversionTarget> Resolve(DataTypeReference reference, bool inCast, int line, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(reference);
         var name = reference is SqlDataTypeReference sql
             ? sql.SqlDataTypeOption.ToString()
             : reference.Name.BaseIdentifier.Value;

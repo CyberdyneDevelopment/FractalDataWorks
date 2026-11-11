@@ -36,9 +36,6 @@ public static class GraphComponentValidator
     /// <returns>The problems, each with its path.</returns>
     public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph, HashSet<string> broken, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(broken);
-        ArgumentNullException.ThrowIfNull(logger);
         var problems = new List<GraphProblem>();
         problems.AddRange(ParameterProblems(graph));
         problems.AddRange(VariableProblems(graph));
@@ -733,9 +730,6 @@ public static class GraphComponentValidator
     /// <returns>The problems, each with its path.</returns>
     public static IReadOnlyList<GraphProblem> ComponentProblems(GraphPipelineConfiguration graph, PipelineComponentConfiguration component, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(logger);
         return [.. KindProblems(graph, component, logger)];
     }
 }

@@ -21,7 +21,7 @@ public class RecordExpectations
     /// <param name="recordDeclaration">The record declaration to validate.</param>
     public RecordExpectations(RecordDeclarationSyntax recordDeclaration)
     {
-        _recordDeclaration = recordDeclaration ?? throw new ArgumentNullException(nameof(recordDeclaration));
+        _recordDeclaration = recordDeclaration;
     }
 
     /// <summary>

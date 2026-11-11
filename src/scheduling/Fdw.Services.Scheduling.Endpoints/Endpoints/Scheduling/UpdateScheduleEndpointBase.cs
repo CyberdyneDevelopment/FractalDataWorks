@@ -24,7 +24,7 @@ public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBa
     private readonly ScheduleConfigurationProvider _provider;
     private readonly RunRoleAuthority _runRoles;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateScheduleEndpointBase{TConfig}"/> class.</summary>
     protected UpdateScheduleEndpointBase(
         ILogger<UpdateScheduleEndpointBase<TConfig>> logger,
         ScheduleConfigurationProvider provider,

@@ -76,7 +76,7 @@ public class GenericResult : IGenericResult
     /// <param name="messages">Optional messages.</param>
     protected GenericResult(IResultStatus status, IEnumerable<IGenericMessage>? messages = null)
     {
-        Status = status ?? throw new ArgumentNullException(nameof(status));
+        Status = status;
         IsSuccess = status.IsSuccess;
         if (messages != null)
         {
@@ -104,7 +104,7 @@ public class GenericResult : IGenericResult
     /// <param name="details">Optional details to format into the message.</param>
     protected GenericResult(IResultCode code, bool isSuccess, IResultDetails? details = null)
     {
-        Code = code ?? throw new ArgumentNullException(nameof(code));
+        Code = code;
         Details = details;
         IsSuccess = isSuccess;
         Status = isSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
@@ -117,9 +117,9 @@ public class GenericResult : IGenericResult
             code.Domain));
     }
 
-    // Why a helper: only Success(code) asks the code's severity for the outcome; a null code is refused here, naming it, as the constructors do.
+    // Why a helper: only Success(code) asks the code's severity for the outcome.
     private protected static bool SeveritySucceeded(IResultCode code) =>
-        (code ?? throw new ArgumentNullException(nameof(code))).Severity.IsSuccess;
+        code.Severity.IsSuccess;
 
     /// <summary>
     /// Constructor for GenericResult with IResultCode and inner result for chaining.
@@ -141,8 +141,8 @@ public class GenericResult : IGenericResult
     /// <param name="details">Optional details to format into the message.</param>
     protected GenericResult(IResultCode code, IGenericResult innerResult, bool isSuccess, IResultDetails? details = null)
     {
-        Code = code ?? throw new ArgumentNullException(nameof(code));
-        InnerResult = innerResult ?? throw new ArgumentNullException(nameof(innerResult));
+        Code = code;
+        InnerResult = innerResult;
         Details = details;
         IsSuccess = isSuccess;
         Status = isSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
@@ -510,16 +510,6 @@ public class GenericResult : IGenericResult
     /// <returns>A failed result that is the cause with the caller's message last.</returns>
     public static IGenericResult Caused(IGenericResult cause, IGenericMessage context)
     {
-        if (cause is null)
-        {
-            throw new ArgumentNullException(nameof(cause));
-        }
-
-        if (context is null)
-        {
-            throw new ArgumentNullException(nameof(context));
-        }
-
         if (cause.IsSuccess)
         {
             throw new ArgumentException("A cause is a failure; a success has nothing to carry.", nameof(cause));
@@ -537,16 +527,6 @@ public class GenericResult : IGenericResult
     /// <returns>A result with the source's outcome, code, messages and chain, and its details with the given ones merged over them.</returns>
     public static IGenericResult WithDetails(IGenericResult source, IResultDetails details)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        if (details is null)
-        {
-            throw new ArgumentNullException(nameof(details));
-        }
-
         return new GenericResult(source, details);
     }
 
@@ -657,16 +637,6 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     /// <returns>A typed failure with the source's code, messages and chain, and its details with the given ones merged over them.</returns>
     public new static IGenericResult<TResult> WithDetails(IGenericResult source, IResultDetails details)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
-
-        if (details is null)
-        {
-            throw new ArgumentNullException(nameof(details));
-        }
-
         return new GenericResult<TResult>(source, details);
     }
 
@@ -867,9 +837,6 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     /// <returns>A result carrying the mapped value, or the original failure.</returns>
     public IGenericResult<TNew> Map<TNew>(Func<TResult, TNew> mapper)
     {
-        if (mapper == null)
-            throw new ArgumentNullException(nameof(mapper));
-
         return IsSuccess
             ? GenericResult<TNew>.Success(mapper(Value))
             : GenericResult<TNew>.Failure(Messages);
@@ -885,11 +852,6 @@ public class GenericResult<TResult> : GenericResult, IGenericResult<TResult>
     /// <returns>The value produced by whichever branch was selected.</returns>
     public T Match<T>(Func<TResult, T> success, Func<string, T> failure)
     {
-        if (success == null)
-            throw new ArgumentNullException(nameof(success));
-        if (failure == null)
-            throw new ArgumentNullException(nameof(failure));
-
         return IsSuccess ? success(Value) : failure(this.FailureReason().Message);
     }
 }

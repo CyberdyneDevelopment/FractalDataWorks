@@ -38,7 +38,6 @@ public abstract class SqlVariableLengthTypeBase : SqlDataTypeBase
     /// <inheritdoc/>
     public override string Declaration(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return column.IsMax
             ? $"{SqlName}(max)"
             : string.Create(CultureInfo.InvariantCulture, $"{SqlName}({column.Length})");
@@ -47,20 +46,16 @@ public abstract class SqlVariableLengthTypeBase : SqlDataTypeBase
     /// <inheritdoc/>
     public override short CatalogMaxLength(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return column.IsMax ? (short)-1 : (short)(column.Length * _bytesPerUnit);
     }
 
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(column);
         writer.WriteByte(_typeId);
         writer.WriteUInt16(column.IsMax ? TdsTypeIds.MaxLengthMarker : (ushort)(column.Length * _bytesPerUnit));
         if (_collated)
         {
-            ArgumentNullException.ThrowIfNull(collation);
             writer.WriteBytes(collation.Bytes);
         }
     }

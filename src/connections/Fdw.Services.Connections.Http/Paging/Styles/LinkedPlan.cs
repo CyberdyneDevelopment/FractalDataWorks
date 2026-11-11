@@ -21,7 +21,6 @@ public abstract class LinkedPlan : HttpPagingPlan
     protected LinkedPlan(string style, HttpPagingSettings settings, int pageSize, int maxPages, HttpReadWindow window)
         : base(style, settings, pageSize, maxPages, window)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         _sizeName = settings.Values.TryGetValue(HttpPagingProperties.PageSizeParameter, out var name) && !string.IsNullOrWhiteSpace(name) ? name.Trim() : null;
     }
 

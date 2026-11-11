@@ -156,10 +156,8 @@ public sealed class ConfigurationIntegrationTests
         initialConfig.ShouldNotBeNull();
         initialConfig.Name.ShouldBe("InitialConnection");
 
-        // Note: In this test, OnChange won't fire because in-memory collection
-        // doesn't support reload. In production with MsSqlConfigurationSource,
-        // OnChange would fire when database configuration changes.
-        // This test validates the subscription mechanism is set up correctly.
+        // Note: OnChange won't fire here because the in-memory collection doesn't
+        // support reload, so this test checks only that the subscription is set up.
         subscription.ShouldNotBeNull();
 
         // Note: changeDetected stays false in this test because the static

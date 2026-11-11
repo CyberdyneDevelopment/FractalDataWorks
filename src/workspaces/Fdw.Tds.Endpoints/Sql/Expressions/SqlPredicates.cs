@@ -48,8 +48,6 @@ public static class SqlPredicates
     /// <returns>True, false or null (unknown), or the refusal.</returns>
     public static IGenericResult<bool?> Evaluate(BooleanExpression condition, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(condition);
-        ArgumentNullException.ThrowIfNull(scope);
         return Evaluators.TryGetValue(condition.GetType(), out var evaluate)
             ? evaluate(condition, scope)
             : SqlRefusal.Refuse<bool?>(SqlServerErrors.NotSupported(SqlText.Of(condition), condition.StartLine), scope.Context.Logger);

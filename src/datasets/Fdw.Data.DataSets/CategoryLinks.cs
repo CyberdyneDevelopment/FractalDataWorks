@@ -46,8 +46,6 @@ public static class CategoryLinks
     /// <returns>The category's identity, null when the request names none, or the refusal when no such category exists.</returns>
     public static IGenericResult<Guid?> Resolve(CategoryTree tree, string type, string? name, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(logger);
         // Left out or empty means none; whitespace is a name like any other and is refused when no category has it.
         if (string.IsNullOrEmpty(name))
         {
@@ -82,8 +80,6 @@ public static class CategoryLinks
     /// <returns>The name and path, or the fault that says the thing cites a category that is not in the tree.</returns>
     public static IGenericResult<CategoryLabel> Label(CategoryTree tree, string type, Guid? categoryId, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(logger);
         if (categoryId is not { } id)
         {
             return GenericResult<CategoryLabel>.Success(new CategoryLabel(null, null));

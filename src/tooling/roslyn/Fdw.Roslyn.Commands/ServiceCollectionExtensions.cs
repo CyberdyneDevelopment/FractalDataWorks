@@ -18,11 +18,6 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddRoslynCommandHandler(this IServiceCollection services)
     {
-        if (services is null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
-
         services.TryAddSingleton<ITranslatorRegistry>(sp =>
             new TranslatorRegistry(sp.GetRequiredService<ILoggerFactory>()));
         services.TryAddSingleton<IChangeLedger, ChangeLedger>();
@@ -41,16 +36,6 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<ITranslatorRegistry> configureRegistry)
     {
-        if (services is null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
-
-        if (configureRegistry is null)
-        {
-            throw new ArgumentNullException(nameof(configureRegistry));
-        }
-
         services.AddSingleton<ITranslatorRegistry>(sp =>
         {
             var registry = new TranslatorRegistry(sp.GetRequiredService<ILoggerFactory>());
@@ -73,11 +58,6 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddTranslator<TTranslator>(this IServiceCollection services)
         where TTranslator : class, IRoslynCommandTranslator
     {
-        if (services is null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
-
         services.AddSingleton<IRoslynCommandTranslator, TTranslator>();
         services.AddSingleton<TTranslator>();
 

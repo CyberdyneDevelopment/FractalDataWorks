@@ -19,6 +19,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\tooling\roslyn\Fdw.CodeBuilder.Abstractions\Fdw.CodeBuilder.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\tooling\roslyn\Fdw.CodeBuilder.CSharp\Fdw.CodeBuilder.CSharp.csproj" />
+    <ProjectReference Include="..\..\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\collections\Fdw.Collections\Fdw.Collections.csproj" />
   </ItemGroup>
 
 </Project>

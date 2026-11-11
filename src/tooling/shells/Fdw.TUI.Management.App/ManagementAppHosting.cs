@@ -52,7 +52,6 @@ public sealed class ManagementAppHosting
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        ArgumentNullException.ThrowIfNull(builder);
         var services = builder.Services;
 
         services.AddSingleton<ManagementApp>();

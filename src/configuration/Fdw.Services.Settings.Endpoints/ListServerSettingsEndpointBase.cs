@@ -19,7 +19,7 @@ public abstract class ListServerSettingsEndpointBase : CrudListEndpointBase<Serv
 {
     private readonly IServerSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListServerSettingsEndpointBase"/> class.</summary>
     protected ListServerSettingsEndpointBase(ILogger<ListServerSettingsEndpointBase> logger, IServerSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

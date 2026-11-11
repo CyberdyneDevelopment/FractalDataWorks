@@ -45,7 +45,6 @@ public sealed class SysTypesView : CatalogViewBase
     /// <inheritdoc/>
     public override IEnumerable<object?[]> Rows(SqlExecutionContext context, CatalogSnapshot catalog)
     {
-        ArgumentNullException.ThrowIfNull(context);
         var collation = context.Server.Collation;
         foreach (var type in Fdw.Protocols.Tds.Types.SqlDataTypes.All())
         {

@@ -25,8 +25,6 @@ public sealed class DataStoreTypesBuilderSelector : IDataStoreBuilderSelector
     /// <inheritdoc/>
     public IGenericResult<IDataStoreBuilder> Select(IDataStoreImplementationConfiguration configuration, ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-
         var option = DataStoreTypes.ByName(configuration.Implementation);
         if (option == DataStoreTypes.NotFound)
         {

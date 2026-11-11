@@ -68,16 +68,6 @@ public sealed class DataCommandTranslatorsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void RegisterThrowsWhenTypeIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            DataCommandTranslators.Register("TestTranslator", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void RegisterThrowsWhenTypeDoesNotImplementInterface()
     {
         // Act & Assert

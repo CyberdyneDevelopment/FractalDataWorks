@@ -39,7 +39,6 @@ public sealed class InProcMcpToolSource : IMcpToolSource
         ILogger<InProcMcpToolSource>? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serverName);
-        ArgumentNullException.ThrowIfNull(handler);
         ServerName = serverName;
         _handler = handler;
         _logger = logger ?? NullLogger<InProcMcpToolSource>.Instance;
@@ -48,7 +47,6 @@ public sealed class InProcMcpToolSource : IMcpToolSource
     /// <inheritdoc />
     public Task Start(IMcpEventBus bus, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(bus);
         if (_pump is not null) return Task.CompletedTask;
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

@@ -16,9 +16,9 @@ public sealed class SqlBoundColumn
     /// <param name="isNullable">Whether it may hold NULL.</param>
     public SqlBoundColumn(string qualifier, string schema, string name, TdsColumnType? type, bool isNullable)
     {
-        Qualifier = qualifier ?? throw new ArgumentNullException(nameof(qualifier));
-        Schema = schema ?? throw new ArgumentNullException(nameof(schema));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Qualifier = qualifier;
+        Schema = schema;
+        Name = name;
         Type = type;
         IsNullable = isNullable;
     }

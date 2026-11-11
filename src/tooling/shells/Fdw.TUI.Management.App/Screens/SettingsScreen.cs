@@ -29,7 +29,7 @@ public sealed class SettingsScreen : ScreenBase
         ISettingsService settingsService)
         : base(console, theme, screenFactory)
     {
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _settingsService = settingsService;
     }
 
     /// <inheritdoc />

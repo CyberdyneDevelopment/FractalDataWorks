@@ -35,7 +35,7 @@ public abstract class RoslynCommandBase : TypeOptionBase<RoslynCommandBase>, IRo
     protected RoslynCommandBase(string name, IRoslynCommandCategory commandCategory, string description)
         : base(name, name, name, description, "RoslynCommand")
     {
-        CommandCategory = commandCategory ?? throw new ArgumentNullException(nameof(commandCategory));
+        CommandCategory = commandCategory;
     }
 
     /// <summary>
@@ -63,8 +63,6 @@ public abstract class RoslynCommandBase : TypeOptionBase<RoslynCommandBase>, IRo
     /// </remarks>
     public virtual bool IsGeneratedDocument(Document document)
     {
-        if (document is null) throw new ArgumentNullException(nameof(document));
-
         return IsGeneratedPath(document.FilePath);
     }
 

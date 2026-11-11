@@ -45,15 +45,17 @@ public sealed class WorkspacePermissions : IWorkspacePermissions
         IRolePermissionConfigurationProvider grants,
         ILogger<WorkspacePermissions>? logger = null)
     {
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
+        _permissions = permissions;
+        _grants = grants;
         _logger = logger ?? NullLogger<WorkspacePermissions>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult> Create(Guid workspaceId, string workspaceName, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceName);
+        if (string.IsNullOrWhiteSpace(workspaceName))
+            return GenericResult.Failure(WorkspacePermissionsLog.WorkspaceNameRequired(_logger, workspaceId));
+
         WorkspacePermissionsLog.CreatingPermissions(_logger, workspaceName, workspaceId.ToString("D", CultureInfo.InvariantCulture));
 
         var view = await Ensure(workspaceId, workspaceName, WorkspacePermissionNames.ViewAction, "View", cancellationToken).ConfigureAwait(false);

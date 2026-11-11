@@ -154,7 +154,10 @@ public sealed class DataSetProvider
         _configurationProvider = configurationProvider;
     }
 
-    /// <inheritdoc />
+    /// <summary>Reads the data set with the given name.</summary>
+    /// <param name="name">The data set's name.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The data set; DataSetNotFound when the read succeeded and found none; or the failure of the read itself.</returns>
     public async Task<IGenericResult<IDataSetImplementationConfiguration>> Get(string name, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetEntry(_logger, name);
@@ -187,7 +190,10 @@ public sealed class DataSetProvider
             ResultDetails.Create().With("DataSetName", name));
     }
 
-    /// <inheritdoc />
+    /// <summary>Reads the data set with the given Id.</summary>
+    /// <param name="id">The data set's Id.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The data set; DataSetNotFound when the read succeeded and found none; or the failure of the read itself.</returns>
     public async Task<IGenericResult<IDataSetImplementationConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetByIdEntry(_logger, id);
@@ -213,7 +219,9 @@ public sealed class DataSetProvider
             ResultDetails.Create().With("DataSetId", id));
     }
 
-    /// <inheritdoc />
+    /// <summary>Reads every data set.</summary>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The data sets, empty when there are none; or the failure of the read, never an empty list in its place.</returns>
     public async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Get(CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetAllDataSetsEntry(_logger);

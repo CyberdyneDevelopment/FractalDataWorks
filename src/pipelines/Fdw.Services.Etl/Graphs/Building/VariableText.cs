@@ -26,7 +26,6 @@ public static partial class VariableText
     /// <returns>What makes the value from the variables in scope when the step runs.</returns>
     public static Func<FlowVariables, object?> Typed(string text)
     {
-        ArgumentNullException.ThrowIfNull(text);
         return Whole().Match(text) is { Success: true } whole
             ? variables => variables.TryGet(whole.Groups["name"].Value, out var value)
                 ? value
@@ -39,7 +38,6 @@ public static partial class VariableText
     /// <returns>The names; one for each reference, a name repeated as often as the text repeats it.</returns>
     public static IReadOnlyList<string> Names(string text)
     {
-        ArgumentNullException.ThrowIfNull(text);
         var names = new List<string>();
         foreach (Match match in Reference().Matches(text))
         {
@@ -56,8 +54,6 @@ public static partial class VariableText
     /// <exception cref="InvalidOperationException">A reference names a variable that is not declared in scope; the graph check refuses such a graph before it runs.</exception>
     public static string Render(string text, FlowVariables variables)
     {
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(variables);
         return Reference().Replace(text, match =>
             variables.TryGet(match.Groups["name"].Value, out var value)
                 ? TextOf(value)

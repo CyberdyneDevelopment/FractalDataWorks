@@ -107,7 +107,7 @@ public sealed class AdministrativeAuditServiceTests
         _ => []
     };
 
-    private IReadOnlyList<FilterCondition> QueryConditions()
+    private List<FilterCondition> QueryConditions()
         => Conditions(_queries.OfType<QueryCommand<AdministrativeChange>>().Single().Filter?.Root).ToList();
 
     [Fact]

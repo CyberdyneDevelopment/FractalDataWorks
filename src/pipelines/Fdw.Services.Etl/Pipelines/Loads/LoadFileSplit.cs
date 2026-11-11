@@ -29,7 +29,6 @@ public static class LoadFileSplit
     public static IGenericResult<IReadOnlyList<LoadFileRows>> Group(
         string owner, string extension, string splitField, IReadOnlyList<IDictionary<string, object?>> rows, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(rows);
         if (rows.Count == 0)
             return GenericResult<IReadOnlyList<LoadFileRows>>.Success([]);
 

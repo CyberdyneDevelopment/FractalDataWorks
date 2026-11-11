@@ -81,37 +81,6 @@ public sealed class CalculatedDataFieldTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenTypeIsNull()
-    {
-        // Arrange
-        Func<IDataRow, object> calculator = row => 42;
-
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() => new CalculatedDataField(
-            name: "Field1",
-            type: null!,
-            calculator: calculator));
-
-        exception.ParamName.ShouldBe("type");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenCalculatorIsNull()
-    {
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() => new CalculatedDataField(
-            name: "Field1",
-            type: typeof(int),
-            calculator: null!));
-
-        exception.ParamName.ShouldBe("calculator");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void IsCalculatedReturnsTrue()
     {
         // Arrange

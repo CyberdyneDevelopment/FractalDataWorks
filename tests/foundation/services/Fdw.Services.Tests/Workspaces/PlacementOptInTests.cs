@@ -51,15 +51,6 @@ public sealed class PlacementOptInTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Workspaces")]
-    public void AProviderWillNotTakeNoPlacement()
-    {
-        Should.Throw<ArgumentNullException>(() => new DataStoreConfigurationProvider(
-            NullLogger<DataStoreConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataStore", null!, Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>()));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Workspaces")]
     public async Task AHostWithNoPlacementRefusesEveryCreateAndNamesWhatIsMissing()
     {
         var placement = ConfigurationPlacementSource.From(new ServiceCollection().BuildServiceProvider());

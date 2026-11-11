@@ -52,15 +52,6 @@ public sealed class DataCommandBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenCommandTypeIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new TestDataCommand(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void NullCategoryFallsBackToData()
     {
         // Arrange & Act

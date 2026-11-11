@@ -27,7 +27,7 @@ internal sealed class OpenRunRecords
 
     public OpenRunRecords(IExecutionTracker tracker, ILogger? logger = null)
     {
-        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
+        _tracker = tracker;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -41,9 +41,11 @@ internal sealed class OpenRunRecords
     public async Task<IGenericResult> Close(
         Guid runId, IExecutionStateType finalState, string resultCode, string message, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(finalState);
-        ArgumentException.ThrowIfNullOrWhiteSpace(resultCode);
-        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        if (string.IsNullOrWhiteSpace(resultCode))
+            return GenericResult.Failure(PipelineRunRecoveryLog.CloseResultCodeRequired(_logger, runId));
+
+        if (string.IsNullOrWhiteSpace(message))
+            return GenericResult.Failure(PipelineRunRecoveryLog.CloseMessageRequired(_logger, runId));
 
         var closed = new Counter();
         var failure = await CloseUnder(runId, finalState, resultCode, message, closed, cancellationToken).ConfigureAwait(false);

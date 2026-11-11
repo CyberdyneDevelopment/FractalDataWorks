@@ -27,7 +27,7 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
     protected GetConnectionEndpointBase(ILogger<GetConnectionEndpointBase> logger, IConnectionConfigurationProvider configProvider, IConnectionDisabledStates states) : base(logger)
     {
         _configProvider = configProvider;
-        _states = states ?? throw new ArgumentNullException(nameof(states));
+        _states = states;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

@@ -8,6 +8,6 @@ namespace Fdw.Services.Credentials.Sql.Commands;
 [TypeOption(typeof(ConfigurationCommands), "CredentialsSqlConfiguration")]
 public sealed class CredentialsSqlConfigurationCommand : ConfigurationCommandBase<CredentialsSqlConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="CredentialsSqlConfigurationCommand"/> class.</summary>
     public CredentialsSqlConfigurationCommand() : base("CredentialsSqlConfiguration") { }
 }

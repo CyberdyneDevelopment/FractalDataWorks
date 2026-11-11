@@ -36,10 +36,6 @@ public static class ServiceLifetimeCheck
     /// <returns>One coded message for each singleton constructor parameter whose registered lifetime is scoped or transient; empty when there is none.</returns>
     public static IReadOnlyList<IGenericMessage> Check(IServiceCollection services, ILogger logger, IReadOnlyCollection<Type> skipped)
     {
-        if (services is null) throw new ArgumentNullException(nameof(services));
-        if (logger is null) throw new ArgumentNullException(nameof(logger));
-        if (skipped is null) throw new ArgumentNullException(nameof(skipped));
-
         var registered = services.Where(d => !d.IsKeyedService).ToList();
         var byType = registered.GroupBy(d => d.ServiceType).ToDictionary(g => g.Key, g => g.ToList());
         var findings = new List<IGenericMessage>();

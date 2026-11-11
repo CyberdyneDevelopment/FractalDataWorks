@@ -14,8 +14,6 @@ public static class CategoryMapper
     /// <returns>The payload.</returns>
     public static CategoryPayload Category(CategoryTree tree, CategoryTreeNode node)
     {
-        ArgumentNullException.ThrowIfNull(tree);
-        ArgumentNullException.ThrowIfNull(node);
         return new CategoryPayload
         {
             Id = node.Node.Id,
@@ -35,7 +33,6 @@ public static class CategoryMapper
     /// <returns>The payload.</returns>
     public static CategoryNodePayload Branch(CategoryTreeNode node)
     {
-        ArgumentNullException.ThrowIfNull(node);
         return new CategoryNodePayload
         {
             Id = node.Node.Id,

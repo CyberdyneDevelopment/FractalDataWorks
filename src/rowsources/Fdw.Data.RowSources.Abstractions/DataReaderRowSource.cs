@@ -27,7 +27,7 @@ public sealed class DataReaderRowSource : IRowSourceReader
     /// <param name="reader">The data reader to adapt.</param>
     public DataReaderRowSource(IDataReader reader)
     {
-        _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+        _reader = reader;
         _ordinalCache = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         // Pre-populate ordinal cache from schema

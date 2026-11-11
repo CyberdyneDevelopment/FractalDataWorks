@@ -51,8 +51,8 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
         ISchemaInformationService schema,
         ILogger logger)
     {
-        _dataStores = dataStores ?? throw new ArgumentNullException(nameof(dataStores));
-        _schema = schema ?? throw new ArgumentNullException(nameof(schema));
+        _dataStores = dataStores;
+        _schema = schema;
         _logger = logger ?? NullLogger.Instance;
     }
 

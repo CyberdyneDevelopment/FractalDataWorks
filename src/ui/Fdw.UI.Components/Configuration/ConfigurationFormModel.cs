@@ -36,7 +36,7 @@ public abstract class ConfigurationFormModel<TConfiguration>
     /// <param name="configuration">The configuration instance to edit.</param>
     protected ConfigurationFormModel(TConfiguration configuration)
     {
-        Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        Configuration = configuration;
     }
 
     /// <summary>

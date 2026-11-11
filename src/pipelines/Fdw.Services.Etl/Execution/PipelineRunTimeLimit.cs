@@ -41,8 +41,6 @@ internal sealed class PipelineRunTimeLimit : IDisposable
     /// <returns>The limit; dispose it when the run ends.</returns>
     internal static PipelineRunTimeLimit Arm(PipelineRunHandle run, PipelineExecutionRequest request, TimeSpan? limit, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(run);
-        ArgumentNullException.ThrowIfNull(request);
         if (limit is not { } time)
         {
             if (request.ScheduleName is { } schedule)
@@ -67,7 +65,6 @@ internal sealed class PipelineRunTimeLimit : IDisposable
     /// <returns>The schedule, or the trigger that carried the timeout.</returns>
     internal static string StatedBy(PipelineExecutionRequest request)
     {
-        ArgumentNullException.ThrowIfNull(request);
         return request.ScheduleName is { } schedule ? $"schedule '{schedule}'" : $"the {request.TriggerSource} trigger";
     }
 
@@ -76,7 +73,6 @@ internal sealed class PipelineRunTimeLimit : IDisposable
     /// <returns>The sentence the run's records state.</returns>
     internal static string Reason(PipelineExecutionRequest request)
     {
-        ArgumentNullException.ThrowIfNull(request);
         return $"The run exceeded the {request.TimeoutSeconds} second timeout of {StatedBy(request)}";
     }
 

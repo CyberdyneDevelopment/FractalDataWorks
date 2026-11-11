@@ -14,7 +14,7 @@ public sealed class WorkspaceDataSetQueryStreamResponse : DataQueryStreamRespons
     public WorkspaceDataSetQueryStreamResponse(string workspaceName, DataQueryStream stream, int skip)
         : base(stream, skip)
     {
-        WorkspaceName = workspaceName ?? throw new ArgumentNullException(nameof(workspaceName));
+        WorkspaceName = workspaceName;
     }
 
     /// <summary>Gets the workspace the query was made through.</summary>

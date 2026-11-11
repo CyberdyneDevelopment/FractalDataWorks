@@ -18,7 +18,7 @@ public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<Get
 {
     private readonly IConnectionConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetConnectionsByTypeEndpointBase"/> class.</summary>
     protected GetConnectionsByTypeEndpointBase(ILogger<GetConnectionsByTypeEndpointBase> logger, IConnectionConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

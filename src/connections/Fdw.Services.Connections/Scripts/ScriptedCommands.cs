@@ -29,10 +29,6 @@ public static class ScriptedCommands
         Func<IScriptRunCommand, Task<IGenericResult<int>>> run,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(read);
-        ArgumentNullException.ThrowIfNull(run);
-        ArgumentNullException.ThrowIfNull(logger);
         return Dispatch(command, read, run, null, logger);
     }
 
@@ -51,11 +47,6 @@ public static class ScriptedCommands
         Func<IScriptStreamCommand, Task<IGenericResult<IRecordSource<DataRecord>>>> stream,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(read);
-        ArgumentNullException.ThrowIfNull(run);
-        ArgumentNullException.ThrowIfNull(stream);
-        ArgumentNullException.ThrowIfNull(logger);
         return Dispatch(command, read, run, stream, logger);
     }
 

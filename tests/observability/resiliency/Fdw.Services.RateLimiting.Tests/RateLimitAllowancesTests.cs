@@ -83,7 +83,7 @@ public sealed class RateLimitAllowancesTests
         var result = ReadAuthenticated(settings);
 
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.RequestsPerWindow));
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.RequestsPerWindow));
     }
 
     [Theory]
@@ -103,7 +103,7 @@ public sealed class RateLimitAllowancesTests
         var result = ReadAuthenticated(settings);
 
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain(RateLimitAllowanceFields.Prefix + ".Authenticated." + field);
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(RateLimitAllowanceFields.Prefix + ".Authenticated." + field);
         result.CurrentMessage.ShouldContain("'" + value + "'");
     }
 
@@ -118,7 +118,7 @@ public sealed class RateLimitAllowancesTests
         var result = ReadAuthenticated(settings);
 
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.Algorithm));
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.Algorithm));
         result.CurrentMessage.ShouldContain("'Leaky'");
     }
 
@@ -133,7 +133,7 @@ public sealed class RateLimitAllowancesTests
         var result = ReadAuthenticated(settings);
 
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.Partitioning));
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.Partitioning));
         result.CurrentMessage.ShouldContain("'PerMoon'");
     }
 
@@ -148,20 +148,8 @@ public sealed class RateLimitAllowancesTests
 
         var result = ReadAuthenticated(settings);
 
-        result.CurrentMessage.ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.RequestsPerWindow));
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(NameOf("Authenticated", RateLimitAllowanceFields.RequestsPerWindow));
         result.CurrentMessage.ShouldNotContain(NameOf("Authenticated", RateLimitAllowanceFields.WindowSeconds));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ReadThrowsOnNullArguments()
-    {
-        var settings = TodaysRateLimitSettings.All();
-
-        Should.Throw<ArgumentNullException>(() => RateLimitAllowances.Read(null!, RateLimitPolicies.Authenticated, null, NullLogger.Instance));
-        Should.Throw<ArgumentNullException>(() => RateLimitAllowances.Read(settings, null!, null, NullLogger.Instance));
-        Should.Throw<ArgumentNullException>(() => RateLimitAllowances.Read(settings, RateLimitPolicies.Authenticated, null, null!));
     }
 
     // ---- a company's own allowance (FDW-1946) -------------------------------------------------------------------------
@@ -240,7 +228,7 @@ public sealed class RateLimitAllowancesTests
         var result = ReadAuthenticated(settings, CompanyA);
 
         result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldContain(Requests);
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(Requests);
         ReadAuthenticated(settings, CompanyB).IsSuccess.ShouldBeTrue();
     }
 }

@@ -22,7 +22,7 @@ public sealed class TypeLookupAttribute : Attribute
         Type? returnType = null,
         bool isUnique = true)
     {
-        MethodName = methodName ?? throw new ArgumentNullException(nameof(methodName));
+        MethodName = methodName;
         ReturnType = returnType;
         IsUnique = isUnique;
     }

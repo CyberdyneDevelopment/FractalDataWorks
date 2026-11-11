@@ -48,9 +48,9 @@ public sealed class DatabaseSignInLog : ISignInLog
         ISignInCaller caller,
         ILogger<DatabaseSignInLog>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
-        _caller = caller ?? throw new ArgumentNullException(nameof(caller));
+        _gateways = gateways;
+        _authContextAccessor = authContextAccessor;
+        _caller = caller;
         _logger = logger ?? NullLogger<DatabaseSignInLog>.Instance;
     }
 

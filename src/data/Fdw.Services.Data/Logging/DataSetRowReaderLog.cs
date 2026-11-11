@@ -24,4 +24,9 @@ public static partial class DataSetRowReaderLog
     [MessageLogging(EventId = 11100, Level = LogLevel.Debug,
         Message = "Read {rowCount} rows of data set '{name}'")]
     public static partial IGenericMessage Read(ILogger logger, string name, int rowCount);
+
+    /// <summary>Error: reading a data set's rows needs its name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21801, Level = LogLevel.Error,
+        Message = "Reading the rows of a data set needs its name, and the name given is empty")]
+    public static partial IGenericMessage DataSetNameRequired(ILogger logger);
 }

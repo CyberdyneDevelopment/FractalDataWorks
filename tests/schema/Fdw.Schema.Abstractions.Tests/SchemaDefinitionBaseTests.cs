@@ -114,26 +114,6 @@ public sealed class SchemaDefinitionBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsOnNullProperties()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new TestSchema("Test", null!, CreateLayout()));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsOnNullLayout()
-    {
-        var props = new List<TestProperty> { CreateProperty("Id") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            new TestSchema("Test", props, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void IndexesDefaultsToEmpty()
     {
         var props = new List<TestProperty> { CreateProperty("Id") };
@@ -265,17 +245,6 @@ public sealed class SchemaDefinitionBaseTests
         var result = schema.Get(surrogateRole);
 
         result.Count.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void GetThrowsOnNullRole()
-    {
-        var props = new List<TestProperty> { CreateProperty("Id") };
-        var schema = new TestSchema("Test", props, CreateLayout());
-
-        Should.Throw<ArgumentNullException>(() => schema.Get((IDatumType)null!));
     }
 
     [Fact]

@@ -23,8 +23,6 @@ public static class MigrationGuideMarkdownFormatter
     /// <returns>The complete markdown document text.</returns>
     public static string Build(string? solutionName, IReadOnlyList<ChangeLedgerEntry> entries)
     {
-        if (entries is null) throw new ArgumentNullException(nameof(entries));
-
         var builder = new StringBuilder();
         builder.AppendLine(string.IsNullOrWhiteSpace(solutionName)
             ? "# Migration Guide"
@@ -52,8 +50,6 @@ public static class MigrationGuideMarkdownFormatter
         IReadOnlyList<ChangeLedgerEntry> entries,
         DateTimeOffset stamp)
     {
-        if (entries is null) throw new ArgumentNullException(nameof(entries));
-
         var builder = new StringBuilder();
         builder.AppendLine();
         builder.AppendLine("---");

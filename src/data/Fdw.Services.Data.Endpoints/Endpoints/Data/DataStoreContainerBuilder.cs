@@ -121,7 +121,6 @@ public static class DataStoreContainerBuilder
     public static IGenericResult? FormatChoicesRefusal(
         string containerName, string? format, IEnumerable<KeyValuePair<string, object?>> choices, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(choices);
         var family = FamilyOf(format);
         var misfit = choices.FirstOrDefault(choice => choice.Value is not null
             && ChoiceFamilies.TryGetValue(choice.Key, out var families)
@@ -203,8 +202,6 @@ public static class DataStoreContainerBuilder
     /// </remarks>
     public static List<DataContainerFieldConfiguration> Fields(IEnumerable<CreateDataStoreContainerFieldRequest> fields)
     {
-        ArgumentNullException.ThrowIfNull(fields);
-
         return fields.Select(f => new DataContainerFieldConfiguration
         {
             Id = Guid.CreateVersion7(),
@@ -242,10 +239,6 @@ public static class DataStoreContainerBuilder
         IEnumerable<DataContainerConfiguration> referenceable,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(keys);
-        ArgumentNullException.ThrowIfNull(container);
-        ArgumentNullException.ThrowIfNull(referenceable);
-
         var candidates = referenceable.ToList();
         var built = new List<DataContainerKeyConfiguration>();
         foreach (var keyRequest in keys)
@@ -265,7 +258,6 @@ public static class DataStoreContainerBuilder
     /// <returns><see langword="true"/> for a Foreign key.</returns>
     public static bool IsForeign(CreateDataStoreContainerKeyRequest key)
     {
-        ArgumentNullException.ThrowIfNull(key);
         return string.Equals(key.TypeId, ForeignKeyType, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -53,7 +53,7 @@ public abstract class TenantTypeBase : TypeOptionBase<Guid, TenantTypeBase>, ITe
         IsSelectable = isSelectable;
         DisplayName = name;
         ConnectionName = connectionName;
-        Theme = theme ?? throw new ArgumentNullException(nameof(theme));
+        Theme = theme;
         Options = options ?? throw new ArgumentNullException(nameof(options));
         AvailableRoles = availableRoles ?? throw new ArgumentNullException(nameof(availableRoles));
         ConfigurationSection = $"Tenants:{slug}";

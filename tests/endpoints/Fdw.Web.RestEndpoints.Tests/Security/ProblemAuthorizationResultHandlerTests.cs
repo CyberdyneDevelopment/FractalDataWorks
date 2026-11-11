@@ -50,7 +50,7 @@ public sealed class ProblemAuthorizationResultHandlerTests
         context.Response.Body.Position = 0;
         using var body = await JsonDocument.ParseAsync(context.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
         body.RootElement.GetProperty("referenceId").GetString().ShouldBe(context.TraceIdentifier);
-        body.RootElement.GetProperty("detail").GetString().ShouldContain("ui-feedback:write");
+        body.RootElement.GetProperty("detail").GetString().ShouldNotBeNull().ShouldContain("ui-feedback:write");
     }
 
     [Fact]

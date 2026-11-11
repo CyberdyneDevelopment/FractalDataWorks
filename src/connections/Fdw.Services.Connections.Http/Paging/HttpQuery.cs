@@ -17,9 +17,6 @@ public static class HttpQuery
     /// </remarks>
     public static Uri With(Uri request, params (string Name, string Value)[] parameters)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(parameters);
-
         var text = request.OriginalString;
         var hash = text.IndexOf('#', StringComparison.Ordinal);
         var fragment = hash >= 0 ? text[hash..] : string.Empty;

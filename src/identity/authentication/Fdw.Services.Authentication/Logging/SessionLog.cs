@@ -227,4 +227,9 @@ public static partial class SessionLog
         Message = "Acting was refused: the chain of acting sessions is already {limit} long",
         ClientMessage = "You cannot act again: {limit} sessions in a row is the most. Return to an earlier step first")]
     public static partial IGenericMessage ActingTooDeep(ILogger logger, int limit);
+
+    /// <summary>Error: acting as a role needs the role's name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "Acting as a role needs the role's name, and the name given is empty")]
+    public static partial IGenericMessage ActingRoleNameRequired(ILogger logger);
 }

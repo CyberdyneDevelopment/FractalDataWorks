@@ -29,7 +29,7 @@ public sealed class DocumentInfo
         LastModified = lastModified;
         ContentHash = contentHash;
         Version = version;
-        Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
+        Metadata = metadata;
     }
 
     /// <summary>Gets the document's path, relative to the scope.</summary>

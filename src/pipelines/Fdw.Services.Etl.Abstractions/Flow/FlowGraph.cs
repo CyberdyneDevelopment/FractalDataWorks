@@ -48,11 +48,11 @@ public sealed class FlowGraph
         IReadOnlyList<FlowStage> stages,
         IReadOnlyList<FlowCompletion> completions)
     {
-        Components = components ?? throw new ArgumentNullException(nameof(components));
-        Links = links ?? throw new ArgumentNullException(nameof(links));
-        Dropped = dropped ?? throw new ArgumentNullException(nameof(dropped));
-        Stages = stages ?? throw new ArgumentNullException(nameof(stages));
-        Completions = completions ?? throw new ArgumentNullException(nameof(completions));
+        Components = components;
+        Links = links;
+        Dropped = dropped;
+        Stages = stages;
+        Completions = completions;
     }
 
     /// <summary>

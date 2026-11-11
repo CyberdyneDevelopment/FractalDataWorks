@@ -24,8 +24,8 @@ public sealed class RowListRecordSource : IRecordSource<DataRecord>
     /// <param name="rows">The rows, in the order they are handed out.</param>
     public RowListRecordSource(RecordSchema schema, IReadOnlyList<IReadOnlyDictionary<string, object?>> rows)
     {
-        Schema = schema ?? throw new ArgumentNullException(nameof(schema));
-        _rows = rows ?? throw new ArgumentNullException(nameof(rows));
+        Schema = schema;
+        _rows = rows;
     }
 
     /// <inheritdoc />
@@ -36,9 +36,6 @@ public sealed class RowListRecordSource : IRecordSource<DataRecord>
     /// <returns>One field for each name any row carries; none when there are no rows.</returns>
     public static RecordSchema SchemaOfRows(IReadOnlyList<IReadOnlyDictionary<string, object?>> rows)
     {
-        if (rows is null)
-            throw new ArgumentNullException(nameof(rows));
-
         var names = new List<string>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var row in rows)
@@ -63,12 +60,6 @@ public sealed class RowListRecordSource : IRecordSource<DataRecord>
     /// <returns>The record.</returns>
     public static DataRecord Record(RecordSchema schema, IReadOnlyDictionary<string, object?> row)
     {
-        if (schema is null)
-            throw new ArgumentNullException(nameof(schema));
-
-        if (row is null)
-            throw new ArgumentNullException(nameof(row));
-
         var values = new object?[schema.FieldCount];
         for (var i = 0; i < values.Length; i++)
             values[i] = row.TryGetValue(schema.GetFieldName(i), out var value) ? value : null;

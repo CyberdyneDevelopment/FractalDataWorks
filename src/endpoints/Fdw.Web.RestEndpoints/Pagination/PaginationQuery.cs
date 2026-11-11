@@ -56,9 +56,6 @@ public static class PaginationQuery
     /// </returns>
     public static IGenericResult<PaginatedListRequest> Parse(HttpContext context, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (ReadNumber(context.Request.Query, "skip", 0, logger, out var skip) is { } skipInvalid)
             return GenericResult<PaginatedListRequest>.Failure(skipInvalid);
 
@@ -82,9 +79,6 @@ public static class PaginationQuery
     /// </remarks>
     public static IGenericResult<PaginatedListRequest> Resolve(HttpContext context, ILogger logger, int skip, int? requestedTake)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (context.RequestServices.GetService<IEffectiveSettingsProvider>() is not { } settings)
             return GenericResult<PaginatedListRequest>.Failure(
                 EndpointLogger.PaginationSettingsUnavailable(logger, nameof(IEffectiveSettingsProvider)));
@@ -109,9 +103,6 @@ public static class PaginationQuery
     /// </remarks>
     public static IGenericResult<int> ResolveBatchSize(HttpContext context, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (context.RequestServices.GetService<IEffectiveSettingsProvider>() is not { } settings)
             return GenericResult<int>.Failure(
                 EndpointLogger.PaginationSettingsUnavailable(logger, nameof(IEffectiveSettingsProvider)));
@@ -204,9 +195,6 @@ public static class PaginationQuery
     /// </remarks>
     public static IGenericResult<int> ResolveCalculatedRowCap(HttpContext context, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (context.RequestServices.GetService<IEffectiveSettingsProvider>() is not { } settings)
             return GenericResult<int>.Failure(
                 EndpointLogger.PaginationSettingsUnavailable(logger, nameof(IEffectiveSettingsProvider)));
@@ -237,8 +225,6 @@ public static class PaginationQuery
     /// </remarks>
     public static IGenericResult<PaginatedListRequest> ResolvePage(HttpContext context, ILogger logger, int page, int? requestedPageSize)
     {
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (page < 1)
             return GenericResult<PaginatedListRequest>.Failure(EndpointLogger.PaginationValueInvalid(
                 logger, "page", page.ToString(CultureInfo.InvariantCulture), "a whole number of 1 or more"));

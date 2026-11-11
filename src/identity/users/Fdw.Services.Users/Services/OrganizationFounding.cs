@@ -44,13 +44,13 @@ public sealed class OrganizationFounding : IOrganizationFounding
         ITenantProvider tenants,
         ILogger<OrganizationFounding>? logger)
     {
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _defaultWorkspaces = defaultWorkspaces ?? throw new ArgumentNullException(nameof(defaultWorkspaces));
-        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-        _bootstrap = bootstrap ?? throw new ArgumentNullException(nameof(bootstrap));
-        _users = users ?? throw new ArgumentNullException(nameof(users));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
+        _organizations = organizations;
+        _defaultWorkspaces = defaultWorkspaces;
+        _policy = policy;
+        _provider = provider;
+        _bootstrap = bootstrap;
+        _users = users;
+        _tenants = tenants;
         _logger = logger ?? NullLogger<OrganizationFounding>.Instance;
     }
 
@@ -58,8 +58,8 @@ public sealed class OrganizationFounding : IOrganizationFounding
     public async Task<IGenericResult<Guid>> Found(
         NewOrganization organization, Guid copyRolesFrom, Guid administratorId, string roleName, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(organization);
-        ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
+        if (string.IsNullOrWhiteSpace(roleName))
+            return GenericResult<Guid>.Failure(OrganizationFoundingLog.FounderRoleNameRequired(_logger));
 
         var checkedInput = await Check(organization.TenantId, copyRolesFrom, administratorId, cancellationToken).ConfigureAwait(false);
         if (checkedInput.IsFailure)

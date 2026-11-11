@@ -17,7 +17,7 @@ public sealed class RunLive : IFlowLiveRun, IDisposable
 
     internal RunLive(Action closed)
     {
-        _closed = closed ?? throw new ArgumentNullException(nameof(closed));
+        _closed = closed;
     }
 
     /// <inheritdoc />

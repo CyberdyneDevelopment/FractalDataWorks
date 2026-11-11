@@ -12,8 +12,8 @@ public sealed class ReferencePathChange
     /// </summary>
     public ReferencePathChange(string oldInclude, string newInclude)
     {
-        OldInclude = oldInclude ?? throw new ArgumentNullException(nameof(oldInclude));
-        NewInclude = newInclude ?? throw new ArgumentNullException(nameof(newInclude));
+        OldInclude = oldInclude;
+        NewInclude = newInclude;
     }
 
     /// <summary>

@@ -20,11 +20,11 @@ public sealed class ChangeLedgerEntry
         IReadOnlyList<PathChange> pathChanges)
     {
         Sequence = sequence;
-        CommandName = commandName ?? throw new ArgumentNullException(nameof(commandName));
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-        FileChanges = fileChanges ?? throw new ArgumentNullException(nameof(fileChanges));
-        SymbolChanges = symbolChanges ?? throw new ArgumentNullException(nameof(symbolChanges));
-        PathChanges = pathChanges ?? throw new ArgumentNullException(nameof(pathChanges));
+        CommandName = commandName;
+        Summary = summary;
+        FileChanges = fileChanges;
+        SymbolChanges = symbolChanges;
+        PathChanges = pathChanges;
     }
 
     /// <summary>

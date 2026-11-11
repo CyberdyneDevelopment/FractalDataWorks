@@ -24,16 +24,6 @@ public static class RecordWriterBytes
     public static byte[] Write(
         IRecordWriterType format, IReadOnlyList<IDataField> fields, RowWriterOptions options, Action<IRecordWriter<DataRecord>> write)
     {
-        if (format is null)
-        {
-            throw new ArgumentNullException(nameof(format));
-        }
-
-        if (write is null)
-        {
-            throw new ArgumentNullException(nameof(write));
-        }
-
         if (!format.WritesBinary)
         {
             throw new NotSupportedException($"The {format.Format} format is written as text; it has no byte form.");

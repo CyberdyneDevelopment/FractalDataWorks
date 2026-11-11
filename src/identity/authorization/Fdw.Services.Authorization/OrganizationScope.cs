@@ -40,9 +40,9 @@ public sealed class OrganizationScope : IOrganizationScope
     public OrganizationScope(
         IAuthenticationContextAccessor authContext, IOrganizationProvider organizations, IScopeAuthority authority, ILogger<OrganizationScope>? logger)
     {
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _authority = authority ?? throw new ArgumentNullException(nameof(authority));
+        _authContext = authContext;
+        _organizations = organizations;
+        _authority = authority;
         _logger = logger ?? NullLogger<OrganizationScope>.Instance;
     }
 
@@ -53,7 +53,8 @@ public sealed class OrganizationScope : IOrganizationScope
     /// <inheritdoc />
     public async Task<IGenericResult<Guid>> TenantOf(string right, Guid organizationId, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(right);
+        if (string.IsNullOrWhiteSpace(right))
+            return GenericResult<Guid>.Failure(OrganizationAccessLog.TenantRightRequired(_logger, organizationId));
 
         var located = await Locate(organizationId, cancellationToken).ConfigureAwait(false);
         if (located.IsFailure)

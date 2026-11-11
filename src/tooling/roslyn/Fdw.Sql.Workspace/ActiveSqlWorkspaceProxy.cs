@@ -21,7 +21,7 @@ public sealed class ActiveSqlWorkspaceProxy : ISqlWorkspace
     public ISqlWorkspace SetActive(ISqlWorkspace workspace)
     {
         var prev = _active;
-        _active = workspace ?? throw new ArgumentNullException(nameof(workspace));
+        _active = workspace;
         return prev;
     }
 

@@ -47,9 +47,6 @@ public sealed class FlowExecutor : IFlowExecutor
     /// <inheritdoc />
     public async Task<FlowRunOutcome> Execute(FlowGraph graph, FlowRunOptions options, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(options);
-
         if (options.LinkCapacity < 1)
         {
             return new FlowRunOutcome(GenericResult.Failure(FlowLog.CapacityInvalid(_logger, options.LinkCapacity)), null);

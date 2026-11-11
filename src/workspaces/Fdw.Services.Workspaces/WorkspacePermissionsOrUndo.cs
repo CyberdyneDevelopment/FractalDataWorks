@@ -33,10 +33,6 @@ public static class WorkspacePermissionsOrUndo
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(permissions);
-        ArgumentNullException.ThrowIfNull(workspaces);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var created = await permissions.Create(workspaceId, workspaceName, cancellationToken).ConfigureAwait(false);
         if (created.IsSuccess) return created;
 

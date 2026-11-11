@@ -32,10 +32,6 @@ public static class WorkspaceOwnershipReader
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        if (organizations is null) throw new ArgumentNullException(nameof(organizations));
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
-        if (logger is null) throw new ArgumentNullException(nameof(logger));
-
         if (workspace.TenantId is not { } tenantId)
             return GenericResult<WorkspaceOwnership>.Failure(WorkspaceOwnershipLog.NoOwningTenant(logger, workspace.Name));
 

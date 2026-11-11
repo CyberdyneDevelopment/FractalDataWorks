@@ -199,7 +199,7 @@ public sealed class ConnectionExpansionTests
         return command;
     }
 
-    private static IReadOnlyDictionary<string, object> CarryingATimeout()
+    private static Dictionary<string, object> CarryingATimeout()
     {
         var metadata = new Dictionary<string, object>();
         CommandTimeoutPolicy.Set(metadata, TimeSpan.FromSeconds(3), "secret manager 'Vault'");

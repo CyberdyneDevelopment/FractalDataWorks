@@ -19,8 +19,6 @@ public static class DataSetReferenceDescription
     /// </remarks>
     public static string For(ReadableDataSet readable)
     {
-        ArgumentNullException.ThrowIfNull(readable);
-
         var dataSet = readable.ExecutionTarget;
         var text = new StringBuilder();
         text.Append("Query the **").Append(readable.Name).Append("** data set.");

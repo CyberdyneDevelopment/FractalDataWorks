@@ -43,19 +43,18 @@ public sealed class EscalationAlerts : IEscalationAlerts
         TimeProvider clock,
         ILogger? logger = null)
     {
-        _store = store ?? throw new ArgumentNullException(nameof(store));
-        _policies = policies ?? throw new ArgumentNullException(nameof(policies));
-        _notifications = notifications ?? throw new ArgumentNullException(nameof(notifications));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _store = store;
+        _policies = policies;
+        _notifications = notifications;
+        _settings = settings;
+        _authContext = authContext;
+        _clock = clock;
         _logger = logger ?? NullLogger.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<EscalationOpened>> Open(EscalationAlertRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
         var policy = await PolicyNamed(request.PolicyName, cancellationToken).ConfigureAwait(false);
         if (policy.IsFailure || policy.Value is null)
         {
@@ -111,7 +110,9 @@ public sealed class EscalationAlerts : IEscalationAlerts
     /// <inheritdoc />
     public async Task<IGenericResult<EscalationAlert>> Acknowledge(Guid alertId, string acknowledgedBy, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(acknowledgedBy);
+        if (string.IsNullOrWhiteSpace(acknowledgedBy))
+            return GenericResult<EscalationAlert>.Failure(EscalationAlertLog.AcknowledgedByRequired(_logger, alertId));
+
         var found = await Reachable(alertId, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure || found.Value is not { } row)
         {
@@ -138,7 +139,9 @@ public sealed class EscalationAlerts : IEscalationAlerts
     /// <inheritdoc />
     public async Task<IGenericResult<EscalationAlert>> Resolve(Guid alertId, string resolvedBy, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(resolvedBy);
+        if (string.IsNullOrWhiteSpace(resolvedBy))
+            return GenericResult<EscalationAlert>.Failure(EscalationAlertLog.ResolvedByRequired(_logger, alertId));
+
         var found = await Reachable(alertId, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure || found.Value is not { } row)
         {

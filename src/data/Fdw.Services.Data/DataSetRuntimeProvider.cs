@@ -36,8 +36,8 @@ public sealed class DataSetRuntimeProvider : IDataSetProvider
         IDataSetBuilder factory,
         ILogger<DataSetRuntimeProvider>? logger = null)
     {
-        _configurationProvider = configurationProvider ?? throw new ArgumentNullException(nameof(configurationProvider));
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        _configurationProvider = configurationProvider;
+        _factory = factory;
         _logger = logger ?? NullLogger<DataSetRuntimeProvider>.Instance;
     }
 

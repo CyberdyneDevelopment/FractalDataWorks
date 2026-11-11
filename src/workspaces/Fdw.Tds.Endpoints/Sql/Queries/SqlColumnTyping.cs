@@ -40,7 +40,6 @@ public static class SqlColumnTyping
     /// <returns>The column type, or the refusal for a type with no SQL Server equivalent.</returns>
     public static IGenericResult<TdsColumnType> Declared(SqlTableColumn column, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(column);
         if (column.ClrType is not { } clr || !SqlDataTypes.ForClrType(clr, out var dataType))
         {
             return SqlRefusal.Refuse<TdsColumnType>(new SqlServerMessage(50000, 2, 16,
@@ -57,8 +56,6 @@ public static class SqlColumnTyping
     /// <returns>The column type, or the refusal.</returns>
     public static IGenericResult<TdsColumnType> Settle(SqlOutputColumn column, IEnumerable<object?> values, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(column);
-        ArgumentNullException.ThrowIfNull(values);
         var present = values.Where(v => v is not null).Select(v => v!).ToList();
 
         if (column.Declared is { } declared)

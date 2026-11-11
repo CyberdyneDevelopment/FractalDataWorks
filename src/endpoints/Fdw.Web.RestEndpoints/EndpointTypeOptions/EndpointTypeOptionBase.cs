@@ -35,7 +35,7 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOption
         string? category = null)
         : base(name, name, name, description, category ?? EndpointPlaceholders.NoCategory)
     {
-        EndpointType = endpointType ?? throw new ArgumentNullException(nameof(endpointType));
+        EndpointType = endpointType;
     }
 
     /// <inheritdoc />
@@ -362,11 +362,6 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOption
     /// <returns>The option name for that endpoint.</returns>
     protected static string DeriveName(Type endpointType)
     {
-        if (endpointType is null)
-        {
-            throw new ArgumentNullException(nameof(endpointType));
-        }
-
         var name = endpointType.Name;
         return name.EndsWith("Endpoint", StringComparison.Ordinal) && name.Length > "Endpoint".Length
             ? name.Substring(0, name.Length - "Endpoint".Length)

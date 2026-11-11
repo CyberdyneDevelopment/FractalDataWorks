@@ -34,7 +34,6 @@ public static class RunParameterEntries
     public static IReadOnlyDictionary<string, object?>? EventData(
         IEnumerable<IPipelineRunParameter>? declared, IReadOnlyDictionary<string, object?> values, IReadOnlySet<string>? defaulted = null)
     {
-        ArgumentNullException.ThrowIfNull(values);
         if (declared is null)
         {
             return null;

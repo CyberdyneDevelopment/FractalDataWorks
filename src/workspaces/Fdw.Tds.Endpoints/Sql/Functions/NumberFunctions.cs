@@ -21,10 +21,6 @@ public static class NumberFunctions
     public static IGenericResult<object?> Map(
         SqlFunctionCall call, object value, Func<long, long> whole, Func<decimal, decimal> exact, Func<double, double> floating)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        ArgumentNullException.ThrowIfNull(whole);
-        ArgumentNullException.ThrowIfNull(exact);
-        ArgumentNullException.ThrowIfNull(floating);
         try
         {
             return value switch

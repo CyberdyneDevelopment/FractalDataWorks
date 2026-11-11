@@ -29,8 +29,6 @@ public static class GraphChainLookup
     /// <returns>The id of each transformation found, by name.</returns>
     public static async Task<IReadOnlyDictionary<string, Guid>> Resolve(StageChainLookup lookup, GraphPayload payload, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(lookup);
-        ArgumentNullException.ThrowIfNull(payload);
         var maps = payload.Components.SelectMany(Maps).ToList();
         if (maps.Count == 0)
         {

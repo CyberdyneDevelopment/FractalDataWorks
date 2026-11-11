@@ -65,8 +65,6 @@ public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<T
     /// <returns>The unexpected names, in the order given; never their values. Every name when the method is unrecognised.</returns>
     public IReadOnlyList<string> UnexpectedProperties(IEnumerable<string> names)
     {
-        if (names is null) throw new ArgumentNullException(nameof(names));
-
         return names
             .Where(key => !ExpectedProperties.Contains(key, StringComparer.OrdinalIgnoreCase))
             .ToList();
@@ -138,8 +136,6 @@ public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<T
     /// </remarks>
     public IDictionary<string, string?> MaskSecrets(IReadOnlyDictionary<string, string?> values, string maskValue)
     {
-        if (values is null) throw new ArgumentNullException(nameof(values));
-
         // Copied entry by entry: this project targets netstandard2.0, where Dictionary has no constructor over an
         // IReadOnlyDictionary.
         var masked = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);

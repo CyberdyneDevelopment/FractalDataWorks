@@ -76,12 +76,12 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
         IAuthenticationContextAccessor? authContextAccessor,
         ILogger<ClaimMappedProvisioner>? logger = null)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _users = users ?? throw new ArgumentNullException(nameof(users));
-        _userRoles = userRoles ?? throw new ArgumentNullException(nameof(userRoles));
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _identities = identities ?? throw new ArgumentNullException(nameof(identities));
-        _userTenants = userTenants ?? throw new ArgumentNullException(nameof(userTenants));
+        _configuration = configuration;
+        _users = users;
+        _userRoles = userRoles;
+        _roles = roles;
+        _identities = identities;
+        _userTenants = userTenants;
         _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<ClaimMappedProvisioner>.Instance;
     }

@@ -14,7 +14,7 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 public sealed class ClaimMappedProvisioningRuleConfigurationCommand
     : ConfigurationCommandBase<ClaimMappedProvisioningRuleConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ClaimMappedProvisioningRuleConfigurationCommand"/> class.</summary>
     public ClaimMappedProvisioningRuleConfigurationCommand()
         : base("ClaimMappedProvisioningRule") { }
 }

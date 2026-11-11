@@ -18,7 +18,7 @@ internal sealed class ConnectionLinkTargets : ILinkTargets
     /// <param name="runner">Sends the commands for the store's organization.</param>
     public ConnectionLinkTargets(DocumentRecordCommandRunner runner)
     {
-        _runner = runner ?? throw new ArgumentNullException(nameof(runner));
+        _runner = runner;
     }
 
     /// <inheritdoc />

@@ -72,9 +72,9 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
         IDataSetConfigurationProvider dataSets,
         ILogger<WorkspaceAccessPolicy>? logger = null)
     {
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
+        _authContext = authContext;
+        _roles = roles;
+        _dataSets = dataSets;
         _logger = logger ?? NullLogger<WorkspaceAccessPolicy>.Instance;
     }
 
@@ -82,7 +82,6 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
     public Task<IGenericResult> MaySee(
         IWorkspaceImplementationConfiguration workspace, CancellationToken cancellationToken = default)
     {
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
         return Answer(workspace, WorkspaceQuestions.See, cancellationToken);
     }
 
@@ -90,7 +89,6 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
     public Task<IGenericResult> MayView(
         IWorkspaceImplementationConfiguration workspace, CancellationToken cancellationToken = default)
     {
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
         return Answer(workspace, WorkspaceQuestions.View, cancellationToken);
     }
 
@@ -98,7 +96,6 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
     public Task<IGenericResult> MayWrite(
         IWorkspaceImplementationConfiguration workspace, CancellationToken cancellationToken = default)
     {
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
         return Answer(workspace, WorkspaceQuestions.Write, cancellationToken);
     }
 
@@ -106,7 +103,6 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
     public Task<IGenericResult> MayRead(
         IWorkspaceImplementationConfiguration workspace, CancellationToken cancellationToken = default)
     {
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
         return Answer(workspace, WorkspaceQuestions.Read, cancellationToken);
     }
 
@@ -114,7 +110,6 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
     public Task<IGenericResult> MayManageMembers(
         IWorkspaceImplementationConfiguration workspace, CancellationToken cancellationToken = default)
     {
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
         return Answer(workspace, WorkspaceQuestions.ManageMembers, cancellationToken);
     }
 
@@ -122,9 +117,6 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
     public async Task<IGenericResult> MayManageRole(
         IWorkspaceImplementationConfiguration workspace, IWorkspaceMemberRole role, CancellationToken cancellationToken = default)
     {
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
-        if (role is null) throw new ArgumentNullException(nameof(role));
-
         var (held, unresolved, undetermined) = await StandingOf(workspace, cancellationToken).ConfigureAwait(false);
         var manages = Decide(workspace, WorkspaceQuestions.ManageMembers, held, unresolved, undetermined);
         if (manages.IsFailure) return manages;
@@ -139,7 +131,6 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
     public async Task<IGenericResult> MayAttachDataSet(
         IWorkspaceImplementationConfiguration workspace, Guid dataSetId, CancellationToken cancellationToken = default)
     {
-        if (workspace is null) throw new ArgumentNullException(nameof(workspace));
         var dataSetText = dataSetId.ToString("D", CultureInfo.InvariantCulture);
         DataSetGrantLog.DecidingGrant(_logger, workspace.Name, dataSetText);
 

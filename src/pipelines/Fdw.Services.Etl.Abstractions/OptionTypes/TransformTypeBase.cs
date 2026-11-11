@@ -40,9 +40,9 @@ public abstract class TransformTypeBase : TypeOptionBase<TransformTypeBase>, ITy
     {
         InputPorts = inputPorts;
         OutputPorts = outputPorts;
-        DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
-        Description = description ?? throw new ArgumentNullException(nameof(description));
-        Category = category ?? throw new ArgumentNullException(nameof(category));
+        DisplayName = displayName;
+        Description = description;
+        Category = category;
         ModifiesStructure = modifiesStructure;
         CanFilterRecords = canFilterRecords;
     }

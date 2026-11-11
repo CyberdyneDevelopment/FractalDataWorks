@@ -33,7 +33,7 @@ public abstract class ExecuteCalculationEndpointBase : Endpoint<ExecuteCalculati
         IDataSetResolver resolver)
     {
         EndpointLogger = logger;
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _resolver = resolver;
     }
 
     /// <summary>

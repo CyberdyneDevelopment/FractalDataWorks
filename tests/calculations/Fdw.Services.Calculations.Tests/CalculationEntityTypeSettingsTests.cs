@@ -15,7 +15,7 @@ namespace Fdw.Services.Calculations.Tests;
 [Trait("Category", "CoreFramework")]
 public class CalculationEntityTypeSettingsTests
 {
-    private static CalculationEntityTypeBase TypeOf(string name) => name switch
+    private static WindowedCalculationEntityType TypeOf(string name) => name switch
     {
         "Windowed" => new WindowedCalculationEntityType(),
         _ => throw new System.ArgumentOutOfRangeException(nameof(name), name, "No calculation entity type of that name is covered here")

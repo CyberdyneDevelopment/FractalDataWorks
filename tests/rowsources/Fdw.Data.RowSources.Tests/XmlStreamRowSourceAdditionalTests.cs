@@ -13,14 +13,6 @@ public sealed class XmlStreamRowSourceAdditionalTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorWithNullXmlReaderThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => new XmlStreamRowSource((XmlReader)null!, new XmlRowSourceOptions() { ContinueOnError = true, UseElementContent = true, IncludeAttributes = true, BufferSize = 16 * 1024, MaxDepth = 32, MaxCharactersFromEntities = 10_000_000 }));
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
     public void GetFieldNameReturnsEmptyForNegativeOrdinal()
     {
         var xml = """<root><row><id>1</id></row></root>""";

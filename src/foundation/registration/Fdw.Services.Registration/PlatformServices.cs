@@ -87,8 +87,6 @@ public static class PlatformServices
     {
         if (string.IsNullOrWhiteSpace(categoryName))
             throw new ArgumentException("categoryName must not be empty.", nameof(categoryName));
-        if (serviceCollection is null)
-            throw new ArgumentNullException(nameof(serviceCollection));
 
         lock (_gate)
         {

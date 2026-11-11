@@ -26,10 +26,10 @@ public abstract class ListNotificationRulesEndpointBase
 {
     private readonly INotificationRuleConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListNotificationRulesEndpointBase"/> class.</summary>
     protected ListNotificationRulesEndpointBase(ILogger<ListNotificationRulesEndpointBase> logger, INotificationRuleConfigurationProvider provider) : base(logger)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
     }
 
     /// <inheritdoc />

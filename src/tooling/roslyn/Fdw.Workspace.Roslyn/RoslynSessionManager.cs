@@ -53,9 +53,9 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
         ILogger<RoslynSessionManager>? logger = null,
         TimeSpan? sleepTimeout = null)
     {
-        _workspaceFactory = workspaceFactory ?? throw new ArgumentNullException(nameof(workspaceFactory));
-        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
-        _projectIndexStore = projectIndexStore ?? throw new ArgumentNullException(nameof(projectIndexStore));
+        _workspaceFactory = workspaceFactory;
+        _sessionStore = sessionStore;
+        _projectIndexStore = projectIndexStore;
         _logger = logger ?? NullLogger<RoslynSessionManager>.Instance;
         SleepTimeout = sleepTimeout ?? DefaultSleepTimeout;
 

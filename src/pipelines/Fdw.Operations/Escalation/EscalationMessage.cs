@@ -19,7 +19,6 @@ internal static class EscalationMessage
     /// <returns>The alert's subject, led by the level.</returns>
     public static string SubjectOf(EscalationAlertRow alert, int level)
     {
-        ArgumentNullException.ThrowIfNull(alert);
         return $"Level {level}: {alert.Subject}";
     }
 
@@ -29,8 +28,6 @@ internal static class EscalationMessage
     /// <returns>The level's template with its tokens replaced, or the alert's message when the level states none.</returns>
     public static string BodyOf(EscalationAlertRow alert, IEscalationLevel level)
     {
-        ArgumentNullException.ThrowIfNull(alert);
-        ArgumentNullException.ThrowIfNull(level);
         return level.MessageTemplate is not { Length: > 0 } template
             ? alert.Message
             : template

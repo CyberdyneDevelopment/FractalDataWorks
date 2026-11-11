@@ -44,7 +44,6 @@ public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSe
     /// <param name="recordType">The .NET type of records in this dataset.</param>
     /// <param name="fields">The field definitions for this dataset schema.</param>
     /// <param name="category">The optional category for this dataset. Defaults to "Dataset" if not specified.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name, description, recordType, or fields are null.</exception>
     /// <exception cref="ArgumentException">Thrown when fields collection is empty or contains duplicate names.</exception>
     protected DataSetTypeBase(
         string name,
@@ -101,7 +100,6 @@ public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSe
     /// </summary>
     /// <param name="fieldName">The name of the field to retrieve.</param>
     /// <returns>The field with the specified name.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when fieldName is null.</exception>
     /// <exception cref="ArgumentException">Thrown when no field with the specified name exists.</exception>
     public IDataField Get(string fieldName)
     {
@@ -130,10 +128,8 @@ public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSe
     /// </summary>
     /// <param name="fieldType">The .NET type to filter fields by.</param>
     /// <returns>A collection of fields that match the specified type.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when fieldType is null.</exception>
     public IEnumerable<IDataField> Get(Type fieldType)
     {
-        if (fieldType == null) throw new ArgumentNullException(nameof(fieldType));
         return _fields.Where(f => f.FieldType == fieldType);
     }
 

@@ -39,8 +39,6 @@ public sealed class AntiforgeryCsrfProtection : SessionCsrfProtectionBase, ICsrf
     /// <inheritdoc />
     public override IGenericResult ValidateConfiguration(ISessionAuthenticationConfiguration configuration, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-
         return configuration.AllowedOrigins is not null
             ? GenericResult.Failure(SessionLog.SessionServiceInvalid(
                 logger, configuration.Name, "AllowedOrigins is set, but Antiforgery checks no origin; set it only for OriginCheck"))
@@ -52,9 +50,6 @@ public sealed class AntiforgeryCsrfProtection : SessionCsrfProtectionBase, ICsrf
         HttpRequest request, SessionRecord session, ISessionAuthenticationConfiguration configuration, ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(configuration);
-
         var antiforgery = request.HttpContext.RequestServices.GetRequiredService<IAntiforgery>();
         try
         {
@@ -73,8 +68,6 @@ public sealed class AntiforgeryCsrfProtection : SessionCsrfProtectionBase, ICsrf
     /// <inheritdoc />
     public IGenericResult<string> IssueToken(HttpContext context, Guid sessionId, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         var antiforgery = context.RequestServices.GetRequiredService<IAntiforgery>();
         var tokens = antiforgery.GetAndStoreTokens(context);
         if (tokens.RequestToken is not { } token)

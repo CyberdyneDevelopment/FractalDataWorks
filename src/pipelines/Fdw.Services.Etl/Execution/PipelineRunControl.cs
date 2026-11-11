@@ -51,16 +51,15 @@ public sealed class PipelineRunControl : IExecutionRunControl
         {
             run.Cancel();
         }
-        catch (ObjectDisposedException)
+        catch (ObjectDisposedException ex)
         {
-            return GenericResult.Failure(PipelineRunControlLog.RunNotHeld(_logger, executionId, "stop"));
+            return GenericResult.Failure(PipelineRunControlLog.RunEndedWhileTold(_logger, ex, executionId, "stop"));
         }
 
         PipelineRunControlLog.CancelRequested(_logger, executionId);
         return GenericResult.Success();
     }
 
-    /// <inheritdoc />
     /// <summary>
     /// Stops a run because a threshold fired (FDW-3865). The run ends the way a cancelled one does (FDW-3784): its records close Cancelled, with the code
     /// <c>ThresholdStopped</c> and the reason as the run's message. A run that is already ending is left as it is, and the stop succeeds without changing it.
@@ -82,9 +81,9 @@ public sealed class PipelineRunControl : IExecutionRunControl
                 RunThresholdLog.RunStoppedByThreshold(_logger, executionId, reason);
             }
         }
-        catch (ObjectDisposedException)
+        catch (ObjectDisposedException ex)
         {
-            return GenericResult.Failure(PipelineRunControlLog.RunNotHeld(_logger, executionId, "stop for a threshold"));
+            return GenericResult.Failure(PipelineRunControlLog.RunEndedWhileTold(_logger, ex, executionId, "stop for a threshold"));
         }
 
         return GenericResult.Success();

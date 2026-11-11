@@ -24,16 +24,6 @@ public class MessageOptionAttributeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_ThrowsOnNullCollectionType()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new MessageOptionAttribute(null!))
-            .ParamName.ShouldBe("collectionType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void AttributeUsage_TargetsClass()
     {
         var usage = typeof(MessageOptionAttribute)

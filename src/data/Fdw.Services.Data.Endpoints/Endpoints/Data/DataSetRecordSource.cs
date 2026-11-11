@@ -60,10 +60,6 @@ public sealed class DataSetRecordSource : IRecordSource<DataRecord>
     public static IGenericResult<IRecordSource<DataRecord>> Open(
         DataSetQuery query, IDataSetImplementationConfiguration dataSet, int pageSize, int rowCap, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(dataSet);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var declared = dataSet.Fields.Where(f => f.IsCurrent && !f.IsDeleted).OrderBy(f => f.Ordinal).ToList();
         var order = declared
             .Where(f => f.IsKey && !f.IsCalculated)

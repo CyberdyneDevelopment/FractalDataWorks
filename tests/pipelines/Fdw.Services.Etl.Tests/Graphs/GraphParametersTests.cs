@@ -124,7 +124,7 @@ public sealed class GraphParametersTests
         var scope = GraphVariables.Declare(WithParameters(Parameter("Limit")), supplied, NullLogger.Instance);
 
         scope.IsFailure.ShouldBeTrue();
-        scope.CurrentMessage.ShouldContain("Other");
+        scope.CurrentMessage.ShouldNotBeNull().ShouldContain("Other");
     }
 
     [Fact]

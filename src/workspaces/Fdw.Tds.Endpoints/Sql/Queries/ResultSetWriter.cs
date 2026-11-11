@@ -27,8 +27,6 @@ public static class ResultSetWriter
     /// <returns>The rows written, or the refusal.</returns>
     public static async Task<IGenericResult<long>> Write(SqlExecutionContext context, SqlSelectOutput output, int line, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(output);
         var columns = Columns(context, output, line);
         if (columns.IsFailure)
             return columns.ToNewResult<long>();

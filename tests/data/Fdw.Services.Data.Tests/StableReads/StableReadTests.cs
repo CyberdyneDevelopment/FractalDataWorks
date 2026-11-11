@@ -65,7 +65,7 @@ public sealed class StableReadTests
         opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
         var source = opened.Value.ShouldNotBeNull();
         source.Schema.Fields.Select(f => f.Name).ShouldBe(["Id", "Name"]);
-        var record = source.Read().Single();
+        var record = await source.Read(TestContext.Current.CancellationToken).SingleAsync(TestContext.Current.CancellationToken);
         record.Value["Name"].ShouldBe("a");
     }
 
@@ -89,7 +89,7 @@ public sealed class StableReadTests
 
         opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
         var source = opened.Value.ShouldBeOfType<KeysetRecordSource>();
-        source.Read().Count().ShouldBe(1);
+        (await source.Read(TestContext.Current.CancellationToken).CountAsync(TestContext.Current.CancellationToken)).ShouldBe(1);
         var first = asked.Single();
         first.Ordering.ShouldNotBeNull().OrderedFields.Select(f => f.PropertyName).ShouldBe(["Region", "Id"]);
         first.Paging.ShouldNotBeNull().Take.ShouldBe(DataGatewayServiceTypes.StableReadPageSize);
@@ -118,7 +118,7 @@ public sealed class StableReadTests
 
         opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
         var source = opened.Value.ShouldBeOfType<StoreOrderedRecordSource>();
-        source.Read().Count().ShouldBe(1);
+        (await source.Read(TestContext.Current.CancellationToken).CountAsync(TestContext.Current.CancellationToken)).ShouldBe(1);
         var first = asked.Single();
         first.Ordering.ShouldBeNull();
         first.Paging.ShouldNotBeNull().Skip.ShouldBe(0);
@@ -171,7 +171,7 @@ public sealed class StableReadTests
         opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
         var source = opened.Value.ShouldBeOfType<KeysetRecordSource>();
         source.Schema.Fields.Select(f => f.Name).ShouldBe(["Id", "Name"]);
-        source.Read().Select(r => (int)r.Value["Id"]!).ShouldBe(Enumerable.Range(0, 7));
+        (await source.Read(TestContext.Current.CancellationToken).Select(r => (int)r.Value["Id"]!).ToListAsync(TestContext.Current.CancellationToken)).ShouldBe(Enumerable.Range(0, 7));
         store.Orderings.ShouldAllBe(order => order == "Id");
     }
 
@@ -185,7 +185,7 @@ public sealed class StableReadTests
         var opened = await StableRead.OpenDataSet(new QueryCommand<Dictionary<string, object?>>(), Federated(), store.Read, null, NullLogger.Instance, TestContext.Current.CancellationToken);
 
         opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
-        opened.Value.ShouldNotBeNull().Read().Count().ShouldBe(1500);
+        (await opened.Value.ShouldNotBeNull().Read(TestContext.Current.CancellationToken).CountAsync(TestContext.Current.CancellationToken)).ShouldBe(1500);
         store.Reads.ShouldBe(1);
         ((IQueryCommand)store.Commands.Single()).Paging.ShouldBeNull();
     }
@@ -256,7 +256,7 @@ public sealed class StableReadTests
             new QueryCommand<Dictionary<string, object?>>(), dataSet, store.Read, NoStream, NullLogger.Instance, TestContext.Current.CancellationToken);
 
         opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
-        opened.Value.ShouldBeOfType<KeysetRecordSource>().Read().Count().ShouldBe(3);
+        (await opened.Value.ShouldBeOfType<KeysetRecordSource>().Read(TestContext.Current.CancellationToken).CountAsync(TestContext.Current.CancellationToken)).ShouldBe(3);
     }
 
     [Fact]

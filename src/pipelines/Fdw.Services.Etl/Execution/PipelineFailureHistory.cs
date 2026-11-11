@@ -25,7 +25,6 @@ public static class PipelineFailureHistory
     public static async Task<IGenericResult<PipelineFailureCount>> Count(
         IPipelineRunHistory history, string pipelineName, DateTimeOffset? notBefore, bool countTimedOut, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(history);
         var runs = new List<PipelineRunOutcome>();
         var skip = 0;
         while (true)

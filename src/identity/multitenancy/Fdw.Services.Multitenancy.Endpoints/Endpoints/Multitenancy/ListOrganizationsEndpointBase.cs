@@ -36,7 +36,7 @@ public abstract class ListOrganizationsEndpointBase : CrudPageEndpointBase<Organ
     /// <param name="organizations">Reads the page of organizations.</param>
     protected ListOrganizationsEndpointBase(ILogger logger, IOrganizationConfigurationProvider organizations) : base(logger)
     {
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _organizations = organizations;
     }
 
     /// <summary>Gets the resource name used for the route and the default policy: <c>/organizations</c>, <c>organizations:read</c>.</summary>

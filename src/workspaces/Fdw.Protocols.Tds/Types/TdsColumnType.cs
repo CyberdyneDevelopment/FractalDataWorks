@@ -17,7 +17,7 @@ public sealed class TdsColumnType
     /// <param name="scale">The scale of a decimal, or the fractional-second digits of a time type.</param>
     public TdsColumnType(ISqlDataType dataType, int length, byte precision, byte scale)
     {
-        DataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
+        DataType = dataType;
         Length = length;
         Precision = precision;
         Scale = scale;

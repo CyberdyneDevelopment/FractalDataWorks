@@ -42,9 +42,9 @@ public sealed class DocumentRecordStores : IDocumentRecordStores
         ILoggerFactory? loggerFactory,
         ILogger<DocumentRecordStores>? logger)
     {
-        _assignments = assignments ?? throw new ArgumentNullException(nameof(assignments));
-        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
-        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
+        _assignments = assignments;
+        _grants = grants;
+        _connections = connections;
         _loggerFactory = loggerFactory;
         _logger = logger ?? NullLogger<DocumentRecordStores>.Instance;
     }

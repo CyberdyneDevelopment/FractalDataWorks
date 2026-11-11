@@ -38,9 +38,9 @@ public sealed class PipelineOwner
     public PipelineOwner(
         IAuthenticationContextAccessor authentication, IOrganizationScope scope, IOrganizationProvider organizations, ILogger<PipelineOwner>? logger = null)
     {
-        _authentication = authentication ?? throw new ArgumentNullException(nameof(authentication));
-        _scope = scope ?? throw new ArgumentNullException(nameof(scope));
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _authentication = authentication;
+        _scope = scope;
+        _organizations = organizations;
         _logger = logger ?? NullLogger<PipelineOwner>.Instance;
     }
 

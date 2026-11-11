@@ -24,7 +24,7 @@ public sealed class FieldGenerator<TId>
     /// <param name="config">The configuration for collection generation.</param>
     public FieldGenerator(CollectionBuilderConfiguration config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _config = config;
     }
 
     /// <summary>
@@ -33,17 +33,9 @@ public sealed class FieldGenerator<TId>
     /// <param name="keyType">The key type for the dictionary (e.g., "int", "string", "System.Guid").</param>
     /// <param name="returnType">The value type for the dictionary.</param>
     /// <param name="strategy">The collection strategy determining dictionary type.</param>
-    public static IFieldBuilder GenerateAllField(string keyType, string returnType, CollectionStrategy strategy)
+    public static IFieldBuilder GenerateAllField(string keyType, string returnType, ICollectionStrategy strategy)
     {
-#pragma warning disable FDW018 // Source generator internal enum — bootstrapping prevents TypeCollection usage
-        string dictionaryType = strategy switch
-        {
-            CollectionStrategy.Immutable => $"FrozenDictionary<{keyType}, {returnType}>",
-            CollectionStrategy.Mutable => $"ConcurrentDictionary<{keyType}, {returnType}>",
-            CollectionStrategy.Factory => $"Dictionary<{keyType}, {returnType}>",
-            _ => $"FrozenDictionary<{keyType}, {returnType}>"
-        };
-#pragma warning restore FDW018
+        string dictionaryType = strategy.DictionaryType(keyType, returnType);
 
         var builder = new FieldBuilder()
             .WithName("_all")
@@ -52,7 +44,7 @@ public sealed class FieldGenerator<TId>
             .AsStatic();
 
         // Only readonly for Immutable strategy
-        if (strategy == CollectionStrategy.Immutable)
+        if (strategy.IsReadOnly)
         {
             builder.AsReadOnly();
         }
@@ -106,15 +98,7 @@ public sealed class FieldGenerator<TId>
         // Generate lookup dictionary fields for all non-ID lookups
         foreach (var lookup in nonIdLookups)
         {
-#pragma warning disable FDW018 // Source generator internal enum — bootstrapping prevents TypeCollection usage
-            string dictionaryType = strategy switch
-            {
-                CollectionStrategy.Immutable => $"FrozenDictionary<{lookup.PropertyType}, {returnType}>",
-                CollectionStrategy.Mutable => $"ConcurrentDictionary<{lookup.PropertyType}, {returnType}>",
-                CollectionStrategy.Factory => $"Dictionary<{lookup.PropertyType}, {returnType}>",
-                _ => $"FrozenDictionary<{lookup.PropertyType}, {returnType}>"
-            };
-#pragma warning restore FDW018
+            string dictionaryType = strategy.DictionaryType(lookup.PropertyType, returnType);
 
             var fieldBuilder = new FieldBuilder()
                 .WithName($"_by{lookup.PropertyName}")
@@ -123,7 +107,7 @@ public sealed class FieldGenerator<TId>
                 .AsStatic();
 
             // Only readonly for Immutable strategy
-            if (strategy == CollectionStrategy.Immutable)
+            if (strategy.IsReadOnly)
             {
                 fieldBuilder.AsReadOnly();
             }

@@ -44,9 +44,9 @@ public sealed class FlowStepContext
         Guid? reportParent,
         IFlowPauseGate? pauseGate = null)
     {
-        Variables = variables ?? throw new ArgumentNullException(nameof(variables));
-        Executor = executor ?? throw new ArgumentNullException(nameof(executor));
-        Options = options ?? throw new ArgumentNullException(nameof(options));
+        Variables = variables;
+        Executor = executor;
+        Options = options;
         Starter = starter;
         Identity = identity;
         Reporter = reporter;

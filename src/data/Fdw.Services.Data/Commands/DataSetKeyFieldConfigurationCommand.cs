@@ -9,6 +9,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataSetKeyField")]
 public sealed class DataSetKeyFieldConfigurationCommand : ConfigurationCommandBase<DataSetKeyFieldConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataSetKeyFieldConfigurationCommand"/> class.</summary>
     public DataSetKeyFieldConfigurationCommand() : base("DataSetKeyField") { }
 }

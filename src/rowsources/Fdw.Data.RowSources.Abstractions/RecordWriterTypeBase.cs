@@ -65,11 +65,6 @@ public abstract class RecordWriterTypeBase : TypeOptionBase<RecordWriterTypeBase
     /// </remarks>
     public virtual IRecordWriter<DataRecord> Create(RecordWriterContext context)
     {
-        if (context is null)
-        {
-            throw new ArgumentNullException(nameof(context));
-        }
-
         if (WritesBinary)
         {
             return CreateBinaryWriter(

@@ -7,6 +7,6 @@ namespace Fdw.Services.Connections.PostgreSql.Commands;
 [TypeOption(typeof(ConfigurationCommands), "PostgreSqlConnectionConfiguration")]
 public sealed class PostgreSqlConnectionConfigurationCommand : ConfigurationCommandBase<PostgreSqlConnectionConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="PostgreSqlConnectionConfigurationCommand"/> class.</summary>
     public PostgreSqlConnectionConfigurationCommand() : base("PostgreSqlConnectionConfiguration") { }
 }

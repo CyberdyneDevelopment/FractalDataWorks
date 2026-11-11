@@ -124,14 +124,4 @@ public sealed class LedgerAssemblyIndexTests
         index.Resolve(string.Empty).IsResolved.ShouldBeFalse();
         index.Resolve("   ").IsResolved.ShouldBeFalse();
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void NullEntriesThrow()
-    {
-        // Cast disambiguates the two overloads; a real caller always passes a typed list.
-        Should.Throw<ArgumentNullException>(() => new LedgerAssemblyIndex((IReadOnlyList<ChangeLedgerEntry>)null!));
-        Should.Throw<ArgumentNullException>(() => new LedgerAssemblyIndex((IReadOnlyList<SymbolChange>)null!));
-    }
 }

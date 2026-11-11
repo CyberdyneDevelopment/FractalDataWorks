@@ -28,22 +28,18 @@ public sealed class SqlDateTime2Type : SqlDataTypeBase
     /// <inheritdoc/>
     public override string Declaration(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return string.Create(CultureInfo.InvariantCulture, $"datetime2({column.Scale})");
     }
 
     /// <inheritdoc/>
     public override short CatalogMaxLength(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return (short)(TdsTimeEncoding.TimeLength(column.Scale) + 3);
     }
 
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(column);
         writer.WriteByte(TdsTypeIds.DateTime2N);
         writer.WriteByte(column.Scale);
     }

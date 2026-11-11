@@ -53,15 +53,6 @@ public class TypeLookupAttributeTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_ThrowsArgumentNullException_WhenMethodNameIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() => new TypeLookupAttribute(null!))
-            .ParamName.ShouldBe("methodName");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void AttributeUsage_AllowsSingleInstance()
     {
         var usage = typeof(TypeLookupAttribute).GetCustomAttributes(typeof(AttributeUsageAttribute), false)

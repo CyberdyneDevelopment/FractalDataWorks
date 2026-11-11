@@ -29,7 +29,7 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
     private readonly ILogger<GetConnectionTypeCapabilitiesEndpointBase> _logger;
     private readonly IConnectionConfigurationProvider _configProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetConnectionTypeCapabilitiesEndpointBase"/> class.</summary>
     protected GetConnectionTypeCapabilitiesEndpointBase(
         IConnectionConfigurationProvider configProvider,
         ILogger<GetConnectionTypeCapabilitiesEndpointBase> logger)

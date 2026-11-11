@@ -62,13 +62,4 @@ public sealed class GenericResultWithDetailsTests
 
         typed.Details.ShouldNotBeNull().Data["connectionId"].ShouldBe("abc");
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ANullSourceOrNullDetailsIsRefused()
-    {
-        Should.Throw<ArgumentNullException>(() => GenericResult.WithDetails(null!, ResultDetails.Create()));
-        Should.Throw<ArgumentNullException>(() => GenericResult.WithDetails(Failed(), null!));
-    }
 }

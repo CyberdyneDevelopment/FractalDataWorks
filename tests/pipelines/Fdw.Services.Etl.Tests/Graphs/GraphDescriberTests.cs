@@ -16,7 +16,7 @@ namespace Fdw.Services.Etl.Tests.Graphs;
 /// </summary>
 public sealed class GraphDescriberTests
 {
-    private static readonly IReadOnlyDictionary<string, IReadOnlyList<GraphField>> DataSets =
+    private static readonly Dictionary<string, IReadOnlyList<GraphField>> DataSets =
         new Dictionary<string, IReadOnlyList<GraphField>>
         {
             ["Orders"] = [new GraphField("Id", "Int32"), new GraphField("Amount", "Decimal"), new GraphField("PersonId", "Int32")],

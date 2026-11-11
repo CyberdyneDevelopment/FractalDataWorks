@@ -58,10 +58,10 @@ public sealed class PipelineRunAuthority
         IConnectionConfigurationProvider connections,
         IDataStoreProvider dataStores)
     {
-        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
-        _dataStores = dataStores ?? throw new ArgumentNullException(nameof(dataStores));
+        _grants = grants;
+        _dataSets = dataSets;
+        _connections = connections;
+        _dataStores = dataStores;
     }
 
     /// <summary>Decides whether <paramref name="caller"/> may start the pipeline's run with <paramref name="runRoles"/>.</summary>
@@ -154,7 +154,8 @@ public sealed class PipelineRunAuthority
         if (Broke(dataSet))
             return dataSet;
 
-        if (dataSet.Value is null)
+        // A lookup that broke was returned above, so a failure here is the Missing kind: the data set is not there for this caller (FDW-5189).
+        if (dataSet.IsFailure || dataSet.Value is null)
             return Refuse(logger, reach, roles, $"data set '{reached.Name}' is not visible to the caller");
 
         var needed = reached.Writes ? DataSetWrite : DataSetRead;

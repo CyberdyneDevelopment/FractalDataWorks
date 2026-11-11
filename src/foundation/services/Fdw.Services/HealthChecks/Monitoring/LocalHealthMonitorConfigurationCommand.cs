@@ -10,6 +10,6 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 public sealed class LocalHealthMonitorConfigurationCommand
     : ConfigurationCommandBase<LocalHealthMonitorConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="LocalHealthMonitorConfigurationCommand"/> class.</summary>
     public LocalHealthMonitorConfigurationCommand() : base("LocalHealthMonitorConfiguration") { }
 }

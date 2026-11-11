@@ -39,7 +39,7 @@ public abstract class ListCalculationVersionsEndpointBase : Endpoint<Calculation
     {
         _services = new CalculationVersionServices(calculations, versions, ancestry, authority);
         _authContext = authContext;
-        _names = names ?? throw new System.ArgumentNullException(nameof(names));
+        _names = names;
     }
 
     /// <summary>Gets the authorization policy and scope right required for read operations.</summary>

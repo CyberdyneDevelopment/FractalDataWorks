@@ -60,11 +60,11 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
         IUserNames userNames,
         string? dataStoreName)
     {
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _dataGateways = dataGateways;
         _logger = loggerFactory?.CreateLogger<AdministrativeAuditService>()
             ?? throw new ArgumentNullException(nameof(loggerFactory));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _userNames = userNames ?? throw new ArgumentNullException(nameof(userNames));
+        _authContext = authContext;
+        _userNames = userNames;
         _dataStoreName = dataStoreName;
     }
 
@@ -79,8 +79,6 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
     /// <inheritdoc />
     public async Task<IGenericResult> Record(AdministrativeChangeEntry entry, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(entry);
-
         // Reported here rather than refused at registration: a host that records no administrative change is not
         // misconfigured for having no operational store.
         if (StoreTarget is not { } target)
@@ -132,8 +130,6 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
         AdministrativeChangeFilter filter,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(filter);
-
         if (StoreTarget is not { } target)
             return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 

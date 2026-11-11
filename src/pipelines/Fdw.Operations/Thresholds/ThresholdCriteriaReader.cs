@@ -24,7 +24,6 @@ public static class ThresholdCriteriaReader
     /// <returns>The filter node; a failure naming what is wrong with the rows.</returns>
     public static IGenericResult<IFilterNode> From(string threshold, ThresholdRuleConfiguration rule)
     {
-        ArgumentNullException.ThrowIfNull(rule);
         var roots = rule.FilterGroups.Where(group => group.ParentGroupId is null).ToList();
         if (roots.Count != 1)
         {

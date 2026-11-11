@@ -36,4 +36,9 @@ public static partial class UserRoleAssignmentLog
     /// <summary>Logs that the roles the person holds could not be read.</summary>
     [MessageLogging(EventId = 72720, Level = LogLevel.Error, Message = "The roles user '{userId}' holds in tenant '{tenantId}' could not be read: {reason}")]
     public static partial IGenericMessage HeldRolesNotRead(ILogger logger, Guid userId, Guid tenantId, string? reason);
+
+    /// <summary>Error: assigning a role needs the role's name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21802, Level = LogLevel.Error,
+        Message = "Assigning a role to user {userId} needs the role's name, and the name given is empty")]
+    public static partial IGenericMessage AssignedRoleNameRequired(ILogger logger, Guid userId);
 }

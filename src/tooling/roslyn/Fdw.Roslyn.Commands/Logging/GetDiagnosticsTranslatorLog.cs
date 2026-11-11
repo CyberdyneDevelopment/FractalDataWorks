@@ -15,10 +15,11 @@ public static partial class GetDiagnosticsTranslatorLog
         Message = "GetDiagnosticsTranslator retrieving diagnostics (filePath='{filePath}', projectName='{projectName}', minSeverity={minSeverity})")]
     public static partial IGenericMessage Retrieving(ILogger logger, string filePath, string projectName, string minSeverity);
 
-    /// <summary>Warning: the requested severity string did not parse, so Warning was used instead.</summary>
-    [MessageLogging(EventId = 21100, Level = LogLevel.Warning,
-        Message = "GetDiagnosticsTranslator: severity '{requestedSeverity}' did not parse, falling back to Warning")]
-    public static partial IGenericMessage InvalidSeverityFallback(ILogger logger, string requestedSeverity);
+    /// <summary>Error: the request names a severity that is not one of the levels; it is refused.</summary>
+    /// <remarks>Mirrors <c>RoslynResultCodes.SeverityNotKnown</c> (21028).</remarks>
+    [MessageLogging(EventId = 21028, Level = LogLevel.Error,
+        Message = "GetDiagnosticsTranslator: '{severity}' is not a severity; use one of: {accepted}")]
+    public static partial IGenericMessage SeverityNotKnown(ILogger logger, string severity, string accepted);
 
     /// <summary>Error: the target document was not found in the solution.</summary>
     /// <remarks>Mirrors <c>RoslynResultCodes.DocumentNotFound</c> (31001).</remarks>

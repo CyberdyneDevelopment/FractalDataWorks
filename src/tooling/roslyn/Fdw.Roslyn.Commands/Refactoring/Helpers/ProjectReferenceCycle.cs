@@ -28,10 +28,6 @@ public static class ProjectReferenceCycle
     /// </remarks>
     public static bool WouldCreateCycle(Solution solution, ProjectId fromProjectId, ProjectId toProjectId)
     {
-        if (solution is null) throw new ArgumentNullException(nameof(solution));
-        if (fromProjectId is null) throw new ArgumentNullException(nameof(fromProjectId));
-        if (toProjectId is null) throw new ArgumentNullException(nameof(toProjectId));
-
         if (fromProjectId == toProjectId) return true;
 
         return Reaches(solution, toProjectId, fromProjectId, new HashSet<ProjectId>());

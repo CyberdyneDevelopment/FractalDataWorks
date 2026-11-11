@@ -28,7 +28,7 @@ internal sealed class FlowStageRecords : IFlowStageObserver
     /// <param name="parent">The record the stage records are children of; none for the run itself.</param>
     public FlowStageRecords(IFlowReporter reporter, Guid? parent)
     {
-        _reporter = reporter ?? throw new ArgumentNullException(nameof(reporter));
+        _reporter = reporter;
         _parent = parent;
     }
 
@@ -58,7 +58,6 @@ internal sealed class FlowStageRecords : IFlowStageObserver
     /// <returns>A task that completes when it is recorded; at once when the stage has no record.</returns>
     public Task Committed(int stage, DestinationCommit commit, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(commit);
         return RecordOf(stage) is { } record ? _reporter.DestinationCommitted(record, commit, cancellationToken) : Task.CompletedTask;
     }
 

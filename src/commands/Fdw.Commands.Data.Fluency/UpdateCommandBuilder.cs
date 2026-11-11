@@ -52,7 +52,7 @@ public class UpdateCommandBuilder<T>
     /// <returns>The builder for method chaining.</returns>
     public UpdateCommandBuilder<T> DataStore(string dataStoreName)
     {
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _dataStoreName = dataStoreName;
         return this;
     }
 
@@ -63,7 +63,7 @@ public class UpdateCommandBuilder<T>
     /// <returns>The builder for method chaining.</returns>
     public UpdateCommandBuilder<T> Path(string pathName)
     {
-        _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
+        _pathName = pathName;
         return this;
     }
 
@@ -172,7 +172,7 @@ public class UpdateCommandBuilder<T>
     /// <returns>This builder.</returns>
     public UpdateCommandBuilder<T> Returning(params string[] columns)
     {
-        _returnColumns = columns ?? throw new ArgumentNullException(nameof(columns));
+        _returnColumns = columns;
         return this;
     }
 

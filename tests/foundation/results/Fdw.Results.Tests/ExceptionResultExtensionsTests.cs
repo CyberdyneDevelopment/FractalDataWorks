@@ -12,15 +12,6 @@ public class ExceptionResultExtensionsTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void FlattenException_NullException_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => ExceptionResultExtensions.FlattenException(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void FlattenException_SimpleException_ReturnsSingleMessage()
     {
         // Arrange

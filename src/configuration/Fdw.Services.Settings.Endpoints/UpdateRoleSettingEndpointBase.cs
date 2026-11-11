@@ -18,7 +18,7 @@ public abstract class UpdateRoleSettingEndpointBase : CrudUpdateEndpointBase<Upd
 {
     private readonly IRoleSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateRoleSettingEndpointBase"/> class.</summary>
     protected UpdateRoleSettingEndpointBase(ILogger<UpdateRoleSettingEndpointBase> logger, IRoleSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

@@ -67,9 +67,6 @@ public abstract class CalculationEntityTypeBase :
     /// <exception cref="ArgumentException">The configuration is not an instance of <see cref="ConfigurationType"/>.</exception>
     public IReadOnlyDictionary<string, object?> SettingValues(IGenericConfiguration configuration)
     {
-        if (configuration is null)
-            throw new ArgumentNullException(nameof(configuration));
-
         if (!ConfigurationType.IsInstanceOfType(configuration))
             throw new ArgumentException(
                 $"The configuration is a {configuration.GetType().Name}, not the {ConfigurationType.Name} that calculation type '{Name}' reads.",

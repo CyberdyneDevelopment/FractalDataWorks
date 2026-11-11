@@ -34,8 +34,6 @@ public sealed class SynchronizerTokenCsrfProtection : SessionCsrfProtectionBase
     /// <inheritdoc />
     public override IGenericResult ValidateConfiguration(ISessionAuthenticationConfiguration configuration, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-
         if (configuration.AllowedOrigins is not null)
             return GenericResult.Failure(SessionLog.SessionServiceInvalid(
                 logger, configuration.Name, "AllowedOrigins is set, but SynchronizerToken checks no origin; set it only for OriginCheck"));
@@ -51,10 +49,6 @@ public sealed class SynchronizerTokenCsrfProtection : SessionCsrfProtectionBase
         HttpRequest request, SessionRecord session, ISessionAuthenticationConfiguration configuration, ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(configuration);
-
         if (session.CsrfTokenHash is not { } expected)
             return Task.FromResult<IGenericResult>(GenericResult.Failure(SessionLog.CsrfRefused(
                 logger, Name, request.Method, request.Path, configuration.Name, "no CSRF token has been issued to this session")));

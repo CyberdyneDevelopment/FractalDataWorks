@@ -21,17 +21,15 @@ internal sealed class DataSetStatusView : IDataSetStatusView
 
     internal DataSetStatusView(IReadOnlyDictionary<string, IReadOnlyList<DataSetWriterRun>> runs, TimeSpan window, DateTimeOffset now, ILogger logger)
     {
-        _runs = runs ?? throw new ArgumentNullException(nameof(runs));
+        _runs = runs;
         _window = window;
         _now = now;
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
     }
 
     /// <inheritdoc/>
     public IGenericResult<IDataSetStatus?> StatusOf(IDataSetImplementationConfiguration dataSet)
     {
-        ArgumentNullException.ThrowIfNull(dataSet);
-
         // A variation holds no data of its own (it runs the data set it points at), so no pipeline writes it and it has no status of its own.
         if (dataSet is IDataSetVariationImplementationConfiguration)
             return GenericResult<IDataSetStatus?>.Success(null);

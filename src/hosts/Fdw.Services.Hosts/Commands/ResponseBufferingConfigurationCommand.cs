@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "ResponseBuffering")]
 public sealed class ResponseBufferingConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ResponseBufferingConfigurationCommand"/> class.</summary>
     public ResponseBufferingConfigurationCommand() : base("ResponseBuffering") { }
 }

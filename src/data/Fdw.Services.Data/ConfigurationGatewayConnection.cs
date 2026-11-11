@@ -26,6 +26,6 @@ public sealed class ConfigurationGatewayConnection
     /// <param name="lazy">Lazy-evaluated IDataConnection.</param>
     public ConfigurationGatewayConnection(Lazy<IDataConnection> lazy)
     {
-        Lazy = lazy ?? throw new ArgumentNullException(nameof(lazy));
+        Lazy = lazy;
     }
 }

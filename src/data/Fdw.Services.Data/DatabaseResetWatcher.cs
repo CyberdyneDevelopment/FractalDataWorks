@@ -57,7 +57,7 @@ public sealed class DatabaseResetWatcher : BackgroundService
         TimeSpan? interval,
         ILogger<DatabaseResetWatcher>? logger = null)
     {
-        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        _catalog = catalog;
         if (interval is { } given && given <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(interval), given, "An interval to look at the databases is positive.");
 
@@ -78,7 +78,6 @@ public sealed class DatabaseResetWatcher : BackgroundService
     /// <exception cref="InvalidOperationException">The host has settings and the setting is missing or not positive; the host does not start without it.</exception>
     public static DatabaseResetWatcher Create(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger<DatabaseResetWatcher>();
         var catalog = services.GetRequiredService<IDatabaseGenerationCatalog>();
         var invalidator = services.GetService<ICacheInvalidator>();

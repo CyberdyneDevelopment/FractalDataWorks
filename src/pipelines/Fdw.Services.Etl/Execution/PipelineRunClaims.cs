@@ -54,11 +54,6 @@ public static class PipelineRunClaims
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(targets);
-        ArgumentNullException.ThrowIfNull(limits);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var run = new PipelineRunIdentity(request.ExecutionId, request.PipelineId, request.PipelineName, request.TenantId, request.ScheduleName, request.ScheduleId);
         var graph = configuration as GraphPipelineConfiguration;
         PipelineRunCap? cap = null;

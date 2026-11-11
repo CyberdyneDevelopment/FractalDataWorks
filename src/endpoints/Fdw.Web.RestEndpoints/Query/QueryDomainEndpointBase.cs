@@ -56,8 +56,8 @@ public abstract class QueryDomainEndpointBase<TDomain>
     /// <param name="records">Reads the page from the domain table.</param>
     protected QueryDomainEndpointBase(ILogger logger, IDomainRecordProvider<TDomain> records)
     {
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _records = records ?? throw new ArgumentNullException(nameof(records));
+        Logger = logger;
+        _records = records;
     }
 
     /// <summary>Gets the plural resource name used for routing and policy generation (e.g., "users").</summary>

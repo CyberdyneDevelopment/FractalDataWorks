@@ -40,8 +40,6 @@ public sealed class RunThresholdProgress : IFlowRunTimedProgress, IDisposable
         string pipelineName, Guid tenantId, Guid? runId, IReadOnlyDictionary<string, Guid> componentIds, IThresholdEvaluator evaluator, IFlowRunProgress? inner, ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pipelineName);
-        ArgumentNullException.ThrowIfNull(componentIds);
-        ArgumentNullException.ThrowIfNull(evaluator);
         _pipelineName = pipelineName;
         _componentIds = componentIds;
         _tenantId = tenantId;
@@ -75,8 +73,6 @@ public sealed class RunThresholdProgress : IFlowRunTimedProgress, IDisposable
     /// <returns>The figures, named as <see cref="ComponentIoThresholdType"/> names them; <c>runTime</c> is left out when it is not known.</returns>
     public static IReadOnlyDictionary<string, object?> FiguresOf(IFlowComponent component, IReadOnlyList<FlowLinkCount> links, TimeSpan? runTime)
     {
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(links);
         var errors = component is IFlowErrorOutputs outputs ? outputs.ErrorOutputs : [];
         var from = links.Where(link => Same(link.Link.FromComponent, component.Name)).ToList();
         var rejected = from.Where(link => errors.Contains(link.Link.FromOutput, StringComparer.OrdinalIgnoreCase)).Sum(link => link.Rows);

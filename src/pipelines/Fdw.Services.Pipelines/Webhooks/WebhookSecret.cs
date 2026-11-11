@@ -32,7 +32,6 @@ public static class WebhookSecret
     /// <returns>The SHA-256 of its UTF-8 bytes as lowercase hexadecimal.</returns>
     public static string Hash(string secret)
     {
-        ArgumentNullException.ThrowIfNull(secret);
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
     }
 
@@ -42,7 +41,6 @@ public static class WebhookSecret
     /// <returns><see langword="true"/> when the secret hashes to the stored hash.</returns>
     public static bool Matches(string? sent, string storedHash)
     {
-        ArgumentNullException.ThrowIfNull(storedHash);
         if (string.IsNullOrEmpty(sent))
         {
             return false;

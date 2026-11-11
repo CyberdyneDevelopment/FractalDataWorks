@@ -7,6 +7,6 @@ namespace Fdw.Services.Identity.JwtAssertion.Commands;
 [TypeOption(typeof(ConfigurationCommands), "JwtAssertionIdentityConfiguration")]
 public sealed class JwtAssertionConfigurationCommand : ConfigurationCommandBase<JwtAssertionConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="JwtAssertionConfigurationCommand"/> class.</summary>
     public JwtAssertionConfigurationCommand() : base("JwtAssertionIdentityConfiguration") { }
 }

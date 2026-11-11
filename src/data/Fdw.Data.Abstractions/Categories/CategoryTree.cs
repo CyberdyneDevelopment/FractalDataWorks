@@ -33,11 +33,6 @@ public sealed class CategoryTree
     /// <returns>The tree, or null when <paramref name="problems"/> says the nodes do not make one.</returns>
     public static CategoryTree? TryBuild(IEnumerable<CategoryNode> nodes, out IReadOnlyList<string> problems)
     {
-        if (nodes is null)
-        {
-            throw new ArgumentNullException(nameof(nodes));
-        }
-
         var found = new List<string>();
         var all = nodes.ToList();
         var byId = new Dictionary<Guid, CategoryNode>();
@@ -84,11 +79,6 @@ public sealed class CategoryTree
     /// <returns>The nodes; empty when the tree has none.</returns>
     public IReadOnlyList<CategoryTreeNode> FindAllByName(string name)
     {
-        if (name is null)
-        {
-            throw new ArgumentNullException(nameof(name));
-        }
-
         return _byName.TryGetValue(name, out var found) ? found.ToArray() : [];
     }
 

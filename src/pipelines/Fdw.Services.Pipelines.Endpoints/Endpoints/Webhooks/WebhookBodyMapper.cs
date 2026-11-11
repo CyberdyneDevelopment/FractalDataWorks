@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Fdw.Results;
@@ -55,6 +56,16 @@ public static class WebhookBodyMapper
         return GenericResult<IReadOnlyList<KeyValuePair<string, string>>>.Success(supplied);
     }
 
+    // A found value as text: null and undefined are no value, a string is itself, a boolean is lower case, anything else is as written.
+    private static readonly Dictionary<JsonValueKind, Func<JsonElement, string?>> ValueTexts = new()
+    {
+        [JsonValueKind.Null] = _ => null,
+        [JsonValueKind.Undefined] = _ => null,
+        [JsonValueKind.String] = value => value.GetString(),
+        [JsonValueKind.True] = _ => "true",
+        [JsonValueKind.False] = _ => "false",
+    };
+
     private static string? Find(JsonElement root, string path)
     {
         var current = root;
@@ -66,13 +77,6 @@ public static class WebhookBodyMapper
             }
         }
 
-        return current.ValueKind switch
-        {
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            JsonValueKind.String => current.GetString(),
-            JsonValueKind.True => "true",
-            JsonValueKind.False => "false",
-            _ => current.GetRawText(),
-        };
+        return ValueTexts.TryGetValue(current.ValueKind, out var text) ? text(current) : current.GetRawText();
     }
 }

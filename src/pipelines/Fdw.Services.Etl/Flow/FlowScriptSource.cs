@@ -69,10 +69,8 @@ public sealed class FlowScriptSource : IFlowComponent
         int? rowCap = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(gateway);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataStore);
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        ArgumentNullException.ThrowIfNull(parameters);
         ArgumentOutOfRangeException.ThrowIfLessThan(maxRows, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
         Name = name;
@@ -98,8 +96,6 @@ public sealed class FlowScriptSource : IFlowComponent
     /// <inheritdoc />
     public async Task<IGenericResult> Run(IFlowPorts ports, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(ports);
-
         // Why one more than the most: the row after the most is what shows the script selects too many; this source fails on it
         // with its own message, and the read's own limit is the guard behind it.
         var opened = await _gateway

@@ -33,9 +33,6 @@ public static class SqlValues
     /// <returns>True when the two can be compared; false when one does not convert to the other's type.</returns>
     public static bool TryCompare(object left, object right, out int order)
     {
-        ArgumentNullException.ThrowIfNull(left);
-        ArgumentNullException.ThrowIfNull(right);
-
         if (IsNumber(left) || IsNumber(right))
             return TryCompareNumbers(left, right, out order);
 
@@ -91,8 +88,6 @@ public static class SqlValues
     /// <returns>True when the text matches.</returns>
     public static bool Like(string text, string pattern, char? escape)
     {
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(pattern);
         return Regex.IsMatch(text.TrimEnd(' '), LikeToRegex(pattern.TrimEnd(' '), escape),
             RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant, PatternTimeout);
     }

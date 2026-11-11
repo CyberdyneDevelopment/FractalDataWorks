@@ -19,7 +19,7 @@ public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<C
 {
     private readonly ITenantSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateTenantSettingEndpointBase"/> class.</summary>
     protected CreateTenantSettingEndpointBase(ILogger<CreateTenantSettingEndpointBase> logger, ITenantSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

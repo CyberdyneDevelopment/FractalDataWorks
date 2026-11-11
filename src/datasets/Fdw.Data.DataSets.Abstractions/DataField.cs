@@ -32,7 +32,7 @@ public sealed class DataField : IDataField, IEquatable<DataField>
             throw new ArgumentException("Field name cannot be null or whitespace.", nameof(name));
 
         Name = name;
-        Type = type ?? throw new ArgumentNullException(nameof(type));
+        Type = type;
         IsKey = isKey;
         IsNullable = isNullable;
         MaxLength = maxLength;

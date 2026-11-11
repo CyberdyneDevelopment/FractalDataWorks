@@ -35,7 +35,6 @@ public sealed class ConnectionAuthenticationTypeInfo
     /// <returns>The description.</returns>
     public static ConnectionAuthenticationTypeInfo Of(ConnectionAuthenticationMethod method)
     {
-        if (method is null) throw new System.ArgumentNullException(nameof(method));
         return new()
         {
             Name = method.Name,

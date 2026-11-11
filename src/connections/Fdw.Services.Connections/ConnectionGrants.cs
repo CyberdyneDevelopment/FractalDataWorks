@@ -44,10 +44,10 @@ public sealed class ConnectionGrants : IConnectionGrants
         ITenantProvider tenants,
         ILogger<ConnectionGrants>? logger)
     {
-        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
-        _assignments = assignments ?? throw new ArgumentNullException(nameof(assignments));
-        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
+        _grants = grants;
+        _assignments = assignments;
+        _connections = connections;
+        _tenants = tenants;
         _logger = logger ?? NullLogger<ConnectionGrants>.Instance;
     }
 

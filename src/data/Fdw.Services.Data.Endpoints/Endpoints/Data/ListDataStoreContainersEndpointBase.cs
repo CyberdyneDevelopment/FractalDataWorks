@@ -31,7 +31,7 @@ public abstract class ListDataStoreContainersEndpointBase : CrudPageEndpointBase
     /// <param name="pages">Reads a page of containers with the names above them.</param>
     protected ListDataStoreContainersEndpointBase(ILogger<ListDataStoreContainersEndpointBase> logger, IDataStoreContainerPages pages) : base(logger)
     {
-        _pages = pages ?? throw new System.ArgumentNullException(nameof(pages));
+        _pages = pages;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

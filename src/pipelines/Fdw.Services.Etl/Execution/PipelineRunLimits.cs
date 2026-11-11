@@ -22,9 +22,6 @@ public static class PipelineRunLimits
     /// <returns>The limits, or the refusal naming the first setting that is not a positive number.</returns>
     public static IGenericResult<PipelineRunLimitValues> Read(IEffectiveSettingsProvider settings, Guid? tenantId, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var server = settings.GetEffectiveValue<int>(SettingDefinitions.MaxConcurrentPipelineRunsPerServer);
         var tenant = settings.GetEffectiveValue<int>(SettingDefinitions.MaxConcurrentPipelineRunsPerTenant, tenantId);
         var missing = server <= 0 ? SettingDefinitions.MaxConcurrentPipelineRunsPerServer

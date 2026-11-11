@@ -52,8 +52,8 @@ public sealed class AegisInjector
         IAegisInjectionTarget target,
         ILogger<AegisInjector>? logger = null)
     {
-        _secretManagerProvider = secretManagerProvider ?? throw new ArgumentNullException(nameof(secretManagerProvider));
-        _target = target ?? throw new ArgumentNullException(nameof(target));
+        _secretManagerProvider = secretManagerProvider;
+        _target = target;
         _logger = logger ?? NullLogger<AegisInjector>.Instance;
     }
 

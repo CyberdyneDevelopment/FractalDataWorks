@@ -7,6 +7,6 @@ namespace Fdw.Services.Notifications.System.Commands;
 [TypeOption(typeof(ConfigurationCommands), "SystemNotificationConfiguration")]
 public sealed class SystemNotificationConfigurationCommand : ConfigurationCommandBase<SystemNotificationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SystemNotificationConfigurationCommand"/> class.</summary>
     public SystemNotificationConfigurationCommand() : base("SystemNotificationConfiguration") { }
 }

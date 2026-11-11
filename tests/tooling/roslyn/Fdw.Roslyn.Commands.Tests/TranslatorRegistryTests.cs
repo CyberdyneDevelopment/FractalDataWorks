@@ -123,31 +123,6 @@ public sealed class TranslatorRegistryTests
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisterNonGenericThrowsArgumentNullExceptionForNullTranslator()
-    {
-        // Arrange
-        var registry = new TranslatorRegistry(NullLoggerFactory.Instance);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => registry.Register((IRoslynCommandTranslator)null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisterGenericThrowsArgumentNullExceptionForNullTranslator()
-    {
-        // Arrange
-        var registry = new TranslatorRegistry(NullLoggerFactory.Instance);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(
-            () => registry.Register((IRoslynCommandTranslator<FakeRoslynCommand, FakeCommandResult>)null!));
-    }
-
-    [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "CoreFramework")]
     public void CountReflectsNumberOfDistinctRegisteredCommandTypes()

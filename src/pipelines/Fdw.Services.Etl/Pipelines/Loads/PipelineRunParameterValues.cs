@@ -62,7 +62,6 @@ public static class PipelineRunParameterValues
     /// <returns>The names of the parameters that got their default.</returns>
     public static IReadOnlySet<string> Defaulted(IEnumerable<IPipelineRunParameter>? declared, IEnumerable<string> supplied)
     {
-        ArgumentNullException.ThrowIfNull(supplied);
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (declared is null)
             return names;
@@ -86,8 +85,11 @@ public static class PipelineRunParameterValues
 
             var type = DataTypes.ByName(parameter.ParameterType);
             object? value = null;
+            JsonException? notJson = null;
             var readable = !ReferenceEquals(type, DataTypes.NotFound)
-                && (parameter.IsList ? TryReadList(type, text, out value) : TryReadSingle(type, text, out value));
+                && (parameter.IsList ? TryReadList(type, text, out value, out notJson) : TryReadSingle(type, text, out value));
+            if (notJson is not null)
+                return GenericResult.Failure(PipelineRunLog.RunParameterDefaultListNotJson(logger, notJson, parameter.Name));
             if (!readable)
                 return GenericResult.Failure(PipelineRunLog.RunParameterDefaultUnreadable(logger, parameter.Name, Words((parameter.ParameterType, parameter.IsList))));
 
@@ -192,8 +194,11 @@ public static class PipelineRunParameterValues
 
         var type = DataTypes.ByName(parameter.TypeName);
         object? value = null;
+        JsonException? notJson = null;
         var readable = !ReferenceEquals(type, DataTypes.NotFound)
-            && (parameter.IsList ? TryReadList(type, pair.Value, out value) : TryReadSingle(type, pair.Value, out value));
+            && (parameter.IsList ? TryReadList(type, pair.Value, out value, out notJson) : TryReadSingle(type, pair.Value, out value));
+        if (notJson is not null)
+            return GenericResult.Failure(PipelineRunLog.RunParameterListNotJson(logger, notJson, pair.Key));
         if (!readable)
             return GenericResult.Failure(PipelineRunLog.RunParameterUnreadable(logger, pair.Key, Words(parameter)));
 
@@ -210,10 +215,11 @@ public static class PipelineRunParameterValues
 
     // A list arrives as the text of a JSON array of items (a schedule keeps every parameter as text). Each item is converted to the
     // item type; an empty list, an item that is not a value of the type, or text that is not an array is unreadable. Nothing is skipped.
-    private static bool TryReadList(IDataType type, string text, out object? value)
+    // Text that is not JSON at all comes back as the parser's exception, so the refusal can say so (FDW-5189).
+    private static bool TryReadList(IDataType type, string text, out object? value, out JsonException? notJson)
     {
         value = null;
-        var items = ArrayItems(text);
+        var items = ArrayItems(text, out notJson);
         if (items.Count == 0)
             return false;
 
@@ -230,9 +236,11 @@ public static class PipelineRunParameterValues
         return true;
     }
 
-    // The items of a JSON array as text: JsonElement.ToString gives a string as itself and any other item (a number, true) as written. Not an array: no items.
-    private static List<string> ArrayItems(string text)
+    // The items of a JSON array as text: JsonElement.ToString gives a string as itself and any other item (a number, true) as written. Not an array: no
+    // items. Not JSON: no items, and the parser's exception.
+    private static List<string> ArrayItems(string text, out JsonException? notJson)
     {
+        notJson = null;
         try
         {
             using var document = JsonDocument.Parse(text);
@@ -240,8 +248,9 @@ public static class PipelineRunParameterValues
                 ? [.. document.RootElement.EnumerateArray().Select(item => item.ToString())]
                 : [];
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            notJson = ex;
             return [];
         }
     }

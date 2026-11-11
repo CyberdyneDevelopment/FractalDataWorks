@@ -20,24 +20,6 @@ public class TypeOptionAttributeTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_ThrowsArgumentNullException_WhenCollectionTypeIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() => new TypeOptionAttribute(null!, "Name"))
-            .ParamName.ShouldBe("collectionType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void Constructor_ThrowsArgumentNullException_WhenNameIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() => new TypeOptionAttribute(typeof(TestCollection), null!))
-            .ParamName.ShouldBe("name");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void AttributeUsage_AllowsSingleInstance()
     {
         var usage = typeof(TypeOptionAttribute).GetCustomAttributes(typeof(AttributeUsageAttribute), false)

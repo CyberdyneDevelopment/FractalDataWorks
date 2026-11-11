@@ -47,10 +47,6 @@ public sealed class PrimaryBackupResiliencyType : ResiliencyTypeBase
         IResiliencyExecutionContext ctx,
         CancellationToken cancellationToken)
     {
-        if (runStage == null) throw new ArgumentNullException(nameof(runStage));
-        if (config == null) throw new ArgumentNullException(nameof(config));
-        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-
         if (config is not PrimaryBackupResiliencyConfiguration pbConfig)
         {
             return GenericResult.Failure(

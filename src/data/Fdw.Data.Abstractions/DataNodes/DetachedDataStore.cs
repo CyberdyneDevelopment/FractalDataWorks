@@ -28,7 +28,7 @@ public sealed class DetachedDataStore : IDataStore
     /// <param name="logger">Logger for navigation diagnostics. Defaults to a null logger.</param>
     public DetachedDataStore(string name, ILogger? logger = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         _logger = logger ?? NullLogger.Instance;
     }
 

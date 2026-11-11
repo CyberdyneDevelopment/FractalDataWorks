@@ -83,11 +83,11 @@ public sealed class DatabaseSessionStore : ISessionStore
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(useWriteCap, TimeSpan.Zero);
         _useWriteCap = useWriteCap;
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
-        _encryption = encryption ?? throw new ArgumentNullException(nameof(encryption));
-        _flows = flows ?? throw new ArgumentNullException(nameof(flows));
-        _serverSettings = serverSettings ?? throw new ArgumentNullException(nameof(serverSettings));
+        _gateways = gateways;
+        _authContextAccessor = authContextAccessor;
+        _encryption = encryption;
+        _flows = flows;
+        _serverSettings = serverSettings;
         _logger = logger ?? NullLogger<DatabaseSessionStore>.Instance;
     }
 

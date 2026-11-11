@@ -205,18 +205,6 @@ public sealed class CreateTableCommandTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void WithForeignKeyRefusesAMissingReferentialAction()
-    {
-        // FDW-3610: no default action; a foreign key states both, NoAction included.
-        var command = new CreateTableCommand("Orders");
-
-        Should.Throw<ArgumentNullException>(() => command.WithForeignKey("CustomerId", "Customers", "Id", null!, ForeignKeyActions.NoAction));
-        Should.Throw<ArgumentNullException>(() => command.WithForeignKey("CustomerId", "Customers", "Id", ForeignKeyActions.NoAction, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void WithForeignKey_AddsForeignKeyConstraint()
     {
         // Arrange

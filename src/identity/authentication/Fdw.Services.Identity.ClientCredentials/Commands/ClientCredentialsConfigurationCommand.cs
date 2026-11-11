@@ -7,6 +7,6 @@ namespace Fdw.Services.Identity.ClientCredentials.Commands;
 [TypeOption(typeof(ConfigurationCommands), "ClientCredentialsIdentityConfiguration")]
 public sealed class ClientCredentialsConfigurationCommand : ConfigurationCommandBase<ClientCredentialsConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ClientCredentialsConfigurationCommand"/> class.</summary>
     public ClientCredentialsConfigurationCommand() : base("ClientCredentialsIdentityConfiguration") { }
 }

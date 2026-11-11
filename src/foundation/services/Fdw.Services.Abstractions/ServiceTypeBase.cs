@@ -110,9 +110,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </remarks>
     protected void Requires<TRequired>(Func<ILogger, IGenericMessage> message)
     {
-        if (message is null)
-            throw new ArgumentNullException(nameof(message));
-
         _requirements.Add(new ServiceRequirement(typeof(TRequired), message));
     }
 

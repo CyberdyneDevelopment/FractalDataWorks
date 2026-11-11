@@ -25,8 +25,6 @@ internal static class PipelineLineageProjection
     /// <param name="logger">Logger for verbose composition/linkage tracing.</param>
     public static PipelineLineageRecord From(IPipelineImplementationConfiguration configuration, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-
         var record = new PipelineLineageRecord
         {
             Id = configuration.Id,

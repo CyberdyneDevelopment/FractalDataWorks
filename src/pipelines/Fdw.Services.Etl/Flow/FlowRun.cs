@@ -78,7 +78,6 @@ internal sealed class FlowRun
     /// <returns>The rows rejected upstream, zero when none was.</returns>
     public long RejectedUpstreamOf(FlowGraph graph, string component)
     {
-        ArgumentNullException.ThrowIfNull(graph);
         var upstream = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var waiting = new Stack<string>();
         waiting.Push(component);

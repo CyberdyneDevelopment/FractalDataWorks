@@ -17,7 +17,7 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
 {
     private readonly IServerSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateServerSettingEndpointBase"/> class.</summary>
     protected UpdateServerSettingEndpointBase(ILogger<UpdateServerSettingEndpointBase> logger, IServerSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

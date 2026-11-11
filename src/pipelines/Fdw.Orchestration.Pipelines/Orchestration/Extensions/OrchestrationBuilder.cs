@@ -27,7 +27,7 @@ public sealed class OrchestrationBuilder
     /// <param name="services">The service collection.</param>
     public OrchestrationBuilder(IServiceCollection services)
     {
-        Services = services ?? throw new ArgumentNullException(nameof(services));
+        Services = services;
         Services.TryAddSingleton<IResiliencePipelineFactory, PollyResiliencePipelineFactory>();
     }
 

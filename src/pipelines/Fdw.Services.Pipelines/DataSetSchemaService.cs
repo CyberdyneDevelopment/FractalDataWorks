@@ -36,7 +36,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
         DataSetConfigurationProvider provider,
         ILogger<DataSetSchemaService>? logger = null)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
         _logger = logger ?? NullLogger<DataSetSchemaService>.Instance;
     }
 

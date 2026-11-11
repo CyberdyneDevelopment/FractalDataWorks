@@ -33,7 +33,7 @@ public abstract class NewWebhookSecretEndpointBase : Endpoint<WebhookNameRequest
         IPipelineConfigurationProvider pipelines,
         IRoleGrants grants)
     {
-        _triggers = new WebhookTriggers(provider, pipelines, new RunRoleAuthority(grants), logger ?? throw new ArgumentNullException(nameof(logger)));
+        _triggers = new WebhookTriggers(provider, pipelines, new RunRoleAuthority(grants), logger);
     }
 
     /// <inheritdoc />

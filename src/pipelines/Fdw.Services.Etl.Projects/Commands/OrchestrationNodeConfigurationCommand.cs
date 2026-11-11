@@ -11,6 +11,6 @@ namespace Fdw.Services.Etl.Projects.Commands;
 [TypeOption(typeof(ConfigurationCommands), "OrchestrationNode")]
 public sealed class OrchestrationNodeConfigurationCommand : ConfigurationCommandBase<OrchestrationNodeImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="OrchestrationNodeConfigurationCommand"/> class.</summary>
     public OrchestrationNodeConfigurationCommand() : base("OrchestrationNode") { }
 }

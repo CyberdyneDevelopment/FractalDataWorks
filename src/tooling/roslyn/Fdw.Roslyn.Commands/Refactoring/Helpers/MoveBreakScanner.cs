@@ -72,8 +72,6 @@ public static class MoveBreakScanner
         RoslynCommandBase command,
         CancellationToken cancellationToken = default)
     {
-        if (command is null) throw new ArgumentNullException(nameof(command));
-
         var findings = new List<BreakFinding>();
         if (string.IsNullOrEmpty(sourceAssembly)) return findings;
 

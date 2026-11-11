@@ -23,11 +23,6 @@ public static class OptionId
     /// <returns>The same Guid for the same name, in every process.</returns>
     public static Guid Derive(string name)
     {
-        if (name is null)
-        {
-            throw new ArgumentNullException(nameof(name));
-        }
-
         using var md5 = System.Security.Cryptography.MD5.Create();
         return new Guid(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(name)));
     }

@@ -33,10 +33,10 @@ public sealed class WebhookTriggers
     public WebhookTriggers(
         WebhookTriggerConfigurationProvider provider, IPipelineConfigurationProvider pipelines, RunRoleAuthority roles, ILogger logger)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-        _pipelines = pipelines ?? throw new ArgumentNullException(nameof(pipelines));
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _provider = provider;
+        _pipelines = pipelines;
+        _roles = roles;
+        _logger = logger;
     }
 
     /// <summary>Finds a trigger by name.</summary>
@@ -160,7 +160,6 @@ public sealed class WebhookTriggers
     private async Task<IGenericResult<WebhookPayload>> Save(
         IAuthenticationContext caller, WebhookPayload request, Guid id, WebhookSecretHash secret, bool mayCreate, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(request);
         var pipeline = await _pipelines.Get(request.Pipeline, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
         if (pipeline.IsFailure || pipeline.Value is not { } found)
         {

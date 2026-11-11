@@ -101,7 +101,6 @@ public sealed class SimpleDataSetType : DataSetTypeBase, IStreamingDataSetType
     public async Task<IGenericResult<IRecordSource<DataRecord>?>> OpenStream(
         DataSetExecutionContext context, IDataCommand command, int batchSize, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
         var (answer, plan) = StreamQuery(context, command);
         if (plan is null)
             return answer;

@@ -8,6 +8,6 @@ namespace Fdw.Operations.Commands;
 [TypeOption(typeof(ConfigurationCommands), "EscalationPolicy")]
 public sealed class EscalationPolicyConfigurationCommand : ConfigurationCommandBase<EscalationPolicyImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="EscalationPolicyConfigurationCommand"/> class.</summary>
     public EscalationPolicyConfigurationCommand() : base("EscalationPolicy") { }
 }

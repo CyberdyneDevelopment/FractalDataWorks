@@ -18,9 +18,8 @@ internal sealed class LiveGraph : IFlowLiveGraph
 
     public LiveGraph(IReadOnlyList<FlowLiveComponent> components, Func<IReadOnlyList<FlowLinkCount>> links, Action<LiveGraph> closed)
     {
-        ArgumentNullException.ThrowIfNull(components);
-        _links = links ?? throw new ArgumentNullException(nameof(links));
-        _closed = closed ?? throw new ArgumentNullException(nameof(closed));
+        _links = links;
+        _closed = closed;
         _entries = components.ToDictionary(component => component.Name, component => new Entry(component), StringComparer.OrdinalIgnoreCase);
     }
 

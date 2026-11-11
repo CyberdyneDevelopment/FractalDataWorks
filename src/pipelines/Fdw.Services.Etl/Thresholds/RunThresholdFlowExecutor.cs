@@ -34,14 +34,14 @@ public sealed class RunThresholdFlowExecutor : IFlowExecutor
     public RunThresholdFlowExecutor(
         IFlowExecutor inner, string pipelineName, Guid tenantId, Guid? runId, IReadOnlyDictionary<string, Guid> componentIds, IThresholdEvaluator evaluator, ILogger logger)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        _inner = inner;
         ArgumentException.ThrowIfNullOrWhiteSpace(pipelineName);
         _pipelineName = pipelineName;
         _tenantId = tenantId;
         _runId = runId;
-        _componentIds = componentIds ?? throw new ArgumentNullException(nameof(componentIds));
-        _evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _componentIds = componentIds;
+        _evaluator = evaluator;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -56,8 +56,6 @@ public sealed class RunThresholdFlowExecutor : IFlowExecutor
     /// <inheritdoc/>
     public async Task<FlowRunOutcome> Execute(FlowGraph graph, FlowRunOptions options, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(options);
         using var progress = new RunThresholdProgress(_pipelineName, _tenantId, _runId, _componentIds, _evaluator, options.Progress, _logger);
         try
         {

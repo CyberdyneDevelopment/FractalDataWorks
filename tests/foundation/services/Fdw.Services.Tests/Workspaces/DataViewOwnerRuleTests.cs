@@ -43,7 +43,7 @@ public class DataViewOwnerRuleTests
         result.Code.ShouldBeOfType<WorkspaceOwnerUnresolvedCode>();
     }
 
-    private static IAuthenticationContextAccessor Accessor(string userId)
+    private static AuthenticationContextAccessor Accessor(string userId)
     {
         var caller = new Mock<IAuthenticationContext>();
         caller.SetupGet(c => c.UserId).Returns(userId);

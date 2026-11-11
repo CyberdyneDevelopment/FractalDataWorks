@@ -82,14 +82,6 @@ public sealed class PageAccessTests
 
     [Fact]
     [Trait("Category", "Registration")]
-    public void RequiringPermissionRejectsAMissingPredicate()
-    {
-        Should.Throw<ArgumentNullException>(
-            () => PageAccess.RequiringPermission("connections:read").IsSatisfiedBy(isAuthenticated: true, null!));
-    }
-
-    [Fact]
-    [Trait("Category", "Registration")]
     public void TheDataFreeFormsAreSingletons()
     {
         PageAccess.Anonymous.ShouldBeSameAs(PageAccess.Anonymous);

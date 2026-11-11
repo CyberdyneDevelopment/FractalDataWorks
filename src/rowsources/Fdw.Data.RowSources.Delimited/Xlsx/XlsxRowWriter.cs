@@ -50,8 +50,7 @@ public sealed class XlsxRowWriter : IRowWriter
     /// <param name="options">The columns and worksheet limits.</param>
     public XlsxRowWriter(Stream target, XlsxRowWriterOptions options)
     {
-        ArgumentNullException.ThrowIfNull(target);
-        var opts = options ?? throw new ArgumentNullException(nameof(options));
+        var opts = options;
         if (opts.Columns.Count == 0)
         {
             throw new ArgumentException("XlsxRowWriterOptions.Columns must contain at least one column name.", nameof(options));
@@ -78,7 +77,6 @@ public sealed class XlsxRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IReadOnlyDictionary<string, object?> row)
     {
-        ArgumentNullException.ThrowIfNull(row);
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_xml is null || _rowCount >= _rowsPerSheet)
@@ -101,7 +99,6 @@ public sealed class XlsxRowWriter : IRowWriter
     /// <inheritdoc />
     public void WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows)
     {
-        ArgumentNullException.ThrowIfNull(rows);
         foreach (var row in rows)
         {
             Write(row);
@@ -111,7 +108,6 @@ public sealed class XlsxRowWriter : IRowWriter
     /// <inheritdoc />
     public ValueTask WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(rows);
         foreach (var row in rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -127,7 +123,6 @@ public sealed class XlsxRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IEnumerable<DataRecord> records)
     {
-        ArgumentNullException.ThrowIfNull(records);
         foreach (var record in records)
         {
             Write(record);
@@ -137,7 +132,6 @@ public sealed class XlsxRowWriter : IRowWriter
     /// <inheritdoc />
     public async ValueTask Write(IAsyncEnumerable<DataRecord> records, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(records);
         await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             Write(record);

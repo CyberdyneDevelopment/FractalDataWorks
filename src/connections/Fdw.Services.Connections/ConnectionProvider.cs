@@ -56,7 +56,7 @@ public sealed class ConnectionProvider
         ILogger<ConnectionProvider> logger)
         : base(logger ?? NullLogger<ConnectionProvider>.Instance)
     {
-        _disabledStates = disabledStates ?? throw new ArgumentNullException(nameof(disabledStates));
+        _disabledStates = disabledStates;
         _logger = logger ?? NullLogger<ConnectionProvider>.Instance;
     }
 

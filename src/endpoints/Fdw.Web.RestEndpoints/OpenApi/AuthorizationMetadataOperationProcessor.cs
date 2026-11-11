@@ -46,8 +46,6 @@ public sealed class AuthorizationMetadataOperationProcessor : IOperationProcesso
     /// </exception>
     public bool Process(OperationProcessorContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         if (context is not AspNetCoreOperationProcessorContext aspNetCore)
         {
             throw new InvalidOperationException(

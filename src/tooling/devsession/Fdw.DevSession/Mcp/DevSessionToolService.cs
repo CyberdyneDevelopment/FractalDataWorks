@@ -44,9 +44,9 @@ public sealed class DevSessionToolService
         IWorkspaceCoordinator coordinator,
         IWorktreeEngine engine)
     {
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-        _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _sessions = sessions;
+        _coordinator = coordinator;
+        _engine = engine;
     }
 
     /// <summary>Open a development session for a fix key, materializing an isolated copy. Re-opening an existing key returns the session already in flight rather than branching twice.</summary>

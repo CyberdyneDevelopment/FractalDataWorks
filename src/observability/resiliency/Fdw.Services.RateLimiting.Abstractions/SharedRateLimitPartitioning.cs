@@ -21,11 +21,6 @@ public sealed class SharedRateLimitPartitioning : RateLimitPartitioningBase
     /// <inheritdoc />
     public override string KeyOf(IRateLimitPolicy policy, ClaimsPrincipal? user, IPAddress? remoteAddress)
     {
-        if (policy is null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
         return policy.Name;
     }
 }

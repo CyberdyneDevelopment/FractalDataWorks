@@ -43,10 +43,6 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
         IResiliencyExecutionContext ctx,
         CancellationToken cancellationToken)
     {
-        if (runStage == null) throw new ArgumentNullException(nameof(runStage));
-        if (config == null) throw new ArgumentNullException(nameof(config));
-        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-
         var logger = ctx is ILoggerProvider lp
             ? lp.CreateLogger(nameof(PollyRetryResiliencyType))
             : NullLogger.Instance;

@@ -13,7 +13,6 @@ public static class WebhookPayloadWriter
     /// <returns>The payload.</returns>
     public static WebhookPayload Write(WebhookTriggerConfiguration trigger)
     {
-        ArgumentNullException.ThrowIfNull(trigger);
         return new WebhookPayload
         {
             Name = trigger.Name,
@@ -35,7 +34,6 @@ public static class WebhookPayloadWriter
     /// <returns>The row.</returns>
     public static WebhookSummaryPayload Summarize(WebhookTriggerConfiguration trigger)
     {
-        ArgumentNullException.ThrowIfNull(trigger);
         return new WebhookSummaryPayload
         {
             Name = trigger.Name,

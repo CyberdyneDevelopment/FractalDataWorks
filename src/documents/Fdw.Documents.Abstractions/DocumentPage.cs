@@ -11,7 +11,7 @@ public sealed class DocumentPage
     /// <param name="continuation">What to give back to read the next page; null when this is the last.</param>
     public DocumentPage(IReadOnlyList<DocumentInfo> items, string? continuation)
     {
-        Items = items ?? throw new ArgumentNullException(nameof(items));
+        Items = items;
         Continuation = continuation;
     }
 

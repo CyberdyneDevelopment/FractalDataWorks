@@ -44,4 +44,9 @@ public static partial class TenantFoundingLog
     /// <summary>Logs that what was made could not be removed again, so it must be removed by hand.</summary>
     [MessageLogging(EventId = 72732, Level = LogLevel.Critical, Message = "Tenant '{tenantId}' could not be removed again after its first administrator could not be set; remove the {what} by hand: {reason}")]
     public static partial IGenericMessage NotUndone(ILogger logger, Guid tenantId, string what, string? reason);
+
+    /// <summary>Error: founding a tenant needs the administrator's role name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21801, Level = LogLevel.Error,
+        Message = "Founding a tenant needs the name of the role its administrator holds, and the name given is empty")]
+    public static partial IGenericMessage FounderRoleNameRequired(ILogger logger);
 }

@@ -24,8 +24,6 @@ public static class CacheChangePollInterval
     /// <returns>The interval, or the failure naming the setting.</returns>
     public static IGenericResult<TimeSpan> Read(IEffectiveSettingsProvider? settings, TimeSpan declared, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (settings is null || !settings.TryGetEffectiveValue<int>(SettingDefinitions.CacheChangePollIntervalSeconds, out var seconds))
             return GenericResult<TimeSpan>.Success(declared);
 

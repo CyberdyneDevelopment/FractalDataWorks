@@ -27,7 +27,7 @@ public class ClassExpectations
     /// <param name="classDeclaration">The class declaration to verify.</param>
     public ClassExpectations(ClassDeclarationSyntax classDeclaration)
     {
-        _classDeclaration = classDeclaration ?? throw new ArgumentNullException(nameof(classDeclaration));
+        _classDeclaration = classDeclaration;
     }
 
     /// <summary>
@@ -142,9 +142,6 @@ public class ClassExpectations
     /// <returns>The current expectations instance for chaining.</returns>
     public ClassExpectations HasConstructor(string parameterTypes, Action<ConstructorExpectations> constructorExpectations)
     {
-        if (constructorExpectations == null)
-            throw new ArgumentNullException(nameof(constructorExpectations));
-
         var constructor = FindConstructorByParameters(_classDeclaration, parameterTypes);
         constructor.ShouldNotBeNull($"Expected class '{_classDeclaration.Identifier}' to have constructor with parameters ({parameterTypes})");
 
@@ -189,9 +186,6 @@ public class ClassExpectations
     /// <returns>The current expectations instance for chaining.</returns>
     public ClassExpectations HasStaticConstructor(Action<ConstructorExpectations> constructorExpectations)
     {
-        if (constructorExpectations == null)
-            throw new ArgumentNullException(nameof(constructorExpectations));
-
         var staticConstructor = _classDeclaration.Members
             .OfType<ConstructorDeclarationSyntax>()
             .FirstOrDefault(c => c.Modifiers.Any(SyntaxKind.StaticKeyword));

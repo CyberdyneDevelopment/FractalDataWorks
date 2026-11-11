@@ -25,8 +25,6 @@ public static class PipelineFailureCounter
     /// <returns>The count, the failures that counted, and whether a success or the boundary ended it.</returns>
     public static PipelineFailureCount Count(IReadOnlyList<PipelineRunOutcome> newestFirst, DateTimeOffset? notBefore, bool countTimedOut)
     {
-        ArgumentNullException.ThrowIfNull(newestFirst);
-
         var counted = new List<PipelineRunOutcome>();
         var ended = false;
         foreach (var run in newestFirst)

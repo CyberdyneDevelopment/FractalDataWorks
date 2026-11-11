@@ -74,9 +74,9 @@ public sealed class CacheChangePublisher : ICacheChangePublisher
         DataStoreTarget target,
         ILogger<CacheChangePublisher>? logger = null)
     {
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
-        _authenticationContextAccessor = authenticationContextAccessor ?? throw new ArgumentNullException(nameof(authenticationContextAccessor));
-        _target = target ?? throw new ArgumentNullException(nameof(target));
+        _gateway = gateway;
+        _authenticationContextAccessor = authenticationContextAccessor;
+        _target = target;
         _ownTag = CacheKeyBuilder.TagFor(target);
         _logger = logger ?? NullLogger<CacheChangePublisher>.Instance;
     }
@@ -88,8 +88,6 @@ public sealed class CacheChangePublisher : ICacheChangePublisher
     /// </remarks>
     public void Publish(IReadOnlyList<string> tags)
     {
-        ArgumentNullException.ThrowIfNull(tags);
-
         var queued = false;
         lock (_gate)
         {
@@ -157,9 +155,10 @@ public sealed class CacheChangePublisher : ICacheChangePublisher
             {
                 _ = asked.Completion.TrySetResult(await Flush(asked.Token).ConfigureAwait(false));
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
-                _ = asked.Completion.TrySetCanceled(asked.Token);
+                // The cancellation the flush observed: the asker's own token, or one a store call gave (FDW-5189).
+                _ = asked.Completion.TrySetCanceled(ex.CancellationToken);
             }
             catch (Exception ex)
             {

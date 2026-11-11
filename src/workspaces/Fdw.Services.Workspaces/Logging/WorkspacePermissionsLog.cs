@@ -1,3 +1,4 @@
+using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
@@ -80,4 +81,9 @@ public static partial class WorkspacePermissionsLog
     [MessageLogging(EventId = 91000, Level = LogLevel.Error,
         Message = "Could not {step} permission '{permissionName}': {reason}")]
     public static partial IGenericMessage PermissionStepFailed(ILogger logger, string step, string permissionName, string reason);
+
+    /// <summary>Error: creating a workspace's permissions needs its name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "Creating the permissions of workspace {workspaceId} needs its name, and the name given is empty")]
+    public static partial IGenericMessage WorkspaceNameRequired(ILogger logger, Guid workspaceId);
 }

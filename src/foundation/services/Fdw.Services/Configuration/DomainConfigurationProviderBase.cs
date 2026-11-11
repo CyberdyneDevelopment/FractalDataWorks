@@ -123,10 +123,10 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         string tableName)
     {
         _logger = logger ?? NullLogger<DomainConfigurationProviderBase<TImplementationConfiguration, TDomain>>.Instance;
-        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
-        DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
-        PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
-        _commands = new DomainConfigurationCommand<TDomain>(tableName ?? throw new ArgumentNullException(nameof(tableName)));
+        _gatewayProvider = gatewayProvider;
+        DataStoreName = dataStoreName;
+        PathName = pathName;
+        _commands = new DomainConfigurationCommand<TDomain>(tableName);
     }
 
 
@@ -176,7 +176,6 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <inheritdoc/>
     public async Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(narrowing);
         if (levels < 0)
             return GenericResult<TImplementationConfiguration>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TImplementationConfiguration).Name, nameof(levels), levels));
@@ -261,8 +260,6 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// </remarks>
     public async Task<IGenericResult<ConfigurationPage<TDomain>>> Get(DomainQuery query, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(query);
-
         if (query.Skip < 0)
             return GenericResult<ConfigurationPage<TDomain>>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TDomain).Name, nameof(query.Skip), query.Skip));
@@ -301,8 +298,6 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// </remarks>
     public async Task<IGenericResult<IReadOnlyList<TDomain>>> Get(IReadOnlyCollection<Guid> ids, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(ids);
-
         var wanted = ids.Distinct().ToList();
         if (wanted.Count == 0)
             return GenericResult<IReadOnlyList<TDomain>>.Success(Array.Empty<TDomain>());
@@ -687,7 +682,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             .FirstOrDefault(store => string.Equals(store.Name, DataStoreName, StringComparison.Ordinal))?
             .Path(PathName);
         var domain = path is { IsSuccess: true, Value: not null } ? path.Value.Container(_commands.TableName) : null;
-        if (domain is not { IsSuccess: true, Value: not null })
+        if (domain is null || domain.IsFailure || domain.Value is null)
             return GenericResult<List<string>>.Failure(
                 DefaultConfigurationProviderLog.ContainerNotFoundInStore(_logger, typeof(TDomain).Name, _commands.TableName, DataStoreName));
 
@@ -832,8 +827,6 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     public async Task<IGenericResult<IReadOnlyList<T>>> Find<T>(Func<T, bool> predicate, CancellationToken ct = default)
         where T : TImplementationConfiguration
     {
-        ArgumentNullException.ThrowIfNull(predicate);
-
         var all = await Get(ct).ConfigureAwait(false);
         if (!all.IsSuccess) return all.ToNewResult<IReadOnlyList<T>>();
 
@@ -1322,6 +1315,14 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
         var domainRow = await ExistingDomainRow(row, unit, ct).ConfigureAwait(false);
         if (domainRow.IsFailure) return domainRow;
+
+        // What other domains hold that names this member goes first, in this unit (FDW-5222): a member removed while
+        // something still names it leaves that reference pointing at nothing, and the next read that follows it fails.
+        if (this is IReferencedConfigurationProvider<TImplementationConfiguration> referenced)
+        {
+            var released = await referenced.RemoveReferences(row.Id, unit, ct).ConfigureAwait(false);
+            if (released.IsFailure) return released;
+        }
 
         IGenericResult removed = await writable.Delete(domainContainer.Value!, domainRow.Value.Keys, unit, ct).ConfigureAwait(false);
         if (removed.IsFailure) return removed;

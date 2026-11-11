@@ -111,10 +111,7 @@ public sealed class MessagePayload
     // Why: every message time is written as UTC (DateTime.UtcNow) into a datetime2 column, which a reader returns with no Kind; a time with no Kind
     // is serialised with no zone and a browser reads it as the viewer's local time. The Kind is restored here, where every path that fills the
     // payload passes, so no reader has to remember it. A time that does carry a Kind is converted, never reinterpreted.
-    private static DateTime AsUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => value,
-    };
+    // ToUniversalTime converts a local time and returns a UTC time as it is.
+    private static DateTime AsUtc(DateTime value) =>
+        value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(value, DateTimeKind.Utc) : value.ToUniversalTime();
 }

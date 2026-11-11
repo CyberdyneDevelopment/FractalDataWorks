@@ -9,6 +9,6 @@ namespace Fdw.Services.Scheduling.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Schedule")]
 public sealed class ScheduleConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ScheduleConfigurationCommand"/> class.</summary>
     public ScheduleConfigurationCommand() : base("Schedule") { }
 }

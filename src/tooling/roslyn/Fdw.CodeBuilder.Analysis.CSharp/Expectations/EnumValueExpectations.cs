@@ -18,7 +18,7 @@ public class EnumValueExpectations
     /// <param name="enumMember">The enum member to validate.</param>
     public EnumValueExpectations(EnumMemberDeclarationSyntax enumMember)
     {
-        _enumMember = enumMember ?? throw new ArgumentNullException(nameof(enumMember));
+        _enumMember = enumMember;
     }
 
     /// <summary>

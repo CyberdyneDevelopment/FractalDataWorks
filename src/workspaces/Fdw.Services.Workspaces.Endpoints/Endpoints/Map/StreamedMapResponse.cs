@@ -23,8 +23,8 @@ public sealed class StreamedMapResponse
 
     internal StreamedMapResponse(MapStream stream, Func<ProblemDetails?> error)
     {
-        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        _error = error ?? throw new ArgumentNullException(nameof(error));
+        _stream = stream;
+        _error = error;
     }
 
     /// <summary>Gets what the response covers.</summary>

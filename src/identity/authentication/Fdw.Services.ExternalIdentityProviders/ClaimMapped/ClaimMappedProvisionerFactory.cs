@@ -89,7 +89,7 @@ internal sealed class ClaimMappedProvisionerFactory
         return GenericResult<IExternalIdentityProvisioner>.Success(provisioner);
     }
 
-    /// <inheritdoc />
+    /// <summary>Creates the claim-mapped provisioner for the configuration, as <see cref="Create(IExternalIdentityProvisionerImplementationConfiguration)"/> does; the provider is not used, since a claim-mapped provisioner has no siblings to delegate to.</summary>
     public IGenericResult<IExternalIdentityProvisioner> Create(
         IExternalIdentityProvisionerImplementationConfiguration configuration,
         IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)

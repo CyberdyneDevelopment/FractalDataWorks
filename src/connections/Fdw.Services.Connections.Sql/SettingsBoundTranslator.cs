@@ -26,8 +26,8 @@ public sealed class SettingsBoundTranslator<TCommand> : IDataCommandTranslator<T
     /// <param name="settings">The connection's setting.</param>
     public SettingsBoundTranslator(IDataCommandTranslator<TCommand> inner, TranslationSettings settings)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _inner = inner;
+        _settings = settings;
     }
 
     /// <summary>Binds a connection's setting to a shared translator.</summary>

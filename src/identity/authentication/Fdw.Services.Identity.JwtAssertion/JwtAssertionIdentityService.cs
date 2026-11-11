@@ -33,14 +33,13 @@ public sealed class JwtAssertionIdentityService
     /// <param name="logger">The logger for this service.</param>
     /// <param name="configuration">The typed configuration body for this identity.</param>
     /// <param name="tokenEndpoint">The shared token-endpoint client.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tokenEndpoint"/> is null.</exception>
     public JwtAssertionIdentityService(
         ILogger<JwtAssertionIdentityService>? logger,
         JwtAssertionConfiguration configuration,
         OAuth2TokenEndpointClient tokenEndpoint)
         : base(logger, configuration)
     {
-        _tokenEndpoint = tokenEndpoint ?? throw new ArgumentNullException(nameof(tokenEndpoint));
+        _tokenEndpoint = tokenEndpoint;
     }
 
     /// <inheritdoc/>

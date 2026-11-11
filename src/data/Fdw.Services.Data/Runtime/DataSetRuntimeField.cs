@@ -19,7 +19,6 @@ public sealed class DataSetRuntimeField : IDataField
     /// <param name="config">The field configuration record.</param>
     public DataSetRuntimeField(DataSetFieldConfiguration config)
     {
-        ArgumentNullException.ThrowIfNull(config);
         Name = config.Name;
         Description = config.Description;
         ExplicitType = null;

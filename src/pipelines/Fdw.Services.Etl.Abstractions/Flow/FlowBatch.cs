@@ -17,7 +17,7 @@ public sealed class FlowBatch
     /// <param name="rows">The rows, in order; the batch keeps this list.</param>
     public FlowBatch(IReadOnlyList<IDictionary<string, object?>> rows)
     {
-        Rows = rows ?? throw new ArgumentNullException(nameof(rows));
+        Rows = rows;
     }
 
     /// <summary>Gets the rows of the batch, in order.</summary>

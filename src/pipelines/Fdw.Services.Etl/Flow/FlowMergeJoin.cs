@@ -62,15 +62,11 @@ public sealed class FlowMergeJoin : IFlowComponent
         ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(leftKeys);
-        ArgumentNullException.ThrowIfNull(rightKeys);
-        ArgumentNullException.ThrowIfNull(kind);
         if (ReferenceEquals(kind, JoinKinds.NotFound))
         {
             throw new ArgumentException("A join states which unmatched rows it keeps.", nameof(kind));
         }
 
-        ArgumentNullException.ThrowIfNull(rightPrefix);
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
         if (leftKeys.Count == 0 || leftKeys.Count != rightKeys.Count)
         {

@@ -33,7 +33,7 @@ public class InsertBatchBuilder<T>
     /// <returns>The builder for method chaining.</returns>
     public InsertBatchBuilder<T> DataStore(string dataStoreName)
     {
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _dataStoreName = dataStoreName;
         return this;
     }
 
@@ -44,7 +44,7 @@ public class InsertBatchBuilder<T>
     /// <returns>The builder for method chaining.</returns>
     public InsertBatchBuilder<T> Path(string pathName)
     {
-        _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
+        _pathName = pathName;
         return this;
     }
 
@@ -56,7 +56,7 @@ public class InsertBatchBuilder<T>
     /// <returns>This builder.</returns>
     public InsertBatchBuilder<T> Returning(params string[] columns)
     {
-        _returnColumns = columns ?? throw new ArgumentNullException(nameof(columns));
+        _returnColumns = columns;
         return this;
     }
 

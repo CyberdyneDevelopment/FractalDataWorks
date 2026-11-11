@@ -42,12 +42,9 @@ public sealed class ConnectionStringArtifact : CredentialArtifactBase
     /// Initializes a new instance of the <see cref="ConnectionStringArtifact"/> class.
     /// </summary>
     /// <param name="connectionString">The complete connection string including credentials.</param>
-    /// <exception cref="ArgumentNullException">Thrown when connectionString is null.</exception>
     /// <exception cref="ArgumentException">Thrown when connectionString is empty or whitespace.</exception>
     public ConnectionStringArtifact(string connectionString)
     {
-        if (connectionString == null)
-            throw new ArgumentNullException(nameof(connectionString));
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new ArgumentException("Connection string cannot be empty or whitespace.", nameof(connectionString));
 

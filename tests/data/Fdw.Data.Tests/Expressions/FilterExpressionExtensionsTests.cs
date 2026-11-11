@@ -77,15 +77,6 @@ public sealed class FilterExpressionExtensionsTests
         condition.PropertyName.ShouldBe("CustomerId");
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void EqualNullDataFieldThrowsArgumentNullException()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            FilterExpressionExtensions.Equal((IDataField)null!, "value"));
-    }
-
     // =========================================================================
     // And(params FilterExpression[])
     // =========================================================================

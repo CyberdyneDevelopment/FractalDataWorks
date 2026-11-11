@@ -63,7 +63,6 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <exception cref="InvalidOperationException">The Configure phase has already run for this entry.</exception>
     public PlatformServiceEntry Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> replacement)
     {
-        if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (Configured)
             throw new InvalidOperationException(
                 $"Cannot replace Configure for '{CategoryName}': the Configure phase has already run. " +
@@ -80,7 +79,6 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <exception cref="InvalidOperationException">The Register phase has already run for this entry.</exception>
     public PlatformServiceEntry Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> replacement)
     {
-        if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (Registered)
             throw new InvalidOperationException(
                 $"Cannot replace Register for '{CategoryName}': the Register phase has already run. " +
@@ -97,7 +95,6 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <exception cref="InvalidOperationException">The Initialize phase has already run for this entry.</exception>
     public PlatformServiceEntry Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> replacement)
     {
-        if (replacement is null) throw new ArgumentNullException(nameof(replacement));
         if (Initialized)
             throw new InvalidOperationException(
                 $"Cannot replace Initialize for '{CategoryName}': the Initialize phase has already run. " +

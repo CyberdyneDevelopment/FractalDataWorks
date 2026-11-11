@@ -80,7 +80,6 @@ public static class ConfigurationPropertyExtractor
     /// <returns><see langword="true"/> when the property can be set to null.</returns>
     public static bool CanBeEmpty(PropertyInfo property)
     {
-        ArgumentNullException.ThrowIfNull(property);
         return property.PropertyType.IsValueType
             ? Nullable.GetUnderlyingType(property.PropertyType) is not null
             : new NullabilityInfoContext().Create(property).WriteState != NullabilityState.NotNull;

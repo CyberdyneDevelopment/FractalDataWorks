@@ -24,7 +24,6 @@ public abstract partial class SqlProcedures : TypeCollectionBase<SqlProcedureBas
     /// <returns>True when found.</returns>
     public static bool TryFind(string name, [NotNullWhen(true)] out ISqlProcedure? procedure)
     {
-        ArgumentNullException.ThrowIfNull(name);
         var unqualified = name.StartsWith("sys.", StringComparison.OrdinalIgnoreCase) ? name[4..] : name;
         return BySqlName.Value.TryGetValue(unqualified, out procedure);
     }

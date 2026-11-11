@@ -34,7 +34,6 @@ internal sealed class DataStoreContainerPages : IDataStoreContainerPages
 
     public DataStoreContainerPages(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, ILogger<DataStoreContainerPages>? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(gateways);
         _logger = logger ?? NullLogger<DataStoreContainerPages>.Instance;
         _gateways = gateways;
         _readers = name => new ConfigurationRowReader(gateways, dataStoreName, pathName, name, _logger);

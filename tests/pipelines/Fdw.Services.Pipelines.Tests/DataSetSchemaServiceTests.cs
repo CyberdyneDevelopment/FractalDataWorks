@@ -53,15 +53,6 @@ public sealed class DataSetSchemaServiceTests
     // ------------------------------------------------------------------
 
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ConstructorThrowsArgumentNullExceptionWhenProviderIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new DataSetSchemaService(null!, Mock.Of<ILogger<DataSetSchemaService>>()));
-    }
-
-    [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
     public async Task ConstructorAcceptsNullLoggerAndFallsBackToNullLogger()

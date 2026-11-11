@@ -17,7 +17,7 @@ public sealed class MappingConstantTests
 {
     private static readonly string[] MappingPath = ["components", "map", "settings", "mappings"];
 
-    private static IReadOnlyDictionary<string, object?> Values(params (string Name, object? Value)[] values) =>
+    private static Dictionary<string, object?> Values(params (string Name, object? Value)[] values) =>
         values.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
 
     private static PipelineComponentConfiguration WithConstant(string text)

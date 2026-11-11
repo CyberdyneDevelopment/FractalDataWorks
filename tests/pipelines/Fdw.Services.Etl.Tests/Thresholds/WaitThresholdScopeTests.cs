@@ -90,8 +90,8 @@ public sealed class WaitThresholdScopeTests : IDisposable
         var owner = Layer("Server", "Own");
         var snapshot = new PipelineRunQueueSnapshot([], []);
 
-        await gate.Check(Request(TenantA), owner, snapshot);
-        await gate.Check(Request(TenantB), owner, snapshot);
+        await gate.Check(Request(TenantA), owner, snapshot, TestContext.Current.CancellationToken);
+        await gate.Check(Request(TenantB), owner, snapshot, TestContext.Current.CancellationToken);
 
         Probe.Calls.Where(call => call.Call == "For").Select(call => call.Tenant).ShouldBe([TenantA, TenantB]);
         Probe.Calls.Where(call => call.Call == "Holds").Select(call => call.Tenant).ShouldBe([TenantA, TenantB]);
@@ -107,8 +107,8 @@ public sealed class WaitThresholdScopeTests : IDisposable
         var owner = Layer("Server", "Own");
         var snapshot = new PipelineRunQueueSnapshot([], []);
 
-        await gate.Check(Request(TenantA), owner, snapshot);
-        await gate.Check(Request(TenantB), owner, snapshot);
+        await gate.Check(Request(TenantA), owner, snapshot, TestContext.Current.CancellationToken);
+        await gate.Check(Request(TenantB), owner, snapshot, TestContext.Current.CancellationToken);
 
         // Two checks, four scoped objects: a gate that kept one of each would show two instances.
         Probe.Calls.Select(call => call.Instance).Distinct().Count().ShouldBe(4);
@@ -122,7 +122,7 @@ public sealed class WaitThresholdScopeTests : IDisposable
         var accessor = new AuthenticationContextAccessor { Current = new SystemAuthenticationContext(Caller) };
         var reporter = new WaitThresholdReporter(ProbeScopes(accessor));
 
-        await reporter.Report(new PipelineRunQueueSnapshot([], [Waiting(TenantA), Waiting(TenantB)]));
+        await reporter.Report(new PipelineRunQueueSnapshot([], [Waiting(TenantA), Waiting(TenantB)]), TestContext.Current.CancellationToken);
 
         var reports = Probe.Calls.Where(call => call.Call == "Report").ToList();
         reports.Select(call => call.Tenant).Distinct().Order().ShouldBe(new[] { TenantA, TenantB }.Order().Select(t => (Guid?)t));

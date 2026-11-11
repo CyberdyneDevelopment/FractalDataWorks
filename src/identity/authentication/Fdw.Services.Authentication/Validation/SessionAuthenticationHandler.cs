@@ -48,16 +48,16 @@ internal sealed class SessionAuthenticationHandler : IAuthenticationHandler
         ISessionAuthenticator sessions,
         ILogger<SessionAuthenticationHandler>? logger = null)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
+        _configuration = configuration;
+        _sessions = sessions;
         _log = logger ?? NullLogger<SessionAuthenticationHandler>.Instance;
     }
 
     /// <inheritdoc />
     public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context)
     {
-        _scheme = scheme ?? throw new ArgumentNullException(nameof(scheme));
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _scheme = scheme;
+        _context = context;
         return Task.CompletedTask;
     }
 

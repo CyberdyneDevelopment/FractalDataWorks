@@ -69,7 +69,6 @@ public sealed class KeyListSpillScope : IDisposable
     /// <returns>The scope; dispose it when the translation is done.</returns>
     public static KeyListSpillScope Begin(TranslationSettings settings, string? sourceTable)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         return new KeyListSpillScope(settings, sourceTable);
     }
 
@@ -77,7 +76,6 @@ public sealed class KeyListSpillScope : IDisposable
     /// <param name="form">What the dialect gave for the list.</param>
     public void Add(KeyListSpillForm form)
     {
-        ArgumentNullException.ThrowIfNull(form);
         if (form.Before.Length > 0)
             _before.Add(form.Before);
         if (form.After.Length > 0)

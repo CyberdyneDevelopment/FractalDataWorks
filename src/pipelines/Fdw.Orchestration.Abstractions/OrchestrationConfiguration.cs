@@ -13,11 +13,11 @@ public class OrchestrationConfiguration : IGenericConfiguration
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    /// <inheritdoc/>
+    /// <summary>Gets or sets the orchestration's name.</summary>
     public string Name { get; set; } = string.Empty;
 
 
-    /// <inheritdoc/>
+    /// <summary>Gets or sets the service type this record configures: "Orchestration" here, a derived kind's own name in a derived record.</summary>
     public virtual string ServiceType { get; set; } = "Orchestration";
 
     /// <summary>Gets or sets the maximum execution time for the entire orchestration.</summary>

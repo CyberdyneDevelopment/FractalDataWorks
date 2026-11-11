@@ -19,8 +19,8 @@ public sealed class ConnectionCredentialWrite
     /// <param name="retiring">The secrets the connection no longer names once saved.</param>
     public ConnectionCredentialWrite(IReadOnlyList<StoredSecret> written, IReadOnlyList<StoredSecret> retiring)
     {
-        Written = written ?? throw new ArgumentNullException(nameof(written));
-        Retiring = retiring ?? throw new ArgumentNullException(nameof(retiring));
+        Written = written;
+        Retiring = retiring;
     }
 
     /// <summary>Gets a write that stored nothing and retires nothing.</summary>
@@ -36,5 +36,5 @@ public sealed class ConnectionCredentialWrite
     /// <param name="more">The further secrets the connection no longer names.</param>
     /// <returns>A write whose <see cref="Retiring"/> also holds <paramref name="more"/>, without duplicates.</returns>
     public ConnectionCredentialWrite AlsoRetiring(IEnumerable<StoredSecret> more)
-        => new(Written, Retiring.Concat(more ?? throw new ArgumentNullException(nameof(more))).Distinct().ToList());
+        => new(Written, Retiring.Concat(more).Distinct().ToList());
 }

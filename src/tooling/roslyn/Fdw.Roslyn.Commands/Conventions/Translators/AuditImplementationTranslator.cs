@@ -113,7 +113,7 @@ public sealed class AuditImplementationTranslator
         return GuideRequiredMembers.Unimplemented(target.Type, abstractions).Select(member => new AuditFindingInfo
         {
             Guide = guideId,
-            Kind = AuditFindingKind.UnimplementedMember,
+            Kind = AuditFindingKinds.UnimplementedMember,
             Subject = member,
             Message = $"Type '{target.Type.Name}' leaves '{member}' unimplemented.",
             Cite = null

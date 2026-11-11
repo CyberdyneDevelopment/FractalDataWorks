@@ -28,9 +28,9 @@ public sealed class RetentionCatalog : IRetentionCatalog
     public RetentionCatalog(
         IRetainedDocuments documents, IOrganizationScope organizations, ILogger<RetentionCatalog>? logger)
     {
-        _documents = documents ?? throw new ArgumentNullException(nameof(documents));
+        _documents = documents;
         _logger = logger ?? NullLogger<RetentionCatalog>.Instance;
-        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _scope = organizations;
     }
 
     /// <inheritdoc />

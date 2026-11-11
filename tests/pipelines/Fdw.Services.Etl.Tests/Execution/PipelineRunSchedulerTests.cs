@@ -13,6 +13,10 @@ namespace Fdw.Services.Etl.Tests.Execution;
 /// </summary>
 public sealed class PipelineRunSchedulerTests
 {
+    // Why two times: a run that must start does so as soon as the scheduler lets it, so the wait for "it started" is a guard that only a
+    // broken scheduler reaches and a slow machine cannot (the wait ends at once when the run starts). A run that must NOT start is watched
+    // for a short time: that wait can only miss a bug, never fail a correct run, so it may be short.
+    private static readonly TimeSpan Guard = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan Short = TimeSpan.FromMilliseconds(150);
 
     private static PipelineRunIdentity Run(Guid? tenantId = null, string pipeline = "Pipeline") => new(Guid.NewGuid(), Guid.NewGuid(), pipeline, tenantId);
@@ -24,8 +28,17 @@ public sealed class PipelineRunSchedulerTests
 
     private static PipelineRunCap Cap(string pipeline, int limit, bool refuses = false) => new(string.Concat("pipeline/", pipeline), limit, refuses);
 
-    private static async Task<bool> Started(Task<PipelineRunPlace> entering) =>
-        await Task.WhenAny(entering, Task.Delay(Short, TestContext.Current.CancellationToken)).ConfigureAwait(false) == entering;
+    private static Task<bool> Started(Task<PipelineRunPlace> entering) => Ended(entering, Guard);
+
+    private static async Task<bool> StillWaiting(Task<PipelineRunPlace> entering) => !await Ended(entering, Short).ConfigureAwait(false);
+
+    private static async Task<bool> Ended(Task<PipelineRunPlace> entering, TimeSpan within)
+    {
+        using var stopWaiting = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var first = await Task.WhenAny(entering, Task.Delay(within, stopWaiting.Token)).ConfigureAwait(false);
+        await stopWaiting.CancelAsync().ConfigureAwait(false);
+        return first == entering;
+    }
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -51,7 +64,7 @@ public sealed class PipelineRunSchedulerTests
 
         var second = scheduler.Enter(Writing(["STORE//customers"]), TestContext.Current.CancellationToken);
 
-        (await Started(second)).ShouldBeFalse();
+        (await StillWaiting(second)).ShouldBeTrue();
         scheduler.Release(first);
         (await Started(second)).ShouldBeTrue();
     }
@@ -79,7 +92,7 @@ public sealed class PipelineRunSchedulerTests
 
         var second = scheduler.Enter(Writing(["b"], server: 1), TestContext.Current.CancellationToken);
 
-        (await Started(second)).ShouldBeFalse();
+        (await StillWaiting(second)).ShouldBeTrue();
         scheduler.Release(first);
         (await Started(second)).ShouldBeTrue();
     }
@@ -96,7 +109,7 @@ public sealed class PipelineRunSchedulerTests
         var sameTenant = scheduler.Enter(Writing(["b"], tenant: 1, tenantId: tenant), TestContext.Current.CancellationToken);
         var otherTenant = scheduler.Enter(Writing(["c"], tenant: 1, tenantId: Guid.NewGuid()), TestContext.Current.CancellationToken);
 
-        (await Started(sameTenant)).ShouldBeFalse();
+        (await StillWaiting(sameTenant)).ShouldBeTrue();
         (await Started(otherTenant)).ShouldBeTrue();
     }
 
@@ -113,7 +126,7 @@ public sealed class PipelineRunSchedulerTests
         scheduler.Release(first);
 
         (await Started(second)).ShouldBeTrue();
-        (await Started(third)).ShouldBeFalse();
+        (await StillWaiting(third)).ShouldBeTrue();
     }
 
     [Fact]
@@ -127,7 +140,7 @@ public sealed class PipelineRunSchedulerTests
 
         var needsOnlyY = scheduler.Enter(Writing(["y"]), TestContext.Current.CancellationToken);
 
-        (await Started(waitsOnX)).ShouldBeFalse();
+        (await StillWaiting(waitsOnX)).ShouldBeTrue();
         (await Started(needsOnlyY)).ShouldBeTrue();
     }
 
@@ -142,8 +155,8 @@ public sealed class PipelineRunSchedulerTests
 
         var needsY = scheduler.Enter(Writing(["y"]), TestContext.Current.CancellationToken);
 
-        (await Started(waitsOnX)).ShouldBeFalse();
-        (await Started(needsY)).ShouldBeFalse();
+        (await StillWaiting(waitsOnX)).ShouldBeTrue();
+        (await StillWaiting(needsY)).ShouldBeTrue();
     }
 
     [Fact]
@@ -156,11 +169,11 @@ public sealed class PipelineRunSchedulerTests
         var alone = scheduler.Enter(Alone(), TestContext.Current.CancellationToken);
         var later = scheduler.Enter(Writing(["b"]), TestContext.Current.CancellationToken);
 
-        (await Started(alone)).ShouldBeFalse();
-        (await Started(later)).ShouldBeFalse();
+        (await StillWaiting(alone)).ShouldBeTrue();
+        (await StillWaiting(later)).ShouldBeTrue();
         scheduler.Release(running);
         (await Started(alone)).ShouldBeTrue();
-        (await Started(later)).ShouldBeFalse();
+        (await StillWaiting(later)).ShouldBeTrue();
     }
 
     [Fact]
@@ -172,7 +185,7 @@ public sealed class PipelineRunSchedulerTests
         var parent = await scheduler.Enter(Writing(["t"]), TestContext.Current.CancellationToken);
         scheduler.Hold(parent);
         var child = scheduler.Enter(Writing(["t"]), TestContext.Current.CancellationToken);
-        (await Started(child)).ShouldBeFalse();
+        (await StillWaiting(child)).ShouldBeTrue();
 
         var handedBack = scheduler.Yield();
 
@@ -194,7 +207,7 @@ public sealed class PipelineRunSchedulerTests
         var other = scheduler.Enter(Writing(["t"]), TestContext.Current.CancellationToken);
         await handle.DisposeAsync();
 
-        (await Started(other)).ShouldBeFalse();
+        (await StillWaiting(other)).ShouldBeTrue();
         scheduler.Running.ShouldBe(1);
     }
 
@@ -208,7 +221,7 @@ public sealed class PipelineRunSchedulerTests
         using var cancel = new CancellationTokenSource();
         var cancelled = scheduler.Enter(Writing(["x", "y"]), cancel.Token);
         var behind = scheduler.Enter(Writing(["y"]), TestContext.Current.CancellationToken);
-        (await Started(behind)).ShouldBeFalse();
+        (await StillWaiting(behind)).ShouldBeTrue();
 
         await cancel.CancelAsync();
 
@@ -229,7 +242,7 @@ public sealed class PipelineRunSchedulerTests
         var third = scheduler.Enter(Writing([], cap: Cap("monthly", 2)), TestContext.Current.CancellationToken);
 
         (await Started(second)).ShouldBeTrue();
-        (await Started(third)).ShouldBeFalse();
+        (await StillWaiting(third)).ShouldBeTrue();
         scheduler.Release(first);
         (await Started(third)).ShouldBeTrue();
     }
@@ -291,7 +304,7 @@ public sealed class PipelineRunSchedulerTests
         var second = scheduler.Enter(Writing(["t"], cap: Cap("monthly", 2)), TestContext.Current.CancellationToken);
         var third = scheduler.Enter(Writing(["u"], cap: Cap("monthly", 2)), TestContext.Current.CancellationToken);
 
-        (await Started(third)).ShouldBeFalse();
+        (await StillWaiting(third)).ShouldBeTrue();
         scheduler.Release(first);
         (await Started(second)).ShouldBeTrue();
         (await Started(third)).ShouldBeTrue();

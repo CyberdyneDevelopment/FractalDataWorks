@@ -50,9 +50,9 @@ public class ServiceRequirementsTests
         public string? Source => nameof(ServiceRequirementsTests);
     }
 
-    private static IGenericMessage AlphaMissing(ILogger logger) => new Coded("ALPHA-1");
+    private static Coded AlphaMissing(ILogger logger) => new Coded("ALPHA-1");
     private static IGenericMessage BetaMissing(ILogger logger) => new Coded("BETA-1");
-    private static IGenericMessage GammaMissing(ILogger logger) => new Coded("GAMMA-1");
+    private static Coded GammaMissing(ILogger logger) => new Coded("GAMMA-1");
 
     private sealed class OneMissingCollection : ServiceTypeCollectionBase<OptionBase, IOneMissing>
     {

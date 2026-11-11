@@ -35,9 +35,6 @@ public static class OperationTags
     /// <returns>The group's display name, or null when neither the path nor a tag names one.</returns>
     public static string? For(string path, IEnumerable<string> explicitTags)
     {
-        ArgumentNullException.ThrowIfNull(path);
-        ArgumentNullException.ThrowIfNull(explicitTags);
-
         var resource = ResourceSegment(path);
         if (resource is not null)
             return AuthenticationSegments.Contains(resource, StringComparer.OrdinalIgnoreCase) ? Authentication : Display(resource);
@@ -51,7 +48,6 @@ public static class OperationTags
     /// <returns>The display name.</returns>
     public static string Display(string tag)
     {
-        ArgumentNullException.ThrowIfNull(tag);
         return string.Join(' ', tag.Split('/')[0].Split(['-', '_', ' '], StringSplitOptions.RemoveEmptyEntries)
             .Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
     }

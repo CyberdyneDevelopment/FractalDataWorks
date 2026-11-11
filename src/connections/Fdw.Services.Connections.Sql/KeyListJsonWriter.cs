@@ -19,7 +19,6 @@ public static class KeyListJsonWriter
     /// <returns>The JSON array.</returns>
     public static string Scalars(IReadOnlyList<object?> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
         var written = new List<object?>(values.Count);
         foreach (var value in values)
             written.Add(Written(value));
@@ -33,8 +32,6 @@ public static class KeyListJsonWriter
     /// <returns>The JSON array.</returns>
     public static string Objects(string columnName, IReadOnlyList<object?> values)
     {
-        ArgumentNullException.ThrowIfNull(columnName);
-        ArgumentNullException.ThrowIfNull(values);
         var written = new List<Dictionary<string, object?>>(values.Count);
         foreach (var value in values)
             written.Add(new Dictionary<string, object?>(StringComparer.Ordinal) { [columnName] = Written(value) });

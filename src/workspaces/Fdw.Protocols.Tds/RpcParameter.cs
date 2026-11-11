@@ -14,9 +14,9 @@ public sealed class RpcParameter
     /// <param name="value">The value; null for a NULL.</param>
     public RpcParameter(string name, bool isOutput, TdsTypeInfo typeInfo, object? value)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         IsOutput = isOutput;
-        TypeInfo = typeInfo ?? throw new ArgumentNullException(nameof(typeInfo));
+        TypeInfo = typeInfo;
         Value = value;
     }
 

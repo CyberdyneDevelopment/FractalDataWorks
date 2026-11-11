@@ -23,15 +23,4 @@ public sealed class ConfigurationGatewayCallExtensionsTests
 
         result.IsFailure.ShouldBeTrue();
     }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ANullProviderIsRefusedAtTheCall()
-    {
-        IConfigurationGatewayProvider gateways = null!;
-
-        await Should.ThrowAsync<ArgumentNullException>(
-            () => gateways.Execute<int>("AuthDb", default(DataGatewayCall), TestContext.Current.CancellationToken));
-    }
 }

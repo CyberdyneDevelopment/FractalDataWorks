@@ -31,7 +31,6 @@ public static class DataTypeNames
     /// </returns>
     public static IReadOnlyList<IDataType> Reading(Type clrType)
     {
-        if (clrType is null) throw new ArgumentNullException(nameof(clrType));
         return DataTypes.All().Where(option => option.ClrType == clrType).OrderBy(option => option.Name, StringComparer.Ordinal).ToList();
     }
 }

@@ -45,8 +45,6 @@ public static class DiagnosticDiff
         IEnumerable<Project> projects,
         CancellationToken cancellationToken = default)
     {
-        if (projects is null) throw new ArgumentNullException(nameof(projects));
-
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
 
         foreach (var project in projects)
@@ -82,8 +80,6 @@ public static class DiagnosticDiff
         Project project,
         CancellationToken cancellationToken = default)
     {
-        if (project is null) throw new ArgumentNullException(nameof(project));
-
         return Counts(new[] { project }, cancellationToken);
     }
 
@@ -101,9 +97,6 @@ public static class DiagnosticDiff
         IReadOnlyDictionary<string, int> before,
         IReadOnlyDictionary<string, int> after)
     {
-        if (before is null) throw new ArgumentNullException(nameof(before));
-        if (after is null) throw new ArgumentNullException(nameof(after));
-
         var appeared = new List<string>();
         foreach (var pair in after)
         {
@@ -119,8 +112,6 @@ public static class DiagnosticDiff
     /// <returns>The path, or empty when the key carries none.</returns>
     public static string PathOf(string diagnosticKey)
     {
-        if (diagnosticKey is null) throw new ArgumentNullException(nameof(diagnosticKey));
-
         var parts = diagnosticKey.Split('|');
         return parts.Length > 1 ? parts[1] : string.Empty;
     }
@@ -130,8 +121,6 @@ public static class DiagnosticDiff
     /// <returns>The id, for example <c>CS0234</c>.</returns>
     public static string IdOf(string diagnosticKey)
     {
-        if (diagnosticKey is null) throw new ArgumentNullException(nameof(diagnosticKey));
-
         var parts = diagnosticKey.Split('|');
         return parts.Length > 0 ? parts[0] : string.Empty;
     }
@@ -141,8 +130,6 @@ public static class DiagnosticDiff
     /// <returns>The compiler's message text.</returns>
     public static string MessageOf(string diagnosticKey)
     {
-        if (diagnosticKey is null) throw new ArgumentNullException(nameof(diagnosticKey));
-
         var parts = diagnosticKey.Split('|');
         return parts.Length > 2 ? string.Join("|", parts.Skip(2)) : string.Empty;
     }

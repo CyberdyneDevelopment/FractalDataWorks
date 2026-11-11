@@ -32,7 +32,7 @@ public sealed class InstanceRoutingHandler : DelegatingHandler
     /// </summary>
     public InstanceRoutingHandler(IConnectionManager connectionManager)
     {
-        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
+        _connectionManager = connectionManager;
     }
 
     /// <inheritdoc />
@@ -40,8 +40,6 @@ public sealed class InstanceRoutingHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         var status = _connectionManager.GetStatus();
         if (!status.IsConnected || string.IsNullOrWhiteSpace(status.Url))
         {

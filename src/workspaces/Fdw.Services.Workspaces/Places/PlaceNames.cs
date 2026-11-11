@@ -27,8 +27,8 @@ public sealed class PlaceNames : IPlaceNames
     /// <param name="logger">The logger.</param>
     public PlaceNames(IOrganizationProvider organizations, IWorkspaceConfigurationProvider workspaces, ILogger<PlaceNames>? logger)
     {
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
+        _organizations = organizations;
+        _workspaces = workspaces;
         _logger = logger ?? NullLogger<PlaceNames>.Instance;
     }
 

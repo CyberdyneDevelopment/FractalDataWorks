@@ -20,8 +20,6 @@ public static class DataContainerOwnership
     /// <returns><see langword="true"/> when the container is a part of another container's configuration.</returns>
     public static bool IsOwnedByAnotherContainer(this IDataContainer container)
     {
-        if (container is null) throw new ArgumentNullException(nameof(container));
-
         for (var i = 0; i < container.Keys.Count; i++)
         {
             if (container.Keys[i].HoldsOwner())
@@ -36,8 +34,6 @@ public static class DataContainerOwnership
     /// <returns><see langword="true"/> for a declared owner key, or a key that references the other container's Physical key.</returns>
     public static bool HoldsOwner(this IContainerKey key)
     {
-        if (key is null) throw new ArgumentNullException(nameof(key));
-
         return key.ReferencedContainer is { } referenced && key.HoldsOwnerUnder(referenced);
     }
 
@@ -51,9 +47,6 @@ public static class DataContainerOwnership
     /// </remarks>
     public static bool HoldsOwnerUnder(this IContainerKey key, IDataContainer parent)
     {
-        if (key is null) throw new ArgumentNullException(nameof(key));
-        if (parent is null) throw new ArgumentNullException(nameof(parent));
-
         if (key.KeyFields.Count == 0)
             return false;
 
@@ -71,8 +64,6 @@ public static class DataContainerOwnership
     /// <remarks>A Physical key that references another container is a physical Foreign key, not this container's identity.</remarks>
     public static string? PhysicalKeyField(this IDataContainer container)
     {
-        if (container is null) throw new ArgumentNullException(nameof(container));
-
         for (var i = 0; i < container.Keys.Count; i++)
         {
             var key = container.Keys[i];

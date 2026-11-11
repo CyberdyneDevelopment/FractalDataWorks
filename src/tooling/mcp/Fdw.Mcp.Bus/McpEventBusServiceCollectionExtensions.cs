@@ -18,9 +18,6 @@ public static class McpEventBusServiceCollectionExtensions
     /// <param name="configure">Sets the bus options; the caller states the ring capacity, there is no default (FDW-3823).</param>
     public static IServiceCollection AddMcpEventBus(this IServiceCollection services, Action<McpEventBusOptions> configure)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
-
         services.Configure(configure);
 
         services.TryAddSingleton<IMcpEventBus>(sp =>

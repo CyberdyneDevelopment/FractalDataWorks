@@ -32,7 +32,7 @@ public abstract class SetDataSetFieldsFilterableEndpointBase
     protected SetDataSetFieldsFilterableEndpointBase(
         ILogger<SetDataSetFieldsFilterableEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider) : base(logger)
     {
-        _dataSetProvider = dataSetProvider ?? throw new ArgumentNullException(nameof(dataSetProvider));
+        _dataSetProvider = dataSetProvider;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

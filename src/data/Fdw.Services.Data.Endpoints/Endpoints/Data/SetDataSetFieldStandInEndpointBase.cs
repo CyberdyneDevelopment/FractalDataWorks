@@ -26,7 +26,7 @@ public abstract class SetDataSetFieldStandInEndpointBase : Endpoint<SetDataSetFi
     private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ILogger<SetDataSetFieldStandInEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="SetDataSetFieldStandInEndpointBase"/> class.</summary>
     protected SetDataSetFieldStandInEndpointBase(
         DataSetConfigurationProvider dataSets,
         IConfigurationGatewayProvider configurationGateways,

@@ -36,8 +36,8 @@ public sealed class DataSetResolver : IDataSetResolver
     public DataSetResolver(
         IDataSetConfigurationProvider dataSets, IDataSetVariationConfigurationProvider variations, ILogger<DataSetResolver>? logger)
     {
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
+        _dataSets = dataSets;
+        _variations = variations;
         _logger = logger ?? NullLogger<DataSetResolver>.Instance;
     }
 
@@ -48,7 +48,8 @@ public sealed class DataSetResolver : IDataSetResolver
     /// <inheritdoc />
     public async Task<IGenericResult<ResolvedDataSet?>> Resolve(string name, int levels, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (string.IsNullOrWhiteSpace(name))
+            return GenericResult<ResolvedDataSet?>.Failure(DataSetResolverLog.DataSetNameRequired(_logger));
 
         var read = await _dataSets.Get(name, levels, cancellationToken).ConfigureAwait(false);
         if (read.IsFailure)

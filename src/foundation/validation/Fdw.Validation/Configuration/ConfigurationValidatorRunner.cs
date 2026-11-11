@@ -21,9 +21,6 @@ public static class ConfigurationValidatorRunner
     /// <returns>Success, or a coded failure when no option speaks for the class or its validator refuses the configuration.</returns>
     public static IGenericResult Validate(object configuration, ILogger logger)
     {
-        if (configuration is null)
-            throw new ArgumentNullException(nameof(configuration));
-
         var found = ConfigurationValidatorResolver.Find(configuration.GetType(), logger);
         if (found.IsFailure)
             return found;

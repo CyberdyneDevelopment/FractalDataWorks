@@ -27,11 +27,6 @@ public sealed class FullJoinExecutor : JoinExecutorBase
         (string LeftField, string RightField) condition,
         Func<TLeft, TRight, TResult> resultSelector)
     {
-        ArgumentNullException.ThrowIfNull(leftRecords);
-        ArgumentNullException.ThrowIfNull(rightRecords);
-        ArgumentNullException.ThrowIfNull(fieldExtractor);
-        ArgumentNullException.ThrowIfNull(resultSelector);
-
         // Materialize both sides (needed for full outer join)
         var leftList = leftRecords.ToList();
         var rightList = rightRecords.ToList();

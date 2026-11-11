@@ -23,7 +23,7 @@ public abstract class TestConnectionEndpointBase : Endpoint<TestConnectionReques
     private readonly IConnectionHealthService _healthService;
     private readonly ILogger<TestConnectionEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="TestConnectionEndpointBase"/> class.</summary>
     protected TestConnectionEndpointBase(
         IConnectionProvider connectionProvider,
         IConnectionConfigurationProvider configProvider,

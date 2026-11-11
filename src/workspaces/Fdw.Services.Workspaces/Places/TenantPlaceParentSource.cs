@@ -23,7 +23,7 @@ public sealed class TenantPlaceParentSource : IPlaceParentSource
     /// <param name="logger">The logger.</param>
     public TenantPlaceParentSource(ITenantProvider tenants, ILogger<TenantPlaceParentSource>? logger)
     {
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
+        _tenants = tenants;
         _logger = logger ?? NullLogger<TenantPlaceParentSource>.Instance;
     }
 

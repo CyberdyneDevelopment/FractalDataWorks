@@ -66,11 +66,6 @@ public static class DeclaredWebMcpTools
     /// </remarks>
     public static void Declare(WebMcpToolDeclaration declaration)
     {
-        if (declaration is null)
-        {
-            throw new ArgumentNullException(nameof(declaration));
-        }
-
         lock (Gate)
         {
             foreach (var existing in Declared)

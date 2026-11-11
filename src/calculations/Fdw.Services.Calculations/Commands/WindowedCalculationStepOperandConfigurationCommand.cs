@@ -8,6 +8,6 @@ namespace Fdw.Services.Calculations.Commands;
 [TypeOption(typeof(ConfigurationCommands), "WindowedCalculationStepOperand")]
 public sealed class WindowedCalculationStepOperandConfigurationCommand : ConfigurationCommandBase<WindowedCalculationStepOperandConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="WindowedCalculationStepOperandConfigurationCommand"/> class.</summary>
     public WindowedCalculationStepOperandConfigurationCommand() : base("WindowedCalculationStepOperand") { }
 }

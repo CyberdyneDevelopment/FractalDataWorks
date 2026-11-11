@@ -28,14 +28,6 @@ public class WorkspaceManagerTests : IDisposable
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "CoreFramework")]
-    public void ConstructorWithNullSessionStoreThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => new WorkspaceManager(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
     public void InitialWorkspaceCountIsZero()
     {
         _sut.WorkspaceCount.ShouldBe(0);

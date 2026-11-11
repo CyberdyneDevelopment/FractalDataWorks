@@ -17,7 +17,7 @@ internal sealed class ConnectionReminderLog : IReminderLog
     /// <param name="runner">Sends the commands for the store's organization.</param>
     public ConnectionReminderLog(DocumentRecordCommandRunner runner)
     {
-        _runner = runner ?? throw new ArgumentNullException(nameof(runner));
+        _runner = runner;
     }
 
     /// <inheritdoc />

@@ -44,8 +44,6 @@ public partial class ScheduledExecutionHandlerTypes
     /// </remarks>
     public static IGenericResult RequireSingleHandler(IServiceProvider services, string schedulerName, ILogger logger)
     {
-        if (services is null) throw new ArgumentNullException(nameof(services));
-
         using var scope = services.CreateScope();
         var handlers = scope.ServiceProvider.GetServices<IGenericScheduledExecutionHandler>().ToList();
 

@@ -40,15 +40,6 @@ public class DataQueryBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenDataSetNameIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new DataQueryBuilder<TestRecord>(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ConstructorWithExpressionInitializesProperties()
     {
         // Arrange
@@ -516,53 +507,5 @@ public class DataQueryBuilderTests
 
         // Act & Assert
         Should.Throw<NotSupportedException>(() => source.GetEnumerator());
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void InternalConstructorThrowsWhenDataSetNameIsNull()
-    {
-        // Arrange
-        var constructorInfo = typeof(DataQueryBuilder<TestRecord>)
-            .GetConstructor(
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-                null,
-                new[] { typeof(string), typeof(Expression), typeof(Type) },
-                null);
-
-        constructorInfo.ShouldNotBeNull();
-
-        var expression = Expression.Constant(42);
-
-        // Act & Assert
-        var ex = Should.Throw<System.Reflection.TargetInvocationException>(() =>
-            constructorInfo.Invoke(new object?[] { null, expression, typeof(TestRecord) }));
-
-        ex.InnerException.ShouldBeOfType<ArgumentNullException>();
-        ((ArgumentNullException)ex.InnerException!).ParamName.ShouldBe("dataSetName");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void InternalConstructorThrowsWhenExpressionIsNull()
-    {
-        // Arrange
-        var constructorInfo = typeof(DataQueryBuilder<TestRecord>)
-            .GetConstructor(
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-                null,
-                new[] { typeof(string), typeof(Expression), typeof(Type) },
-                null);
-
-        constructorInfo.ShouldNotBeNull();
-
-        // Act & Assert
-        var ex = Should.Throw<System.Reflection.TargetInvocationException>(() =>
-            constructorInfo.Invoke(new object?[] { "TestDataSet", null, typeof(TestRecord) }));
-
-        ex.InnerException.ShouldBeOfType<ArgumentNullException>();
-        ((ArgumentNullException)ex.InnerException!).ParamName.ShouldBe("expression");
     }
 }

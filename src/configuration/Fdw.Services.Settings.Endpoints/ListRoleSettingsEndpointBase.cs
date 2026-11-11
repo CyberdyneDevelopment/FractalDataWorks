@@ -19,7 +19,7 @@ public abstract class ListRoleSettingsEndpointBase : CrudListEndpointBase<RoleSe
 {
     private readonly IRoleSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListRoleSettingsEndpointBase"/> class.</summary>
     protected ListRoleSettingsEndpointBase(ILogger<ListRoleSettingsEndpointBase> logger, IRoleSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

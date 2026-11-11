@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Globalization;
 using System.Text.Json;
@@ -31,11 +32,15 @@ namespace Fdw.Data.RowSources.Json.Abstractions;
 /// (e.g. audit columns from an external seed/import). Callers that need the full-fidelity write MUST
 /// route through the <see cref="IRowWriter"/> surface, not the <see cref="IRecordWriter{T}"/> one.
 /// </para>
+/// <para>
+/// The target writer is not owned: whoever made it and asked the format for this writer disposes it.
+/// </para>
 /// </remarks>
 public sealed class JsonStreamRowWriter : IRowWriter
 {
     private readonly Utf8JsonWriter _writer;
     private readonly MemoryStream _bridge;
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the target writer; whoever made it and asked the format for this writer (the response sink's DrainingTextWriter, a file writer) disposes it.")]
     private readonly TextWriter _target;
     private readonly System.Text.Decoder _decoder = System.Text.Encoding.UTF8.GetDecoder();
     private byte[] _byteBuffer = new byte[1024];
@@ -51,8 +56,8 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// <param name="options">JSON writer options.</param>
     public JsonStreamRowWriter(TextWriter target, JsonRowWriterOptions options)
     {
-        _target = target ?? throw new ArgumentNullException(nameof(target));
-        var opts = options ?? throw new ArgumentNullException(nameof(options));
+        _target = target;
+        var opts = options;
         if (opts.RecordsAreLines && opts.WriteIndented)
             throw new ArgumentException("JSON Lines writes each record on one line, so it is never indented.", nameof(options));
 
@@ -68,7 +73,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IReadOnlyDictionary<string, object?> row)
     {
-        if (row is null) throw new ArgumentNullException(nameof(row));
         if (!_arrayStarted && !_lines)
         {
             _writer.WriteStartArray();
@@ -95,7 +99,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         foreach (var row in rows)
         {
             Write(row);
@@ -110,7 +113,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// <returns>A task that completes when all rows have been written.</returns>
     public ValueTask WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows, CancellationToken cancellationToken)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         foreach (var row in rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -126,7 +128,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IEnumerable<DataRecord> records)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         foreach (var record in records)
         {
             Write(record);
@@ -136,7 +137,6 @@ public sealed class JsonStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public async ValueTask Write(IAsyncEnumerable<DataRecord> records, CancellationToken cancellationToken = default)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             Write(record);

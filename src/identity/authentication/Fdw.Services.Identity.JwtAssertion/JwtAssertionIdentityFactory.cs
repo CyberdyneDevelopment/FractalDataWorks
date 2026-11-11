@@ -31,12 +31,11 @@ internal sealed class JwtAssertionIdentityFactory
     /// <summary>Initializes a new instance of the <see cref="JwtAssertionIdentityFactory"/> class.</summary>
     /// <param name="loggerFactory">The logger factory for created services.</param>
     /// <param name="http">The HTTP client used to reach the token endpoint.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="http"/> is null.</exception>
     public JwtAssertionIdentityFactory(ILoggerFactory? loggerFactory, HttpClient http)
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<JwtAssertionIdentityFactory>();
-        _http = http ?? throw new ArgumentNullException(nameof(http));
+        _http = http;
     }
 
     /// <inheritdoc />

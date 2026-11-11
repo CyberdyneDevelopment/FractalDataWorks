@@ -39,11 +39,9 @@ public static class ServiceTypePhaseState
     /// <param name="scope">The IServiceCollection (Configure/Register) or IServiceProvider (Initialize) the phase runs against.</param>
     /// <param name="phase">The phase being run.</param>
     /// <exception cref="ArgumentException"><paramref name="category"/> is null/empty.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="scope"/> is null.</exception>
     public static bool TryMarkCollection(string category, object scope, IServiceTypePhase phase)
     {
         if (string.IsNullOrEmpty(category)) throw new ArgumentException("category must not be empty.", nameof(category));
-        if (scope is null) throw new ArgumentNullException(nameof(scope));
 
         var set = SetFor(scope);
         lock (set) return set.Add((category, phase.Name, null));
@@ -59,12 +57,10 @@ public static class ServiceTypePhaseState
     /// <param name="scope">The IServiceCollection (Configure/Register) or IServiceProvider (Initialize) the phase runs against.</param>
     /// <param name="phase">The phase being run.</param>
     /// <exception cref="ArgumentException"><paramref name="category"/> or <paramref name="optionName"/> is null/empty.</exception>
-    /// <exception cref="ArgumentNullException"><paramref name="scope"/> is null.</exception>
     public static bool TryMarkOption(string category, string optionName, object scope, IServiceTypePhase phase)
     {
         if (string.IsNullOrEmpty(category)) throw new ArgumentException("category must not be empty.", nameof(category));
         if (string.IsNullOrEmpty(optionName)) throw new ArgumentException("optionName must not be empty.", nameof(optionName));
-        if (scope is null) throw new ArgumentNullException(nameof(scope));
 
         var set = SetFor(scope);
         lock (set) return set.Add((category, phase.Name, optionName));
@@ -77,7 +73,6 @@ public static class ServiceTypePhaseState
     public static bool HasCollectionRun(string category, object scope, IServiceTypePhase phase)
     {
         if (string.IsNullOrEmpty(category)) throw new ArgumentException("category must not be empty.", nameof(category));
-        if (scope is null) throw new ArgumentNullException(nameof(scope));
 
         var set = SetFor(scope);
         lock (set) return set.Contains((category, phase.Name, null));

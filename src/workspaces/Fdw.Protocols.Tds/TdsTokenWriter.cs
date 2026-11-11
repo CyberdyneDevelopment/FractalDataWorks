@@ -25,8 +25,6 @@ public static class TdsTokenWriter
     /// <param name="version">The version this server reports.</param>
     public static void LoginAck(TdsPayloadWriter writer, uint tdsVersion, string programName, TdsServerVersion version)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(version);
         writer.WriteByte(TdsTokenTypes.LoginAck);
         var length = writer.Mark();
         writer.WriteUInt16(0);
@@ -44,7 +42,6 @@ public static class TdsTokenWriter
     /// <param name="oldValue">The old value.</param>
     public static void EnvironmentChange(TdsPayloadWriter writer, byte type, string newValue, string oldValue)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTokenTypes.EnvironmentChange);
         var length = writer.Mark();
         writer.WriteUInt16(0);
@@ -61,7 +58,6 @@ public static class TdsTokenWriter
     /// <param name="oldValue">The old value.</param>
     public static void EnvironmentChange(TdsPayloadWriter writer, byte type, ReadOnlySpan<byte> newValue, ReadOnlySpan<byte> oldValue)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTokenTypes.EnvironmentChange);
         var length = writer.Mark();
         writer.WriteUInt16(0);
@@ -79,8 +75,6 @@ public static class TdsTokenWriter
     /// <param name="serverName">The name of the server raising it.</param>
     public static void Message(TdsPayloadWriter writer, SqlServerMessage message, string serverName)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(message);
         writer.WriteByte(message.IsError ? TdsTokenTypes.Error : TdsTokenTypes.Info);
         var length = writer.Mark();
         writer.WriteUInt16(0);
@@ -102,7 +96,6 @@ public static class TdsTokenWriter
     /// <param name="rowCount">The rows it affected or returned.</param>
     public static void Done(TdsPayloadWriter writer, byte token, ushort status, ushort currentCommand, long rowCount)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(token);
         writer.WriteUInt16(status);
         writer.WriteUInt16(currentCommand);
@@ -115,8 +108,6 @@ public static class TdsTokenWriter
     /// <param name="collation">The collation character columns carry.</param>
     public static void ColumnMetadata(TdsPayloadWriter writer, IReadOnlyList<TdsColumn> columns, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(columns);
         writer.WriteByte(TdsTokenTypes.ColumnMetadata);
         writer.WriteUInt16((ushort)columns.Count);
         foreach (var column in columns)
@@ -136,9 +127,6 @@ public static class TdsTokenWriter
     /// <returns>True when every value was written; the payload is unusable after a false.</returns>
     public static bool TryRow(TdsPayloadWriter writer, IReadOnlyList<TdsColumn> columns, IReadOnlyList<object?> values, out int failedColumn)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(columns);
-        ArgumentNullException.ThrowIfNull(values);
         writer.WriteByte(TdsTokenTypes.Row);
         for (var i = 0; i < columns.Count; i++)
         {
@@ -158,7 +146,6 @@ public static class TdsTokenWriter
     /// <param name="status">The procedure's return status.</param>
     public static void ReturnStatus(TdsPayloadWriter writer, int status)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTokenTypes.ReturnStatus);
         writer.WriteInt32(status);
     }
@@ -173,8 +160,6 @@ public static class TdsTokenWriter
     /// <returns>True when the value was written; the payload is unusable after a false.</returns>
     public static bool TryReturnValue(TdsPayloadWriter writer, ushort ordinal, string name, TdsColumnType type, object? value, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(type);
         writer.WriteByte(TdsTokenTypes.ReturnValue);
         writer.WriteUInt16(ordinal);
         writer.WriteByteLengthUnicode(name);
@@ -189,7 +174,6 @@ public static class TdsTokenWriter
     /// <param name="writer">The payload being built.</param>
     public static void FeatureExtensionAck(TdsPayloadWriter writer)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTokenTypes.FeatureExtensionAck);
         writer.WriteByte(0xFF);
     }

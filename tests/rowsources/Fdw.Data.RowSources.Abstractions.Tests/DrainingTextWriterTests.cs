@@ -172,14 +172,4 @@ public class DrainingTextWriterTests
     public void A_threshold_of_zero_or_less_fails_loud(int threshold)
         => Should.Throw<ArgumentOutOfRangeException>(
             () => new DrainingTextWriter(new RecordingStream(), Encoding.UTF8, threshold));
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    public void A_missing_target_fails_loud()
-        => Should.Throw<ArgumentNullException>(() => new DrainingTextWriter(null!, Encoding.UTF8, 16));
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    public void A_missing_encoding_fails_loud()
-        => Should.Throw<ArgumentNullException>(() => new DrainingTextWriter(new RecordingStream(), null!, 16));
 }

@@ -8,6 +8,6 @@ namespace Fdw.Aegis;
 [TypeOption(typeof(ConfigurationCommands), "ParameterAllowEntryConfiguration")]
 public sealed class ParameterAllowEntryConfigurationCommand : ConfigurationCommandBase<ParameterAllowEntryConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ParameterAllowEntryConfigurationCommand"/> class.</summary>
     public ParameterAllowEntryConfigurationCommand() : base("ParameterAllowEntryConfiguration") { }
 }

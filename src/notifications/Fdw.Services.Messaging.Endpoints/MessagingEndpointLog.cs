@@ -303,6 +303,13 @@ public static partial class MessagingEndpointLog
     public static partial IGenericMessage AlertListNotAList(ILogger logger, string kind);
 
     /// <summary>
+    /// Logged at Error level when a list asked to answer its rows' alert fields is not JSON at all, with the parser's exception (FDW-5189). An internal
+    /// failure (category 9).
+    /// </summary>
+    [MessageLogging(EventId = 91034, Level = LogLevel.Error, Message = "A list asked for the alert fields of kind {kind} is not JSON")]
+    public static partial IGenericMessage AlertListNotJson(ILogger logger, Exception ex, string kind);
+
+    /// <summary>
     /// Logged at Error level when a row of a list asked to answer its alert fields has no identifier. An internal failure (category 9).
     /// </summary>
     [MessageLogging(EventId = 91021, Level = LogLevel.Error, Message = "A row of a list asked for the alert fields of kind {kind} has no GUID identifier")]

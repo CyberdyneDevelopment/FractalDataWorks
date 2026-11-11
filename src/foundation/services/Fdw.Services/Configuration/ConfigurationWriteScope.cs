@@ -188,9 +188,6 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
     /// </remarks>
     public Task<IGenericResult<T>> Read<T>(IDataCommand command, DataStoreTarget target, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(target);
-
         return command is IQueryCommand
             ? _transaction.Execute<T>(command, target, ct)
             : Task.FromResult<IGenericResult<T>>(GenericResult<T>.Failure(

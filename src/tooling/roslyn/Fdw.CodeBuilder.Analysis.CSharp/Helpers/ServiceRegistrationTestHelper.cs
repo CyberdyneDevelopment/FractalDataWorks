@@ -36,11 +36,6 @@ public class ServiceRegistrationTestHelper<TService> where TService : class
     /// </summary>
     public void RegisterService(Microsoft.CodeAnalysis.Compilation compilation, TService service)
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
-
         lock (_lock)
         {
             _serviceTable.Remove(compilation);
@@ -54,9 +49,6 @@ public class ServiceRegistrationTestHelper<TService> where TService : class
     /// </summary>
     public TService? GetService(Microsoft.CodeAnalysis.Compilation compilation)
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
-
         lock (_lock)
         {
             if (_serviceTable.TryGetValue(compilation, out var service))
@@ -86,9 +78,6 @@ public class ServiceRegistrationTestHelper<TService> where TService : class
     /// </summary>
     public void VerifyServiceRegistered(Microsoft.CodeAnalysis.Compilation compilation)
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
-
         lock (_lock)
         {
             if (!_serviceTable.TryGetValue(compilation, out _))
@@ -104,9 +93,6 @@ public class ServiceRegistrationTestHelper<TService> where TService : class
     /// </summary>
     public void VerifyServiceNotRegistered(Compilation compilation)
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
-
         lock (_lock)
         {
             if (_serviceTable.TryGetValue(compilation, out _))
@@ -190,11 +176,6 @@ public static class ServiceRegistrationTestHelper
     public static void Register<TService>(Microsoft.CodeAnalysis.Compilation compilation, TService service)
         where TService : class
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
-        if (service == null)
-            throw new ArgumentNullException(nameof(service));
-
         _testServices.Remove(compilation);
         _testServices.Add(compilation, service);
     }
@@ -205,9 +186,6 @@ public static class ServiceRegistrationTestHelper
     public static TService? Get<TService>(Microsoft.CodeAnalysis.Compilation compilation)
         where TService : class
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
-
         if (_testServices.TryGetValue(compilation, out var service))
         {
             return service as TService;

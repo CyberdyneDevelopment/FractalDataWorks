@@ -32,14 +32,14 @@ public sealed class RateLimitPartitionForTests
         TodaysRateLimitSettings.Set(_settings, "Standard", RateLimitAllowanceFields.RequestsPerWindow, "3");
     }
 
-    private HttpContext CallerAt(string id, string address) => new DefaultHttpContext
+    private DefaultHttpContext CallerAt(string id, string address) => new DefaultHttpContext
     {
         RequestServices = _services,
         User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimDefinitions.sub.Name, id) }, "test")),
         Connection = { RemoteIpAddress = IPAddress.Parse(address) },
     };
 
-    private HttpContext CallerOfCompany(Guid company, string id, string address) => new DefaultHttpContext
+    private DefaultHttpContext CallerOfCompany(Guid company, string id, string address) => new DefaultHttpContext
     {
         RequestServices = _services,
         User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -52,7 +52,7 @@ public sealed class RateLimitPartitionForTests
         Connection = { RemoteIpAddress = IPAddress.Parse(address) },
     };
 
-    private HttpContext At(string address) => new DefaultHttpContext
+    private DefaultHttpContext At(string address) => new DefaultHttpContext
     {
         RequestServices = _services,
         Connection = { RemoteIpAddress = IPAddress.Parse(address) },
@@ -150,15 +150,6 @@ public sealed class RateLimitPartitionForTests
             () => RateLimitingServiceExtensions.PartitionFor(RateLimitPolicies.Authenticated, CallerAt("any", "10.0.0.1")));
 
         fault.Message.ShouldContain("RateLimit.Authenticated.WindowSeconds");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void PartitionForThrowsOnNullArguments()
-    {
-        Should.Throw<ArgumentNullException>(() => RateLimitingServiceExtensions.PartitionFor(null!, new DefaultHttpContext()));
-        Should.Throw<ArgumentNullException>(() => RateLimitingServiceExtensions.PartitionFor(RateLimitPolicies.Authenticated, null!));
     }
 
     // ---- a company's own allowance (FDW-1946) -------------------------------------------------------------------------

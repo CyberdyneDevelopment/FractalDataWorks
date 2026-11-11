@@ -27,9 +27,6 @@ public static class ReadableWorkspaces
         IWorkspaceAccessPolicy access,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(workspaces);
-        ArgumentNullException.ThrowIfNull(access);
-
         var all = await workspaces.Get(cancellationToken).ConfigureAwait(false);
         if (all.IsFailure || all.Value is not { } candidates)
             return all;

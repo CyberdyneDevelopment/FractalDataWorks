@@ -78,27 +78,26 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         string tableName)
     {
         _logger = logger ?? NullLogger<ImplementationProviderBase<TConfiguration, TContract>>.Instance;
-        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
-        DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
-        PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
+        _gatewayProvider = gatewayProvider;
+        DataStoreName = dataStoreName;
+        PathName = pathName;
         _commands = new ImplementationConfigurationCommand<TConfiguration>(
-            tableName ?? throw new ArgumentNullException(nameof(tableName)));
+            tableName);
         _children = new ChildSetLoader(_gatewayProvider, DataStoreName, _logger, LookupContainer, ForeignKeyToOwner, ChildContainer);
     }
 
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IImplementationConfigurationProvider{TContract}.Get(Guid, CancellationToken)"/>
     public Task<IGenericResult<TConfiguration>> Get(Guid domainId, CancellationToken cancellationToken = default)
         => Get(domainId, ConfigurationLevels.WholeAggregate, cancellationToken);
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IImplementationConfigurationProvider{TContract}.Get(Guid, int, CancellationToken)"/>
     public Task<IGenericResult<TConfiguration>> Get(Guid domainId, int levels, CancellationToken cancellationToken = default)
         => ReadCurrent(domainId, levels, null, cancellationToken);
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IImplementationConfigurationProvider{TContract}.Get(Guid, int, ChildNarrowing, CancellationToken)"/>
     public Task<IGenericResult<TConfiguration>> Get(Guid domainId, int levels, ChildNarrowing narrowing, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(narrowing);
         return ReadCurrent(domainId, levels, narrowing, cancellationToken);
     }
 
@@ -133,7 +132,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         return GenericResult<TConfiguration>.Success(found);
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IImplementationConfigurationProvider{TContract}.Get(Guid, DateTimeOffset, CancellationToken)"/>
     public async Task<IGenericResult<TConfiguration>> Get(Guid domainId, DateTimeOffset asOf, CancellationToken cancellationToken = default)
     {
         var rows = await Read(domainId, asOf, ConfigurationLevels.WholeAggregate, cancellationToken).ConfigureAwait(false);
@@ -223,7 +222,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             new OwnerFilter(command.ContainerName, keys.Value.Logical, ownerId)));
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IImplementationConfigurationProvider{TContract}.Get(IEnumerable{Guid}, CancellationToken)"/>
     /// <remarks>
     /// FDW-811 REVERT (2026-09-18): this used to build one batched <c>IRelationshipReadCommand</c>
     /// and hand it to <c>ConnectionBase.ExecuteRelationshipRead</c>'s connection-agnostic default,
@@ -247,8 +246,6 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     public async Task<IGenericResult<IReadOnlyList<TConfiguration>>> Get(
         IEnumerable<Guid> domainIds, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(domainIds);
-
         // FDW-4254: the ids go to the set read in one call (a statement per table per level) and come back in the order asked, those with no
         // row left out, as the per-id loop gave them. The FDW-811 fault above was in a ConnectionBase default; the set read goes through
         // ConfigurationRowReader and the coercing reader, as every other FileSystem-safe read does.
@@ -279,7 +276,6 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     private async Task<IGenericResult<IReadOnlyDictionary<Guid, TConfiguration>>> ReadSets(
         IEnumerable<Guid> domainIds, int levels, ChildNarrowing? narrowing, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(domainIds);
         if (levels < 0)
             return GenericResult<IReadOnlyDictionary<Guid, TConfiguration>>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TConfiguration).Name, nameof(levels), levels));

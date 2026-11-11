@@ -18,8 +18,8 @@ public sealed class ServiceRequirement
     /// <param name="message">The coded message logged and returned when it is not.</param>
     public ServiceRequirement(Type service, Func<ILogger, IGenericMessage> message)
     {
-        Service = service ?? throw new ArgumentNullException(nameof(service));
-        Message = message ?? throw new ArgumentNullException(nameof(message));
+        Service = service;
+        Message = message;
     }
 
     /// <summary>Gets the service that must be registered.</summary>

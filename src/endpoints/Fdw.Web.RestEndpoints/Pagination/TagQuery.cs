@@ -23,8 +23,6 @@ public static class TagQuery
     /// <returns>The tag names, each once (case is not significant), in the order first written; none when the request names none.</returns>
     public static IReadOnlyList<string> Read(HttpContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         // StringValues joins a repeated parameter with commas, so ?tag=a&tag=b and ?tag=a,b read the same.
         return [.. context.Request.Query[QueryName].ToString()
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

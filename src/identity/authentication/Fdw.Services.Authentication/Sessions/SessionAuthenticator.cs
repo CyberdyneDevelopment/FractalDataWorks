@@ -35,8 +35,8 @@ internal sealed class SessionAuthenticator : ISessionAuthenticator
         ITokenRevocationStore revocations,
         ILogger<SessionAuthenticator>? logger = null)
     {
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-        _revocations = revocations ?? throw new ArgumentNullException(nameof(revocations));
+        _sessions = sessions;
+        _revocations = revocations;
         _log = logger ?? NullLogger<SessionAuthenticator>.Instance;
     }
 

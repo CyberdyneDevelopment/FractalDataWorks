@@ -63,7 +63,7 @@ public sealed class SystemAuthenticationContextScope : IDisposable
     /// <param name="accessor">The ambient accessor to elevate for the duration of this scope.</param>
     public SystemAuthenticationContextScope(IAuthenticationContextAccessor accessor)
     {
-        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
+        _accessor = accessor;
         _previous = accessor.Current;
         accessor.Current = new SystemAuthenticationContext();
     }
@@ -84,7 +84,7 @@ public sealed class SystemAuthenticationContextScope : IDisposable
     /// <param name="tenantId">The tenant the rows written inside the scope belong to.</param>
     public SystemAuthenticationContextScope(IAuthenticationContextAccessor accessor, Guid tenantId)
     {
-        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
+        _accessor = accessor;
         _previous = accessor.Current;
         accessor.Current = new SystemAuthenticationContext(tenantId);
     }

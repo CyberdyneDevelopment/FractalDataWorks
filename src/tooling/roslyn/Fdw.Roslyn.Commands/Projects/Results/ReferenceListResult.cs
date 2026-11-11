@@ -18,11 +18,11 @@ public sealed class ReferenceListResult
         int metadataReferenceCount,
         IReadOnlyList<ReferenceSummary> references)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
+        ProjectName = projectName;
         ReferenceCount = referenceCount;
         ProjectReferenceCount = projectReferenceCount;
         MetadataReferenceCount = metadataReferenceCount;
-        References = references ?? throw new ArgumentNullException(nameof(references));
+        References = references;
     }
 
     /// <summary>

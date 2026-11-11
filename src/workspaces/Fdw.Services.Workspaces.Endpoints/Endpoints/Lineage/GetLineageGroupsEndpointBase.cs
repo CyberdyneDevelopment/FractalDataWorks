@@ -39,7 +39,7 @@ public abstract class GetLineageGroupsEndpointBase : LineageEndpointBase<Lineage
         ITagService tags)
         : base(logger, dataSets, dataStores, pipelines, variations, categories, workspaces, access, authorization)
     {
-        _tags = tags ?? throw new ArgumentNullException(nameof(tags));
+        _tags = tags;
     }
 
     public override void Configure() => ConfigureLineage(

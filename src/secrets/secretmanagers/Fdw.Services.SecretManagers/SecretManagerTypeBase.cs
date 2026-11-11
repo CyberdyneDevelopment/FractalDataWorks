@@ -206,8 +206,8 @@ public abstract class SecretManagerTypeBase<TService, TFactory, TConfiguration> 
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)
     {
-        SupportedSecretStores = supportedSecretStores ?? throw new ArgumentNullException(nameof(supportedSecretStores));
-        SupportedSecretTypes = supportedSecretTypes ?? throw new ArgumentNullException(nameof(supportedSecretTypes));
+        SupportedSecretStores = supportedSecretStores;
+        SupportedSecretTypes = supportedSecretTypes;
         SupportsRotation = supportsRotation;
         SupportsVersioning = supportsVersioning;
         SupportsSoftDelete = supportsSoftDelete;

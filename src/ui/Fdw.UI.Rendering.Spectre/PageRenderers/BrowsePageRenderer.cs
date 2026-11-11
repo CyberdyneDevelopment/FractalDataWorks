@@ -28,8 +28,6 @@ public static class BrowsePageRenderer
         SpectreRenderContext context,
         int visibleColumns = DefaultVisibleColumns)
     {
-        if (page is null) throw new ArgumentNullException(nameof(page));
-        if (context is null) throw new ArgumentNullException(nameof(context));
         if (visibleColumns < 1) visibleColumns = 1;
 
         var console = context.Console;

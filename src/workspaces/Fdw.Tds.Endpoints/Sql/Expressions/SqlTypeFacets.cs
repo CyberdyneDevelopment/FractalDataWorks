@@ -54,7 +54,6 @@ public sealed class SqlTypeFacets
     /// <returns>False when a parameter is not a whole number or max.</returns>
     public static bool TryRead(IList<Literal> parameters, int defaultLength, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out SqlTypeFacets? facets)
     {
-        ArgumentNullException.ThrowIfNull(parameters);
         facets = null;
         if (parameters.Count == 0)
         {

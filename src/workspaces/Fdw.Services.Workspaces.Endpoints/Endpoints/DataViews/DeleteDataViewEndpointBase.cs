@@ -22,14 +22,14 @@ public abstract class DeleteDataViewEndpointBase : CrudDeleteEndpointBase<DataVi
     private readonly IDataSetVariationConfigurationProvider _variations;
     private readonly IAuthenticationContextAccessor _authContext;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeleteDataViewEndpointBase"/> class.</summary>
     protected DeleteDataViewEndpointBase(
         ILogger<DeleteDataViewEndpointBase> logger,
         IDataSetVariationConfigurationProvider variations,
         IAuthenticationContextAccessor authContext) : base(logger)
     {
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _variations = variations;
+        _authContext = authContext;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

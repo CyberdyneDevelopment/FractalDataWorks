@@ -34,9 +34,9 @@ public abstract class ScreenBase : IScreen
     /// </summary>
     protected ScreenBase(IAnsiConsole console, IMenuTheme theme, IScreenFactory screenFactory)
     {
-        Console = console ?? throw new ArgumentNullException(nameof(console));
-        Theme = theme ?? throw new ArgumentNullException(nameof(theme));
-        ScreenFactory = screenFactory ?? throw new ArgumentNullException(nameof(screenFactory));
+        Console = console;
+        Theme = theme;
+        ScreenFactory = screenFactory;
     }
 
     /// <inheritdoc />

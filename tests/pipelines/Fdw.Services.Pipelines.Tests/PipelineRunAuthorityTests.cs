@@ -39,10 +39,10 @@ public sealed class PipelineRunAuthorityTests
     private readonly Mock<IDataStoreProvider> _dataStores = new();
 
     // How the data store provider says a store or a container is not there for the caller: a failure in the Missing category (a 3xxxx number).
-    private static IGenericMessage Missing() => new GenericMessage(MessageSeverity.Error, "not there for this caller", "DATA-31100");
+    private static GenericMessage Missing() => new GenericMessage(MessageSeverity.Error, "not there for this caller", "DATA-31100");
 
     // A lookup that broke: no category, so it is not an answer about the caller's access.
-    private static IGenericMessage Broke() => new GenericMessage(MessageSeverity.Error, "the lookup broke");
+    private static GenericMessage Broke() => new GenericMessage(MessageSeverity.Error, "the lookup broke");
 
     private static void ShouldBeTheLookupsOwnFailure(IGenericResult result)
     {

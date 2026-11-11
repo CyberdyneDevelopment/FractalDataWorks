@@ -48,10 +48,8 @@ public sealed class FlowExecuteSql : IFlowStep
         ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(gateway);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataStore);
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        ArgumentNullException.ThrowIfNull(parameters);
         Name = name;
         _gateway = gateway;
         _dataStore = dataStore;
@@ -67,8 +65,6 @@ public sealed class FlowExecuteSql : IFlowStep
     /// <inheritdoc />
     public async Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         // Checked before the script runs: a script that has changed data cannot be taken back by a variable that is not there.
         if (_resultVariable is not null)
         {

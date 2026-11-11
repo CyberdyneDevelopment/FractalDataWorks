@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "ResponseStreaming")]
 public sealed class ResponseStreamingConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ResponseStreamingConfigurationCommand"/> class.</summary>
     public ResponseStreamingConfigurationCommand() : base("ResponseStreaming") { }
 }

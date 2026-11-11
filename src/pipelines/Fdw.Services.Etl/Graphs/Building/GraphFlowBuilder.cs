@@ -32,8 +32,6 @@ public static class GraphFlowBuilder
     /// <returns>The pipeline, or the failure that names the first component that cannot be built.</returns>
     public static IGenericResult<FlowPipeline> Build(GraphPipelineConfiguration graph, FlowBuildContext context)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(context);
         if (graph.Components.Count == 0)
         {
             return GenericResult<FlowPipeline>.Failure(GraphLog.GraphEmpty(context.Logger, graph.Name));

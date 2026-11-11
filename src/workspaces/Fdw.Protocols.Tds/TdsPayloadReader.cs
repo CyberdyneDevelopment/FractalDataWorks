@@ -20,7 +20,7 @@ public sealed class TdsPayloadReader
     /// <param name="payload">The message payload, without packet headers.</param>
     public TdsPayloadReader(byte[] payload)
     {
-        _payload = payload ?? throw new ArgumentNullException(nameof(payload));
+        _payload = payload;
     }
 
     /// <summary>Gets the offset of the next byte to read.</summary>

@@ -25,7 +25,7 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly IFilterCalculations? _calculations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateDataViewEndpointBase"/> class.</summary>
     protected UpdateDataViewEndpointBase(
         ILogger<UpdateDataViewEndpointBase> logger,
         IDataSetVariationConfigurationProvider variations,
@@ -34,9 +34,9 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
         IFilterCalculations? calculations = null) : base(logger)
     {
         _calculations = calculations;
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _variations = variations;
+        _dataSets = dataSets;
+        _authContext = authContext;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

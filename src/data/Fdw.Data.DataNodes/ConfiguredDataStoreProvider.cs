@@ -49,8 +49,6 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         IDataStoreBuilderSelector builderSelector)
     {
         _logger = logger ?? NullLogger<ConfiguredDataStoreProvider>.Instance;
-        ArgumentNullException.ThrowIfNull(configurationProvider);
-        ArgumentNullException.ThrowIfNull(builderSelector);
         _configurationProvider = configurationProvider;
         _builderSelector = builderSelector;
     }
@@ -170,7 +168,6 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         string dataStoreName, string pathName, string containerName, IReadOnlyCollection<string> joinedContainers, CancellationToken cancellationToken = default)
     {
         ConfiguredDataStoreProviderLog.TraceGetContainerEntry(_logger, dataStoreName, pathName, containerName);
-        ArgumentNullException.ThrowIfNull(joinedContainers);
         if (string.IsNullOrWhiteSpace(dataStoreName))
             return GenericResult<IDataContainer>.Failure(ConfiguredDataStoreProviderLog.StoreNameRequired(_logger));
 

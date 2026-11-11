@@ -28,8 +28,8 @@ public abstract class ScriptedDataCommandBase : IScriptedDataCommand
     /// <param name="parameters">The values of the script's named parameters.</param>
     protected ScriptedDataCommandBase(string commandType, string text, IReadOnlyList<ScriptParameter> parameters)
     {
-        Text = text ?? throw new ArgumentNullException(nameof(text));
-        Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+        Text = text;
+        Parameters = parameters;
         CommandId = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
         CommandType = commandType;

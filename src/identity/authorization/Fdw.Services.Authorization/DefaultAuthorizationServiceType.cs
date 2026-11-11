@@ -133,7 +133,9 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             {
                 var domain = new RoleConfigurationProvider(
                     sp.GetRequiredService<ILogger<RoleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", "Role");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", "Role",
+                    sp.GetRequiredService<IUserRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IRolePermissionConfigurationProvider>());
                 domain.Register("Role", sp.GetRequiredService<IRoleImplementationConfigurationProvider>());
                 return domain;
             });

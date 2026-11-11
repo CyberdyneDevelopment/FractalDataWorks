@@ -40,10 +40,9 @@ public sealed class OAuth2TokenEndpointClient
     /// <summary>Initializes a new instance of the <see cref="OAuth2TokenEndpointClient"/> class.</summary>
     /// <param name="http">The HTTP client used to reach the token endpoint.</param>
     /// <param name="logger">The logger for this client.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="http"/> is null.</exception>
     public OAuth2TokenEndpointClient(HttpClient http, ILogger? logger = null)
     {
-        _http = http ?? throw new ArgumentNullException(nameof(http));
+        _http = http;
         _logger = logger ?? NullLogger.Instance;
     }
 

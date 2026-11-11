@@ -12,9 +12,9 @@ public sealed class RemoveDocumentResult
     /// </summary>
     public RemoveDocumentResult(string projectName, string documentName, string documentPath, bool removed, string? reason = null)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
-        DocumentName = documentName ?? throw new ArgumentNullException(nameof(documentName));
-        DocumentPath = documentPath ?? throw new ArgumentNullException(nameof(documentPath));
+        ProjectName = projectName;
+        DocumentName = documentName;
+        DocumentPath = documentPath;
         Removed = removed;
         Reason = reason;
     }

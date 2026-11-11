@@ -18,11 +18,11 @@ public sealed class SqlTable
     /// <param name="modified">When it last changed, as <c>sys.objects.modify_date</c> reports.</param>
     public SqlTable(string schema, string name, IReadOnlyList<SqlTableColumn> columns, bool pagesInStore, string target, DateTime created, DateTime modified)
     {
-        Schema = schema ?? throw new ArgumentNullException(nameof(schema));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Columns = columns ?? throw new ArgumentNullException(nameof(columns));
+        Schema = schema;
+        Name = name;
+        Columns = columns;
         PagesInStore = pagesInStore;
-        Target = target ?? throw new ArgumentNullException(nameof(target));
+        Target = target;
         Created = created;
         Modified = modified;
     }

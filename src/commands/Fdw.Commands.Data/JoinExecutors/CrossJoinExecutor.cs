@@ -26,11 +26,6 @@ public sealed class CrossJoinExecutor : JoinExecutorBase
         (string LeftField, string RightField) condition,
         Func<TLeft, TRight, TResult> resultSelector)
     {
-        ArgumentNullException.ThrowIfNull(leftRecords);
-        ArgumentNullException.ThrowIfNull(rightRecords);
-        ArgumentNullException.ThrowIfNull(fieldExtractor);
-        ArgumentNullException.ThrowIfNull(resultSelector);
-
         // CROSS JOIN - Cartesian product (condition is ignored)
         foreach (var leftRecord in leftRecords)
         {

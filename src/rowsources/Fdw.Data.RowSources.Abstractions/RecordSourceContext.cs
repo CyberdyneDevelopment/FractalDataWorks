@@ -30,12 +30,11 @@ public sealed class RecordSourceContext
     /// Format-specific options (the concrete subclass of <see cref="RowSourceOptions"/> for the selected
     /// format), built by the format's <c>CreateOptions</c>. Required.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="content"/> or <paramref name="fields"/> or <paramref name="options"/> is null.</exception>
     public RecordSourceContext(Stream content, IReadOnlyList<IDataField> fields, RowSourceOptions options)
     {
-        Content = content ?? throw new ArgumentNullException(nameof(content));
-        Fields = fields ?? throw new ArgumentNullException(nameof(fields));
-        Options = options ?? throw new ArgumentNullException(nameof(options));
+        Content = content;
+        Fields = fields;
+        Options = options;
     }
 
     /// <summary>

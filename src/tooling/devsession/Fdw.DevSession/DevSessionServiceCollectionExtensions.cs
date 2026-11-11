@@ -33,9 +33,6 @@ public static class DevSessionServiceCollectionExtensions
     /// <param name="configureBus">Sets the MCP event bus options; the caller states the ring capacity (FDW-3823).</param>
     public static IServiceCollection AddDevSessions(this IServiceCollection services, Action<McpEventBusOptions> configureBus)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configureBus);
-
         services.AddMcpEventBus(configureBus);
 
         services.TryAddSingleton<IGitRunner, GitProcessRunner>();

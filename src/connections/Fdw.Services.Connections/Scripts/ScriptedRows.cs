@@ -28,9 +28,6 @@ public static class ScriptedRows
     /// <param name="prefix">What the driver puts before a parameter's name in the text (<c>@</c> for the SQL drivers).</param>
     public static void Bind(DbCommand command, IReadOnlyList<ScriptParameter> parameters, string prefix)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(parameters);
-        ArgumentNullException.ThrowIfNull(prefix);
         foreach (var parameter in parameters)
         {
             var bound = command.CreateParameter();
@@ -52,8 +49,6 @@ public static class ScriptedRows
     public static async Task<IGenericResult<IReadOnlyList<IDictionary<string, object?>>>> Read(
         DbDataReader reader, int? take, ILogger logger, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(reader);
-        ArgumentNullException.ThrowIfNull(logger);
         if (RepeatedColumn(reader) is { } repeated)
         {
             return GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Failure(ScriptedRowsLog.ColumnRepeated(logger, repeated));
@@ -104,10 +99,6 @@ public static class ScriptedRows
         Func<Exception, IEnumerable<IGenericMessage>> failed,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(reader);
-        ArgumentNullException.ThrowIfNull(owned);
-        ArgumentNullException.ThrowIfNull(failed);
-        ArgumentNullException.ThrowIfNull(logger);
         if (RepeatedColumn(reader) is { } repeated)
         {
             foreach (var release in owned)

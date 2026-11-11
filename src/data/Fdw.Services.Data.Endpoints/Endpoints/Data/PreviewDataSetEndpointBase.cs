@@ -32,7 +32,7 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
     /// <summary>Gets the logger.</summary>
     protected new ILogger<PreviewDataSetEndpointBase> Logger { get; }
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="PreviewDataSetEndpointBase"/> class.</summary>
     protected PreviewDataSetEndpointBase(
         IDataSetConfigurationProvider dataSetProvider,
         IDataGatewayProvider dataGateways,

@@ -11,6 +11,6 @@ namespace Fdw.Services.SecretManagers.Commands;
 [TypeOption(typeof(ConfigurationCommands), "SecretManager")]
 public sealed class SecretManagerConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SecretManagerConfigurationCommand"/> class.</summary>
     public SecretManagerConfigurationCommand() : base("SecretManager") { }
 }

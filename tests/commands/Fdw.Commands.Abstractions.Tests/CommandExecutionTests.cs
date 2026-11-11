@@ -53,27 +53,6 @@ public sealed class CommandExecutionTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void ConstructorThrowsWhenCommandTypeIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new CommandExecution(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorThrowsWithCorrectParameterName()
-    {
-        // Act
-        var exception = Should.Throw<ArgumentNullException>(() => new CommandExecution(null!));
-
-        // Assert
-        exception.ParamName.ShouldBe("commandType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void ExecutionIdIsGeneratedAutomatically()
     {
         // Arrange

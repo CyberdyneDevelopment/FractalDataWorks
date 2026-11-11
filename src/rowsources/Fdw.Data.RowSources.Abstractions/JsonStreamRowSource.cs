@@ -1,6 +1,7 @@
 using Fdw.Conventions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -17,10 +18,12 @@ namespace Fdw.Data.RowSources.Json.Abstractions;
 /// The records are the objects of the top-level array, of the array at <see cref="JsonRowSourceOptions.RowArrayPath"/>, or, when
 /// <see cref="JsonRowSourceOptions.RecordsAreLines"/> is set, each top-level value (JSON Lines). They are found by
 /// <see cref="JsonRecordScanner"/> over <see cref="Utf8JsonReader"/>; each record is parsed alone and flattened into the row exactly as before.
-/// A malformed document ends the read with <see cref="ReadFailure"/> set, after every record before it.
+/// A malformed document ends the read with <see cref="ReadFailure"/> set, after every record before it. The stream is not owned:
+/// whoever opened it and asked the format for this reader disposes it.
 /// </remarks>
 public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReader, IReportsReadFailure
 {
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the content stream; whoever opened it and asked the format for this reader (StreamedFileRecordSource for a file) disposes it.")]
     private readonly Stream _stream;
     private readonly JsonRowSourceOptions _options;
     private readonly Dictionary<string, int> _fieldOrdinals;
@@ -38,8 +41,8 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
     /// <param name="options">JSON processing options.</param>
     public JsonStreamRowSource(Stream stream, JsonRowSourceOptions options)
     {
-        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _stream = stream;
+        _options = options;
         if (options.BufferSize < 1)
             throw new ArgumentOutOfRangeException(nameof(options), options.BufferSize, "A JSON reader's buffer holds at least one byte.");
         _fieldOrdinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);

@@ -36,8 +36,10 @@ namespace Fdw.Services.Multitenancy;
 /// instead of hand-writing those three methods: <see cref="SelectAndConfigureSingleOption"/> resolves
 /// the single configured choice and drives that ONE option's Configure/Register
 /// directly, instead of the generated blanket Configure/Register that would iterate every discovered
-/// option; Register/Initialize become no-ops since Configure already did the only work needed. This
-/// makes the domain self-selecting — it is not excluded from the collect; it
+/// option. Register adds only the domain's configuration provider. Initialize forwards to the selected
+/// option's own Initialize: because Configure and Register drive that option by hand, the generated
+/// collect never reaches it, and without the forward its implementation would never be registered with
+/// the domain provider (every tenant read then failed). This makes the domain self-selecting — it is not excluded from the collect; it
 /// participates in the ordinary PlatformServices Configure/Register/Initialize collects like every other
 /// domain, and the "exactly one option runs" guarantee lives here instead of in each host's Program.cs.
 /// </para>

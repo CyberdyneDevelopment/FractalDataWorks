@@ -11,6 +11,6 @@ namespace Fdw.Services.Etl.Projects.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Stage")]
 public sealed class StageConfigurationCommand : ConfigurationCommandBase<StageConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="StageConfigurationCommand"/> class.</summary>
     public StageConfigurationCommand() : base("ProjectStage") { }
 }

@@ -32,7 +32,7 @@ public sealed class AuditImplementationTranslatorTests
 
         result.IsSuccess.ShouldBeTrue();
         var finding = result.Value!.Data.Findings.ShouldHaveSingleItem();
-        finding.Kind.ShouldBe(AuditFindingKind.ForbiddenReference);
+        finding.Kind.ShouldBe(AuditFindingKinds.ForbiddenReference);
         finding.Subject.ShouldBe("Acme.Legacy.Registration");
         finding.Cite.ShouldBe("acme/Impl.csproj:9");
     }
@@ -78,7 +78,7 @@ public sealed class AuditImplementationTranslatorTests
         var result = await Run(new AuditImplementationCommand { GuidesPath = folder, ProjectName = "Acme.Impl" });
 
         var finding = result.Value!.Data.Findings.ShouldHaveSingleItem();
-        finding.Kind.ShouldBe(AuditFindingKind.MissingReference);
+        finding.Kind.ShouldBe(AuditFindingKinds.MissingReference);
         finding.Subject.ShouldBe("Acme.Absent");
     }
 
@@ -97,7 +97,7 @@ public sealed class AuditImplementationTranslatorTests
         });
 
         var finding = result.Value!.Data.Findings.ShouldHaveSingleItem();
-        finding.Kind.ShouldBe(AuditFindingKind.UnimplementedMember);
+        finding.Kind.ShouldBe(AuditFindingKinds.UnimplementedMember);
         finding.Cite.ShouldBeNull();
     }
 

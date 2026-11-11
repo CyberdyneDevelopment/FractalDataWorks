@@ -12,6 +12,6 @@ namespace Fdw.Services.Connections.MsSql.Commands;
 [TypeOption(typeof(ConfigurationCommands), "MsSqlConnectionLimit")]
 public sealed class MsSqlConnectionLimitConfigurationCommand : ConfigurationCommandBase<MsSqlConnectionLimitConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="MsSqlConnectionLimitConfigurationCommand"/> class.</summary>
     public MsSqlConnectionLimitConfigurationCommand() : base("MsSqlConnectionLimit") { }
 }

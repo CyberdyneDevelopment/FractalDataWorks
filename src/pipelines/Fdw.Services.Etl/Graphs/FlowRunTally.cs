@@ -32,7 +32,7 @@ public sealed class FlowRunTally : IFlowExecutor, IFlowRunCounts
     /// <param name="inner">The executor that runs each graph.</param>
     public FlowRunTally(IFlowExecutor inner)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        _inner = inner;
     }
 
     /// <summary>Gets the rows that left a component with no inputs, across the run, including those of the graphs running now.</summary>
@@ -59,8 +59,6 @@ public sealed class FlowRunTally : IFlowExecutor, IFlowRunCounts
     /// <inheritdoc />
     public async Task<FlowRunOutcome> Execute(FlowGraph graph, FlowRunOptions options, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(options);
         var pending = new Pending();
         lock (_running)
         {

@@ -32,8 +32,8 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
         IServiceScopeFactory scopeFactory,
         ILogger<OrchestrationNodeOrchestratorBackgroundService>? logger = null)
     {
-        _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        _queue = queue;
+        _scopeFactory = scopeFactory;
         _logger = logger ?? NullLogger<OrchestrationNodeOrchestratorBackgroundService>.Instance;
     }
 

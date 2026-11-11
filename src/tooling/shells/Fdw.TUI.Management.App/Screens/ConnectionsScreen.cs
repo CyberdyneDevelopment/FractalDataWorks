@@ -49,9 +49,9 @@ public sealed class ConnectionsScreen : ScreenBase
         IRenderContext renderContext)
         : base(console, theme, screenFactory)
     {
-        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
-        _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
-        _renderContext = renderContext ?? throw new ArgumentNullException(nameof(renderContext));
+        _connectionManager = connectionManager;
+        _renderer = renderer;
+        _renderContext = renderContext;
     }
 
     /// <inheritdoc />

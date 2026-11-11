@@ -47,7 +47,6 @@ public class ConnectionDisablingOption : ITypeOption, IDeclaresDefaults
     /// <returns>The answer: the host's override, else the declared default; a failure when neither gives a boolean.</returns>
     public IGenericResult<bool> GlobalRulesMayDisableOthers(ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(logger);
         return ServiceTypeDefaults.TryResolve(this, GlobalRulesMayDisableOtherTenantsConnections, out var value) && value is bool answer
             ? GenericResult<bool>.Success(answer)
             : GenericResult<bool>.Failure(ConnectionDisabledLog.DefaultNotDeclared(logger, GlobalRulesMayDisableOtherTenantsConnections));

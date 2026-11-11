@@ -57,8 +57,8 @@ public sealed class FileBasedSessionStore : ISessionStore, IProjectIndexStore
     /// <param name="basePath">The base path for session storage.</param>
     public FileBasedSessionStore(ILogger<FileBasedSessionStore> logger, string basePath)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _basePath = basePath ?? throw new ArgumentNullException(nameof(basePath));
+        _logger = logger;
+        _basePath = basePath;
     }
 
     /// <inheritdoc />

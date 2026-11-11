@@ -47,11 +47,11 @@ public sealed class FeatureEnablement : IFeatureEnablement
         IConfigurationGatewayProvider gateways, FeatureTables tables, IOrganizationScope organizations, IScopeAuthority authority,
         ILogger<FeatureEnablement>? logger)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _tables = tables ?? throw new ArgumentNullException(nameof(tables));
+        _gateways = gateways;
+        _tables = tables;
         _logger = logger ?? NullLogger<FeatureEnablement>.Instance;
-        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _authority = authority ?? throw new ArgumentNullException(nameof(authority));
+        _scope = organizations;
+        _authority = authority;
     }
 
     /// <inheritdoc />

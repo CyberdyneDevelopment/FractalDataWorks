@@ -19,7 +19,7 @@ namespace Fdw.Services.Data.Tests;
 /// </summary>
 public sealed class DataStoreLoadTests
 {
-    private static IServiceProvider Services(Mock<IConfigurationGatewayProvider> gateways) =>
+    private static ServiceProvider Services(Mock<IConfigurationGatewayProvider> gateways) =>
         new ServiceCollection()
             .AddSingleton(new DataStoreConfigurationProvider(
                 NullLogger<DataStoreConfigurationProvider>.Instance, gateways.Object, "ConfigurationDb", "data", "DataStoreConfiguration", new Mock<IConfigurationPlacement>().Object,

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -30,6 +31,7 @@ namespace Fdw.Data.RowSources.Abstractions;
 /// </remarks>
 public sealed class DrainingTextWriter : TextWriter
 {
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the response body; the request pipeline disposes it after the response, which outlives this writer.")]
     private readonly Stream _target;
     private readonly Encoding _encoding;
     private readonly Encoder _encoder;
@@ -48,14 +50,13 @@ public sealed class DrainingTextWriter : TextWriter
     /// <param name="drainThresholdChars">
     /// The pending character count at which <see cref="DrainIfFull(CancellationToken)"/> drains.
     /// </param>
-    /// <exception cref="ArgumentNullException">A required argument was null.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="drainThresholdChars"/> was not positive.</exception>
     // Why every argument is required with no default: a default threshold or encoding here would be a
     // configuration value invented by the framework. The caller reads both from its own configuration.
     public DrainingTextWriter(Stream target, Encoding encoding, int drainThresholdChars)
     {
-        _target = target ?? throw new ArgumentNullException(nameof(target));
-        _encoding = encoding ?? throw new ArgumentNullException(nameof(encoding));
+        _target = target;
+        _encoding = encoding;
         if (drainThresholdChars <= 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -87,7 +88,6 @@ public sealed class DrainingTextWriter : TextWriter
     /// <inheritdoc />
     public override void Write(char[] buffer, int index, int count)
     {
-        if (buffer is null) throw new ArgumentNullException(nameof(buffer));
         EnsureCapacity(count);
         Array.Copy(buffer, index, _pending, _pendingCount, count);
         _pendingCount += count;

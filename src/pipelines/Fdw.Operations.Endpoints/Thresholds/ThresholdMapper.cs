@@ -26,7 +26,6 @@ public static class ThresholdMapper
     /// <returns>The configuration; a refusal naming what the payload does not state.</returns>
     public static IGenericResult<ThresholdImplementationConfiguration> ToConfiguration(ThresholdPayload payload, Guid id)
     {
-        ArgumentNullException.ThrowIfNull(payload);
         if (payload.IsEnabled is not { } isEnabled)
         {
             return ThresholdRefusal.Of<ThresholdImplementationConfiguration>(payload.Name, "it does not state isEnabled");
@@ -86,7 +85,6 @@ public static class ThresholdMapper
     /// <returns>The payload; a refusal when a rule holds rows that do not make criteria.</returns>
     public static IGenericResult<ThresholdPayload> ToPayload(IThresholdImplementationConfiguration stored)
     {
-        ArgumentNullException.ThrowIfNull(stored);
         var type = ThresholdTypes.ByName(stored.Implementation);
         if (ReferenceEquals(type, ThresholdTypes.NotFound))
         {
@@ -134,7 +132,6 @@ public static class ThresholdMapper
     /// <returns>The summary.</returns>
     public static ThresholdSummaryResponse ToSummary(IThresholdImplementationConfiguration item)
     {
-        ArgumentNullException.ThrowIfNull(item);
         return new ThresholdSummaryResponse
         {
             Id = item.Id,
@@ -342,26 +339,39 @@ public static class ThresholdMapper
     }
 
     // The data type a stored condition or parameter states for a value of a .NET type: the six the reader accepts. Whole numbers are stored as Int64 and fractions as Double; any other type has none.
-    private static string? DataTypeOf(Type type) => Type.GetTypeCode(type) switch
+    private static readonly Dictionary<Type, string> DataTypes = new()
     {
-        TypeCode.Byte or TypeCode.SByte or TypeCode.Int16 or TypeCode.UInt16 or TypeCode.Int32 or TypeCode.UInt32 or TypeCode.Int64 => "Int64",
-        TypeCode.Single or TypeCode.Double or TypeCode.Decimal => "Double",
-        TypeCode.Boolean => "Boolean",
-        TypeCode.String => "String",
-        _ when type == typeof(TimeSpan) => "TimeSpan",
-        _ when type == typeof(DateTimeOffset) => "DateTimeOffset",
-        _ => null,
+        [typeof(byte)] = "Int64",
+        [typeof(sbyte)] = "Int64",
+        [typeof(short)] = "Int64",
+        [typeof(ushort)] = "Int64",
+        [typeof(int)] = "Int64",
+        [typeof(uint)] = "Int64",
+        [typeof(long)] = "Int64",
+        [typeof(float)] = "Double",
+        [typeof(double)] = "Double",
+        [typeof(decimal)] = "Double",
+        [typeof(bool)] = "Boolean",
+        [typeof(string)] = "String",
+        [typeof(TimeSpan)] = "TimeSpan",
+        [typeof(DateTimeOffset)] = "DateTimeOffset",
     };
 
     // A scalar as the invariant text the store keeps; anything that is not a scalar has no text, and the reader refuses a condition whose value is missing.
-    private static string? TextOf(JsonElement value) => value.ValueKind switch
+    private static readonly Dictionary<JsonValueKind, Func<JsonElement, string?>> ScalarTexts = new()
     {
-        JsonValueKind.String => value.GetString(),
-        JsonValueKind.Number => value.GetRawText(),
-        JsonValueKind.True => bool.TrueString,
-        JsonValueKind.False => bool.FalseString,
-        _ => null,
+        [JsonValueKind.String] = value => value.GetString(),
+        [JsonValueKind.Number] = value => value.GetRawText(),
+        [JsonValueKind.True] = _ => bool.TrueString,
+        [JsonValueKind.False] = _ => bool.FalseString,
     };
+
+    // An enum is looked up by its underlying type, as Type.GetTypeCode reads it.
+    private static string? DataTypeOf(Type type) =>
+        DataTypes.TryGetValue(type.IsEnum ? Enum.GetUnderlyingType(type) : type, out var dataType) ? dataType : null;
+
+    private static string? TextOf(JsonElement value) =>
+        ScalarTexts.TryGetValue(value.ValueKind, out var text) ? text(value) : null;
 
     private static IGenericResult<ThresholdRulePayload> RuleOf(string threshold, ThresholdRuleConfiguration rule)
     {

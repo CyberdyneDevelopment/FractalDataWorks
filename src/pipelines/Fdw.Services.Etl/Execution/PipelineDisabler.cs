@@ -36,7 +36,6 @@ public sealed class PipelineDisabler : IPipelineDisabler
     /// <inheritdoc />
     public async Task<IGenericResult> Disable(EscalationFiring firing, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(firing);
         var pipeline = firing.Subject.Name;
         if (firing.Subject.RunId is not { } runId)
         {

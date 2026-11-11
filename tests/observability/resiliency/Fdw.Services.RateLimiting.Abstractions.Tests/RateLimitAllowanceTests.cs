@@ -68,13 +68,4 @@ public class RateLimitAllowanceTests
             limiter.ShouldNotBeNull();
         }
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void AnAllowanceWithoutAnAlgorithmOrAWayOfCountingIsRefused()
-    {
-        Should.Throw<ArgumentNullException>(() => new RateLimitAllowance(1, TimeSpan.FromSeconds(1), false, 1, null!, 1, false, 0, RateLimitPartitionings.Shared));
-        Should.Throw<ArgumentNullException>(() => new RateLimitAllowance(1, TimeSpan.FromSeconds(1), false, 1, RateLimitAlgorithms.FixedWindow, 1, false, 0, null!));
-    }
 }

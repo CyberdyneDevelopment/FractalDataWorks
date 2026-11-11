@@ -23,7 +23,7 @@ public abstract class GetWorkspaceReadinessEndpointBase : CrudGetEndpointBase<Wo
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IWorkspaceAccessPolicy _access;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetWorkspaceReadinessEndpointBase"/> class.</summary>
     protected GetWorkspaceReadinessEndpointBase(
         ILogger<GetWorkspaceReadinessEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

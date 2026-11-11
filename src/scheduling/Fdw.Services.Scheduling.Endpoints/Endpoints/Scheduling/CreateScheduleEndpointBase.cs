@@ -31,7 +31,7 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
     private readonly RunRoleAuthority _runRoles;
     private readonly Lazy<IEffectiveSettingsProvider> _settings;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateScheduleEndpointBase{TConfig}"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="provider">The schedule configuration provider.</param>
     /// <param name="grants">The role grants the run roles are checked against.</param>
@@ -44,7 +44,7 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
     {
         _provider = provider;
         _runRoles = new RunRoleAuthority(grants);
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _settings = settings;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

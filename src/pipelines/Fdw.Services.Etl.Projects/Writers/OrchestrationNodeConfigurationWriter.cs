@@ -32,8 +32,8 @@ public sealed class OrchestrationNodeConfigurationWriter
         IValidator<OrchestrationNodeImplementationConfiguration> validator,
         ILogger<OrchestrationNodeConfigurationWriter>? logger = null)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+        _provider = provider;
+        _validator = validator;
         _logger = logger ?? NullLogger<OrchestrationNodeConfigurationWriter>.Instance;
     }
 
@@ -58,8 +58,6 @@ public sealed class OrchestrationNodeConfigurationWriter
         bool mayCreate,
         CancellationToken cancellationToken)
     {
-        if (config == null) throw new ArgumentNullException(nameof(config));
-
         // Run FluentValidation before touching the database.
         var validationResult = await _validator.ValidateAsync(config, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)

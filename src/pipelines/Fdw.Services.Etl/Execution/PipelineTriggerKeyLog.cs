@@ -61,4 +61,9 @@ public static partial class PipelineTriggerKeyLog
     [MessageLogging(EventId = 71341, Level = LogLevel.Error,
         Message = "The trigger key '{key}' could not be bound to run {executionId}, or given back: {reason}")]
     public static partial IGenericMessage KeyNotBound(ILogger logger, string key, Guid executionId, string? reason);
+
+    /// <summary>Error: claiming, binding or releasing a trigger key needs the key; an empty key is refused.</summary>
+    [MessageLogging(EventId = 21804, Level = LogLevel.Error,
+        Message = "Trigger key {operation} needs the key, and the key given is empty")]
+    public static partial IGenericMessage TriggerKeyRequired(ILogger logger, string operation);
 }

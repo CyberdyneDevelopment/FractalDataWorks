@@ -41,7 +41,7 @@ public abstract class RequestWorkspaceMembershipEndpointBase
     // Set by CheckExists when it finds a conflict, read back by DuplicateMessage.
     private WorkspaceMembershipRequestConfiguration? _conflict;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="RequestWorkspaceMembershipEndpointBase"/> class.</summary>
     protected RequestWorkspaceMembershipEndpointBase(
         ILogger<RequestWorkspaceMembershipEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

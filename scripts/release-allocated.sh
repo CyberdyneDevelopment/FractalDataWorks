@@ -7,9 +7,12 @@
 #   release-allocated.sh levels   give every package its own version: read each changed package's public surface (and its last
 #                                 stable version's), let tools/versioning/release.py decide the lowest level each needs, add the
 #                                 packages a major pulls in
-#   release-allocated.sh build    prepare the build set, build and test it, pack its members into artifacts/ at their own versions
+#   release-allocated.sh build    prepare the build set, build it (and test it only when RUN_TESTS is true), pack its members into artifacts/ at their own versions
 #   release-allocated.sh bindings prove that a package left as it is still loads with the rebuilt ones: no built assembly is below
 #                                 the floor or lower than a version the last release's dlls ask for (tools/versioning/bindcheck.py)
+#   release-allocated.sh keep     (dry run) stage the results of levels, build and bindings, with the packages, for the real run (FDW-5175)
+#   release-allocated.sh reuse    (real run) take the dry run's results instead of making them: download the artifact of this commit, prove it
+#                                 belongs to this release, restore it; stops with the reason when it cannot. Replaces levels, build and bindings.
 #   release-allocated.sh decide   check-then-push: decide every package before anything is pushed
 #   release-allocated.sh bundle   generate and pack the release bundle into bundle/ (pushed last, by the workflow)
 #
@@ -34,6 +37,12 @@
 #   MAX_LEVEL         optional: the highest level any package may take in this release (patch, minor or major). Empty = no cap. A package
 #                     whose surface says a higher level takes the cap; levels.json keeps what the surface said (capped_from) for the
 #                     release notes. It is the release owner's decision, stated by the setting max_level; nothing in the job sets it.
+#   RUN_TESTS         (build phase) true or false: whether the members' tests run in this job. The real run's gate (stable and candidate) requires a green CI run
+#                     of the commit, which runs every test, so the workflow's declared default is false.
+#   (keep and reuse phases) SHA, BRANCH, LINE, BUMP, BUNDLE_ID, BASELINE_FILE (may be empty), MAX_LEVEL (may be empty), LEVELS_MAX_ROUNDS,
+#                     RUN_TESTS: the key a dry run is matched on (tools/versioning/dryrun.py). reuse also needs GITHUB_REPOSITORY, a GH_TOKEN
+#                     that may read the repository's workflow artifacts, and DRYRUN_DIR (where the artifact is downloaded).
+#   KEPT_DIR          (keep) the folder the dry run's results are staged in, uploaded by the workflow as release-dryrun-<SHA>
 #   WORK_DIR          where the plan files and reports go (not the packages)
 #   GITHUB_OUTPUT     GitHub's step output file
 #
@@ -234,19 +243,26 @@ print(len(held) + 1)' "$BUNDLE_ID" "$number") || fail "could not read the candid
     || fail "no members in the decided $WORK_DIR/plan.json."
   [ -n "$members" ] || fail "decide left no package to build, but the plan had members."
   echo "release-allocated: versions decided for $(echo "$members" | tr ',' '\n' | wc -l) package(s); the bundle is $version."
+  # The same three lines go into a file the dry run keeps: the real run puts them back as this step's outputs instead of deciding again.
   {
     echo "members=$members"
     echo "number=$number"
     echo "version=$version"
-  } >> "$GITHUB_OUTPUT"
+  } | tee "$WORK_DIR/levels-outputs.env" >> "$GITHUB_OUTPUT"
 }
 
 build() {
-  require MEMBERS WORK_DIR
+  require MEMBERS WORK_DIR RUN_TESTS
+  local skip_tests=()
+  case "$RUN_TESTS" in
+    true) ;;
+    false) skip_tests=(--skip-tests); echo "release-allocated: the members' tests are not run in this job (RUN_TESTS=false); the real run requires a green CI run of the commit (RELEASE-UNPROVEN-1/2)." ;;
+    *) fail "RUN_TESTS is '$RUN_TESTS' but must be true or false." ;;
+  esac
   rm -rf "$ARTIFACTS"
   mkdir -p "$ARTIFACTS"
   python3 "$TOOLS/buildset.py" prepare --repo . --set "$MEMBERS" --versions "$WORK_DIR/versions.json" \
-    --trees "$WORK_DIR/trees.json" --package-versions "$WORK_DIR/package-versions.json" --assembly-versions "$WORK_DIR/assembly-versions.json" > "$WORK_DIR/prepare.json" \
+    --trees "$WORK_DIR/trees.json" --package-versions "$WORK_DIR/package-versions.json" --assembly-versions "$WORK_DIR/assembly-versions.json" "${skip_tests[@]}" > "$WORK_DIR/prepare.json" \
     || fail "buildset.py could not prepare the build set; its message is above and nothing was written."
   echo "release-allocated: build set prepared; embeds outside the set: $(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["embeds_not_in_set"])' "$WORK_DIR/prepare.json")"
 
@@ -327,6 +343,43 @@ PY
   echo "release-allocated: bindings ok; the floors for the next release are in $WORK_DIR/next-floors.json."
 }
 
+# The key a dry run is matched on: the commit and every input the release was decided from (tools/versioning/dryrun.py).
+write_key() {
+  require SHA BRANCH LINE BUMP BUNDLE_ID LEVELS_MAX_ROUNDS RUN_TESTS
+  python3 "$TOOLS/dryrun.py" key --out "$1" --sha "$SHA" --branch "$BRANCH" --line "$LINE" --bump "$BUMP" --bundle-id "$BUNDLE_ID" \
+    --baseline-file "${BASELINE_FILE:-}" --max-level "${MAX_LEVEL:-}" --levels-max-rounds "$LEVELS_MAX_ROUNDS" --run-tests "$RUN_TESTS" \
+    || fail "dryrun.py could not write the key of this release; its message is above."
+}
+
+keep() {
+  require WORK_DIR KEPT_DIR
+  write_key "$WORK_DIR/dryrun-key.json"
+  python3 "$TOOLS/dryrun.py" package --key "$WORK_DIR/dryrun-key.json" --work-dir "$WORK_DIR" --artifacts "$ARTIFACTS" --out "$KEPT_DIR" \
+    || fail "could not stage the dry run's results for the real run; its message is above."
+}
+
+reuse() {
+  require WORK_DIR GITHUB_OUTPUT GITHUB_REPOSITORY SHA GH_TOKEN DRYRUN_DIR
+  local name="release-dryrun-$SHA" run_id
+  rm -rf "$DRYRUN_DIR"
+  run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name&per_page=100" \
+    --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | reverse | .[0].workflow_run.id // empty') \
+    || fail "could not list the workflow artifacts of $GITHUB_REPOSITORY; its message is above. Nothing is rebuilt silently."
+  [ -n "$run_id" ] || fail "no dry run of commit $SHA has left its results (artifact $name, not expired). Nothing is rebuilt silently. Run this workflow with dry_run=true on this commit first, or set reuse_dry_run to never to build in this run."
+  echo "release-allocated: taking the results of dry run $run_id (artifact $name)."
+  gh run download "$run_id" -R "$GITHUB_REPOSITORY" -n "$name" -D "$DRYRUN_DIR" \
+    || fail "could not download artifact $name of run $run_id; its message is above. Nothing is rebuilt silently."
+  write_key "$WORK_DIR/real-key.json"
+  python3 "$TOOLS/dryrun.py" verify --dir "$DRYRUN_DIR" --expect "$WORK_DIR/real-key.json" --work-dir "$WORK_DIR" \
+    || fail "dry run $run_id does not belong to this release (listed above). Nothing is rebuilt silently. Run the dry run again on this commit with the same inputs, or set reuse_dry_run to never."
+  rm -rf "$ARTIFACTS"
+  python3 "$TOOLS/dryrun.py" restore --dir "$DRYRUN_DIR" --work-dir "$WORK_DIR" --artifacts "$ARTIFACTS" \
+    || fail "could not restore the dry run's results; its message is above."
+  # The levels step's outputs (members, number, version), as the dry run decided them.
+  cat "$WORK_DIR/levels-outputs.env" >> "$GITHUB_OUTPUT"
+  echo "release-allocated: the dry run's levels, packages and bindings are in place; they are not made again."
+}
+
 decide() {
   require WORK_DIR GITHUB_OUTPUT
   python3 "$TOOLS/pushcheck.py" check --packages "$ARTIFACTS" --json > "$WORK_DIR/decide.json"
@@ -375,6 +428,6 @@ bundle() {
 }
 
 case "${1:-}" in
-  plan|levels|build|bindings|decide|bundle) "$1" ;;
-  *) fail "unknown phase '${1:-}': plan, levels, build, bindings, decide or bundle." ;;
+  plan|levels|build|bindings|keep|reuse|decide|bundle) "$1" ;;
+  *) fail "unknown phase '${1:-}': plan, levels, build, bindings, keep, reuse, decide or bundle." ;;
 esac

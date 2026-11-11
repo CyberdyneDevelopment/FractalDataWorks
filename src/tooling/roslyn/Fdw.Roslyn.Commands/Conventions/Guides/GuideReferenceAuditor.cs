@@ -32,7 +32,7 @@ internal static class GuideReferenceAuditor
                 findings.Add(new AuditFindingInfo
                 {
                     Guide = guideId,
-                    Kind = AuditFindingKind.ForbiddenReference,
+                    Kind = AuditFindingKinds.ForbiddenReference,
                     Subject = assembly,
                     Message = $"Project '{projectName}' references '{assembly}', which this guide forbids: {rule.Why}",
                     Cite = rule.Cite
@@ -47,7 +47,7 @@ internal static class GuideReferenceAuditor
             findings.Add(new AuditFindingInfo
             {
                 Guide = guideId,
-                Kind = AuditFindingKind.MissingReference,
+                Kind = AuditFindingKinds.MissingReference,
                 Subject = rule.Assembly,
                 Message = $"Project '{projectName}' does not reference '{rule.Assembly}', which this guide requires: {rule.Why}",
                 Cite = rule.Cite

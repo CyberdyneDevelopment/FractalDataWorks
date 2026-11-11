@@ -12,7 +12,7 @@ public sealed class SqlProcedureResult
     /// <param name="outputs">The OUTPUT values, in argument order.</param>
     public SqlProcedureResult(IReadOnlyList<SqlProcedureOutput> outputs)
     {
-        Outputs = outputs ?? throw new ArgumentNullException(nameof(outputs));
+        Outputs = outputs;
     }
 
     /// <summary>Gets the OUTPUT values.</summary>

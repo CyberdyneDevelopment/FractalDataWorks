@@ -48,8 +48,8 @@ internal sealed class JwtIssuanceResolver : IDisposable
     /// <param name="logger">The logger.</param>
     public JwtIssuanceResolver(IServiceProvider services, IAuthenticationContextAccessor authContextAccessor, ILogger<JwtIssuanceResolver>? logger = null)
     {
-        _services = services ?? throw new ArgumentNullException(nameof(services));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _services = services;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<JwtIssuanceResolver>.Instance;
     }
 

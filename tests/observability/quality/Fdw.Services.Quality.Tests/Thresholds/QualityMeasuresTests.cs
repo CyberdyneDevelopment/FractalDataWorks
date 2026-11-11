@@ -8,12 +8,12 @@ namespace Fdw.Services.Quality.Tests.Thresholds;
 /// <summary>Tests for the measures the quality threshold types take (FDW-3935): the rule logic of the quality rule evaluator, as measures a threshold then judges.</summary>
 public sealed class QualityMeasuresTests
 {
-    private static IReadOnlyDictionary<string, object?> Row(object? age, object? name = null) => new Dictionary<string, object?> { ["Age"] = age, ["Name"] = name };
+    private static Dictionary<string, object?> Row(object? age, object? name = null) => new Dictionary<string, object?> { ["Age"] = age, ["Name"] = name };
 
     private static QualityMeasureInput Input(IReadOnlyDictionary<string, object?> parameters, params IReadOnlyDictionary<string, object?>[] rows) =>
         new("T", parameters, rows, TimeSpan.FromSeconds(1));
 
-    private static IReadOnlyDictionary<string, object?> Parameters(params (string Name, object? Value)[] pairs) => pairs.ToDictionary(pair => pair.Name, pair => pair.Value);
+    private static Dictionary<string, object?> Parameters(params (string Name, object? Value)[] pairs) => pairs.ToDictionary(pair => pair.Name, pair => pair.Value);
 
     [Fact]
     [Trait("Priority", "P0")]

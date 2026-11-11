@@ -35,7 +35,7 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
     private readonly IExecutionTracker _runs;
     private readonly IPipelineProjectMemberships _projects;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetMapEndpointBase"/> class.</summary>
     protected GetMapEndpointBase(
         ILogger<GetMapEndpointBase> logger,
         IDataSetConfigurationProvider dataSets,
@@ -50,8 +50,8 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
         IPipelineProjectMemberships projects)
         : base(logger)
     {
-        _runs = runs ?? throw new ArgumentNullException(nameof(runs));
-        _projects = projects ?? throw new ArgumentNullException(nameof(projects));
+        _runs = runs;
+        _projects = projects;
         _sources = new MapSources(dataSets, dataStores, pipelines, variations, categories);
         _scopes = new MapScopeSelector(workspaces, access, MapLogger);
         _authorization = authorization;

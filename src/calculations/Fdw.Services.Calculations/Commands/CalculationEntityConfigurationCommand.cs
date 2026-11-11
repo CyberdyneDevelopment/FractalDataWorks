@@ -9,6 +9,6 @@ namespace Fdw.Services.Calculations.Commands;
 [TypeOption(typeof(ConfigurationCommands), "CalculationEntity")]
 public sealed class CalculationEntityConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="CalculationEntityConfigurationCommand"/> class.</summary>
     public CalculationEntityConfigurationCommand() : base("CalculationEntity") { }
 }

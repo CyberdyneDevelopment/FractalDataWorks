@@ -11,15 +11,6 @@ public class JsonStreamRowSourceTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenStreamIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new JsonStreamRowSource(null!, new JsonRowSourceOptions() { RecordsAreLines = false, ContinueOnError = true, PropertyNameCaseInsensitive = true, FlattenNestedObjects = false, FlattenSeparator = ".", BufferSize = 16 * 1024, MaxDepth = 64, MaxStringLength = 128 * 1024 * 1024, AllowTrailingCommas = true }));
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
     public async Task ReadReturnsRowsFromJsonArray()
     {
         // Arrange

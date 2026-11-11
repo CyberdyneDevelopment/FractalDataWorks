@@ -33,7 +33,7 @@ public abstract class ListRolesEndpointBase : CrudPageEndpointBase<RoleDomainCon
     /// <param name="roleProvider">Reads the page of roles.</param>
     protected ListRolesEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider) : base(logger)
     {
-        _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
+        _roleProvider = roleProvider;
     }
 
     /// <summary>Gets the resource name used for the route: <c>/roles</c>.</summary>

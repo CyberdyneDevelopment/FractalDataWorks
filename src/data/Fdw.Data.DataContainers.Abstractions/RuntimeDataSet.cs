@@ -22,8 +22,8 @@ public class RuntimeDataSet : IRuntimeDataSet
     /// </summary>
     private RuntimeDataSet(string name, IDataSchema schema, IEnumerable<IDataRow> rows, bool isSuccess, string? message = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        _schema = schema ?? throw new ArgumentNullException(nameof(schema));
+        Name = name;
+        _schema = schema;
         _rows = rows?.ToList() ?? throw new ArgumentNullException(nameof(rows));
         _isSuccess = isSuccess;
         _errorMessage = message;

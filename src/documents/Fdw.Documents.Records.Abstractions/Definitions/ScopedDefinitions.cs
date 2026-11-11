@@ -41,11 +41,6 @@ public static class ScopedDefinitions
     public static IGenericResult<EffectiveDefinition<T>> Effective<T>(IReadOnlyList<T> rows, Guid tenantId, Guid? organizationId, string code)
         where T : IScopedDefinition
     {
-        if (rows is null)
-        {
-            throw new ArgumentNullException(nameof(rows));
-        }
-
         if (string.IsNullOrWhiteSpace(code))
         {
             throw new ArgumentException("The code must be named.", nameof(code));
@@ -91,11 +86,6 @@ public static class ScopedDefinitions
     public static IGenericResult<IReadOnlyList<EffectiveDefinition<T>>> All<T>(IReadOnlyList<T> rows, Guid tenantId, Guid? organizationId)
         where T : IScopedDefinition
     {
-        if (rows is null)
-        {
-            throw new ArgumentNullException(nameof(rows));
-        }
-
         var inForce = new List<EffectiveDefinition<T>>();
         foreach (var code in rows.Where(row => Bears(row, tenantId, organizationId)).Select(row => row.Code).Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -122,11 +112,6 @@ public static class ScopedDefinitions
     public static IGenericResult MayDefine<T>(IReadOnlyList<T> rows, Guid? tenantId, Guid? organizationId, string code, bool locked)
         where T : IScopedDefinition
     {
-        if (rows is null)
-        {
-            throw new ArgumentNullException(nameof(rows));
-        }
-
         if (string.IsNullOrWhiteSpace(code))
         {
             throw new ArgumentException("The code must be named.", nameof(code));

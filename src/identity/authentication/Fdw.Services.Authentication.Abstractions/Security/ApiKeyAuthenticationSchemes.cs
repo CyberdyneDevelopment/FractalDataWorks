@@ -26,8 +26,6 @@ public static class ApiKeyAuthenticationSchemes
     public static bool Authenticated(ClaimsPrincipal principal)
     {
         // Explicit, not ArgumentNullException.ThrowIfNull: this project targets netstandard2.0, which does not have it.
-        if (principal is null)
-            throw new ArgumentNullException(nameof(principal));
 
         return principal.Identities.Any(identity =>
             identity.IsAuthenticated

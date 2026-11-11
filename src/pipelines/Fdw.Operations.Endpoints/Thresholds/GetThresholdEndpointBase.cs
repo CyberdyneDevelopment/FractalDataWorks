@@ -18,7 +18,7 @@ public abstract class GetThresholdEndpointBase : CrudGetEndpointBase<ThresholdNa
     protected GetThresholdEndpointBase(ILogger<GetThresholdEndpointBase> logger, IThresholdConfigurationProvider thresholds)
         : base(logger)
     {
-        _thresholds = thresholds ?? throw new ArgumentNullException(nameof(thresholds));
+        _thresholds = thresholds;
     }
 
     /// <inheritdoc />

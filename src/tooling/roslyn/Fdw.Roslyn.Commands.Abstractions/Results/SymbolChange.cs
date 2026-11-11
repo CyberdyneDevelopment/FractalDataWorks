@@ -30,10 +30,10 @@ public sealed class SymbolChange
         string? newAssembly,
         string? relativePosition)
     {
-        OldFullyQualifiedName = oldFullyQualifiedName ?? throw new ArgumentNullException(nameof(oldFullyQualifiedName));
-        NewFullyQualifiedName = newFullyQualifiedName ?? throw new ArgumentNullException(nameof(newFullyQualifiedName));
-        ChangeType = changeType ?? throw new ArgumentNullException(nameof(changeType));
-        SymbolKind = symbolKind ?? throw new ArgumentNullException(nameof(symbolKind));
+        OldFullyQualifiedName = oldFullyQualifiedName;
+        NewFullyQualifiedName = newFullyQualifiedName;
+        ChangeType = changeType;
+        SymbolKind = symbolKind;
         OldFilePath = oldFilePath;
         NewFilePath = newFilePath;
         OldAssembly = oldAssembly;

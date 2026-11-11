@@ -16,6 +16,9 @@
               release recorded for that assembly.
   --assembly-versions FILE
               with --package-versions: JSON {member: x.y.z.w}, one AssemblyVersion per member; no default.
+  --skip-tests
+              leave the members' tests out of the commands: only build and pack. Without it the tests run, as before. The allocated
+              release job passes it unless the setting run_tests asks for them (FDW-5175).
 
 For each member's project file, and for the project file of its tests (tests/<Name>.Tests), a <ProjectReference> to a
 project outside the set becomes a <PackageReference> to the published package. References to projects in the set, to
@@ -152,9 +155,9 @@ def tree_targets(package_versions=None, assembly_versions=None):
 """
 
 
-def commands(repo, members, release, tests, projects):
-    """The dotnet commands that build and pack every member, then test the members' tests. Each is a list of arguments,
-    to run from the folder that holds src/ and tests/ (public/ in the repository, the root on the mirror)."""
+def commands(repo, members, release, tests, projects, run_tests=True):
+    """The dotnet commands that build and pack every member, then (unless run_tests is False) test the members' tests. Each is a list of
+    arguments, to run from the folder that holds src/ and tests/ (public/ in the repository, the root on the mirror)."""
     work = os.path.join(repo, BUILD_DIR)
     extra = ([f"-p:Version={release}"] if release else []) + [f"-p:CustomAfterMicrosoftCommonTargets={os.path.join(work, TARGETS)}",
                                                                f"-p:FdwBuildSetDir={work}{os.sep}"]
@@ -165,6 +168,8 @@ def commands(repo, members, release, tests, projects):
     for m in members:
         rel = projects[("src", m)]["rel"]
         packs += [["dotnet", "build", rel, "-c", "Release", *extra], ["dotnet", "pack", rel, "-c", "Release", "--no-build", *extra]]
+    if not run_tests:
+        return packs
     return packs + [["dotnet", "test", projects[("tests", t)]["rel"], "-c", "Release"] for t in tests]
 
 
@@ -192,9 +197,10 @@ def check_package_versions(members, release, package_versions):
         raise BuildSetError(f"not a version (major.minor.patch with an optional prerelease tail): {bad}")
 
 
-def prepare(repo, members, versions, trees, release, package_versions=None, assembly_versions=None):
+def prepare(repo, members, versions, trees, release, package_versions=None, assembly_versions=None, run_tests=True):
     """Rewrite the checkout and return a report. Raises BuildSetError, before writing anything, when it cannot be exact.
-    The version is `release` (one number for every member) or `package_versions` ({member: version}); exactly one."""
+    The version is `release` (one number for every member) or `package_versions` ({member: version}); exactly one.
+    run_tests=False leaves the members' tests out of the commands (the real run requires a green CI run of the commit unless the job tests it)."""
     check_package_versions(members, release, package_versions)
     if package_versions:
         missing = sorted(set(package_versions) - set(assembly_versions or {}))
@@ -268,7 +274,7 @@ def prepare(repo, members, versions, trees, release, package_versions=None, asse
     return {"members": list(members), "tests": tests, "release": release, "package_versions": dict(sorted((package_versions or {}).items())),
             "rewritten": sorted(k[1] for k in rewrites), "swapped": dict(sorted(swapped.items())),
             "kept": kept, "versions_added": {pid: versions[pid] for pid in sorted(ids)},
-            "embeds_not_in_set": silent, "commands": commands(repo, members, release, tests, projects), "run_from": os.path.relpath(public, repo)}
+            "embeds_not_in_set": silent, "commands": commands(repo, members, release, tests, projects, run_tests), "run_from": os.path.relpath(public, repo)}
 
 
 def main(argv=None):
@@ -281,6 +287,7 @@ def main(argv=None):
     ap.add_argument("--release")
     ap.add_argument("--package-versions")
     ap.add_argument("--assembly-versions")
+    ap.add_argument("--skip-tests", action="store_true")
     a = ap.parse_args(argv)
     if a.package_versions and not a.assembly_versions:
         sys.exit("build set not prepared; nothing was written:\n  --package-versions needs --assembly-versions FILE: the AssemblyVersion of each member")
@@ -295,7 +302,7 @@ def main(argv=None):
         with open(a.assembly_versions, encoding="utf-8") as f:
             assembly_versions = json.load(f)
     try:
-        report = prepare(a.repo, [m for m in a.set.split(",") if m], versions, trees, a.release, package_versions, assembly_versions)
+        report = prepare(a.repo, [m for m in a.set.split(",") if m], versions, trees, a.release, package_versions, assembly_versions, not a.skip_tests)
     except BuildSetError as e:
         sys.exit(f"build set not prepared; nothing was written:\n  {e}")
     print(json.dumps(report, indent=1))

@@ -64,9 +64,6 @@ public static class TdsValueReader
     /// <returns>True when the value was read; the reader's overrun is the caller's to check.</returns>
     public static bool TryRead(TdsPayloadReader reader, TdsTypeInfo typeInfo, out object? value, out string? problem)
     {
-        ArgumentNullException.ThrowIfNull(reader);
-        ArgumentNullException.ThrowIfNull(typeInfo);
-
         if (!Readers.TryGetValue(typeInfo.TypeId, out var read))
         {
             value = null;

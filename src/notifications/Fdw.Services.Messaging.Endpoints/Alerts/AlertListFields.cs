@@ -43,11 +43,6 @@ public static class AlertListFields
     public static async Task<IGenericResult<string>> Attach(
         IAlertActionService alerts, string kind, string listJson, ILogger logger, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(alerts);
-        ArgumentNullException.ThrowIfNull(kind);
-        ArgumentNullException.ThrowIfNull(listJson);
-        ArgumentNullException.ThrowIfNull(logger);
-
         MessagingEndpointLog.TraceAlertEndpoint(logger, "attach to a list");
 
         var read = Read(kind, listJson, logger);
@@ -73,9 +68,9 @@ public static class AlertListFields
         {
             parsed = JsonNode.Parse(listJson);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return GenericResult<ReadList>.Failure(MessagingEndpointLog.AlertListNotAList(logger, kind));
+            return GenericResult<ReadList>.Failure(MessagingEndpointLog.AlertListNotJson(logger, ex, kind));
         }
 
         if (parsed is not JsonObject body || body[ItemsProperty] is not JsonArray items)

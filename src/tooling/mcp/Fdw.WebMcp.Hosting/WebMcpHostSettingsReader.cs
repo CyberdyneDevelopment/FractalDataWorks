@@ -36,8 +36,8 @@ public sealed class WebMcpHostSettingsReader
         ISecretManagerProvider secretManagers,
         ILogger<WebMcpHostSettingsReader>? logger = null)
     {
-        _configurations = configurations ?? throw new ArgumentNullException(nameof(configurations));
-        _secretManagers = secretManagers ?? throw new ArgumentNullException(nameof(secretManagers));
+        _configurations = configurations;
+        _secretManagers = secretManagers;
         _logger = logger ?? NullLogger<WebMcpHostSettingsReader>.Instance;
     }
 

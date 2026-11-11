@@ -18,7 +18,6 @@ public static class TargetKindRules
     /// <returns>A problem for each setting that is wrong, by its name in the body, or an empty list.</returns>
     public static IReadOnlyList<(string Field, string Message)> Problems(PipelineComponentConfiguration component)
     {
-        ArgumentNullException.ThrowIfNull(component);
         var problems = new List<(string, string)>();
         if (component.TargetKind is not { } named)
         {
@@ -72,7 +71,6 @@ public static class TargetKindRules
     /// <returns>A problem for each setting that is wrong, by its name in the body, or an empty list.</returns>
     public static IReadOnlyList<(string Field, string Message)> WriteProblems(PipelineComponentConfiguration component)
     {
-        ArgumentNullException.ThrowIfNull(component);
         var label = $"destination '{component.Name}'";
         var problems = new List<(string, string)>();
         if (component.TargetKind is not { } named)

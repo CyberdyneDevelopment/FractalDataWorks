@@ -44,7 +44,6 @@ public static class GraphPayloadReader
     /// <returns>The stored configuration, or the refusal.</returns>
     public static IGenericResult<GraphPipelineConfiguration> Read(GraphPayload payload, Guid id, IReadOnlyDictionary<string, Guid> transformationIds)
     {
-        ArgumentNullException.ThrowIfNull(payload);
         if (payload.IsEnabled is null)
         {
             return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state isEnabled");
@@ -94,8 +93,6 @@ public static class GraphPayloadReader
     public static IGenericResult<GraphPipelineConfiguration> ReadDraft(
         GraphPayload payload, Guid id, List<GraphProblem> problems, IReadOnlyDictionary<string, Guid> transformationIds)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        ArgumentNullException.ThrowIfNull(problems);
         return Place(payload, id, problems, transformationIds);
     }
 

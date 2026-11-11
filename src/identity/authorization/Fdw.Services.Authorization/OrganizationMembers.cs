@@ -39,10 +39,10 @@ public sealed class OrganizationMembers : IOrganizationMembers
         IGrantRule grantRule,
         ILogger<OrganizationMembers>? logger)
     {
-        _scope = scope ?? throw new ArgumentNullException(nameof(scope));
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _access = access ?? throw new ArgumentNullException(nameof(access));
-        _grantRule = grantRule ?? throw new ArgumentNullException(nameof(grantRule));
+        _scope = scope;
+        _roles = roles;
+        _access = access;
+        _grantRule = grantRule;
         _logger = logger ?? NullLogger<OrganizationMembers>.Instance;
     }
 

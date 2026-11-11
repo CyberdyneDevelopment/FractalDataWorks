@@ -51,12 +51,12 @@ public sealed class PermissionHolders : IPermissionHolders
         IAuthenticationContextAccessor authContext,
         ILogger<PermissionHolders>? logger)
     {
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _rolePermissions = rolePermissions ?? throw new ArgumentNullException(nameof(rolePermissions));
-        _userRoles = userRoles ?? throw new ArgumentNullException(nameof(userRoles));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _roles = roles;
+        _permissions = permissions;
+        _rolePermissions = rolePermissions;
+        _userRoles = userRoles;
+        _tenants = tenants;
+        _authContext = authContext;
         _logger = logger ?? NullLogger<PermissionHolders>.Instance;
     }
 

@@ -168,7 +168,7 @@ public sealed class PermissionClaimsPreProcessorTests
         context.HttpContext.Response.Body.Position = 0;
         using var body = await JsonDocument.ParseAsync(context.HttpContext.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
         body.RootElement.GetProperty("referenceId").GetString().ShouldBe(context.HttpContext.TraceIdentifier);
-        body.RootElement.GetProperty("detail").GetString().ShouldContain("connections:delete");
+        body.RootElement.GetProperty("detail").GetString().ShouldNotBeNull().ShouldContain("connections:delete");
     }
 
     [Fact]

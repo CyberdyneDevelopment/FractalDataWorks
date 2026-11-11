@@ -24,7 +24,7 @@ public sealed class FlowActionComponent : IFlowComponent, IFlowStepBound, IFlowS
     /// <param name="step">The step the component runs.</param>
     public FlowActionComponent(IFlowStep step)
     {
-        Step = step ?? throw new ArgumentNullException(nameof(step));
+        Step = step;
     }
 
     /// <summary>Gets the step the component runs.</summary>
@@ -40,12 +40,12 @@ public sealed class FlowActionComponent : IFlowComponent, IFlowStepBound, IFlowS
     public IReadOnlyList<string> Outputs => [];
 
     /// <inheritdoc />
-    void IFlowStepBound.Bind(FlowStepContext context) => _context = context ?? throw new ArgumentNullException(nameof(context));
+    void IFlowStepBound.Bind(FlowStepContext context) => _context = context;
 
     /// <inheritdoc />
     void IFlowStageBound.BindStages(FlowStageRecords records, int stage)
     {
-        _records = records ?? throw new ArgumentNullException(nameof(records));
+        _records = records;
         _stage = stage;
     }
 

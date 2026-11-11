@@ -25,9 +25,6 @@ public static class InMemoryQuery
     /// <returns>The page: <see cref="QueryPlan.Skip"/> rows skipped and at most one past <see cref="QueryPlan.Take"/> kept, so a following page can be reported.</returns>
     public static List<Dictionary<string, object?>> Apply(IEnumerable<Dictionary<string, object?>> rows, QueryPlan plan)
     {
-        ArgumentNullException.ThrowIfNull(rows);
-        ArgumentNullException.ThrowIfNull(plan);
-
         var named = rows.Select(row => new Dictionary<string, object?>(row, StringComparer.OrdinalIgnoreCase));
         var kept = plan.InMemoryFilter is { } filter ? named.Where(row => Matches(row, filter)) : named;
         var ordered = plan.InMemoryOrdering is { } ordering ? Sort(kept, ordering) : kept;

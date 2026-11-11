@@ -71,24 +71,15 @@ public static class UserPreferenceChanges
         return GenericResult.Success();
     }
 
-    // A time zone is good exactly when the server can resolve it, which is what everything that later reads it does.
+    // A time zone is good exactly when the server can resolve it, which is what everything that later reads it does. Asked without a throw
+    // (FDW-5189): a zone the server does not have, or whose data it cannot read, is not one it resolves.
     private static IGenericResult TimeZoneStated(string? timeZoneId, ILogger logger)
     {
         if (timeZoneId is null) return GenericResult.Success();
         if (string.IsNullOrWhiteSpace(timeZoneId)) return GenericResult.Failure(UserEndpointLog.TimeZoneEmpty(logger));
 
-        try
-        {
-            TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-            return GenericResult.Success();
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return GenericResult.Failure(UserEndpointLog.TimeZoneNotKnown(logger, timeZoneId));
-        }
-        catch (InvalidTimeZoneException)
-        {
-            return GenericResult.Failure(UserEndpointLog.TimeZoneNotKnown(logger, timeZoneId));
-        }
+        return TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out _)
+            ? GenericResult.Success()
+            : GenericResult.Failure(UserEndpointLog.TimeZoneNotKnown(logger, timeZoneId));
     }
 }

@@ -25,7 +25,7 @@ public sealed class WorkspaceFoundingPolicy : IWorkspaceFoundingPolicy
     /// <param name="logger">The logger.</param>
     public WorkspaceFoundingPolicy(IEffectiveSettingsProvider settings, ILogger<WorkspaceFoundingPolicy>? logger = null)
     {
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _settings = settings;
         _logger = logger ?? NullLogger<WorkspaceFoundingPolicy>.Instance;
     }
 

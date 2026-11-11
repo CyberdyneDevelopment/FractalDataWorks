@@ -68,7 +68,6 @@ public sealed class WebMcpMcpHosting
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        ArgumentNullException.ThrowIfNull(builder);
         var services = builder.Services;
         services.TryAddSingleton<WebMcpMcpCatalogue>();
         services.TryAddSingleton<WebMcpToolInvoker>();
@@ -112,7 +111,6 @@ public sealed class WebMcpMcpHosting
             return GenericResult<IHost>.Success(host);
         }
 
-        ArgumentNullException.ThrowIfNull(host);
         ILogger logger = loggerFactory?.CreateLogger<WebMcpMcpHosting>() ?? (ILogger)NullLogger.Instance;
         if (host is not IEndpointRouteBuilder endpoints)
         {

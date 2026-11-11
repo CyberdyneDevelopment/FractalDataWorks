@@ -22,7 +22,7 @@ public interface IGenericCollectionBuilder<TId>
     /// <param name="mode">The collection generation mode to use.</param>
     /// <returns>The current builder instance for method chaining.</returns>
     /// <exception cref="ArgumentException">Thrown when an invalid generation mode is specified.</exception>
-    IGenericCollectionBuilder<TId> Configure(CollectionGenerationMode mode);
+    IGenericCollectionBuilder<TId> Configure(ICollectionGenerationMode mode);
 
     /// <summary>
     /// Sets the type definition that contains metadata about the type to be processed.

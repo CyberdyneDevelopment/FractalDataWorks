@@ -13,8 +13,8 @@ public sealed class CsprojChangeDetail
     /// </summary>
     public CsprojChangeDetail(string csprojPath, IReadOnlyList<ReferencePathChange> referenceChanges)
     {
-        CsprojPath = csprojPath ?? throw new ArgumentNullException(nameof(csprojPath));
-        ReferenceChanges = referenceChanges ?? throw new ArgumentNullException(nameof(referenceChanges));
+        CsprojPath = csprojPath;
+        ReferenceChanges = referenceChanges;
     }
 
     /// <summary>

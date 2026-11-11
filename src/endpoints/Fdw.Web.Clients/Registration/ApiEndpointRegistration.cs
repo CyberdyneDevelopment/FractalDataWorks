@@ -43,13 +43,11 @@ public static class ApiEndpointRegistration
     /// <param name="services">The service collection.</param>
     /// <param name="clientName">The API client's name, which is also the connection's name.</param>
     /// <returns>The service collection.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="clientName"/> is empty.</exception>
     public static IServiceCollection AddApiHttpClient(
         this IServiceCollection services,
         string clientName)
     {
-        if (services is null) throw new ArgumentNullException(nameof(services));
         if (string.IsNullOrEmpty(clientName)) throw new ArgumentException("A client name is required.", nameof(clientName));
 
         // Why here: ResolveEndpoint elevates to system context to read the connection, so this client

@@ -57,8 +57,6 @@ public class AdministrativeChangeResponse
     /// <returns>The response.</returns>
     public static AdministrativeChangeResponse Of(AdministrativeChangeRecord record)
     {
-        ArgumentNullException.ThrowIfNull(record);
-
         return new AdministrativeChangeResponse
         {
             Id = record.Id,

@@ -28,16 +28,13 @@ public sealed class TagScope : ITagScope
     /// <param name="logger">The logger.</param>
     public TagScope(IWorkspaceConfigurationProvider workspaces, ILogger<TagScope>? logger = null)
     {
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
+        _workspaces = workspaces;
         _logger = logger ?? NullLogger<TagScope>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult> Allows(TagDomainConfiguration tag, ITaggableKind kind, Guid thingId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(tag);
-        ArgumentNullException.ThrowIfNull(kind);
-
         if (string.Equals(tag.OwnerKind, TagOwnerKinds.Tenant.Name, StringComparison.Ordinal)) return GenericResult.Success();
         if (kind.WorkspaceResourceKind.Length == 0) return Refuse(tag, kind, thingId, "this kind is in no workspace, so it takes tenant tags only");
 

@@ -17,7 +17,7 @@ public abstract class GetScheduleEndpointBase<TConfig> : CrudGetEndpointBase<Sch
 {
     private readonly ScheduleConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetScheduleEndpointBase{TConfig}"/> class.</summary>
     protected GetScheduleEndpointBase(ILogger<GetScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

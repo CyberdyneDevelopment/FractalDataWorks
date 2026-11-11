@@ -32,21 +32,6 @@ public class ProcessorChainTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void Add_WithNullProcessor_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var chain = new ProcessorChain<string>();
-        var context = new TestContext();
-
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(
-            () => chain.Add<TestContext>(null!, context));
-        exception.ParamName.ShouldBe("processor");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void Add_MultipleProcessors_AddsAllToChain()
     {
         // Arrange
@@ -103,21 +88,6 @@ public class ProcessorChainTests
         // Assert
         result.ShouldBe(chain); // Still fluent
         chain.Count.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void AddIf_WhenConditionTrueAndNullProcessor_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var chain = new ProcessorChain<string>();
-        var context = new TestContext();
-
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(
-            () => chain.AddIf<TestContext>(true, null!, context));
-        exception.ParamName.ShouldBe("processor");
     }
 
     [Fact]

@@ -50,11 +50,6 @@ public static class ConfigurationCreateDefaults
         string ownerName,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(body);
-        ArgumentNullException.ThrowIfNull(configurationType);
-        ArgumentNullException.ThrowIfNull(isStated);
-        ArgumentNullException.ThrowIfNull(logger);
-
         foreach (var property in configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             if (isStated(property.Name))
@@ -101,7 +96,6 @@ public static class ConfigurationCreateDefaults
     /// <returns><see langword="true"/> when the body states the property.</returns>
     public static bool IsStated(JsonObject body, string property)
     {
-        ArgumentNullException.ThrowIfNull(body);
         return body.Any(member => member.Value is not null && string.Equals(member.Key, property, StringComparison.OrdinalIgnoreCase));
     }
 

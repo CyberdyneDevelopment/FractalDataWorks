@@ -14,7 +14,6 @@ public sealed class PipelineRunHolds : IPipelineRunHolds
     /// <inheritdoc/>
     public bool Hold(PipelineExecutionRequest request)
     {
-        ArgumentNullException.ThrowIfNull(request);
         return _held.TryAdd(request.ExecutionId, request);
     }
 

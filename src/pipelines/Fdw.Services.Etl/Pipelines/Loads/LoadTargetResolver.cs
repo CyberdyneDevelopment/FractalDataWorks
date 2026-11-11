@@ -97,7 +97,6 @@ public sealed class LoadTargetResolver
     /// <returns>The target, or a failure saying why the unit cannot be written to.</returns>
     public async Task<IGenericResult<LoadTarget>> ForUnit(LoadUnit unit, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(unit);
         var declared = unit.DataSet is not null
             ? await ForDataSet(unit.Owner, unit.DataSet, cancellationToken).ConfigureAwait(false)
             : await ForContainer(unit.Owner, unit.DataStore!, unit.Path!, unit.Container!, cancellationToken).ConfigureAwait(false);
@@ -123,8 +122,6 @@ public sealed class LoadTargetResolver
     /// <returns>The stage, or a failure saying why it cannot be used.</returns>
     public async Task<IGenericResult<LoadTarget>> ForStage(LoadUnit unit, LoadTarget target, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(unit);
-        ArgumentNullException.ThrowIfNull(target);
         if (string.IsNullOrWhiteSpace(unit.Row.StageContainer) || string.IsNullOrWhiteSpace(unit.Row.StageKeyColumn))
             return GenericResult<LoadTarget>.Failure(PipelineRunLog.StageNotNamed(_logger, unit.Owner));
 

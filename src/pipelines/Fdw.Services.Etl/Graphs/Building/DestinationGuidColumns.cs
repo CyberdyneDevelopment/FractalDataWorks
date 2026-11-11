@@ -36,9 +36,6 @@ public static class DestinationGuidColumns
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(dataSetFields);
-        ArgumentNullException.ThrowIfNull(logger);
         var problems = new List<GraphProblem>();
         foreach (var component in graph.Components.Where(component => component.LoadKind is not null && !string.IsNullOrWhiteSpace(component.DataSetName)))
         {

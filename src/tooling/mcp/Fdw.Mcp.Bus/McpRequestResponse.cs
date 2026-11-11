@@ -48,7 +48,6 @@ public static class McpRequestResponse
         ulong? causation = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(bus);
         if (timeout <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "A positive timeout is required.");
 

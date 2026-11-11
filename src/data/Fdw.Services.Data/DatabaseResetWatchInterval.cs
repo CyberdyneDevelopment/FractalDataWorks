@@ -21,9 +21,6 @@ public static class DatabaseResetWatchInterval
     /// <returns>The interval, or the failure naming the setting.</returns>
     public static IGenericResult<TimeSpan> Read(IEffectiveSettingsProvider settings, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var seconds = settings.GetEffectiveValue<int>(SettingDefinitions.ResetWatchIntervalSeconds);
         return seconds <= 0
             ? GenericResult<TimeSpan>.Failure(DatabaseResetWatcherLog.IntervalSettingMissing(logger, SettingDefinitions.ResetWatchIntervalSeconds))

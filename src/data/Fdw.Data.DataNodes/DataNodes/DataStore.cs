@@ -61,8 +61,6 @@ internal sealed class DataStore : IDataStore
 
     internal void SetPaths(IReadOnlyList<IDataNodePath> paths)
     {
-        if (paths is null)
-            throw new ArgumentNullException(nameof(paths));
         if (_pathsFinalized)
             throw new InvalidOperationException($"DataStore '{Name}' paths already finalized.");
 

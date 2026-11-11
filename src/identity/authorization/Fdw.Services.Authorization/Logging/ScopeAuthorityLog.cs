@@ -38,4 +38,9 @@ public static partial class ScopeAuthorityLog
     /// <summary>Logs that a check was refused because the caller holds the right at no scope that reaches the thing.</summary>
     [MessageLogging(EventId = 102782, Level = LogLevel.Warning, Message = "Refused '{right}' at {scope}: the caller holds it at no scope that reaches the thing")]
     public static partial IGenericMessage RightNotHeldAtScope(ILogger logger, string right, string scope);
+
+    /// <summary>Error: checking a right on a scope needs the right; an empty right is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "Checking a right on a scope needs the right, and the right given is empty")]
+    public static partial IGenericMessage ScopeRightRequired(ILogger logger);
 }

@@ -27,7 +27,7 @@ public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<Conn
     private readonly IConnectionProvider _connectionLookupProvider;
     private readonly ILogger<DeleteConnectionEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeleteConnectionEndpointBase"/> class.</summary>
     protected DeleteConnectionEndpointBase(
         IConnectionConfigurationProvider connectionProvider,
         IConnectionProvider connectionLookupProvider,

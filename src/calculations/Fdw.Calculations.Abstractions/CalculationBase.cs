@@ -34,9 +34,9 @@ public abstract class CalculationBase<TInput, TOutput> : ICalculation<TInput, TO
         string calculationType,
         string? description = null)
     {
-        CalculationId = calculationId ?? throw new ArgumentNullException(nameof(calculationId));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        CalculationType = calculationType ?? throw new ArgumentNullException(nameof(calculationType));
+        CalculationId = calculationId;
+        Name = name;
+        CalculationType = calculationType;
         Description = description;
     }
 

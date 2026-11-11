@@ -71,7 +71,7 @@ public class PlaceAncestryTests
     [Trait("Category", "Api")]
     public async Task AWorkspaceInAnOrganizationListsItselfItsOrganizationAndItsTenantNearestFirst()
     {
-        var steps = await Holding(workspaceOrganization: Finance, workspaceTenant: Tenant).Ancestry.Get(PlaceKinds.Workspace, Workspace);
+        var steps = await Holding(workspaceOrganization: Finance, workspaceTenant: Tenant).Ancestry.Get(PlaceKinds.Workspace, Workspace, TestContext.Current.CancellationToken);
 
         steps.IsSuccess.ShouldBeTrue();
         steps.Value!.ToArray().ShouldBe(new[]
@@ -87,7 +87,7 @@ public class PlaceAncestryTests
     [Trait("Category", "Api")]
     public async Task AnOrganizationListsItselfAndItsTenant()
     {
-        var steps = await Holding().Ancestry.Get(PlaceKinds.Organization, Finance);
+        var steps = await Holding().Ancestry.Get(PlaceKinds.Organization, Finance, TestContext.Current.CancellationToken);
 
         steps.Value!.ToArray().ShouldBe(new[]
         {
@@ -101,7 +101,7 @@ public class PlaceAncestryTests
     [Trait("Category", "Api")]
     public async Task ATenantListsOnlyItself()
     {
-        var steps = await Holding().Ancestry.Get(PlaceKinds.Tenant, Tenant);
+        var steps = await Holding().Ancestry.Get(PlaceKinds.Tenant, Tenant, TestContext.Current.CancellationToken);
 
         steps.Value!.ToArray().ShouldBe(new[] { new PlaceStep(PlaceKinds.Tenant, Tenant, 0) });
     }
@@ -111,7 +111,7 @@ public class PlaceAncestryTests
     [Trait("Category", "Api")]
     public async Task AWorkspaceThatDoesNotExistIsAFailureAndNotAnEmptyList()
     {
-        var steps = await Holding(workspace: false).Ancestry.Get(PlaceKinds.Workspace, Workspace);
+        var steps = await Holding(workspace: false).Ancestry.Get(PlaceKinds.Workspace, Workspace, TestContext.Current.CancellationToken);
 
         steps.IsFailure.ShouldBeTrue();
     }
@@ -121,7 +121,7 @@ public class PlaceAncestryTests
     [Trait("Category", "Api")]
     public async Task ADeletedOrganizationIsNotAPlace()
     {
-        var steps = await Holding(deletedOrganization: true).Ancestry.Get(PlaceKinds.Organization, Finance);
+        var steps = await Holding(deletedOrganization: true).Ancestry.Get(PlaceKinds.Organization, Finance, TestContext.Current.CancellationToken);
 
         steps.IsFailure.ShouldBeTrue();
     }
@@ -131,7 +131,7 @@ public class PlaceAncestryTests
     [Trait("Category", "Api")]
     public async Task ATenantThatDoesNotExistIsNotAPlace()
     {
-        var steps = await Holding(tenant: false).Ancestry.Get(PlaceKinds.Tenant, Tenant);
+        var steps = await Holding(tenant: false).Ancestry.Get(PlaceKinds.Tenant, Tenant, TestContext.Current.CancellationToken);
 
         steps.IsFailure.ShouldBeTrue();
     }
@@ -141,7 +141,7 @@ public class PlaceAncestryTests
     [Trait("Category", "Api")]
     public async Task AWorkspaceThatNamesNoOrganizationSitsNowhereAndIsAFailure()
     {
-        var steps = await Holding(workspaceTenant: Tenant).Ancestry.Get(PlaceKinds.Workspace, Workspace);
+        var steps = await Holding(workspaceTenant: Tenant).Ancestry.Get(PlaceKinds.Workspace, Workspace, TestContext.Current.CancellationToken);
 
         steps.IsFailure.ShouldBeTrue();
     }
@@ -156,7 +156,7 @@ public class PlaceAncestryTests
     {
         var fixture = Holding();
 
-        var steps = await fixture.Ancestry.Get(kind, Tenant);
+        var steps = await fixture.Ancestry.Get(kind, Tenant, TestContext.Current.CancellationToken);
 
         steps.IsFailure.ShouldBeTrue();
         fixture.Tenants.Verify(t => t.GetTenant(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -171,7 +171,7 @@ public class PlaceAncestryTests
         fixture.Workspaces.Setup(w => w.Get(Workspace, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IWorkspaceImplementationConfiguration>.Failure(new GenericMessage("the configuration store is down")));
 
-        var steps = await fixture.Ancestry.Get(PlaceKinds.Workspace, Workspace);
+        var steps = await fixture.Ancestry.Get(PlaceKinds.Workspace, Workspace, TestContext.Current.CancellationToken);
 
         steps.IsFailure.ShouldBeTrue();
     }
@@ -188,7 +188,7 @@ public class PlaceAncestryTests
         two.SetupGet(s => s.Kind).Returns("Two");
         two.Setup(s => s.Above(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<PlaceRef?>.Success(new PlaceRef("One", Tenant)));
 
-        var steps = await new PlaceAncestry([one.Object, two.Object], NullLogger<PlaceAncestry>.Instance).Get("One", Tenant);
+        var steps = await new PlaceAncestry([one.Object, two.Object], NullLogger<PlaceAncestry>.Instance).Get("One", Tenant, TestContext.Current.CancellationToken);
 
         steps.IsFailure.ShouldBeTrue();
     }
@@ -224,7 +224,7 @@ public class PlaceAncestryTests
         using var scope = provider.CreateScope();
         scope.ServiceProvider.GetServices<IPlaceParentSource>().Select(source => source.Kind).Order(StringComparer.Ordinal).ToArray()
             .ShouldBe(new[] { PlaceKinds.Organization, PlaceKinds.Tenant, PlaceKinds.Workspace });
-        var steps = await scope.ServiceProvider.GetRequiredService<IPlaceAncestry>().Get(PlaceKinds.Workspace, Workspace);
+        var steps = await scope.ServiceProvider.GetRequiredService<IPlaceAncestry>().Get(PlaceKinds.Workspace, Workspace, TestContext.Current.CancellationToken);
         steps.Value!.Select(step => step.Kind).ToArray().ShouldBe(new[] { PlaceKinds.Workspace, PlaceKinds.Organization, PlaceKinds.Tenant });
     }
 }

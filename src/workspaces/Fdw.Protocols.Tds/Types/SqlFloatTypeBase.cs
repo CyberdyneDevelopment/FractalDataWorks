@@ -32,7 +32,6 @@ public abstract class SqlFloatTypeBase : SqlDataTypeBase
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTypeIds.FloatN);
         writer.WriteByte(_width);
     }

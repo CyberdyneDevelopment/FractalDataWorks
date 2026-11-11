@@ -12,8 +12,8 @@ public sealed class AddProjectReferenceResult
     /// </summary>
     public AddProjectReferenceResult(string projectName, string referenceName, bool added, string? reason = null)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
-        ReferenceName = referenceName ?? throw new ArgumentNullException(nameof(referenceName));
+        ProjectName = projectName;
+        ReferenceName = referenceName;
         Added = added;
         Reason = reason;
     }

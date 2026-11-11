@@ -63,20 +63,17 @@ public sealed class DefaultWorkspacePlacement : IConfigurationPlacement
         string organizationPathName,
         ILogger<DefaultWorkspacePlacement>? logger = null)
     {
-        _authentication = authentication ?? throw new ArgumentNullException(nameof(authentication));
-        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
-        _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
-        _organizationPathName = organizationPathName ?? throw new ArgumentNullException(nameof(organizationPathName));
+        _authentication = authentication;
+        _policy = policy;
+        _dataStoreName = dataStoreName;
+        _pathName = pathName;
+        _organizationPathName = organizationPathName;
         _logger = logger ?? NullLogger<DefaultWorkspacePlacement>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult> Place(PlacementRequest request, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(unit);
-
         if (ReferenceEquals(WorkspaceResourceKinds.ByName(request.Kind), WorkspaceResourceKinds.NotFound))
             return UnknownKind(request);
 

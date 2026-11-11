@@ -70,9 +70,6 @@ public abstract partial class DataCommandTranslators : TypeCollectionBase<DataCo
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Translator name cannot be null or whitespace", nameof(name));
 
-        if (translatorType == null)
-            throw new ArgumentNullException(nameof(translatorType));
-
         // Check if the type implements IDataCommandTranslator<T> for some T
         var implementsTranslator = translatorType.GetInterfaces()
             .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDataCommandTranslator<>));

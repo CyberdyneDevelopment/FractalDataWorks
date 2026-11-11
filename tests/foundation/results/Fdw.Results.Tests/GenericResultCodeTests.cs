@@ -147,15 +147,6 @@ public class GenericResultCodeTests
         msg.Severity.ShouldBe(MessageSeverity.Error);
     }
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorWithNullCode_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => GenericResult.Success((IResultCode)null!));
-    }
-
     #endregion
 
     #region Chain Tests

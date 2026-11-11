@@ -39,7 +39,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
     {
         _dataStoreProvider = dataStoreProvider;
         _connectionProvider = connectionProvider;
-        _schema = schema ?? throw new ArgumentNullException(nameof(schema));
+        _schema = schema;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

@@ -38,11 +38,11 @@ public sealed class RetentionKeeper : IRetentionKeeper
         IRetentionPolicies policies, ILegalHolds holds, IRetainedDocuments documents, IOrganizationScope organizations,
         ILogger<RetentionKeeper>? logger)
     {
-        _policies = policies ?? throw new ArgumentNullException(nameof(policies));
-        _holds = holds ?? throw new ArgumentNullException(nameof(holds));
-        _documents = documents ?? throw new ArgumentNullException(nameof(documents));
+        _policies = policies;
+        _holds = holds;
+        _documents = documents;
         _logger = logger ?? NullLogger<RetentionKeeper>.Instance;
-        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _scope = organizations;
     }
 
     /// <inheritdoc />

@@ -27,12 +27,6 @@ public sealed class RealTimeHubsCollectionTests
     }
 
     [Fact]
-    public void RegisterWithNullServicesThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => RealTimeHubs.Register(null!));
-    }
-
-    [Fact]
     public void RegisterAddsSignalRServices()
     {
         var builder = Host.CreateApplicationBuilder();

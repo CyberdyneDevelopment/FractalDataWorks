@@ -43,7 +43,7 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
     /// <param name="logger">The logger; <see cref="NullLogger.Instance"/> when DI supplies none.</param>
     protected SchedulerBackgroundServiceBase(IAuthenticationContextAccessor authContextAccessor, ILogger? logger)
     {
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger.Instance;
     }
 

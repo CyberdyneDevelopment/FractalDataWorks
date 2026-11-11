@@ -71,7 +71,6 @@ public sealed class WebMcpHosting
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        System.ArgumentNullException.ThrowIfNull(builder);
         var registry = new WebMcpToolRegistry();
         builder.Services.TryAddSingleton<IWebMcpToolRegistry>(registry);
         builder.Services.TryAddSingleton(registry);
@@ -99,7 +98,6 @@ public sealed class WebMcpHosting
             return GenericResult<IHost>.Success(host);
         }
 
-        System.ArgumentNullException.ThrowIfNull(host);
         ILogger logger = loggerFactory?.CreateLogger<WebMcpHosting>() ?? (ILogger)NullLogger.Instance;
         if (host is not IEndpointRouteBuilder endpoints)
         {
@@ -162,7 +160,6 @@ public sealed class WebMcpHosting
     /// </remarks>
     public static IGenericResult<WebMcpHostSettings> ReadSettings(System.IServiceProvider services, ILogger logger)
     {
-        System.ArgumentNullException.ThrowIfNull(services);
         if (services.GetService<IWebMcpConfigurationProvider>() is null)
         {
             return GenericResult<WebMcpHostSettings>.Failure(WebMcpLog.NotRegistered(logger, nameof(IWebMcpConfigurationProvider)));

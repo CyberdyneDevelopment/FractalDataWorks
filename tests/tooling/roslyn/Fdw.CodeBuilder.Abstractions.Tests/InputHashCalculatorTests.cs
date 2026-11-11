@@ -86,14 +86,6 @@ public class InputHashCalculatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    public void CalculateHashThrowsForNullInput()
-    {
-        Should.Throw<ArgumentNullException>(() => InputHashCalculator.CalculateHash(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "SourceGen")]
     public void CalculateHashProducesValidBase64()
     {
         var input = new SimpleWritableInput("some content");

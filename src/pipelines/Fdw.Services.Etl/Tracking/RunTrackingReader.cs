@@ -33,7 +33,6 @@ public static class RunTrackingReader
     /// <returns>What the run did, or the failure when the run is not found or its records cannot be read.</returns>
     public static async Task<IGenericResult<RunTracking>> Read(IExecutionTracker tracker, Guid runId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(tracker);
         var run = await tracker.GetItem(runId, cancellationToken).ConfigureAwait(false);
         if (run.IsFailure || run.Value is null)
         {

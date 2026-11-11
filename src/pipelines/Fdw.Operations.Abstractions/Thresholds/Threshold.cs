@@ -28,8 +28,8 @@ public sealed class Threshold<T> : IThresholdDefinition
         Name = name;
         IsEnabled = isEnabled;
         FiresOnEntry = firesOnEntry;
-        Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-        Rules = rules ?? throw new ArgumentNullException(nameof(rules));
+        Parameters = parameters;
+        Rules = rules;
     }
 
     /// <summary>Gets the threshold type.</summary>

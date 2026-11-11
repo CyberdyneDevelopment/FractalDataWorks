@@ -24,7 +24,7 @@ public abstract class ListScriptsEndpointBase : CrudPageEndpointBase<DomainConfi
     /// <param name="provider">The stored scripts.</param>
     protected ListScriptsEndpointBase(ILogger<ListScriptsEndpointBase> logger, ScriptConfigurationProvider provider) : base(logger)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
     }
 
     /// <inheritdoc />

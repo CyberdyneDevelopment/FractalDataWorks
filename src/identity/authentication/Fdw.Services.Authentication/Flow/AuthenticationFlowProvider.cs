@@ -65,9 +65,9 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
         Func<string, IAuthenticationStep?> step,
         ILogger<AuthenticationFlowProvider>? logger = null)
     {
-        _flows = flows ?? throw new ArgumentNullException(nameof(flows));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
-        _step = step ?? throw new ArgumentNullException(nameof(step));
+        _flows = flows;
+        _authContextAccessor = authContextAccessor;
+        _step = step;
         _logger = logger ?? NullLogger<AuthenticationFlowProvider>.Instance;
     }
 

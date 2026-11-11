@@ -20,7 +20,7 @@ public abstract class DetachThresholdEndpointBase : Endpoint<ThresholdSubjectReq
     /// <param name="logger">The logger.</param>
     protected DetachThresholdEndpointBase(IThresholdLinks links, ILogger<DetachThresholdEndpointBase>? logger)
     {
-        _links = links ?? throw new ArgumentNullException(nameof(links));
+        _links = links;
         _logger = logger ?? NullLogger<DetachThresholdEndpointBase>.Instance;
     }
 

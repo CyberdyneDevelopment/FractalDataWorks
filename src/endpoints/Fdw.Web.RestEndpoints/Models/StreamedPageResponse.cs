@@ -39,8 +39,8 @@ public sealed class StreamedPageResponse<T>
         Take = take;
         HasMore = hasMore;
         Total = total;
-        Items = items ?? throw new ArgumentNullException(nameof(items));
-        _error = error ?? throw new ArgumentNullException(nameof(error));
+        Items = items;
+        _error = error;
     }
 
     /// <summary>Gets how many items precede this page.</summary>

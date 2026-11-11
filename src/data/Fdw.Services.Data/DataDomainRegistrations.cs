@@ -24,7 +24,6 @@ internal static class DataDomainRegistrations
     /// <returns>Success, or the first failed attachment.</returns>
     public static IGenericResult Attach(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
         var steps = new List<Func<IGenericResult>>();
         steps.AddRange(DataStoreKinds(services));
         steps.AddRange(DataSets(services));
@@ -42,7 +41,6 @@ internal static class DataDomainRegistrations
     /// <returns>Success, or the first failed attachment.</returns>
     public static IGenericResult AttachDataStoreKinds(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
         return FirstFailure(DataStoreKinds(services));
     }
 
@@ -51,7 +49,6 @@ internal static class DataDomainRegistrations
     /// <returns>Success when every step succeeded; otherwise the first failed result, with the steps after it not run.</returns>
     internal static IGenericResult FirstFailure(IEnumerable<Func<IGenericResult>> steps)
     {
-        ArgumentNullException.ThrowIfNull(steps);
         foreach (var step in steps)
         {
             var result = step();

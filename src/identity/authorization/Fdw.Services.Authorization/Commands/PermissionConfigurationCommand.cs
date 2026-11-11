@@ -8,6 +8,6 @@ namespace Fdw.Services.Authorization.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Permission")]
 public sealed class PermissionConfigurationCommand : ConfigurationCommandBase<PermissionImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="PermissionConfigurationCommand"/> class.</summary>
     public PermissionConfigurationCommand() : base("Permission") { }
 }

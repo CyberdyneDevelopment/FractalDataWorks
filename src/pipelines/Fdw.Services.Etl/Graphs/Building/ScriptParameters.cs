@@ -25,8 +25,6 @@ public static class ScriptParameters
     /// <returns>The parameters, or the failure that names the one that is incomplete or unreadable.</returns>
     public static IGenericResult<IReadOnlyList<ScriptParameter>> Of(PipelineComponentConfiguration component, string setting, FlowBuildContext context)
     {
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(context);
         var parameters = new List<ScriptParameter>();
         foreach (var row in component.Fields
             .Where(field => string.Equals(field.SettingName, setting, StringComparison.OrdinalIgnoreCase))

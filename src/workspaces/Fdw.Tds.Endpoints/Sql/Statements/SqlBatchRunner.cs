@@ -35,8 +35,6 @@ public static class SqlBatchRunner
     /// <returns>The statements, or error 102.</returns>
     public static IGenericResult<IReadOnlyList<TSqlStatement>> Parse(string text, SqlExecutionContext context)
     {
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(context);
         using var reader = new StringReader(text);
         var fragment = new TSql160Parser(context.Session.QuotedIdentifier).Parse(reader, out var errors);
         if (errors.Count > 0)
@@ -68,8 +66,6 @@ public static class SqlBatchRunner
     /// <returns>Success, or the refusal that ended them.</returns>
     public static async Task<IGenericResult> Run(IEnumerable<TSqlStatement> statements, SqlExecutionContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(statements);
-        ArgumentNullException.ThrowIfNull(context);
         foreach (var statement in statements)
         {
             cancellationToken.ThrowIfCancellationRequested();

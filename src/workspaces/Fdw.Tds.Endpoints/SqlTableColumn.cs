@@ -24,10 +24,10 @@ public sealed class SqlTableColumn
     /// <param name="isFilterable">Whether the source lets a caller filter on it (a data set field's own setting, FDW-1048).</param>
     public SqlTableColumn(string name, int ordinal, Type? clrType, string declaredTypeName, bool isNullable, int? maxLength, bool isKey, bool isQueryable, bool isFilterable)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         Ordinal = ordinal;
         ClrType = clrType;
-        DeclaredTypeName = declaredTypeName ?? throw new ArgumentNullException(nameof(declaredTypeName));
+        DeclaredTypeName = declaredTypeName;
         IsNullable = isNullable;
         MaxLength = maxLength;
         IsKey = isKey;

@@ -23,10 +23,10 @@ public abstract class ListDataViewsEndpointBase : CrudPageEndpointBase<DataSetVa
 {
     private readonly IDataSetVariationConfigurationProvider _variations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListDataViewsEndpointBase"/> class.</summary>
     protected ListDataViewsEndpointBase(ILogger<ListDataViewsEndpointBase> logger, IDataSetVariationConfigurationProvider variations) : base(logger)
     {
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
+        _variations = variations;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

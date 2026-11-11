@@ -16,6 +16,6 @@ namespace Fdw.Services.Workspaces.Commands;
 [TypeOption(typeof(ConfigurationCommands), "WorkspaceResource")]
 public sealed class WorkspaceResourceConfigurationCommand : ConfigurationCommandBase<WorkspaceResourceConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="WorkspaceResourceConfigurationCommand"/> class.</summary>
     public WorkspaceResourceConfigurationCommand() : base("WorkspaceResource") { }
 }

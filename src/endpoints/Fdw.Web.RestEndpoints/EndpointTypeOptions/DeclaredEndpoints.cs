@@ -87,11 +87,6 @@ public static class DeclaredEndpoints
     /// </remarks>
     public static void Declare(Type endpointType)
     {
-        if (endpointType is null)
-        {
-            throw new ArgumentNullException(nameof(endpointType));
-        }
-
         lock (Gate)
         {
             if (!Declared.Contains(endpointType))

@@ -34,7 +34,7 @@ public sealed class ClientCredentialsIdentityType
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
+    /// <summary>Gets or sets the implementation's name within its domain.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Implementation { get; set; } = string.Empty;
 

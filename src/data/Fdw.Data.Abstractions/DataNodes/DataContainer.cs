@@ -71,17 +71,17 @@ public class DataContainer : IDataContainer
         IReadOnlyDictionary<string, object> metadata,
         ILogger? logger = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         Description = description;
-        Parent = parent ?? throw new ArgumentNullException(nameof(parent));
-        _fields = fields ?? throw new ArgumentNullException(nameof(fields));
-        _keys = keys ?? throw new ArgumentNullException(nameof(keys));
-        _referencingKeys = referencingKeys ?? throw new ArgumentNullException(nameof(referencingKeys));
-        _containerType = containerType ?? throw new ArgumentNullException(nameof(containerType));
-        _format = format ?? throw new ArgumentNullException(nameof(format));
-        _physicalPath = physicalPath ?? throw new ArgumentNullException(nameof(physicalPath));
-        _supportedOperations = supportedOperations ?? throw new ArgumentNullException(nameof(supportedOperations));
-        _metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
+        Parent = parent;
+        _fields = fields;
+        _keys = keys;
+        _referencingKeys = referencingKeys;
+        _containerType = containerType;
+        _format = format;
+        _physicalPath = physicalPath;
+        _supportedOperations = supportedOperations;
+        _metadata = metadata;
         _logger = logger ?? NullLogger.Instance;
 
         _fieldIndex = new Dictionary<string, IDataField>(StringComparer.Ordinal);
@@ -124,7 +124,7 @@ public class DataContainer : IDataContainer
             name,
             null,
             new DetachedDataPath(
-                schemaName ?? throw new ArgumentNullException(nameof(schemaName)),
+                schemaName,
                 new DetachedDataStore(schemaName, logger),
                 logger),
             fields,

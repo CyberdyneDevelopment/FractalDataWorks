@@ -17,9 +17,9 @@ public sealed class TdsColumn
     /// <param name="isNullable">Whether the column may hold NULL.</param>
     public TdsColumn(string name, TdsColumnType type, bool isNullable)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, MaxNameLength, nameof(name));
-        Type = type ?? throw new ArgumentNullException(nameof(type));
+        Type = type;
         IsNullable = isNullable;
     }
 

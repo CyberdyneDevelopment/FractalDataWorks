@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ public sealed class TdsTlsHandshakeStream : Stream
     private const int HeaderLength = 8;
     private const int HandshakePacketBody = 4088;
 
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the connection's socket stream; the connection that opened the socket disposes it.")]
     private readonly Stream _inner;
     private readonly byte[] _header = new byte[HeaderLength];
     private int _packetRemaining;
@@ -35,7 +37,7 @@ public sealed class TdsTlsHandshakeStream : Stream
     /// <param name="inner">The connection's stream; the connection keeps ownership of it.</param>
     public TdsTlsHandshakeStream(Stream inner)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        _inner = inner;
     }
 
     /// <inheritdoc />

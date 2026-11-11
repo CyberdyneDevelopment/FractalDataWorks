@@ -18,10 +18,6 @@ public sealed class AlertEscalationType : EscalationTypeBase
     /// <inheritdoc/>
     public override async Task<IGenericResult> Handle(EscalationFiring firing, IServiceProvider services, CancellationToken cancellationToken = default)
     {
-        if (firing is null)
-        {
-            throw new ArgumentNullException(nameof(firing));
-        }
         if (firing.Rule.EscalationPolicy is not { Length: > 0 } policy)
         {
             return EscalationFailures.PolicyMissing(firing, Name);

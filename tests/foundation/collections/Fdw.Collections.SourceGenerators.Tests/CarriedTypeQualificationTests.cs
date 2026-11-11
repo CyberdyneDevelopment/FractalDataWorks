@@ -65,7 +65,7 @@ namespace Acme.Logging.Levels
         // generated FrozenDictionary and Fdw.Types code reports its own CS0234/CS0246 here (the real build has those references).
         // The bug is the carried type resolving into Acme.Logging ("'Events' does not exist in the namespace 'Acme.Logging'"), and
         // every error it causes names Logging; the harness's own errors do not.
-        var errors = compilation.GetDiagnostics()
+        var errors = compilation.GetDiagnostics(TestContext.Current.CancellationToken)
             .Where(d => d.Severity == DiagnosticSeverity.Error && d.Id is "CS0234" or "CS0246" or "CS0103")
             .Select(d => $"{d.Id}: {d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)}")
             .Where(message => message.Contains("Logging", System.StringComparison.Ordinal))

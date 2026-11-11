@@ -15,8 +15,8 @@ public sealed class SqlRowSet
     /// <param name="rows">The rows, each holding one value per column.</param>
     public SqlRowSet(IReadOnlyList<SqlBoundColumn> columns, IReadOnlyList<object?[]> rows)
     {
-        Columns = columns ?? throw new ArgumentNullException(nameof(columns));
-        Rows = rows ?? throw new ArgumentNullException(nameof(rows));
+        Columns = columns;
+        Rows = rows;
     }
 
     /// <summary>Gets the columns, in value order.</summary>
@@ -37,8 +37,6 @@ public sealed class SqlRowSet
     /// <returns>The joined row set.</returns>
     public static SqlRowSet Join(SqlRowSet left, SqlRowSet right, Func<object?[], bool>? keep, bool leftOuter)
     {
-        ArgumentNullException.ThrowIfNull(left);
-        ArgumentNullException.ThrowIfNull(right);
         var columns = left.Columns.Concat(right.Columns).ToList();
         var rows = new List<object?[]>();
         foreach (var l in left.Rows)

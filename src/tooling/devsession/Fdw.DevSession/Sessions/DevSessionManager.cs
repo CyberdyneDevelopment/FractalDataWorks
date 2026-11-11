@@ -46,8 +46,8 @@ public sealed class DevSessionManager : IDevSessionManager
         IMcpEventBus bus,
         ILogger<DevSessionManager>? logger = null)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _bus = bus ?? throw new ArgumentNullException(nameof(bus));
+        _engine = engine;
+        _bus = bus;
         _logger = logger ?? NullLogger<DevSessionManager>.Instance;
     }
 
@@ -110,8 +110,6 @@ public sealed class DevSessionManager : IDevSessionManager
         Guid? parentSessionId,
         CancellationToken cancellationToken)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
-
         var existing = FindLiveByKey(request.Key);
         if (existing is not null)
         {

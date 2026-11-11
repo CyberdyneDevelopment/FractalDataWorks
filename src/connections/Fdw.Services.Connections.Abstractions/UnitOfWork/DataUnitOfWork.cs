@@ -94,11 +94,6 @@ public sealed class DataUnitOfWork
         IReadOnlyList<UnitOfWorkStep> steps,
         CancellationToken cancellationToken)
     {
-        if (connection is null)
-            throw new ArgumentNullException(nameof(connection));
-        if (steps is null)
-            throw new ArgumentNullException(nameof(steps));
-
         var affected = new List<int>(steps.Count);
         var answers = new List<BulkWriteAnswer?>(steps.Count);
         if (steps.Count == 0)

@@ -43,7 +43,7 @@ public sealed class WorkspaceManager : IWorkspaceManager
         IRoslynWorkspaceFactory? workspaceFactory = null,
         ILogger<WorkspaceManager>? logger = null)
     {
-        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _sessionStore = sessionStore;
         _workspaceFactory = workspaceFactory ?? DefaultWorkspaceFactory;
         _logger = logger ?? NullLogger<WorkspaceManager>.Instance;
     }

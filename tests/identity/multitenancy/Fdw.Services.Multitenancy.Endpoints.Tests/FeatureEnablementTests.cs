@@ -54,7 +54,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create(["Documents"], []);
 
-        var states = await service.ForTenant(Tenant);
+        var states = await service.ForTenant(Tenant, TestContext.Current.CancellationToken);
 
         states.IsSuccess.ShouldBeTrue();
         var documents = states.Value!.Single(state => state.Name == "Documents");
@@ -71,7 +71,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create([], ["Documents"]);
 
-        var states = await service.ForOrganization(Finance);
+        var states = await service.ForOrganization(Finance, TestContext.Current.CancellationToken);
 
         var documents = states.Value!.Single(state => state.Name == "Documents");
         documents.Enabled.ShouldBeFalse();
@@ -84,7 +84,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create(["Documents"], []);
 
-        var states = await service.ForOrganization(Finance);
+        var states = await service.ForOrganization(Finance, TestContext.Current.CancellationToken);
 
         var documents = states.Value!.Single(state => state.Name == "Documents");
         documents.Enabled.ShouldBeFalse();
@@ -97,7 +97,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create(["Documents"], ["Documents"]);
 
-        var states = await service.ForOrganization(Finance);
+        var states = await service.ForOrganization(Finance, TestContext.Current.CancellationToken);
 
         states.Value!.Single(state => state.Name == "Documents").Enabled.ShouldBeTrue();
     }
@@ -108,7 +108,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create([], []);
 
-        var set = await service.SetForOrganization(Finance, "Documents", true);
+        var set = await service.SetForOrganization(Finance, "Documents", true, TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -120,7 +120,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create(["Documents"], []);
 
-        var set = await service.SetForOrganization(Finance, "Documents", true);
+        var set = await service.SetForOrganization(Finance, "Documents", true, TestContext.Current.CancellationToken);
 
         set.IsSuccess.ShouldBeTrue();
         Writes(gateway, Times.Once());
@@ -132,7 +132,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create([], ["Documents"]);
 
-        var set = await service.SetForOrganization(Finance, "Documents", false);
+        var set = await service.SetForOrganization(Finance, "Documents", false, TestContext.Current.CancellationToken);
 
         set.IsSuccess.ShouldBeTrue();
         Writes(gateway, Times.Once());
@@ -144,8 +144,8 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create(["Documents"], []);
 
-        var on = await service.SetForTenant(Tenant, "Documents", true);
-        var off = await service.SetForTenant(Tenant, "InsightStudio", false);
+        var on = await service.SetForTenant(Tenant, "Documents", true, TestContext.Current.CancellationToken);
+        var off = await service.SetForTenant(Tenant, "InsightStudio", false, TestContext.Current.CancellationToken);
 
         on.IsSuccess.ShouldBeTrue();
         off.IsSuccess.ShouldBeTrue();
@@ -159,8 +159,8 @@ public sealed class FeatureEnablementTests
         var (on, onGateway) = Create([], []);
         var (off, offGateway) = Create(["Documents"], []);
 
-        (await on.SetForTenant(Tenant, "Documents", true)).IsSuccess.ShouldBeTrue();
-        (await off.SetForTenant(Tenant, "Documents", false)).IsSuccess.ShouldBeTrue();
+        (await on.SetForTenant(Tenant, "Documents", true, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await off.SetForTenant(Tenant, "Documents", false, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
         Writes(onGateway, Times.Once());
         Writes(offGateway, Times.Once());
@@ -172,7 +172,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create([], []);
 
-        var set = await service.SetForTenant(Tenant, "Nothing", true);
+        var set = await service.SetForTenant(Tenant, "Nothing", true, TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -184,7 +184,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create([], [], gatewayFails: true);
 
-        var states = await service.ForTenant(Tenant);
+        var states = await service.ForTenant(Tenant, TestContext.Current.CancellationToken);
 
         states.IsFailure.ShouldBeTrue();
     }

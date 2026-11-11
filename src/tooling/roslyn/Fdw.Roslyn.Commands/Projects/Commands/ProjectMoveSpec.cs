@@ -14,8 +14,8 @@ public sealed class ProjectMoveSpec
     /// <param name="targetFolder">Target folder relative to src/ (e.g., "Services"). Empty string means src/ root.</param>
     public ProjectMoveSpec(string projectName, string targetFolder)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
-        TargetFolder = targetFolder ?? throw new ArgumentNullException(nameof(targetFolder));
+        ProjectName = projectName;
+        TargetFolder = targetFolder;
     }
 
     /// <summary>

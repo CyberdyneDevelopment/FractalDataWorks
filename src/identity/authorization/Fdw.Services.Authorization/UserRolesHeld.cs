@@ -33,6 +33,7 @@ public sealed class UserRolesHeld : IUserRolesHeld
 
     private readonly ConfigurationRowReader _assignments;
     private readonly ConfigurationRowReader _domains;
+    private readonly ConfigurationRowReader _roles;
     private readonly ILogger<UserRolesHeld> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserRolesHeld"/> class.</summary>
@@ -45,6 +46,7 @@ public sealed class UserRolesHeld : IUserRolesHeld
         _logger = logger ?? NullLogger<UserRolesHeld>.Instance;
         _assignments = new ConfigurationRowReader(gateways, dataStoreName, pathName, "UserRoleConfiguration", _logger);
         _domains = new ConfigurationRowReader(gateways, dataStoreName, pathName, "UserRole", _logger);
+        _roles = new ConfigurationRowReader(gateways, dataStoreName, pathName, "Role", _logger);
     }
 
     /// <inheritdoc />
@@ -88,6 +90,20 @@ public sealed class UserRolesHeld : IUserRolesHeld
                     row.Identifier("TenantId") ?? throw new InvalidOperationException("an assignment has no tenant"),
                     row.Moment("ExpiresAt")))
                 .ToList();
+
+            // Every role an assignment names must still exist (FDW-5222). One that does not is refused by name rather than handed on:
+            // a caller that looked it up would find nothing, and the person's profile would fail to read with nothing saying why.
+            var missing = await MissingRole(held, cancellationToken).ConfigureAwait(false);
+            if (missing.IsFailure)
+            {
+                return missing.ToNewResult<IReadOnlyList<HeldRole>>();
+            }
+
+            if (missing.Value is { } roleId)
+            {
+                return GenericResult<IReadOnlyList<HeldRole>>.Failure(UserRolesHeldLog.AssignedRoleMissing(_logger, userId.ToString("D"), roleId.ToString("D")));
+            }
+
             UserRolesHeldLog.Read(_logger, userId.ToString("D"), held.Count);
             return GenericResult<IReadOnlyList<HeldRole>>.Success(held);
         }
@@ -95,6 +111,33 @@ public sealed class UserRolesHeld : IUserRolesHeld
         {
             return GenericResult<IReadOnlyList<HeldRole>>.Failure(UserRolesHeldLog.AssignmentUnreadable(_logger, userId.ToString("D"), unreadable.Message));
         }
+    }
+
+    // The first role an assignment names that has no current, undeleted row, or none when every one is there.
+    private async Task<IGenericResult<Guid?>> MissingRole(IReadOnlyList<HeldRole> held, CancellationToken cancellationToken)
+    {
+        var named = held.Select(role => role.RoleId).Distinct().ToList();
+        if (named.Count == 0)
+        {
+            return GenericResult<Guid?>.Success(null);
+        }
+
+        var roles = await _roles.Page(In("Id", named.Cast<object>().ToList()), ByRowId, 0, named.Count, true, cancellationToken).ConfigureAwait(false);
+        if (roles.IsFailure)
+        {
+            return roles.ToNewResult<Guid?>();
+        }
+
+        var present = roles.Value!.Select(row => row.Identifier("Id")).ToHashSet();
+        foreach (var roleId in named)
+        {
+            if (!present.Contains(roleId))
+            {
+                return GenericResult<Guid?>.Success(roleId);
+            }
+        }
+
+        return GenericResult<Guid?>.Success(null);
     }
 
     private static FilterCondition In(string column, IReadOnlyList<object> values)

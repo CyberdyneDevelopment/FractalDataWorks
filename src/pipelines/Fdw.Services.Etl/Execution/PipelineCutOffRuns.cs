@@ -26,8 +26,8 @@ internal sealed class PipelineCutOffRuns
 
     public PipelineCutOffRuns(IPipelineRunRequestStore store, IServiceScopeFactory scopes, ILogger? logger = null)
     {
-        _store = store ?? throw new ArgumentNullException(nameof(store));
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+        _store = store;
+        _scopes = scopes;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -37,7 +37,6 @@ internal sealed class PipelineCutOffRuns
     /// <returns>The requests of the new runs, to queue in this order.</returns>
     public async Task<IReadOnlyList<PipelineExecutionRequest>> StartAgain(IReadOnlyList<InterruptedRun> runs, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(runs);
         if (runs.Count == 0)
         {
             return [];

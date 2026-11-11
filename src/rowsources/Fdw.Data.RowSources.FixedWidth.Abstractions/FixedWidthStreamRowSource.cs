@@ -37,8 +37,7 @@ public sealed class FixedWidthStreamRowSource : IRowSourceReader
     /// <exception cref="ArgumentException">Thrown when no field definitions are supplied.</exception>
     public FixedWidthStreamRowSource(Stream content, FixedWidthRowSourceOptions options)
     {
-        if (content is null) throw new ArgumentNullException(nameof(content));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _options = options;
         if (_options.Fields.Count == 0)
         {
             throw new ArgumentException(

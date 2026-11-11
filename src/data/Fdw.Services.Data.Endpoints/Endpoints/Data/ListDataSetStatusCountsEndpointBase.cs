@@ -27,7 +27,7 @@ public abstract class ListDataSetStatusCountsEndpointBase : CrudListEndpointBase
     protected ListDataSetStatusCountsEndpointBase(ILogger<ListDataSetStatusCountsEndpointBase> logger, IDataSetStatuses statuses)
         : base(logger)
     {
-        _statuses = statuses ?? throw new ArgumentNullException(nameof(statuses));
+        _statuses = statuses;
     }
 
     /// <summary>Gets the resource name used for route generation.</summary>

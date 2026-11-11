@@ -23,7 +23,7 @@ public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<Bu
     protected BulkPipelineStatusEndpointBase(ILogger logger, IConfigurationGatewayProvider configurationGateways)
     {
         EndpointLogger = logger;
-        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
+        _configurationGateways = configurationGateways;
     }
 
 

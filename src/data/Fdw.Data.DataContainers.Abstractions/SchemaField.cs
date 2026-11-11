@@ -19,8 +19,8 @@ public class SchemaField : ISchemaField
     /// <param name="ordinal">The ordinal position.</param>
     public SchemaField(string name, Type dataType, int ordinal)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        DataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
+        Name = name;
+        DataType = dataType;
         Ordinal = ordinal;
     }
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Fdw.Roslyn.Commands.Conventions.Results;
 
@@ -17,7 +18,8 @@ public sealed class GuideExemplarInfo
     public required string StampedCite { get; init; }
 
     /// <summary>Gets how the exemplar was found in the loaded solution.</summary>
-    public required GuideExemplarResolution Resolution { get; init; }
+    [JsonConverter(typeof(GuideExemplarResolutionJsonConverter))]
+    public required IGuideExemplarResolution Resolution { get; init; }
 
     /// <summary>Gets the solution document that declares it; null unless resolved.</summary>
     public required string? FilePath { get; init; }

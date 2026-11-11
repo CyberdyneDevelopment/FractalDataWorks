@@ -39,9 +39,9 @@ public sealed class SqlScope
         int innerCount,
         IReadOnlyDictionary<FunctionCall, object?> aggregates)
     {
-        Context = context ?? throw new ArgumentNullException(nameof(context));
-        Columns = columns ?? throw new ArgumentNullException(nameof(columns));
-        Row = row ?? throw new ArgumentNullException(nameof(row));
+        Context = context;
+        Columns = columns;
+        Row = row;
         _bound = bound;
         _innerCount = innerCount;
         Aggregates = aggregates;
@@ -82,7 +82,6 @@ public sealed class SqlScope
     /// <returns>The scope, before any inner row; <see cref="Nest"/> gives one per inner row.</returns>
     public SqlScope Enclose(IReadOnlyList<SqlBoundColumn> inner)
     {
-        ArgumentNullException.ThrowIfNull(inner);
         var columns = inner.Concat(Columns).ToList();
         return new SqlScope(Context, columns, [.. new object?[inner.Count], .. Row],
             new Dictionary<MultiPartIdentifier, int>(ReferenceEqualityComparer.Instance), inner.Count, NoAggregates);
@@ -93,7 +92,6 @@ public sealed class SqlScope
     /// <returns>The scope.</returns>
     public SqlScope Nest(object?[] innerRow)
     {
-        ArgumentNullException.ThrowIfNull(innerRow);
         return For([.. innerRow, .. Row[_innerCount..]]);
     }
 
@@ -102,7 +100,6 @@ public sealed class SqlScope
     /// <returns>The value, or error 207 for no such column and 209 for one named twice.</returns>
     public IGenericResult<object?> Column(ColumnReferenceExpression reference)
     {
-        ArgumentNullException.ThrowIfNull(reference);
         var identifier = reference.MultiPartIdentifier;
         if (identifier is null)
             return SqlRefusal.Refuse<object?>(SqlServerErrors.NotSupported("*", reference.StartLine), Context.Logger);
@@ -126,7 +123,6 @@ public sealed class SqlScope
     /// <returns>The position, or error 207 or 209.</returns>
     public IGenericResult<int> Bind(MultiPartIdentifier identifier, int line)
     {
-        ArgumentNullException.ThrowIfNull(identifier);
         var parts = identifier.Identifiers.Select(i => i.Value).ToList();
         var name = parts[^1];
         var qualifier = parts.Count >= 2 ? parts[^2] : null;

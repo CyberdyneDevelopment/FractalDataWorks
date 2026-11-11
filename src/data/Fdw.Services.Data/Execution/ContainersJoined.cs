@@ -21,7 +21,6 @@ public static class ContainersJoined
     /// <returns>The targets and sources of its joins; none for a command that does not join, a vectorized one among them.</returns>
     public static IReadOnlyList<string> By(IGenericCommand command, string container)
     {
-        ArgumentNullException.ThrowIfNull(command);
         if (command is not IQueryCommand { Joins.Count: > 0 } query)
             return [];
 

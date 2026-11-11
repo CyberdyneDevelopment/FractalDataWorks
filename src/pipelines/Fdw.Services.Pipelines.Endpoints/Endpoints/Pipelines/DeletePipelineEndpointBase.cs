@@ -19,7 +19,7 @@ public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBa
     private readonly IPipelineConfigurationProvider _provider;
     private readonly WaitThresholdOwnerRelease _release;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeletePipelineEndpointBase{TConfig}"/> class.</summary>
     protected DeletePipelineEndpointBase(
         ILogger<DeletePipelineEndpointBase<TConfig>> logger, IPipelineConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
     {

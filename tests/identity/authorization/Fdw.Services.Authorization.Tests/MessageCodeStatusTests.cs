@@ -24,4 +24,9 @@ public sealed class MessageCodeStatusTests
     [Trait("Priority", "P1")]
     public void ADeclaredRoleTheCatalogueLacksAnswersServerError()
         => StatusOf(AuthorizationLog.RoleNameUnknown(NullLogger.Instance, "Ghost")).ShouldBe(500);
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    public void AnAssignmentToARoleThatNoLongerExistsAnswersConflictNotServerError()
+        => StatusOf(UserRolesHeldLog.AssignedRoleMissing(NullLogger.Instance, "0a1b2c3d-0000-0000-0000-00000000000a", "bbbbbbbb-0000-0000-0000-000000000001")).ShouldBe(409);
 }

@@ -76,10 +76,4 @@ public sealed class HttpSignInCallerTests
     [Trait("Category", "Security")]
     public void AHostWithNoRequestHasNoCaller()
         => CallerOf(null).Current().ShouldBeSameAs(SignInCaller.NotKnown);
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Security")]
-    public void AMissingAccessorIsRefused()
-        => Should.Throw<ArgumentNullException>(() => new HttpSignInCaller(null!));
 }

@@ -9,6 +9,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 [TypeOption(typeof(ConfigurationCommands), "ExternalIdentityProvisionerBinding")]
 public sealed class ExternalIdentityProvisionerBindingConfigurationCommand : ConfigurationCommandBase<ExternalIdentityProvisionerBindingImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerBindingConfigurationCommand"/> class.</summary>
     public ExternalIdentityProvisionerBindingConfigurationCommand() : base("ExternalIdentityProvisionerBinding") { }
 }

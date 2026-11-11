@@ -28,7 +28,7 @@ public sealed class MonitoringMenuScreen : ScreenBase
         IConnectionManager connectionManager)
         : base(console, theme, screenFactory)
     {
-        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
+        _connectionManager = connectionManager;
     }
 
     /// <inheritdoc />

@@ -65,12 +65,8 @@ public static class FilterExpressionExtensions
     /// <param name="field">The data field whose <see cref="IDataNode.Name"/> is used.</param>
     /// <param name="value">The equality target value.</param>
     /// <returns>A <see cref="FilterExpression"/> with an equality root condition.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="field"/> is <see langword="null"/>.
-    /// </exception>
     public static FilterExpression Equal(IDataField field, object value)
     {
-        if (field is null) throw new ArgumentNullException(nameof(field));
         return Equal(field.Name, value);
     }
 

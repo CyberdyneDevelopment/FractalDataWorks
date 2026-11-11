@@ -78,10 +78,10 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         INotificationRuleConfigurationProvider? notificationRuleProvider = null,
         int? latestRunsChunkSize = null)
     {
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _dataGateways = dataGateways;
         _logger = loggerFactory?.CreateLogger<ExecutionTrackingService>()
             ?? throw new ArgumentNullException(nameof(loggerFactory));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _authContext = authContext;
         _dataStoreName = dataStoreName;
         _notificationProvider = notificationProvider;
         _notificationRuleProvider = notificationRuleProvider;
@@ -286,7 +286,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         string? resultMessage = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(finalState);
         if (!StoreIsNamed)
             return GenericResult.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 
@@ -590,7 +589,6 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         IReadOnlyCollection<string> pipelineNames,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(pipelineNames);
         if (!StoreIsNamed)
             return GenericResult<IReadOnlyDictionary<string, IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
         if (_latestRunsChunkSize is not { } chunkSize)
@@ -949,7 +947,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         var result = await Gateway.Execute<IEnumerable<ExecutionEvent>>(
             queryCommand, TargetFor(ContainerNameExecutionEvent), cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
-            return GenericResult<int>.Failure(result.Messages.Append(OperationsLog.EventSequenceUnread(_logger, executionItemId)));
+            return GenericResult.Caused(result, OperationsLog.EventSequenceUnread(_logger, executionItemId)).ToNewResult<int>();
 
         var lastEvent = result.Value?.FirstOrDefault();
         return GenericResult<int>.Success(lastEvent is null ? FirstSequenceNumber : lastEvent.SequenceNumber + 1);

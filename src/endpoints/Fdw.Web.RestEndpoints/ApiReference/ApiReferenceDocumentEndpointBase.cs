@@ -46,7 +46,7 @@ public abstract class ApiReferenceDocumentEndpointBase<TRequest> : Endpoint<TReq
         ISystemRoleConfiguration systemRoles)
     {
         Logger = logger ?? NullLogger<ApiReferenceDocumentEndpointBase<TRequest>>.Instance;
-        _systemRoles = systemRoles ?? throw new ArgumentNullException(nameof(systemRoles));
+        _systemRoles = systemRoles;
     }
 
     /// <summary>Gets the logger.</summary>

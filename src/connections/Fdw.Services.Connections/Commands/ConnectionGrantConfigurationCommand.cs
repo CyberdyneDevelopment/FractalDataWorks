@@ -8,6 +8,6 @@ namespace Fdw.Services.Connections.Commands;
 [TypeOption(typeof(ConfigurationCommands), "ConnectionGrant")]
 public sealed class ConnectionGrantConfigurationCommand : ConfigurationCommandBase<ConnectionGrantImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ConnectionGrantConfigurationCommand"/> class.</summary>
     public ConnectionGrantConfigurationCommand() : base("ConnectionGrant") { }
 }

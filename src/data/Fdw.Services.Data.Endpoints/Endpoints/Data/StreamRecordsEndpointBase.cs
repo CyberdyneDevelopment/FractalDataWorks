@@ -67,7 +67,7 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     /// </remarks>
     protected StreamRecordsEndpointBase(ResponseStreamingOptions streaming, ILogger logger)
     {
-        _streaming = streaming ?? throw new ArgumentNullException(nameof(streaming));
+        _streaming = streaming;
         Logger = logger ?? NullLogger<StreamRecordsEndpointBase<TRequest>>.Instance;
     }
 

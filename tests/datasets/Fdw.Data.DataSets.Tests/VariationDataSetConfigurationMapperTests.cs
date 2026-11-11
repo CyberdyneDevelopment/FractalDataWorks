@@ -26,9 +26,13 @@ public class VariationDataSetConfigurationMapperTests
     [Trait("Category", "Configuration")]
     public void TheListsAVariationDoesNotStoreAreStillThereForTheInterfaceItImplements()
     {
-        var variation = new VariationDataSetConfiguration();
-        IDataSetImplementationConfiguration asDataSet = variation;
+        HoldsNoListsThroughTheInterface(new VariationDataSetConfiguration());
+    }
 
+    // Read through the interface on purpose: the test is that IDataSetImplementationConfiguration's lists are there, though empty.
+    private static void HoldsNoListsThroughTheInterface<TConfiguration>(TConfiguration asDataSet)
+        where TConfiguration : IDataSetImplementationConfiguration
+    {
         asDataSet.Fields.ShouldBeEmpty();
         asDataSet.Sources.ShouldBeEmpty();
         asDataSet.Filters.ShouldBeEmpty();

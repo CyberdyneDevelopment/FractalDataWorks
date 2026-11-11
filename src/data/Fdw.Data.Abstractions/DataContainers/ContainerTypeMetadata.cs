@@ -45,7 +45,7 @@ public sealed class ContainerTypeMetadata
         IEnumerable<string>? limitations = null,
         IDictionary<string, object>? additionalMetadata = null)
     {
-        ContainerType = containerType ?? throw new ArgumentNullException(nameof(containerType));
+        ContainerType = containerType;
         SupportsRead = supportsRead;
         SupportsWrite = supportsWrite;
         SupportsStreaming = supportsStreaming;

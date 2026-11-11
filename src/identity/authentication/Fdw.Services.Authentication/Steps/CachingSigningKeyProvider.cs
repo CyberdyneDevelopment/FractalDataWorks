@@ -43,7 +43,7 @@ public sealed class CachingSigningKeyProvider : ISigningKeyProvider
         TimeSpan minimumRefreshInterval,
         ILogger<CachingSigningKeyProvider>? logger = null)
     {
-        _http = http ?? throw new ArgumentNullException(nameof(http));
+        _http = http;
         _lifetime = lifetime;
         _minimumRefreshInterval = minimumRefreshInterval;
         _logger = logger ?? NullLogger<CachingSigningKeyProvider>.Instance;

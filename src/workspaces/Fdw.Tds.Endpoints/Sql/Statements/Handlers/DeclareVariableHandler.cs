@@ -41,8 +41,6 @@ public sealed class DeclareVariableHandler : SqlStatementHandlerBase<DeclareVari
     /// <returns>Success, error 134 for a name already declared, or the conversion's refusal.</returns>
     public static IGenericResult Declare(DeclareVariableElement declaration, SqlExecutionContext context)
     {
-        System.ArgumentNullException.ThrowIfNull(declaration);
-        System.ArgumentNullException.ThrowIfNull(context);
         var name = declaration.VariableName.Value;
         if (context.Variables.IsDeclared(name))
         {

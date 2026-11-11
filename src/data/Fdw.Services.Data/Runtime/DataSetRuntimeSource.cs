@@ -15,7 +15,6 @@ internal sealed class DataSetRuntimeSource : IDataSetSource
     /// <param name="config">The source configuration record.</param>
     public DataSetRuntimeSource(DataSetSourceConfiguration config)
     {
-        ArgumentNullException.ThrowIfNull(config);
         Node = new DataSetSourceNode(config);
         Alias = null;
         Filter = null;

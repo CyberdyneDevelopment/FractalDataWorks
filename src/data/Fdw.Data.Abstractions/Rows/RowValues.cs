@@ -65,9 +65,6 @@ public static class RowValues
     /// <remarks>Why here: each kind of row says what it declares, so the translators read one binding type instead of choosing between two.</remarks>
     public static bool TryReadForBinding(object? row, string column, Type columnType, out object? value, out Type? bindingType)
     {
-        if (columnType == null)
-            throw new ArgumentNullException(nameof(columnType));
-
         bindingType = null;
         switch (row)
         {

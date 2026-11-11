@@ -66,8 +66,6 @@ public static class SqlExpressions
     /// <returns>The value (null for NULL), or the refusal.</returns>
     public static IGenericResult<object?> Evaluate(ScalarExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
-        ArgumentNullException.ThrowIfNull(scope);
         return Evaluators.TryGetValue(expression.GetType(), out var evaluate)
             ? evaluate(expression, scope)
             : SqlRefusal.Refuse<object?>(SqlServerErrors.NotSupported(SqlText.Of(expression), expression.StartLine), scope.Context.Logger);

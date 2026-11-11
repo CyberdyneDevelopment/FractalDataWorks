@@ -24,7 +24,7 @@ public sealed class MutableOrgContext : IMutableOrgContext
     /// <inheritdoc />
     public void SetOrg(OrganizationConfiguration org)
     {
-        _currentOrg = org ?? throw new ArgumentNullException(nameof(org));
+        _currentOrg = org;
     }
 
     /// <inheritdoc />

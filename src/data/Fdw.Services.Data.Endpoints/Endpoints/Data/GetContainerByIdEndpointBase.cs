@@ -26,7 +26,7 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
 
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetContainerByIdEndpointBase"/> class.</summary>
     protected GetContainerByIdEndpointBase(ILogger<GetContainerByIdEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;

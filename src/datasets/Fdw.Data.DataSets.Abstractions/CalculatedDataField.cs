@@ -26,8 +26,8 @@ public sealed class CalculatedDataField : IDataField
             throw new ArgumentException("Field name cannot be empty", nameof(name));
 
         Name = name;
-        FieldType = type ?? throw new ArgumentNullException(nameof(type));
-        Calculator = calculator ?? throw new ArgumentNullException(nameof(calculator));
+        FieldType = type;
+        Calculator = calculator;
         Description = description;
     }
 

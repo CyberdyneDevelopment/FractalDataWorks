@@ -48,9 +48,12 @@ public static class QualityMeasures
             return Measured(input, "violations", input.Rows.LongCount(row => OutsideRange(row, field, min.Value, max.Value)));
         });
 
-    /// <summary>Rows whose field is missing, blank or does not match the pattern; a match that times out counts as not matching.</summary>
+    /// <summary>Rows whose field is missing, blank or does not match the pattern.</summary>
     /// <param name="input">The parameters (FieldName, Pattern) and rows.</param>
-    /// <returns>rowCount and violations; a failure when the pattern is not a valid expression.</returns>
+    /// <returns>
+    /// rowCount and violations; a failure when the pattern is not a valid expression, or when matching a row takes longer than the measure's
+    /// RegexTimeout: a row that was never judged is not counted as matching or not (FDW-5189).
+    /// </returns>
     public static IGenericResult<IReadOnlyDictionary<string, object?>> MatchesPattern(QualityMeasureInput input) =>
         Field(input, field =>
         {
@@ -64,7 +67,14 @@ public static class QualityMeasures
                 return Failed(input, "Pattern is not a valid regular expression: " + exception.Message);
             }
 
-            return Measured(input, "violations", input.Rows.LongCount(row => !Matches(regex, row, field)));
+            try
+            {
+                return Measured(input, "violations", input.Rows.LongCount(row => !Matches(regex, row, field)));
+            }
+            catch (RegexMatchTimeoutException exception)
+            {
+                return Failed(input, $"Pattern took longer than {exception.MatchTimeout} to match field {field}: {exception.Message}");
+            }
         });
 
     /// <summary>Rows whose field is not one of the allowed values.</summary>
@@ -145,13 +155,6 @@ public static class QualityMeasures
             return false;
         }
 
-        try
-        {
-            return regex.IsMatch(text);
-        }
-        catch (RegexMatchTimeoutException)
-        {
-            return false;
-        }
+        return regex.IsMatch(text);
     }
 }

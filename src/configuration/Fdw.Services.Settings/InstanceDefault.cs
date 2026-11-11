@@ -150,12 +150,6 @@ public static class InstanceDefault
     private static IGenericResult<IEffectiveSettingsProvider> Provider(
         Lazy<IEffectiveSettingsProvider>? settings, string setting, string ownerKind, string ownerName, string field, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(setting);
-        ArgumentNullException.ThrowIfNull(ownerKind);
-        ArgumentNullException.ThrowIfNull(ownerName);
-        ArgumentNullException.ThrowIfNull(field);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (settings is null)
         {
             return GenericResult<IEffectiveSettingsProvider>.Failure(InstanceDefaultLog.NoSettings(logger, ownerKind, ownerName, field, setting));
@@ -165,11 +159,11 @@ public static class InstanceDefault
         {
             return GenericResult<IEffectiveSettingsProvider>.Success(settings.Value);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex)
         {
             // Why: the settings are read through connections, so a connection that states no value while the connection the settings are read
             // through is being made asks for the provider it is itself a part of. That is a defect of its configuration, and it says so.
-            return GenericResult<IEffectiveSettingsProvider>.Failure(InstanceDefaultLog.ReadThroughItself(logger, ownerKind, ownerName, field, setting));
+            return GenericResult<IEffectiveSettingsProvider>.Failure(InstanceDefaultLog.ReadThroughItselfThrew(logger, ex, ownerKind, ownerName, field, setting));
         }
     }
 }

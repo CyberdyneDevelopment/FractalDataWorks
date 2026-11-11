@@ -33,8 +33,6 @@ public sealed class OriginCheckCsrfProtection : SessionCsrfProtectionBase
     /// <inheritdoc />
     public override IGenericResult ValidateConfiguration(ISessionAuthenticationConfiguration configuration, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-
         if (configuration.CsrfHeaderName is not null)
             return GenericResult.Failure(SessionLog.SessionServiceInvalid(
                 logger, configuration.Name, "CsrfHeaderName is set, but OriginCheck reads no header; set it only for SynchronizerToken"));
@@ -60,9 +58,6 @@ public sealed class OriginCheckCsrfProtection : SessionCsrfProtectionBase
         HttpRequest request, SessionRecord session, ISessionAuthenticationConfiguration configuration, ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(configuration);
-
         var origin = request.Headers.Origin.ToString();
         if (origin.Length == 0)
             return Task.FromResult<IGenericResult>(GenericResult.Failure(SessionLog.CsrfRefused(

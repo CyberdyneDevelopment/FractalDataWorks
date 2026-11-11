@@ -147,9 +147,6 @@ public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
         IServiceProvider services,
         ILoggerFactory? loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-        ArgumentNullException.ThrowIfNull(schemes);
-
         var log = loggerFactory?.CreateLogger<ApiKeyAuthenticationType>()
             ?? NullLogger<ApiKeyAuthenticationType>.Instance;
 

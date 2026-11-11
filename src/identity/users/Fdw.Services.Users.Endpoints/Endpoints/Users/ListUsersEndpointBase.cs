@@ -41,8 +41,8 @@ public abstract class ListUsersEndpointBase : CrudPageEndpointBase<UserDomainCon
     /// <param name="signIns">Reads when each user last signed in.</param>
     protected ListUsersEndpointBase(ILogger logger, IUserConfigurationProvider userProvider, ISignInLog signIns) : base(logger)
     {
-        _userProvider = userProvider ?? throw new ArgumentNullException(nameof(userProvider));
-        _signIns = signIns ?? throw new ArgumentNullException(nameof(signIns));
+        _userProvider = userProvider;
+        _signIns = signIns;
     }
 
     /// <summary>Gets the user provider.</summary>

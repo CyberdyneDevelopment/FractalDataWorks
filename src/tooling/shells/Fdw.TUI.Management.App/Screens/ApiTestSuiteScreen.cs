@@ -41,7 +41,7 @@ public sealed class ApiTestSuiteScreen : ScreenBase
         INewmanSuiteService suite)
         : base(console, theme, screenFactory)
     {
-        this.suite = suite ?? throw new ArgumentNullException(nameof(suite));
+        this.suite = suite;
     }
 
     /// <inheritdoc />

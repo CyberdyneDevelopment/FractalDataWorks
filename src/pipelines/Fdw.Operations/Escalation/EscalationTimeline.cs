@@ -23,7 +23,6 @@ public static class EscalationTimeline
     /// <returns>The level that is due now; none when the next one is not yet due, the policy is not enabled, or no level is left.</returns>
     public static EscalationStep? Due(IEscalationPolicy policy, int currentLevel, DateTimeOffset levelReachedAt, DateTimeOffset now)
     {
-        ArgumentNullException.ThrowIfNull(policy);
         var next = Next(policy, currentLevel);
         return next is not null && policy.IsEnabled && now >= levelReachedAt.AddMinutes(next.DelayMinutes)
             ? new EscalationStep(next.Level, next)
@@ -36,7 +35,6 @@ public static class EscalationTimeline
     /// <returns>The next level by number that is not past the policy's maximum; none when there is none.</returns>
     public static IEscalationLevel? Next(IEscalationPolicy policy, int currentLevel)
     {
-        ArgumentNullException.ThrowIfNull(policy);
         return policy.Levels
             .Where(level => level.Level > currentLevel && level.Level <= policy.MaxEscalationLevel)
             .OrderBy(level => level.Level)
@@ -50,7 +48,6 @@ public static class EscalationTimeline
     /// <returns>True when the policy's cooldown has passed since the last resolution, or there was none.</returns>
     public static bool CooldownPassed(IEscalationPolicy policy, DateTimeOffset? lastResolvedAt, DateTimeOffset now)
     {
-        ArgumentNullException.ThrowIfNull(policy);
         return lastResolvedAt is not { } resolved || now >= resolved.AddMinutes(policy.CooldownMinutes);
     }
 }

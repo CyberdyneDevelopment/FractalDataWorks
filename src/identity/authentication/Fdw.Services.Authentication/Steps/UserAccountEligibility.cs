@@ -37,8 +37,8 @@ public sealed class UserAccountEligibility : IIssuanceEligibility
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserAccountEligibility>? logger = null)
     {
-        _users = users ?? throw new ArgumentNullException(nameof(users));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _users = users;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<UserAccountEligibility>.Instance;
     }
 

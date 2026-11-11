@@ -19,16 +19,9 @@ public static class NavTree
     /// names one.
     /// </param>
     /// <returns>Sections ordered by <see cref="INavItem.SectionOrder"/>, each holding its ordered pages.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pages"/> or <paramref name="hasPermission"/> is null.</exception>
     public static IReadOnlyList<NavGroup> Build(
         IEnumerable<IPage> pages, bool isAuthenticated, Func<string, bool> hasPermission)
     {
-        if (pages is null)
-            throw new ArgumentNullException(nameof(pages));
-
-        if (hasPermission is null)
-            throw new ArgumentNullException(nameof(hasPermission));
-
         return pages
             .Where(p => !ReferenceEquals(p.NavItem, NavItem.Empty))
             .Where(p => p.Access.IsSatisfiedBy(isAuthenticated, hasPermission))

@@ -11,8 +11,8 @@ public sealed class DocumentContent : IDisposable
     /// <param name="content">The content, positioned at its start; for a ranged read, at the start of the range.</param>
     public DocumentContent(DocumentInfo info, Stream content)
     {
-        Info = info ?? throw new ArgumentNullException(nameof(info));
-        Content = content ?? throw new ArgumentNullException(nameof(content));
+        Info = info;
+        Content = content;
     }
 
     /// <summary>Gets what the storage reports about the document.</summary>

@@ -13,7 +13,6 @@ public static class ScriptPayloadWriter
     /// <returns>The payload.</returns>
     public static ScriptPayload Write(SqlScriptConfiguration script)
     {
-        ArgumentNullException.ThrowIfNull(script);
         return new ScriptPayload
         {
             Name = script.Name,

@@ -25,7 +25,7 @@ public class EnumExpectations
     /// <param name="enumDeclaration">The enum declaration to validate.</param>
     public EnumExpectations(EnumDeclarationSyntax enumDeclaration)
     {
-        _enumDeclaration = enumDeclaration ?? throw new ArgumentNullException(nameof(enumDeclaration));
+        _enumDeclaration = enumDeclaration;
     }
 
     /// <summary>

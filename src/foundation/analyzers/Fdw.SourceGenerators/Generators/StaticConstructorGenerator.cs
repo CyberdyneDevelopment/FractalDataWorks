@@ -25,7 +25,7 @@ public sealed class StaticConstructorGenerator<TId>
     /// <param name="config">The configuration for collection generation.</param>
     public StaticConstructorGenerator(CollectionBuilderConfiguration config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _config = config;
     }
 
     /// <summary>
@@ -70,38 +70,12 @@ public sealed class StaticConstructorGenerator<TId>
             }
 
             // Convert to appropriate dictionary type based on strategy
-#pragma warning disable FDW018
-            switch (strategy)
-            {
-                case CollectionStrategy.Immutable:
-                    constructorBody.AppendLine("_all = dictionary.ToFrozenDictionary();");
-                    break;
-                case CollectionStrategy.Mutable:
-                    constructorBody.AppendLine("_all = new System.Collections.Concurrent.ConcurrentDictionary<" + keyType + ", " + returnType + ">(dictionary);");
-                    break;
-                case CollectionStrategy.Factory:
-                    constructorBody.AppendLine("_all = dictionary;");
-                    break;
-            }
-#pragma warning restore FDW018
+            constructorBody.AppendLine(strategy.AllFromDictionary(keyType, returnType));
         }
         else
         {
             // No values - create empty dictionary based on strategy
-#pragma warning disable FDW018
-            switch (strategy)
-            {
-                case CollectionStrategy.Immutable:
-                    constructorBody.AppendLine("_all = System.Collections.Frozen.FrozenDictionary<" + keyType + ", " + returnType + ">.Empty;");
-                    break;
-                case CollectionStrategy.Mutable:
-                    constructorBody.AppendLine("_all = new System.Collections.Concurrent.ConcurrentDictionary<" + keyType + ", " + returnType + ">();");
-                    break;
-                case CollectionStrategy.Factory:
-                    constructorBody.AppendLine("_all = new System.Collections.Generic.Dictionary<" + keyType + ", " + returnType + ">();");
-                    break;
-            }
-#pragma warning restore FDW018
+            constructorBody.AppendLine(strategy.EmptyAll(keyType, returnType));
         }
 
         constructorBody.AppendLine();
@@ -174,20 +148,7 @@ public sealed class StaticConstructorGenerator<TId>
                     var dictionaryName = $"_by{lookup.PropertyName}";
 
                     // Use appropriate dictionary conversion based on strategy
-#pragma warning disable FDW018
-                    switch (strategy)
-                    {
-                        case CollectionStrategy.Immutable:
-                            constructorBody.AppendLine($"{dictionaryName} = _all.Values.ToFrozenDictionary(x => x.{lookup.PropertyName});");
-                            break;
-                        case CollectionStrategy.Mutable:
-                            constructorBody.AppendLine($"{dictionaryName} = new System.Collections.Concurrent.ConcurrentDictionary<{lookup.PropertyType}, {returnType}>(_all.Values.ToDictionary(x => x.{lookup.PropertyName}));");
-                            break;
-                        case CollectionStrategy.Factory:
-                            constructorBody.AppendLine($"{dictionaryName} = _all.Values.ToDictionary(x => x.{lookup.PropertyName});");
-                            break;
-                    }
-#pragma warning restore FDW018
+                    constructorBody.AppendLine(strategy.LookupFromAll(dictionaryName, lookup.PropertyName, lookup.PropertyType, returnType));
                 }
             }
         }

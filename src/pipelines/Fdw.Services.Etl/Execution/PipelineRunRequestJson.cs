@@ -31,8 +31,6 @@ internal static class PipelineRunRequestJson
     /// <returns>The text, or a failure naming the parameter whose value cannot be kept.</returns>
     public static IGenericResult<string> Write(PipelineExecutionRequest request, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(logger);
         List<ValueRecord>? values = null;
         if (request.Parameters is { } parameters)
         {
@@ -62,8 +60,6 @@ internal static class PipelineRunRequestJson
     /// <returns>The request, or a failure naming what cannot be read.</returns>
     public static IGenericResult<PipelineExecutionRequest> Read(Guid executionId, string text, DateTimeOffset? heldUntil, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(logger);
         RequestRecord? record;
         try
         {

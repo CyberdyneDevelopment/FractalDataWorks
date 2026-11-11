@@ -122,7 +122,7 @@ public class Lonely
         run.IsSuccess.ShouldBeTrue();
         run.Data!.SitesResolved.ShouldBe(0);
         run.Data.SitesUnresolved.ShouldBe(1);
-        run.Data.Unresolved.Single().Reason.ShouldBe(UnresolvedReason.NoBaseMember);
+        run.Data.Unresolved.Single().Reason.ShouldBe(UnresolvedReasons.NoBaseMember);
         run.Data.Unresolved.Single().SymbolDisplayName.ShouldContain("Solo");
         run.NewText.ShouldContain("/// <inheritdoc/>");
     }
@@ -141,7 +141,7 @@ public class Consumer
 
         run.IsSuccess.ShouldBeTrue();
         run.Data!.SitesUnresolved.ShouldBe(1);
-        run.Data.Unresolved.Single().Reason.ShouldBe(UnresolvedReason.CrefTargetNotFound);
+        run.Data.Unresolved.Single().Reason.ShouldBe(UnresolvedReasons.CrefTargetNotFound);
         run.NewText.ShouldContain("<inheritdoc");
     }
 

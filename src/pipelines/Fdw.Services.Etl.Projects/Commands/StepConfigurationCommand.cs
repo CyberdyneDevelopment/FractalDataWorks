@@ -11,6 +11,6 @@ namespace Fdw.Services.Etl.Projects.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Step")]
 public sealed class StepConfigurationCommand : ConfigurationCommandBase<StepConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="StepConfigurationCommand"/> class.</summary>
     public StepConfigurationCommand() : base("StageStep") { }
 }

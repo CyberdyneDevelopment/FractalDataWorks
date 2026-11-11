@@ -33,6 +33,18 @@ public static partial class FindMembersTranslatorLog
         Message = "FindMembersTranslator: failed to analyze document '{filePath}'")]
     public static partial IGenericMessage FailedToAnalyzeDocument(ILogger logger, string filePath);
 
+    /// <summary>Error: the request names a member kind that is not one of the kinds a listing filters by; it is refused.</summary>
+    /// <remarks>Mirrors <c>RoslynResultCodes.MemberKindNotKnown</c> (21029).</remarks>
+    [MessageLogging(EventId = 21029, Level = LogLevel.Error,
+        Message = "FindMembersTranslator: '{memberKind}' is not a member kind; use one of: {accepted}")]
+    public static partial IGenericMessage MemberKindNotKnown(ILogger logger, string memberKind, string accepted);
+
+    /// <summary>Error: the request names a symbol kind that no member of a type has; it is refused.</summary>
+    /// <remarks>Mirrors <c>RoslynResultCodes.MemberKindNotAMember</c> (21030).</remarks>
+    [MessageLogging(EventId = 21030, Level = LogLevel.Error,
+        Message = "FindMembersTranslator: '{memberKind}' is a symbol kind that no member of a type has; use one of: {accepted}")]
+    public static partial IGenericMessage MemberKindNotAMember(ILogger logger, string memberKind, string accepted);
+
     /// <summary>Error: the symbol at the given position is not a named type.</summary>
     /// <remarks>Mirrors <c>RoslynResultCodes.SymbolNotType</c> (21021).</remarks>
     [MessageLogging(EventId = 21021, Level = LogLevel.Error,

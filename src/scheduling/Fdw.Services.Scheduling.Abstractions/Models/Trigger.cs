@@ -75,7 +75,6 @@ public sealed class Trigger : IGenericTrigger
     /// <param name="modifiedUtc">When the trigger was last modified.</param>
     /// <param name="metadata">Optional metadata for the trigger.</param>
     /// <param name="logger">Optional logger instance.</param>
-    /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentException">Thrown when required parameters are empty or whitespace.</exception>
 #pragma warning disable FDW007 // Sequential property initialization with validation checks
     private Trigger(
@@ -89,9 +88,9 @@ public sealed class Trigger : IGenericTrigger
         IReadOnlyDictionary<string, object>? metadata,
         ILogger<Trigger>? logger = null)
     {
-        TriggerId = triggerId ?? throw new ArgumentNullException(nameof(triggerId));
-        TriggerName = triggerName ?? throw new ArgumentNullException(nameof(triggerName));
-        TriggerType = triggerType ?? throw new ArgumentNullException(nameof(triggerType));
+        TriggerId = triggerId;
+        TriggerName = triggerName;
+        TriggerType = triggerType;
         IsEnabled = isEnabled;
         CreatedUtc = createdUtc;
         ModifiedUtc = modifiedUtc;
@@ -208,7 +207,6 @@ public sealed class Trigger : IGenericTrigger
     /// <param name="isEnabled">Whether the trigger is enabled (default: true).</param>
     /// <param name="metadata">Optional additional metadata.</param>
     /// <returns>A new cron trigger instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentException">Thrown when required parameters are empty or whitespace.</exception>
     /// <remarks>
     /// <para>
@@ -299,7 +297,6 @@ public sealed class Trigger : IGenericTrigger
     /// <param name="isEnabled">Whether the trigger is enabled (default: true).</param>
     /// <param name="metadata">Optional additional metadata.</param>
     /// <returns>A new interval trigger instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentException">Thrown when required parameters are invalid.</exception>
     /// <remarks>
     /// <para>
@@ -393,7 +390,6 @@ public sealed class Trigger : IGenericTrigger
     /// <param name="isEnabled">Whether the trigger is enabled (default: true).</param>
     /// <param name="metadata">Optional additional metadata.</param>
     /// <returns>A new once trigger instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentException">Thrown when required parameters are invalid.</exception>
     /// <remarks>
     /// <para>
@@ -475,7 +471,6 @@ public sealed class Trigger : IGenericTrigger
     /// <param name="isEnabled">Whether the trigger is enabled (default: true).</param>
     /// <param name="metadata">Optional additional metadata.</param>
     /// <returns>A new manual trigger instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentException">Thrown when required parameters are empty or whitespace.</exception>
     /// <remarks>
     /// <para>

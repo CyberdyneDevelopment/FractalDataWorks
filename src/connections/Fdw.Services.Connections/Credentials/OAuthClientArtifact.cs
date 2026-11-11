@@ -57,7 +57,6 @@ public sealed class OAuthClientArtifact : CredentialArtifactBase
     /// <param name="clientSecret">The OAuth client secret.</param>
     /// <param name="tokenEndpoint">The OAuth token endpoint URL. Optional if token endpoint is configured elsewhere.</param>
     /// <param name="scope">The OAuth scope to request. Optional.</param>
-    /// <exception cref="ArgumentNullException">Thrown when clientId or clientSecret is null.</exception>
     /// <exception cref="ArgumentException">Thrown when clientId or clientSecret is empty or whitespace.</exception>
     public OAuthClientArtifact(
         string clientId,
@@ -65,13 +64,9 @@ public sealed class OAuthClientArtifact : CredentialArtifactBase
         string? tokenEndpoint = null,
         string? scope = null)
     {
-        if (clientId == null)
-            throw new ArgumentNullException(nameof(clientId));
         if (string.IsNullOrWhiteSpace(clientId))
             throw new ArgumentException("Client ID cannot be empty or whitespace.", nameof(clientId));
 
-        if (clientSecret == null)
-            throw new ArgumentNullException(nameof(clientSecret));
         if (string.IsNullOrWhiteSpace(clientSecret))
             throw new ArgumentException("Client secret cannot be empty or whitespace.", nameof(clientSecret));
 

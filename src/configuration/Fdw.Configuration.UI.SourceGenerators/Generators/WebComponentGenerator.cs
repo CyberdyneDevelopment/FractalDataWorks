@@ -82,7 +82,7 @@ public sealed class WebComponentGenerator
         if (property.HelpText != null)
             builder.AppendLine($"                HelpText = \"{EscapeString(property.HelpText)}\",");
         builder.AppendLine($"                Required = {(property.IsRequired ? "true" : "false")},");
-        builder.AppendLine($"                ComponentTypeId = {(int)property.ComponentType},");
+        builder.AppendLine($"                ComponentTypeId = {property.ComponentType.Id},");
 
         if (property.ValidationRules.Count > 0)
         {

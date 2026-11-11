@@ -39,7 +39,7 @@ public sealed class SpectreUIRenderer : IUIRenderer
     /// <param name="logger">The logger.</param>
     public SpectreUIRenderer(ILogger<SpectreUIRenderer> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
     }
 
     /// <inheritdoc />

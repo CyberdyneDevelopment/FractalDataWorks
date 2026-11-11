@@ -41,7 +41,7 @@ public class TenantOrgAccessConfigurationProvider
         IConfigurationGatewayProvider gatewayProvider,
         ILogger<TenantOrgAccessConfigurationProvider>? logger = null)
     {
-        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
+        _gatewayProvider = gatewayProvider;
         _logger = logger ?? NullLogger<TenantOrgAccessConfigurationProvider>.Instance;
     }
 

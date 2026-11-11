@@ -70,7 +70,6 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(pipeline);
-        ArgumentNullException.ThrowIfNull(parameters);
         if (!awaitCompletion && (resultVariable is not null || failOnChildFailure))
         {
             throw new ArgumentException("A result variable or a failure on the child's failure needs the step to wait for the child.", nameof(awaitCompletion));
@@ -99,7 +98,6 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
     /// <inheritdoc />
     public Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
         return _runPoint is { FiresOnFailure: true }
             ? Task.FromResult<IGenericResult>(GenericResult.Success())
             : Start(context, "Succeeded", cancellationToken);
@@ -108,8 +106,6 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
     /// <inheritdoc />
     public async Task<IGenericResult> OnFailure(FlowStepContext context, IGenericResult failure, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(failure);
         return _runPoint is { FiresOnFailure: true }
             ? await Start(context, "Failed", cancellationToken).ConfigureAwait(false)
             : GenericResult.Success();

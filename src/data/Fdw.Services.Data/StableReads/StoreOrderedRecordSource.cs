@@ -50,9 +50,6 @@ public sealed class StoreOrderedRecordSource : IRecordSource<DataRecord>
         string target,
         ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(schema);
-        ArgumentNullException.ThrowIfNull(readPage);
-        ArgumentNullException.ThrowIfNull(query);
         ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
         ArgumentException.ThrowIfNullOrWhiteSpace(target);
 

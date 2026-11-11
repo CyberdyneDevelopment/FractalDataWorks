@@ -34,7 +34,7 @@ public abstract class UpdateWorkspaceMemberRoleEndpointBase
     private WorkspaceMemberConfiguration? _existing;
     private IWorkspaceImplementationConfiguration? _workspace;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateWorkspaceMemberRoleEndpointBase"/> class.</summary>
     protected UpdateWorkspaceMemberRoleEndpointBase(
         ILogger<UpdateWorkspaceMemberRoleEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

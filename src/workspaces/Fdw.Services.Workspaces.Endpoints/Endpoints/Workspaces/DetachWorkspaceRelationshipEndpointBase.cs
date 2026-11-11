@@ -26,7 +26,7 @@ public abstract class DetachWorkspaceRelationshipEndpointBase : Endpoint<DetachW
     private readonly IWorkspaceAccessPolicy _access;
     private readonly ILogger<DetachWorkspaceRelationshipEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DetachWorkspaceRelationshipEndpointBase"/> class.</summary>
     protected DetachWorkspaceRelationshipEndpointBase(
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,

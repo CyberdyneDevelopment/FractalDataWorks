@@ -31,9 +31,6 @@ public static class GraphScriptAccess
     public static async Task<IGenericResult> Check(
         GraphPipelineConfiguration graph, Func<CancellationToken, Task<bool>> mayWriteScripts, ILogger logger, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(mayWriteScripts);
-        ArgumentNullException.ThrowIfNull(logger);
         var holding = GraphScripts.ComponentsHolding(graph);
         if (holding.Count == 0 || await mayWriteScripts(cancellationToken).ConfigureAwait(false))
         {

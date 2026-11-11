@@ -42,7 +42,7 @@ public sealed class NarrowedDocumentStore : IDocumentStore
     /// <param name="logger">The logger.</param>
     public NarrowedDocumentStore(IDocumentConnection connection, DocumentPath folder, Guid storedUnder, ILogger<NarrowedDocumentStore>? logger)
     {
-        _connection = connection ?? throw new ArgumentNullException(nameof(connection));
+        _connection = connection;
         StoredUnder = storedUnder;
         _folder = new DocumentScope(folder);
         Scope = new DocumentScope(DocumentPath.Root);
@@ -61,8 +61,6 @@ public sealed class NarrowedDocumentStore : IDocumentStore
     /// <inheritdoc />
     public async Task<IGenericResult<T>> Execute<T>(IDocumentCommand<T> command, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         var rewritten = Rewrite(command);
         if (rewritten.IsFailure || rewritten.Value is not IDocumentCommand<T> inner)
         {

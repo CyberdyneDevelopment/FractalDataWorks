@@ -3,7 +3,7 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Claims.Abstractions;
 
 /// <summary>
-/// Per-token identifier, distinct from the principal it was issued for. RFC&nbsp;7519 &sect;4.1.7 fixes
+/// Per-token identifier, distinct from the principal it was issued for. RFC 7519 section 4.1.7 fixes
 /// this claim's wire name globally — not deployment-specific like <c>roles</c>/<c>perm</c> naming can
 /// be for an external validator, so there is nothing to make configurable here, only a name to not
 /// repeat as a literal. Read by this host's own revocation check

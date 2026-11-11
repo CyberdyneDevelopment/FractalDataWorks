@@ -41,7 +41,7 @@ public sealed class SessionStateService : ISessionStateService
         SessionStateConfigurationProvider provider,
         ILogger<SessionStateService>? logger = null)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
         _logger = logger ?? NullLogger<SessionStateService>.Instance;
     }
 

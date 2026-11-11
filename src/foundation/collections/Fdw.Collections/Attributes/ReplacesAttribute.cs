@@ -22,7 +22,7 @@ public sealed class ReplacesAttribute : Attribute
     /// <param name="originalType">The TypeOption type to replace.</param>
     public ReplacesAttribute(Type originalType)
     {
-        OriginalType = originalType ?? throw new ArgumentNullException(nameof(originalType));
+        OriginalType = originalType;
     }
 
     /// <summary>

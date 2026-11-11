@@ -24,12 +24,12 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
     private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly ICategoryConfigurationProvider _categories;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateDataSetEndpointBase"/> class.</summary>
     protected UpdateDataSetEndpointBase(
         ILogger<UpdateDataSetEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider, ICategoryConfigurationProvider categories) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
-        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
+        _categories = categories;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

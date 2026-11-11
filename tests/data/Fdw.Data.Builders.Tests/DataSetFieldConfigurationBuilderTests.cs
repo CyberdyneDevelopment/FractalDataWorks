@@ -95,15 +95,6 @@ public sealed class DataSetFieldConfigurationBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void WithTypeInstanceThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new DataSetFieldConfigurationBuilder().WithType(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void WithTypeNameSetsTypeName()
     {
         var result = new DataSetFieldConfigurationBuilder()

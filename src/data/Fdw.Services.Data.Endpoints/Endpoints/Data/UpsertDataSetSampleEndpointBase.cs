@@ -19,7 +19,7 @@ public abstract class UpsertDataSetSampleEndpointBase : Endpoint<DataSetSampleRe
     private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ILogger<UpsertDataSetSampleEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpsertDataSetSampleEndpointBase"/> class.</summary>
     /// <remarks>
     /// The rows are configuration rows in the data set store the host declared, so they go through that store's
     /// configuration gateway: the main gateway refuses a request over a host-declared store.

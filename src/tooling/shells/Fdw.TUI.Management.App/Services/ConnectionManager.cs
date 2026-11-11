@@ -32,7 +32,7 @@ public sealed class ConnectionManager : IConnectionManager
     /// </summary>
     public ConnectionManager(IHttpClientFactory httpClientFactory)
     {
-        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _httpClientFactory = httpClientFactory;
     }
 
     /// <inheritdoc />
@@ -47,8 +47,6 @@ public sealed class ConnectionManager : IConnectionManager
     /// <inheritdoc />
     public void SaveConnection(SavedConnection connection)
     {
-        ArgumentNullException.ThrowIfNull(connection);
-
         // Remove existing connection with same name
         _savedConnections.RemoveAll(c => string.Equals(c.Name, connection.Name, StringComparison.OrdinalIgnoreCase));
 
@@ -64,8 +62,6 @@ public sealed class ConnectionManager : IConnectionManager
     /// <inheritdoc />
     public async Task<ConnectionResult> Connect(SavedConnection connection, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(connection);
-
         if (string.IsNullOrWhiteSpace(connection.Url))
         {
             return ConnectionResult.Failed("URL is required");

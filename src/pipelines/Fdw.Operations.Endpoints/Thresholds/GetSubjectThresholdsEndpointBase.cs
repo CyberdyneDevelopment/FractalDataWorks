@@ -21,7 +21,7 @@ public abstract class GetSubjectThresholdsEndpointBase : Endpoint<SubjectThresho
     /// <param name="logger">The logger.</param>
     protected GetSubjectThresholdsEndpointBase(IThresholdLinks links, ILogger<GetSubjectThresholdsEndpointBase>? logger)
     {
-        _links = links ?? throw new ArgumentNullException(nameof(links));
+        _links = links;
         _logger = logger ?? NullLogger<GetSubjectThresholdsEndpointBase>.Instance;
     }
 

@@ -54,7 +54,7 @@ public sealed class ThresholdEvaluatorTests
             : null;
     }
 
-    private static IFilterNode AtLeast(string field, object value) =>
+    private static FilterCondition AtLeast(string field, object value) =>
         new FilterCondition { PropertyName = field, Operator = FilterOperators.ByName("GreaterThanOrEqual"), Value = value };
 
     private static Threshold<RunType> Failures(bool enabled = true, params ThresholdRule[] rules) => new(new RunType(), "FailureRule", enabled, false, new Dictionary<string, object?>(), rules);
@@ -65,7 +65,7 @@ public sealed class ThresholdEvaluatorTests
 
     private static ThresholdRule Disable(IFilterNode criteria) => new(criteria, "DisablePipeline", null, []);
 
-    private static IReadOnlyDictionary<string, object?> Values(int failures) => new Dictionary<string, object?> { ["consecutiveFailures"] = failures };
+    private static Dictionary<string, object?> Values(int failures) => new Dictionary<string, object?> { ["consecutiveFailures"] = failures };
 
     private static ThresholdEvaluator Sut(Services services, params IThresholdDefinition[] thresholds) => new(new Source(thresholds), services, new ThresholdEntryTracker());
 

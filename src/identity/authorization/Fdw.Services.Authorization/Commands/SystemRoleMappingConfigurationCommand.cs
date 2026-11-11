@@ -8,6 +8,6 @@ namespace Fdw.Services.Authorization.Commands;
 [TypeOption(typeof(ConfigurationCommands), "System")]
 public sealed class SystemRoleMappingConfigurationCommand : ConfigurationCommandBase<SystemRoleMappingConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SystemRoleMappingConfigurationCommand"/> class.</summary>
     public SystemRoleMappingConfigurationCommand() : base("SystemRoleMappingConfiguration") { }
 }

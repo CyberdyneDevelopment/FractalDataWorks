@@ -7,6 +7,6 @@ namespace Fdw.Services.Connections.Commands;
 [TypeOption(typeof(ConfigurationCommands), "FileTypeHandlerOverride")]
 public sealed class FileTypeHandlerOverrideConfigurationCommand : ConfigurationCommandBase<FileTypeHandlerOverrideConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="FileTypeHandlerOverrideConfigurationCommand"/> class.</summary>
     public FileTypeHandlerOverrideConfigurationCommand() : base("FileTypeHandlerOverride") { }
 }

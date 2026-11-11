@@ -36,8 +36,6 @@ internal sealed class FlowInputPump
     /// <returns>The running pump.</returns>
     public static FlowInputPump Start(IFlowInput input, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(input);
-
         var buffer = Channel.CreateUnbounded<FlowBatch>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
         var completion = Task.Run(async () =>
         {

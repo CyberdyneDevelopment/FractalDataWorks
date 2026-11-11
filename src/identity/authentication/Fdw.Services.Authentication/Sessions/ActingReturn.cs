@@ -34,8 +34,6 @@ internal static class ActingReturn
     /// <returns>The plan, or null when refused.</returns>
     internal static Plan? Of(IReadOnlyList<Guid> chain, int step, out string? refusal)
     {
-        ArgumentNullException.ThrowIfNull(chain);
-
         if (chain.Count < 2)
         {
             refusal = "the session is not acting";

@@ -240,6 +240,14 @@ public static partial class CalculationEndpointLog
         Message = "The result of windowed calculation '{calculationName}' does not state its PartitionCount and RowCount")]
     public static partial IGenericMessage WindowedResultCountsMissing(ILogger logger, string calculationName);
 
+    /// <summary>A windowed calculation's result is not JSON, so its counts cannot be read (FDW-5189).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="ex">The parser's exception.</param>
+    /// <param name="calculationName">The calculation that was executed.</param>
+    [MessageLogging(EventId = 91031, Level = LogLevel.Error,
+        Message = "The result of windowed calculation '{calculationName}' is not JSON, so its PartitionCount and RowCount cannot be read")]
+    public static partial IGenericMessage WindowedResultNotJson(ILogger logger, Exception ex, string calculationName);
+
     /// <summary>Logs that the request failed: An internal error occurred during calculation execution.</summary>
     [MessageLogging(EventId = 21550, Level = LogLevel.Warning, Message = "An internal error occurred during calculation execution.", ClientMessage = "An internal error occurred during calculation execution.")]
     public static partial IGenericMessage ExecuteCalculationFaulted(ILogger logger);

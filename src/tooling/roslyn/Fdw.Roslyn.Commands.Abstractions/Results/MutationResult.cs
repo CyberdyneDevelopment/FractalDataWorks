@@ -17,8 +17,8 @@ public class MutationResult : IRoslynCommandResult
     /// <param name="newSolution">The new solution after mutation.</param>
     public MutationResult(string summary, Solution newSolution)
     {
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-        NewSolution = newSolution ?? throw new ArgumentNullException(nameof(newSolution));
+        Summary = summary;
+        NewSolution = newSolution;
         ChangedFiles = Array.Empty<FileChange>();
         SymbolChanges = Array.Empty<SymbolChange>();
         PathChanges = Array.Empty<PathChange>();
@@ -32,9 +32,9 @@ public class MutationResult : IRoslynCommandResult
     /// <param name="changedFiles">The list of changed files.</param>
     public MutationResult(string summary, Solution newSolution, IReadOnlyList<FileChange> changedFiles)
     {
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-        NewSolution = newSolution ?? throw new ArgumentNullException(nameof(newSolution));
-        ChangedFiles = changedFiles ?? throw new ArgumentNullException(nameof(changedFiles));
+        Summary = summary;
+        NewSolution = newSolution;
+        ChangedFiles = changedFiles;
         SymbolChanges = Array.Empty<SymbolChange>();
         PathChanges = Array.Empty<PathChange>();
     }
@@ -55,11 +55,11 @@ public class MutationResult : IRoslynCommandResult
         IReadOnlyList<SymbolChange> symbolChanges,
         IReadOnlyList<PathChange> pathChanges)
     {
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
-        NewSolution = newSolution ?? throw new ArgumentNullException(nameof(newSolution));
-        ChangedFiles = changedFiles ?? throw new ArgumentNullException(nameof(changedFiles));
-        SymbolChanges = symbolChanges ?? throw new ArgumentNullException(nameof(symbolChanges));
-        PathChanges = pathChanges ?? throw new ArgumentNullException(nameof(pathChanges));
+        Summary = summary;
+        NewSolution = newSolution;
+        ChangedFiles = changedFiles;
+        SymbolChanges = symbolChanges;
+        PathChanges = pathChanges;
     }
 
     /// <summary>

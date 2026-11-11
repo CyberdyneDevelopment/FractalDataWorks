@@ -16,7 +16,7 @@ namespace Fdw.Services.Etl.Tests.Execution;
 [Trait("Category", "Etl")]
 public sealed class PipelineRunControlTests
 {
-    private static string CodeOf(Fdw.Results.IGenericResult result) => result.Messages[^1].Code;
+    private static string? CodeOf(Fdw.Results.IGenericResult result) => result.Messages[^1].Code;
 
     [Fact]
     public void CancelOfARunTheHostDoesNotHoldFailsAsNotHeld()

@@ -44,7 +44,6 @@ public sealed class DevSessionHosting
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        ArgumentNullException.ThrowIfNull(builder);
         builder.Services.AddDevSessions(bus => bus.RingCapacity = DefaultRingCapacity);
         builder.Services
             .AddMcpServer()

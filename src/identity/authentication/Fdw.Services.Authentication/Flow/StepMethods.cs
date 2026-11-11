@@ -19,8 +19,6 @@ public static class StepMethods
     /// <returns>The distinct methods the step can prove, or the step's failure when its authority cannot be read.</returns>
     public static async Task<IGenericResult<IReadOnlyList<string>>> Of(IAuthenticationStep step, CancellationToken cancellationToken = default)
     {
-        if (step is null) throw new ArgumentNullException(nameof(step));
-
         if (step is not IAuthorityAssertingAuthenticationStep asserting)
             return GenericResult<IReadOnlyList<string>>.Success(step.AuthenticationMethods);
 

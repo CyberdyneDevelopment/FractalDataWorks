@@ -12,8 +12,8 @@ public sealed class SlnxProjectPathChange
     /// </summary>
     public SlnxProjectPathChange(string oldPath, string newPath)
     {
-        OldPath = oldPath ?? throw new ArgumentNullException(nameof(oldPath));
-        NewPath = newPath ?? throw new ArgumentNullException(nameof(newPath));
+        OldPath = oldPath;
+        NewPath = newPath;
     }
 
     /// <summary>

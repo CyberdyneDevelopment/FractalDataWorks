@@ -39,8 +39,8 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         ISigningCredentialProvider credentials,
         ILogger<JwtTokenIssuer>? logger = null)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+        _configuration = configuration;
+        _credentials = credentials;
         _logger = logger ?? NullLogger<JwtTokenIssuer>.Instance;
     }
 

@@ -14,7 +14,6 @@ public static class FragmentSearch
     /// <returns>The calls, in the order written.</returns>
     public static IReadOnlyList<FunctionCall> Aggregates(TSqlFragment fragment)
     {
-        ArgumentNullException.ThrowIfNull(fragment);
         var finder = new AggregateFinder();
         fragment.Accept(finder);
         return finder.Found;
@@ -25,7 +24,6 @@ public static class FragmentSearch
     /// <returns>True when it does.</returns>
     public static bool ReadsColumns(TSqlFragment fragment)
     {
-        ArgumentNullException.ThrowIfNull(fragment);
         var finder = new ColumnReferenceFinder();
         fragment.Accept(finder);
         return finder.Found;
@@ -36,7 +34,6 @@ public static class FragmentSearch
     /// <returns>True when it does.</returns>
     public static bool ReadsCatalog(TSqlFragment fragment)
     {
-        ArgumentNullException.ThrowIfNull(fragment);
         var finder = new CatalogNeedFinder();
         fragment.Accept(finder);
         return finder.Found;

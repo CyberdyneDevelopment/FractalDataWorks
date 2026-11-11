@@ -37,7 +37,7 @@ public abstract class CreateWorkspaceNoteEndpointBase : CrudCreateEndpointBase<C
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IWorkspaceAccessPolicy _access;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateWorkspaceNoteEndpointBase"/> class.</summary>
     protected CreateWorkspaceNoteEndpointBase(
         ILogger<CreateWorkspaceNoteEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

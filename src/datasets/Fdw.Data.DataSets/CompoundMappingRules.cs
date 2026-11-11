@@ -28,9 +28,6 @@ public static class CompoundMappingRules
     /// </returns>
     public static IGenericResult Validate(ICompoundDataSetConfiguration dataSet, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(dataSet);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var sources = JoinedDataSetRules.Validate(dataSet, logger);
         if (sources.IsFailure)
             return sources;

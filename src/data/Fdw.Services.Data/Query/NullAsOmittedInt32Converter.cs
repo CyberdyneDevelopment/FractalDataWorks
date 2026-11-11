@@ -31,7 +31,6 @@ public sealed class NullAsOmittedInt32Converter : JsonConverter<int>
     /// <inheritdoc />
     public override void Write(Utf8JsonWriter writer, int value, JsonSerializerOptions options)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteNumberValue(value);
     }
 }

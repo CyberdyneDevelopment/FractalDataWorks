@@ -122,15 +122,6 @@ public sealed class ConfigurationValidatorResolverTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void ANullTypeIsRefusedNamingIt()
-    {
-        Should.Throw<ArgumentNullException>(() => ConfigurationValidatorResolver.Find(null!, NullLogger.Instance))
-            .ParamName.ShouldBe("configurationType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void AnUnvalidatedOptionNeedsAReason()
     {
         Should.Throw<ArgumentException>(() => new BlankReasonOption());

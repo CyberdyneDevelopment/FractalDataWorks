@@ -36,7 +36,7 @@ public sealed class FlowStageStep : IFlowStep, IFlowFailureHook
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
-        _graph = graph ?? throw new ArgumentNullException(nameof(graph));
+        _graph = graph;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -46,8 +46,6 @@ public sealed class FlowStageStep : IFlowStep, IFlowFailureHook
     /// <inheritdoc />
     public async Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         foreach (var bound in _graph.Components.OfType<IFlowStepBound>())
         {
             bound.Bind(context);

@@ -16,61 +16,6 @@ public sealed class ResultMergerAdditionalTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorWithNullFieldExtractorThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => new ResultMerger(null!, new QualifiedNameParser()));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorWithNullNameParserThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => new ResultMerger(new CompositeFieldExtractor(), null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void HashJoinThrowsWhenLeftRecordsIsNull()
-    {
-        var joinDef = CreateJoinDefinition("Inner");
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.HashJoin<dynamic, dynamic, dynamic>(null!, [], joinDef, (l, r) => l));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void HashJoinThrowsWhenRightRecordsIsNull()
-    {
-        var joinDef = CreateJoinDefinition("Inner");
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.HashJoin<dynamic, dynamic, dynamic>([], null!, joinDef, (l, r) => l));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void HashJoinThrowsWhenJoinDefinitionIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.HashJoin<dynamic, dynamic, dynamic>([], [], null!, (l, r) => l));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void HashJoinThrowsWhenResultSelectorIsNull()
-    {
-        var joinDef = CreateJoinDefinition("Inner");
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.HashJoin<dynamic, dynamic, dynamic>([], [], joinDef, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void HashJoinThrowsWhenNoConditions()
     {
         var joinDef = new JoinDefinition
@@ -85,45 +30,6 @@ public sealed class ResultMergerAdditionalTests
                 new List<dynamic>(),
                 joinDef,
                 (l, r) => l).ToList());
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void NestedLoopJoinThrowsWhenLeftRecordsIsNull()
-    {
-        var joinDef = CreateJoinDefinition("Inner");
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.NestedLoopJoin<dynamic, dynamic, dynamic>(null!, [], joinDef, (l, r) => l));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void NestedLoopJoinThrowsWhenRightRecordsIsNull()
-    {
-        var joinDef = CreateJoinDefinition("Inner");
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.NestedLoopJoin<dynamic, dynamic, dynamic>([], null!, joinDef, (l, r) => l));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void NestedLoopJoinThrowsWhenJoinDefinitionIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.NestedLoopJoin<dynamic, dynamic, dynamic>([], [], null!, (l, r) => l));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void NestedLoopJoinThrowsWhenResultSelectorIsNull()
-    {
-        var joinDef = CreateJoinDefinition("Inner");
-        Should.Throw<ArgumentNullException>(() =>
-            _merger.NestedLoopJoin<dynamic, dynamic, dynamic>([], [], joinDef, null!));
     }
 
     [Fact]

@@ -38,8 +38,8 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
         IChangeLedger? ledger = null,
         ILogger<RoslynCommandHandler>? logger = null)
     {
-        _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
-        _translators = translators ?? throw new ArgumentNullException(nameof(translators));
+        _workspace = workspace;
+        _translators = translators;
         _ledger = ledger ?? NullChangeLedger.Instance;
         _logger = logger ?? NullLogger<RoslynCommandHandler>.Instance;
     }

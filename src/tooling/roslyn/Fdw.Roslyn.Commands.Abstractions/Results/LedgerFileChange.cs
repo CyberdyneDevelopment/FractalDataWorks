@@ -12,9 +12,9 @@ public sealed class LedgerFileChange
     /// </summary>
     public LedgerFileChange(string filePath, string changeType, string projectName, int textChangeCount)
     {
-        FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-        ChangeType = changeType ?? throw new ArgumentNullException(nameof(changeType));
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
+        FilePath = filePath;
+        ChangeType = changeType;
+        ProjectName = projectName;
         TextChangeCount = textChangeCount;
     }
 

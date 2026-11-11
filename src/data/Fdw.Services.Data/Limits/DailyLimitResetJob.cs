@@ -31,7 +31,7 @@ public sealed class DailyLimitResetJob : BackgroundService
         ConnectionLimitCounterStore counters,
         ILoggerFactory? loggerFactory)
     {
-        _counters = counters ?? throw new ArgumentNullException(nameof(counters));
+        _counters = counters;
         _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DailyLimitResetJob>();
     }
 

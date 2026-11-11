@@ -237,4 +237,9 @@ public static partial class FlowLog
     [MessageLogging(EventId = 21001, Level = LogLevel.Error,
         Message = "'{owner}' names $({name}) in its script, whose value is not a name; a token takes letters, digits, underscore and dot only (a value belongs in a named parameter such as @Year), and the script did not run")]
     public static partial IGenericMessage ScriptTokenNotAName(ILogger logger, string owner, string name);
+
+    /// <summary>Error: a filter needs an expression; an empty expression is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "A filter needs an expression, and the expression given is empty")]
+    public static partial IGenericMessage FilterExpressionRequired(ILogger logger);
 }

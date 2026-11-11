@@ -57,22 +57,22 @@ public sealed class TenantFounding : ITenantFounding
         IUserRoleAssignment roles,
         ILogger<TenantFounding>? logger)
     {
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _defaultWorkspaces = defaultWorkspaces ?? throw new ArgumentNullException(nameof(defaultWorkspaces));
-        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
-        _users = users ?? throw new ArgumentNullException(nameof(users));
-        _memberships = memberships ?? throw new ArgumentNullException(nameof(memberships));
-        _grantRule = grantRule ?? throw new ArgumentNullException(nameof(grantRule));
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
+        _tenants = tenants;
+        _organizations = organizations;
+        _defaultWorkspaces = defaultWorkspaces;
+        _policy = policy;
+        _users = users;
+        _memberships = memberships;
+        _grantRule = grantRule;
+        _roles = roles;
         _logger = logger ?? NullLogger<TenantFounding>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<Guid>> Found(NewTenant tenant, Guid administratorId, string roleName, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(tenant);
-        ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
+        if (string.IsNullOrWhiteSpace(roleName))
+            return GenericResult<Guid>.Failure(TenantFoundingLog.FounderRoleNameRequired(_logger));
 
         // The founder names the slug of the tenant's first organization; there is no default (FDW-3838). The organization itself is named after the
         // tenant (FDW-4225). Refused before anything is made.

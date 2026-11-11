@@ -26,7 +26,7 @@ public sealed class HttpHealthMonitorFactory : IHttpHealthMonitorFactory
     /// <summary>Initializes a new instance of the <see cref="HttpHealthMonitorFactory"/> class.</summary>
     public HttpHealthMonitorFactory(IHttpClientFactory httpClientFactory, ILoggerFactory? loggerFactory = null)
     {
-        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _httpClientFactory = httpClientFactory;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory?.CreateLogger<HttpHealthMonitorFactory>()
             ?? NullLogger<HttpHealthMonitorFactory>.Instance;
@@ -35,9 +35,6 @@ public sealed class HttpHealthMonitorFactory : IHttpHealthMonitorFactory
     /// <inheritdoc/>
     public IGenericResult<IHealthMonitorService> Create(IHealthMonitorImplementationConfiguration configuration)
     {
-        if (configuration is null)
-            throw new ArgumentNullException(nameof(configuration));
-
         return GenericResult<IHealthMonitorService>.Success(
             new HttpHealthMonitorService(
                 _httpClientFactory,

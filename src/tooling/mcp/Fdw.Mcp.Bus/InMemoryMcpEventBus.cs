@@ -42,8 +42,6 @@ public sealed class InMemoryMcpEventBus : IMcpEventBus
     /// <inheritdoc />
     public ValueTask<ulong> Publish(McpEventDraft draft, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(draft);
-
         McpEvent evt;
         Subscription[] snapshot;
 
@@ -81,8 +79,6 @@ public sealed class InMemoryMcpEventBus : IMcpEventBus
     /// <inheritdoc />
     public IAsyncEnumerable<McpEvent> Subscribe(string topicPattern, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(topicPattern);
-
         var channel = Channel.CreateUnbounded<McpEvent>(new UnboundedChannelOptions
         {
             SingleReader = true,
@@ -111,8 +107,6 @@ public sealed class InMemoryMcpEventBus : IMcpEventBus
     /// <inheritdoc />
     public async IAsyncEnumerable<McpEvent> Replay(string topicPattern, ulong fromEventId, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(topicPattern);
-
         foreach (var evt in Snapshot())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -126,8 +120,6 @@ public sealed class InMemoryMcpEventBus : IMcpEventBus
     /// <inheritdoc />
     public async IAsyncEnumerable<McpEvent> ReplayBetween(string topicPattern, DateTimeOffset from, DateTimeOffset to, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(topicPattern);
-
         foreach (var evt in Snapshot())
         {
             cancellationToken.ThrowIfCancellationRequested();

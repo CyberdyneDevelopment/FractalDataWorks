@@ -11,6 +11,6 @@ namespace Fdw.Services.DataVault;
 [TypeOption(typeof(ConfigurationCommands), "DataVault")]
 public sealed class DataVaultConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataVaultConfigurationCommand"/> class.</summary>
     public DataVaultConfigurationCommand() : base("DataVault") { }
 }

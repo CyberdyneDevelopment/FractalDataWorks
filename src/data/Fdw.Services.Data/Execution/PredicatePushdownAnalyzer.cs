@@ -47,7 +47,7 @@ public sealed class PredicatePushdownAnalyzer
     /// <param name="logger">The logger instance.</param>
     public PredicatePushdownAnalyzer(ILogger<PredicatePushdownAnalyzer> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
     }
 
     /// <summary>

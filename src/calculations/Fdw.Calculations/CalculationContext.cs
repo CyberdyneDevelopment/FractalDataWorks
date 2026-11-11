@@ -42,7 +42,7 @@ public sealed class CalculationContext : ICalculationContext
         ILogger<CalculationContext>? logger = null,
         CancellationToken cancellationToken = default)
     {
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _dataGateways = dataGateways;
         ExecutionId = Guid.NewGuid();
         StartTime = DateTimeOffset.UtcNow;
         Parameters = parameters ?? NoParameters;

@@ -181,10 +181,6 @@ public sealed class CreateTableCommand : DdlCommand
         if (string.IsNullOrWhiteSpace(referencedColumn))
             throw new ArgumentException("Referenced column name cannot be null or whitespace.", nameof(referencedColumn));
 
-        // No default action (FDW-3610): a foreign key states both, NoAction included.
-        ArgumentNullException.ThrowIfNull(onDelete);
-        ArgumentNullException.ThrowIfNull(onUpdate);
-
         _foreignKeys.Add(new ForeignKeyDefinition
         {
             Name = constraintName,

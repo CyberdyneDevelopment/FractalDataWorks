@@ -42,13 +42,6 @@ public sealed class DataSet : IDataSet
         IReadOnlyList<IContainerKey> keys,
         ILogger<DataSet>? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(composition);
-        ArgumentNullException.ThrowIfNull(sources);
-        ArgumentNullException.ThrowIfNull(joins);
-        ArgumentNullException.ThrowIfNull(fields);
-        ArgumentNullException.ThrowIfNull(keys);
-
         Name = name;
         Description = description;
         Composition = composition;
@@ -80,8 +73,6 @@ public sealed class DataSet : IDataSet
     /// <inheritdoc />
     public IGenericResult<IDataNode> Node(string name)
     {
-        ArgumentNullException.ThrowIfNull(name);
-
         var field = _fields.FirstOrDefault(f =>
             string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
 
@@ -102,8 +93,6 @@ public sealed class DataSet : IDataSet
     /// <inheritdoc />
     public IGenericResult<IDataField> Field(string name)
     {
-        ArgumentNullException.ThrowIfNull(name);
-
         var field = _fields.FirstOrDefault(f =>
             string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase));
 

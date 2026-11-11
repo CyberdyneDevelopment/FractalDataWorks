@@ -34,16 +34,15 @@ public sealed class ThresholdEvaluator : IThresholdEvaluator
     /// <param name="logger">The logger.</param>
     public ThresholdEvaluator(IThresholdSource source, IServiceProvider services, ThresholdEntryTracker entries, ILogger<ThresholdEvaluator>? logger = null)
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _services = services ?? throw new ArgumentNullException(nameof(services));
-        _entries = entries ?? throw new ArgumentNullException(nameof(entries));
+        _source = source;
+        _services = services;
+        _entries = entries;
         _logger = logger ?? NullLogger<ThresholdEvaluator>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<ThresholdReport>> Report(ThresholdSubject subject, IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(subject);
         var attached = await _source.For(subject, cancellationToken).ConfigureAwait(false);
         if (attached.IsFailure || attached.Value is null)
         {
@@ -57,9 +56,6 @@ public sealed class ThresholdEvaluator : IThresholdEvaluator
     public async Task<IGenericResult<ThresholdReport>> Judge(
         ThresholdSubject subject, IReadOnlyList<IThresholdDefinition> thresholds, IReadOnlyDictionary<string, object?> values, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(subject);
-        ArgumentNullException.ThrowIfNull(thresholds);
-        ArgumentNullException.ThrowIfNull(values);
         var enabled = thresholds.Where(threshold => threshold.IsEnabled).ToList();
         if (enabled.Count == 0)
         {
@@ -86,9 +82,6 @@ public sealed class ThresholdEvaluator : IThresholdEvaluator
     public IReadOnlyList<ThresholdMatch> Holds(
         ThresholdSubject subject, IReadOnlyList<IThresholdDefinition> thresholds, IReadOnlyDictionary<string, object?> values, string escalation)
     {
-        ArgumentNullException.ThrowIfNull(subject);
-        ArgumentNullException.ThrowIfNull(thresholds);
-        ArgumentNullException.ThrowIfNull(values);
         var named = new Dictionary<string, object?>(values, StringComparer.OrdinalIgnoreCase);
         var held = new List<ThresholdMatch>();
         foreach (var threshold in thresholds.Where(threshold => threshold.IsEnabled))

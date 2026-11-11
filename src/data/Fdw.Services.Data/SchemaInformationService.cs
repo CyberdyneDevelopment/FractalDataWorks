@@ -113,8 +113,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
         DataStoreDiscoveryOptions options,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(options);
-
         var config = await ResolveConnectionConfig(connectionName, cancellationToken).ConfigureAwait(false);
         if (config.IsFailure || config.Value is not { } connection)
             return config.ToNewResult<IReadOnlyList<IStorageContainer>>();
@@ -129,9 +127,6 @@ public sealed class SchemaInformationService : ISchemaInformationService
         bool refresh,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(store);
-        ArgumentNullException.ThrowIfNull(options);
-
         var config = await _configProvider.Get(store.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (config.IsFailure || config.Value is not { } connection)
         {

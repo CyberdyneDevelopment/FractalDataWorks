@@ -90,7 +90,7 @@ public sealed class GuideImplementationTranslatorTests
         var result = await Run(new GuideImplementationCommand { GuidesPath = folder, TypeName = "Gadget" });
 
         var exemplar = result.Value!.Data.Guides.Single().Exemplars.ShouldHaveSingleItem();
-        exemplar.Resolution.ShouldBe(GuideExemplarResolution.Resolved);
+        exemplar.Resolution.ShouldBe(GuideExemplarResolutions.Resolved);
         exemplar.Line.ShouldNotBeNull();
         exemplar.Summary.ShouldBe("The widget to copy.");
     }
@@ -106,7 +106,7 @@ public sealed class GuideImplementationTranslatorTests
         var result = await Run(new GuideImplementationCommand { GuidesPath = folder, TypeName = "Gadget" });
 
         var exemplar = result.Value!.Data.Guides.Single().Exemplars.Single();
-        exemplar.Resolution.ShouldBe(GuideExemplarResolution.FileNotInSolution);
+        exemplar.Resolution.ShouldBe(GuideExemplarResolutions.FileNotInSolution);
         exemplar.FilePath.ShouldBeNull();
         exemplar.StampedCite.ShouldBe("other/src/Thing.cs:3");
     }

@@ -183,14 +183,6 @@ public sealed class DataSetConfigurationBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void WithVersionRefusesNull()
-    {
-        Should.Throw<ArgumentNullException>(() => CreateValidBuilder().WithVersion(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void AnUnstatedVersionIsTheKindsDeclaredVersion()
     {
         // FDW-3956: the version is declared on the data set kind, not assumed in the builder.
@@ -252,15 +244,6 @@ public sealed class DataSetConfigurationBuilderTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.RecordTypeName.ShouldNotBeNullOrWhiteSpace();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void WithRecordTypeInstanceThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new DataSetConfigurationBuilder().WithRecordType((Type)null!));
     }
 
     [Fact]

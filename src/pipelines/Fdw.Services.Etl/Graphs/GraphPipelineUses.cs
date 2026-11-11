@@ -43,8 +43,6 @@ public static class GraphPipelineUses
     /// <returns>The uses, in the order the pipeline's components are listed.</returns>
     public static IReadOnlyList<PipelineUse> Of(GraphPipelineConfiguration graph, IReadOnlyDictionary<Guid, string> transformationNames)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(transformationNames);
         var uses = new List<PipelineUse>();
         foreach (var component in graph.Components)
         {
@@ -74,9 +72,6 @@ public static class GraphPipelineUses
     /// <returns>The uses, in the order the pipeline's components are listed, or the failure that names the parameter the run was not given.</returns>
     public static IGenericResult<IReadOnlyList<PipelineUse>> Of(GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(parameters);
-        ArgumentNullException.ThrowIfNull(logger);
         var scope = GraphScope.RenderValues(graph, parameters, logger);
         if (scope.IsFailure || scope.Value is null)
         {

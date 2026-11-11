@@ -38,10 +38,10 @@ public sealed class ConfiguredOrganizationProvider : IOrganizationProvider
     public ConfiguredOrganizationProvider(
         IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, string containerName, ILogger<ConfiguredOrganizationProvider>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
-        _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
-        _containerName = containerName ?? throw new ArgumentNullException(nameof(containerName));
+        _gateways = gateways;
+        _dataStoreName = dataStoreName;
+        _pathName = pathName;
+        _containerName = containerName;
         _logger = logger ?? NullLogger<ConfiguredOrganizationProvider>.Instance;
     }
 

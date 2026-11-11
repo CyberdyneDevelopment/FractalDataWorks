@@ -22,8 +22,9 @@ public sealed class MsSqlBulkDeleteTranslatorTests
 {
     private readonly MsSqlBulkDeleteTranslator _sut = new();
 
+    // Codes are "code_q<n>": 'o', '_' and 'q' are not hex digits, so a code never shows up by chance in the random #fdw_<guid> staging name.
     private static List<Dictionary<string, object?>> Keys(int count) =>
-        Enumerable.Range(1, count).Select(i => new Dictionary<string, object?> { ["Code"] = $"C{i}" }).ToList();
+        Enumerable.Range(1, count).Select(i => new Dictionary<string, object?> { ["Code"] = $"code_q{i}" }).ToList();
 
     private async Task<IGenericResult<SqlCommand>> Run(IEnumerable<Dictionary<string, object?>> rows, BulkDeleteOptions options, SoftDeleteOptions? soft = null)
     {
@@ -57,8 +58,8 @@ public sealed class MsSqlBulkDeleteTranslatorTests
         sql.ShouldContain("OPENJSON(@fdw_rows)");
         sql.ShouldContain("DELETE t FROM [dbo].[Customers] AS t INNER JOIN #fdw_");
         sql.ShouldContain("ON t.[Code] = s.[Code]");
-        sql.ShouldNotContain("C500");
-        ((string)result.Value.Parameters["@fdw_rows"].Value).ShouldContain("C500");
+        sql.ShouldNotContain("code_q500");
+        ((string)result.Value.Parameters["@fdw_rows"].Value).ShouldContain("code_q500");
     }
 
     [Fact]

@@ -49,10 +49,10 @@ public abstract class MsSqlAuthenticationConfiguration
     /// <inheritdoc />
     public override IReadOnlyList<string> ExpectedProperties { get; } = [];
 
-    /// <inheritdoc />
+    /// <summary>Gets the properties a connection must state for this authentication type; a connection that leaves one out is refused.</summary>
     public IReadOnlyList<string> RequiredProperties { get; } = [];
 
-    /// <inheritdoc />
+    /// <summary>Gets a value indicating whether this is the empty sentinel, which has no name.</summary>
     public bool IsEmpty => string.IsNullOrEmpty(Name);
 
     /// <summary>
@@ -68,7 +68,7 @@ public abstract class MsSqlAuthenticationConfiguration
                 MsSqlConnectionResultCodes.ByName("AuthenticationValueMissing"),
                 ResultDetails.Create("Property", name, "AuthenticationType", Name));
 
-    /// <inheritdoc />
+    /// <summary>Builds the authentication portion of the SQL Server connection string from the connection's properties and, for a type that needs one, the secret the provider fetched.</summary>
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
     /// <summary>Reports the secret this authentication type needs fetched before it can build.</summary>
@@ -89,6 +89,6 @@ public abstract class MsSqlAuthenticationConfiguration
     public virtual IGenericResult<SecretRequirement> RequiredSecret(IReadOnlyDictionary<string, string?> values)
         => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
 
-    /// <inheritdoc />
+    /// <summary>Checks that the connection's authentication properties are complete and usable for this type, before any connection string is built.</summary>
     public abstract IGenericResult Validate(IReadOnlyDictionary<string, string?> values);
 }

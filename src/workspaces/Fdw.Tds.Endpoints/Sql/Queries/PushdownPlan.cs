@@ -14,7 +14,7 @@ internal sealed class PushdownPlan
     /// <param name="steps">The steps left to run in memory.</param>
     public PushdownPlan(QueryCommand<Dictionary<string, object?>> command, ProjectionSteps steps)
     {
-        Command = command ?? throw new ArgumentNullException(nameof(command));
+        Command = command;
         Steps = steps;
     }
 

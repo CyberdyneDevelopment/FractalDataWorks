@@ -18,7 +18,6 @@ public static class GraphScriptPermission
     /// <returns>The question <see cref="GraphScriptAccess.Check"/> asks when a graph holds script text.</returns>
     public static Func<CancellationToken, Task<bool>> For(HttpContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
         return async _ =>
         {
             var authorization = context.RequestServices.GetRequiredService<IAuthorizationService>();

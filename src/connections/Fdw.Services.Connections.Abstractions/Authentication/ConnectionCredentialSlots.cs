@@ -32,11 +32,11 @@ public sealed class ConnectionCredentialSlots
         string? secretManagerName,
         IReadOnlyDictionary<string, string?> references)
     {
-        Method = method ?? throw new ArgumentNullException(nameof(method));
-        Credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+        Method = method;
+        Credentials = credentials;
         Fields = credentials.Select(credential => credential.Field).ToList();
         SecretManagerName = string.IsNullOrEmpty(secretManagerName) ? null : secretManagerName;
-        References = references ?? throw new ArgumentNullException(nameof(references));
+        References = references;
     }
 
     /// <summary>Gets the slots of a connection whose authentication carries no stored credential.</summary>
@@ -82,9 +82,6 @@ public sealed class ConnectionCredentialSlots
     public static ConnectionCredentialSlots From(
         string method, IReadOnlyList<ConnectionCredentialField> credentials, IDictionary<string, string?> values)
     {
-        if (credentials is null) throw new ArgumentNullException(nameof(credentials));
-        if (values is null) throw new ArgumentNullException(nameof(values));
-
         var lookup = new Dictionary<string, string?>(values, StringComparer.OrdinalIgnoreCase);
         var references = credentials.ToDictionary(
             credential => credential.Field,
@@ -105,9 +102,7 @@ public sealed class ConnectionCredentialSlots
         string secretManagerName,
         IReadOnlyDictionary<string, string> secretKeyByField)
     {
-        if (values is null) throw new ArgumentNullException(nameof(values));
         if (string.IsNullOrEmpty(secretManagerName)) throw new ArgumentException("A secret manager name is required.", nameof(secretManagerName));
-        if (secretKeyByField is null) throw new ArgumentNullException(nameof(secretKeyByField));
 
         values[ConnectionCredentialProperties.SecretManager] = secretManagerName;
         foreach (var binding in secretKeyByField)

@@ -72,7 +72,6 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
     /// <returns>The plan, or the refusal naming the property that is missing or wrong, or the window the style cannot address.</returns>
     public IGenericResult<HttpPagingPlan> Plan(HttpPagingSettings settings, HttpReadWindow window)
     {
-        ArgumentNullException.ThrowIfNull(window);
         var stated = RequiredStated(settings);
         if (stated.IsFailure) return stated.ToNewResult<HttpPagingPlan>();
 
@@ -109,7 +108,6 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
     /// </remarks>
     protected virtual IGenericResult<HttpPagingPlan> CreatePlan(HttpPagingSettings settings, HttpReadWindow window)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         return GenericResult<HttpPagingPlan>.Failure(HttpPagingLog.PagingStyleUnknown(settings.Logger, settings.ConnectionName, Name));
     }
 
@@ -121,7 +119,6 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
     /// <remarks>Virtual and refusing rather than abstract, for the same reason as <see cref="CreatePlan"/>.</remarks>
     protected virtual IGenericResult<HttpPagingWindow> CreateWindow(HttpPagingSettings settings, int skip, int? take)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         return GenericResult<HttpPagingWindow>.Failure(HttpPagingLog.PagingStyleUnknown(settings.Logger, settings.ConnectionName, Name));
     }
 
@@ -131,7 +128,6 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
     /// <returns>Success when the window starts at the first row; otherwise the refusal.</returns>
     protected IGenericResult FromTheStart(HttpPagingSettings settings, int skip)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         return skip == 0
             ? GenericResult.Success()
             : GenericResult.Failure(HttpPagingLog.PagingWindowNotAddressable(
@@ -170,7 +166,6 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
 
     private IGenericResult RequiredStated(HttpPagingSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         foreach (var property in RequiredProperties)
         {
             if (!settings.Values.TryGetValue(property, out var value) || string.IsNullOrWhiteSpace(value))
@@ -190,7 +185,6 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
     /// <returns>The number, or the refusal.</returns>
     protected IGenericResult<int> WholeNumber(HttpPagingSettings settings, string property, int minimum)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         if (Stated(settings, property) is { } text)
         {
             return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) && number >= minimum
@@ -220,7 +214,6 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
     /// <returns>The stated value, trimmed; null when it is left out or blank.</returns>
     protected static string? Stated(HttpPagingSettings settings, string property)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         return settings.Values.TryGetValue(property, out var value) && !string.IsNullOrWhiteSpace(value) ? value.Trim() : null;
     }
 }

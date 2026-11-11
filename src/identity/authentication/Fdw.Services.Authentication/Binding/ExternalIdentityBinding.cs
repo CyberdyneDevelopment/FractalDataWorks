@@ -44,9 +44,9 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<ExternalIdentityBinding>? logger = null)
     {
-        _identities = identities ?? throw new ArgumentNullException(nameof(identities));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _identities = identities;
+        _tenants = tenants;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<ExternalIdentityBinding>.Instance;
     }
 

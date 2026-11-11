@@ -35,34 +35,6 @@ public class FdwConfigurationProviderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public void Constructor_WithNullSource_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var loadHierarchy = () => new Dictionary<int, IDictionary<string, object>>();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new FdwConfigurationProvider(null!, loadHierarchy))
-            .ParamName.ShouldBe("source");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Configuration")]
-    public void Constructor_WithNullLoadHierarchy_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var source = new TestConfigurationSource();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new FdwConfigurationProvider(source, null!))
-            .ParamName.ShouldBe("loadHierarchy");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Configuration")]
     public void Constructor_WithNullSectionName_UsesSemptyString()
     {
         // Arrange

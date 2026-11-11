@@ -24,7 +24,6 @@ public static class GraphScope
     /// <returns>The names, compared without regard to case.</returns>
     public static IReadOnlySet<string> AssignedVariables(GraphPipelineConfiguration graph)
     {
-        ArgumentNullException.ThrowIfNull(graph);
         return graph.Components
             .SelectMany(component => new[] { component.VariableName, component.ResultVariable })
             .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -40,9 +39,6 @@ public static class GraphScope
     public static IGenericResult<IReadOnlyDictionary<string, object?>> RenderValues(
         GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(parameters);
-        ArgumentNullException.ThrowIfNull(logger);
         var values = new Dictionary<string, object?>(parameters, StringComparer.OrdinalIgnoreCase);
         var assigned = AssignedVariables(graph);
         foreach (var variable in graph.Variables.Where(variable => !assigned.Contains(variable.Name)))

@@ -28,12 +28,11 @@ public sealed class RecordWriterContext
     /// Format-specific options (the concrete subclass of <see cref="RowWriterOptions"/> for the selected
     /// format), built by the format's <c>CreateOptions</c>. Required.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="target"/> or <paramref name="fields"/> or <paramref name="options"/> is null.</exception>
     public RecordWriterContext(TextWriter target, IReadOnlyList<IDataField> fields, RowWriterOptions options)
     {
-        Target = target ?? throw new ArgumentNullException(nameof(target));
-        Fields = fields ?? throw new ArgumentNullException(nameof(fields));
-        Options = options ?? throw new ArgumentNullException(nameof(options));
+        Target = target;
+        Fields = fields;
+        Options = options;
     }
 
     /// <summary>
@@ -50,7 +49,7 @@ public sealed class RecordWriterContext
     /// </remarks>
     public static RecordWriterContext ForBytes(Stream target, IReadOnlyList<IDataField> fields, RowWriterOptions options)
     {
-        return new RecordWriterContext(TextWriter.Null, fields, options) { ByteTarget = target ?? throw new ArgumentNullException(nameof(target)) };
+        return new RecordWriterContext(TextWriter.Null, fields, options) { ByteTarget = target };
     }
 
     /// <summary>

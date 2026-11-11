@@ -25,8 +25,8 @@ public sealed class AuiService
         IEnumerable<IAuiProvider> providers,
         ILogger<AuiService> logger)
     {
-        _providers = providers ?? throw new ArgumentNullException(nameof(providers));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _providers = providers;
+        _logger = logger;
     }
 
     /// <summary>

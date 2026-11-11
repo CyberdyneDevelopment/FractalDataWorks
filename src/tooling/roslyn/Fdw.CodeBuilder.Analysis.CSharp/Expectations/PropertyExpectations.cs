@@ -25,7 +25,7 @@ public class PropertyExpectations
     /// <param name="propertyDeclaration">The property declaration to verify.</param>
     public PropertyExpectations(PropertyDeclarationSyntax propertyDeclaration)
     {
-        _propertyDeclaration = propertyDeclaration ?? throw new ArgumentNullException(nameof(propertyDeclaration));
+        _propertyDeclaration = propertyDeclaration;
     }
 
     /// <summary>

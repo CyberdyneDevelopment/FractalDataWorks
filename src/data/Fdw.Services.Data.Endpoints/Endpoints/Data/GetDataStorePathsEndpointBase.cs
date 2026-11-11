@@ -21,7 +21,7 @@ public abstract class GetDataStorePathsEndpointBase : CrudGetEndpointBase<DataSt
 {
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataStorePathsEndpointBase"/> class.</summary>
     protected GetDataStorePathsEndpointBase(ILogger<GetDataStorePathsEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;

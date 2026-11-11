@@ -21,7 +21,7 @@ public abstract class CreateWorkspaceEndpointBase : CrudCreateEndpointBase<Creat
     /// <inheritdoc />
     private readonly IAuthenticationContextAccessor _authContext;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateWorkspaceEndpointBase"/> class.</summary>
     protected CreateWorkspaceEndpointBase(
         ILogger<CreateWorkspaceEndpointBase> logger,
         IWorkspaceConfigurationProvider provider,

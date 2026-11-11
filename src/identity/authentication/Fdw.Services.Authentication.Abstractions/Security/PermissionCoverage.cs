@@ -35,7 +35,6 @@ public static class PermissionCoverage
     /// <returns>True when any held permission covers the required one.</returns>
     public static bool Covers(IEnumerable<string> held, string required)
     {
-        if (held is null) throw new ArgumentNullException(nameof(held));
         if (string.IsNullOrWhiteSpace(required)) throw new ArgumentException("A required permission is named.", nameof(required));
 
         var accepted = Accepting(required);

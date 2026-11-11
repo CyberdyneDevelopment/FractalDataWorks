@@ -62,10 +62,6 @@ public sealed class FlowLookup : IFlowComponent
         ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(keys);
-        ArgumentNullException.ThrowIfNull(referenceKeys);
-        ArgumentNullException.ThrowIfNull(bring);
-        ArgumentNullException.ThrowIfNull(unmatched);
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
         if (keys.Count == 0 || keys.Count != referenceKeys.Count)
         {

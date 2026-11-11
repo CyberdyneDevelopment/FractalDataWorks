@@ -8,6 +8,6 @@ namespace Fdw.Aegis;
 [TypeOption(typeof(ConfigurationCommands), "PermittedValueConfiguration")]
 public sealed class PermittedValueConfigurationCommand : ConfigurationCommandBase<PermittedValueConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="PermittedValueConfigurationCommand"/> class.</summary>
     public PermittedValueConfigurationCommand() : base("PermittedValueConfiguration") { }
 }

@@ -8,6 +8,6 @@ namespace Fdw.Services.Users.Commands;
 [TypeOption(typeof(ConfigurationCommands), "UserPreference")]
 public sealed class UserPreferenceConfigurationCommand : ConfigurationCommandBase<UserPreferencesImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="UserPreferenceConfigurationCommand"/> class.</summary>
     public UserPreferenceConfigurationCommand() : base("UserPreferences") { }
 }

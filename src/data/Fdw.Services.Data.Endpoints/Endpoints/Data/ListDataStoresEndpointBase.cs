@@ -61,8 +61,8 @@ public abstract class ListDataStoresEndpointBase
         ITagService? tags = null) : base(logger)
     {
         _tags = tags;
-        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
-        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
+        _dataStoreProvider = dataStoreProvider;
+        _configurationGateways = configurationGateways;
         _connectionNames = new ConnectionNames(connectionProvider, authorization, logger);
     }
 

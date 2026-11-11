@@ -20,7 +20,7 @@ public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBa
     private readonly ScheduleConfigurationProvider _provider;
     private readonly WaitThresholdOwnerRelease _release;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeleteScheduleEndpointBase{TConfig}"/> class.</summary>
     protected DeleteScheduleEndpointBase(
         ILogger<DeleteScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
     {

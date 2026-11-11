@@ -48,9 +48,9 @@ public sealed class AccessRequestService : IAccessRequestService
         IMessageService messageService)
     {
         _logger = logger ?? NullLogger<AccessRequestService>.Instance;
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
-        _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
-        _messageService = messageService ?? throw new ArgumentNullException(nameof(messageService));
+        _dataGateways = dataGateways;
+        _messaging = messaging;
+        _messageService = messageService;
     }
 
     /// <summary>Resolves the store and path this deployment keeps its messaging data in.</summary>

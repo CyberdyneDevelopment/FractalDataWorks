@@ -61,7 +61,6 @@ public sealed class DataSetFieldConfigurationBuilder
     /// </summary>
     /// <param name="type">The .NET type of the field's values.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No option, or more than one, reads <paramref name="type"/>.</exception>
     public DataSetFieldConfigurationBuilder WithType(Type type)
     {
@@ -76,10 +75,6 @@ public sealed class DataSetFieldConfigurationBuilder
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetFieldConfigurationBuilder WithDataType(IDataType dataType)
     {
-        if (dataType == null)
-        {
-            throw new ArgumentNullException(nameof(dataType));
-        }
         _typeName = dataType.Name;
         return this;
     }

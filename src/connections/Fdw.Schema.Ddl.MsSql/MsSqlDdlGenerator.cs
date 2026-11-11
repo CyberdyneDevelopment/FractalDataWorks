@@ -31,7 +31,7 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
     {
         try
         {
-            var generation = options ?? throw new ArgumentNullException(nameof(options));
+            var generation = options;
             var commands = new List<IDdlCommand>();
 
             var columns = ConvertToColumnDefinitions(schema.Properties);

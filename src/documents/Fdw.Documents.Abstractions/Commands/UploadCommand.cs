@@ -28,16 +28,6 @@ public sealed class UploadCommand : DocumentCommandBase<DocumentInfo>
     public UploadCommand(DocumentPath path, Stream content, string? contentType, bool createOnly, IReadOnlyDictionary<string, string> metadata)
         : base("Upload")
     {
-        if (content is null)
-        {
-            throw new ArgumentNullException(nameof(content));
-        }
-
-        if (metadata is null)
-        {
-            throw new ArgumentNullException(nameof(metadata));
-        }
-
         Path = path;
         Content = content;
         ContentType = contentType;

@@ -35,9 +35,6 @@ public static class WorkspaceOrganizationCheck
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(organizations);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (tenantId is not { } tenant)
             return Refuse(workspaceName, organizationId, "cannot be checked because the workspace's tenant is not known", logger);
 

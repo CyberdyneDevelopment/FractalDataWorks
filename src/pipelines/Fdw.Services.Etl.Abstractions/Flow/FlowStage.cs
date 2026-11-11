@@ -18,7 +18,7 @@ public sealed record FlowStage(string Component, int Stage)
     /// <returns>The rank.</returns>
     public static int RankIn(IEnumerable<FlowStage> stages, string component)
     {
-        var stated = (stages ?? throw new ArgumentNullException(nameof(stages))).FirstOrDefault(stage => string.Equals(stage.Component, component, StringComparison.OrdinalIgnoreCase));
+        var stated = stages.FirstOrDefault(stage => string.Equals(stage.Component, component, StringComparison.OrdinalIgnoreCase));
         return stated is null ? 0 : stated.Stage;
     }
 }

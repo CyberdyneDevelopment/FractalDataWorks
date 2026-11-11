@@ -20,7 +20,7 @@ internal sealed class AlertKindChoices
     /// <param name="store">Reads what each tenant chose.</param>
     public AlertKindChoices(AlertStore store)
     {
-        _store = store ?? throw new ArgumentNullException(nameof(store));
+        _store = store;
     }
 
     /// <summary>Reads the actions a kind offers each tenant that is asked about.</summary>

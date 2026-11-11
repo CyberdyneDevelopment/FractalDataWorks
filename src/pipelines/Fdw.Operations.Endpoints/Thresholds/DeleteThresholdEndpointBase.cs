@@ -18,7 +18,7 @@ public abstract class DeleteThresholdEndpointBase : CrudDeleteEndpointBase<Thres
     protected DeleteThresholdEndpointBase(ILogger<DeleteThresholdEndpointBase> logger, IThresholdConfigurationProvider thresholds)
         : base(logger)
     {
-        _thresholds = thresholds ?? throw new ArgumentNullException(nameof(thresholds));
+        _thresholds = thresholds;
     }
 
     /// <inheritdoc />

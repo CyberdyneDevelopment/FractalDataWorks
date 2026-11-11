@@ -33,8 +33,7 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
     /// <param name="options">XML writer options.</param>
     public XmlStreamRowWriter(TextWriter target, XmlRowWriterOptions options)
     {
-        if (target is null) throw new ArgumentNullException(nameof(target));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _options = options;
         _writer = XmlWriter.Create(target, new XmlWriterSettings
         {
             Indent = _options.Indent,
@@ -43,10 +42,10 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
         });
     }
 
-    /// <inheritdoc />
+    /// <summary>Writes one row as an element named by the options' row element name, each column a child element named by its key; the root element opens before the first row.</summary>
+    /// <param name="row">The row, its columns by name; an absent value is written as empty text.</param>
     public void Write(IReadOnlyDictionary<string, object?> row)
     {
-        if (row is null) throw new ArgumentNullException(nameof(row));
         if (!_rootStarted)
         {
             _writer.WriteStartElement(_options.RootElementName);
@@ -68,10 +67,10 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
         _writer.WriteEndElement();
     }
 
-    /// <inheritdoc />
+    /// <summary>Writes every row of the sequence, in order, as <see cref="Write(IReadOnlyDictionary{string, object})"/> writes one.</summary>
+    /// <param name="rows">The rows to write.</param>
     public void WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         foreach (var row in rows)
         {
             Write(row);
@@ -86,7 +85,6 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
     /// <returns>A task that completes when all rows have been written.</returns>
     public ValueTask WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows, CancellationToken cancellationToken)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         foreach (var row in rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -102,7 +100,6 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
     /// <inheritdoc />
     public void Write(IEnumerable<DataRecord> records)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         foreach (var record in records)
         {
             Write(record);
@@ -112,7 +109,6 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
     /// <inheritdoc />
     public async ValueTask Write(IAsyncEnumerable<DataRecord> records, CancellationToken cancellationToken = default)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             Write(record);

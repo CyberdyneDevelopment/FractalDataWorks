@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,10 +14,12 @@ namespace Fdw.Data.RowSources.Abstractions;
 /// The byte-level sibling of <see cref="DrainingTextWriter"/>, for formats that are not text (an Excel workbook is a zip). A
 /// synchronous write to a response body throws under Kestrel, and a zip writer only writes synchronously, so the writer fills
 /// this buffer and the response pump drains it between records: memory holds the bytes pending since the last drain, not the
-/// file. <see cref="Flush"/> does nothing for the same reason as <see cref="DrainingTextWriter.Flush"/>.
+/// file. <see cref="Flush"/> does nothing for the same reason as <see cref="DrainingTextWriter.Flush"/>. The target stream is NOT
+/// owned: disposing this stream never disposes the target, because a response body outlives the stream that wrote to it.
 /// </remarks>
 public sealed class DrainingStream : Stream
 {
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the response body; the request pipeline disposes it after the response, which outlives this stream.")]
     private readonly Stream _target;
     private readonly int _drainThresholdBytes;
     private byte[] _pending;
@@ -27,7 +30,7 @@ public sealed class DrainingStream : Stream
     /// <param name="drainThresholdBytes">The pending byte count at which <see cref="DrainIfFull"/> writes; greater than zero. Required, with no default: it is the caller's configuration.</param>
     public DrainingStream(Stream target, int drainThresholdBytes)
     {
-        _target = target ?? throw new ArgumentNullException(nameof(target));
+        _target = target;
         if (drainThresholdBytes <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(drainThresholdBytes), drainThresholdBytes, "The drain threshold must be greater than zero.");

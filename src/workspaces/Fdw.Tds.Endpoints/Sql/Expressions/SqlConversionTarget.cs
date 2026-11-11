@@ -21,12 +21,12 @@ public sealed class SqlConversionTarget
     /// <param name="convert">Converts a value that is not NULL; answers null when it does not convert.</param>
     public SqlConversionTarget(string sqlName, ISqlDataType dataType, int length, byte precision, byte scale, Func<object, SqlConversionTarget, object?> convert)
     {
-        SqlName = sqlName ?? throw new ArgumentNullException(nameof(sqlName));
-        DataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
+        SqlName = sqlName;
+        DataType = dataType;
         Length = length;
         Precision = precision;
         Scale = scale;
-        _convert = convert ?? throw new ArgumentNullException(nameof(convert));
+        _convert = convert;
     }
 
     /// <summary>Gets the type's T-SQL name.</summary>

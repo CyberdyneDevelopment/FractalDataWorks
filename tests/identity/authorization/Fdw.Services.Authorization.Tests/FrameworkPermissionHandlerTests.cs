@@ -27,24 +27,6 @@ public sealed class FrameworkPermissionHandlerTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void Constructor_Throws_WhenAuthorizationServiceNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new FrameworkPermissionHandler(null!, NullLogger<FrameworkPermissionHandler>.Instance));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void Constructor_Throws_WhenLoggerNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new FrameworkPermissionHandler(_authorizationServiceMock.Object, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
     public async Task HandleRequirementAsync_UnauthenticatedUser_DoesNotSucceed_AndSkipsAuthorizeCall()
     {
         var principal = new ClaimsPrincipal(new ClaimsIdentity());

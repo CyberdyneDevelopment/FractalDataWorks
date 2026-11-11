@@ -24,7 +24,7 @@ public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameR
     private readonly IConnectionHealthService _healthService;
     private readonly ILogger<GetConnectionHealthEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetConnectionHealthEndpointBase"/> class.</summary>
     protected GetConnectionHealthEndpointBase(
         IConnectionConfigurationProvider configProvider,
         IConnectionHealthService healthService,

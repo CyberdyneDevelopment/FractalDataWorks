@@ -17,15 +17,9 @@ internal static class FieldDataType
     /// <summary>Finds the name of the one option that reads a CLR type.</summary>
     /// <param name="type">The CLR type.</param>
     /// <returns>The option's name.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No option, or more than one, reads <paramref name="type"/>.</exception>
     internal static string NameFor(Type type)
     {
-        if (type == null)
-        {
-            throw new ArgumentNullException(nameof(type));
-        }
-
         var reading = DataTypeNames.Reading(type);
         if (reading.Count == 1)
         {

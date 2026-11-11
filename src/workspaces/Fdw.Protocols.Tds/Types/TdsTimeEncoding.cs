@@ -20,7 +20,6 @@ public static class TdsTimeEncoding
     /// <param name="scale">The fractional-second scale.</param>
     public static void WriteTime(TdsPayloadWriter writer, TimeSpan timeOfDay, byte scale)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         var units = timeOfDay.Ticks / TicksPerUnit(scale);
         Span<byte> bytes = stackalloc byte[8];
         System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(bytes, units);
@@ -32,7 +31,6 @@ public static class TdsTimeEncoding
     /// <param name="date">The date; its time of day is ignored.</param>
     public static void WriteDate(TdsPayloadWriter writer, DateTime date)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         var days = (int)(date.Date - DateEpoch).TotalDays;
         writer.WriteByte((byte)(days & 0xFF));
         writer.WriteByte((byte)((days >> 8) & 0xFF));

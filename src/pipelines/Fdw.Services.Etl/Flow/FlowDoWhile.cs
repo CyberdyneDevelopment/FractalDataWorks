@@ -35,9 +35,7 @@ public sealed class FlowDoWhile : IFlowStep
     public FlowDoWhile(string name, Func<FlowVariables, bool> condition, int maximum, IReadOnlyList<IFlowStep> body, ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(condition);
         ArgumentOutOfRangeException.ThrowIfLessThan(maximum, 1);
-        ArgumentNullException.ThrowIfNull(body);
         if (body.Count == 0)
         {
             throw new ArgumentException("A loop's body has at least one step.", nameof(body));
@@ -56,8 +54,6 @@ public sealed class FlowDoWhile : IFlowStep
     /// <inheritdoc />
     public async Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         for (var run = 1; run <= _maximum; run++)
         {
             var ran = await FlowSequence.RunRound(_body, context.CreateChild(), run, cancellationToken).ConfigureAwait(false);

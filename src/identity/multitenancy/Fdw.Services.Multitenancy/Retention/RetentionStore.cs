@@ -20,8 +20,8 @@ internal sealed class RetentionStore
 
     internal RetentionStore(IConfigurationGatewayProvider gateways, RetentionTables tables, ILogger logger)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        Tables = tables ?? throw new ArgumentNullException(nameof(tables));
+        _gateways = gateways;
+        Tables = tables;
         _logger = logger;
     }
 

@@ -22,7 +22,7 @@ public class ParameterExpectations
     /// <param name="parameterSyntax">The parameter syntax to verify.</param>
     public ParameterExpectations(ParameterSyntax parameterSyntax)
     {
-        _parameterSyntax = parameterSyntax ?? throw new ArgumentNullException(nameof(parameterSyntax));
+        _parameterSyntax = parameterSyntax;
     }
 
     /// <summary>

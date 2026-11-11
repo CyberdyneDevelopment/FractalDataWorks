@@ -17,7 +17,7 @@ public sealed class PipelineLoadValidatorTests
     // The checks a graph's destination component runs on its row (DestinationOptions), in the same order, for the kind the row states.
     private static IGenericResult Check(PipelineLoadStepConfiguration step)
     {
-        var kind = LoadStepKinds.ByName(step.Kind);
+        var kind = LoadStepKinds.ByName(step.Kind.ShouldNotBeNull());
         var columns = PipelineLoadValidator.ValidateColumnLists(Owner, step, kind, kind.Name, NullLogger.Instance);
         if (columns.IsFailure)
             return columns;

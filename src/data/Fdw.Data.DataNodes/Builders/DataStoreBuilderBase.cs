@@ -72,15 +72,12 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     /// <inheritdoc />
     public void DeclareSlice(IReadOnlyCollection<string> containerNames)
     {
-        ArgumentNullException.ThrowIfNull(containerNames);
         _slice = new HashSet<string>(containerNames, StringComparer.Ordinal);
     }
 
     /// <inheritdoc />
     public IGenericResult Configure(IGenericConfiguration storeConfig)
     {
-        ArgumentNullException.ThrowIfNull(storeConfig);
-
         if (storeConfig is not IDataStoreImplementationConfiguration cfg)
         {
             return GenericResult.Failure(

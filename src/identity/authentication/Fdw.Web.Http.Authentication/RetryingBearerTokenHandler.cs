@@ -35,10 +35,6 @@ public sealed class RetryingBearerTokenHandler : DelegatingHandler
         IAuthExpirationNotifier? expirationNotifier,
         ILogger<RetryingBearerTokenHandler> logger)
     {
-        ArgumentNullException.ThrowIfNull(tokenProvider);
-        ArgumentNullException.ThrowIfNull(refreshHandler);
-        ArgumentNullException.ThrowIfNull(logger);
-
         _tokenProvider = tokenProvider;
         _refreshHandler = refreshHandler;
         _expirationNotifier = expirationNotifier;

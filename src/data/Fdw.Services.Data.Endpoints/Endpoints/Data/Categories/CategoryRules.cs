@@ -20,8 +20,6 @@ public static class CategoryRules
     /// <returns>The identity of the parent, null for a top-level category, or the refusal that names every problem.</returns>
     public static IGenericResult<Guid?> Parent(CategoryPayload payload, CategoryTree tree, Guid? currentParentId = null)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        ArgumentNullException.ThrowIfNull(tree);
         List<string> problems = [];
         if (string.IsNullOrWhiteSpace(payload.Name) || payload.Name.Contains('/', StringComparison.Ordinal))
         {
@@ -91,7 +89,6 @@ public static class CategoryRules
     /// </remarks>
     public static IGenericResult Scope(CategoryTree tree, Guid? parentId, Guid tenantId, Guid? visibilityGroupId)
     {
-        ArgumentNullException.ThrowIfNull(tree);
         if (parentId is not { } id)
         {
             return GenericResult.Success();
@@ -118,7 +115,6 @@ public static class CategoryRules
     /// <returns>Success, or the refusal that says the category would sit under itself.</returns>
     public static IGenericResult Move(CategoryTree tree, Guid categoryId, Guid? parentId)
     {
-        ArgumentNullException.ThrowIfNull(tree);
         return tree.WouldMakeCycle(categoryId, parentId)
             ? CategoryRefusal.Of<bool>("the category cannot sit under itself or under a category below it")
             : GenericResult.Success();

@@ -31,7 +31,6 @@ public sealed class TranslatorRegistry : ITranslatorRegistry
     /// Initializes a new instance of the <see cref="TranslatorRegistry"/> class.
     /// </summary>
     /// <param name="loggerFactory">The factory each registered translator's logger is created from.</param>
-    /// <exception cref="ArgumentNullException">The factory is null.</exception>
     /// <remarks>
     /// Required, with no NullLoggerFactory default. A silent fallback here would reintroduce exactly the
     /// defect this class exists to close — a registry that looks wired and hands out silent translators.
@@ -39,7 +38,7 @@ public sealed class TranslatorRegistry : ITranslatorRegistry
     /// </remarks>
     public TranslatorRegistry(ILoggerFactory loggerFactory)
     {
-        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+        _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<TranslatorRegistry>();
     }
 
@@ -89,11 +88,6 @@ public sealed class TranslatorRegistry : ITranslatorRegistry
     /// <inheritdoc/>
     public void Register(IRoslynCommandTranslator translator)
     {
-        if (translator is null)
-        {
-            throw new ArgumentNullException(nameof(translator));
-        }
-
         Admit(translator, translator.CommandType);
     }
 
@@ -102,11 +96,6 @@ public sealed class TranslatorRegistry : ITranslatorRegistry
         where TCommand : IRoslynCommand
         where TResult : IRoslynCommandResult
     {
-        if (translator is null)
-        {
-            throw new ArgumentNullException(nameof(translator));
-        }
-
         Admit(translator, typeof(TCommand));
     }
 

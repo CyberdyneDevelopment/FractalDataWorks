@@ -22,7 +22,7 @@ public abstract class CreateThresholdEndpointBase : CrudCreateEndpointBase<Thres
     protected CreateThresholdEndpointBase(ILogger<CreateThresholdEndpointBase> logger, IThresholdConfigurationProvider thresholds)
         : base(logger)
     {
-        _thresholds = thresholds ?? throw new ArgumentNullException(nameof(thresholds));
+        _thresholds = thresholds;
     }
 
     /// <inheritdoc />

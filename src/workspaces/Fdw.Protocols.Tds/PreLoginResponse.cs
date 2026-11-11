@@ -20,8 +20,6 @@ public static class PreLoginResponse
     /// <returns>The message payload.</returns>
     public static byte[] Build(TdsServerVersion version, byte encryption, bool answerFederatedAuthentication)
     {
-        ArgumentNullException.ThrowIfNull(version);
-
         var options = new List<(byte Token, byte[] Value)>
         {
             (PreLoginOptionTokens.Version, version.PreLoginBytes()),

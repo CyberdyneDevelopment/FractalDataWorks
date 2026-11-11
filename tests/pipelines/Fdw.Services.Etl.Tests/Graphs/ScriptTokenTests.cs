@@ -20,7 +20,7 @@ namespace Fdw.Services.Etl.Tests.Graphs;
 /// </summary>
 public sealed class ScriptTokenTests
 {
-    private static IReadOnlyDictionary<string, object?> Values(params (string Name, object? Value)[] values) =>
+    private static Dictionary<string, object?> Values(params (string Name, object? Value)[] values) =>
         values.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
 
     [Fact]

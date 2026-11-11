@@ -194,9 +194,10 @@ internal static class UiFeedbackChecks
                 ? null
                 : MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} must be a JSON object");
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is not valid JSON");
+            // The parser's own reason says where the entry stops being JSON (FDW-5189).
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is not valid JSON: {ex.Message}");
         }
     }
 

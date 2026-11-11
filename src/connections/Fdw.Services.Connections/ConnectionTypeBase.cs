@@ -40,8 +40,6 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IConnectionFactory<TService, TConfiguration>
 {
-    /// <inheritdoc />
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionTypeBase{TService,TFactory,TConfiguration}"/> class.
     /// </summary>
@@ -132,7 +130,6 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// </remarks>
     public IGenericResult<bool> UsesHostIdentity(IConnectionImplementationConfiguration configuration)
     {
-        if (configuration is null) throw new ArgumentNullException(nameof(configuration));
         if (configuration is TConfiguration typed)
             return DecideHostIdentity(typed);
 
@@ -162,7 +159,6 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// </remarks>
     public IGenericResult<ConnectionCredentialSlots> CredentialSlots(IConnectionImplementationConfiguration configuration)
     {
-        if (configuration is null) throw new ArgumentNullException(nameof(configuration));
         if (configuration is TConfiguration typed)
             return DescribeCredentials(typed);
 
@@ -183,7 +179,6 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
         string secretManagerName,
         IReadOnlyDictionary<string, string> secretKeyByField)
     {
-        if (configuration is null) throw new ArgumentNullException(nameof(configuration));
         if (configuration is TConfiguration typed)
             return BindCredentialReferences(typed, secretManagerName, secretKeyByField);
 

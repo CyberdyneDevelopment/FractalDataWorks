@@ -34,7 +34,7 @@ public sealed class TdsLoginOutcome
     /// <param name="tdsVersion">The TDS version agreed.</param>
     /// <returns>The outcome.</returns>
     public static TdsLoginOutcome SignedIn(TdsSession session, uint tdsVersion)
-        => new(session ?? throw new ArgumentNullException(nameof(session)), tdsVersion, []);
+        => new(session, tdsVersion, []);
 
     /// <summary>A refused login.</summary>
     /// <param name="errors">The errors the client is refused with.</param>

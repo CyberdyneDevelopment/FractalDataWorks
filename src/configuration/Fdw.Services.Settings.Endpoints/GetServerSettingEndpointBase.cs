@@ -17,7 +17,7 @@ public abstract class GetServerSettingEndpointBase : CrudGetEndpointBase<Setting
 {
     private readonly IServerSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetServerSettingEndpointBase"/> class.</summary>
     protected GetServerSettingEndpointBase(ILogger<GetServerSettingEndpointBase> logger, IServerSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

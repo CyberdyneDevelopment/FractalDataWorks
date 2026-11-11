@@ -47,11 +47,11 @@ internal sealed class LimitedRecordSource : IRecordSource<DataRecord>
         int timeoutSeconds,
         ILogger logger)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _lease = lease ?? throw new ArgumentNullException(nameof(lease));
+        _inner = inner;
+        _lease = lease;
         _timeout = timeout;
         _timeoutSeconds = timeoutSeconds;
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
     }
 
     /// <inheritdoc />

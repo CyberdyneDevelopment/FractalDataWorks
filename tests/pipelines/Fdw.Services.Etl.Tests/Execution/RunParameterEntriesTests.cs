@@ -18,7 +18,7 @@ public sealed class RunParameterEntriesTests
     private static List<IReadOnlyDictionary<string, object?>> Entries(IReadOnlyDictionary<string, object?>? data) =>
         [.. data.ShouldNotBeNull()["parameters"].ShouldBeAssignableTo<IEnumerable<IReadOnlyDictionary<string, object?>>>().ShouldNotBeNull()];
 
-    private static IReadOnlyDictionary<string, object?> Values(params (string Name, object Value)[] pairs) =>
+    private static Dictionary<string, object?> Values(params (string Name, object Value)[] pairs) =>
         pairs.ToDictionary(pair => pair.Name, pair => (object?)pair.Value, System.StringComparer.OrdinalIgnoreCase);
 
     [Fact]

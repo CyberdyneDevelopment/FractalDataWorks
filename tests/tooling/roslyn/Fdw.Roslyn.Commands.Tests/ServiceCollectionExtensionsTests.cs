@@ -70,19 +70,6 @@ public sealed class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void AddRoslynCommandHandlerWithConfigureThrowsArgumentNullExceptionForNullConfigureAction()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(
-            () => services.AddRoslynCommandHandler((Action<ITranslatorRegistry>)null!));
-    }
-
-    [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
     public void AddRoslynCommandHandlerWithConfigureInvokesConfigureActionOnResolvedRegistry()

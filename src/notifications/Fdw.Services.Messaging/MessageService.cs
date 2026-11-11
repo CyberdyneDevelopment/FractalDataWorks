@@ -66,10 +66,10 @@ public sealed class MessageService : IMessageService, IAlertSource
         IAuthenticationContextAccessor authContext)
     {
         _logger = logger ?? NullLogger<MessageService>.Instance;
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
-        _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
-        _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _dataGateways = dataGateways;
+        _messaging = messaging;
+        _hubContext = hubContext;
+        _authContext = authContext;
         _alerts = new AlertStore(_logger, dataGateways, messaging);
     }
 

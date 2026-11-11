@@ -12,7 +12,7 @@ public sealed class MigrationGuideResult
     /// </summary>
     public MigrationGuideResult(string outputPath, int entryCount)
     {
-        OutputPath = outputPath ?? throw new ArgumentNullException(nameof(outputPath));
+        OutputPath = outputPath;
         EntryCount = entryCount;
     }
 

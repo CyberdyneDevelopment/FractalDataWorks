@@ -17,8 +17,8 @@ public sealed class TypeOptionAttribute : Attribute
     /// <param name="name">The name for the method/property in the generated collection.</param>
     public TypeOptionAttribute(Type collectionType, string name)
     {
-        CollectionType = collectionType ?? throw new ArgumentNullException(nameof(collectionType));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        CollectionType = collectionType;
+        Name = name;
     }
 
     /// <summary>

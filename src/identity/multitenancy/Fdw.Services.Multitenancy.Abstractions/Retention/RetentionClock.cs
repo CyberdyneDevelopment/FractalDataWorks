@@ -20,16 +20,6 @@ public static class RetentionClock
     /// <returns>The deadline, or the field the uploader must state.</returns>
     public static RetentionDeadline DeadlineFor(RetentionPolicy policy, IReadOnlyDictionary<string, DateTimeOffset> dates)
     {
-        if (policy is null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
-        if (dates is null)
-        {
-            throw new ArgumentNullException(nameof(dates));
-        }
-
         foreach (var date in dates)
         {
             if (string.Equals(date.Key, policy.StartField, StringComparison.OrdinalIgnoreCase))

@@ -34,7 +34,6 @@ public static class RateLimitingServiceExtensions
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="configure">Optional action to further configure rate limiter options.</param>
     /// <returns>The service collection for chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when services is null.</exception>
     /// <remarks>
     /// <para>
     /// This method:
@@ -74,11 +73,6 @@ public static class RateLimitingServiceExtensions
         this IServiceCollection services,
         Action<RateLimiterOptions>? configure = null)
     {
-        if (services == null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
-
         services.AddRateLimiter(options =>
         {
             // Register all policies from TypeCollection
@@ -105,7 +99,6 @@ public static class RateLimitingServiceExtensions
     /// <param name="loggerFactory">The logger factory for logging policy registration.</param>
     /// <param name="configure">Optional action to further configure rate limiter options.</param>
     /// <returns>The service collection for chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when services is null.</exception>
     /// <remarks>
     /// <para>
     /// This overload provides logging during policy registration using the provided logger factory.
@@ -117,11 +110,6 @@ public static class RateLimitingServiceExtensions
         ILoggerFactory loggerFactory,
         Action<RateLimiterOptions>? configure = null)
     {
-        if (services == null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
-
         var logger = loggerFactory?.CreateLogger(typeof(RateLimitingServiceExtensions));
 
         services.AddRateLimiter(options =>
@@ -175,7 +163,6 @@ public static class RateLimitingServiceExtensions
     /// <param name="policy">The policy the request is counted under.</param>
     /// <param name="httpContext">The request.</param>
     /// <returns>The request's bucket.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the policy or the request is null.</exception>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the policy's allowance cannot be read from its settings (a setting that is not set, or holds a value the
     /// limiter cannot use; the message names it), or when the request has no identity the policy's partitioning needs. It is
@@ -198,16 +185,6 @@ public static class RateLimitingServiceExtensions
     /// </remarks>
     public static RateLimitPartition<string> PartitionFor(IRateLimitPolicy policy, HttpContext httpContext)
     {
-        if (policy is null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
-        if (httpContext is null)
-        {
-            throw new ArgumentNullException(nameof(httpContext));
-        }
-
         var allowance = RateLimitAllowances.Read(
             httpContext.RequestServices.GetRequiredService<IEffectiveSettingsProvider>(),
             policy,

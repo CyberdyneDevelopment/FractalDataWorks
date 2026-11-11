@@ -35,8 +35,8 @@ public sealed class WaitThresholdStore : IWaitThresholdStore
     /// <param name="logger">The logger.</param>
     public WaitThresholdStore(IConfigurationGatewayProvider gateways, IPipelineConfigurationProvider pipelines, ILogger<WaitThresholdStore>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _pipelines = pipelines ?? throw new ArgumentNullException(nameof(pipelines));
+        _gateways = gateways;
+        _pipelines = pipelines;
         _logger = logger ?? NullLogger<WaitThresholdStore>.Instance;
         _rows = new WaitThresholdRows(_logger);
     }
@@ -44,7 +44,9 @@ public sealed class WaitThresholdStore : IWaitThresholdStore
     /// <inheritdoc/>
     public async Task<IGenericResult<WaitThresholdLevelPayload>> Read(string ownerKind, string? ownerName, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ownerKind);
+        if (string.IsNullOrWhiteSpace(ownerKind))
+            return GenericResult<WaitThresholdLevelPayload>.Failure(WaitThresholdLog.OwnerKindRequired(_logger));
+
         var gateway = _gateways.Get(EtlPipelineTypes.ConfigurationConnection);
         if (gateway.IsFailure || gateway.Value is null)
         {
@@ -71,8 +73,9 @@ public sealed class WaitThresholdStore : IWaitThresholdStore
     public async Task<IGenericResult<WaitThresholdLevelPayload>> Write(
         string ownerKind, string? ownerName, WaitThresholdLevelPayload level, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ownerKind);
-        ArgumentNullException.ThrowIfNull(level);
+        if (string.IsNullOrWhiteSpace(ownerKind))
+            return GenericResult<WaitThresholdLevelPayload>.Failure(WaitThresholdLog.OwnerKindRequired(_logger));
+
         var judged = WaitThresholdValidator.Check(ownerKind, level, _logger);
         if (judged.IsFailure)
         {

@@ -39,9 +39,6 @@ public sealed class ApiReferenceCaller
     /// <returns>The caller.</returns>
     public static ApiReferenceCaller From(ClaimsPrincipal user, ISystemRoleConfiguration systemRoles)
     {
-        ArgumentNullException.ThrowIfNull(user);
-        ArgumentNullException.ThrowIfNull(systemRoles);
-
         if (user.Identity?.IsAuthenticated != true)
             return new ApiReferenceCaller(false, false, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
@@ -59,8 +56,6 @@ public sealed class ApiReferenceCaller
     /// <returns>Why the caller may not call it, or <see langword="null"/> when they may.</returns>
     public string? Refusal(bool isAnonymous, IReadOnlyList<string> policies)
     {
-        ArgumentNullException.ThrowIfNull(policies);
-
         if (isAnonymous)
             return null;
 

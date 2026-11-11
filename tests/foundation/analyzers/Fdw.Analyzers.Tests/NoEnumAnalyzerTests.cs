@@ -7,8 +7,9 @@ namespace Fdw.Analyzers.Tests;
 
 /// <summary>
 /// FDW059 (FDW-4154, Feature FDW-4143): no enum is declared and none is parsed. Mike, 2026-11-05: enums are "expressly
-/// forbidden in fdw", "replace all of those other than messageseverity with type collections", and "the roslyn ones are an
-/// allowable exception".
+/// forbidden in fdw" and "replace all of those other than messageseverity with type collections". Mike, 2026-11-11 (FDW-5188,
+/// FDW-5194): "there should not be any enums outside of type collections"; only the TypeCollection layer, the packages that
+/// define the TypeCollection types and what they depend on, keeps them. That replaced the Roslyn-side exemption.
 /// </summary>
 public class NoEnumAnalyzerTests
 {
@@ -92,25 +93,47 @@ namespace App
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Analyzer")]
-    public Task RoslynToolingIsExempt() => Test(@"
+    public Task RoslynToolingReports() => Test(@"
 namespace Fdw.Roslyn.Commands
 {
-    public enum AuditFindingKind { Missing, Extra }
+    public enum {|FDW059:AuditFindingKind|} { Missing, Extra }
 
     public class Reader
     {
-        public object Read(string text) => System.Enum.Parse<AuditFindingKind>(text);
+        public object Read(string text) => {|FDW059:System.Enum.Parse<AuditFindingKind>(text)|};
     }
 }
 ", path: "/repo/public/src/tooling/roslyn/Fdw.Roslyn.Commands/AuditFindingKind.cs").RunAsync(TestContext.Current.CancellationToken);
 
-    [Fact]
+    [Theory]
     [Trait("Priority", "P1")]
     [Trait("Category", "Analyzer")]
-    public Task ASourceGeneratorAssemblyIsExempt() => Test(@"
+    [InlineData("Fdw.Data.SourceGenerators")]
+    [InlineData("Fdw.Conventions.Analyzers")]
+    [InlineData("Fdw.CodeFixes")]
+    public Task AGeneratorOrAnalyzerOutsideTheTypeCollectionLayerReports(string assemblyName) => Test(@"
+namespace Fdw.Tooling
+{
+    internal enum {|FDW059:Direction|} { Input, Output }
+}
+", assemblyName: assemblyName).RunAsync(TestContext.Current.CancellationToken);
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Analyzer")]
+    [InlineData("Fdw.Collections")]
+    [InlineData("Fdw.Collections.SourceGenerators")]
+    [InlineData("Fdw.Abstractions")]
+    [InlineData("Fdw.Results.Abstractions")]
+    public Task TheTypeCollectionLayerIsExempt(string assemblyName) => Test(@"
 namespace Fdw.Collections.SourceGenerators
 {
     internal enum CollectionKind { TypeCollection, ServiceTypeCollection }
+
+    internal static class Reader
+    {
+        public static object Read(string text) => System.Enum.Parse<CollectionKind>(text);
+    }
 }
-", assemblyName: "Fdw.Collections.SourceGenerators").RunAsync(TestContext.Current.CancellationToken);
+", assemblyName: assemblyName).RunAsync(TestContext.Current.CancellationToken);
 }

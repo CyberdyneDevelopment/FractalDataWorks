@@ -31,16 +31,15 @@ public sealed class ThresholdSource : IThresholdSource
     /// <param name="logger">The logger.</param>
     public ThresholdSource(IConfigurationGatewayProvider gateways, IThresholdConfigurationProvider thresholds, string dataStoreName, ILogger<ThresholdSource>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _thresholds = thresholds ?? throw new ArgumentNullException(nameof(thresholds));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _gateways = gateways;
+        _thresholds = thresholds;
+        _dataStoreName = dataStoreName;
         _logger = logger ?? NullLogger<ThresholdSource>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<IThresholdDefinition>>> For(ThresholdSubject subject, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(subject);
         var kind = ThresholdSubjectKinds.ByName(subject.Kind);
         if (ReferenceEquals(kind, ThresholdSubjectKinds.NotFound))
         {

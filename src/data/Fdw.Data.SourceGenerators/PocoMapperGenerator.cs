@@ -192,20 +192,55 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             ["Fdw.Data.BothMapperDirection"] = MapperDirection.Both,
         };
 
-#pragma warning disable FDW017
-    private enum MapperDirection
+    // Why not a TypeCollection: a source generator runs inside the compiler before TypeCollections exist, so it cannot load Fdw.Collections.
+    private sealed class MapperDirection
     {
-        Input = 0,
-        Output = 1,
-        Both = 2,
+        public static readonly MapperDirection Input = new(1, nameof(Input));
+        public static readonly MapperDirection Output = new(2, nameof(Output));
+        public static readonly MapperDirection Both = new(3, nameof(Both));
+
+        private MapperDirection(int id, string name)
+        {
+            Id = id;
+            Name = name;
+        }
+
+        public static System.Collections.Generic.IReadOnlyList<MapperDirection> All { get; } = [Input, Output, Both];
+
+        public int Id { get; }
+
+        public string Name { get; }
+
+        public static MapperDirection? ByName(string name) =>
+            All.FirstOrDefault(direction => string.Equals(direction.Name, name, System.StringComparison.Ordinal));
+
+        // Why: the generated mapper's doc comment writes the direction by name.
+        public override string ToString() => Name;
     }
 
-    private enum ChildKind
+    // Why not a TypeCollection: a source generator runs inside the compiler before TypeCollections exist, so it cannot load Fdw.Collections.
+    private sealed class ChildKind
     {
-        TypedList = 0,
-        PropertyCollection = 1,
+        public static readonly ChildKind TypedList = new(1, nameof(TypedList));
+        public static readonly ChildKind PropertyCollection = new(2, nameof(PropertyCollection));
+
+        private ChildKind(int id, string name)
+        {
+            Id = id;
+            Name = name;
+        }
+
+        public static System.Collections.Generic.IReadOnlyList<ChildKind> All { get; } = [TypedList, PropertyCollection];
+
+        public int Id { get; }
+
+        public string Name { get; }
+
+        public static ChildKind? ByName(string name) =>
+            All.FirstOrDefault(kind => string.Equals(kind.Name, name, System.StringComparison.Ordinal));
+
+        public override string ToString() => Name;
     }
-#pragma warning restore FDW017
 
     private static void GenerateMapper(SourceProductionContext context, TypeInfo typeInfo)
     {

@@ -50,9 +50,9 @@ public sealed class ConnectionAssignments : IConnectionAssignments
         IConnectionGrantConfigurationProvider grants,
         ILogger<ConnectionAssignments>? logger)
     {
-        _scope = scope ?? throw new ArgumentNullException(nameof(scope));
-        _assignments = assignments ?? throw new ArgumentNullException(nameof(assignments));
-        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
+        _scope = scope;
+        _assignments = assignments;
+        _grants = grants;
         _logger = logger ?? NullLogger<ConnectionAssignments>.Instance;
     }
 

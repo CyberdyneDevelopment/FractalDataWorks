@@ -19,8 +19,6 @@ public static class RequestBoundSteps
     /// <returns>The bound step for a request-bound step; <paramref name="step"/> itself otherwise.</returns>
     public static IAuthenticationStep? ForRequest(IAuthenticationStep? step, Func<Type, object> requestServices)
     {
-        if (requestServices is null) throw new ArgumentNullException(nameof(requestServices));
-
         return step is IRequestBoundAuthenticationStep bound ? bound.BindToRequest(requestServices(bound.RequestServicesType)) : step;
     }
 }

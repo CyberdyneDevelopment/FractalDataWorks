@@ -40,10 +40,10 @@ public sealed class WorkspaceReadService : IWorkspaceReadService
         IDataSetVariationConfigurationProvider variations,
         ILogger<WorkspaceReadService>? logger = null)
     {
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
-        _access = access ?? throw new ArgumentNullException(nameof(access));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
+        _workspaces = workspaces;
+        _access = access;
+        _dataSets = dataSets;
+        _variations = variations;
         _logger = logger ?? NullLogger<WorkspaceReadService>.Instance;
     }
 
@@ -75,7 +75,6 @@ public sealed class WorkspaceReadService : IWorkspaceReadService
     public async Task<IGenericResult<IReadOnlyList<ReadableDataSet>>> DataSets(
         IWorkspaceImplementationConfiguration workspace, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(workspace);
         WorkspaceReadLog.ListingDataSets(_logger, workspace.Name);
 
         var readable = new List<ReadableDataSet>();

@@ -17,17 +17,17 @@ public sealed class TypeCollectionAttribute(Type baseType, Type defaultReturnTyp
     /// <summary>
     /// Gets the base type to collect.
     /// </summary>
-    public Type BaseType { get; } = baseType ?? throw new ArgumentNullException(nameof(baseType));
+    public Type BaseType { get; } = baseType;
 
     /// <summary>
     /// Gets the default return type for generated methods.
     /// </summary>
-    public Type DefaultReturnType { get; } = defaultReturnType ?? throw new ArgumentNullException(nameof(defaultReturnType));
+    public Type DefaultReturnType { get; } = defaultReturnType;
 
     /// <summary>
     /// Gets the partial class type being generated.
     /// </summary>
-    public Type CollectionType { get; } = collectionType ?? throw new ArgumentNullException(nameof(collectionType));
+    public Type CollectionType { get; } = collectionType;
 
     /// <summary>
     /// Gets the fully qualified name of the base type (for generator compatibility).

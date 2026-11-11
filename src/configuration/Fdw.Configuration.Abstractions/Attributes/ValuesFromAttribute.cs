@@ -39,7 +39,7 @@ public sealed class ValuesFromAttribute : Attribute
     /// <param name="typeCollectionType">The TypeCollection type that provides valid values.</param>
     public ValuesFromAttribute(Type typeCollectionType)
     {
-        TypeCollectionType = typeCollectionType ?? throw new ArgumentNullException(nameof(typeCollectionType));
+        TypeCollectionType = typeCollectionType;
         TypeCollectionName = typeCollectionType.Name;
     }
 
@@ -51,7 +51,7 @@ public sealed class ValuesFromAttribute : Attribute
     /// <param name="typeCollectionName">The name of the TypeCollection (e.g., "CalculationTypes").</param>
     public ValuesFromAttribute(string typeCollectionName)
     {
-        TypeCollectionName = typeCollectionName ?? throw new ArgumentNullException(nameof(typeCollectionName));
+        TypeCollectionName = typeCollectionName;
     }
 
     /// <summary>

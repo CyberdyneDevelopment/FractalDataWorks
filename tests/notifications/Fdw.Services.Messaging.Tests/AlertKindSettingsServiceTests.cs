@@ -132,8 +132,9 @@ public sealed class AlertKindSettingsServiceTests
         var listed = await fixture.Service.List(Ct);
 
         listed.IsSuccess.ShouldBeTrue();
-        listed.Value!.Select(k => k.Kind).ShouldBe(["Alpha", "Beta"]);
-        var alpha = listed.Value[0];
+        var kinds = listed.Value.ShouldNotBeNull();
+        kinds.Select(k => k.Kind).ShouldBe(["Alpha", "Beta"]);
+        var alpha = kinds[0];
         alpha.Configured.ShouldBeFalse();
         alpha.DefaultActions.ShouldBe(["Acknowledge", "Snooze"]);
         alpha.Actions.Select(a => a.Name).ShouldBe(["Acknowledge", "Snooze"]);

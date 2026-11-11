@@ -56,9 +56,9 @@ public sealed class DataStoreConfigurationProvider
         ICrossTenantChangePolicy crossTenant)
         : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
-        Placement = placement ?? throw new ArgumentNullException(nameof(placement));
-        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
-        _crossTenant = crossTenant ?? throw new ArgumentNullException(nameof(crossTenant));
+        Placement = placement;
+        _accessor = accessor;
+        _crossTenant = crossTenant;
         _gateways = gatewayProvider;
         _target = new DataStoreTarget(dataStoreName, pathName, containerName);
         _logger = logger ?? NullLogger<DataStoreConfigurationProvider>.Instance;

@@ -37,8 +37,8 @@ public sealed class GrantRule : IGrantRule
     /// <param name="logger">The logger.</param>
     public GrantRule(IRoleGrants roleGrants, IAuthenticationContextAccessor authContext, ILogger<GrantRule>? logger)
     {
-        _roleGrants = roleGrants ?? throw new ArgumentNullException(nameof(roleGrants));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _roleGrants = roleGrants;
+        _authContext = authContext;
         _logger = logger ?? NullLogger<GrantRule>.Instance;
     }
 

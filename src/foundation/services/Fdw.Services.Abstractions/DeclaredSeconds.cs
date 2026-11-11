@@ -29,7 +29,6 @@ public static class DeclaredSeconds
     /// <returns>The seconds; a failure naming the type and field when none is declared or it is below one.</returns>
     public static IGenericResult<int> Resolve(ITypeOption option, string field, ILogger? logger)
     {
-        if (option is null) throw new ArgumentNullException(nameof(option));
         var log = logger ?? NullLogger.Instance;
         if (!ServiceTypeDefaults.TryResolve(option, field, out var value) || value is not int seconds)
             return GenericResult<int>.Failure(ServiceTypeLog.DeclaredSecondsNotDeclared(log, option.Name, field));

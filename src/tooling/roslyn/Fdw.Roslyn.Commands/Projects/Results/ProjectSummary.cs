@@ -12,11 +12,11 @@ public sealed class ProjectSummary
     /// </summary>
     public ProjectSummary(string name, string filePath, string language, int documentCount, string outputKind)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-        Language = language ?? throw new ArgumentNullException(nameof(language));
+        Name = name;
+        FilePath = filePath;
+        Language = language;
         DocumentCount = documentCount;
-        OutputKind = outputKind ?? throw new ArgumentNullException(nameof(outputKind));
+        OutputKind = outputKind;
     }
 
     /// <summary>

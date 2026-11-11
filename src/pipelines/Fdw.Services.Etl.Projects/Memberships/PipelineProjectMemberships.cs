@@ -39,7 +39,7 @@ public sealed class PipelineProjectMemberships : IPipelineProjectMemberships
     /// <param name="logger">The logger the read reports through.</param>
     public PipelineProjectMemberships(IOrchestrationNodeConfigurationProvider nodes, ILogger<PipelineProjectMemberships>? logger = null)
     {
-        _nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
+        _nodes = nodes;
         _logger = logger ?? NullLogger<PipelineProjectMemberships>.Instance;
     }
 

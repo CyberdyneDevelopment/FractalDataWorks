@@ -56,8 +56,8 @@ public sealed class FieldMappingTransformationResolver
         TransformationConfigurationProvider transformations,
         ILogger<FieldMappingTransformationResolver>? logger = null)
     {
-        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
-        _transformations = transformations ?? throw new ArgumentNullException(nameof(transformations));
+        _gatewayProvider = gatewayProvider;
+        _transformations = transformations;
         _logger = logger ?? NullLogger<FieldMappingTransformationResolver>.Instance;
     }
 

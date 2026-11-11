@@ -39,7 +39,7 @@ public sealed class StoredViewFiltersTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Logic.ShouldBe("And");
-        result.Value.Nodes!.Select(node => node.Field).ShouldBe(new[] { "grade", "campus" });
+        result.Value.Nodes!.Select(node => node?.Field).ShouldBe(new[] { "grade", "campus" });
     }
 
     [Fact]

@@ -38,8 +38,6 @@ public static class ParameterizedBatch
     public static async Task<IGenericResult<SqlProcedureResult>> Run(
         SqlProcedureCall call, string declarations, string statement, int firstValue, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        ArgumentNullException.ThrowIfNull(declarations);
         var parameters = Parameters(declarations, call);
         if (parameters.IsFailure)
             return parameters.ToNewResult<SqlProcedureResult>();

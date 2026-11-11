@@ -38,8 +38,7 @@ public sealed class DelimitedStreamRowSource : IRowSourceReader
     /// <exception cref="ArgumentException">Thrown when no column names are supplied.</exception>
     public DelimitedStreamRowSource(Stream content, DelimitedRowSourceOptions options)
     {
-        if (content is null) throw new ArgumentNullException(nameof(content));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _options = options;
         if (_options.Columns.Count == 0)
         {
             throw new ArgumentException(

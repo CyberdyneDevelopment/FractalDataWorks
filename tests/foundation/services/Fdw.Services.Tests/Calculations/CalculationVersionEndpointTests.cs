@@ -152,7 +152,7 @@ public class CalculationVersionEndpointTests
         return setup;
     }
 
-    private static ICalculationVersionImplementationConfiguration? Existing(CalculationVersionDomainConfiguration? row)
+    private static CalculationVersionImplementationConfiguration? Existing(CalculationVersionDomainConfiguration? row)
         => row is null
             ? null
             : new CalculationVersionImplementationConfiguration

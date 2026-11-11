@@ -38,7 +38,7 @@ public sealed class ResiliencyPipelineFactory : IResiliencyPipelineFactory
     /// <param name="logger">The logger instance for this factory.</param>
     public ResiliencyPipelineFactory(ILogger<ResiliencyPipelineFactory> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
         _pipelineCache = new ConcurrentDictionary<string, ResiliencePipeline>(StringComparer.Ordinal);
         _genericPipelineCache = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
 

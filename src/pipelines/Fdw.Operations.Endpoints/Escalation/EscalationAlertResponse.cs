@@ -59,7 +59,6 @@ public sealed class EscalationAlertResponse
     /// <returns>The response.</returns>
     public static EscalationAlertResponse Of(EscalationAlert alert)
     {
-        ArgumentNullException.ThrowIfNull(alert);
         return new EscalationAlertResponse
         {
             Id = alert.Id, TenantId = alert.TenantId, SubjectKind = alert.SubjectKind, SubjectName = alert.SubjectName, ThresholdName = alert.ThresholdName,

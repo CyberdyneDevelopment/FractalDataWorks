@@ -46,7 +46,7 @@ public abstract class QueryDataSetDataEndpointBase : DataQueryEndpointBase<DataQ
         IFilterCalculations? calculations = null)
         : base(logger ?? NullLogger<QueryDataSetDataEndpointBase>.Instance, dataGateways, calculations)
     {
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _resolver = resolver;
     }
 
     /// <inheritdoc />

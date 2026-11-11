@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "ApiReference")]
 public sealed class ApiReferenceConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ApiReferenceConfigurationCommand"/> class.</summary>
     public ApiReferenceConfigurationCommand() : base("ApiReference") { }
 }

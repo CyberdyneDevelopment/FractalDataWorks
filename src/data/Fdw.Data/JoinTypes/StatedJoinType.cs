@@ -33,7 +33,6 @@ public static class StatedJoinType
     /// </returns>
     public static bool Joins(IJoinType kind)
     {
-        ArgumentNullException.ThrowIfNull(kind);
         return !ReferenceEquals(kind, JoinTypes.NotFound) && (kind.RequiresConditions || (kind.IncludesAllLeft && kind.IncludesAllRight));
     }
 }

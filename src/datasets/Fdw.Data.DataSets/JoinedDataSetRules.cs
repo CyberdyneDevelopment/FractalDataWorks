@@ -28,9 +28,6 @@ public static class JoinedDataSetRules
     /// </returns>
     public static IGenericResult Validate(IJoinedDataSetConfiguration dataSet, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(dataSet);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var sources = dataSet.Sources.Select(s => s.SourceName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var join in dataSet.Joins)
         {

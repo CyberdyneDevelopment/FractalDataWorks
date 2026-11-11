@@ -50,11 +50,11 @@ public sealed class DataSetStatusProvider : IDataSetStatuses
         TimeProvider time,
         ILogger<DataSetStatusProvider>? logger = null)
     {
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _writerRuns = writerRuns ?? throw new ArgumentNullException(nameof(writerRuns));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
-        _time = time ?? throw new ArgumentNullException(nameof(time));
+        _dataSets = dataSets;
+        _writerRuns = writerRuns;
+        _settings = settings;
+        _tenant = tenant;
+        _time = time;
         _logger = logger ?? NullLogger<DataSetStatusProvider>.Instance;
     }
 

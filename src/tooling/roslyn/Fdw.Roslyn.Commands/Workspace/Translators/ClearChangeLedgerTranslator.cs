@@ -37,8 +37,6 @@ public sealed class ClearChangeLedgerTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        if (command is null) throw new ArgumentNullException(nameof(command));
-
         ClearChangeLedgerTranslatorLog.Clearing(Logger, command.Reason ?? string.Empty);
 
         return Task.FromResult<IGenericResult<IRoslynCommandResult>>(

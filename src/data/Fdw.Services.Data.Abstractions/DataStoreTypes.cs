@@ -25,7 +25,7 @@ public abstract partial class DataStoreTypes : TypeCollectionBase<
     IDataStoreType>
 {
     /// <summary>
-    /// The service category for database configuration loading.
+    /// The service category the data store types belong to. It names the category; it loads no configuration.
     /// </summary>
     public static string ServiceCategory => "DataStore";
 

@@ -59,7 +59,6 @@ public sealed class MsSqlBulkUpdateTranslator : MsSqlDataCommandTranslatorBase, 
     /// <remarks>The same write as the inline translation, with the rows bulk copied into the temporary table instead of sent as JSON (FDW-4958).</remarks>
     public IGenericResult<MsSqlStagedWrite> Stage(IDataCommand command, IStorageContainer container)
     {
-        ArgumentNullException.ThrowIfNull(container);
         try
         {
             var batch = Batch(command, container);

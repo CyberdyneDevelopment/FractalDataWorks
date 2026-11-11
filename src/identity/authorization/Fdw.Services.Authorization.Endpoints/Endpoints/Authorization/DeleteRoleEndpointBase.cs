@@ -99,8 +99,18 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
             return;
         }
 
+        // Why before the delete: deleting the role removes its assignments with it (FDW-5222), so afterwards nothing says who held it, and
+        // their sessions, which still carry the role's grants, could not be found to end.
+        var holders = await RoleHolderSessions.Holders(_userRoles, existing.Value.Id, req.Name, EndpointLogger, ct).ConfigureAwait(false);
+        if (holders.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(holders, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         OnDeletingRole(req.Name, existing.Value.Id);
 
+        // The role provider removes the role's assignments and permission grants in the same unit as the role.
         var result = await _roleProvider.Delete(existing.Value.Id, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -112,7 +122,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         AuthorizationEndpointLog.RoleDeleted(EndpointLogger, req.Name);
 
         // The role's grants are gone, so no holder may keep a token that still carries them (FDW-875).
-        var ended = await RoleHolderSessions.End(_userRoles, _revocations, existing.Value.Id, req.Name, EndpointLogger, ct).ConfigureAwait(false);
+        var ended = await RoleHolderSessions.End(_revocations, holders.Value!, req.Name, EndpointLogger, ct).ConfigureAwait(false);
         if (ended.IsFailure)
         {
             await Send.ResultAsync(ResultHttpStatusMapper.Answer(ended, HttpContext)).ConfigureAwait(false);

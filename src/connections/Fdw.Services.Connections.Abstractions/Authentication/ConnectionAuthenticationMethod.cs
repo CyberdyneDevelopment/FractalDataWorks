@@ -27,11 +27,11 @@ public sealed class ConnectionAuthenticationMethod
         IReadOnlyList<ConnectionCredentialField> credentials,
         IReadOnlyList<ConnectionSettingField> settings)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
+        Name = name;
+        DisplayName = displayName;
         UsesHostIdentity = usesHostIdentity;
-        Credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
-        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        Credentials = credentials;
+        Settings = settings;
     }
 
     /// <summary>Gets the method's name, as a connection names it.</summary>
@@ -60,7 +60,6 @@ public sealed class ConnectionAuthenticationMethod
     public static ConnectionAuthenticationMethod Of<TSelf>(ConnectionAuthenticationTypeBase<TSelf> method)
         where TSelf : Fdw.Collections.ITypeOption<int, TSelf>
     {
-        if (method is null) throw new ArgumentNullException(nameof(method));
         return new ConnectionAuthenticationMethod(
             method.Name,
             method.DisplayName,

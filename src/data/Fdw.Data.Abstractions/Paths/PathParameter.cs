@@ -30,8 +30,8 @@ public sealed class PathParameter
         string? description = null,
         IEnumerable<string>? validationRules = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        ParameterType = parameterType ?? throw new ArgumentNullException(nameof(parameterType));
+        Name = name;
+        ParameterType = parameterType;
         IsRequired = isRequired;
         DefaultValue = defaultValue;
         Description = description;

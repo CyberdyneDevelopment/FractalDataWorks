@@ -26,16 +26,6 @@ public class MessageCollectionAttributeTests
         attribute.ReturnType.ShouldBe(typeof(IGenericMessage));
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void Constructor_WithNullName_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new MessageCollectionAttribute(null!))
-            .ParamName.ShouldBe("name");
-    }
-
     [Theory]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]

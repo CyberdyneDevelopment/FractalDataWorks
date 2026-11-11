@@ -20,7 +20,6 @@ public sealed class HostStoppedStop : FlowStopKindBase
     /// <inheritdoc />
     public override Task EndRecord(IFlowReporter reporter, Guid record, IGenericResult outcome, bool unfinished, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(reporter);
         return unfinished
             ? Task.CompletedTask
             : reporter.StepFinished(record, GenericResult.Success(), cancellationToken);

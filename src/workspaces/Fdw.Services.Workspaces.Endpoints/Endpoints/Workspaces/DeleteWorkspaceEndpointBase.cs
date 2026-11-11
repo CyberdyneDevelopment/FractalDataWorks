@@ -18,7 +18,7 @@ public abstract class DeleteWorkspaceEndpointBase : CrudDeleteEndpointBase<Works
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IDataSetVariationConfigurationProvider _variations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeleteWorkspaceEndpointBase"/> class.</summary>
     protected DeleteWorkspaceEndpointBase(
         ILogger<DeleteWorkspaceEndpointBase> logger,
         IWorkspaceConfigurationProvider provider,

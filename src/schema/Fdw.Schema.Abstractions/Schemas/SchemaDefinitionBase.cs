@@ -53,8 +53,8 @@ public abstract class SchemaDefinitionBase<TProperty> : ISchemaDefinition<TPrope
         }
 
         Name = name;
-        Properties = properties ?? throw new ArgumentNullException(nameof(properties));
-        Layout = layout ?? throw new ArgumentNullException(nameof(layout));
+        Properties = properties;
+        Layout = layout;
         Description = description;
         SurrogateKey = surrogateKey;
         NaturalKey = naturalKey;
@@ -105,11 +105,6 @@ public abstract class SchemaDefinitionBase<TProperty> : ISchemaDefinition<TPrope
     /// <inheritdoc/>
     public virtual IReadOnlyList<TProperty> Get(IDatumType role)
     {
-        if (role == null)
-        {
-            throw new ArgumentNullException(nameof(role));
-        }
-
         return Properties
             .Where(p => string.Equals(p.Role.Name, role.Name, StringComparison.Ordinal))
             .ToList();

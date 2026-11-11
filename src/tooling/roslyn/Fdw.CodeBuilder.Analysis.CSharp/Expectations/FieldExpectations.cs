@@ -25,7 +25,7 @@ public class FieldExpectations
     /// <param name="fieldDeclaration">The field declaration to verify.</param>
     public FieldExpectations(FieldDeclarationSyntax fieldDeclaration)
     {
-        _fieldDeclaration = fieldDeclaration ?? throw new ArgumentNullException(nameof(fieldDeclaration));
+        _fieldDeclaration = fieldDeclaration;
 
         // Get the variable declarator for this field
         _variable = fieldDeclaration.Declaration.Variables.First();

@@ -31,15 +31,13 @@ public sealed class HomePages : IHomePages
     /// <param name="logger">The logger.</param>
     public HomePages(IHomePageConfigurationProvider pages, ILogger<HomePages>? logger)
     {
-        _pages = pages ?? throw new ArgumentNullException(nameof(pages));
+        _pages = pages;
         _logger = logger ?? NullLogger<HomePages>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<HomePageSet>> Get(HomePageScope scope, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(scope);
-
         var published = await Read(scope, HomePageStates.Published, cancellationToken).ConfigureAwait(false);
         if (published.IsFailure)
             return published.ToNewResult<HomePageSet>();
@@ -53,8 +51,6 @@ public sealed class HomePages : IHomePages
     /// <inheritdoc />
     public async Task<IGenericResult> SaveDraft(HomePageScope scope, string body, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(scope);
-
         var checkedBody = HomePageBody.Check(body, _logger);
         if (checkedBody.IsFailure)
             return checkedBody;
@@ -69,8 +65,6 @@ public sealed class HomePages : IHomePages
     /// <inheritdoc />
     public async Task<IGenericResult> Publish(HomePageScope scope, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(scope);
-
         var draft = await Read(scope, HomePageStates.Draft, cancellationToken).ConfigureAwait(false);
         if (draft.IsFailure)
             return draft;

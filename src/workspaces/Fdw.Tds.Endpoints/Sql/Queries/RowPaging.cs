@@ -20,8 +20,6 @@ public readonly record struct RowPaging(long Skip, long? Take)
     /// <returns>The paging, or the refusal for TOP PERCENT or WITH TIES.</returns>
     public static IGenericResult<RowPaging> Of(QuerySpecification query, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(scope);
         var limit = scope.Context.Session.RowCountLimit > 0 ? scope.Context.Session.RowCountLimit : (long?)null;
 
         if (query.OffsetClause is { } offset)

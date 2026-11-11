@@ -46,9 +46,9 @@ public abstract class ListDataSetsEndpointBase
         : base(logger)
     {
         _tags = tags;
-        _statuses = statuses ?? throw new ArgumentNullException(nameof(statuses));
-        _dataSetProvider = dataSetProvider ?? throw new ArgumentNullException(nameof(dataSetProvider));
-        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
+        _statuses = statuses;
+        _dataSetProvider = dataSetProvider;
+        _categories = categories;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

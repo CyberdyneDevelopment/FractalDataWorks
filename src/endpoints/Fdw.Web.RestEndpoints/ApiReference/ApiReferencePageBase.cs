@@ -33,11 +33,11 @@ public abstract class ApiReferencePageBase : TypeOptionBase<ApiReferencePageBase
         string headerContent)
         : base(name)
     {
-        Route = route ?? throw new ArgumentNullException(nameof(route));
-        Title = title ?? throw new ArgumentNullException(nameof(title));
+        Route = route;
+        Title = title;
         RequiresSignIn = requiresSignIn;
-        RequiredPolicies = requiredPolicies ?? throw new ArgumentNullException(nameof(requiredPolicies));
-        HeaderContent = headerContent ?? throw new ArgumentNullException(nameof(headerContent));
+        RequiredPolicies = requiredPolicies;
+        HeaderContent = headerContent;
     }
 
     /// <inheritdoc />

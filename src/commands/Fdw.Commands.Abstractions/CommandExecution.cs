@@ -89,7 +89,7 @@ public sealed record CommandExecution
     /// <param name="payload">The execution payload (command-specific data).</param>
     public CommandExecution(IGenericCommandType commandType, object? payload = null)
     {
-        CommandType = commandType ?? throw new ArgumentNullException(nameof(commandType));
+        CommandType = commandType;
         Payload = payload;
     }
 }

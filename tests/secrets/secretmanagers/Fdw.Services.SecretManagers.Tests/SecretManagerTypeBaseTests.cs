@@ -116,30 +116,6 @@ public sealed class SecretManagerTypeBaseTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ConstructorThrowsWhenSupportedSecretStoresIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new TestSecretManagerType(
-                supportedSecretStores: null!,
-                supportedSecretTypes: new List<string> { "Password" }));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void ConstructorThrowsWhenSupportedSecretTypesIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new TestSecretManagerType(
-                supportedSecretStores: new[] { "Test" },
-                supportedSecretTypes: null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
     public void ConstructorAcceptsEmptySecretStores()
     {
         // Arrange & Act

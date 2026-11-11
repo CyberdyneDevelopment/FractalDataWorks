@@ -8,6 +8,6 @@ namespace Fdw.Services.Quality.Commands;
 [TypeOption(typeof(ConfigurationCommands), "QualityRule")]
 public sealed class QualityRuleConfigurationCommand : ConfigurationCommandBase<QualityRuleImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="QualityRuleConfigurationCommand"/> class.</summary>
     public QualityRuleConfigurationCommand() : base("QualityRule") { }
 }

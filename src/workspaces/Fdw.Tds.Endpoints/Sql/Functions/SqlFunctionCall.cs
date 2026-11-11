@@ -24,9 +24,9 @@ public sealed class SqlFunctionCall
     /// <param name="line">The line the call was written on.</param>
     public SqlFunctionCall(string name, IList<ScalarExpression> arguments, SqlScope scope, int line)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Arguments = arguments ?? throw new ArgumentNullException(nameof(arguments));
-        Scope = scope ?? throw new ArgumentNullException(nameof(scope));
+        Name = name;
+        Arguments = arguments;
+        Scope = scope;
         Line = line;
     }
 

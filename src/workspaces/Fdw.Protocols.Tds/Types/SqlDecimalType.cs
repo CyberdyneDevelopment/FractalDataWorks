@@ -37,22 +37,18 @@ public sealed class SqlDecimalType : SqlDataTypeBase
     /// <inheritdoc/>
     public override string Declaration(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return string.Create(CultureInfo.InvariantCulture, $"decimal({column.Precision},{column.Scale})");
     }
 
     /// <inheritdoc/>
     public override short CatalogMaxLength(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return StorageLength(column.Precision);
     }
 
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(column);
         writer.WriteByte(TdsTypeIds.DecimalN);
         writer.WriteByte(StorageLength(column.Precision));
         writer.WriteByte(column.Precision);

@@ -15,8 +15,8 @@ public sealed class AuthenticatedSession
     /// <param name="principal">The principal built from the claims baked at sign-in.</param>
     public AuthenticatedSession(SessionRecord session, ClaimsPrincipal principal)
     {
-        Session = session ?? throw new ArgumentNullException(nameof(session));
-        Principal = principal ?? throw new ArgumentNullException(nameof(principal));
+        Session = session;
+        Principal = principal;
     }
 
     /// <summary>Gets the live session.</summary>

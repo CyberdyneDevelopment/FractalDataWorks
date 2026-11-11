@@ -13,9 +13,9 @@ public sealed class DocumentListResult
     /// </summary>
     public DocumentListResult(string projectName, int documentCount, IReadOnlyList<DocumentSummary> documents)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
+        ProjectName = projectName;
         DocumentCount = documentCount;
-        Documents = documents ?? throw new ArgumentNullException(nameof(documents));
+        Documents = documents;
     }
 
     /// <summary>

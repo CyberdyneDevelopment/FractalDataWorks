@@ -16,9 +16,6 @@ public static class SqlAssignment
     /// <returns>Success, error 137 for a variable not declared, or 245 for a value that does not convert.</returns>
     public static IGenericResult Assign(VariableReference variable, ScalarExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(variable);
-        ArgumentNullException.ThrowIfNull(expression);
-        ArgumentNullException.ThrowIfNull(scope);
         var variables = scope.Context.Variables;
         if (!variables.TryGetType(variable.Name, out var type))
             return SqlRefusal.Refuse(SqlServerErrors.MustDeclareVariable(variable.Name, variable.StartLine), scope.Context.Logger);

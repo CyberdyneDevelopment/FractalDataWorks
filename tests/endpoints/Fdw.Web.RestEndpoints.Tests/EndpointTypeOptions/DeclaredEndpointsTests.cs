@@ -69,11 +69,4 @@ public sealed class DeclaredEndpointsTests
 
         DeclaredEndpoints.Types.ShouldContain(typeof(FirstEndpoint));
     }
-
-    /// <summary>Declaring null throws rather than recording nothing.</summary>
-    [Fact]
-    public void DeclareNullThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => DeclaredEndpoints.Declare(null!));
-    }
 }

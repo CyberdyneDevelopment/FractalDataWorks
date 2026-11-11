@@ -56,9 +56,9 @@ public sealed class FlowStageAdapter : IFlowComponent, IFlowErrorOutputs
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
-        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _stage = stage;
+        _configuration = configuration;
+        _context = context;
 
         // Why the answer is per configuration and not only per kind: a Compute stage works a row at a time, or on whole tables when
         // its transformation is a set, and only the compiled transformation says which.

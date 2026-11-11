@@ -105,4 +105,14 @@ public static partial class WaitThresholdLog
     [MessageLogging(EventId = 32166, Level = LogLevel.Error,
         Message = "A run of '{pipeline}' names the schedule '{schedule}' but not its Id, so the thresholds of that schedule cannot say whether it is held; it is not taken")]
     public static partial IGenericMessage HoldScheduleIdMissing(ILogger logger, string pipeline, string schedule);
+
+    /// <summary>Error: a wait threshold level needs its owner kind; an empty kind is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "A wait threshold level needs the kind of its owner (server, pipeline or schedule), and the kind given is empty")]
+    public static partial IGenericMessage OwnerKindRequired(ILogger logger);
+
+    /// <summary>Error: releasing an owner's level needs the owner's name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21801, Level = LogLevel.Error,
+        Message = "Releasing the wait threshold level of a {ownerKind} needs its name, and the name given is empty")]
+    public static partial IGenericMessage OwnerNameRequired(ILogger logger, string ownerKind);
 }

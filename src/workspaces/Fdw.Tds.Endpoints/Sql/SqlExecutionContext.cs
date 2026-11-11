@@ -42,11 +42,11 @@ public sealed class SqlExecutionContext
         bool inProcedure,
         int nestLevel)
     {
-        Session = session ?? throw new ArgumentNullException(nameof(session));
-        Server = server ?? throw new ArgumentNullException(nameof(server));
-        Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
-        Response = response ?? throw new ArgumentNullException(nameof(response));
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        Session = session;
+        Server = server;
+        Endpoint = endpoint;
+        Response = response;
+        Logger = logger;
         Variables = variables;
         _catalog = catalog;
         RequestTime = requestTime;

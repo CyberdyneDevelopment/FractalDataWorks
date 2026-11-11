@@ -41,8 +41,8 @@ public sealed class TdsLogin
     /// <param name="logger">The logger.</param>
     public TdsLogin(TdsEndpointOptions options, ILogger logger)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _options = options;
+        _logger = logger;
     }
 
     /// <summary>Signs a login in.</summary>
@@ -53,9 +53,6 @@ public sealed class TdsLogin
     /// <returns>The session, or the errors the client is refused with.</returns>
     public async Task<TdsLoginOutcome> SignIn(Login7Request login, IServiceProvider services, int sessionId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(login);
-        ArgumentNullException.ThrowIfNull(services);
-
         var refusal = Precondition(login);
         if (refusal is not null)
             return Refused(login, refusal);

@@ -25,7 +25,7 @@ public sealed class ExecutionItemRecord : IExecutionItem
     /// <param name="data">The underlying data.</param>
     public ExecutionItemRecord(ExecutionItem data)
     {
-        _data = data ?? throw new ArgumentNullException(nameof(data));
+        _data = data;
     }
 
     /// <inheritdoc />

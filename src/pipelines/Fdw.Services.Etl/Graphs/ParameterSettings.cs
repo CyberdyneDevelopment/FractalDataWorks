@@ -29,7 +29,6 @@ public static class ParameterSettings
 
     private static List<(string Setting, string Text)> Settings(PipelineComponentConfiguration component, bool late)
     {
-        ArgumentNullException.ThrowIfNull(component);
         var found = new List<(string Setting, string Text)>();
         foreach (var member in ComponentTypes.ByName(component.ComponentType).Settings.Where(member => member.TakesParameterText && member.ReadsWhenStepRuns == late))
         {
@@ -50,7 +49,6 @@ public static class ParameterSettings
     /// <returns>The mappings, in order; none for a component whose mapping constants are plain values.</returns>
     public static IReadOnlyList<PipelineComponentFieldConfiguration> MappingConstants(PipelineComponentConfiguration component)
     {
-        ArgumentNullException.ThrowIfNull(component);
         return [.. component.Fields
             .Where(field => string.Equals(field.SettingName, ComponentTypeBase.MappingsSetting, StringComparison.OrdinalIgnoreCase) && HoldsParameter(field.ConstantText))
             .OrderBy(field => field.Ordinal)];
@@ -62,7 +60,6 @@ public static class ParameterSettings
     /// <returns><see langword="true"/> when the component binds the setting.</returns>
     public static bool IsBound(PipelineComponentConfiguration component, string setting)
     {
-        ArgumentNullException.ThrowIfNull(component);
         return component.SettingBindings.Any(binding => string.Equals(binding.SettingName, setting, StringComparison.OrdinalIgnoreCase));
     }
 

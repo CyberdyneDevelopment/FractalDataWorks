@@ -45,9 +45,9 @@ public abstract class DeleteDataSetVariationEndpointBase : CrudDeleteEndpointBas
         IWorkspaceAccessPolicy access,
         IDataSetVariationConfigurationProvider variations) : base(logger)
     {
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
-        _access = access ?? throw new ArgumentNullException(nameof(access));
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
+        _workspaces = workspaces;
+        _access = access;
+        _variations = variations;
     }
 
     /// <inheritdoc />

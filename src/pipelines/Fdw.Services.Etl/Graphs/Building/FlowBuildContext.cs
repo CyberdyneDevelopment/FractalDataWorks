@@ -66,7 +66,6 @@ public sealed class FlowBuildContext
         TimeProvider? clock = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pipelineName);
-        ArgumentNullException.ThrowIfNull(links);
         _destinations = [];
         PipelineName = pipelineName;
         PipelineId = pipelineId;
@@ -77,12 +76,12 @@ public sealed class FlowBuildContext
         Clock = clock;
         ExecutionId = executionId;
         ConnectionProvider = connectionProvider;
-        Gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
+        Gateway = gateway;
         EtlGateway = etlGateway;
-        LoadExecutor = loadExecutor ?? throw new ArgumentNullException(nameof(loadExecutor));
+        LoadExecutor = loadExecutor;
         StartedAt = startedAt;
-        Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        Parameters = parameters;
+        Logger = logger;
         ArgumentOutOfRangeException.ThrowIfLessThan(commitReportInterval, TimeSpan.Zero);
         CommitReportInterval = commitReportInterval;
         ArgumentOutOfRangeException.ThrowIfNegative(unmatchedKeySample);
@@ -126,7 +125,6 @@ public sealed class FlowBuildContext
     /// <returns>The context for that step.</returns>
     public FlowBuildContext ForLinks(IReadOnlyList<PipelineLinkConfiguration> links)
     {
-        ArgumentNullException.ThrowIfNull(links);
         return new FlowBuildContext(this, links);
     }
 
@@ -138,7 +136,6 @@ public sealed class FlowBuildContext
     /// <returns>The context for that component. A name that is a run parameter keeps the run's value.</returns>
     public FlowBuildContext WithValues(IReadOnlyDictionary<string, object?> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
         var merged = new Dictionary<string, object?>(Parameters, StringComparer.OrdinalIgnoreCase);
         foreach (var (name, value) in values)
         {

@@ -40,7 +40,7 @@ public sealed class LegalHolds : ILegalHolds
     {
         _logger = logger ?? NullLogger<LegalHolds>.Instance;
         _store = new RetentionStore(gateways, tables, _logger);
-        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _scope = organizations;
     }
 
     /// <inheritdoc />

@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Fdw.Results;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.Pipelines.Clients.Abstractions;
+using Fdw.Services.Pipelines.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines.Endpoints;
@@ -40,10 +41,8 @@ public static class TemplateFill
     public static IGenericResult<GraphPayload> Apply(
         GraphPayload template, DateTimeOffset templateVersion, string name, IReadOnlyList<KeyValuePair<string, string>> values, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(template);
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(values);
-        ArgumentNullException.ThrowIfNull(logger);
+        if (string.IsNullOrWhiteSpace(name))
+            return GraphRefusal.From<GraphPayload>(GenericResult.Failure(PipelineEndpointLog.TemplatePipelineNameRequired(logger, template.Name)));
 
         // Why only the parameters that are given: a parameter nobody gives stays a run parameter, so it must not be asked for, defaulted or refused here.
         var given = new HashSet<string>(values.Select(pair => pair.Key), StringComparer.OrdinalIgnoreCase);

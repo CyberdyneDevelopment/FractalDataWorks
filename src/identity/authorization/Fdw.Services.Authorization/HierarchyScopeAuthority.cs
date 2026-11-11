@@ -54,17 +54,17 @@ public sealed class HierarchyScopeAuthority : IScopeAuthority
     public HierarchyScopeAuthority(
         IAuthenticationContextAccessor authContext, IUserPermissions permissions, ISystemRoleConfiguration systemRoles, ILogger<HierarchyScopeAuthority>? logger)
     {
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _systemRoles = systemRoles ?? throw new ArgumentNullException(nameof(systemRoles));
+        _authContext = authContext;
+        _permissions = permissions;
+        _systemRoles = systemRoles;
         _logger = logger ?? NullLogger<HierarchyScopeAuthority>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult> May(string right, ThingScope scope, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(right);
-        ArgumentNullException.ThrowIfNull(scope);
+        if (string.IsNullOrWhiteSpace(right))
+            return GenericResult.Failure(ScopeAuthorityLog.ScopeRightRequired(_logger));
 
         if (scope.TenantId == Guid.Empty)
             return GenericResult.Failure(ScopeAuthorityLog.NoScope(_logger, right));

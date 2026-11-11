@@ -106,8 +106,6 @@ public static class CalculationTypedConfigurationReader
     public static IGenericResult<IGenericConfiguration> ReadOver(
         string calculationEntityType, IGenericConfiguration stored, JsonElement sent, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(stored);
-
         var option = CalculationEntityTypes.ByName(calculationEntityType);
         if (option == CalculationEntityTypes.NotFound
             || sent.ValueKind != JsonValueKind.Object

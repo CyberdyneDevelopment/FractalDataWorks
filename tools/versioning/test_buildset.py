@@ -168,6 +168,29 @@ class BuildSetTests(unittest.TestCase):
         self.assertTrue(all(any(a.startswith("-p:CustomAfterMicrosoftCommonTargets=") for a in c) for c in packs))
         self.assertIn(["dotnet", "test", "tests/B.Tests/B.Tests.csproj", "-c", "Release"], cmds)
 
+    def test_without_tests_only_build_and_pack_remain(self):
+        self.commit()
+        report = buildset.prepare(self.repo.root, ["B", "C"], VERSIONS, TREES, "1.4.9", run_tests=False)
+        self.assertEqual({c[1] for c in report["commands"]}, {"build", "pack"})
+        self.assertEqual(report["tests"], ["B.Tests", "C.Tests"])
+
+    def test_the_tests_run_unless_they_are_left_out(self):
+        self.commit()
+        self.assertIn("test", {c[1] for c in self.prepare(["B"])["commands"]})
+
+    def test_the_command_leaves_the_tests_out_with_skip_tests(self):
+        self.commit()
+        paths = {}
+        for name, data in (("versions", VERSIONS), ("trees", TREES)):
+            paths[name] = os.path.join(self._tmp.name, "..", f"{os.path.basename(self._tmp.name)}-{name}.json")
+            with open(paths[name], "w") as f:
+                json.dump(data, f)
+            self.addCleanup(os.remove, paths[name])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            buildset.main(["prepare", "--repo", self.repo.root, "--set", "B", "--versions", paths["versions"], "--trees", paths["trees"], "--release", "1.4.5", "--skip-tests"])
+        self.assertEqual({c[1] for c in json.loads(out.getvalue())["commands"]}, {"build", "pack"})
+
     def per_package(self, members, package_versions, versions=None, assembly_versions=None):
         return buildset.prepare(self.repo.root, members, VERSIONS if versions is None else versions, TREES, None, package_versions,
                                 AV if assembly_versions is None else assembly_versions)

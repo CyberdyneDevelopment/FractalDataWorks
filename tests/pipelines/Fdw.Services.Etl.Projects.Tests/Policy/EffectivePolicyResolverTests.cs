@@ -109,15 +109,6 @@ public sealed class EffectivePolicyResolverTests
     // Constructor guard
     // ============================================================
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ConstructorThrowsWhenServerDefaultsIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new EffectivePolicyResolver(null!));
-    }
-
     // ============================================================
     // ResolveForProject — inherits from server defaults
     // ============================================================
@@ -134,7 +125,7 @@ public sealed class EffectivePolicyResolverTests
         var project = CreateProject();
 
         // Act
-        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
+        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
 
         // Assert
         effective.StepFailurePolicy.ShouldBe("HaltStage");
@@ -165,7 +156,7 @@ public sealed class EffectivePolicyResolverTests
             resiliencyPolicyId: resiliencyId);
 
         // Act
-        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
+        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
 
         // Assert
         effective.StepFailurePolicy.ShouldBe("ContinueStage");
@@ -192,7 +183,7 @@ public sealed class EffectivePolicyResolverTests
         var project = CreateProject(stepFailurePolicy: "ContinueStage", allowCrossTenant: true);
 
         // Act
-        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
+        var effective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
 
         // Assert
         effective.StepFailurePolicy.ShouldBe("ContinueStage");
@@ -201,18 +192,6 @@ public sealed class EffectivePolicyResolverTests
         effective.MaxParallelPipelines.ShouldBe(5);
         effective.RequireApprovalToRun.ShouldBeTrue();
         effective.AllowResume.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public async Task ResolveForProjectThrowsWhenProjectIsNull()
-    {
-        // Arrange
-        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
-
-        // Act & Assert
-        await Should.ThrowAsync<ArgumentNullException>(() => sut.ResolveForProject(null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -284,32 +263,6 @@ public sealed class EffectivePolicyResolverTests
         effective.ResiliencyPolicyId.ShouldBe(resiliencyId);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ResolveForStageThrowsWhenStageIsNull()
-    {
-        // Arrange
-        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
-        var parentEffective = new ExecutionPolicySnapshot("HaltStage", "HaltProject", 5, true, false, false, null);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.ResolveForStage(null!, parentEffective));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ResolveForStageThrowsWhenParentProjectEffectiveIsNull()
-    {
-        // Arrange
-        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
-        var stage = CreateStage();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.ResolveForStage(stage, null!));
-    }
-
     // ============================================================
     // ResolveForStep — inherits from parent stage's effective policy
     // ============================================================
@@ -351,32 +304,6 @@ public sealed class EffectivePolicyResolverTests
         effective.AllowResume.ShouldBeFalse();
         effective.StepFailurePolicy.ShouldBe(parentEffective.StepFailurePolicy);
         effective.StageFailurePolicy.ShouldBe(parentEffective.StageFailurePolicy);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ResolveForStepThrowsWhenStepIsNull()
-    {
-        // Arrange
-        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
-        var parentEffective = new ExecutionPolicySnapshot("HaltStage", "HaltProject", 5, true, false, false, null);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.ResolveForStep(null!, parentEffective));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ResolveForStepThrowsWhenParentStageEffectiveIsNull()
-    {
-        // Arrange
-        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
-        var step = CreateStep();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.ResolveForStep(step, null!));
     }
 
     // ============================================================
@@ -421,32 +348,6 @@ public sealed class EffectivePolicyResolverTests
         effective.StepFailurePolicy.ShouldBe(parentEffective.StepFailurePolicy);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ResolveForNodeThrowsWhenNodeIsNull()
-    {
-        // Arrange
-        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
-        var parentEffective = new ExecutionPolicySnapshot("HaltStage", "HaltProject", 5, true, false, false, null);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.ResolveForNode(null!, parentEffective));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ResolveForNodeThrowsWhenParentEffectiveIsNull()
-    {
-        // Arrange
-        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock().Object);
-        var node = CreateNode();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.ResolveForNode(node, null!));
-    }
-
     // ============================================================
     // Multi-level inheritance chain: Server -> Project -> Stage -> Step
     // ============================================================
@@ -465,7 +366,7 @@ public sealed class EffectivePolicyResolverTests
         var step = CreateStep();
 
         // Act
-        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
+        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
         var stageEffective = sut.ResolveForStage(stage, projectEffective);
         var stepEffective = sut.ResolveForStep(step, stageEffective);
 
@@ -487,7 +388,7 @@ public sealed class EffectivePolicyResolverTests
         var step = CreateStep();
 
         // Act
-        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
+        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
         var stageEffective = sut.ResolveForStage(stage, projectEffective);
         var stepEffective = sut.ResolveForStep(step, stageEffective);
 
@@ -514,7 +415,7 @@ public sealed class EffectivePolicyResolverTests
         var step = CreateStep(maxParallelPipelines: 4);
 
         // Act
-        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value;
+        var projectEffective = (await sut.ResolveForProject(project, TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
         var stageEffective = sut.ResolveForStage(stage, projectEffective);
         var stepEffective = sut.ResolveForStep(step, stageEffective);
 
@@ -537,7 +438,7 @@ public sealed class EffectivePolicyResolverTests
         var sut = new EffectivePolicyResolver(CreateServerDefaultsMock(requireApprovalToRun: true).Object);
 
         // Act
-        var effective = (await sut.ResolveForRootNode(CreateNode(), TestContext.Current.CancellationToken)).Value;
+        var effective = (await sut.ResolveForRootNode(CreateNode(), TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
 
         // Assert
         effective.RequireApprovalToRun.ShouldBeTrue();
@@ -552,7 +453,7 @@ public sealed class EffectivePolicyResolverTests
         var sut = new EffectivePolicyResolver(CreateServerDefaultsMock(requireApprovalToRun: false).Object);
 
         // Act
-        var effective = (await sut.ResolveForRootNode(CreateNode(requireApprovalToRun: true), TestContext.Current.CancellationToken)).Value;
+        var effective = (await sut.ResolveForRootNode(CreateNode(requireApprovalToRun: true), TestContext.Current.CancellationToken)).Value.ShouldNotBeNull();
 
         // Assert
         effective.RequireApprovalToRun.ShouldBeTrue();

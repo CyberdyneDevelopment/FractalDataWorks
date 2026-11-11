@@ -18,6 +18,6 @@ public sealed class TerminalDataEventArgs : EventArgs
     /// <param name="data">The received data.</param>
     public TerminalDataEventArgs(string data)
     {
-        Data = data ?? throw new ArgumentNullException(nameof(data));
+        Data = data;
     }
 }

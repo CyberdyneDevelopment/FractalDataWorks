@@ -152,7 +152,7 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
             var symbol = GetDocumentedSymbol(docComment, model, cancellationToken);
             if (symbol is null)
             {
-                unresolved.AddRange(inheritNodes.Select(n => MakeSite(text, filePath, n, "(unknown)", UnresolvedReason.Other)));
+                unresolved.AddRange(inheritNodes.Select(n => MakeSite(text, filePath, n, "(unknown)", UnresolvedReasons.Other)));
                 continue;
             }
 
@@ -279,20 +279,20 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         {
             var target = model.GetSymbolInfo(crefAttribute.Cref, cancellationToken).Symbol;
             return target is null
-                ? Resolution.Failed(UnresolvedReason.CrefTargetNotFound)
+                ? Resolution.Failed(UnresolvedReasons.CrefTargetNotFound)
                 : ResolveFrom(target, model.Compilation, visited, cancellationToken);
         }
 
         var baseMember = FindBaseMember(symbol);
         return baseMember is null
-            ? Resolution.Failed(UnresolvedReason.NoBaseMember)
+            ? Resolution.Failed(UnresolvedReasons.NoBaseMember)
             : ResolveFrom(baseMember, model.Compilation, visited, cancellationToken);
     }
 
     private static Resolution ResolveFrom(ISymbol target, MsCompilation compilation, HashSet<ISymbol> visited, CancellationToken cancellationToken)
     {
         if (!visited.Add(target))
-            return Resolution.Failed(UnresolvedReason.CircularInheritDoc);
+            return Resolution.Failed(UnresolvedReasons.CircularInheritDoc);
 
         var root = TryParseResolved(target.GetDocumentationCommentXml(preferredCulture: null, expandIncludes: true, cancellationToken));
         if (root is not null && HasMeaningfulDoc(root))
@@ -304,13 +304,13 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         {
             var next = DocumentationCommentId.GetFirstSymbolForDeclarationId(crefFromXml, compilation);
             return next is null
-                ? Resolution.Failed(UnresolvedReason.CrefTargetNotFound)
+                ? Resolution.Failed(UnresolvedReasons.CrefTargetNotFound)
                 : ResolveFrom(next, compilation, visited, cancellationToken);
         }
 
         var nextBase = FindBaseMember(target);
         return nextBase is null
-            ? Resolution.Failed(UnresolvedReason.BaseHasNoDocs)
+            ? Resolution.Failed(UnresolvedReasons.BaseHasNoDocs)
             : ResolveFrom(nextBase, compilation, visited, cancellationToken);
     }
 
@@ -373,7 +373,7 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
         return attributes.OfType<XmlCrefAttributeSyntax>().FirstOrDefault();
     }
 
-    private static UnresolvedSite MakeSite(SourceText text, string filePath, SyntaxNode node, string symbolDisplayName, UnresolvedReason reason)
+    private static UnresolvedSite MakeSite(SourceText text, string filePath, SyntaxNode node, string symbolDisplayName, IUnresolvedReason reason)
     {
         var position = text.Lines.GetLinePosition(node.SpanStart);
         return new UnresolvedSite(filePath, position.Line + 1, position.Character + 1, symbolDisplayName, reason);
@@ -435,7 +435,7 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
 
     private sealed class Resolution
     {
-        private Resolution(XElement? doc, UnresolvedReason reason)
+        private Resolution(XElement? doc, IUnresolvedReason reason)
         {
             Doc = doc;
             Reason = reason;
@@ -443,10 +443,10 @@ public sealed class ResolveInheritDocTranslator : RoslynCommandTranslatorBase<Re
 
         public XElement? Doc { get; }
 
-        public UnresolvedReason Reason { get; }
+        public IUnresolvedReason Reason { get; }
 
-        public static Resolution Resolved(XElement doc) => new(doc, UnresolvedReason.Other);
+        public static Resolution Resolved(XElement doc) => new(doc, UnresolvedReasons.Other);
 
-        public static Resolution Failed(UnresolvedReason reason) => new(null, reason);
+        public static Resolution Failed(IUnresolvedReason reason) => new(null, reason);
     }
 }

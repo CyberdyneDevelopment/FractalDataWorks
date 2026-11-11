@@ -26,11 +26,15 @@ public sealed class ConfigurationSourceGenerator : IIncrementalGenerator
     /// </summary>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Register embedded sources (attributes and interfaces)
-        // Note: ConfigurationTypeOptionAttribute is NOT embedded - it lives in Fdw.Configuration
-        // to avoid CS0436 conflicts when projects reference each other
+        // The attributes are emitted into every project that uses this generator, as internal types marked
+        // [Embedded]. Why embedded: an internal type is still visible to an assembly the project grants
+        // InternalsVisibleTo, and that assembly emits its own copy, so the two collide (CS0436). An embedded
+        // type is never visible outside its own assembly, even through InternalsVisibleTo. Only this generator
+        // reads the attributes, by metadata name, inside the compilation it runs in.
+        // ConfigurationTypeOptionAttribute is not emitted: it lives in Fdw.Configuration.
         context.RegisterPostInitializationOutput(static ctx =>
         {
+            ctx.AddEmbeddedAttributeDefinition();
             ctx.AddSource(ManagedConfigurationAttributeSource.FileName, ManagedConfigurationAttributeSource.Source);
             ctx.AddSource(ConfigurationOptionAttributeSource.FileName, ConfigurationOptionAttributeSource.Source);
             ctx.AddSource(DbTypeAttributeSource.FileName, DbTypeAttributeSource.Source);

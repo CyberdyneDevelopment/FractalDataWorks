@@ -52,9 +52,6 @@ public static class SqlAggregates
     /// <returns>The aggregate's value (null for NULL), or the refusal.</returns>
     public static IGenericResult<object?> Compute(FunctionCall call, IReadOnlyList<SqlScope> rows, SqlScope outer)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        ArgumentNullException.ThrowIfNull(rows);
-        ArgumentNullException.ThrowIfNull(outer);
         var name = call.FunctionName.Value;
         if (!Computers.TryGetValue(name, out var compute) || call.Parameters.Count != 1)
             return SqlRefusal.Refuse<object?>(SqlServerErrors.NotSupported(SqlText.Of(call), call.StartLine), outer.Context.Logger);

@@ -62,9 +62,9 @@ public sealed class CacheChangePoller : BackgroundService
         TimeSpan? interval,
         ILogger<CacheChangePoller>? logger = null)
     {
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
-        _authenticationContextAccessor = authenticationContextAccessor ?? throw new ArgumentNullException(nameof(authenticationContextAccessor));
-        _target = target ?? throw new ArgumentNullException(nameof(target));
+        _gateway = gateway;
+        _authenticationContextAccessor = authenticationContextAccessor;
+        _target = target;
 
         if (invalidator is not null && interval is null)
             throw new ArgumentNullException(nameof(interval), "A host that keeps a cache states how often the published changes are looked at.");
@@ -92,7 +92,6 @@ public sealed class CacheChangePoller : BackgroundService
     /// <exception cref="InvalidOperationException">The setting states a number that is not positive; the host does not start.</exception>
     public static CacheChangePoller Create(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger<CacheChangePoller>();
         var accessor = services.GetRequiredService<IAuthenticationContextAccessor>();
         IGenericResult<IConfigurationGateway> Gateway()

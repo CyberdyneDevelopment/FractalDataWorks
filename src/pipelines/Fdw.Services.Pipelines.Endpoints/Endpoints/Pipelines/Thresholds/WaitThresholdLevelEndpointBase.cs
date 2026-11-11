@@ -21,7 +21,7 @@ public abstract class WaitThresholdLevelEndpointBase<TRequest> : Endpoint<TReque
     /// <param name="store">Reads and writes the level.</param>
     protected WaitThresholdLevelEndpointBase(IWaitThresholdStore store)
     {
-        Store = store ?? throw new ArgumentNullException(nameof(store));
+        Store = store;
     }
 
     /// <summary>Gets the kind of owner the route is for, as <c>WaitThresholdOwners</c> names it.</summary>
@@ -43,7 +43,6 @@ public abstract class WaitThresholdLevelEndpointBase<TRequest> : Endpoint<TReque
     /// <returns>A task that ends when the answer is sent.</returns>
     protected async Task Answer(IGenericResult<WaitThresholdLevelPayload> result, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(result);
         if (result.IsSuccess && result.Value is { } level)
         {
             await Send.OkAsync(level, cancellationToken).ConfigureAwait(false);

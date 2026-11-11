@@ -71,11 +71,11 @@ public sealed class EndpointContainer : IStorageContainer
         bool flattenNestedObjects = false,
         string flattenSeparator = ".")
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Path = path ?? throw new ArgumentNullException(nameof(path));
-        Schema = schema ?? throw new ArgumentNullException(nameof(schema));
-        Format = format ?? throw new ArgumentNullException(nameof(format));
-        HttpMethods = httpMethods ?? throw new ArgumentNullException(nameof(httpMethods));
+        Name = name;
+        Path = path;
+        Schema = schema;
+        Format = format;
+        HttpMethods = httpMethods;
         ContainerType = EndpointContainerType.Instance;
         SupportedOperations = MapHttpMethodsToOperations(httpMethods);
 

@@ -43,10 +43,10 @@ public sealed class TagService : ITagService
         string dataStoreName,
         ILogger<TagService>? logger = null)
     {
-        _tags = tags ?? throw new ArgumentNullException(nameof(tags));
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _scope = scope ?? throw new ArgumentNullException(nameof(scope));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _tags = tags;
+        _gateways = gateways;
+        _scope = scope;
+        _dataStoreName = dataStoreName;
         _logger = logger ?? NullLogger<TagService>.Instance;
     }
 
@@ -165,8 +165,6 @@ public sealed class TagService : ITagService
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<Guid>>> ThingsOf(string kind, IReadOnlyList<string> tagNames, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(tagNames);
-
         var target = Resolve(kind);
         if (target.IsFailure || target.Value is not { } resolved) return target.ToNewResult<IReadOnlyList<Guid>>();
 

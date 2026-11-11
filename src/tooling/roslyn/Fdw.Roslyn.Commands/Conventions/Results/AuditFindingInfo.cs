@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Fdw.Roslyn.Commands.Conventions.Results;
 
@@ -11,7 +12,8 @@ public sealed class AuditFindingInfo
     public required string Guide { get; init; }
 
     /// <summary>Gets what the finding is about.</summary>
-    public required AuditFindingKind Kind { get; init; }
+    [JsonConverter(typeof(AuditFindingKindJsonConverter))]
+    public required IAuditFindingKind Kind { get; init; }
 
     /// <summary>Gets the assembly or member concerned.</summary>
     public required string Subject { get; init; }

@@ -23,7 +23,6 @@ internal static class CancelledRunMessage
     public static string Of(string reason, RunTracking tracking)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
-        ArgumentNullException.ThrowIfNull(tracking);
 
         var parts = new List<string> { reason };
         var rows = new List<string>();

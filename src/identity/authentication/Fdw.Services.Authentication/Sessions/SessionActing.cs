@@ -49,19 +49,19 @@ public sealed class SessionActing : ISessionActing
         ISystemRoleConfiguration systemRoles,
         ILogger<SessionActing>? logger = null)
     {
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-        _cookies = cookies ?? throw new ArgumentNullException(nameof(cookies));
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
-        _systemRoles = systemRoles ?? throw new ArgumentNullException(nameof(systemRoles));
+        _sessions = sessions;
+        _cookies = cookies;
+        _roles = roles;
+        _grants = grants;
+        _systemRoles = systemRoles;
         _logger = logger ?? NullLogger<SessionActing>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult> Act(HttpContext context, string roleName, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentException.ThrowIfNullOrWhiteSpace(roleName);
+        if (string.IsNullOrWhiteSpace(roleName))
+            return GenericResult.Failure(SessionLog.ActingRoleNameRequired(_logger));
 
         if (SessionPrincipal.Identity(context.User) is not { } identity)
             return GenericResult.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "act with a role in"));
@@ -122,8 +122,6 @@ public sealed class SessionActing : ISessionActing
     /// <inheritdoc />
     public async Task<IGenericResult> Return(HttpContext context, int step, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         if (SessionPrincipal.Identity(context.User) is not { } identity)
             return GenericResult.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "return from acting in"));
 
@@ -138,8 +136,6 @@ public sealed class SessionActing : ISessionActing
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<ActingStep>>> Steps(HttpContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         return SessionPrincipal.Identity(context.User) is { } identity
             ? await _sessions.Chain(Guid.Parse(identity.FindFirst(ClaimDefinitions.sid.Name)!.Value), cancellationToken).ConfigureAwait(false)
             : GenericResult<IReadOnlyList<ActingStep>>.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "list the steps of"));
@@ -148,8 +144,6 @@ public sealed class SessionActing : ISessionActing
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<string>>> Roles(HttpContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         if (SessionPrincipal.Identity(context.User) is not { } identity)
             return GenericResult<IReadOnlyList<string>>.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "list the roles to act with in"));
 

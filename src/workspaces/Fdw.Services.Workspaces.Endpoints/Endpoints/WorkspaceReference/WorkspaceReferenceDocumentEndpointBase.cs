@@ -59,8 +59,6 @@ public abstract class WorkspaceReferenceDocumentEndpointBase : WorkspaceDocument
         WorkspaceReferenceRequest request,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         var workspace = await Workspaces.Get(request.WorkspaceName, cancellationToken).ConfigureAwait(false);
         if (workspace.IsFailure)
             return workspace;

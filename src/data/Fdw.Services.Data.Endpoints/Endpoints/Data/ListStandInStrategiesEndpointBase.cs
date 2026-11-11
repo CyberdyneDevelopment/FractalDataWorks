@@ -12,7 +12,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>Lists the stand-in strategies a data set field can be given, with their parameter schemas.</summary>
 public abstract class ListStandInStrategiesEndpointBase : CrudListEndpointBase<StandInStrategyDto>
 {
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListStandInStrategiesEndpointBase"/> class.</summary>
     protected ListStandInStrategiesEndpointBase(ILogger<ListStandInStrategiesEndpointBase> logger) : base(logger)
     {
     }

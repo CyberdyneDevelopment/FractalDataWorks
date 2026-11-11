@@ -22,7 +22,7 @@ public class DevelopmentCommandResult : IDevelopmentCommandResult
     /// <param name="data">The structured data.</param>
     public DevelopmentCommandResult(string summary, IReadOnlyDictionary<string, object>? data = null)
     {
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
+        Summary = summary;
         Data = data ?? ImmutableDictionary<string, object>.Empty;
     }
 

@@ -31,8 +31,6 @@ public abstract class HttpPagingPlan
     /// <param name="window">The rows of the set the read returns.</param>
     protected HttpPagingPlan(string style, HttpPagingSettings settings, int pageSize, int maxPages, HttpReadWindow window)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(window);
         Style = style;
         ConnectionName = settings.ConnectionName;
         Logger = settings.Logger;
@@ -78,7 +76,6 @@ public abstract class HttpPagingPlan
     /// <returns>The next page's address; null when the read is complete; or why the read is stopped.</returns>
     public IGenericResult<Uri?> Next(HttpPageOutcome outcome)
     {
-        ArgumentNullException.ThrowIfNull(outcome);
         _asked.Add(outcome.Request.AbsoluteUri);
 
         if (PageSize > 0 && outcome.Rows > PageSize)
@@ -111,7 +108,6 @@ public abstract class HttpPagingPlan
     /// <returns>The next page's absolute address, or why it cannot be followed.</returns>
     protected IGenericResult<Uri?> Follow(HttpPageOutcome outcome, string link)
     {
-        ArgumentNullException.ThrowIfNull(outcome);
         if (!Uri.TryCreate(outcome.Request, link, out var next)
             || !(string.Equals(next.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
                  || string.Equals(next.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))

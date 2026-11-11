@@ -268,19 +268,6 @@ public class DataSetTypeBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void GetThrowsForNullType()
-    {
-        // Arrange
-        var fields = CreateTestFields();
-        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => sut.Get((Type)null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void GetKeyFieldDefinitionsReturnsOnlyKeyFields()
     {
         // Arrange

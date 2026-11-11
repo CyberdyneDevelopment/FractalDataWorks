@@ -61,24 +61,6 @@ public sealed class InsertCommandBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void InsertSingleDataStoreThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Insert.Into<TestEntity>("Customers").DataStore(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void InsertSinglePathThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Insert.Into<TestEntity>("Customers").Path(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void InsertBatchBuildsCorrectCommand()
     {
         var entities = new[]
@@ -119,23 +101,5 @@ public sealed class InsertCommandBuilderTests
             .DataStore("CRM");
 
         Should.Throw<InvalidOperationException>(() => builder.Values(entities));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void InsertBatchDataStoreThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Insert.IntoMany<TestEntity>("Customers").DataStore(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void InsertBatchPathThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Insert.IntoMany<TestEntity>("Customers").Path(null!));
     }
 }

@@ -79,9 +79,6 @@ public class GeneratorPipelineBuilder
     /// </summary>
     public GeneratorPipelineBuilder AddGenerator(IIncrementalGenerator generator)
     {
-        if (generator == null)
-            throw new ArgumentNullException(nameof(generator));
-
         _generators.Add(generator);
         return this;
     }
@@ -154,9 +151,6 @@ public class GeneratorPipelineBuilder
     /// </summary>
     public GeneratorPipelineBuilder Assert(Action<GeneratorPipelineResult> assertion)
     {
-        if (assertion == null)
-            throw new ArgumentNullException(nameof(assertion));
-
         _assertions.Add(assertion);
         return this;
     }

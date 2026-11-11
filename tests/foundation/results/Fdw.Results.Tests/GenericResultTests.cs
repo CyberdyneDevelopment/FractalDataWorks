@@ -783,18 +783,6 @@ public class GenericResultTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void GenericOfT_Map_WithNullMapper_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var result = (GenericResult<int>)GenericResult<int>.Success(42);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => result.Map<string>(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void GenericOfT_Map_PreservesFailureState()
     {
         // Arrange
@@ -872,32 +860,6 @@ public class GenericResultTests
         successCalled.ShouldBeFalse();
         failureCalled.ShouldBeTrue();
         matchResult.ShouldBe($"Failed: {errorMessage}");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void GenericOfT_Match_WithNullSuccessFunction_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var result = (GenericResult<int>)GenericResult<int>.Success(42);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            result.Match<string>(null!, error => "Error"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void GenericOfT_Match_WithNullFailureFunction_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var result = (GenericResult<int>)GenericResult<int>.Success(42);
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            result.Match(value => "Success", null!));
     }
 
     [Fact]

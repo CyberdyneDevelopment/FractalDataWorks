@@ -28,8 +28,8 @@ public sealed class FrameworkPermissionHandler : AuthorizationHandler<FdwPermiss
         IFrameworkAuthorizationService fdwAuthorizationService,
         ILogger<FrameworkPermissionHandler> logger)
     {
-        _fdwAuthorizationService = fdwAuthorizationService ?? throw new ArgumentNullException(nameof(fdwAuthorizationService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _fdwAuthorizationService = fdwAuthorizationService;
+        _logger = logger;
     }
 
     /// <inheritdoc />

@@ -25,8 +25,8 @@ public class FdwConfigurationProvider : ConfigurationProvider
         Func<IDictionary<int, IDictionary<string, object>>> loadHierarchy,
         string sectionName = "")
     {
-        _source = source ?? throw new ArgumentNullException(nameof(source));
-        _loadHierarchy = loadHierarchy ?? throw new ArgumentNullException(nameof(loadHierarchy));
+        _source = source;
+        _loadHierarchy = loadHierarchy;
         _sectionName = sectionName ?? string.Empty;
     }
 

@@ -25,7 +25,7 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
         IResiliencyPolicyProvider policyProvider,
         ILogger<ResiliencyExecutor>? logger = null)
     {
-        _policyProvider = policyProvider ?? throw new ArgumentNullException(nameof(policyProvider));
+        _policyProvider = policyProvider;
         _logger = logger ?? NullLogger<ResiliencyExecutor>.Instance;
     }
 
@@ -36,9 +36,6 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
         IResiliencyExecutionContext ctx,
         CancellationToken cancellationToken)
     {
-        if (runStage == null) throw new ArgumentNullException(nameof(runStage));
-        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
-
         ResiliencyLog.ResiliencyExecutorStarted(_logger, ctx.ExecutionId, ctx.StageId, policyId);
 
         if (policyId is null)

@@ -33,7 +33,7 @@ public abstract class ListPermissionsEndpointBase : CrudPageEndpointBase<Permiss
     /// <param name="tenantContext">The acting tenant, whose org prefix qualifies each permission's name.</param>
     protected ListPermissionsEndpointBase(ILogger logger, IPermissionConfigurationProvider permissionProvider, ITenantContext? tenantContext = null) : base(logger)
     {
-        _permissionProvider = permissionProvider ?? throw new ArgumentNullException(nameof(permissionProvider));
+        _permissionProvider = permissionProvider;
         _tenantContext = tenantContext;
     }
 

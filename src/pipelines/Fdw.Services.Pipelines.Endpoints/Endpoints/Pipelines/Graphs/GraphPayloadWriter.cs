@@ -21,7 +21,6 @@ public static class GraphPayloadWriter
     /// <returns>The payload.</returns>
     public static GraphPayload Write(GraphPipelineConfiguration graph)
     {
-        ArgumentNullException.ThrowIfNull(graph);
         return new GraphPayload
         {
             Name = graph.Name,

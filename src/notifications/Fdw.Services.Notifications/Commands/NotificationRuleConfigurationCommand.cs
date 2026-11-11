@@ -8,6 +8,6 @@ namespace Fdw.Services.Notifications.Commands;
 [TypeOption(typeof(ConfigurationCommands), "NotificationRule")]
 public sealed class NotificationRuleConfigurationCommand : ConfigurationCommandBase<NotificationRuleImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="NotificationRuleConfigurationCommand"/> class.</summary>
     public NotificationRuleConfigurationCommand() : base("NotificationRule") { }
 }

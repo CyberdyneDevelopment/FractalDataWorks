@@ -15,7 +15,7 @@ public sealed class SqlOutputColumn
     /// <param name="isNullable">Whether it may hold NULL.</param>
     public SqlOutputColumn(string name, TdsColumnType? declared, bool isNullable)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         Declared = declared;
         IsNullable = isNullable;
     }

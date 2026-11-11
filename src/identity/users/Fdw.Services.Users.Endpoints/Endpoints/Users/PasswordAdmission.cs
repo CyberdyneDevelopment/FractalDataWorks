@@ -26,7 +26,6 @@ public static class PasswordAdmission
     public static Task<IGenericResult<bool>> Check(
         ISignInMethodAdmission admission, Guid userId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(admission);
         return admission.MayUse(userId, Method, cancellationToken);
     }
 }

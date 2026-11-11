@@ -56,8 +56,6 @@ internal sealed class DataPath : IDataNodePath
 
     internal void SetContainers(IReadOnlyList<IDataContainer> containers)
     {
-        if (containers is null)
-            throw new System.ArgumentNullException(nameof(containers));
         if (_containersFinalized)
             throw new System.InvalidOperationException($"DataPath '{Name}' containers already finalized.");
 

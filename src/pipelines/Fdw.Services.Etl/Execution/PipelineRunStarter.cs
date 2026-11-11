@@ -70,12 +70,12 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
         IExecutionCompletionSignaler? signaler = null,
         ILogger<PipelineRunStarter>? logger = null)
     {
-        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
-        _pipelines = pipelines ?? throw new ArgumentNullException(nameof(pipelines));
-        _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-        _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
-        _broadcaster = broadcaster ?? throw new ArgumentNullException(nameof(broadcaster));
+        _tracker = tracker;
+        _dataGateways = dataGateways;
+        _pipelines = pipelines;
+        _queue = queue;
+        _scheduler = scheduler;
+        _broadcaster = broadcaster;
         _signaler = signaler;
         _logger = logger ?? NullLogger<PipelineRunStarter>.Instance;
     }
@@ -83,8 +83,6 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
     /// <inheritdoc />
     public async Task<IGenericResult<Guid>> Start(PipelineRunStart start, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(start);
-
         var planned = await Plan(start, cancellationToken).ConfigureAwait(false);
         if (planned.IsFailure)
             return planned.ToNewResult<Guid>();
@@ -231,8 +229,8 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
     /// <inheritdoc />
     public async Task<IGenericResult> Check(string pipelineName, IReadOnlyList<string> parameterNames, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pipelineName);
-        ArgumentNullException.ThrowIfNull(parameterNames);
+        if (string.IsNullOrWhiteSpace(pipelineName))
+            return GenericResult.Failure(PipelineRunStartLog.CheckedPipelineNameRequired(_logger));
 
         var found = await _pipelines.Get(pipelineName, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure || found.Value is null)

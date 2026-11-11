@@ -26,6 +26,9 @@ namespace Fdw.Data.DataStores.Rest.Tests;
 /// </remarks>
 public sealed class ODataSchemaImporterTests
 {
+    // The importer reads no option on these paths: the caller states options, and these state no filter (FDW-5184).
+    private static readonly SchemaImporterOptions NoFilters = new() { IncludeExtendedProperties = true };
+
     private static ODataSchemaImporter CreateImporter() => new(Mock.Of<ILogger<ODataSchemaImporter>>());
 
     [Fact]
@@ -80,7 +83,7 @@ public sealed class ODataSchemaImporterTests
         var importer = CreateImporter();
 
         // Act
-        var result = await importer.Import(source!, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(source!, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();

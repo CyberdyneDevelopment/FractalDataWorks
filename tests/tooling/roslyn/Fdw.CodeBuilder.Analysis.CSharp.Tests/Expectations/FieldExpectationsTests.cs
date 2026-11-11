@@ -16,15 +16,6 @@ public class FieldExpectationsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    public void Constructor_WithNull_ThrowsArgumentNullException()
-    {
-        // Arrange & Act & Assert
-        Should.Throw<ArgumentNullException>(() => new FieldExpectations(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "SourceGen")]
     public void IsPrivate_WithPrivateField_DoesNotThrow()
     {
         // Arrange

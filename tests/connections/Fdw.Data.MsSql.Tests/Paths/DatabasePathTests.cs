@@ -116,22 +116,6 @@ public sealed class DatabasePathTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsForNullSchema()
-    {
-        Should.Throw<ArgumentNullException>(() => new DatabasePath("db", null!, "table"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsForNullObjectName()
-    {
-        Should.Throw<ArgumentNullException>(() => new DatabasePath("db", "dbo", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ContainersIsEmptyByDefault()
     {
         var sut = new DatabasePath("db", "dbo", "table");

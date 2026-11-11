@@ -36,7 +36,7 @@ public sealed class XmlStreamRowSource : IRowSourceReader, IAsyncRowSourceReader
     /// <param name="options">XML processing options.</param>
     public XmlStreamRowSource(Stream stream, XmlRowSourceOptions options)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _options = options;
         var settings = _options.CreateSecureSettings();
         _reader = XmlReader.Create(stream, settings);
         _fieldOrdinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -51,8 +51,8 @@ public sealed class XmlStreamRowSource : IRowSourceReader, IAsyncRowSourceReader
     /// <param name="options">XML processing options.</param>
     public XmlStreamRowSource(XmlReader reader, XmlRowSourceOptions options)
     {
-        _reader = reader ?? throw new ArgumentNullException(nameof(reader));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _reader = reader;
+        _options = options;
         _fieldOrdinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         _fieldNames = [];
         _currentRowValues = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);

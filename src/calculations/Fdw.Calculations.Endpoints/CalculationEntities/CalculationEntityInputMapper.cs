@@ -23,9 +23,6 @@ public static class CalculationEntityInputMapper
     /// </returns>
     public static IGenericResult<List<CalculationInput>> ToInputs(IEnumerable<CalculationEntityInputDto> dtos, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(dtos);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var inputs = new List<CalculationInput>();
         foreach (var dto in dtos)
         {

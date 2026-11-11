@@ -55,7 +55,7 @@ public sealed class AesGcmEncryptionCommandExecutor : IEncryptionCommandExecutor
         TimeSpan cacheLifetime,
         ILogger<AesGcmEncryptionCommandExecutor>? logger = null)
     {
-        _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
+        _secrets = secrets;
 
         // Why a throw here and a result everywhere else: a constructor cannot return a result, and a
         // zero or negative lifetime would silently mean "never cache" — a secret-manager round trip

@@ -45,7 +45,7 @@ public sealed class WaitHoldGate
     /// <param name="logger">The logger.</param>
     public WaitHoldGate(IServiceScopeFactory scopes, ILogger<WaitHoldGate>? logger = null)
     {
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+        _scopes = scopes;
         _logger = logger ?? NullLogger<WaitHoldGate>.Instance;
     }
 
@@ -58,9 +58,6 @@ public sealed class WaitHoldGate
     public async Task<IGenericResult<PipelineRunStopCheck>> Check(
         PipelineExecutionRequest request, WaitThresholdLayer owner, PipelineRunQueueSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(owner);
-        ArgumentNullException.ThrowIfNull(snapshot);
         if (!owner.Mode.StatesThresholds)
         {
             return GenericResult<PipelineRunStopCheck>.Success(PipelineRunStopCheck.Open);

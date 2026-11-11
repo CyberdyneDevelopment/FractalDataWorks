@@ -67,7 +67,7 @@ public abstract class SignalRBroadcaster<THub, TClient>
         IHubContext<THub, TClient> hubContext,
         ILogger<SignalRBroadcaster<THub, TClient>>? logger = null)
     {
-        HubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+        HubContext = hubContext;
         Logger = logger ?? NullLogger<SignalRBroadcaster<THub, TClient>>.Instance;
     }
 

@@ -37,9 +37,6 @@ public sealed class TenantActing : IDisposable
     /// <returns>The scope; dispose it to put the caller's context back.</returns>
     public static TenantActing In(IAuthenticationContextAccessor accessor, Guid tenantId, Guid principalId, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(accessor);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var acting = new TenantActing(accessor);
         if (acting._caller?.ActiveTenantId == tenantId) return acting;
 

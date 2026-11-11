@@ -128,7 +128,7 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
     /// </summary>
     public string CommandId { get; }
 
-    /// <inheritdoc/>
+    /// <inheritdoc cref="IGenericCommand.CommandType"/>
     public string CommandType { get; }
 
     /// <inheritdoc/>
@@ -152,7 +152,8 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
     /// <inheritdoc/>
     public abstract bool IsSecretModifying { get; }
 
-    /// <inheritdoc/>
+    /// <summary>Checks the command before it runs: a command type, a secret key and a container where the operation needs them, and usable parameters for an operation that changes a secret.</summary>
+    /// <returns>Success, or a failure naming every problem found.</returns>
     public virtual IGenericResult Validate()
     {
         SecretManagerCommandBaseLog.Validating(_logger, CommandType);

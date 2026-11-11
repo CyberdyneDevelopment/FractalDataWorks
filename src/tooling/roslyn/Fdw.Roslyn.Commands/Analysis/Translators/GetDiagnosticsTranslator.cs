@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Analysis.Commands;
 using Fdw.Roslyn.Commands.Analysis.Results;
+using Fdw.Roslyn.Commands.Analysis.Severities;
 using Fdw.Roslyn.Commands.Logging;
 using Microsoft.CodeAnalysis;
 
@@ -35,11 +36,20 @@ public sealed class GetDiagnosticsTranslator
         Solution solution,
         CancellationToken cancellationToken = default)
     {
-        if (!Enum.TryParse<DiagnosticSeverity>(command.Severity, ignoreCase: true, out var minSeverity))
+        // The level the request names, matched ignoring case as the severity names always were. A name that is no level is refused:
+        // the request is never read at a level it did not state.
+        var level = DiagnosticSeverityLevels.All()
+            .FirstOrDefault(option => string.Equals(option.Name, command.Severity, StringComparison.OrdinalIgnoreCase));
+        if (level is null)
         {
-            GetDiagnosticsTranslatorLog.InvalidSeverityFallback(Logger, command.Severity);
-            minSeverity = DiagnosticSeverity.Warning;
+            var accepted = string.Join(", ", DiagnosticSeverityLevels.All().Select(option => option.Name));
+            GetDiagnosticsTranslatorLog.SeverityNotKnown(Logger, command.Severity, accepted);
+            return GenericResult<QueryResult<DiagnosticsData>>.Failure(
+                RoslynResultCodes.ByName("SeverityNotKnown"),
+                ResultDetails.Create().With("Severity", command.Severity).With("Accepted", accepted));
         }
+
+        var minSeverity = level.Severity;
 
         GetDiagnosticsTranslatorLog.Retrieving(Logger, command.FilePath ?? string.Empty, command.ProjectName ?? string.Empty, minSeverity.ToString());
 

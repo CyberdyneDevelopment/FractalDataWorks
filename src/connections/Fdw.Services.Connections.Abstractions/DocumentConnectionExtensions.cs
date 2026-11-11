@@ -13,16 +13,6 @@ public static class DocumentConnectionExtensions
     /// <returns>True when the connection declares it.</returns>
     public static bool Supports(this IDocumentConnection connection, IDocumentCapability capability)
     {
-        if (connection is null)
-        {
-            throw new ArgumentNullException(nameof(connection));
-        }
-
-        if (capability is null)
-        {
-            throw new ArgumentNullException(nameof(capability));
-        }
-
         return connection.Capabilities.Any(declared => string.Equals(declared.Name, capability.Name, StringComparison.Ordinal));
     }
 }

@@ -68,7 +68,7 @@ public class OrchestrationExecutorStepTests
         var services = ServicesHolding(stepExecutor.Object);
         var probe = new ProbeExecutor(services);
 
-        var result = await probe.Run(StepContext(services));
+        var result = await probe.Run(StepContext(services), TestContext.Current.CancellationToken);
 
         result.ShouldBe("42 rows");
     }

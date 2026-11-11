@@ -31,24 +31,6 @@ public class SchemaFieldTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenNameIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new SchemaField(null!, typeof(string), 0));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenDataTypeIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new SchemaField("Field", null!, 0));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
     public void InitPropertiesSetCorrectly()
     {
         // Arrange & Act

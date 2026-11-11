@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -20,10 +21,12 @@ namespace Fdw.Data.RowSources.Delimited.Abstractions;
 /// <see cref="DelimitedRowWriterOptions.QuoteChar"/> (and its embedded quotes doubled) when it
 /// contains the separator, the quote, or a line break — matching RecordParser's
 /// <c>ContainsQuotedFields</c> read convention. Reading the written output back through
-/// <see cref="DelimitedStreamRowSource"/> with the same column list yields the original rows.
+/// <see cref="DelimitedStreamRowSource"/> with the same column list yields the original rows. The target writer is not owned:
+/// whoever made it and asked the format for this writer disposes it.
 /// </remarks>
 public sealed class DelimitedStreamRowWriter : IRowWriter
 {
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the target writer; whoever made it and asked the format for this writer (the response sink's DrainingTextWriter, a file writer) disposes it.")]
     private readonly TextWriter _target;
     private readonly DelimitedRowWriterOptions _options;
     private readonly List<string> _columns;
@@ -39,8 +42,8 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     /// <exception cref="ArgumentException">Thrown when no column names are supplied.</exception>
     public DelimitedStreamRowWriter(TextWriter target, DelimitedRowWriterOptions options)
     {
-        _target = target ?? throw new ArgumentNullException(nameof(target));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _target = target;
+        _options = options;
         if (_options.Columns.Count == 0)
         {
             throw new ArgumentException(
@@ -54,7 +57,6 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IReadOnlyDictionary<string, object?> row)
     {
-        if (row is null) throw new ArgumentNullException(nameof(row));
         EnsureHeader();
         WriterExtensions.WriteRecords(_target, [row], _formatRow);
     }
@@ -62,7 +64,6 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         EnsureHeader();
         WriterExtensions.WriteRecords(_target, rows, _formatRow);
     }
@@ -75,7 +76,6 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     /// <returns>A task that completes when all rows have been written.</returns>
     public ValueTask WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows, CancellationToken cancellationToken)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         cancellationToken.ThrowIfCancellationRequested();
         EnsureHeader();
         WriterExtensions.WriteRecords(_target, rows, _formatRow);
@@ -88,7 +88,6 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IEnumerable<DataRecord> records)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         foreach (var record in records)
         {
             Write(record);
@@ -98,7 +97,6 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public async ValueTask Write(IAsyncEnumerable<DataRecord> records, CancellationToken cancellationToken = default)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             Write(record);

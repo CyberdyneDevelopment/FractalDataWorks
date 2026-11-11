@@ -31,10 +31,10 @@ public sealed class TdsEndpointOptions
         int maximumConnections,
         TimeSpan loginTimeout)
     {
-        ListenOn = listenOn ?? throw new ArgumentNullException(nameof(listenOn));
-        Certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
-        LoginFlowName = loginFlowName ?? throw new ArgumentNullException(nameof(loginFlowName));
-        Identity = identity ?? throw new ArgumentNullException(nameof(identity));
+        ListenOn = listenOn;
+        Certificate = certificate;
+        LoginFlowName = loginFlowName;
+        Identity = identity;
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumMessageBytes, TdsMessageReader.SmallestLimit, nameof(maximumMessageBytes));
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumConnections, 1, nameof(maximumConnections));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(loginTimeout, TimeSpan.Zero, nameof(loginTimeout));

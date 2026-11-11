@@ -327,18 +327,6 @@ public sealed class AlterTableCommandTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void AddForeignKeyRefusesAMissingReferentialAction()
-    {
-        // FDW-3610: no default action; a foreign key states both, NoAction included.
-        var command = new AlterTableCommand("Orders");
-
-        Should.Throw<ArgumentNullException>(() => command.AddForeignKey("CustomerId", "Customers", "Id", null!, ForeignKeyActions.NoAction));
-        Should.Throw<ArgumentNullException>(() => command.AddForeignKey("CustomerId", "Customers", "Id", ForeignKeyActions.NoAction, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void AddForeignKey_AddsOperationToList()
     {
         // Arrange

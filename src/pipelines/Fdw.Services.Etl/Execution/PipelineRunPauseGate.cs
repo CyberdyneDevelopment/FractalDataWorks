@@ -22,7 +22,7 @@ public sealed class PipelineRunPauseGate : IFlowPauseGate
     /// <param name="stoppedWithHost">Says whether the run was stopped because the host is stopping (FDW-3880).</param>
     internal PipelineRunPauseGate(Func<bool> stoppedWithHost)
     {
-        _stoppedWithHost = stoppedWithHost ?? throw new ArgumentNullException(nameof(stoppedWithHost));
+        _stoppedWithHost = stoppedWithHost;
     }
 
     /// <inheritdoc />

@@ -27,14 +27,12 @@ public sealed class UnavailableOrganizationWriter : IOrganizationWriter
     /// <inheritdoc />
     public Task<IGenericResult<Guid>> Create(NewOrganization organization, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(organization);
         return Task.FromResult<IGenericResult<Guid>>(GenericResult<Guid>.Failure(UnavailableWritersLog.OrganizationWriterUnavailable(_logger, "made")));
     }
 
     /// <inheritdoc />
     public Task<IGenericResult> Update(Guid organizationId, OrganizationChange change, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(change);
         return Task.FromResult<IGenericResult>(GenericResult.Failure(UnavailableWritersLog.OrganizationWriterUnavailable(_logger, "changed")));
     }
 

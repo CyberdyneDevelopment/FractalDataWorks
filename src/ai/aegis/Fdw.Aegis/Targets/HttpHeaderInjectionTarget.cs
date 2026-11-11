@@ -37,7 +37,7 @@ public sealed class HttpHeaderInjectionTarget : IAegisInjectionTarget
     /// </summary>
     public HttpHeaderInjectionTarget(IHttpClientFactory httpClientFactory, ILogger<HttpHeaderInjectionTarget>? logger = null)
     {
-        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _httpClientFactory = httpClientFactory;
         _logger = logger ?? NullLogger<HttpHeaderInjectionTarget>.Instance;
     }
 

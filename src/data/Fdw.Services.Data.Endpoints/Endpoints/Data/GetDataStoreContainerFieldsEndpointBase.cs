@@ -23,7 +23,7 @@ public abstract class GetDataStoreContainerFieldsEndpointBase
     protected GetDataStoreContainerFieldsEndpointBase(
         ILogger<GetDataStoreContainerFieldsEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
-        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
+        _dataStoreProvider = dataStoreProvider;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

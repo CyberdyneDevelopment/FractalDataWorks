@@ -115,10 +115,12 @@ public sealed class PipelineRunClaimsTests
             (await PipelineRunClaims.For(Request(Guid.NewGuid(), 1), Graph(1, "Queue"), NoTargets, Limits, NullLogger.Instance, TestContext.Current.CancellationToken)).Value!,
             TestContext.Current.CancellationToken);
 
-        (await Task.WhenAny(other, Task.Delay(150, TestContext.Current.CancellationToken))).ShouldBe(other);
+        // A run that must start is waited for up to a guard only a broken scheduler reaches (the wait ends at once when it starts); a run that
+        // must not start is watched for a short time, which can only miss a bug and never fail a correct run.
+        await other.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         (await Task.WhenAny(again, Task.Delay(150, TestContext.Current.CancellationToken))).ShouldNotBe(again);
         scheduler.Release(first);
-        (await Task.WhenAny(again, Task.Delay(150, TestContext.Current.CancellationToken))).ShouldBe(again);
+        await again.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
     }
 
     [Fact]

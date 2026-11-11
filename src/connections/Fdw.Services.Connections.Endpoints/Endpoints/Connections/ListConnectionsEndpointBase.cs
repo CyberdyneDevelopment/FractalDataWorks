@@ -39,8 +39,8 @@ public abstract class ListConnectionsEndpointBase
         IConnectionDisabledStates states,
         ITagService? tags = null) : base(logger)
     {
-        _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
-        _states = states ?? throw new ArgumentNullException(nameof(states));
+        _configProvider = configProvider;
+        _states = states;
         _tags = tags;
     }
 

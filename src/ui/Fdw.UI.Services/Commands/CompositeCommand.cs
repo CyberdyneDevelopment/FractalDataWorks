@@ -16,8 +16,8 @@ public sealed class CompositeCommand : ICommand
     /// </summary>
     public CompositeCommand(string description, IEnumerable<ICommand> commands)
     {
-        _description = description ?? throw new ArgumentNullException(nameof(description));
-        _commands = new List<ICommand>(commands ?? throw new ArgumentNullException(nameof(commands)));
+        _description = description;
+        _commands = new List<ICommand>(commands);
     }
 
     /// <summary>

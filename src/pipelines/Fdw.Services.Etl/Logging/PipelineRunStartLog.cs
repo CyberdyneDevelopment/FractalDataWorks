@@ -102,4 +102,9 @@ public static partial class PipelineRunStartLog
     [MessageLogging(EventId = 90001, Level = LogLevel.Warning,
         Message = "Pipeline '{pipeline}' was started as execution '{executionId}', but the parameters it was given could not be recorded: {reason}")]
     public static partial IGenericMessage RunParametersNotRecorded(ILogger logger, string pipeline, Guid executionId, string? reason);
+
+    /// <summary>Error: checking a run's parameters needs the pipeline's name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21803, Level = LogLevel.Error,
+        Message = "Checking the parameters of a pipeline run needs the pipeline's name, and the name given is empty")]
+    public static partial IGenericMessage CheckedPipelineNameRequired(ILogger logger);
 }

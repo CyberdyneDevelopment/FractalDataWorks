@@ -51,10 +51,10 @@ public class DataflowGraphConfigurationProvider
         ICategoryConfigurationProvider categories,
         ILogger<DataflowGraphConfigurationProvider>? logger = null)
     {
-        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
-        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
+        _gatewayProvider = gatewayProvider;
+        _dataSets = dataSets;
+        _variations = variations;
+        _categories = categories;
         _logger = logger ?? NullLogger<DataflowGraphConfigurationProvider>.Instance;
     }
 

@@ -45,9 +45,6 @@ public sealed class PipelineStopGrace
     /// <returns>The time, or a failure naming the setting when it is not set to a positive number of seconds.</returns>
     public static IGenericResult<PipelineStopGrace> Read(IEffectiveSettingsProvider settings, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var seconds = settings.GetEffectiveValue<int>(SettingDefinitions.PipelineStopGraceSeconds);
         return seconds <= 0
             ? GenericResult<PipelineStopGrace>.Failure(PipelineRunRecoveryLog.StopGraceSettingMissing(logger, SettingDefinitions.PipelineStopGraceSeconds))
@@ -62,7 +59,6 @@ public sealed class PipelineStopGrace
     /// <exception cref="InvalidOperationException">The setting is missing or not positive; the host does not start without it.</exception>
     public static PipelineStopGrace Create(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineStopGrace>();
         using var scope = services.CreateScope();
         var accessor = scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>();

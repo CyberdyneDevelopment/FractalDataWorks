@@ -21,7 +21,7 @@ public abstract class ListWorkspaceMembersEndpointBase
     private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _access;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListWorkspaceMembersEndpointBase"/> class.</summary>
     protected ListWorkspaceMembersEndpointBase(
         ILogger<ListWorkspaceMembersEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

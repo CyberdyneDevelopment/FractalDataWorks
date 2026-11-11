@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Fdw.Roslyn.Commands.Refactoring.Results;
 
@@ -16,12 +17,12 @@ public sealed class UnresolvedSite
     /// <param name="column">One-based column number of the <c>&lt;inheritdoc/&gt;</c> element.</param>
     /// <param name="symbolDisplayName">Display name of the member the doc comment is attached to.</param>
     /// <param name="reason">Why the site could not be resolved.</param>
-    public UnresolvedSite(string filePath, int line, int column, string symbolDisplayName, UnresolvedReason reason)
+    public UnresolvedSite(string filePath, int line, int column, string symbolDisplayName, IUnresolvedReason reason)
     {
-        FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+        FilePath = filePath;
         Line = line;
         Column = column;
-        SymbolDisplayName = symbolDisplayName ?? throw new ArgumentNullException(nameof(symbolDisplayName));
+        SymbolDisplayName = symbolDisplayName;
         Reason = reason;
     }
 
@@ -48,5 +49,6 @@ public sealed class UnresolvedSite
     /// <summary>
     /// Gets the reason the site could not be resolved.
     /// </summary>
-    public UnresolvedReason Reason { get; }
+    [JsonConverter(typeof(UnresolvedReasonJsonConverter))]
+    public IUnresolvedReason Reason { get; }
 }

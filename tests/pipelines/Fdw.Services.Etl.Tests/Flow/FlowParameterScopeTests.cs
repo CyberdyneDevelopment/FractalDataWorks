@@ -112,7 +112,7 @@ public sealed class FlowParameterScopeTests
         var ran = await step.Run(new FlowStepContext(scope, new FlowExecutor(), new FlowRunOptions { LinkCapacity = 2 }, null, null), TestContext.Current.CancellationToken);
 
         ran.IsFailure.ShouldBeTrue();
-        ran.CurrentMessage.ShouldContain("read-only");
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("read-only");
         scope.TryGet("Region", out var value).ShouldBeTrue();
         value.ShouldBe("West");
     }

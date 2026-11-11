@@ -26,7 +26,6 @@ public sealed class SqlVariables
     /// <param name="value">The initial value, already of that type; null for NULL.</param>
     public void Declare(string name, SqlConversionTarget type, object? value)
     {
-        ArgumentNullException.ThrowIfNull(name);
         _slots[name] = new Slot(type, value);
     }
 

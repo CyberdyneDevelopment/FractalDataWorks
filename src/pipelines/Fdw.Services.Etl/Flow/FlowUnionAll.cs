@@ -32,7 +32,6 @@ public sealed class FlowUnionAll : IFlowComponent
     public FlowUnionAll(string name, IReadOnlyList<string> inputs)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(inputs);
         if (inputs.Count < 2)
         {
             throw new ArgumentException("A union all has at least two inputs.", nameof(inputs));

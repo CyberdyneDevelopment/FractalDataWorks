@@ -22,7 +22,7 @@ public sealed class PipelineProjectMembershipsTests
         PipelineMemberships = pipelines.Select((id, i) => new OrchestrationNodePipelineMembershipConfiguration { PipelineId = id, Name = id.ToString(), Ordinal = i }).ToList()
     };
 
-    private static IReadOnlyDictionary<Guid, IReadOnlyList<string>> Of(params OrchestrationNodeImplementationConfiguration[] nodes)
+    private static Dictionary<Guid, IReadOnlyList<string>> Of(params OrchestrationNodeImplementationConfiguration[] nodes)
         => PipelineProjectMemberships.Of(nodes, NullLogger.Instance);
 
     [Fact]

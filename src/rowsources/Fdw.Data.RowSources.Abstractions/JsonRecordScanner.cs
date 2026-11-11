@@ -59,7 +59,7 @@ internal sealed class JsonRecordScanner
         if (bufferSize < 1)
             throw new ArgumentOutOfRangeException(nameof(bufferSize), bufferSize, "A JSON reader's buffer holds at least one byte.");
 
-        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+        _stream = stream;
         _path = lines ? [] : Segments(recordsPath);
         _buffer = new byte[bufferSize];
         _state = new JsonReaderState(new JsonReaderOptions

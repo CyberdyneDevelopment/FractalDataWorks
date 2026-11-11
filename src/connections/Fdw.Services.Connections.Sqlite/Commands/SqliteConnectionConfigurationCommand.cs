@@ -7,6 +7,6 @@ namespace Fdw.Services.Connections.Sqlite.Commands;
 [TypeOption(typeof(ConfigurationCommands), "SqliteConnectionConfiguration")]
 public sealed class SqliteConnectionConfigurationCommand : ConfigurationCommandBase<SqliteConnectionConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SqliteConnectionConfigurationCommand"/> class.</summary>
     public SqliteConnectionConfigurationCommand() : base("SqliteConnectionConfiguration") { }
 }

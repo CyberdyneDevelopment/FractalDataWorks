@@ -52,7 +52,6 @@ public sealed class FixedWidthField
     /// guessing widths.</remarks>
     public static List<FixedWidthField> FromContainer(IStorageContainer container)
     {
-        ArgumentNullException.ThrowIfNull(container);
         var fields = new List<FixedWidthField>();
         foreach (var field in container.Schema?.Fields ?? [])
         {

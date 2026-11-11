@@ -55,7 +55,7 @@ public sealed class PipelineRunScheduler
     /// <param name="observer">Told each time the runs that wait change (FDW-3161); none when nothing watches the waiting runs.</param>
     public PipelineRunScheduler(TimeProvider time, ILogger<PipelineRunScheduler>? logger = null, IPipelineWaitObserver? observer = null)
     {
-        _time = time ?? throw new ArgumentNullException(nameof(time));
+        _time = time;
         _logger = logger ?? NullLogger<PipelineRunScheduler>.Instance;
         _observer = observer;
     }
@@ -90,7 +90,6 @@ public sealed class PipelineRunScheduler
     /// <returns>The run's place, which <see cref="Wait"/> completes once the run may start; a place that is refused (<see cref="PipelineRunPlace.IsRefused"/>) is not queued and never starts.</returns>
     public PipelineRunPlace Queue(PipelineRunClaim claim, DateTimeOffset? heldUntil = null)
     {
-        ArgumentNullException.ThrowIfNull(claim);
         if (claim.ServerLimit < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(claim), claim.ServerLimit, "A claim's server limit is at least one.");
@@ -141,7 +140,6 @@ public sealed class PipelineRunScheduler
     /// <returns>A task that ends when the run may start.</returns>
     public async Task Wait(PipelineRunPlace place, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(place);
         if (place.IsRefused)
         {
             throw new InvalidOperationException("A refused run is never queued, so it has no turn to wait for.");
@@ -178,7 +176,6 @@ public sealed class PipelineRunScheduler
     /// <param name="place">The place the run holds.</param>
     public void Hold(PipelineRunPlace place)
     {
-        ArgumentNullException.ThrowIfNull(place);
         _held.Value = place;
     }
 
@@ -186,7 +183,6 @@ public sealed class PipelineRunScheduler
     /// <param name="place">The place the run holds.</param>
     public void Release(PipelineRunPlace place)
     {
-        ArgumentNullException.ThrowIfNull(place);
         _held.Value = null;
         lock (_gate)
         {

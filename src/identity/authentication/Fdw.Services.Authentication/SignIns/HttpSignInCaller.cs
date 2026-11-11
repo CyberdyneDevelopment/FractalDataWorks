@@ -24,7 +24,7 @@ public sealed class HttpSignInCaller : ISignInCaller
     /// <param name="accessor">Reaches the request in hand.</param>
     public HttpSignInCaller(IHttpContextAccessor accessor)
     {
-        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
+        _accessor = accessor;
     }
 
     /// <inheritdoc />

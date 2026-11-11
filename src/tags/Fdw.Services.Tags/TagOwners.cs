@@ -39,9 +39,9 @@ public sealed class TagOwners : ITagOwners
     /// <param name="logger">The logger.</param>
     public TagOwners(ITenantContext tenant, IOrganizationConfigurationProvider organizations, IWorkspaceConfigurationProvider workspaces, ILogger<TagOwners>? logger = null)
     {
-        _tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
+        _tenant = tenant;
+        _organizations = organizations;
+        _workspaces = workspaces;
         _logger = logger ?? NullLogger<TagOwners>.Instance;
     }
 

@@ -36,9 +36,6 @@ public sealed class ConnectionAssignmentConfigurationProvider
         ConnectionAssignmentImplementationConfiguration replacement,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(superseded);
-        ArgumentNullException.ThrowIfNull(replacement);
-
         var scope = await BeginWriteScope(cancellationToken).ConfigureAwait(false);
         if (scope.IsFailure) return scope;
 

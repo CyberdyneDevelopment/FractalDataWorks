@@ -28,8 +28,6 @@ public static class ReferenceRepairPlanFile
     /// <returns>The number of proposals written.</returns>
     public static int Write(string path, IReadOnlyList<ReferenceRepair> proposals, DateTimeOffset stamp)
     {
-        if (proposals is null) throw new ArgumentNullException(nameof(proposals));
-
         var builder = new StringBuilder();
         builder.AppendLine(CultureInfo.InvariantCulture,
             $"# RepairMovedReferences plan — {stamp.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)}");

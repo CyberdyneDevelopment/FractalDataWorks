@@ -25,22 +25,18 @@ public sealed class SqlTimeType : SqlDataTypeBase
     /// <inheritdoc/>
     public override string Declaration(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return string.Create(CultureInfo.InvariantCulture, $"time({column.Scale})");
     }
 
     /// <inheritdoc/>
     public override short CatalogMaxLength(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return (short)TdsTimeEncoding.TimeLength(column.Scale);
     }
 
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(column);
         writer.WriteByte(TdsTypeIds.TimeN);
         writer.WriteByte(column.Scale);
     }

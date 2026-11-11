@@ -17,11 +17,6 @@ public static class ExceptionResultExtensions
     /// <returns>A read-only list of messages representing the full exception chain.</returns>
     public static IReadOnlyList<IGenericMessage> FlattenException(Exception ex)
     {
-        if (ex == null)
-        {
-            throw new ArgumentNullException(nameof(ex));
-        }
-
         var messages = new List<IGenericMessage>();
 
         if (ex is AggregateException agg)

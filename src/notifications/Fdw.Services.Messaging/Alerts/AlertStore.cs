@@ -38,9 +38,9 @@ internal sealed class AlertStore
     /// <param name="messaging">Resolves where this deployment keeps its messaging data.</param>
     public AlertStore(ILogger logger, IDataGatewayProvider dataGateways, IMessagingConfigurationProvider messaging)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
-        _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
+        _logger = logger;
+        _dataGateways = dataGateways;
+        _messaging = messaging;
     }
 
     // Why resolved here rather than injected: the gateway is scoped and the service is not, so holding one would be a captive dependency.

@@ -12,8 +12,8 @@ public sealed class RemoveProjectReferenceResult
     /// </summary>
     public RemoveProjectReferenceResult(string projectName, string referenceName, bool removed, string? reason = null)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
-        ReferenceName = referenceName ?? throw new ArgumentNullException(nameof(referenceName));
+        ProjectName = projectName;
+        ReferenceName = referenceName;
         Removed = removed;
         Reason = reason;
     }

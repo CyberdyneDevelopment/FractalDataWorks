@@ -58,7 +58,6 @@ public static class CategoryTrees
     private static async Task<IGenericResult<CategoryTree>> Read(
         ICategoryConfigurationProvider categories, DomainQuery query, string scope, ILogger logger, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(logger);
         var page = await categories.Get(query, cancellationToken).ConfigureAwait(false);
         if (page.IsFailure || page.Value is null)
         {

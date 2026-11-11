@@ -290,8 +290,8 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         IConfigurationGatewayProvider? gatewayProvider = null)
     {
         _logger = logger ?? NullLogger<ConfigurationGatewayDataStoreProvider>.Instance;
-        _coreProvider = coreProvider ?? throw new ArgumentNullException(nameof(coreProvider));
-        _dataStoreConfigProvider = dataStoreConfigProvider ?? throw new ArgumentNullException(nameof(dataStoreConfigProvider));
+        _coreProvider = coreProvider;
+        _dataStoreConfigProvider = dataStoreConfigProvider;
         _gatewayProvider = gatewayProvider;
     }
 
@@ -407,7 +407,6 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     public async Task<IGenericResult<IDataContainer>> Get(
         string dataStoreName, string pathName, string containerName, IReadOnlyCollection<string> joinedContainers, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(joinedContainers);
         DataStoreProviderLog.TraceGetDataStoreEntry(_logger, dataStoreName);
 
         if (_gatewayProvider is not null)

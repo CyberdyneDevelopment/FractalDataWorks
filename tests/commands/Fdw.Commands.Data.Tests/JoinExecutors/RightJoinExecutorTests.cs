@@ -163,55 +163,6 @@ public sealed class RightJoinExecutorTests
         results.ShouldBeEmpty();
     }
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenLeftRecordsIsNull()
-    {
-        var right = new List<Dictionary<string, object>> { RightRow(1, "O100") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute<Dictionary<string, object>, Dictionary<string, object>, Merged>(
-                null!, right, Extractor, Condition, Merge).ToList());
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenRightRecordsIsNull()
-    {
-        var left = new List<Dictionary<string, object>> { LeftRow(1, "Alice") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute<Dictionary<string, object>, Dictionary<string, object>, Merged>(
-                left, null!, Extractor, Condition, Merge).ToList());
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenFieldExtractorIsNull()
-    {
-        var left = new List<Dictionary<string, object>> { LeftRow(1, "Alice") };
-        var right = new List<Dictionary<string, object>> { RightRow(1, "O100") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute(left, right, null!, Condition, Merge).ToList());
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ExecuteThrowsWhenResultSelectorIsNull()
-    {
-        var left = new List<Dictionary<string, object>> { LeftRow(1, "Alice") };
-        var right = new List<Dictionary<string, object>> { RightRow(1, "O100") };
-
-        Should.Throw<ArgumentNullException>(() =>
-            _sut.Execute<Dictionary<string, object>, Dictionary<string, object>, Merged>(
-                left, right, Extractor, Condition, null!).ToList());
-    }
-
     private static Dictionary<string, object> LeftRow(int id, string name) =>
         new() { ["Id"] = id, ["Name"] = name };
 

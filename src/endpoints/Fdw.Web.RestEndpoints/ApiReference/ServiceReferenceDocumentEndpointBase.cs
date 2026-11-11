@@ -42,8 +42,6 @@ public abstract class ServiceReferenceDocumentEndpointBase : ApiReferenceDocumen
         EmptyRequest request,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(document);
-
         var admitted = document.KeepAdmitted(caller, Logger);
         return Task.FromResult<IGenericResult>(admitted);
     }

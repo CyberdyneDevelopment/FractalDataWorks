@@ -79,18 +79,6 @@ public sealed class ResiliencyPipelineExtensionsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void CreatePipelineThrowsForNullPolicy()
-    {
-        // Arrange
-        IResiliencyPolicy? policy = null;
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => policy!.Create("TestOperation"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void CreateGenericPipelineReturnsPipelineForValidPolicy()
     {
         // Arrange
@@ -116,18 +104,6 @@ public sealed class ResiliencyPipelineExtensionsTests
 
         // Assert
         pipeline.ShouldNotBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void CreateGenericPipelineThrowsForNullPolicy()
-    {
-        // Arrange
-        IResiliencyPolicy? policy = null;
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => policy!.CreatePipeline<string>("TestOperation"));
     }
 
     [Fact]
@@ -173,58 +149,6 @@ public sealed class ResiliencyPipelineExtensionsTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         executed.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ExecuteThrowsForNullPolicy()
-    {
-        // Arrange
-        IResiliencyPolicy? policy = null;
-
-        // Act & Assert
-        await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy!.Execute<string>(_ => Task.FromResult("test"), "TestOperation"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ExecuteThrowsForNullOperation()
-    {
-        // Arrange
-        var policy = ResiliencyPolicies.ByName("Simple");
-
-        // Act & Assert
-        await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy.Execute<string>(null!, "TestOperation"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ExecuteWithoutResultThrowsForNullPolicy()
-    {
-        // Arrange
-        IResiliencyPolicy? policy = null;
-
-        // Act & Assert
-        await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy!.Execute(_ => Task.CompletedTask, "TestOperation"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ExecuteWithoutResultThrowsForNullOperation()
-    {
-        // Arrange
-        var policy = ResiliencyPolicies.ByName("Simple");
-
-        // Act & Assert
-        await Should.ThrowAsync<ArgumentNullException>(async () =>
-            await policy.Execute((Func<CancellationToken, Task>)null!, "TestOperation"));
     }
 
     [Fact]

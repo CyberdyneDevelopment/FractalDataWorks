@@ -22,16 +22,6 @@ public class ConfigurationSectionAttributeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public void Constructor_ThrowsOnNullName()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new ConfigurationSectionAttribute(null!))
-            .ParamName.ShouldBe("name");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
     public void Title_DefaultsToNull()
     {
         // Act

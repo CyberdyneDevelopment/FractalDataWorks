@@ -30,9 +30,9 @@ public class OrchestrationResult : IOrchestrationResult
         IExecutionStatus status,
         DateTimeOffset startTime)
     {
-        ExecutionId = executionId ?? throw new ArgumentNullException(nameof(executionId));
-        OrchestrationId = orchestrationId ?? throw new ArgumentNullException(nameof(orchestrationId));
-        Status = status ?? throw new ArgumentNullException(nameof(status));
+        ExecutionId = executionId;
+        OrchestrationId = orchestrationId;
+        Status = status;
         StartTime = startTime;
         _stepResults = [];
     }

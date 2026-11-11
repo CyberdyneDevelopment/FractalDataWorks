@@ -27,8 +27,6 @@ public sealed class McpToolSourceHost : IHostedService, IAsyncDisposable
     /// <summary>Initializes the tool-source host.</summary>
     public McpToolSourceHost(IMcpEventBus bus, IEnumerable<IMcpToolSource> sources, ILogger<McpToolSourceHost>? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(bus);
-        ArgumentNullException.ThrowIfNull(sources);
         _bus = bus;
         _sources = new List<IMcpToolSource>(sources);
         _logger = logger ?? NullLogger<McpToolSourceHost>.Instance;

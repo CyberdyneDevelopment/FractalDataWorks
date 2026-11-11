@@ -35,7 +35,6 @@ public sealed class CatalogSnapshot
     /// <returns>The snapshot, or the failure reading it.</returns>
     public static async Task<IGenericResult<CatalogSnapshot>> Load(TdsEndpointBase endpoint, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(endpoint);
         var names = await endpoint.Schemas(cancellationToken).ConfigureAwait(false);
         if (names.IsFailure)
             return names.ToNewResult<CatalogSnapshot>();

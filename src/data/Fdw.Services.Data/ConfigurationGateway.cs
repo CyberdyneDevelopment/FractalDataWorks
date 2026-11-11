@@ -109,8 +109,8 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)
             ? throw new ArgumentNullException(nameof(connectionName))
             : connectionName;
-        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
-        _schema = schema ?? throw new ArgumentNullException(nameof(schema));
+        _connectionProvider = connectionProvider;
+        _schema = schema;
         _logger = logger ?? NullLogger<ConfigurationGateway>.Instance;
         _cache = cache;
         _options = options;
@@ -275,10 +275,6 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         Func<T, bool> isWorthKeeping,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(build);
-        ArgumentNullException.ThrowIfNull(isWorthKeeping);
-
         // With the cache off nothing is kept, as for every read this gateway makes.
         if (!CacheEnabled)
             return await build().ConfigureAwait(false);
@@ -372,7 +368,6 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
     /// <inheritdoc/>
     public void InvalidateCachedResults(DataStoreTarget target)
     {
-        ArgumentNullException.ThrowIfNull(target);
         Invalidated([CacheKeyBuilder.TagFor(target)]);
     }
 

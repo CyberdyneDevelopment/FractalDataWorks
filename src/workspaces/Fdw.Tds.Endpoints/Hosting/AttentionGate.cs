@@ -21,7 +21,6 @@ internal sealed class AttentionGate
     /// <param name="request">The request's cancellation source.</param>
     public void Begin(CancellationTokenSource request)
     {
-        ArgumentNullException.ThrowIfNull(request);
         lock (_lock)
         {
             _current = request;

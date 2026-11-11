@@ -26,7 +26,7 @@ public sealed class PreApprovedPolicyEvaluator : IApprovalPolicyEvaluator
     /// </summary>
     public PreApprovedPolicyEvaluator(IAegisCommandConfigurationProvider commands, ILogger<PreApprovedPolicyEvaluator>? logger = null)
     {
-        _commands = commands ?? throw new ArgumentNullException(nameof(commands));
+        _commands = commands;
         _logger = logger ?? NullLogger<PreApprovedPolicyEvaluator>.Instance;
     }
 

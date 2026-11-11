@@ -23,8 +23,6 @@ public static class JsonBodyPath
     /// <returns>The text; null when the body holds nothing, or null, there (the remote has no more); or why the body cannot be read.</returns>
     public static IGenericResult<string?> Text(string connectionName, ILogger logger, int page, ReadOnlyMemory<byte> body, string path)
     {
-        ArgumentNullException.ThrowIfNull(logger);
-        ArgumentNullException.ThrowIfNull(path);
         try
         {
             using var document = JsonDocument.Parse(body);

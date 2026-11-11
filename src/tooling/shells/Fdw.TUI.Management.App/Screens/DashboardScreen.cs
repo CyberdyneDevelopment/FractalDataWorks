@@ -36,8 +36,8 @@ public sealed class DashboardScreen : ScreenBase
         SpectreRenderContext renderContext)
         : base(console, theme, screenFactory)
     {
-        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
-        _renderContext = renderContext ?? throw new ArgumentNullException(nameof(renderContext));
+        _connectionManager = connectionManager;
+        _renderContext = renderContext;
         _dashboardRenderer = new DashboardPageRenderer();
     }
 

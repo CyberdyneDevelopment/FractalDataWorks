@@ -12,9 +12,9 @@ public sealed class ReferenceSummary
     /// </summary>
     public ReferenceSummary(string type, string name, string filePath)
     {
-        Type = type ?? throw new ArgumentNullException(nameof(type));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+        Type = type;
+        Name = name;
+        FilePath = filePath;
     }
 
     /// <summary>

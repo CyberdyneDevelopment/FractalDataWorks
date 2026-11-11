@@ -108,52 +108,48 @@ public sealed class TUIComponentGenerator
         }
         else
         {
-#pragma warning disable FDW018
-            switch (property.ComponentType)
+            if (property.ComponentType == ComponentTypeMapping.Switch)
             {
-                case ComponentTypeMapping.Switch:
-                    builder.AppendLine($"        config.{property.PropertyName} = ConfirmationPromptHelper.Prompt(");
-                    builder.AppendLine($"            console,");
-                    builder.AppendLine($"            \"{label}?\",");
-                    builder.AppendLine($"            config.{property.PropertyName},");
-                    builder.AppendLine($"            Theme);");
-                    break;
-
-                case ComponentTypeMapping.NumericInput:
-                    builder.AppendLine($"        config.{property.PropertyName} = NumericPromptHelper.Prompt<{property.PropertyType}>(");
-                    builder.AppendLine($"            console,");
-                    builder.AppendLine($"            \"{label}:\",");
-                    builder.AppendLine($"            config.{property.PropertyName},");
-                    GenerateValidationMetadata(builder, property);
-                    builder.AppendLine($"            Theme);");
-                    break;
-
-                case ComponentTypeMapping.DateTimePicker:
-                    builder.AppendLine($"        config.{property.PropertyName} = DateTimePromptHelper.Prompt(");
-                    builder.AppendLine($"            console,");
-                    builder.AppendLine($"            \"{label}:\",");
-                    builder.AppendLine($"            config.{property.PropertyName},");
-                    builder.AppendLine($"            Theme);");
-                    break;
-
-                case ComponentTypeMapping.Collection:
-                    builder.AppendLine($"        config.{property.PropertyName} = CollectionPromptHelper.Prompt<{property.CollectionItemType}>(");
-                    builder.AppendLine($"            console,");
-                    builder.AppendLine($"            \"{label}\",");
-                    builder.AppendLine($"            config.{property.PropertyName},");
-                    builder.AppendLine($"            Theme);");
-                    break;
-
-                default: // TextInput, TextArea
-                    builder.AppendLine($"        config.{property.PropertyName} = TextPromptHelper.Prompt(");
-                    builder.AppendLine($"            console,");
-                    builder.AppendLine($"            \"{label}:\",");
-                    builder.AppendLine($"            config.{property.PropertyName},");
-                    GenerateValidationMetadata(builder, property);
-                    builder.AppendLine($"            Theme);");
-                    break;
+                builder.AppendLine($"        config.{property.PropertyName} = ConfirmationPromptHelper.Prompt(");
+                builder.AppendLine($"            console,");
+                builder.AppendLine($"            \"{label}?\",");
+                builder.AppendLine($"            config.{property.PropertyName},");
+                builder.AppendLine($"            Theme);");
             }
-#pragma warning restore FDW018
+            else if (property.ComponentType == ComponentTypeMapping.NumericInput)
+            {
+                builder.AppendLine($"        config.{property.PropertyName} = NumericPromptHelper.Prompt<{property.PropertyType}>(");
+                builder.AppendLine($"            console,");
+                builder.AppendLine($"            \"{label}:\",");
+                builder.AppendLine($"            config.{property.PropertyName},");
+                GenerateValidationMetadata(builder, property);
+                builder.AppendLine($"            Theme);");
+            }
+            else if (property.ComponentType == ComponentTypeMapping.DateTimePicker)
+            {
+                builder.AppendLine($"        config.{property.PropertyName} = DateTimePromptHelper.Prompt(");
+                builder.AppendLine($"            console,");
+                builder.AppendLine($"            \"{label}:\",");
+                builder.AppendLine($"            config.{property.PropertyName},");
+                builder.AppendLine($"            Theme);");
+            }
+            else if (property.ComponentType == ComponentTypeMapping.Collection)
+            {
+                builder.AppendLine($"        config.{property.PropertyName} = CollectionPromptHelper.Prompt<{property.CollectionItemType}>(");
+                builder.AppendLine($"            console,");
+                builder.AppendLine($"            \"{label}\",");
+                builder.AppendLine($"            config.{property.PropertyName},");
+                builder.AppendLine($"            Theme);");
+            }
+            else // TextInput, TextArea
+            {
+                builder.AppendLine($"        config.{property.PropertyName} = TextPromptHelper.Prompt(");
+                builder.AppendLine($"            console,");
+                builder.AppendLine($"            \"{label}:\",");
+                builder.AppendLine($"            config.{property.PropertyName},");
+                GenerateValidationMetadata(builder, property);
+                builder.AppendLine($"            Theme);");
+            }
         }
     }
 
@@ -224,7 +220,7 @@ public sealed class TUIComponentGenerator
             builder.AppendLine($"        var {property.PropertyName.ToLower(CultureInfo.InvariantCulture)}Type = {property.TypeCollectionName}.ById(Value.{property.PropertyName});");
             builder.AppendLine($"        table.AddRow(\"{label}\", {property.PropertyName.ToLower(CultureInfo.InvariantCulture)}Type?.Name ?? \"[dim]None[/]\");");
         }
-        else if (string.Equals(property.ComponentType.ToString(), "Switch", StringComparison.Ordinal))
+        else if (property.ComponentType == ComponentTypeMapping.Switch)
         {
             builder.AppendLine($"        table.AddRow(\"{label}\", Value.{property.PropertyName} ? \"[{{Theme?.SuccessColor ?? Color.Green}}]Yes[/]\" : \"[{{Theme?.ErrorColor ?? Color.Red}}]No[/]\");");
         }
@@ -240,16 +236,12 @@ public sealed class TUIComponentGenerator
 
     private static string GetTUIPromptHelper(PropertyModel property)
     {
-#pragma warning disable FDW018
-        return property.ComponentType switch
-        {
-            ComponentTypeMapping.NumericInput => "NumericPromptHelper",
-            ComponentTypeMapping.Switch => "ConfirmationPromptHelper",
-            ComponentTypeMapping.DateTimePicker => "DateTimePromptHelper",
-            ComponentTypeMapping.Collection => "CollectionPromptHelper",
-            _ => "TextPromptHelper"
-        };
-#pragma warning restore FDW018
+        var componentType = property.ComponentType;
+        return componentType == ComponentTypeMapping.NumericInput ? "NumericPromptHelper"
+            : componentType == ComponentTypeMapping.Switch ? "ConfirmationPromptHelper"
+            : componentType == ComponentTypeMapping.DateTimePicker ? "DateTimePromptHelper"
+            : componentType == ComponentTypeMapping.Collection ? "CollectionPromptHelper"
+            : "TextPromptHelper";
     }
 
     private static string FormatValue(object value)

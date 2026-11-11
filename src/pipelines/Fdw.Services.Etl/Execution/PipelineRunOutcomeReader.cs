@@ -40,8 +40,6 @@ public static class PipelineRunOutcomeReader
     public static async Task<IGenericResult<IReadOnlyList<PipelineRunOutcome>>> Page(
         IDataGateway gateway, IExecutionTracker tracker, ILogger logger, string connection, string pipelineName, int skip, int take, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(gateway);
-        ArgumentNullException.ThrowIfNull(tracker);
         var read = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
             new QueryCommand<Dictionary<string, object?>>
             {

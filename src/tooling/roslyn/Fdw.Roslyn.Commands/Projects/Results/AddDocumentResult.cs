@@ -13,9 +13,9 @@ public sealed class AddDocumentResult
     /// </summary>
     public AddDocumentResult(string projectName, string documentName, IReadOnlyList<string> folders, bool added, string? reason = null)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
-        DocumentName = documentName ?? throw new ArgumentNullException(nameof(documentName));
-        Folders = folders ?? throw new ArgumentNullException(nameof(folders));
+        ProjectName = projectName;
+        DocumentName = documentName;
+        Folders = folders;
         Added = added;
         Reason = reason;
     }

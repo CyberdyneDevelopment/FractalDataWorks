@@ -25,7 +25,7 @@ public sealed class FlowSetVariable : IFlowStep
     /// <param name="value">Computes the new value from the variables in scope.</param>
     /// <param name="logger">The logger.</param>
     public FlowSetVariable(string name, string variable, Func<FlowVariables, object?> value, ILogger? logger = null)
-        : this(name, variable, value ?? throw new ArgumentNullException(nameof(value)), null, logger)
+        : this(name, variable, value, null, logger)
     {
     }
 
@@ -35,7 +35,7 @@ public sealed class FlowSetVariable : IFlowStep
     /// <param name="calculation">Works the new value out from the variables in scope.</param>
     /// <param name="logger">The logger.</param>
     public FlowSetVariable(string name, string variable, FlowVariableCalculation calculation, ILogger? logger = null)
-        : this(name, variable, null, calculation ?? throw new ArgumentNullException(nameof(calculation)), logger)
+        : this(name, variable, null, calculation, logger)
     {
     }
 
@@ -56,8 +56,6 @@ public sealed class FlowSetVariable : IFlowStep
     /// <inheritdoc />
     public async Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         var target = FlowVariableTarget.Check(context.Variables, Name, _variable, _logger);
         if (target.IsFailure)
         {

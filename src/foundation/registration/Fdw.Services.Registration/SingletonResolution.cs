@@ -24,10 +24,6 @@ public static class SingletonResolution
     /// <returns>One coded message for each service type whose singletons could not all be resolved; empty when every one resolved.</returns>
     public static IReadOnlyList<IGenericMessage> ResolveAll(IServiceCollection services, IServiceProvider provider, ILogger logger)
     {
-        if (services is null) throw new ArgumentNullException(nameof(services));
-        if (provider is null) throw new ArgumentNullException(nameof(provider));
-        if (logger is null) throw new ArgumentNullException(nameof(logger));
-
         var findings = new List<IGenericMessage>();
         var singletonTypes = services
             .Where(d => !d.IsKeyedService && d.Lifetime == ServiceLifetime.Singleton && !d.ServiceType.IsGenericTypeDefinition)

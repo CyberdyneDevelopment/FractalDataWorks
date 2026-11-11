@@ -125,8 +125,9 @@ public sealed class DataSetStatusProviderTests
         var counts = await provider.Counts(TestContext.Current.CancellationToken);
 
         counts.IsSuccess.ShouldBeTrue();
-        counts.Value!.Select(c => c.Status.Name).ToArray().ShouldBe(["Unwritten", "Failed", "Running", "Warning", "Current", "Idle"]);
-        counts.Value.ToDictionary(c => c.Status.Name, c => c.Count).ShouldBe(
+        var statuses = counts.Value.ShouldNotBeNull();
+        statuses.Select(c => c.Status.Name).ToArray().ShouldBe(["Unwritten", "Failed", "Running", "Warning", "Current", "Idle"]);
+        statuses.ToDictionary(c => c.Status.Name, c => c.Count).ShouldBe(
             new Dictionary<string, int> { ["Unwritten"] = 1, ["Failed"] = 1, ["Running"] = 0, ["Warning"] = 0, ["Current"] = 2, ["Idle"] = 0 });
     }
 

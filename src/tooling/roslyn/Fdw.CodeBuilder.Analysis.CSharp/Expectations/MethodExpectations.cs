@@ -21,7 +21,7 @@ public class MethodExpectations
     /// <param name="methodDeclaration">The method declaration to verify.</param>
     public MethodExpectations(MethodDeclarationSyntax methodDeclaration)
     {
-        _methodDeclaration = methodDeclaration ?? throw new ArgumentNullException(nameof(methodDeclaration));
+        _methodDeclaration = methodDeclaration;
     }
 
     /// <summary>

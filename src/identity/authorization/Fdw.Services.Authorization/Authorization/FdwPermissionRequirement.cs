@@ -17,8 +17,8 @@ public sealed class FdwPermissionRequirement : IAuthorizationRequirement
     /// <param name="action">The action being performed (e.g., "read", "write", "delete").</param>
     public FdwPermissionRequirement(string resource, string action)
     {
-        Resource = resource ?? throw new ArgumentNullException(nameof(resource));
-        Action = action ?? throw new ArgumentNullException(nameof(action));
+        Resource = resource;
+        Action = action;
     }
 
     /// <summary>
@@ -30,7 +30,6 @@ public sealed class FdwPermissionRequirement : IAuthorizationRequirement
     public FdwPermissionRequirement(string resource, string action, IReadOnlyList<(string Resource, string Action)> alsoAccepted)
         : this(resource, action)
     {
-        ArgumentNullException.ThrowIfNull(alsoAccepted);
         if (alsoAccepted.Count == 0)
             throw new ArgumentException("A requirement with alternatives names at least one more permission.", nameof(alsoAccepted));
 

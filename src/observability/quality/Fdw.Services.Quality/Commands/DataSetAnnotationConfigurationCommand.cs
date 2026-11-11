@@ -8,7 +8,7 @@ namespace Fdw.Services.Quality.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataSetAnnotation")]
 public sealed class DataSetAnnotationConfigurationCommand : ConfigurationCommandBase<DataSetAnnotationImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataSetAnnotationConfigurationCommand"/> class.</summary>
     public DataSetAnnotationConfigurationCommand() : base("DataSetAnnotation") { }
 
     /// <inheritdoc/>

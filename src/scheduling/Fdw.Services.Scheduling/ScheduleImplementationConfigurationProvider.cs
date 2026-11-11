@@ -35,7 +35,7 @@ public sealed class ScheduleImplementationConfigurationProvider
         string containerName)
         : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
-        _gateways = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
+        _gateways = gatewayProvider;
         _logger = logger ?? NullLogger<ScheduleImplementationConfigurationProvider>.Instance;
     }
 

@@ -19,11 +19,6 @@ public static class NullableTypeExtensions
     /// <returns>The type without <see cref="Nullable{T}"/>.</returns>
     public static Type WithoutNullable(this Type type)
     {
-        if (type == null)
-        {
-            throw new ArgumentNullException(nameof(type));
-        }
-
         return Nullable.GetUnderlyingType(type) is { } underlying ? underlying : type;
     }
 }

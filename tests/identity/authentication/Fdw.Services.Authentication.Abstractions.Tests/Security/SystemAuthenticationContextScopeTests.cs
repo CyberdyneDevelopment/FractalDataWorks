@@ -79,14 +79,6 @@ public class SystemAuthenticationContextScopeTests
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ConstructorThrowsForNullAccessor()
-    {
-        Should.Throw<ArgumentNullException>(() => new SystemAuthenticationContextScope(null!));
-    }
-
-    [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
     public void TheTenantScopeCarriesItsTenantAndRestoresThePriorValue()

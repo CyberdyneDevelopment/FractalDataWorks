@@ -126,7 +126,6 @@ public static class SqlServerErrors
     /// <returns>The error.</returns>
     public static SqlServerMessage PlatformFailure(IGenericResult failure, int line)
     {
-        ArgumentNullException.ThrowIfNull(failure);
         return failure.Code is { } code
             ? new SqlServerMessage(50000, 1, 16, $"The request could not be completed ({code.Code}).", line)
             : new SqlServerMessage(50000, 1, 16, "The request could not be completed.", line);

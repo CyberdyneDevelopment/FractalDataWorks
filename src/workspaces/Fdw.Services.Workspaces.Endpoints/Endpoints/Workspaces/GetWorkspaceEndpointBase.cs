@@ -15,7 +15,7 @@ public abstract class GetWorkspaceEndpointBase : CrudGetEndpointBase<WorkspaceNa
     private readonly IWorkspaceConfigurationProvider _provider;
     private readonly IWorkspaceAccessPolicy _access;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetWorkspaceEndpointBase"/> class.</summary>
     protected GetWorkspaceEndpointBase(ILogger<GetWorkspaceEndpointBase> logger, IWorkspaceConfigurationProvider provider, IWorkspaceAccessPolicy access) : base(logger)
     {
         _provider = provider;

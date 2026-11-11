@@ -38,7 +38,6 @@ public sealed class ThresholdNotifier : IThresholdNotifier
     public async Task<IGenericResult> Notify(
         IReadOnlyList<string> rules, string subject, string message, IReadOnlyDictionary<string, object?> metadata, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(rules);
         if (_services is null || _rules is null)
         {
             return Unavailable(_services is null ? nameof(INotificationServiceProvider) : nameof(INotificationRuleConfigurationProvider));

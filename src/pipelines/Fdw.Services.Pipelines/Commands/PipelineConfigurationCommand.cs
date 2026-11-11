@@ -8,6 +8,6 @@ namespace Fdw.Services.Pipelines.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Pipeline")]
 public sealed class PipelineConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="PipelineConfigurationCommand"/> class.</summary>
     public PipelineConfigurationCommand() : base("Pipeline") { }
 }

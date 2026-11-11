@@ -14,7 +14,6 @@ public static class AllHeaders
     /// <param name="reader">The reader, positioned at the stream's total length.</param>
     public static void Skip(TdsPayloadReader reader)
     {
-        System.ArgumentNullException.ThrowIfNull(reader);
         var start = reader.Position;
         var total = reader.ReadUInt32();
         reader.Seek(start + (int)total);

@@ -35,7 +35,7 @@ public sealed class DataSetConfigurationProvider
         IConfigurationPlacement placement)
         : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
-        Placement = placement ?? throw new ArgumentNullException(nameof(placement));
+        Placement = placement;
     }
 
     /// <inheritdoc />

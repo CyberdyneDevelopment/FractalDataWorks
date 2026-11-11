@@ -32,9 +32,9 @@ public sealed class OrchestrationStepExecutionContext : IOrchestrationStepExecut
         IOrchestrationContext orchestrationContext,
         int attemptNumber = 1)
     {
-        StepExecutionId = stepExecutionId ?? throw new ArgumentNullException(nameof(stepExecutionId));
-        Step = step ?? throw new ArgumentNullException(nameof(step));
-        OrchestrationContext = orchestrationContext ?? throw new ArgumentNullException(nameof(orchestrationContext));
+        StepExecutionId = stepExecutionId;
+        Step = step;
+        OrchestrationContext = orchestrationContext;
         AttemptNumber = attemptNumber;
         StartTime = DateTimeOffset.UtcNow;
         _stepState = new ConcurrentDictionary<string, object?>(StringComparer.Ordinal);

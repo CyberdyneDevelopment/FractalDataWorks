@@ -24,16 +24,6 @@ public static class ForeignClaims
     /// <returns>The types of the claims that were removed, in the order they were found; none when the token carried none.</returns>
     public static IReadOnlyList<string> WithoutPlatformClaims(ClaimsIdentity identity, IReadOnlyCollection<string> accepted)
     {
-        if (identity is null)
-        {
-            throw new ArgumentNullException(nameof(identity));
-        }
-
-        if (accepted is null)
-        {
-            throw new ArgumentNullException(nameof(accepted));
-        }
-
         var reserved = ClaimDefinitions.All()
             .Select(definition => definition.Name)
             .Where(name => !string.Equals(name, ClaimDefinitions.sub.Name, StringComparison.Ordinal)

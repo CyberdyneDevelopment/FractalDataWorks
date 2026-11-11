@@ -11,6 +11,6 @@ namespace Fdw.Services.Etl.Projects.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Project")]
 public sealed class ProjectConfigurationCommand : ConfigurationCommandBase<ProjectConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ProjectConfigurationCommand"/> class.</summary>
     public ProjectConfigurationCommand() : base("Project") { }
 }

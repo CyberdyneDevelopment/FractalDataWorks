@@ -68,7 +68,6 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// picked up automatically — declaring a <c>[TypeOption(typeof(RealTimeHubs), ...)]</c> in any
     /// referenced assembly is the only step.
     /// </remarks>
-    /// <exception cref="ArgumentNullException"><paramref name="builder"/> is <see langword="null"/>.</exception>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
@@ -80,7 +79,6 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
 
-        ArgumentNullException.ThrowIfNull(builder);
         var services = builder.Services;
 
         ILogger logger = loggerFactory?.CreateLogger("Fdw.SignalR") ?? NullLogger.Instance;
@@ -138,11 +136,8 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// calls it only when it is meant to be a hub endpoint. Safe to call more than once — only the
     /// first call maps anything, the rest are a logged no-op.
     /// </remarks>
-    /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
     public static void Map(IEndpointRouteBuilder endpoints, ILoggerFactory? loggerFactory = null)
     {
-        ArgumentNullException.ThrowIfNull(endpoints);
-
         ILogger logger = loggerFactory?.CreateLogger("Fdw.SignalR") ?? NullLogger.Instance;
 
         if (_mapped)

@@ -71,16 +71,16 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         IRoleGrants roleGrants,
         ILogger<JwtBearerAuthenticationHandler>? logger = null)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _roleGrants = roleGrants ?? throw new ArgumentNullException(nameof(roleGrants));
+        _configuration = configuration;
+        _roleGrants = roleGrants;
         _log = logger ?? NullLogger<JwtBearerAuthenticationHandler>.Instance;
     }
 
     /// <inheritdoc />
     public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context)
     {
-        _scheme = scheme ?? throw new ArgumentNullException(nameof(scheme));
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _scheme = scheme;
+        _context = context;
         return Task.CompletedTask;
     }
 

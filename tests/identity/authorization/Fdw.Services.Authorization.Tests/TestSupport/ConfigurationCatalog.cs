@@ -34,13 +34,15 @@ internal static class ConfigurationCatalog
     public static RoleConfigurationProvider Roles(IEnumerable<IRoleImplementationConfiguration> items)
         => Of<RoleConfigurationProvider, IRoleImplementationConfiguration, RoleDomainConfiguration>(
             gateways => new RoleConfigurationProvider(
-                NullLogger<RoleConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Role"), items);
+                NullLogger<RoleConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Role",
+                Mock.Of<IUserRoleConfigurationProvider>(), Mock.Of<IRolePermissionConfigurationProvider>()), items);
 
     /// <summary>A role catalogue whose store cannot be read.</summary>
     public static RoleConfigurationProvider UnreadableRoles(string reason)
         => Unreadable<RoleConfigurationProvider, IRoleImplementationConfiguration, RoleDomainConfiguration>(
             gateways => new RoleConfigurationProvider(
-                NullLogger<RoleConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Role"), reason);
+                NullLogger<RoleConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Role",
+                Mock.Of<IUserRoleConfigurationProvider>(), Mock.Of<IRolePermissionConfigurationProvider>()), reason);
 
     /// <summary>The permission catalogue this store holds.</summary>
     public static PermissionConfigurationProvider Permissions(IEnumerable<IPermissionImplementationConfiguration> items)

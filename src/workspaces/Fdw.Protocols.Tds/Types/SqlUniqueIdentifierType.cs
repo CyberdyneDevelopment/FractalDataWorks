@@ -27,7 +27,6 @@ public sealed class SqlUniqueIdentifierType : SqlDataTypeBase
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTypeIds.UniqueIdentifier);
         writer.WriteByte(16);
     }

@@ -30,8 +30,6 @@ public sealed class UnavailablePlacement : IConfigurationPlacement
     /// <inheritdoc />
     public Task<IGenericResult> Place(PlacementRequest request, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         return Task.FromResult(GenericResult.Failure(DefaultConfigurationProviderLog.PlacementUnavailable(_logger, request.Kind, request.Name)));
     }
 }

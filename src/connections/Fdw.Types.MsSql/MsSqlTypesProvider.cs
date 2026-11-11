@@ -26,8 +26,8 @@ public sealed class MsSqlTypesProvider : ITypesProvider
     /// <param name="logger">The logger instance.</param>
     public MsSqlTypesProvider(string connectionString, ILogger<MsSqlTypesProvider> logger)
     {
-        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _connectionString = connectionString;
+        _logger = logger;
     }
 
     /// <inheritdoc/>

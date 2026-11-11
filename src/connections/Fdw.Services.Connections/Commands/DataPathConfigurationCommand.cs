@@ -7,6 +7,6 @@ namespace Fdw.Services.Connections.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataPath")]
 public sealed class DataPathConfigurationCommand : ConfigurationCommandBase<DataPathConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataPathConfigurationCommand"/> class.</summary>
     public DataPathConfigurationCommand() : base("DataPath") { }
 }

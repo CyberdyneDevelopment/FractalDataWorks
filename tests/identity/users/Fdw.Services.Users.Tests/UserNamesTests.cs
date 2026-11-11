@@ -80,12 +80,4 @@ public sealed class UserNamesTests
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Message.Contains("the store is down", StringComparison.Ordinal));
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ALookupWithoutAProviderIsRefused()
-    {
-        Should.Throw<ArgumentNullException>(() => new UserNames(null!, NullLogger<UserNames>.Instance));
-    }
 }

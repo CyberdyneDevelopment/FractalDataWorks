@@ -95,8 +95,6 @@ public sealed class DataQueryStream
     /// <remarks>The serializer may carry an exception from the rows as the inner one of its own.</remarks>
     public static DataQueryStreamException? CausedBy(Exception exception)
     {
-        ArgumentNullException.ThrowIfNull(exception);
-
         return exception as DataQueryStreamException is { } direct ? direct : exception.InnerException as DataQueryStreamException;
     }
 
@@ -120,12 +118,6 @@ public sealed class DataQueryStream
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(dataSet);
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(scope);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var scoped = await scope(cancellationToken).ConfigureAwait(false);
         if (scoped.IsFailure) return scoped.ToNewResult<DataQueryStream>();
 

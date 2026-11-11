@@ -28,7 +28,7 @@ public abstract class GetMapChildrenEndpointBase : MapEndpointBase<MapChildrenRe
     private readonly MapSources _sources;
     private readonly IFrameworkAuthorizationService _authorization;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetMapChildrenEndpointBase"/> class.</summary>
     protected GetMapChildrenEndpointBase(
         ILogger<GetMapChildrenEndpointBase> logger,
         IDataSetConfigurationProvider dataSets,

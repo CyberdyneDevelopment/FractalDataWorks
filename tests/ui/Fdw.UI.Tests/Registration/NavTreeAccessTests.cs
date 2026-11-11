@@ -93,11 +93,4 @@ public sealed class NavTreeAccessTests
 
         NavTree.Build([hidden], isAuthenticated: false, HoldsNothing).ShouldBeEmpty();
     }
-
-    [Fact]
-    [Trait("Category", "Registration")]
-    public void BuildStillRequiresAPermissionPredicate()
-    {
-        Should.Throw<ArgumentNullException>(() => NavTree.Build(ThreePages(), isAuthenticated: true, null!));
-    }
 }

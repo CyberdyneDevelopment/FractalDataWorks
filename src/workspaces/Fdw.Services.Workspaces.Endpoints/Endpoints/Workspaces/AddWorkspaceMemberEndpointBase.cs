@@ -36,7 +36,7 @@ public abstract class AddWorkspaceMemberEndpointBase
     // Set by CheckExists when it finds a conflict, read back by DuplicateMessage.
     private WorkspaceMemberConfiguration? _conflict;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="AddWorkspaceMemberEndpointBase"/> class.</summary>
     protected AddWorkspaceMemberEndpointBase(
         ILogger<AddWorkspaceMemberEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

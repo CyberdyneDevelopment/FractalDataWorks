@@ -39,7 +39,6 @@ internal sealed class ClientCredentialsIdentityFactory
     /// <param name="loggerFactory">The logger factory for created services.</param>
     /// <param name="http">The HTTP client used to reach the authorization server's token endpoint.</param>
     /// <param name="secretManagers">Provider resolving the named secret manager holding the client secret.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="http"/> or <paramref name="secretManagers"/> is null.</exception>
     public ClientCredentialsIdentityFactory(
         ILoggerFactory? loggerFactory,
         HttpClient http,
@@ -47,8 +46,8 @@ internal sealed class ClientCredentialsIdentityFactory
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<ClientCredentialsIdentityFactory>();
-        _http = http ?? throw new ArgumentNullException(nameof(http));
-        _secretManagers = secretManagers ?? throw new ArgumentNullException(nameof(secretManagers));
+        _http = http;
+        _secretManagers = secretManagers;
     }
 
     /// <inheritdoc />

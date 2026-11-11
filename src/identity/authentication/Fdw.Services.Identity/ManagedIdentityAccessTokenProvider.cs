@@ -51,7 +51,6 @@ public sealed class ManagedIdentityAccessTokenProvider : IAccessTokenProvider
     /// <param name="configurationName">The identity configuration this client authenticates as.</param>
     /// <param name="request">The audience and scopes this client needs a token for.</param>
     /// <param name="logger">The logger for this bridge.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="identities"/>, <paramref name="cache"/>, or <paramref name="request"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="configurationName"/> is null, empty, or whitespace.</exception>
     public ManagedIdentityAccessTokenProvider(
         IIdentityServiceProvider identities,
@@ -63,9 +62,9 @@ public sealed class ManagedIdentityAccessTokenProvider : IAccessTokenProvider
         if (string.IsNullOrWhiteSpace(configurationName))
             throw new ArgumentException("A managed identity token provider must name the identity configuration it authenticates as.", nameof(configurationName));
 
-        _identities = identities ?? throw new ArgumentNullException(nameof(identities));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _request = request ?? throw new ArgumentNullException(nameof(request));
+        _identities = identities;
+        _cache = cache;
+        _request = request;
         _configurationName = configurationName;
         _logger = logger ?? NullLogger<ManagedIdentityAccessTokenProvider>.Instance;
     }

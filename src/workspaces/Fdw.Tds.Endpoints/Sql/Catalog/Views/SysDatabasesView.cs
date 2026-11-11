@@ -68,7 +68,6 @@ public sealed class SysDatabasesView : CatalogViewBase
     /// <inheritdoc/>
     public override IEnumerable<object?[]> Rows(SqlExecutionContext context, CatalogSnapshot catalog)
     {
-        ArgumentNullException.ThrowIfNull(context);
         // The database came online with this process, so that is when sys.databases says it was created.
         using var process = System.Diagnostics.Process.GetCurrentProcess();
         var started = process.StartTime;

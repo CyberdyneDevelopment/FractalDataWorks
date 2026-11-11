@@ -85,7 +85,6 @@ public sealed class TdsTypeInfo
     /// <returns>True when the type id is one this server reads; the reader's overrun is the caller's to check.</returns>
     public static bool TryRead(TdsPayloadReader reader, out TdsTypeInfo typeInfo)
     {
-        ArgumentNullException.ThrowIfNull(reader);
         var typeId = reader.ReadByte();
         if (!Readers.TryGetValue(typeId, out var read))
         {

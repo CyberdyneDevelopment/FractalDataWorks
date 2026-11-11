@@ -60,10 +60,10 @@ public sealed class UserCredentialService : IUserCredentialService
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserCredentialService>? logger = null)
     {
-        _credentialServiceProvider = credentialServiceProvider ?? throw new ArgumentNullException(nameof(credentialServiceProvider));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _userProvider = userProvider ?? throw new ArgumentNullException(nameof(userProvider));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _credentialServiceProvider = credentialServiceProvider;
+        _configuration = configuration;
+        _userProvider = userProvider;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<UserCredentialService>.Instance;
     }
 

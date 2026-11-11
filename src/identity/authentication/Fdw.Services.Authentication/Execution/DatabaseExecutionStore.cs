@@ -66,10 +66,10 @@ public sealed class DatabaseExecutionStore : IAuthenticationExecutionStore
         IAuthenticationFlowProvider flows,
         ILogger<DatabaseExecutionStore>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
-        _encryption = encryption ?? throw new ArgumentNullException(nameof(encryption));
-        _flows = flows ?? throw new ArgumentNullException(nameof(flows));
+        _gateways = gateways;
+        _authContextAccessor = authContextAccessor;
+        _encryption = encryption;
+        _flows = flows;
         _logger = logger ?? NullLogger<DatabaseExecutionStore>.Instance;
     }
 

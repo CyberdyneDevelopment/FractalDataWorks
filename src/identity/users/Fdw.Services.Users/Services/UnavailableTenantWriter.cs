@@ -28,14 +28,12 @@ public sealed class UnavailableTenantWriter : ITenantWriter
     /// <inheritdoc />
     public Task<IGenericResult<Guid>> Create(NewTenant tenant, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(tenant);
         return Task.FromResult<IGenericResult<Guid>>(GenericResult<Guid>.Failure(UnavailableWritersLog.TenantWriterUnavailable(_logger, "made")));
     }
 
     /// <inheritdoc />
     public Task<IGenericResult> Update(Guid tenantId, TenantChange change, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(change);
         return Task.FromResult<IGenericResult>(GenericResult.Failure(UnavailableWritersLog.TenantWriterUnavailable(_logger, "changed")));
     }
 

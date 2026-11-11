@@ -33,7 +33,6 @@ public abstract class SqlIntegerTypeBase : SqlDataTypeBase
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
         writer.WriteByte(TdsTypeIds.IntN);
         writer.WriteByte(_width);
     }

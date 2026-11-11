@@ -35,7 +35,6 @@ public static partial class ScriptTokens
     /// <returns>The names, in the order they appear; a name used twice is listed twice.</returns>
     public static IReadOnlyList<string> Names(string text)
     {
-        ArgumentNullException.ThrowIfNull(text);
         return [.. Token().Matches(text).Select(match => match.Groups["name"].Value)];
     }
 
@@ -47,10 +46,6 @@ public static partial class ScriptTokens
     /// <returns>The text to run, or the failure that names the owner and the name that has no value or whose value is not a name.</returns>
     public static IGenericResult<string> Render(string owner, string text, IReadOnlyDictionary<string, object?> values, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(owner);
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(values);
-        ArgumentNullException.ThrowIfNull(logger);
         IGenericMessage? refused = null;
         var rendered = Token().Replace(text, match =>
         {

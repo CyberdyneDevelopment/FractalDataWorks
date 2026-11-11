@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Cors")]
 public sealed class CorsConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="CorsConfigurationCommand"/> class.</summary>
     public CorsConfigurationCommand() : base("Cors") { }
 }

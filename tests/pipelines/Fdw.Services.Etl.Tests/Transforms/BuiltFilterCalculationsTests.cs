@@ -114,7 +114,7 @@ public sealed class BuiltFilterCalculationsTests
         var value = await Calculations(SecondsAgo()).Evaluate("Seconds ago", With(), TestContext.Current.CancellationToken);
 
         value.IsFailure.ShouldBeTrue();
-        value.CurrentMessage.ShouldContain("seconds");
+        value.CurrentMessage.ShouldNotBeNull().ShouldContain("seconds");
         value.CurrentMessage.ShouldContain("Seconds ago");
     }
 
@@ -124,7 +124,7 @@ public sealed class BuiltFilterCalculationsTests
         var value = await Calculations(Yesterday()).Evaluate("Yesterday", With(("days", 3m)), TestContext.Current.CancellationToken);
 
         value.IsFailure.ShouldBeTrue();
-        value.CurrentMessage.ShouldContain("days");
+        value.CurrentMessage.ShouldNotBeNull().ShouldContain("days");
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public sealed class BuiltFilterCalculationsTests
         var value = await Calculations(SecondsAgo()).Evaluate("Seconds ago", With(("seconds", true)), TestContext.Current.CancellationToken);
 
         value.IsFailure.ShouldBeTrue();
-        value.CurrentMessage.ShouldContain("seconds");
+        value.CurrentMessage.ShouldNotBeNull().ShouldContain("seconds");
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class BuiltFilterCalculationsTests
         var value = await Calculations(Yesterday()).Evaluate("Tomorrow", With(), TestContext.Current.CancellationToken);
 
         value.IsFailure.ShouldBeTrue();
-        value.CurrentMessage.ShouldContain("Tomorrow");
+        value.CurrentMessage.ShouldNotBeNull().ShouldContain("Tomorrow");
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public sealed class BuiltFilterCalculationsTests
         var value = await Calculations(mapped.Object).Evaluate("Remap", With(), TestContext.Current.CancellationToken);
 
         value.IsFailure.ShouldBeTrue();
-        value.CurrentMessage.ShouldContain("Remap");
+        value.CurrentMessage.ShouldNotBeNull().ShouldContain("Remap");
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class BuiltFilterCalculationsTests
         var value = await Calculations(two).Evaluate("Two", With(), TestContext.Current.CancellationToken);
 
         value.IsFailure.ShouldBeTrue();
-        value.CurrentMessage.ShouldContain("Two");
+        value.CurrentMessage.ShouldNotBeNull().ShouldContain("Two");
     }
 
     [Fact]

@@ -531,8 +531,8 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         if (!string.IsNullOrEmpty(collection.ServiceCategory))
         {
             bodySb.AppendLine("        /// <summary>");
-            bodySb.AppendLine("        /// The service category for database configuration loading.");
-            bodySb.AppendLine("        /// Used by MsSqlConfigurationSource to load configurations from cfg.* tables.");
+            bodySb.AppendLine("        /// The service category of this collection: its options read it as their category, and it is");
+            bodySb.AppendLine("        /// recorded on the collection's TypeCollectionMetadata, which is written to types.TypeCollection.");
             bodySb.AppendLine("        /// </summary>");
             bodySb.AppendLine($"        public static string ServiceCategory => \"{collection.ServiceCategory}\";");
             bodySb.AppendLine();

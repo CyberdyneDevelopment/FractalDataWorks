@@ -125,14 +125,8 @@ public class CollectionValueInfoModel<TId> : IInputInfoModel, IEquatable<Collect
     /// Writes the contents of this value info model to a TextWriter for hash generation.
     /// </summary>
     /// <param name="writer">The TextWriter to write to.</param>
-    /// <exception cref="ArgumentNullException">Thrown when the writer is null.</exception>
     public void WriteToHash(TextWriter writer)
     {
-        if (writer == null)
-        {
-            throw new ArgumentNullException(nameof(writer), "The TextWriter cannot be null.");
-        }
-
         // Write basic properties
         writer.Write(FullTypeName);
         writer.Write(ShortTypeName);

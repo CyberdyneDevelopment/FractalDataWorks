@@ -9,6 +9,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataSetJoin")]
 public sealed class DataSetJoinConfigurationCommand : ConfigurationCommandBase<DataSetJoinConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataSetJoinConfigurationCommand"/> class.</summary>
     public DataSetJoinConfigurationCommand() : base("DataSetJoin") { }
 }

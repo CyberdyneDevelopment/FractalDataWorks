@@ -41,17 +41,15 @@ public sealed class DefaultWorkspaceFounding : IDefaultWorkspaceFounding
         IAuthenticationContextAccessor authentication,
         ILogger<DefaultWorkspaceFounding>? logger = null)
     {
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _authentication = authentication ?? throw new ArgumentNullException(nameof(authentication));
+        _workspaces = workspaces;
+        _permissions = permissions;
+        _authentication = authentication;
         _logger = logger ?? NullLogger<DefaultWorkspaceFounding>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<Guid>> Found(NewDefaultWorkspace workspace, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(workspace);
-
         var configuration = ToConfiguration(workspace);
         DefaultWorkspaceLog.Founding(_logger, configuration.Name, workspace.OrganizationId, workspace.TenantId);
 
@@ -70,8 +68,6 @@ public sealed class DefaultWorkspaceFounding : IDefaultWorkspaceFounding
     /// <inheritdoc />
     public async Task<IGenericResult> Remove(NewDefaultWorkspace workspace, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(workspace);
-
         DefaultWorkspaceLog.Removing(_logger, workspace.WorkspaceId, workspace.TenantId);
         using var acting = TenantActing.In(_authentication, workspace.TenantId, workspace.OwnerUserId, _logger);
         var retired = await _permissions.Remove(workspace.WorkspaceId, cancellationToken).ConfigureAwait(false);

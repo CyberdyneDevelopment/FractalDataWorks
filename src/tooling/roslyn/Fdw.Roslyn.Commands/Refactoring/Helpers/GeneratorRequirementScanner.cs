@@ -53,8 +53,6 @@ public static class GeneratorRequirementScanner
         IReadOnlyList<Document> documents,
         CancellationToken cancellationToken = default)
     {
-        if (documents is null) throw new ArgumentNullException(nameof(documents));
-
         var found = new Dictionary<string, GeneratorRequirement>(StringComparer.Ordinal);
 
         foreach (var document in documents)

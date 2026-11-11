@@ -24,7 +24,7 @@ public abstract class ListEscalationAlertsEndpointBase : Endpoint<EscalationAler
     /// <param name="alerts">The alerts.</param>
     protected ListEscalationAlertsEndpointBase(IEscalationAlerts alerts)
     {
-        _alerts = alerts ?? throw new ArgumentNullException(nameof(alerts));
+        _alerts = alerts;
     }
 
     /// <summary>Configures the route, the permission and the OpenAPI metadata.</summary>

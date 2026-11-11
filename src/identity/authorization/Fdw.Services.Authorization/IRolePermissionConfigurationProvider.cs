@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Configuration;
 
 namespace Fdw.Services.Authorization;
 
@@ -28,4 +29,12 @@ public interface IRolePermissionConfigurationProvider
         IReadOnlyList<Guid> retiring,
         IReadOnlyList<IRolePermissionImplementationConfiguration> mappings,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Removes, in <paramref name="unit"/>, every permission grant of a role (FDW-5222).</summary>
+    /// <param name="roleId">The durable Id of the role whose grants go.</param>
+    /// <param name="unit">The unit the removal joins; it commits or rolls back with the rest of the unit.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>How many grants were removed; otherwise the failure of the read or of the first removal that failed.</returns>
+    /// <remarks>For the delete of the role itself, so no grant names a role that no longer exists.</remarks>
+    Task<IGenericResult<int>> RemoveGrantsOf(Guid roleId, ConfigurationWriteScope unit, CancellationToken cancellationToken = default);
 }

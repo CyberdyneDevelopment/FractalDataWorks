@@ -48,7 +48,7 @@ public sealed class WorkspaceManager : IWorkspaceManager
         ILogger<WorkspaceManager>? logger = null,
         TimeSpan? sleepTimeout = null)
     {
-        _workspaceFactory = workspaceFactory ?? throw new ArgumentNullException(nameof(workspaceFactory));
+        _workspaceFactory = workspaceFactory;
         _logger = logger ?? NullLogger<WorkspaceManager>.Instance;
         SleepTimeout = sleepTimeout ?? DefaultSleepTimeout;
 

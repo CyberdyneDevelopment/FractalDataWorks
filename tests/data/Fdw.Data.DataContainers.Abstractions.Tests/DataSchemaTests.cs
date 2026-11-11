@@ -32,51 +32,6 @@ public class DataSchemaTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenIdIsNull()
-    {
-        // Arrange
-        var fields = new List<ISchemaField>();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new DataSchema(null!, "Name", "1.0", fields));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenNameIsNull()
-    {
-        // Arrange
-        var fields = new List<ISchemaField>();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new DataSchema("id", null!, "1.0", fields));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenVersionIsNull()
-    {
-        // Arrange
-        var fields = new List<ISchemaField>();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new DataSchema("id", "Name", null!, fields));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenFieldsIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new DataSchema("id", "Name", "1.0", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
     public void FieldNamesReturnsAllFieldNames()
     {
         // Arrange

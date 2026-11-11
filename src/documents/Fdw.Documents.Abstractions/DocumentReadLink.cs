@@ -10,7 +10,7 @@ public sealed class DocumentReadLink
     /// <param name="expiresAt">When it stops working.</param>
     public DocumentReadLink(Uri link, DateTimeOffset expiresAt)
     {
-        Link = link ?? throw new ArgumentNullException(nameof(link));
+        Link = link;
         ExpiresAt = expiresAt;
     }
 

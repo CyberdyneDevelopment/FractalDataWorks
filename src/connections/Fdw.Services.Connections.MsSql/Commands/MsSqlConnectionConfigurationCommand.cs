@@ -7,6 +7,6 @@ namespace Fdw.Services.Connections.MsSql.Commands;
 [TypeOption(typeof(ConfigurationCommands), "MsSqlConnectionConfiguration")]
 public sealed class MsSqlConnectionConfigurationCommand : ConfigurationCommandBase<MsSqlConnectionConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="MsSqlConnectionConfigurationCommand"/> class.</summary>
     public MsSqlConnectionConfigurationCommand() : base("MsSqlConnectionConfiguration") { }
 }

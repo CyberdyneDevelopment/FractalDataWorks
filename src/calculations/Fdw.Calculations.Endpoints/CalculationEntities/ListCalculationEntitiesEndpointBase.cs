@@ -64,11 +64,11 @@ public abstract class ListCalculationEntitiesEndpointBase : CrudPageEndpointBase
         : base(logger)
     {
         _tags = tags;
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-        _versions = versions ?? throw new ArgumentNullException(nameof(versions));
-        _ancestry = ancestry ?? throw new ArgumentNullException(nameof(ancestry));
-        _authority = authority ?? throw new ArgumentNullException(nameof(authority));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _provider = provider;
+        _versions = versions;
+        _ancestry = ancestry;
+        _authority = authority;
+        _authContext = authContext;
     }
 
     /// <inheritdoc/>

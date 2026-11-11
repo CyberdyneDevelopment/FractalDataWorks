@@ -25,9 +25,6 @@ public sealed class BearerTokenHandler : DelegatingHandler
         IAccessTokenProvider tokenProvider,
         ILogger<BearerTokenHandler> logger)
     {
-        ArgumentNullException.ThrowIfNull(tokenProvider);
-        ArgumentNullException.ThrowIfNull(logger);
-
         _tokenProvider = tokenProvider;
         _logger = logger;
     }

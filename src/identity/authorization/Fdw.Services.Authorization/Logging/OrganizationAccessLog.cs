@@ -81,4 +81,9 @@ public static partial class OrganizationAccessLog
     [MessageLogging(EventId = 72752, Level = LogLevel.Critical, Message = "Role '{roleName}' of organization '{organizationId}' was changed but the access of user '{userId}' could not be refreshed: {reason}")]
     public static partial IGenericMessage HolderNotRefreshed(ILogger logger, string roleName, Guid organizationId, Guid userId, string? reason);
 
+
+    /// <summary>Error: finding an organization's tenant for a right needs the right; an empty right is refused.</summary>
+    [MessageLogging(EventId = 21801, Level = LogLevel.Error,
+        Message = "Finding the tenant of organization {organizationId} for a right needs the right, and the right given is empty")]
+    public static partial IGenericMessage TenantRightRequired(ILogger logger, Guid organizationId);
 }

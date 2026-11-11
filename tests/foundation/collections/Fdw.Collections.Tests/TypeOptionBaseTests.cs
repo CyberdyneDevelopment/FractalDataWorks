@@ -75,14 +75,6 @@ public class TypeOptionBaseTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_WithNullName_ThrowsArgumentNullException()
-    {
-        Should.Throw<ArgumentNullException>(() => new TestOption(1, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void Constructor_WithFullMetadata_SetsAllProperties()
     {
         var option = new TestOption(5, "Custom", "cfg:Custom", "Custom Display", "A custom option", "Advanced");
@@ -93,25 +85,6 @@ public class TypeOptionBaseTests
         option.DisplayName.ShouldBe("Custom Display");
         option.Description.ShouldBe("A custom option");
         option.Category.ShouldBe("Advanced");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void Constructor_WithFullMetadataNullConfigKey_IsRefused()
-    {
-        // A type option states its configuration key; a missing one is refused rather than derived (FDW-3580).
-        Should.Throw<ArgumentNullException>(() => new TestOption(5, "Custom", null!, null!, null!, null))
-            .ParamName.ShouldBe("configurationKey");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void Constructor_WithFullMetadataNullName_ThrowsArgumentNullException()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            new TestOption(5, null!, "key", "display", "desc", "cat"));
     }
 
     #endregion

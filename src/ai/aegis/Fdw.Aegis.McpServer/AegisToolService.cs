@@ -55,9 +55,9 @@ public sealed class AegisToolService
         AegisInjector injector,
         ILogger<AegisToolService>? logger = null)
     {
-        _commands = commands ?? throw new ArgumentNullException(nameof(commands));
-        _evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
-        _injector = injector ?? throw new ArgumentNullException(nameof(injector));
+        _commands = commands;
+        _evaluator = evaluator;
+        _injector = injector;
         _logger = logger ?? NullLogger<AegisToolService>.Instance;
     }
 

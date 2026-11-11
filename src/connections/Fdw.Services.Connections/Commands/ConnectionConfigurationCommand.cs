@@ -11,6 +11,6 @@ namespace Fdw.Services.Connections.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Connection")]
 public sealed class ConnectionConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ConnectionConfigurationCommand"/> class.</summary>
     public ConnectionConfigurationCommand() : base("Connection") { }
 }

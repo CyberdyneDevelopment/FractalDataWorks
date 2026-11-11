@@ -38,7 +38,7 @@ public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<Crea
 {
     private readonly IConnectionConfigurationProvider _connectionProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateConnectionEndpointBase"/> class.</summary>
     /// <remarks>
     /// Creating a connection discovers nothing. It used to run the connection's schema discovery straight
     /// away when a schema service was supplied (no reference host supplied one) and dropped any failure;

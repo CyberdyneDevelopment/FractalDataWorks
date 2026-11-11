@@ -26,7 +26,7 @@ public class DataNodeTree<TRoot> : IDataNodeTree<TRoot>
     /// <param name="logger">Logger for navigation diagnostics. Defaults to <see cref="NullLogger.Instance"/>.</param>
     public DataNodeTree(IReadOnlyList<TRoot> roots, ILogger? logger = null)
     {
-        Roots = roots ?? throw new ArgumentNullException(nameof(roots));
+        Roots = roots;
         _logger = logger ?? NullLogger.Instance;
 
         _index = new Dictionary<string, TRoot>(StringComparer.Ordinal);

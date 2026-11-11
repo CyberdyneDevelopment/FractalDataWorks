@@ -30,7 +30,6 @@ public static class InMemorySelect
     /// <returns>The result, or the refusal.</returns>
     public static IGenericResult<SqlSelectOutput> Run(QuerySpecification query, SqlScope outer)
     {
-        ArgumentNullException.ThrowIfNull(query);
         var source = Source(query.FromClause, outer);
         return source.IsFailure
             ? source.ToNewResult<SqlSelectOutput>()
@@ -43,8 +42,6 @@ public static class InMemorySelect
     /// <returns>The rows, or the refusal.</returns>
     public static IGenericResult<SqlRowSet> Rows(QueryExpression query, SqlScope outer)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(outer);
         if (query is not QuerySpecification specification)
             return SqlRefusal.Refuse<SqlRowSet>(SqlServerErrors.NotSupported(SqlText.Of(query), query.StartLine), outer.Context.Logger);
 
@@ -81,7 +78,6 @@ public static class InMemorySelect
     /// <returns>The value, or the refusal.</returns>
     public static IGenericResult<object?> Scalar(ScalarSubquery subquery, SqlScope outer)
     {
-        ArgumentNullException.ThrowIfNull(subquery);
         var values = Column(subquery.QueryExpression, outer);
         if (values.IsFailure)
             return values.ToNewResult<object?>();
@@ -102,7 +98,6 @@ public static class InMemorySelect
     /// <returns>The rows, or the refusal.</returns>
     public static IGenericResult<SqlRowSet> Source(FromClause? from, SqlScope outer)
     {
-        ArgumentNullException.ThrowIfNull(outer);
         if (from is null || from.TableReferences.Count == 0)
             return GenericResult<SqlRowSet>.Success(SqlRowSet.SingleEmptyRow());
 

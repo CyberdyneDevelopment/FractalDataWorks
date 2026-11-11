@@ -12,18 +12,6 @@ namespace Fdw.SignalR.Tests;
 public sealed class RealTimeHubOptionBaseTests
 {
     [Fact]
-    public void ConstructorWithNullRouteThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => new ParamRealTimeHubOption(null!, typeof(TestHub)));
-    }
-
-    [Fact]
-    public void ConstructorWithNullHubTypeThrows()
-    {
-        Should.Throw<ArgumentNullException>(() => new ParamRealTimeHubOption("/hubs/x", null!));
-    }
-
-    [Fact]
     public void ConstructorExposesRouteHubTypeAndPolicy()
     {
         var option = new TestRealTimeHubOption();

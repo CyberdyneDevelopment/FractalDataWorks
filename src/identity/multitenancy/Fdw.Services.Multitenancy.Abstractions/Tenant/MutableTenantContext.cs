@@ -36,7 +36,7 @@ public sealed class MutableTenantContext : IMutableTenantContext
     /// <inheritdoc />
     public void SetTenant(ITenant tenant)
     {
-        _currentTenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
+        _currentTenant = tenant;
     }
 
     /// <inheritdoc />

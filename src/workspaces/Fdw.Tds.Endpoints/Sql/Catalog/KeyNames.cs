@@ -12,7 +12,6 @@ public static class KeyNames
     /// <returns>The key's name.</returns>
     public static string Of(SqlTable table)
     {
-        ArgumentNullException.ThrowIfNull(table);
         return "PK_" + table.Name;
     }
 }

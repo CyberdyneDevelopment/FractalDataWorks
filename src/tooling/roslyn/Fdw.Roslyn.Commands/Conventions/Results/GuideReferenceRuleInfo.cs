@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Fdw.Roslyn.Commands.Conventions.Results;
 
@@ -8,7 +9,8 @@ namespace Fdw.Roslyn.Commands.Conventions.Results;
 public sealed class GuideReferenceRuleInfo
 {
     /// <summary>Gets whether the assembly is required or forbidden.</summary>
-    public required GuideReferenceRuleKind Kind { get; init; }
+    [JsonConverter(typeof(GuideReferenceRuleKindJsonConverter))]
+    public required IGuideReferenceRuleKind Kind { get; init; }
 
     /// <summary>Gets the assembly name or a glob using *.</summary>
     public required string Assembly { get; init; }

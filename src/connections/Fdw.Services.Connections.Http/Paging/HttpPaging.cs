@@ -13,7 +13,6 @@ public static class HttpPaging
     /// <returns>The style; or the refusal when the connection names none, or one no option answers to.</returns>
     public static IGenericResult<HttpPagingStyleBase> StyleOf(string? style, HttpPagingSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         if (string.IsNullOrWhiteSpace(style))
             return GenericResult<HttpPagingStyleBase>.Failure(HttpPagingLog.PagingStyleNotStated(settings.Logger, settings.ConnectionName));
 

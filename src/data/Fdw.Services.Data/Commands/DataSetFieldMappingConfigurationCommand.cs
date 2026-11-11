@@ -18,6 +18,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataSetFieldMapping")]
 public sealed class DataSetFieldMappingConfigurationCommand : ConfigurationCommandBase<DataSetFieldMappingConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataSetFieldMappingConfigurationCommand"/> class.</summary>
     public DataSetFieldMappingConfigurationCommand() : base("DataSetFieldMapping") { }
 }

@@ -26,42 +26,6 @@ public class TypeCollectionAttributeTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void Constructor_ThrowsArgumentNullException_WhenBaseTypeIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() => new TypeCollectionAttribute(
-            null!,
-            typeof(TestReturn),
-            typeof(TestCollection)))
-            .ParamName.ShouldBe("baseType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void Constructor_ThrowsArgumentNullException_WhenDefaultReturnTypeIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() => new TypeCollectionAttribute(
-            typeof(TestBase),
-            null!,
-            typeof(TestCollection)))
-            .ParamName.ShouldBe("defaultReturnType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void Constructor_ThrowsArgumentNullException_WhenCollectionTypeIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() => new TypeCollectionAttribute(
-            typeof(TestBase),
-            typeof(TestReturn),
-            null!))
-            .ParamName.ShouldBe("collectionType");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void BaseTypeName_ReturnsFullName()
     {
         var attribute = new TypeCollectionAttribute(

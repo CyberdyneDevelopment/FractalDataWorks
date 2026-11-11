@@ -35,7 +35,7 @@ public sealed class RowIdETagProvider : IETagProvider
     /// <param name="logger">Optional logger for trace-level diagnostics.</param>
     public RowIdETagProvider(IDataGatewayProvider dataGateways, ILogger<RowIdETagProvider>? logger)
     {
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _dataGateways = dataGateways;
         _logger = logger ?? NullLogger<RowIdETagProvider>.Instance;
     }
 

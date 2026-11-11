@@ -27,7 +27,6 @@ public static class SessionOptions
     /// <returns>The mask.</returns>
     public static int Mask(Hosting.TdsSession session)
     {
-        ArgumentNullException.ThrowIfNull(session);
         var mask = AnsiWarnings | AnsiPadding | AnsiNulls | ArithAbort | AnsiNullDefaultOn | ConcatNullYieldsNull;
         if (session.QuotedIdentifier)
             mask |= QuotedIdentifier;

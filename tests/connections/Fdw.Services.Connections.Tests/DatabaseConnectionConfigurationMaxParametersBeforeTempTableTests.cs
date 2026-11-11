@@ -32,10 +32,13 @@ public sealed class DatabaseConnectionConfigurationMaxParametersBeforeTempTableT
     [Trait("Category", "Configuration")]
     public void TheThresholdIsReadThroughTheDatabaseConfigurationInterface()
     {
-        IDatabaseConnectionConfiguration configuration = new MsSqlConnectionConfiguration { MaxParametersBeforeTempTable = 800 };
-
-        configuration.MaxParametersBeforeTempTable.ShouldBe(800);
+        ThresholdThroughTheInterface(new MsSqlConnectionConfiguration { MaxParametersBeforeTempTable = 800 }).ShouldBe(800);
     }
+
+    // Read through the interface on purpose: the test is that IDatabaseConnectionConfiguration exposes the threshold.
+    private static int? ThresholdThroughTheInterface<TConfiguration>(TConfiguration configuration)
+        where TConfiguration : IDatabaseConnectionConfiguration
+        => configuration.MaxParametersBeforeTempTable;
 
     [Fact]
     [Trait("Priority", "P1")]

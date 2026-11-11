@@ -54,22 +54,17 @@ public sealed class HttpHeadersArtifact : CredentialArtifactBase
     /// Initializes a new instance of the <see cref="HttpHeadersArtifact"/> class.
     /// </summary>
     /// <param name="headers">The HTTP headers to add to requests.</param>
-    /// <exception cref="ArgumentNullException">Thrown when headers is null.</exception>
     public HttpHeadersArtifact(IReadOnlyDictionary<string, string> headers)
     {
-        Headers = headers ?? throw new ArgumentNullException(nameof(headers));
+        Headers = headers;
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpHeadersArtifact"/> class from a mutable dictionary.
     /// </summary>
     /// <param name="headers">The HTTP headers to add to requests (will be copied).</param>
-    /// <exception cref="ArgumentNullException">Thrown when headers is null.</exception>
     public HttpHeadersArtifact(IDictionary<string, string> headers)
     {
-        if (headers == null)
-            throw new ArgumentNullException(nameof(headers));
-
         // Get a defensive copy
         Headers = new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase);
     }

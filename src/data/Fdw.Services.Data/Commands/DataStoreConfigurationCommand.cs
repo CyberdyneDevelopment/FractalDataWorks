@@ -10,6 +10,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataStore")]
 public sealed class DataStoreConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataStoreConfigurationCommand"/> class.</summary>
     public DataStoreConfigurationCommand() : base("DataStore") { }
 }

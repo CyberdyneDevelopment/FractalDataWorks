@@ -175,9 +175,6 @@ public static class ConnectionCredentialStore
         bool callerIsPlatformAdmin,
         ILogger logger)
     {
-        if (connectionType is null) throw new ArgumentNullException(nameof(connectionType));
-        if (after is null) throw new ArgumentNullException(nameof(after));
-
         var slots = connectionType.CredentialSlots(after);
         if (slots.IsFailure)
             return slots;
@@ -224,10 +221,6 @@ public static class ConnectionCredentialStore
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        if (connectionType is null) throw new ArgumentNullException(nameof(connectionType));
-        if (connection is null) throw new ArgumentNullException(nameof(connection));
-        if (services is null) throw new ArgumentNullException(nameof(services));
-
         var slots = connectionType.CredentialSlots(connection);
         if (slots.IsFailure)
             return slots.ToNewResult<ConnectionCredentialWrite>();
@@ -285,8 +278,6 @@ public static class ConnectionCredentialStore
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        if (secrets is null) throw new ArgumentNullException(nameof(secrets));
-        if (services is null) throw new ArgumentNullException(nameof(services));
         if (secrets.Count == 0)
             return;
 
@@ -329,9 +320,6 @@ public static class ConnectionCredentialStore
     /// <returns>The secrets, none when the connection names none; or the refusal when its credentials cannot be determined.</returns>
     public static IGenericResult<IReadOnlyList<StoredSecret>> Owned(IConnectionType connectionType, IConnectionImplementationConfiguration connection)
     {
-        if (connectionType is null) throw new ArgumentNullException(nameof(connectionType));
-        if (connection is null) throw new ArgumentNullException(nameof(connection));
-
         var slots = connectionType.CredentialSlots(connection);
         if (slots.IsFailure)
             return slots.ToNewResult<IReadOnlyList<StoredSecret>>();
@@ -363,8 +351,6 @@ public static class ConnectionCredentialStore
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        if (deleteConnection is null) throw new ArgumentNullException(nameof(deleteConnection));
-
         var owned = Owned(connectionType, connection);
         if (owned.IsFailure)
             return owned;
@@ -385,8 +371,6 @@ public static class ConnectionCredentialStore
     /// <remarks>Derived from the names and nothing else: the store mints every name it writes, so a name in another form was named by a person.</remarks>
     public static bool IsExternal(ConnectionCredentialSlots slots)
     {
-        if (slots is null) throw new ArgumentNullException(nameof(slots));
-
         return slots.SecretManagerName is not null
                && slots.Fields.Any(field => IsExternal(slots, field));
     }
@@ -397,8 +381,6 @@ public static class ConnectionCredentialStore
     /// <returns><see langword="true"/> when the field names a secret the store did not mint.</returns>
     public static bool IsExternal(ConnectionCredentialSlots slots, string field)
     {
-        if (slots is null) throw new ArgumentNullException(nameof(slots));
-
         return slots.IsSet(field)
                && slots.References.TryGetValue(field, out var reference)
                && !string.IsNullOrEmpty(reference)

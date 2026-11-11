@@ -29,14 +29,8 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
     /// Initializes a new instance of the <see cref="ClaimsPrincipalAuthenticationContext"/> class.
     /// </summary>
     /// <param name="principal">The claims principal (e.g. from the HTTP context).</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is null.</exception>
     public ClaimsPrincipalAuthenticationContext(ClaimsPrincipal principal)
     {
-        if (principal is null)
-        {
-            throw new ArgumentNullException(nameof(principal));
-        }
-
         IsAuthenticated = principal.Identity is { IsAuthenticated: true };
 
         UserId = CallerClaims.UserId(principal) ?? string.Empty;

@@ -24,7 +24,6 @@ internal sealed class DataSetSourceNode : IDataNode
     /// <param name="config">The source configuration record.</param>
     public DataSetSourceNode(DataSetSourceConfiguration config)
     {
-        ArgumentNullException.ThrowIfNull(config);
         Name = config.SourceName;
         Description = null;
     }

@@ -28,7 +28,7 @@ internal sealed class FlowMappingRefusedException : Exception
     public FlowMappingRefusedException(string? message, IGenericResult failure)
         : base(message)
     {
-        Failure = failure ?? throw new ArgumentNullException(nameof(failure));
+        Failure = failure;
     }
 
     /// <summary>Initializes a new instance of the <see cref="FlowMappingRefusedException"/> class.</summary>

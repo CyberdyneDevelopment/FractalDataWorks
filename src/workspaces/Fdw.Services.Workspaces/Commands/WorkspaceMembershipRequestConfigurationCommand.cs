@@ -10,6 +10,6 @@ namespace Fdw.Services.Workspaces.Commands;
 [TypeOption(typeof(ConfigurationCommands), "WorkspaceMembershipRequest")]
 public sealed class WorkspaceMembershipRequestConfigurationCommand : ConfigurationCommandBase<WorkspaceMembershipRequestConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="WorkspaceMembershipRequestConfigurationCommand"/> class.</summary>
     public WorkspaceMembershipRequestConfigurationCommand() : base("WorkspaceMembershipRequest") { }
 }

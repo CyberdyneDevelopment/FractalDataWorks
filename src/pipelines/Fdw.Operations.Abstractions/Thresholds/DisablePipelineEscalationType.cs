@@ -18,10 +18,6 @@ public sealed class DisablePipelineEscalationType : EscalationTypeBase
     /// <inheritdoc/>
     public override async Task<IGenericResult> Handle(EscalationFiring firing, IServiceProvider services, CancellationToken cancellationToken = default)
     {
-        if (firing is null)
-        {
-            throw new ArgumentNullException(nameof(firing));
-        }
         if (EscalationServices.Find<IPipelineDisabler>(services) is not { } disabler)
         {
             return EscalationFailures.ServiceMissing(firing, Name, nameof(IPipelineDisabler));

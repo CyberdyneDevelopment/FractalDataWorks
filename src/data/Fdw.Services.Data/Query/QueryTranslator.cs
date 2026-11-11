@@ -74,10 +74,6 @@ public sealed class QueryTranslator
     public static IGenericResult<QueryTranslator> Create(
         IEnumerable<QueryableField> fields, string subject, IQueryRefusals refusals, bool allowCalculated = false)
     {
-        ArgumentNullException.ThrowIfNull(fields);
-        ArgumentNullException.ThrowIfNull(subject);
-        ArgumentNullException.ThrowIfNull(refusals);
-
         var byName = new Dictionary<string, QueryableField>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in fields)
         {
@@ -94,8 +90,6 @@ public sealed class QueryTranslator
     /// <returns>The command, or a refusal naming the first thing that did not resolve.</returns>
     public IGenericResult<QueryCommand<Dictionary<string, object?>>> Translate(QueryRequest request, int take)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         var query = Resolve(request);
         if (query.IsFailure) return query.ToNewResult<QueryCommand<Dictionary<string, object?>>>();
 
@@ -124,8 +118,6 @@ public sealed class QueryTranslator
     /// </remarks>
     public IGenericResult<QueryPlan> Plan(QueryRequest request, int take, int rowCap)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         var query = Resolve(request);
         if (query.IsFailure) return query.ToNewResult<QueryPlan>();
 
@@ -185,8 +177,6 @@ public sealed class QueryTranslator
     /// <returns>The query, or a refusal naming the first thing that did not resolve.</returns>
     public IGenericResult<DomainQuery> ToDomainQuery(ResourceQueryRequest request, int take)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
         var query = Resolve(request);
         return query.IsFailure
             ? query.ToNewResult<DomainQuery>()

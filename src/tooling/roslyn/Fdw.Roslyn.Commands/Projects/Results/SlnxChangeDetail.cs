@@ -13,8 +13,8 @@ public sealed class SlnxChangeDetail
     /// </summary>
     public SlnxChangeDetail(string slnxPath, IReadOnlyList<SlnxProjectPathChange> projectPathChanges)
     {
-        SlnxPath = slnxPath ?? throw new ArgumentNullException(nameof(slnxPath));
-        ProjectPathChanges = projectPathChanges ?? throw new ArgumentNullException(nameof(projectPathChanges));
+        SlnxPath = slnxPath;
+        ProjectPathChanges = projectPathChanges;
     }
 
     /// <summary>

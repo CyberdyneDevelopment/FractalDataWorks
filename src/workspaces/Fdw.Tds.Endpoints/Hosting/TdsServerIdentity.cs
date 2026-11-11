@@ -31,13 +31,13 @@ public sealed class TdsServerIdentity
         string language,
         string databaseName)
     {
-        ServerName = serverName ?? throw new ArgumentNullException(nameof(serverName));
-        Version = version ?? throw new ArgumentNullException(nameof(version));
-        Edition = edition ?? throw new ArgumentNullException(nameof(edition));
+        ServerName = serverName;
+        Version = version;
+        Edition = edition;
         EngineEdition = engineEdition;
-        Collation = collation ?? throw new ArgumentNullException(nameof(collation));
-        Language = language ?? throw new ArgumentNullException(nameof(language));
-        DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
+        Collation = collation;
+        Language = language;
+        DatabaseName = databaseName;
     }
 
     /// <summary>Gets the server's name.</summary>

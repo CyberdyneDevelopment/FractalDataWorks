@@ -39,7 +39,6 @@ public sealed class WebMcpJsGenerator
     /// </param>
     public string Generate(WebMcpHostSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(settings);
         WebMcpLog.ServingWebMcpJs(_logger, _registry.Tools.Count);
         WebMcpLog.GeneratingScript(_logger, _registry.Tools.Count);
 

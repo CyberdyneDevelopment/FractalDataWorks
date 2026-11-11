@@ -10,6 +10,6 @@ namespace Fdw.Services.DataVault;
 [TypeOption(typeof(ConfigurationCommands), "DefaultDataVaultConfiguration")]
 public sealed class SqlDataVaultConfigurationCommand : ConfigurationCommandBase<SqlDataVaultConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SqlDataVaultConfigurationCommand"/> class.</summary>
     public SqlDataVaultConfigurationCommand() : base("DefaultDataVaultConfiguration") { }
 }

@@ -24,12 +24,8 @@ internal sealed class PermissionPageAccess : PageAccess
     }
 
     /// <inheritdoc />
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="hasPermission"/> is null.</exception>
     public override bool IsSatisfiedBy(bool isAuthenticated, Func<string, bool> hasPermission)
     {
-        if (hasPermission is null)
-            throw new ArgumentNullException(nameof(hasPermission));
-
         return isAuthenticated && hasPermission(_permission);
     }
 }

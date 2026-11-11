@@ -36,7 +36,7 @@ public abstract class UpdateWorkspaceRelationshipEndpointBase
     private WorkspaceRelationshipConfiguration? _existing;
     private IWorkspaceImplementationConfiguration? _workspace;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateWorkspaceRelationshipEndpointBase"/> class.</summary>
     protected UpdateWorkspaceRelationshipEndpointBase(
         ILogger<UpdateWorkspaceRelationshipEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

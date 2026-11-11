@@ -14,8 +14,8 @@ public sealed class SqlSelectOutput
     /// <param name="assignedOnly">Whether the SELECT assigned variables and has no result set.</param>
     public SqlSelectOutput(IReadOnlyList<SqlOutputColumn> columns, IReadOnlyList<object?[]> rows, bool assignedOnly)
     {
-        Columns = columns ?? throw new ArgumentNullException(nameof(columns));
-        Rows = rows ?? throw new ArgumentNullException(nameof(rows));
+        Columns = columns;
+        Rows = rows;
         AssignedOnly = assignedOnly;
     }
 

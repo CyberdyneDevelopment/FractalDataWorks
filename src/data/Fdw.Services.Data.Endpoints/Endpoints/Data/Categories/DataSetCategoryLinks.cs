@@ -51,7 +51,6 @@ public static class DataSetCategoryLinks
     /// <returns>The detail with its category, or the fault.</returns>
     public static IGenericResult<DataSetDetailResponse> Describe(DataSetDetailResponse detail, CategoryTree tree, Guid? categoryId, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(detail);
         var label = Label(tree, categoryId, logger);
         if (label.IsFailure || label.Value is null)
         {
@@ -82,8 +81,6 @@ public static class DataSetCategoryLinks
     public static async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Matching(
         IDataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid>? categoryIds, IReadOnlyList<string> kinds, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(dataSets);
-        ArgumentNullException.ThrowIfNull(kinds);
         var implementations = RequestedDataSetKinds.ImplementationNames(kinds);
         var page = await dataSets.Get(0, AllRows, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
         if (page.IsFailure || page.Value is null)
@@ -115,8 +112,6 @@ public static class DataSetCategoryLinks
     public static async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Citing(
         IDataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid> categoryIds, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(dataSets);
-        ArgumentNullException.ThrowIfNull(categoryIds);
         var page = await dataSets.Get(0, AllRows, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
         if (page.IsFailure || page.Value is null)
         {

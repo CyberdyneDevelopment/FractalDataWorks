@@ -29,11 +29,6 @@ public static class CallerClaims
     /// <returns>The id, or <see langword="null"/> when the principal carries no non-blank <c>sub</c>.</returns>
     public static string? UserId(ClaimsPrincipal principal)
     {
-        if (principal == null)
-        {
-            throw new ArgumentNullException(nameof(principal));
-        }
-
         return principal.FindFirst(ClaimDefinitions.sub.Name)?.Value is { } value && value.Trim().Length > 0
             ? value
             : null;

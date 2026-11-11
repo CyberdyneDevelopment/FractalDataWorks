@@ -9,6 +9,6 @@ namespace Fdw.Services.Authorization.Commands;
 [TypeOption(typeof(ConfigurationCommands), "RoleMapping")]
 public sealed class RoleMappingConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="RoleMappingConfigurationCommand"/> class.</summary>
     public RoleMappingConfigurationCommand() : base("RoleMapping") { }
 }

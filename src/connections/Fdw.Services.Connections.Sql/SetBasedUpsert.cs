@@ -38,8 +38,6 @@ public static class SetBasedUpsert
     /// <returns>The refusal, or <see langword="null"/>.</returns>
     public static IGenericMessage? Problem(UpsertOptions options, IStorageContainer container, string kind)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(container);
         var general = options.FirstProblem();
         if (general is not null)
             return general;
@@ -85,10 +83,6 @@ public static class SetBasedUpsert
         string now,
         Action<string, object?> addParameter)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(dialect);
-        ArgumentNullException.ThrowIfNull(differs);
-        ArgumentNullException.ThrowIfNull(addParameter);
         var shape = new Shape(options, container, dialect, target, source, differs, addParameter);
         var versioning = options.Versioning;
         if (versioning is not null && versioning.CurrentFlagColumn is not null)
@@ -109,8 +103,6 @@ public static class SetBasedUpsert
     /// <returns>The declared names, in write-column order.</returns>
     public static IReadOnlyList<string> StagedColumns(UpsertOptions options, IStorageContainer container)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(container);
         return SetBasedColumns.Declared(container, options.WriteColumns)
             .Where(column => options.KeyColumns.Contains(column, StringComparer.OrdinalIgnoreCase)
                 || Field(container, column) is { IsIdentity: false, IsComputed: false })

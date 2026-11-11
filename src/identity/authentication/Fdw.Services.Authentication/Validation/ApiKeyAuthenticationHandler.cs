@@ -58,16 +58,16 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         IAuthenticationServiceConfigurationProvider configuration,
         ILogger<ApiKeyAuthenticationHandler>? logger = null)
     {
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _permissions = permissions;
+        _configuration = configuration;
         _log = logger ?? NullLogger<ApiKeyAuthenticationHandler>.Instance;
     }
 
     /// <inheritdoc />
     public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context)
     {
-        _scheme = scheme ?? throw new ArgumentNullException(nameof(scheme));
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _scheme = scheme;
+        _context = context;
         return Task.CompletedTask;
     }
 

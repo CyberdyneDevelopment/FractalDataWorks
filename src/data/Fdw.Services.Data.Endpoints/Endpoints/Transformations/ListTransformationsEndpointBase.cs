@@ -31,8 +31,8 @@ public abstract class ListTransformationsEndpointBase : CrudPageEndpointBase<ITr
     protected ListTransformationsEndpointBase(ILogger<ListTransformationsEndpointBase> logger,
         ITransformationConfigurationProvider transformations, IEffectiveSettingsProvider settings) : base(logger)
     {
-        _transformations = transformations ?? throw new ArgumentNullException(nameof(transformations));
-        _context = new TransformationKindContext(settings ?? throw new ArgumentNullException(nameof(settings)), logger);
+        _transformations = transformations;
+        _context = new TransformationKindContext(settings, logger);
     }
 
     /// <inheritdoc/>

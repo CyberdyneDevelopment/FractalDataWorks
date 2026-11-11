@@ -21,8 +21,8 @@ internal sealed class ConnectionNameLookup
     public ConnectionNameLookup(bool mayReadConnections, IReadOnlyDictionary<Guid, string> names, ILogger logger)
     {
         _mayReadConnections = mayReadConnections;
-        _names = names ?? throw new ArgumentNullException(nameof(names));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _names = names;
+        _logger = logger;
     }
 
     /// <summary>Gets the name of a connection, or null when this caller may not see it.</summary>

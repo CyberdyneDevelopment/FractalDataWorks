@@ -62,7 +62,6 @@ public sealed class StdioBridgeMcpToolSource : IMcpToolSource
     /// <inheritdoc />
     public async Task Start(IMcpEventBus bus, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(bus);
         if (_process is not null) return;
 
         var psi = new ProcessStartInfo(_command)

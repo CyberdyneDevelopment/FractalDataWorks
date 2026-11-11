@@ -37,8 +37,6 @@ public sealed class LedgerAssemblyIndex
     /// </remarks>
     public LedgerAssemblyIndex(IReadOnlyList<SymbolChange> changes)
     {
-        if (changes is null) throw new ArgumentNullException(nameof(changes));
-
         foreach (var change in changes)
         {
             if (!string.Equals(change.ChangeType, SymbolChangeTypes.Moved.Name, StringComparison.Ordinal))
@@ -51,7 +49,7 @@ public sealed class LedgerAssemblyIndex
     }
 
     private static IReadOnlyList<ChangeLedgerEntry> RequireEntries(IReadOnlyList<ChangeLedgerEntry> entries) =>
-        entries ?? throw new ArgumentNullException(nameof(entries));
+        entries;
 
     /// <summary>Gets the number of distinct moved types indexed.</summary>
     public int Count => _byFullName.Count;

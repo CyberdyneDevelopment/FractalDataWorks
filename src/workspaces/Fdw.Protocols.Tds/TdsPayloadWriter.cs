@@ -106,7 +106,6 @@ public sealed class TdsPayloadWriter
     /// <param name="text">The text.</param>
     public void WriteUnicode(string text)
     {
-        ArgumentNullException.ThrowIfNull(text);
         Encoding.Unicode.GetBytes(text, Reserve(text.Length * 2));
     }
 
@@ -115,7 +114,6 @@ public sealed class TdsPayloadWriter
     /// <exception cref="ArgumentOutOfRangeException">The text is longer than a one-byte count can state.</exception>
     public void WriteByteLengthUnicode(string text)
     {
-        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, byte.MaxValue, nameof(text));
         WriteByte((byte)text.Length);
         WriteUnicode(text);
@@ -126,7 +124,6 @@ public sealed class TdsPayloadWriter
     /// <exception cref="ArgumentOutOfRangeException">The text is longer than a two-byte count can state.</exception>
     public void WriteUShortLengthUnicode(string text)
     {
-        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, ushort.MaxValue, nameof(text));
         WriteUInt16((ushort)text.Length);
         WriteUnicode(text);

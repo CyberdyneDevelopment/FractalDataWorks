@@ -29,9 +29,8 @@ public static class ServiceTypeDefaults
     /// <param name="value">The host's value.</param>
     public static void Override(ITypeOption option, string field, object value)
     {
-        if (option is null) throw new ArgumentNullException(nameof(option));
         if (string.IsNullOrWhiteSpace(field)) throw new ArgumentException("A default names the configuration property it is for.", nameof(field));
-        Overrides[Key(option, field)] = value ?? throw new ArgumentNullException(nameof(value));
+        Overrides[Key(option, field)] = value;
     }
 
     /// <summary>
@@ -45,7 +44,7 @@ public static class ServiceTypeDefaults
     {
         if (string.IsNullOrWhiteSpace(category)) throw new ArgumentException("A category override names its category.", nameof(category));
         if (string.IsNullOrWhiteSpace(field)) throw new ArgumentException("A default names the configuration property it is for.", nameof(field));
-        CategoryOverrides[category + "|" + field] = value ?? throw new ArgumentNullException(nameof(value));
+        CategoryOverrides[category + "|" + field] = value;
     }
 
     /// <summary>Resolves a type's tuning default for a field its configuration does not state.</summary>
@@ -55,7 +54,6 @@ public static class ServiceTypeDefaults
     /// <returns><see langword="true"/> when the host or the type gives a value.</returns>
     public static bool TryResolve(ITypeOption option, string field, out object? value)
     {
-        if (option is null) throw new ArgumentNullException(nameof(option));
         if (Overrides.TryGetValue(Key(option, field), out var host))
         {
             value = host;
@@ -88,8 +86,6 @@ public static class ServiceTypeDefaults
     /// <returns>The merged defaults.</returns>
     public static IReadOnlyDictionary<string, object> With(IReadOnlyDictionary<string, object> inherited, params (string Field, object Value)[] own)
     {
-        if (inherited is null) throw new ArgumentNullException(nameof(inherited));
-        if (own is null) throw new ArgumentNullException(nameof(own));
         var merged = inherited.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         foreach (var (field, value) in own)
         {

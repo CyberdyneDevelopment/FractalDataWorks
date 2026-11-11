@@ -26,7 +26,7 @@ public sealed class UnavailableDefaultWorkspaceFoundingTests
     [Trait("Category", "Users")]
     public async Task FoundingFailsWithAMessageInsteadOfThrowing()
     {
-        var result = await new UnavailableDefaultWorkspaceFounding().Found(Workspace);
+        var result = await new UnavailableDefaultWorkspaceFounding().Found(Workspace, TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
     }
@@ -36,7 +36,7 @@ public sealed class UnavailableDefaultWorkspaceFoundingTests
     [Trait("Category", "Users")]
     public async Task RemovingFailsWithAMessageInsteadOfThrowing()
     {
-        var result = await new UnavailableDefaultWorkspaceFounding().Remove(Workspace);
+        var result = await new UnavailableDefaultWorkspaceFounding().Remove(Workspace, TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
     }

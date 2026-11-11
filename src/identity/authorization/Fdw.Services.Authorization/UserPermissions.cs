@@ -39,10 +39,10 @@ public sealed class UserPermissions : IUserPermissions
         ILogger<UserPermissions>? logger,
         IOrgAccessProvider orgAccessProvider)
     {
-        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _grants = grants;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<UserPermissions>.Instance;
-        _orgAccessProvider = orgAccessProvider ?? throw new ArgumentNullException(nameof(orgAccessProvider));
+        _orgAccessProvider = orgAccessProvider;
     }
 
     /// <inheritdoc />

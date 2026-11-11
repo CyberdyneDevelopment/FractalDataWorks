@@ -70,8 +70,6 @@ public abstract class AuthenticationFlowChangeEndpointBase<TRequest> : Endpoint<
         Func<AuthenticationFlowAdministrator, Task<IGenericResult<AuthenticationFlowState>>> change,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(change);
-
         if (!EndpointUserResolver.TryResolveUserId(User, out var userId))
         {
             AuthenticationEndpointLog.FlowChangeCallerUnknown(EndpointLogger, flowName);

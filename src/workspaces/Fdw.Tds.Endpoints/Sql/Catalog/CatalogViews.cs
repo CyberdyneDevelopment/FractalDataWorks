@@ -46,7 +46,6 @@ public abstract partial class CatalogViews : TypeCollectionBase<CatalogViewBase,
     /// <returns>The row set.</returns>
     public static SqlRowSet Read(ICatalogView view, string qualifier, SqlExecutionContext context, CatalogSnapshot catalog)
     {
-        ArgumentNullException.ThrowIfNull(view);
         var columns = view.Columns.Select(c => new SqlBoundColumn(qualifier, view.Schema, c.Name, c.Type, c.IsNullable)).ToList();
         return new SqlRowSet(columns, view.Rows(context, catalog).ToList());
     }

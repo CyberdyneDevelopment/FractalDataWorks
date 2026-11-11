@@ -39,7 +39,7 @@ public sealed class EscalationService : IEscalationService
         IEscalationConfigurationProvider provider,
         ILoggerFactory loggerFactory)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
         _logger = loggerFactory?.CreateLogger<EscalationService>()
             ?? throw new ArgumentNullException(nameof(loggerFactory));
     }

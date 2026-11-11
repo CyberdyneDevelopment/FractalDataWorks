@@ -23,7 +23,6 @@ internal sealed class CatalogKindSet
     /// <returns>The set, or the first name that is not a kind (null when all are).</returns>
     public static (CatalogKindSet? Kinds, string? Unknown) Of(IEnumerable<string> requested)
     {
-        ArgumentNullException.ThrowIfNull(requested);
         var named = requested.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).ToList();
         var unknown = named.FirstOrDefault(name => CatalogKinds.IndexOf(name) < 0);
         if (unknown is not null)

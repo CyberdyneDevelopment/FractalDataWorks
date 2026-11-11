@@ -25,16 +25,6 @@ public static class ValidationFailureMessages
     /// </returns>
     public static IReadOnlyList<IGenericMessage> From(ValidationResult result, Func<string, IGenericMessage> rejected)
     {
-        if (result == null)
-        {
-            throw new ArgumentNullException(nameof(result));
-        }
-
-        if (rejected == null)
-        {
-            throw new ArgumentNullException(nameof(rejected));
-        }
-
         var messages = new List<IGenericMessage>();
         var uncoded = new List<string>();
         foreach (var error in result.Errors)

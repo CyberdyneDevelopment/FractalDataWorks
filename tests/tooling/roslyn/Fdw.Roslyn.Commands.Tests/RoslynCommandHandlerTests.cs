@@ -652,24 +652,6 @@ public sealed class RoslynCommandHandlerTests
         result.Details.ShouldNotBeNull();
     }
 
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorThrowsArgumentNullExceptionForNullWorkspace()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new RoslynCommandHandler(null!, new Mock<ITranslatorRegistry>().Object));
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorThrowsArgumentNullExceptionForNullTranslatorRegistry()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new RoslynCommandHandler(NewWorkspaceMock().Object, null!));
-    }
-
     // ─────────────────────────────────────────────────────────────────────
     // Change ledger recording
     // ─────────────────────────────────────────────────────────────────────

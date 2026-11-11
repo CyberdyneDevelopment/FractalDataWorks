@@ -25,10 +25,10 @@ public sealed class UnavailableWritersTests
     {
         var writer = new UnavailableTenantWriter();
 
-        (await writer.Create(new NewTenant("Beta", "beta", null, null, true, "main"))).IsFailure.ShouldBeTrue();
-        (await writer.Update(Id, new TenantChange("Beta", true, null))).IsFailure.ShouldBeTrue();
-        (await writer.Delete(Id)).IsFailure.ShouldBeTrue();
-        (await writer.SetDeleted(Id, true)).IsFailure.ShouldBeTrue();
+        (await writer.Create(new NewTenant("Beta", "beta", null, null, true, "main"), TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
+        (await writer.Update(Id, new TenantChange("Beta", true, null), TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
+        (await writer.Delete(Id, TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
+        (await writer.SetDeleted(Id, true, TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
     }
 
     [Fact]
@@ -38,9 +38,9 @@ public sealed class UnavailableWritersTests
     {
         var writer = new UnavailableOrganizationWriter();
 
-        (await writer.Create(new NewOrganization(Id, "Main", "main"))).IsFailure.ShouldBeTrue();
-        (await writer.Update(Id, new OrganizationChange("Main", true))).IsFailure.ShouldBeTrue();
-        (await writer.Delete(Id)).IsFailure.ShouldBeTrue();
+        (await writer.Create(new NewOrganization(Id, "Main", "main"), TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
+        (await writer.Update(Id, new OrganizationChange("Main", true), TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
+        (await writer.Delete(Id, TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
     }
 
     [Fact]

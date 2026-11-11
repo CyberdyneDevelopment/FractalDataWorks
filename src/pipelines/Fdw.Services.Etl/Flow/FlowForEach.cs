@@ -39,7 +39,6 @@ public sealed class FlowForEach : IFlowStep
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(variable);
         ArgumentException.ThrowIfNullOrWhiteSpace(list);
-        ArgumentNullException.ThrowIfNull(body);
         if (body.Count == 0)
         {
             throw new ArgumentException("A loop's body has at least one step.", nameof(body));
@@ -64,8 +63,6 @@ public sealed class FlowForEach : IFlowStep
     /// <inheritdoc />
     public async Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         if (!context.Variables.TryGet(_list, out var held))
         {
             return GenericResult.Failure(FlowLog.VariableNotDeclared(_logger, Name, _list));

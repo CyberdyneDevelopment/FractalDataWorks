@@ -18,7 +18,7 @@ public sealed class CatalogCache
     /// <param name="endpoint">The endpoint the catalog is read from, as the caller.</param>
     public CatalogCache(TdsEndpointBase endpoint)
     {
-        _endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
+        _endpoint = endpoint;
     }
 
     /// <summary>Gets the catalog once it has been read; null before.</summary>

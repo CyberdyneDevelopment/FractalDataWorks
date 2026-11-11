@@ -8,6 +8,6 @@ namespace Fdw.Services.Settings.Commands;
 [TypeOption(typeof(ConfigurationCommands), "TenantSetting")]
 public sealed class TenantSettingConfigurationCommand : ConfigurationCommandBase<TenantSettingImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="TenantSettingConfigurationCommand"/> class.</summary>
     public TenantSettingConfigurationCommand() : base("TenantSetting") { }
 }

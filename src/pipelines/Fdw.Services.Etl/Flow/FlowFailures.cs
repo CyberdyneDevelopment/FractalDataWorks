@@ -21,7 +21,6 @@ internal static class FlowFailures
     /// <returns>The reason. The last message alone is not it: a failed result can end with a message that is not a failure (a failed connection test on dev ended with "Success"), so a sentence built from it said "Success".</returns>
     internal static string? ReasonOf(IGenericResult cause)
     {
-        ArgumentNullException.ThrowIfNull(cause);
         return cause.FirstFailureMessage() is { } coded ? coded.Message.Message : cause.CurrentMessage;
     }
 
@@ -31,8 +30,6 @@ internal static class FlowFailures
     /// <returns>A failed result whose messages are the cause's, then the context.</returns>
     internal static IGenericResult Caused(IGenericMessage context, IGenericResult cause)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(cause);
         IReadOnlyList<IGenericMessage> messages = [.. cause.Messages, context];
         var failure = GenericResult.Failure(messages);
 

@@ -81,12 +81,12 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         IExecutionCompletionSignaler? completionSignaler = null)
     {
         _queue = queue;
-        _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
-        _runControl = runControl ?? throw new ArgumentNullException(nameof(runControl));
-        _requests = requests ?? throw new ArgumentNullException(nameof(requests));
-        _holds = holds ?? throw new ArgumentNullException(nameof(holds));
+        _scheduler = scheduler;
+        _runControl = runControl;
+        _requests = requests;
+        _holds = holds;
         _scopeFactory = scopeFactory;
-        _grace = grace ?? throw new ArgumentNullException(nameof(grace));
+        _grace = grace;
         _logger = logger ?? NullLogger<PipelineExecutionBackgroundService>.Instance;
         _completionSignaler = completionSignaler;
     }
@@ -272,9 +272,10 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         {
             return;
         }
-        catch (OperationCanceledException) when (run.IsCancelled)
+        catch (OperationCanceledException ex) when (run.IsCancelled)
         {
             // Cancelled while it waited: it never ran, so the row only needs closing and anyone waiting on it needs telling.
+            PipelineRunControlLog.RunCancelledWhileWaiting(_logger, ex, request.ExecutionId, request.PipelineName);
             await CancelWaiting(request, stoppingToken).ConfigureAwait(false);
             return;
         }
@@ -348,9 +349,9 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             }
             // Why a person's cancel (or a timeout) wins over the host's stop (FDW-3880): it was asked for first, so the run ends Cancelled with the records the flow closed for it, and its
             // request is forgotten; it is not left Interrupted to be started again.
-            catch (OperationCanceledException) when (run.IsCancelled)
+            catch (OperationCanceledException ex) when (run.IsCancelled)
             {
-                PipelineRunControlLog.RunCancelled(_logger, request.ExecutionId, request.PipelineName);
+                PipelineRunControlLog.RunCancelledObserved(_logger, ex, request.ExecutionId, request.PipelineName);
                 await HandleCancellation(
                     executionTracker, dataGateways, broadcaster, request, orgId,
                     CodeOfStop(run), ReasonOfStop(run, request),
@@ -803,7 +804,9 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             PipelineRunRecoveryLog.CancelledRunNotRead(logger, request.ExecutionId, tracking.CurrentMessage);
         }
 
-        var message = tracking.Value is { } read ? CancelledRunMessage.Of(reason, read) : reason;
+        // A run whose records cannot be read is closed with the reason alone (logged above); its records are read only when the read succeeded.
+        var read = tracking.IsSuccess ? tracking.Value : null;
+        var message = read is { } records ? CancelledRunMessage.Of(reason, records) : reason;
         // Typed as the state contract: the two options are different classes, so a conditional between them has no common type.
         IExecutionStateType endState = string.Equals(resultCode, TimedOutCode, StringComparison.Ordinal) ? ExecutionStateTypes.TimedOut : ExecutionStateTypes.Cancelled;
         var closed = await new OpenRunRecords(executionTracker, logger)
@@ -817,7 +820,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         {
             Status = endState.Name,
             CompletedAt = DateTimeOffset.UtcNow,
-            DurationMs = tracking.Value?.RunTimeMs,
+            DurationMs = read?.RunTimeMs,
             ErrorMessage = message,
         }).ConfigureAwait(false);
 

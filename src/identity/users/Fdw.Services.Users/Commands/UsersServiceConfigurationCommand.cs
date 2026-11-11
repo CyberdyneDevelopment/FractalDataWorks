@@ -8,6 +8,6 @@ namespace Fdw.Services.Users.Commands;
 [TypeOption(typeof(ConfigurationCommands), "UsersService")]
 public sealed class UsersServiceConfigurationCommand : ConfigurationCommandBase<UsersServiceImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="UsersServiceConfigurationCommand"/> class.</summary>
     public UsersServiceConfigurationCommand() : base("UsersService") { }
 }

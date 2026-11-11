@@ -26,7 +26,7 @@ public sealed class PlaceAncestry : IPlaceAncestry
     /// <param name="logger">The logger.</param>
     public PlaceAncestry(IEnumerable<IPlaceParentSource> sources, ILogger<PlaceAncestry>? logger)
     {
-        _sources = (sources ?? throw new ArgumentNullException(nameof(sources))).ToDictionary(source => source.Kind, StringComparer.Ordinal);
+        _sources = sources.ToDictionary(source => source.Kind, StringComparer.Ordinal);
         _logger = logger ?? NullLogger<PlaceAncestry>.Instance;
     }
 

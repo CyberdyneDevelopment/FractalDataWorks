@@ -31,11 +31,6 @@ public static class ServiceRequirements
     /// <returns>The host, or a failure carrying one message for each service that is not registered.</returns>
     public static IGenericResult<IHost> Check(IHost host, ILoggerFactory? loggerFactory, IEnumerable<ServiceRequirement> requirements, string owner)
     {
-        if (host is null)
-            throw new ArgumentNullException(nameof(host));
-        if (requirements is null)
-            throw new ArgumentNullException(nameof(requirements));
-
         var isService = host.Services.GetRequiredService<IServiceProviderIsService>();
         var logger = loggerFactory?.CreateLogger(owner) ?? NullLogger.Instance;
         var seen = new HashSet<Type>();

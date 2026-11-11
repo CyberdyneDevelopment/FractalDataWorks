@@ -509,7 +509,7 @@ public sealed class GraphPayloadMappingTests
         var read = GraphPayloadReader.Read(WithDestination(("valueSources", "[{\"column\":\"Origin\"}]")), System.Guid.NewGuid());
 
         read.IsFailure.ShouldBeTrue();
-        read.CurrentMessage.ShouldContain("Origin");
+        read.CurrentMessage.ShouldNotBeNull().ShouldContain("Origin");
     }
 
     private static GraphPayload WithMaps(string kind, string maps)
@@ -541,7 +541,7 @@ public sealed class GraphPayloadMappingTests
         withIds.IsSuccess.ShouldBeTrue(withIds.CurrentMessage);
         withIds.Value!.Components.Single(c => c.Name == "tidy").Fields.Single().TransformationChain.Single().TransformationId.ShouldBe(id);
         without.IsFailure.ShouldBeTrue();
-        without.CurrentMessage.ShouldContain("Trim");
+        without.CurrentMessage.ShouldNotBeNull().ShouldContain("Trim");
     }
 
     [Fact]
@@ -575,7 +575,7 @@ public sealed class GraphPayloadMappingTests
         var read = GraphPayloadReader.Read(WithMaps("Filter", "[{\"input\":\"input\",\"target\":\"Qty\",\"source\":\"Quantity\",\"targetType\":\"money\"}]"), System.Guid.NewGuid());
 
         read.IsFailure.ShouldBeTrue();
-        read.CurrentMessage.ShouldContain("money");
+        read.CurrentMessage.ShouldNotBeNull().ShouldContain("money");
     }
 
     [Fact]
@@ -587,7 +587,7 @@ public sealed class GraphPayloadMappingTests
         var exact = GraphPayloadReader.Read(WithMaps("Filter", "[{\"input\":\"input\",\"target\":\"Qty\",\"source\":\"Quantity\",\"targetType\":\"Int64\"}]"), System.Guid.NewGuid());
 
         spelling.IsFailure.ShouldBeTrue();
-        spelling.CurrentMessage.ShouldContain("int");
+        spelling.CurrentMessage.ShouldNotBeNull().ShouldContain("int");
         exact.IsSuccess.ShouldBeTrue(exact.CurrentMessage);
     }
 
@@ -599,7 +599,7 @@ public sealed class GraphPayloadMappingTests
         var read = GraphPayloadReader.Read(WithMaps("Lookup", "[{\"target\":\"Qty\",\"source\":\"Quantity\",\"defaultValue\":\"0\"}]"), System.Guid.NewGuid());
 
         read.IsFailure.ShouldBeTrue();
-        read.CurrentMessage.ShouldContain("Qty");
+        read.CurrentMessage.ShouldNotBeNull().ShouldContain("Qty");
     }
 
     [Fact]

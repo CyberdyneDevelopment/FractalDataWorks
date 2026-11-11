@@ -22,7 +22,7 @@ public sealed class EmptyClassGenerator
     /// <param name="config">The configuration for collection generation.</param>
     public EmptyClassGenerator(CollectionBuilderConfiguration config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _config = config;
     }
 
     /// <summary>

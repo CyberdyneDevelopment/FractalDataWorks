@@ -20,6 +20,6 @@ public abstract class SqlCommandBase : TypeOptionBase<SqlCommandBase>, ISqlComma
     protected SqlCommandBase(string name, ISqlCommandCategory category, string description)
         : base(name, name, name, description, "SqlCommand")
     {
-        CommandCategory = category ?? throw new ArgumentNullException(nameof(category));
+        CommandCategory = category;
     }
 }

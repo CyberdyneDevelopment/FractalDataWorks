@@ -14,7 +14,6 @@ internal static class LikePatterns
     /// <returns>False for a pattern with _ or [ ], or with % anywhere but its ends.</returns>
     public static bool TryRead(string pattern, out string filterOperator, out string literal)
     {
-        ArgumentNullException.ThrowIfNull(pattern);
         var leading = pattern.StartsWith('%');
         var trailing = pattern.Length > 1 && pattern.EndsWith('%');
         literal = pattern[(leading ? 1 : 0)..(pattern.Length - (trailing ? 1 : 0))];

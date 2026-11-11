@@ -24,17 +24,17 @@ public sealed class ProjectInfoResult
         IReadOnlyList<string> projectReferences,
         IReadOnlyList<string> metadataReferences)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-        Language = language ?? throw new ArgumentNullException(nameof(language));
-        OutputKind = outputKind ?? throw new ArgumentNullException(nameof(outputKind));
-        LanguageVersion = languageVersion ?? throw new ArgumentNullException(nameof(languageVersion));
-        NullableContextOptions = nullableContextOptions ?? throw new ArgumentNullException(nameof(nullableContextOptions));
+        Name = name;
+        FilePath = filePath;
+        Language = language;
+        OutputKind = outputKind;
+        LanguageVersion = languageVersion;
+        NullableContextOptions = nullableContextOptions;
         AllowUnsafe = allowUnsafe;
         DocumentCount = documentCount;
         AdditionalDocumentCount = additionalDocumentCount;
-        ProjectReferences = projectReferences ?? throw new ArgumentNullException(nameof(projectReferences));
-        MetadataReferences = metadataReferences ?? throw new ArgumentNullException(nameof(metadataReferences));
+        ProjectReferences = projectReferences;
+        MetadataReferences = metadataReferences;
     }
 
     /// <summary>

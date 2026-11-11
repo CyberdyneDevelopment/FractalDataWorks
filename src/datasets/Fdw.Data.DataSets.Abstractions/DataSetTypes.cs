@@ -17,7 +17,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 public abstract partial class DataSetTypes : TypeCollectionBase<DataSetTypeBase, IDataSetType>
 {
     /// <summary>
-    /// The service category for database configuration loading.
+    /// The service category the data set types belong to. It names the category; it loads no configuration.
     /// </summary>
     public static string ServiceCategory => "DataSet";
 }

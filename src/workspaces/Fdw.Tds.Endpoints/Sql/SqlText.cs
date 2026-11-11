@@ -16,7 +16,6 @@ public static class SqlText
     /// <returns>Its text.</returns>
     public static string Of(TSqlFragment fragment)
     {
-        ArgumentNullException.ThrowIfNull(fragment);
         if (fragment.ScriptTokenStream is not { } tokens || fragment.FirstTokenIndex < 0)
             return fragment.GetType().Name;
 

@@ -24,10 +24,10 @@ public class DataSchema : IDataSchema
     /// <param name="fields">The field definitions.</param>
     public DataSchema(string id, string name, string version, IReadOnlyList<ISchemaField> fields)
     {
-        Id = id ?? throw new ArgumentNullException(nameof(id));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Version = version ?? throw new ArgumentNullException(nameof(version));
-        _fields = fields ?? throw new ArgumentNullException(nameof(fields));
+        Id = id;
+        Name = name;
+        Version = version;
+        _fields = fields;
 
         // Build ordinal map for fast lookups
         _ordinalMap = new Dictionary<string, int>(StringComparer.Ordinal);

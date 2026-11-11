@@ -39,6 +39,6 @@ public sealed class PipelineTriggerQueueLimitTests
         var read = PipelineTriggerQueueLimit.Read(Settings(capacity).Object, NullLogger.Instance);
 
         read.IsFailure.ShouldBeTrue();
-        read.CurrentMessage.ShouldContain("MaxQueuedPipelineTriggers");
+        read.CurrentMessage.ShouldNotBeNull().ShouldContain("MaxQueuedPipelineTriggers");
     }
 }

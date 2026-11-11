@@ -19,7 +19,7 @@ public sealed class DefaultSettingAttribute : Attribute
     /// <param name="setting">The name of the setting that holds the default (a <c>DefaultValueSettings</c> name).</param>
     public DefaultSettingAttribute(string setting)
     {
-        Setting = setting ?? throw new ArgumentNullException(nameof(setting));
+        Setting = setting;
     }
 
     /// <summary>Gets the name of the setting that holds the default.</summary>

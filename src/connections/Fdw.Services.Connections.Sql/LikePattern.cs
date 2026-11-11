@@ -36,9 +36,6 @@ internal static class LikePattern
     /// <returns>The pattern, ready to be passed as a parameter value.</returns>
     internal static string Build(string text, ISqlDialect dialect, bool anythingBefore, bool anythingAfter)
     {
-        ArgumentNullException.ThrowIfNull(text);
-        ArgumentNullException.ThrowIfNull(dialect);
-
         var escape = EscapeCharacter(dialect);
         var pattern = new StringBuilder(text.Length + 4);
         if (anythingBefore)
@@ -63,7 +60,6 @@ internal static class LikePattern
     /// <returns>For example <c>ESCAPE '!'</c>.</returns>
     internal static string EscapeClause(ISqlDialect dialect)
     {
-        ArgumentNullException.ThrowIfNull(dialect);
         return $"ESCAPE '{EscapeCharacter(dialect)}'";
     }
 

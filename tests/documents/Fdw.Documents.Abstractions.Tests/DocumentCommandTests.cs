@@ -58,7 +58,6 @@ public sealed class DocumentCommandTests
         upload.FirstProblem().ShouldBeNull();
         upload.CreateOnly.ShouldBeTrue();
         upload.ContentType.ShouldBe("application/pdf");
-        Should.Throw<ArgumentNullException>(() => new UploadCommand(Path("a.pdf"), null!, null, false, new Dictionary<string, string>()));
     }
 
     [Fact]

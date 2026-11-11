@@ -18,10 +18,6 @@ public sealed class NotifyEscalationType : EscalationTypeBase
     /// <inheritdoc/>
     public override async Task<IGenericResult> Handle(EscalationFiring firing, IServiceProvider services, CancellationToken cancellationToken = default)
     {
-        if (firing is null)
-        {
-            throw new ArgumentNullException(nameof(firing));
-        }
         if (EscalationServices.Find<IThresholdNotifier>(services) is not { } notifier)
         {
             return EscalationFailures.ServiceMissing(firing, Name, nameof(IThresholdNotifier));

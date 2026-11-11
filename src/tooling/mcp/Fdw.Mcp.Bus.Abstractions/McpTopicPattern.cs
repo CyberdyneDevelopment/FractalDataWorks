@@ -11,9 +11,6 @@ public static class McpTopicPattern
     /// <summary>True when <paramref name="topic"/> matches <paramref name="pattern"/>.</summary>
     public static bool Matches(string pattern, string topic)
     {
-        if (pattern is null) throw new ArgumentNullException(nameof(pattern));
-        if (topic is null) throw new ArgumentNullException(nameof(topic));
-
         var patternSegments = pattern.Split('/');
         var topicSegments = topic.Split('/');
         return MatchSegments(patternSegments, 0, topicSegments, 0);

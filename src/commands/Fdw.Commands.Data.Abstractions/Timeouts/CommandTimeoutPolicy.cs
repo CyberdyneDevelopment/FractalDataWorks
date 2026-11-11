@@ -26,11 +26,6 @@ public static class CommandTimeoutPolicy
     /// <param name="owner">Who set the limit, in the words a failure uses; not empty.</param>
     public static void Set(IDictionary<string, object> metadata, TimeSpan timeout, string owner)
     {
-        if (metadata == null)
-        {
-            throw new ArgumentNullException(nameof(metadata));
-        }
-
         if (timeout <= TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "A command timeout is longer than zero.");
@@ -52,11 +47,6 @@ public static class CommandTimeoutPolicy
     /// <returns><see langword="true"/> when the command carries a timeout longer than zero.</returns>
     public static bool TryGet(IDataCommand command, out TimeSpan timeout, out string owner)
     {
-        if (command == null)
-        {
-            throw new ArgumentNullException(nameof(command));
-        }
-
         // A command with no metadata carries no timeout; nothing is assumed in its place.
         var metadata = command.Metadata;
         owner = metadata != null && metadata.TryGetValue(CommandTimeoutOwnerKey, out var named) && named is string name ? name : string.Empty;

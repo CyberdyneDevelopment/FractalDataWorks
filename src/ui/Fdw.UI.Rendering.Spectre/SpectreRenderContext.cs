@@ -19,8 +19,8 @@ public sealed class SpectreRenderContext : IRenderContext
     /// <param name="theme">The theme to use; the host picks it from its configuration.</param>
     public SpectreRenderContext(IAnsiConsole console, IMenuTheme theme)
     {
-        Console = console ?? throw new ArgumentNullException(nameof(console));
-        Theme = theme ?? throw new ArgumentNullException(nameof(theme));
+        Console = console;
+        Theme = theme;
     }
 
     /// <summary>

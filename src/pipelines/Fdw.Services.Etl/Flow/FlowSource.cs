@@ -29,7 +29,6 @@ public sealed class FlowSource : IFlowComponent
     public FlowSource(string name, Func<CancellationToken, IAsyncEnumerable<IDictionary<string, object?>>> rows, int batchSize)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(rows);
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
         Name = name;
         _rows = rows;

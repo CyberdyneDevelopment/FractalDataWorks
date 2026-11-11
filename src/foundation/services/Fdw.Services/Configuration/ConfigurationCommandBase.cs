@@ -35,7 +35,7 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// <inheritdoc />
     public string Name => TableName;
 
-    /// <inheritdoc />
+    /// <summary>Gets the command's identity, which is its table name.</summary>
     public object Id => TableName;
 
     /// <inheritdoc />
@@ -308,9 +308,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// </remarks>
     public virtual IDataCommand Get(string dataStoreName, string pathName, DomainQuery query, IReadOnlyList<string> keyFields)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(keyFields);
-
         return new QueryCommand<TConfig>
         {
             Filter = QueryFilter(query),
@@ -326,8 +323,6 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// <returns>A query whose one row carries the number in <see cref="CountColumn"/>.</returns>
     public virtual IDataCommand Count(string dataStoreName, string pathName, DomainQuery query)
     {
-        ArgumentNullException.ThrowIfNull(query);
-
         return new QueryCommand<Dictionary<string, object?>>
         {
             Filter = QueryFilter(query),

@@ -23,7 +23,6 @@ internal static class TdsSessionClosing
     /// <returns>Success once no live session remains, or the failure reading or revoking it.</returns>
     public static async Task<IGenericResult> Close(ISessionStore sessions, string sessionToken, string serviceName, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(sessions);
         var used = await sessions.Use(sessionToken, serviceName, cancellationToken).ConfigureAwait(false);
         if (used.IsFailure)
             return used;

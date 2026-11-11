@@ -27,7 +27,7 @@ public sealed class ThresholdRunStopperTests
         using (stopping)
         using (run)
         {
-            var result = await new ThresholdRunStopper(control).Stop(run.ExecutionId, "rejected is 60 on load/clean");
+            var result = await new ThresholdRunStopper(control).Stop(run.ExecutionId, "rejected is 60 on load/clean", TestContext.Current.CancellationToken);
 
             result.IsSuccess.ShouldBeTrue();
             run.Token.IsCancellationRequested.ShouldBeTrue();
@@ -49,8 +49,8 @@ public sealed class ThresholdRunStopperTests
         using (run)
         {
             var stopper = new ThresholdRunStopper(control);
-            await stopper.Stop(run.ExecutionId, "first");
-            var second = await stopper.Stop(run.ExecutionId, "second");
+            await stopper.Stop(run.ExecutionId, "first", TestContext.Current.CancellationToken);
+            var second = await stopper.Stop(run.ExecutionId, "second", TestContext.Current.CancellationToken);
 
             second.IsSuccess.ShouldBeTrue();
             run.ThresholdReason.ShouldBe("first");
@@ -68,7 +68,7 @@ public sealed class ThresholdRunStopperTests
         {
             control.Cancel(run.ExecutionId).IsSuccess.ShouldBeTrue();
 
-            var result = await new ThresholdRunStopper(control).Stop(run.ExecutionId, "late");
+            var result = await new ThresholdRunStopper(control).Stop(run.ExecutionId, "late", TestContext.Current.CancellationToken);
 
             result.IsSuccess.ShouldBeTrue();
             run.IsThresholdStopped.ShouldBeFalse();
@@ -81,7 +81,7 @@ public sealed class ThresholdRunStopperTests
     [Trait("Category", "Etl")]
     public async Task ARunTheHostDoesNotHoldIsAFailure()
     {
-        var result = await new ThresholdRunStopper(new PipelineRunControl()).Stop(Guid.NewGuid(), "reason");
+        var result = await new ThresholdRunStopper(new PipelineRunControl()).Stop(Guid.NewGuid(), "reason", TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
         result.Messages[^1].Code.ShouldBe("PIPELINERUN-40994");

@@ -48,7 +48,7 @@ public sealed class DistributedOrchestrationCache : IOrchestrationCache
     /// <param name="serializerOptions">Optional JSON serializer options.</param>
     public DistributedOrchestrationCache(IDistributedCache cache, JsonSerializerOptions? serializerOptions)
     {
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cache = cache;
         _serializerOptions = serializerOptions ?? DefaultSerializerOptions;
         _localKeyTracker = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
     }

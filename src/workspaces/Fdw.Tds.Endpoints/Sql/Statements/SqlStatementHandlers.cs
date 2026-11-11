@@ -32,7 +32,6 @@ public abstract partial class SqlStatementHandlers : TypeCollectionBase<SqlState
     /// <returns>True when a handler runs it.</returns>
     public static bool TryFor(TSqlStatement statement, [NotNullWhen(true)] out ISqlStatementHandler? handler)
     {
-        ArgumentNullException.ThrowIfNull(statement);
         return ByStatementType.Value.TryGetValue(statement.GetType(), out handler);
     }
 
@@ -43,7 +42,6 @@ public abstract partial class SqlStatementHandlers : TypeCollectionBase<SqlState
     /// <returns>The refusal.</returns>
     public static IGenericResult<SqlStatementOutcome> Refuse(TSqlStatement statement, string database, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(statement);
         SqlServerMessage message = IsWrite(statement)
             ? SqlServerErrors.ReadOnly(database, statement.StartLine)
             : SqlServerErrors.NotSupported(SqlText.Of(statement), statement.StartLine);

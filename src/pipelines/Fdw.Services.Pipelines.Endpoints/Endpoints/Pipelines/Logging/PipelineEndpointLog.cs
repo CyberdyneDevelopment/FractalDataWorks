@@ -110,4 +110,9 @@ public static partial class PipelineEndpointLog
     /// <summary>Logs a count of runs that returned no number.</summary>
     [MessageLogging(EventId = 61071, Level = LogLevel.Error, Message = "The count over etl.PipelineExecution returned no number")]
     public static partial IGenericMessage HistoryCountReturnedNoNumber(ILogger logger);
+
+    /// <summary>Error: a pipeline made from a template needs a name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "A pipeline made from template '{templateName}' needs a name, and the name given is empty")]
+    public static partial IGenericMessage TemplatePipelineNameRequired(ILogger logger, string templateName);
 }

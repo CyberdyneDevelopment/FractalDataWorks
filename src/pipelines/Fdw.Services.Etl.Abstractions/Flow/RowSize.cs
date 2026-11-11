@@ -23,11 +23,6 @@ public static class RowSize
     /// <returns>The estimated bytes.</returns>
     public static long Of(IDictionary<string, object?> row)
     {
-        if (row is null)
-        {
-            throw new ArgumentNullException(nameof(row));
-        }
-
         long total = 0;
         foreach (var value in row.Values)
         {
@@ -42,11 +37,6 @@ public static class RowSize
     /// <returns>The estimated bytes.</returns>
     public static long Of(FlowBatch batch)
     {
-        if (batch is null)
-        {
-            throw new ArgumentNullException(nameof(batch));
-        }
-
         long total = 0;
         foreach (var row in batch.Rows)
         {

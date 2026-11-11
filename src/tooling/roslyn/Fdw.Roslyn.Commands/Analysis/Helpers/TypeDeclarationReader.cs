@@ -36,8 +36,6 @@ public static class TypeDeclarationReader
         Document document,
         CancellationToken cancellationToken = default)
     {
-        if (document is null) throw new ArgumentNullException(nameof(document));
-
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         if (root is null) return Array.Empty<TypeDeclarationInfo>();
 

@@ -27,7 +27,7 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
     private readonly IWorkspaceAccessPolicy _access;
     private readonly ILogger<RemoveWorkspaceMemberEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="RemoveWorkspaceMemberEndpointBase"/> class.</summary>
     protected RemoveWorkspaceMemberEndpointBase(
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,

@@ -17,9 +17,9 @@ public sealed class WaitThresholdConfiguration
     public WaitThresholdConfiguration(
         WaitThresholdLayer server, IReadOnlyDictionary<string, WaitThresholdLayer> pipelines, IReadOnlyDictionary<string, WaitThresholdLayer> schedules)
     {
-        Server = server ?? throw new ArgumentNullException(nameof(server));
-        Pipelines = (pipelines ?? throw new ArgumentNullException(nameof(pipelines))).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
-        Schedules = (schedules ?? throw new ArgumentNullException(nameof(schedules))).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+        Server = server;
+        Pipelines = pipelines.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+        Schedules = schedules.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>Gets what the server states.</summary>

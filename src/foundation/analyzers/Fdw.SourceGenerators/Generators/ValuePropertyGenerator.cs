@@ -24,7 +24,7 @@ public sealed class ValuePropertyGenerator<TId>
     /// <param name="config">The configuration for collection generation.</param>
     public ValuePropertyGenerator(CollectionBuilderConfiguration config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _config = config;
     }
 
     /// <summary>

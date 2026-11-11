@@ -53,10 +53,4 @@ public class RecordSchemaTests
 
         sut.GetFieldName(0).ShouldBe("Id");
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsOnNullFields()
-        => Should.Throw<ArgumentNullException>(() => new RecordSchema(null!));
 }

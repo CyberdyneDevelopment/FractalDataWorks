@@ -53,7 +53,6 @@ public static class NamespaceLayout
     /// <returns>The expected absolute file path, or <see langword="null"/> when it cannot be derived.</returns>
     public static string? ExpectedPath(Project project, string namespaceName, string typeName)
     {
-        if (project is null) throw new ArgumentNullException(nameof(project));
         if (string.IsNullOrWhiteSpace(typeName)) return null;
 
         var projectDirectory = ProjectDirectory(project);
@@ -76,7 +75,6 @@ public static class NamespaceLayout
     /// <returns>The directory, or <see langword="null"/> when the project has no file path.</returns>
     public static string? ProjectDirectory(Project project)
     {
-        if (project is null) throw new ArgumentNullException(nameof(project));
         return string.IsNullOrEmpty(project.FilePath) ? null : Path.GetDirectoryName(project.FilePath);
     }
 

@@ -17,7 +17,6 @@ public static class ScriptChecker
     /// <returns>The problems, each with the part of the draft it concerns; empty when the draft is sound.</returns>
     public static IReadOnlyList<ScriptProblemPayload> Problems(ScriptPayload script)
     {
-        ArgumentNullException.ThrowIfNull(script);
         List<ScriptProblemPayload> problems = [];
         Require(problems, script.Name, "name", "the script has no name");
         Require(problems, script.Connection, "connection", "the script does not say which data store it runs on");

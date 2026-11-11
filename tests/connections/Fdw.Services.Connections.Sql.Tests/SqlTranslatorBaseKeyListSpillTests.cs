@@ -19,7 +19,7 @@ public sealed class SqlTranslatorBaseKeyListSpillTests
 {
     private static readonly FakeDialect Dialect = new();
 
-    private static IFilterExpression In(string column, IEnumerable<object?> values, FilterOperatorBase? op = null)
+    private static FilterExpression In(string column, IEnumerable<object?> values, FilterOperatorBase? op = null)
         => new FilterExpression { Root = new FilterCondition { PropertyName = column, Operator = op ?? new InOperator(), Value = values.ToList() } };
 
     private static (string Sql, List<(string Name, object? Value)> Parameters) Build(IFilterExpression filter)

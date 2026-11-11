@@ -17,7 +17,7 @@ public abstract class ListConnectionHealthEndpointBase : CrudListEndpointBase<Co
 {
     private readonly IConnectionHealthService _healthService;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListConnectionHealthEndpointBase"/> class.</summary>
     protected ListConnectionHealthEndpointBase(ILogger<ListConnectionHealthEndpointBase> logger, IConnectionHealthService healthService) : base(logger)
     {
         _healthService = healthService;

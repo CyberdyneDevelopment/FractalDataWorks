@@ -42,10 +42,10 @@ public sealed class InheritedSettings : IInheritedSettings
         IOrganizationScope scope,
         ILogger<InheritedSettings>? logger)
     {
-        _server = server ?? throw new ArgumentNullException(nameof(server));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
-        _scope = scope ?? throw new ArgumentNullException(nameof(scope));
+        _server = server;
+        _tenants = tenants;
+        _organizations = organizations;
+        _scope = scope;
         _logger = logger ?? NullLogger<InheritedSettings>.Instance;
     }
 

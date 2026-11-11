@@ -31,7 +31,6 @@ public static class FieldTypeConversion
     /// <returns><see langword="true"/> when the value was converted.</returns>
     public static bool TryConvert(object value, string targetType, out object? converted, out string? reason)
     {
-        ArgumentNullException.ThrowIfNull(value);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetType);
         converted = null;
         var target = DataTypeNames.Find(targetType);

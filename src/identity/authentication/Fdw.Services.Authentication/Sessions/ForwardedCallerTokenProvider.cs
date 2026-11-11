@@ -54,8 +54,8 @@ internal sealed class ForwardedCallerTokenProvider : IAccessTokenProvider
         ITokenIssuer issuer,
         ILogger<ForwardedCallerTokenProvider>? logger = null)
     {
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-        _issuer = issuer ?? throw new ArgumentNullException(nameof(issuer));
+        _httpContextAccessor = httpContextAccessor;
+        _issuer = issuer;
         _logger = logger ?? NullLogger<ForwardedCallerTokenProvider>.Instance;
     }
 

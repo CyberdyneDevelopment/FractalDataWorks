@@ -41,9 +41,9 @@ internal sealed class UiFeedbackStore
     /// <param name="messaging">Resolves where this deployment keeps its messaging data.</param>
     public UiFeedbackStore(ILogger logger, IDataGatewayProvider dataGateways, IMessagingConfigurationProvider messaging)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
-        _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
+        _logger = logger;
+        _dataGateways = dataGateways;
+        _messaging = messaging;
         _alerts = new AlertStore(logger, dataGateways, messaging);
     }
 

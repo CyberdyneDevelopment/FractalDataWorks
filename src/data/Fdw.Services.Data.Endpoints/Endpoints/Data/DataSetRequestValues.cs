@@ -27,8 +27,8 @@ internal sealed class DataSetRequestValues
     /// <param name="logger">The logger.</param>
     internal DataSetRequestValues(string dataSetName, ILogger logger)
     {
-        _dataSetName = dataSetName ?? throw new ArgumentNullException(nameof(dataSetName));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _dataSetName = dataSetName;
+        _logger = logger;
     }
 
     /// <summary>A value the caller chooses: the stated one, else a refusal naming it.</summary>

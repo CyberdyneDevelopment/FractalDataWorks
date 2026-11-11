@@ -23,9 +23,6 @@ public static class FailureCategory
     /// <returns>The category of the failure; null when the result carries no categorized code.</returns>
     public static IResultCategory? Of(IGenericResult result)
     {
-        if (result is null)
-            throw new ArgumentNullException(nameof(result));
-
         if (result.Code is { } code && code.Id >= FirstFailureNumber)
             return ResultCategories.ById(code.Id / CategoryBand);
 

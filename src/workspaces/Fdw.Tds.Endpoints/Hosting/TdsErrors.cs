@@ -18,8 +18,6 @@ public static class TdsErrors
     /// <param name="line">The line it refers to, when the failure carries none.</param>
     public static void Write(SqlExecutionContext context, IGenericResult failure, int line)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(failure);
         var message = SqlRefusal.TryGetMessage(failure, out var refusal) ? refusal : SqlServerErrors.PlatformFailure(failure, line);
         TdsEndpointLog.StatementRefused(context.Logger, context.Session.SessionId, message.Number, message.Text);
         TdsTokenWriter.Message(context.Response.Payload, message, context.Server.ServerName);

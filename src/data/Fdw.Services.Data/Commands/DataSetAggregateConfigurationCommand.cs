@@ -9,6 +9,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataSetAggregate")]
 public sealed class DataSetAggregateConfigurationCommand : ConfigurationCommandBase<DataSetAggregateConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataSetAggregateConfigurationCommand"/> class.</summary>
     public DataSetAggregateConfigurationCommand() : base("DataSetAggregate") { }
 }

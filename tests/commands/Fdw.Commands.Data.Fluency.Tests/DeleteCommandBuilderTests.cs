@@ -161,24 +161,6 @@ public sealed class DeleteCommandBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DataStoreThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Delete.From("Customers").DataStore(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void PathThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Delete.From("Customers").Path(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void BuildDeleteWithNoWhereAndNoAllRowsIsRefused()
     {
         // FDW-3660: emptying a container is said with AllRows(), never left to a forgotten Where.

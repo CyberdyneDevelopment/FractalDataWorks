@@ -31,10 +31,6 @@ public static class FlowCompletionValidator
     public static IReadOnlyList<FlowGraphProblem> Problems(
         IReadOnlyList<string> components, IReadOnlyList<FlowLink> rowLinks, IReadOnlyList<FlowCompletion> completions, Func<string, int> rankOf)
     {
-        ArgumentNullException.ThrowIfNull(components);
-        ArgumentNullException.ThrowIfNull(rowLinks);
-        ArgumentNullException.ThrowIfNull(completions);
-        ArgumentNullException.ThrowIfNull(rankOf);
         if (completions.Count == 0)
         {
             return [];

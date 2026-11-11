@@ -43,6 +43,6 @@ public sealed class PipelineRunLimitsTests
         var read = PipelineRunLimits.Read(Settings(server, tenant, null).Object, null, NullLogger.Instance);
 
         read.IsFailure.ShouldBeTrue();
-        read.CurrentMessage.ShouldContain(setting);
+        read.CurrentMessage.ShouldNotBeNull().ShouldContain(setting);
     }
 }

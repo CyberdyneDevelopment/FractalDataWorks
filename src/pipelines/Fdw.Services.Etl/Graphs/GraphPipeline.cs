@@ -100,9 +100,9 @@ public sealed class GraphPipeline : EtlPipelineBase
         TimeProvider? clock = null)
         : base(logger)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _configuration = configuration;
         _logger = logger ?? NullLogger<GraphPipeline>.Instance;
-        _flowExecutor = flowExecutor ?? throw new ArgumentNullException(nameof(flowExecutor));
+        _flowExecutor = flowExecutor;
         _dataGateways = dataGateways;
         _connectionProvider = connectionProvider;
         _dataStoreProvider = dataStoreProvider;
@@ -388,7 +388,6 @@ public sealed class GraphPipeline : EtlPipelineBase
     // with none has none, and nothing stands in for a missing one.
     internal static Dictionary<string, object?> ParameterValues(PipelineExecutionOptions options)
     {
-        ArgumentNullException.ThrowIfNull(options);
         return options.Parameters is null
             ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, object?>(options.Parameters, StringComparer.OrdinalIgnoreCase);

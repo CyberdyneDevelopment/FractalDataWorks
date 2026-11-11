@@ -23,7 +23,7 @@ internal sealed class ConfiguredTokenIssuer : ITokenIssuer
     /// <param name="resolver">Resolves the configured issuer.</param>
     public ConfiguredTokenIssuer(JwtIssuanceResolver resolver)
     {
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _resolver = resolver;
     }
 
     /// <inheritdoc />

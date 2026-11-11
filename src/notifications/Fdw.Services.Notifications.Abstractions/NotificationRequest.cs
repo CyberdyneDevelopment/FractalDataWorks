@@ -34,7 +34,7 @@ public sealed class NotificationRequest : INotificationRequest
         Recipients = recipients;
         Subject = subject;
         Message = message;
-        Priority = priority ?? throw new ArgumentNullException(nameof(priority));
+        Priority = priority;
         Metadata = metadata;
         CorrelationId = correlationId;
         CreatedAt = DateTimeOffset.UtcNow;

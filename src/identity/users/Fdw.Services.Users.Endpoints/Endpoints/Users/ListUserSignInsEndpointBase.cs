@@ -32,7 +32,7 @@ public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequ
     {
         _logger = logger;
         _userProvider = userProvider;
-        _signIns = signIns ?? throw new ArgumentNullException(nameof(signIns));
+        _signIns = signIns;
     }
 
     /// <remarks>

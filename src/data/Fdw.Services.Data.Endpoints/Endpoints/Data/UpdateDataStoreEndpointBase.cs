@@ -27,7 +27,7 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
     private readonly IConnectionConfigurationProvider _connectionProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateDataStoreEndpointBase{TConfig}"/> class.</summary>
     protected UpdateDataStoreEndpointBase(ILogger<UpdateDataStoreEndpointBase<TConfig>> logger, IDataStoreConfigurationProvider dataStoreProvider,
         IConnectionConfigurationProvider connectionProvider) : base(logger)
     {
@@ -153,9 +153,6 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
     /// </remarks>
     protected static void ApplyPaths(TConfig target, UpdateDataStoreRequest request)
     {
-        ArgumentNullException.ThrowIfNull(target);
-        ArgumentNullException.ThrowIfNull(request);
-
         if (request.Paths is null)
         {
             return;

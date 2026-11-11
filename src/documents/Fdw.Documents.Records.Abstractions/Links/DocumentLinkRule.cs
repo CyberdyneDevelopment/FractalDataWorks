@@ -29,21 +29,6 @@ public static class DocumentLinkRule
     public static async Task<IGenericResult> Check(
         IDocumentLink link, Guid tenantId, IReadOnlyList<ILinkKindDefinition> linkKinds, ILinkTargets targets, CancellationToken cancellationToken = default)
     {
-        if (link is null)
-        {
-            throw new ArgumentNullException(nameof(link));
-        }
-
-        if (linkKinds is null)
-        {
-            throw new ArgumentNullException(nameof(linkKinds));
-        }
-
-        if (targets is null)
-        {
-            throw new ArgumentNullException(nameof(targets));
-        }
-
         var id = PublicIds.Check(link.Id, "DocumentLink");
         if (id.IsFailure)
         {

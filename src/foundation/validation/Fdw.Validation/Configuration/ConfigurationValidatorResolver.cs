@@ -31,9 +31,6 @@ public static class ConfigurationValidatorResolver
     /// <returns>The option, or a coded failure when none or several speak for the class.</returns>
     public static IGenericResult<IConfigurationValidator> Find(Type configurationType, ILogger logger)
     {
-        if (configurationType is null)
-            throw new ArgumentNullException(nameof(configurationType));
-
         for (var type = configurationType; type is not null; type = type.BaseType)
         {
             var option = Speaking(type);

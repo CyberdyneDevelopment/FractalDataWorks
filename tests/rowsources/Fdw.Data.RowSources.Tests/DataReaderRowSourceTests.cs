@@ -11,15 +11,6 @@ public class DataReaderRowSourceTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenReaderIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new DataReaderRowSource(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void FieldCountReturnsReaderFieldCount()
     {
         // Arrange

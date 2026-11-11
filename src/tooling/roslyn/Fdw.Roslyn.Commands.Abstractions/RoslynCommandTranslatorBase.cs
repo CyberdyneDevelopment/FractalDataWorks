@@ -56,8 +56,6 @@ public abstract class RoslynCommandTranslatorBase : DevelopmentCommandTranslator
     /// </remarks>
     public virtual void UseLoggerFactory(ILoggerFactory loggerFactory)
     {
-        if (loggerFactory is null) throw new ArgumentNullException(nameof(loggerFactory));
-
         Logger = loggerFactory.CreateLogger(GetType());
     }
 
@@ -183,8 +181,6 @@ public abstract class RoslynCommandTranslatorBase<TSelf, TCommand, TResult>
     /// <inheritdoc/>
     public override void UseLoggerFactory(ILoggerFactory loggerFactory)
     {
-        if (loggerFactory is null) throw new ArgumentNullException(nameof(loggerFactory));
-
         Logger = loggerFactory.CreateLogger<TSelf>();
         base.UseLoggerFactory(loggerFactory);
     }

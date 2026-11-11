@@ -35,7 +35,7 @@ public sealed class MemorySidecar
     /// <param name="logger">The logger instance.</param>
     public MemorySidecar(IVectorMemoryStore memoryStore, ILogger<MemorySidecar>? logger = null)
     {
-        _memoryStore = memoryStore ?? throw new ArgumentNullException(nameof(memoryStore));
+        _memoryStore = memoryStore;
         _logger = logger ?? NullLogger<MemorySidecar>.Instance;
     }
 

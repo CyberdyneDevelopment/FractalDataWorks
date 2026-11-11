@@ -20,7 +20,6 @@ public static class ThresholdDefinitions
     /// <returns>The definition; a failure naming the first thing wrong with it.</returns>
     public static IGenericResult<IThresholdDefinition> From(IThresholdImplementationConfiguration stored)
     {
-        ArgumentNullException.ThrowIfNull(stored);
         var type = ThresholdTypes.ByName(stored.Implementation);
         if (ReferenceEquals(type, ThresholdTypes.NotFound))
         {

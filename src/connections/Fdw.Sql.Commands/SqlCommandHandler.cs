@@ -24,8 +24,8 @@ public sealed class SqlCommandHandler : ISqlCommandHandler
 
     public SqlCommandHandler(ISqlWorkspace workspace, ISqlTranslatorRegistry translators, ILogger<SqlCommandHandler>? logger = null)
     {
-        _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
-        _translators = translators ?? throw new ArgumentNullException(nameof(translators));
+        _workspace = workspace;
+        _translators = translators;
         _logger = logger ?? NullLogger<SqlCommandHandler>.Instance;
     }
 

@@ -9,6 +9,7 @@ using Fdw.Roslyn.Commands.Abstractions;
 using Fdw.Roslyn.Commands.Abstractions.Results;
 using Fdw.Roslyn.Commands.Logging;
 using Fdw.Roslyn.Commands.Navigation.Commands;
+using Fdw.Roslyn.Commands.Navigation.MemberKinds;
 using Fdw.Roslyn.Commands.Navigation.Results;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -37,6 +38,12 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         CancellationToken cancellationToken = default)
     {
         FindMembersTranslatorLog.Finding(Logger, command.FilePath, command.Line, command.Column, command.IncludeInherited);
+
+        var kinds = MemberKinds(command.MemberKinds);
+        if (kinds.IsFailure || kinds.Value is not { } allowedKinds)
+        {
+            return kinds.ToNewResult<QueryResult<IReadOnlyList<NavigationMemberInfo>>>();
+        }
 
         var documentId = solution.GetDocumentIdsWithFilePath(command.FilePath).FirstOrDefault();
         if (documentId is null)
@@ -77,7 +84,6 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
                 RoslynResultCodes.ByName("SymbolNotType"));
         }
 
-        var allowedKinds = ParseMemberKinds(command.MemberKinds);
         var members = new List<NavigationMemberInfo>();
 
         var symbolMembers = command.IncludeInherited
@@ -161,21 +167,39 @@ public sealed class FindMembersTranslator : RoslynCommandTranslatorBase<FindMemb
         return info;
     }
 
-    private static HashSet<SymbolKind> ParseMemberKinds(string? filter)
+    // The kinds the request filters by; none stated means every kind. Each name is matched ignoring case, and a name that is not a
+    // member kind is refused, never skipped: skipping it would list kinds the caller did not ask for.
+    private IGenericResult<HashSet<SymbolKind>> MemberKinds(string? filter)
     {
         var kinds = new HashSet<SymbolKind>();
         if (string.IsNullOrWhiteSpace(filter))
-            return kinds;
+            return GenericResult<HashSet<SymbolKind>>.Success(kinds);
 
-        foreach (var part in filter.Split(','))
+        foreach (var name in filter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var trimmed = part.Trim();
-            if (Enum.TryParse<SymbolKind>(trimmed, ignoreCase: true, out var kind))
-            {
-                kinds.Add(kind);
-            }
+            var memberKind = MemberKindFilters.All()
+                .FirstOrDefault(option => string.Equals(option.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (memberKind is null)
+                return MemberKindRefused(name);
+
+            kinds.Add(memberKind.Kind);
         }
 
-        return kinds;
+        return GenericResult<HashSet<SymbolKind>>.Success(kinds);
+    }
+
+    // A name that is a Roslyn symbol kind but not one a member has (Local, Namespace...) is told apart from one that is no kind at all.
+    private IGenericResult<HashSet<SymbolKind>> MemberKindRefused(string name)
+    {
+        var accepted = string.Join(", ", MemberKindFilters.All().Select(option => option.Name));
+        var details = ResultDetails.Create().With("MemberKind", name).With("Accepted", accepted);
+        if (Enum.GetNames<SymbolKind>().Any(kind => string.Equals(kind, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            FindMembersTranslatorLog.MemberKindNotAMember(Logger, name, accepted);
+            return GenericResult<HashSet<SymbolKind>>.Failure(RoslynResultCodes.ByName("MemberKindNotAMember"), details);
+        }
+
+        FindMembersTranslatorLog.MemberKindNotKnown(Logger, name, accepted);
+        return GenericResult<HashSet<SymbolKind>>.Failure(RoslynResultCodes.ByName("MemberKindNotKnown"), details);
     }
 }

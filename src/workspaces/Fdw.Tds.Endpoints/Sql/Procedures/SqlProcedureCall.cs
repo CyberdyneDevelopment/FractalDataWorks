@@ -16,9 +16,9 @@ public sealed class SqlProcedureCall
     /// <param name="line">The line the call was written on; 1 for an RPC.</param>
     public SqlProcedureCall(SqlExecutionContext context, string procedure, IReadOnlyList<SqlProcedureArgument> arguments, int line)
     {
-        Context = context ?? throw new ArgumentNullException(nameof(context));
-        Procedure = procedure ?? throw new ArgumentNullException(nameof(procedure));
-        Arguments = arguments ?? throw new ArgumentNullException(nameof(arguments));
+        Context = context;
+        Procedure = procedure;
+        Arguments = arguments;
         Line = line;
     }
 

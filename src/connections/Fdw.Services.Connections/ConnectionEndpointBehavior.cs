@@ -132,7 +132,6 @@ public sealed class ConnectionEndpointBehavior : IConnectionEndpointBehavior<ICo
         Func<IConnectionImplementationConfiguration, IConnectionAuthenticationType> authentication,
         Func<IConnectionImplementationConfiguration, IReadOnlyList<string>>? sharedProperties)
     {
-        ArgumentNullException.ThrowIfNull(authentication);
         MaskEntries(dictionaryProperty, (configuration, entries) =>
         {
             var method = authentication(configuration);

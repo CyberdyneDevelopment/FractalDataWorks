@@ -20,7 +20,7 @@ public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpointBase<DataSe
 {
     private readonly IDataSetConfigurationProvider _dataSetProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataSetSourcesEndpointBase"/> class.</summary>
     protected GetDataSetSourcesEndpointBase(ILogger<GetDataSetSourcesEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider) : base(logger)
     {
         _dataSetProvider = dataSetProvider;

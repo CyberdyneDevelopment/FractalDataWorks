@@ -28,7 +28,7 @@ public sealed class UserNames : IUserNames
     /// <param name="logger">The logger.</param>
     public UserNames(IUserConfigurationProvider users, ILogger<UserNames>? logger)
     {
-        _users = users ?? throw new ArgumentNullException(nameof(users));
+        _users = users;
         _logger = logger ?? NullLogger<UserNames>.Instance;
     }
 

@@ -161,7 +161,7 @@ public class GlossaryTermVersionEndpointTests
         return setup;
     }
 
-    private static IGlossaryTermVersionImplementationConfiguration? Existing(GlossaryTermVersionDomainConfiguration? row)
+    private static GlossaryTermVersionImplementationConfiguration? Existing(GlossaryTermVersionDomainConfiguration? row)
         => row is null
             ? null
             : new GlossaryTermVersionImplementationConfiguration

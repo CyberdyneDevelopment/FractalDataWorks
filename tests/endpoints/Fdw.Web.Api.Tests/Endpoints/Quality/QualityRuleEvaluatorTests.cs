@@ -9,7 +9,7 @@ namespace Fdw.Web.Api.Tests.Endpoints.Quality;
 /// </summary>
 public sealed class QualityRuleEvaluatorTests
 {
-    private static IReadOnlyList<Dictionary<string, object>> Rows(params object?[] values) =>
+    private static List<Dictionary<string, object>> Rows(params object?[] values) =>
         values.Select(v => new Dictionary<string, object> { ["Value"] = v! }).ToList();
 
     private static QualityRuleImplementationConfiguration Rule(string type, string? field = "Value", string? min = null, string? max = null, string? pattern = null) =>

@@ -38,7 +38,7 @@ public class DeleteCommandBuilder
     /// <returns>The builder for method chaining.</returns>
     public DeleteCommandBuilder DataStore(string dataStoreName)
     {
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _dataStoreName = dataStoreName;
         return this;
     }
 
@@ -49,7 +49,7 @@ public class DeleteCommandBuilder
     /// <returns>The builder for method chaining.</returns>
     public DeleteCommandBuilder Path(string pathName)
     {
-        _pathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
+        _pathName = pathName;
         return this;
     }
 

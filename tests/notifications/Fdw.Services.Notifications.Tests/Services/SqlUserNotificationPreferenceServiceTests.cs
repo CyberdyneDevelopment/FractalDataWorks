@@ -93,16 +93,6 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     // ──────────────────────────────────────────── Constructor ───────────────────────────────────────────
 
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsArgumentNullExceptionWhenDataGatewayIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new SqlUserNotificationPreferenceService(null!, NullLogger<SqlUserNotificationPreferenceService>.Instance));
-    }
-
-    [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "DataIntegrity")]
     public void ConstructorSucceedsWhenLoggerIsNull()
@@ -227,19 +217,6 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     }
 
     // ─────────────────────────────────────────── SavePreferences ────────────────────────────────────────
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task SavePreferencesThrowsArgumentNullExceptionWhenPreferencesIsNull()
-    {
-        // Arrange
-        var sut = CreateService(new Mock<IConfigurationGateway>());
-
-        // Act & Assert
-        await Should.ThrowAsync<ArgumentNullException>(
-            () => sut.SavePreferences(Guid.NewGuid(), null!, TestContext.Current.CancellationToken));
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

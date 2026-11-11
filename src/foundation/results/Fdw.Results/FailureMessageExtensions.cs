@@ -44,11 +44,6 @@ public static class FailureMessageExtensions
     /// </remarks>
     public static IReadOnlyList<FailureMessage> FailureMessages(this IGenericResult result)
     {
-        if (result == null)
-        {
-            throw new ArgumentNullException(nameof(result));
-        }
-
         var failures = new List<FailureMessage>();
         foreach (var message in result.Messages)
         {
@@ -68,11 +63,6 @@ public static class FailureMessageExtensions
     /// <returns>The failure message, or <see langword="null"/> when the message has no code, a code of another form, or a success or progress number.</returns>
     public static FailureMessage? AsFailureMessage(this Fdw.Messages.IGenericMessage message)
     {
-        if (message == null)
-        {
-            throw new ArgumentNullException(nameof(message));
-        }
-
         if (message.Code is not { Length: > 0 } text)
         {
             return null;
@@ -101,11 +91,6 @@ public static class FailureMessageExtensions
     /// </remarks>
     public static Fdw.Messages.IGenericMessage FailureReason(this IGenericResult result)
     {
-        if (result == null)
-        {
-            throw new ArgumentNullException(nameof(result));
-        }
-
         if (result.IsSuccess)
         {
             throw new InvalidOperationException("A successful result has no failure reason.");
@@ -128,11 +113,6 @@ public static class FailureMessageExtensions
     /// <exception cref="InvalidOperationException">The result succeeded with a value.</exception>
     public static Fdw.Messages.IGenericMessage NoValueReason<T>(this IGenericResult<T> result)
     {
-        if (result == null)
-        {
-            throw new ArgumentNullException(nameof(result));
-        }
-
         if (!result.IsSuccess)
         {
             return result.FailureReason();

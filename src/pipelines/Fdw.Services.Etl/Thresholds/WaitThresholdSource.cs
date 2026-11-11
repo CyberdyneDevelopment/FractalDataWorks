@@ -35,7 +35,7 @@ public sealed class WaitThresholdSource : IWaitThresholdSource
     /// <param name="logger">The logger.</param>
     public WaitThresholdSource(IServiceScopeFactory scopes, ILogger<WaitThresholdSource>? logger = null)
     {
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+        _scopes = scopes;
         _logger = logger ?? NullLogger<WaitThresholdSource>.Instance;
         _rows = new WaitThresholdRows(_logger);
     }

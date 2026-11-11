@@ -107,21 +107,21 @@ public sealed class Schedule : IGenericSchedule
         ILogger<Schedule>? logger = null)
     {
         // IFractalSchedule properties
-        ScheduleId = scheduleId ?? throw new ArgumentNullException(nameof(scheduleId));
-        ScheduleName = scheduleName ?? throw new ArgumentNullException(nameof(scheduleName));
-        ProcessId = processId ?? throw new ArgumentNullException(nameof(processId));
-        CronExpression = cronExpression ?? throw new ArgumentNullException(nameof(cronExpression));
+        ScheduleId = scheduleId;
+        ScheduleName = scheduleName;
+        ProcessId = processId;
+        CronExpression = cronExpression;
         IsActive = isActive;
-        TimeZoneId = timeZoneId ?? throw new ArgumentNullException(nameof(timeZoneId));
+        TimeZoneId = timeZoneId;
         NextExecution = nextExecution;
         Metadata = metadata;
 
         // Extended properties
-        Id = id ?? throw new ArgumentNullException(nameof(id));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        ProcessType = processType ?? throw new ArgumentNullException(nameof(processType));
-        ProcessConfiguration = processConfiguration ?? throw new ArgumentNullException(nameof(processConfiguration));
-        Trigger = trigger ?? throw new ArgumentNullException(nameof(trigger));
+        Id = id;
+        Name = name;
+        ProcessType = processType;
+        ProcessConfiguration = processConfiguration;
+        Trigger = trigger;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
         Description = description;
@@ -242,7 +242,6 @@ public sealed class Schedule : IGenericSchedule
     /// <param name="isActive">Whether the schedule should be active initially (default: true).</param>
     /// <param name="metadata">Optional metadata for the schedule.</param>
     /// <returns>A new schedule instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentException">Thrown when required parameters are empty or whitespace.</exception>
     /// <remarks>
     /// <para>
@@ -325,7 +324,6 @@ public sealed class Schedule : IGenericSchedule
     /// <param name="nextExecution">The next scheduled execution time.</param>
     /// <param name="metadata">Optional metadata for the schedule.</param>
     /// <returns>A schedule instance with the specified data.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when required parameters are null.</exception>
     /// <exception cref="ArgumentException">Thrown when required parameters are empty or whitespace.</exception>
     /// <remarks>
     /// <para>

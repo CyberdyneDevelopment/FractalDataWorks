@@ -28,7 +28,7 @@ public sealed class ResolveInheritDocResult
         FilesModified = filesModified;
         SitesResolved = sitesResolved;
         SitesUnresolved = sitesUnresolved;
-        Unresolved = unresolved ?? throw new ArgumentNullException(nameof(unresolved));
+        Unresolved = unresolved;
     }
 
     /// <summary>

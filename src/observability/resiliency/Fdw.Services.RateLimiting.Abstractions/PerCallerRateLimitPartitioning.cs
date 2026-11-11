@@ -23,11 +23,6 @@ public sealed class PerCallerRateLimitPartitioning : RateLimitPartitioningBase
     /// <inheritdoc />
     public override string KeyOf(IRateLimitPolicy policy, ClaimsPrincipal? user, IPAddress? remoteAddress)
     {
-        if (policy is null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
         if (user is null || user.Identity is null || !user.Identity.IsAuthenticated)
         {
             throw new InvalidOperationException(

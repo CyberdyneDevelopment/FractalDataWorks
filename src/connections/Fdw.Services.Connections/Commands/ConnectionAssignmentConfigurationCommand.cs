@@ -8,6 +8,6 @@ namespace Fdw.Services.Connections.Commands;
 [TypeOption(typeof(ConfigurationCommands), "ConnectionAssignment")]
 public sealed class ConnectionAssignmentConfigurationCommand : ConfigurationCommandBase<ConnectionAssignmentImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ConnectionAssignmentConfigurationCommand"/> class.</summary>
     public ConnectionAssignmentConfigurationCommand() : base("ConnectionAssignment") { }
 }

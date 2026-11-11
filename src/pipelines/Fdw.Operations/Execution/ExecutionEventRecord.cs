@@ -23,7 +23,7 @@ public sealed class ExecutionEventRecord : IExecutionEvent
     /// <param name="data">The underlying data.</param>
     public ExecutionEventRecord(ExecutionEvent data)
     {
-        _data = data ?? throw new ArgumentNullException(nameof(data));
+        _data = data;
     }
 
     /// <inheritdoc />

@@ -24,7 +24,7 @@ internal sealed class SqlQueryRefusals : IQueryRefusals
     /// <param name="line">The line of the statement translated.</param>
     public SqlQueryRefusals(SqlScope scope, int line)
     {
-        _scope = scope ?? throw new ArgumentNullException(nameof(scope));
+        _scope = scope;
         _line = line;
     }
 

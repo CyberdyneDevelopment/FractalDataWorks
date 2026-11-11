@@ -26,7 +26,7 @@ public sealed class SqlServerMessage
         Number = number;
         State = state;
         Class = severityClass;
-        Text = text ?? throw new ArgumentNullException(nameof(text));
+        Text = text;
         LineNumber = lineNumber;
     }
 

@@ -45,8 +45,6 @@ public static class QualityRuleExecutions
     /// <returns>The active tenant, or a failure that says the caller has none.</returns>
     public static IGenericResult<Guid> CallerTenant(ClaimsPrincipal user, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(user);
-
         return new ClaimsPrincipalAuthenticationContext(user).ActiveTenantId is { } tenant && tenant != Guid.Empty
             ? GenericResult<Guid>.Success(tenant)
             : GenericResult<Guid>.Failure(QualityCheckEndpointLog.NoActiveTenant(logger));
@@ -61,9 +59,6 @@ public static class QualityRuleExecutions
     /// <returns>The row, ready to record.</returns>
     public static QualityRuleExecutionRecord Of(Guid ruleId, IQualityRuleImplementationConfiguration rule, QualityCheckResultResponse result, Guid tenantId, long durationMs)
     {
-        ArgumentNullException.ThrowIfNull(rule);
-        ArgumentNullException.ThrowIfNull(result);
-
         // Why a rule that could not run judges no rows: its ErrorMessage says why, and every row is "not judged", so the
         // counts never read as a pass.
         var judged = result.ErrorMessage is null && result.Status is "Passed" or "Failed";
@@ -101,9 +96,6 @@ public static class QualityRuleExecutions
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(gateway);
-        ArgumentNullException.ThrowIfNull(record);
-
         if (string.IsNullOrWhiteSpace(operationalStore))
             return GenericResult.Failure(QualityCheckEndpointLog.ExecutionStoreNotNamed(logger));
 
@@ -135,8 +127,6 @@ public static class QualityRuleExecutions
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(gateway);
-
         if (string.IsNullOrWhiteSpace(operationalStore))
             return GenericResult<IReadOnlyList<QualityRuleExecutionRecord>>.Failure(QualityCheckEndpointLog.ExecutionStoreNotNamed(logger));
 
@@ -159,8 +149,6 @@ public static class QualityRuleExecutions
     /// <returns>The response.</returns>
     public static QualityRuleExecutionResponse ToResponse(QualityRuleExecutionRecord record)
     {
-        ArgumentNullException.ThrowIfNull(record);
-
         return new QualityRuleExecutionResponse
         {
             Id = record.Id,

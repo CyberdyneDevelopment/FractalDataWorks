@@ -100,9 +100,9 @@ public sealed class DataStoreContainerFileOptionsTests
         notForFormatMessage.ShouldEndWith(" container takes");
         notForFormatMessage.ShouldContain("Xlsx");
         sheet.Code!.Code.ShouldBe("DATA-21020");
-        sheet.Code.FormatClientMessage(sheet.Details).ShouldContain("worksheet 'a/b'");
+        sheet.Code.FormatClientMessage(sheet.Details).ShouldNotBeNull().ShouldContain("worksheet 'a/b'");
         separator.Code!.Code.ShouldBe("DATA-21021");
-        separator.Code.FormatClientMessage(separator.Details).ShouldContain("0 characters");
+        separator.Code.FormatClientMessage(separator.Details).ShouldNotBeNull().ShouldContain("0 characters");
     }
 
     [Fact]

@@ -22,7 +22,6 @@ public sealed class FlowPipeline : IFlowStep
     public FlowPipeline(string name, IReadOnlyList<IFlowStep> steps)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(steps);
         if (steps.Count == 0)
         {
             throw new ArgumentException("A pipeline has at least one step.", nameof(steps));

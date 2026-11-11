@@ -19,7 +19,7 @@ public abstract class DeleteDataStoreEndpointBase<TConfig> : CrudDeleteEndpointB
 {
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeleteDataStoreEndpointBase{TConfig}"/> class.</summary>
     protected DeleteDataStoreEndpointBase(ILogger<DeleteDataStoreEndpointBase<TConfig>> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;

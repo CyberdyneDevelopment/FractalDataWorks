@@ -15,7 +15,7 @@ public sealed class ScreenFactory : IScreenFactory
     /// </summary>
     public ScreenFactory(IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _serviceProvider = serviceProvider;
     }
 
     /// <inheritdoc />

@@ -60,15 +60,6 @@ public class EtlRowMapperProviderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void RegisterThrowsOnNullFactory()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => _provider.Register("Test", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
     public void CreateReturnsFailureWhenConfigurationIsNull()
     {
         // Act
@@ -180,7 +171,6 @@ public class EtlRowMapperProviderTests
         // Assert
         _provider.MapperTypeCount.ShouldBe(0);
     }
-
 
     private sealed class TestEtlRowMapperConfig : EtlRowMapperConfiguration
     {

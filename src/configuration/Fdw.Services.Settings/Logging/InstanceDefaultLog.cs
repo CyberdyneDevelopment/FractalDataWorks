@@ -1,3 +1,4 @@
+using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,15 @@ public static partial class InstanceDefaultLog
         Message = "The {ownerKind} '{ownerName}' states no {field}, and the setting '{setting}' cannot be read yet because the settings are read through the {ownerKind} being made; state {field} in its configuration",
         ClientMessage = "The {ownerKind} '{ownerName}' states no {field}, and the settings that would give one are read through it; state {field} in its configuration")]
     public static partial IGenericMessage ReadThroughItself(ILogger logger, string ownerKind, string ownerName, string field, string setting);
+
+    /// <summary>
+    /// Logs a value that is not stated when the settings that would give it are read through the owner being made, with the exception the read
+    /// threw (FDW-5189). <see cref="ReadThroughItself"/> stays as it was for callers that have no exception.
+    /// </summary>
+    [MessageLogging(EventId = 62058, Level = LogLevel.Error,
+        Message = "The {ownerKind} '{ownerName}' states no {field}, and the setting '{setting}' cannot be read yet because the settings are read through the {ownerKind} being made; state {field} in its configuration",
+        ClientMessage = "The {ownerKind} '{ownerName}' states no {field}, and the settings that would give one are read through it; state {field} in its configuration")]
+    public static partial IGenericMessage ReadThroughItselfThrew(ILogger logger, Exception ex, string ownerKind, string ownerName, string field, string setting);
 
     /// <summary>Logs a create body that leaves a value out and takes it from the setting (FDW-3823).</summary>
     [MessageLogging(EventId = 62053, Level = LogLevel.Trace,

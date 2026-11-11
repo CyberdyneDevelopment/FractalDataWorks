@@ -31,7 +31,7 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
     /// <summary>Initializes the engine.</summary>
     public GitWorktreeEngine(IGitRunner runner, ILogger<GitWorktreeEngine>? logger = null)
     {
-        _runner = runner ?? throw new ArgumentNullException(nameof(runner));
+        _runner = runner;
         _logger = logger ?? NullLogger<GitWorktreeEngine>.Instance;
     }
 
@@ -40,8 +40,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
         IsolationRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
-
         var created = await Git(
             request.RepoPath,
             cancellationToken,
@@ -63,8 +61,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
         IsolationRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
-
         if (string.IsNullOrWhiteSpace(request.WorktreePath))
         {
             return GenericResult<IsolatedCopy>.Failure(
@@ -96,7 +92,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
         string message,
         CancellationToken cancellationToken = default)
     {
-        if (copy is null) throw new ArgumentNullException(nameof(copy));
         if (string.IsNullOrWhiteSpace(message)) throw new ArgumentException("Commit message is required.", nameof(message));
 
         var path = WorkingPath(copy);
@@ -127,7 +122,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
         string remote,
         CancellationToken cancellationToken = default)
     {
-        if (copy is null) throw new ArgumentNullException(nameof(copy));
         if (string.IsNullOrWhiteSpace(remote)) throw new ArgumentException("Remote is required.", nameof(remote));
 
         var pushed = await Git(
@@ -169,8 +163,6 @@ public sealed class GitWorktreeEngine : IWorktreeEngine
         IsolatedCopy copy,
         CancellationToken cancellationToken = default)
     {
-        if (copy is null) throw new ArgumentNullException(nameof(copy));
-
         if (string.IsNullOrWhiteSpace(copy.WorktreePath))
         {
             return GenericResult<bool>.Failure(

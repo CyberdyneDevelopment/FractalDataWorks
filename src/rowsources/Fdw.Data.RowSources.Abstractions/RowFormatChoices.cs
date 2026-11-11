@@ -30,9 +30,9 @@ public sealed class RowFormatChoices
     /// <param name="format">The format the choices are for, named in a failure.</param>
     public RowFormatChoices(IReadOnlyDictionary<string, object> stated, string owner, string format)
     {
-        _stated = stated ?? throw new ArgumentNullException(nameof(stated));
-        _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-        _format = format ?? throw new ArgumentNullException(nameof(format));
+        _stated = stated;
+        _owner = owner;
+        _format = format;
     }
 
     /// <summary>Reads a required flag: a boolean, or the text <c>true</c> or <c>false</c>.</summary>

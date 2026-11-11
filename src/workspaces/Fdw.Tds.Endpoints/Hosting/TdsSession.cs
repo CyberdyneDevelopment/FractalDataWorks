@@ -37,13 +37,13 @@ public sealed class TdsSession
         string database)
     {
         SessionId = sessionId;
-        UserName = userName ?? throw new ArgumentNullException(nameof(userName));
-        ApplicationName = applicationName ?? throw new ArgumentNullException(nameof(applicationName));
-        HostName = hostName ?? throw new ArgumentNullException(nameof(hostName));
-        ClientInterface = clientInterface ?? throw new ArgumentNullException(nameof(clientInterface));
-        SessionToken = sessionToken ?? throw new ArgumentNullException(nameof(sessionToken));
-        SessionServiceName = sessionServiceName ?? throw new ArgumentNullException(nameof(sessionServiceName));
-        LoginDatabase = database ?? throw new ArgumentNullException(nameof(database));
+        UserName = userName;
+        ApplicationName = applicationName;
+        HostName = hostName;
+        ClientInterface = clientInterface;
+        SessionToken = sessionToken;
+        SessionServiceName = sessionServiceName;
+        LoginDatabase = database;
         Reset();
     }
 

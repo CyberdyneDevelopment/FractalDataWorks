@@ -32,9 +32,6 @@ public sealed class UnavailableTagScope : ITagScope
     /// <inheritdoc />
     public Task<IGenericResult> Allows(TagDomainConfiguration tag, ITaggableKind kind, Guid thingId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(tag);
-        ArgumentNullException.ThrowIfNull(kind);
-
         return Task.FromResult<IGenericResult>(GenericResult<bool>.Failure(
             TagsResultCodes.ByName("TagScopeUnavailable"), _logger,
             TagDetails.Of("name", tag.Name, "kind", kind.Name, "thingId", thingId.ToString("D"))));

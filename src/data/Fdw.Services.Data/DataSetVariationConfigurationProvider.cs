@@ -36,8 +36,8 @@ public sealed class DataSetVariationConfigurationProvider : IDataSetVariationCon
         DataSetVariationListProvider list,
         ILogger<DataSetVariationConfigurationProvider>? logger)
     {
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _list = list ?? throw new ArgumentNullException(nameof(list));
+        _dataSets = dataSets;
+        _list = list;
         _logger = logger ?? NullLogger<DataSetVariationConfigurationProvider>.Instance;
     }
 

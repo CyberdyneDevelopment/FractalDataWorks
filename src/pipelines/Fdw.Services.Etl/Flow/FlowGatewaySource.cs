@@ -40,7 +40,6 @@ public sealed class FlowGatewaySource : IFlowComponent
     private FlowGatewaySource(string name, IDataGateway gateway, int pageSize, int? rowCap, IReadOnlyList<Target> targets, ILogger? logger)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(gateway);
         ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
         if (targets.Count < 1)
         {
@@ -158,7 +157,6 @@ public sealed class FlowGatewaySource : IFlowComponent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataStore);
         ArgumentException.ThrowIfNullOrWhiteSpace(container);
-        ArgumentNullException.ThrowIfNull(files);
         if (gateway is not IEtlDataGateway)
         {
             throw new ArgumentException("A list of files needs the ETL data gateway; the gateway given does not read a declared container at another address.", nameof(gateway));

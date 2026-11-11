@@ -58,7 +58,6 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     /// </summary>
     /// <param name="id">The unique identifier for this type option value.</param>
     /// <param name="name">The name of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase([TypeOptionId] TKey id, string name) : this(id, name, string.Empty)
     {
     }
@@ -69,11 +68,8 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     /// <param name="id">The unique identifier for this type option value.</param>
     /// <param name="name">The name of this type option value.</param>
     /// <param name="category">The category of this type option value. Pass null or empty string for default "NotCategorized".</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase([TypeOptionId] TKey id, string name, string? category)
     {
-        if (name == null) throw new ArgumentNullException(nameof(name));
-
         Id = id;
         Name = name;
         _category = category ?? string.Empty;
@@ -91,17 +87,14 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     /// <param name="displayName">The display name for user-facing representations.</param>
     /// <param name="description">The detailed description of this type option.</param>
     /// <param name="category">The category of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(TKey id, string name, string displayName, string description, string? category)
     {
-        if (name == null) throw new ArgumentNullException(nameof(name));
-
         Id = id;
         Name = name;
         _category = category ?? string.Empty;
         ConfigurationKey = $"TypeOptions:{name}";
-        DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
-        Description = description ?? throw new ArgumentNullException(nameof(description));
+        DisplayName = displayName;
+        Description = description;
     }
 
     /// <summary>
@@ -113,17 +106,14 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     /// <param name="displayName">The display name for user-facing representations.</param>
     /// <param name="description">The detailed description of this type option.</param>
     /// <param name="category">The category of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(TKey id, string name, string configurationKey, string displayName, string description, string? category)
     {
-        if (name == null) throw new ArgumentNullException(nameof(name));
-
         Id = id;
         Name = name;
         _category = category ?? string.Empty;
-        ConfigurationKey = configurationKey ?? throw new ArgumentNullException(nameof(configurationKey));
-        DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
-        Description = description ?? throw new ArgumentNullException(nameof(description));
+        ConfigurationKey = configurationKey;
+        DisplayName = displayName;
+        Description = description;
     }
 
     /// <summary>
@@ -163,7 +153,6 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// </summary>
     /// <param name="id">The unique identifier for this type option value.</param>
     /// <param name="name">The name of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(int id, string name) : base(id, name)
     {
         _id = id;
@@ -175,7 +164,6 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// <param name="id">The unique identifier for this type option value.</param>
     /// <param name="name">The name of this type option value.</param>
     /// <param name="category">The category of this type option value. Pass null or empty string for default "NotCategorized".</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(int id, string name, string? category) : base(id, name, category)
     {
         _id = id;
@@ -190,7 +178,6 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// <param name="displayName">The display name for user-facing representations.</param>
     /// <param name="description">The detailed description of this type option.</param>
     /// <param name="category">The category of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(int id, string name, string configurationKey, string displayName, string description, string? category)
         : base(id, name, configurationKey, displayName, description, category)
     {
@@ -202,7 +189,6 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// from the option's fully qualified type name instead of taking one explicitly.
     /// </summary>
     /// <param name="name">The name of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null or empty.</exception>
     /// <remarks>
     /// A derived id is a hash of the option's fully qualified type name, so renaming or moving the
     /// class changes its id and orphans any stored row that referenced the old one. That makes the
@@ -219,7 +205,6 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// </summary>
     /// <param name="name">The name of this type option value.</param>
     /// <param name="category">The category of this type option value. Pass null or empty string for default "NotCategorized".</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(string name, string? category) : base(0, name, category)
     {
         _id = null;
@@ -233,7 +218,6 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// <param name="displayName">The display name for user-facing representations.</param>
     /// <param name="description">The detailed description of this type option.</param>
     /// <param name="category">The category of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(string name, string displayName, string description, string? category)
         : base(0, name, displayName, description, category)
     {
@@ -249,7 +233,6 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// <param name="displayName">The display name for user-facing representations.</param>
     /// <param name="description">The detailed description of this type option.</param>
     /// <param name="category">The category of this type option value.</param>
-    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
     protected TypeOptionBase(string name, string configurationKey, string displayName, string description, string? category)
         : base(0, name, configurationKey, displayName, description, category)
     {
@@ -285,6 +268,5 @@ public abstract class TypeOptionBase<TBase> : TypeOptionBase<int, TBase>
     /// </summary>
     /// <param name="name">The option name.</param>
     /// <returns>A stable non-negative id.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when name is null or empty.</exception>
     protected static int GenerateIdFromName(string name) => OptionId.DeriveInt(name);
 }

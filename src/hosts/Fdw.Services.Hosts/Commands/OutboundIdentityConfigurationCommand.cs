@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "OutboundIdentity")]
 public sealed class OutboundIdentityConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="OutboundIdentityConfigurationCommand"/> class.</summary>
     public OutboundIdentityConfigurationCommand() : base("OutboundIdentity") { }
 }

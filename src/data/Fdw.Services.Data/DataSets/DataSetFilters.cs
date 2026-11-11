@@ -33,9 +33,6 @@ public static class DataSetFilters
     /// <returns>The filter, or null when the data set states no condition; or the refusal naming the first condition that breaks a rule.</returns>
     public static IGenericResult<IFilterExpression?> Expression(IDataSetImplementationConfiguration dataSet, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(dataSet);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var conditions = dataSet.Filters.Where(f => f.IsCurrent && !f.IsDeleted).OrderBy(f => f.Ordinal).ToList();
         if (conditions.Count == 0)
             return GenericResult<IFilterExpression?>.Success(null);

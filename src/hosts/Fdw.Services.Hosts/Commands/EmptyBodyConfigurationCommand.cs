@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "EmptyBody")]
 public sealed class EmptyBodyConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="EmptyBodyConfigurationCommand"/> class.</summary>
     public EmptyBodyConfigurationCommand() : base("EmptyBody") { }
 }

@@ -20,7 +20,7 @@ public sealed class SecretManagerSettingsTests
 
     private sealed class Types(Microsoft.Extensions.Logging.ILogger<ListSecretManagerTypesEndpointBase> logger) : ListSecretManagerTypesEndpointBase(logger)
     {
-        internal string Policy => ReadPolicy;
+        internal string StatedReadPolicy => ReadPolicy;
 
         internal SecretManagerTypeDto Describe(ISecretManagerType type) => MapToDto(type);
     }
@@ -222,6 +222,6 @@ public sealed class SecretManagerSettingsTests
     [Trait("Priority", "P0")]
     public void TheTypeListAsksThePlatformAdministratorPolicyLikeEveryOtherSecretManagerRoute()
     {
-        new Types(NullLogger<ListSecretManagerTypesEndpointBase>.Instance).Policy.ShouldBe(AuthConstants.PlatformAdminPolicy);
+        new Types(NullLogger<ListSecretManagerTypesEndpointBase>.Instance).StatedReadPolicy.ShouldBe(AuthConstants.PlatformAdminPolicy);
     }
 }

@@ -17,11 +17,11 @@ public sealed class ProjectMoveDetail
         string originalFolder,
         string targetFolder)
     {
-        ProjectName = projectName ?? throw new ArgumentNullException(nameof(projectName));
-        OriginalPath = originalPath ?? throw new ArgumentNullException(nameof(originalPath));
-        NewPath = newPath ?? throw new ArgumentNullException(nameof(newPath));
-        OriginalFolder = originalFolder ?? throw new ArgumentNullException(nameof(originalFolder));
-        TargetFolder = targetFolder ?? throw new ArgumentNullException(nameof(targetFolder));
+        ProjectName = projectName;
+        OriginalPath = originalPath;
+        NewPath = newPath;
+        OriginalFolder = originalFolder;
+        TargetFolder = targetFolder;
     }
 
     /// <summary>

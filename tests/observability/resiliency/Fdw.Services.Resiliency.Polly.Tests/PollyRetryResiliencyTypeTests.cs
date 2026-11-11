@@ -32,52 +32,6 @@ public sealed class PollyRetryResiliencyTypeTests
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ExecuteThrowsArgumentNullExceptionWhenRunStageIsNull()
-    {
-        // Arrange
-        var type = new PollyRetryResiliencyType();
-        var config = new PollyRetryResiliencyConfiguration();
-        var ctx = new FakeResiliencyExecutionContext();
-
-        // Act & Assert
-        var ex = await Should.ThrowAsync<ArgumentNullException>(
-            () => type.Execute(null!, config, ctx, TestContext.Current.CancellationToken));
-        ex.ParamName.ShouldBe("runStage");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ExecuteThrowsArgumentNullExceptionWhenConfigIsNull()
-    {
-        // Arrange
-        var type = new PollyRetryResiliencyType();
-        var ctx = new FakeResiliencyExecutionContext();
-
-        // Act & Assert
-        var ex = await Should.ThrowAsync<ArgumentNullException>(
-            () => type.Execute(AlwaysSucceeds(), null!, ctx, TestContext.Current.CancellationToken));
-        ex.ParamName.ShouldBe("config");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public async Task ExecuteThrowsArgumentNullExceptionWhenContextIsNull()
-    {
-        // Arrange
-        var type = new PollyRetryResiliencyType();
-        var config = new PollyRetryResiliencyConfiguration();
-
-        // Act & Assert
-        var ex = await Should.ThrowAsync<ArgumentNullException>(
-            () => type.Execute(AlwaysSucceeds(), config, null!, TestContext.Current.CancellationToken));
-        ex.ParamName.ShouldBe("ctx");
-    }
-
-    [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
     public async Task ExecuteReturnsFailureWhenConfigurationIsWrongType()
@@ -330,7 +284,7 @@ public sealed class PollyRetryResiliencyTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldContain(field);
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(field);
         calls.ShouldBe(0);
     }
 
@@ -348,6 +302,6 @@ public sealed class PollyRetryResiliencyTypeTests
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldContain("SomeUnknownKind");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("SomeUnknownKind");
     }
 }

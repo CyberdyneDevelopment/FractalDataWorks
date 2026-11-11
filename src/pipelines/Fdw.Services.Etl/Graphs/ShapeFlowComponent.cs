@@ -26,9 +26,9 @@ public sealed class ShapeFlowComponent : IFlowComponent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
-        Inputs = inputs ?? throw new ArgumentNullException(nameof(inputs));
-        Outputs = outputs ?? throw new ArgumentNullException(nameof(outputs));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        Inputs = inputs;
+        Outputs = outputs;
+        _logger = logger;
     }
 
     /// <inheritdoc />

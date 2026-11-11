@@ -21,9 +21,6 @@ public static class ActingGrant
     /// <returns>The permissions to refuse for, each once; empty when the role is no wider than the caller.</returns>
     public static IReadOnlyList<string> NotCovered(IEnumerable<string> held, IEnumerable<string> roleGrants)
     {
-        ArgumentNullException.ThrowIfNull(held);
-        ArgumentNullException.ThrowIfNull(roleGrants);
-
         var heldList = held.ToList();
         return [.. roleGrants.Where(permission => !PermissionCoverage.Covers(heldList, permission)).Distinct(StringComparer.Ordinal)];
     }

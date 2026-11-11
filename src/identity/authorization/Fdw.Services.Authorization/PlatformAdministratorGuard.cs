@@ -42,10 +42,10 @@ public sealed class PlatformAdministratorGuard : IPlatformAdministratorGuard
         IRoleConfigurationProvider roles, IUserRoleConfigurationProvider userRoles,
         ILogger<PlatformAdministratorGuard>? logger)
     {
-        _systemRoles = systemRoles ?? throw new ArgumentNullException(nameof(systemRoles));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _userRoles = userRoles ?? throw new ArgumentNullException(nameof(userRoles));
+        _systemRoles = systemRoles;
+        _tenants = tenants;
+        _roles = roles;
+        _userRoles = userRoles;
         _logger = logger ?? NullLogger<PlatformAdministratorGuard>.Instance;
     }
 

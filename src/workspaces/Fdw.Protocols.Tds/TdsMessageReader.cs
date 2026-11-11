@@ -43,7 +43,7 @@ public sealed class TdsMessageReader
     /// <param name="logger">The logger.</param>
     public TdsMessageReader(Stream stream, int maximumMessageBytes, ILogger? logger)
     {
-        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+        _stream = stream;
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumMessageBytes, SmallestLimit, nameof(maximumMessageBytes));
         _maximumMessageBytes = maximumMessageBytes;
         _logger = logger ?? NullLogger.Instance;

@@ -41,7 +41,7 @@ public sealed class ActiveSessionProxy : IRoslynWorkspace
         IRoslynSessionManager sessionManager,
         ILogger<ActiveSessionProxy>? logger = null)
     {
-        _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
+        _sessionManager = sessionManager;
         _logger = logger ?? NullLogger<ActiveSessionProxy>.Instance;
     }
 

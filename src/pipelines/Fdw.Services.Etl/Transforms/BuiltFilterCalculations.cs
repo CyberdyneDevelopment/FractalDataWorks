@@ -54,9 +54,9 @@ public sealed class BuiltFilterCalculations : IFilterCalculations
         TimeProvider clock,
         ILogger<BuiltFilterCalculations>? logger = null)
     {
-        _transformations = transformations ?? throw new ArgumentNullException(nameof(transformations));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _transformations = transformations;
+        _settings = settings;
+        _clock = clock;
         _logger = logger ?? NullLogger<BuiltFilterCalculations>.Instance;
     }
 

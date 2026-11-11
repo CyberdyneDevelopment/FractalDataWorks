@@ -1,3 +1,4 @@
+using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
@@ -37,6 +38,16 @@ public static partial class PipelineRunLog
     [MessageLogging(EventId = 20204, Level = LogLevel.Warning,
         Message = "Run parameter '{parameterName}' is not a valid {parameterType}")]
     public static partial IGenericMessage RunParameterUnreadable(ILogger logger, string parameterName, string parameterType);
+
+    /// <summary>Logs a refused run parameter: it is declared as a list and its text is not JSON, with the parser's exception (FDW-5189).</summary>
+    [MessageLogging(EventId = 20253, Level = LogLevel.Warning,
+        Message = "Run parameter '{parameterName}' is a list, and its text is not a JSON array of items")]
+    public static partial IGenericMessage RunParameterListNotJson(ILogger logger, Exception ex, string parameterName);
+
+    /// <summary>Logs a refused run: the default declared for a list parameter the run did not give is not JSON, with the parser's exception (FDW-5189).</summary>
+    [MessageLogging(EventId = 20002, Level = LogLevel.Warning,
+        Message = "The default declared for list run parameter '{parameterName}' is not a JSON array of items, and the run did not give the parameter")]
+    public static partial IGenericMessage RunParameterDefaultListNotJson(ILogger logger, Exception ex, string parameterName);
 
     /// <summary>Logs a refused expression: it references a parameter that has no value for this run.</summary>
     [MessageLogging(EventId = 20205, Level = LogLevel.Warning,

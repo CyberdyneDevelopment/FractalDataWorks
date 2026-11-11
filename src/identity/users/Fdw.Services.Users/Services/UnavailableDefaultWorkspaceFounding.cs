@@ -29,7 +29,6 @@ public sealed class UnavailableDefaultWorkspaceFounding : IDefaultWorkspaceFound
     /// <inheritdoc />
     public Task<IGenericResult<Guid>> Found(NewDefaultWorkspace workspace, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(workspace);
         return Task.FromResult<IGenericResult<Guid>>(
             GenericResult<Guid>.Failure(DefaultWorkspaceFoundingLog.Unavailable(_logger, "made", workspace.WorkspaceId, workspace.TenantId)));
     }
@@ -37,7 +36,6 @@ public sealed class UnavailableDefaultWorkspaceFounding : IDefaultWorkspaceFound
     /// <inheritdoc />
     public Task<IGenericResult> Remove(NewDefaultWorkspace workspace, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(workspace);
         return Task.FromResult<IGenericResult>(
             GenericResult.Failure(DefaultWorkspaceFoundingLog.Unavailable(_logger, "removed", workspace.WorkspaceId, workspace.TenantId)));
     }

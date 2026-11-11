@@ -13,8 +13,8 @@ public sealed class CategoryTreeNode
     /// <param name="path">The display names from the top of the tree down to this node, joined by the path separator.</param>
     internal CategoryTreeNode(CategoryNode node, string path)
     {
-        Node = node ?? throw new ArgumentNullException(nameof(node));
-        Path = path ?? throw new ArgumentNullException(nameof(path));
+        Node = node;
+        Path = path;
     }
 
     /// <summary>Gets the node.</summary>

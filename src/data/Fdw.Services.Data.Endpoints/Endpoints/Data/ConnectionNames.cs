@@ -42,8 +42,8 @@ internal sealed class ConnectionNames
     /// <param name="logger">The logger.</param>
     public ConnectionNames(IDomainRecordProvider<DomainConfiguration> connections, IAuthorizationService authorization, ILogger? logger)
     {
-        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
-        _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
+        _connections = connections;
+        _authorization = authorization;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -59,8 +59,6 @@ internal sealed class ConnectionNames
     public async Task<IGenericResult<ConnectionNameLookup>> Read(
         IReadOnlyCollection<Guid> connectionIds, ClaimsPrincipal caller, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(connectionIds);
-
         var allowed = await _authorization.AuthorizeAsync(caller, null, ReadPolicy).ConfigureAwait(false);
         if (!allowed.Succeeded)
             return GenericResult<ConnectionNameLookup>.Success(

@@ -44,16 +44,6 @@ public sealed class HealthStateJsonConverter : JsonConverter<IHealthState>
     /// <inheritdoc />
     public override void Write(Utf8JsonWriter writer, IHealthState value, JsonSerializerOptions options)
     {
-        if (writer is null)
-        {
-            throw new ArgumentNullException(nameof(writer));
-        }
-
-        if (value is null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
-
         writer.WriteStringValue(value.Name);
     }
 

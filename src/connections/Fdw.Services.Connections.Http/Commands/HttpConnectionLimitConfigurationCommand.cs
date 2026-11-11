@@ -12,6 +12,6 @@ namespace Fdw.Services.Connections.Http.Commands;
 [TypeOption(typeof(ConfigurationCommands), "HttpConnectionLimit")]
 public sealed class HttpConnectionLimitConfigurationCommand : ConfigurationCommandBase<HttpConnectionLimitConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="HttpConnectionLimitConfigurationCommand"/> class.</summary>
     public HttpConnectionLimitConfigurationCommand() : base("HttpConnectionLimit") { }
 }

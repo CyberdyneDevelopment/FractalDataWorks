@@ -47,16 +47,15 @@ public abstract class PostgreSqlAuthenticationConfiguration
     /// <inheritdoc />
     public override IReadOnlyList<string> ExpectedProperties { get; } = [];
 
-    /// <inheritdoc />
+    /// <summary>Gets the properties a connection must state for this authentication type; a connection that leaves one out is refused.</summary>
     public IReadOnlyList<string> RequiredProperties { get; } = [];
 
-    /// <inheritdoc />
+    /// <summary>Gets a value indicating whether this is the empty sentinel, which has no name.</summary>
     public bool IsEmpty => string.IsNullOrEmpty(Name);
 
-    /// <inheritdoc />
+    /// <summary>Builds the authentication portion of the PostgreSQL connection string from the connection's properties and, for a type that needs one, the secret the provider fetched.</summary>
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
-    /// <inheritdoc />
     /// <remarks>
     /// Takes both a manager that may have been supplied directly and the provider that resolves one
     /// by name, because which of the two applies is this type's own decision: SecretManagerName is
@@ -76,6 +75,6 @@ public abstract class PostgreSqlAuthenticationConfiguration
     public virtual IGenericResult<SecretRequirement> RequiredSecret(IReadOnlyDictionary<string, string?> values)
         => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
 
-    /// <inheritdoc />
+    /// <summary>Checks that the connection's authentication properties are complete and usable for this type, before any connection string is built.</summary>
     public abstract IGenericResult Validate(IReadOnlyDictionary<string, string?> values);
 }

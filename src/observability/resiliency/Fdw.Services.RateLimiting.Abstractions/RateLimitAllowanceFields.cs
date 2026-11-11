@@ -72,19 +72,8 @@ public static class RateLimitAllowanceFields
     /// <param name="policyName">The policy's name.</param>
     /// <param name="field">The field.</param>
     /// <returns>The setting's name: <c>RateLimit.{policy}.{field}</c>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the policy's name or the field is null.</exception>
     public static string SettingName(string policyName, RateLimitAllowanceField field)
     {
-        if (policyName is null)
-        {
-            throw new ArgumentNullException(nameof(policyName));
-        }
-
-        if (field is null)
-        {
-            throw new ArgumentNullException(nameof(field));
-        }
-
         return Prefix + "." + policyName + "." + field.Name;
     }
 }

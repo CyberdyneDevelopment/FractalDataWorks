@@ -31,7 +31,6 @@ internal sealed class FlowRejectedRows
     /// <param name="rows">The rows; none is kept.</param>
     public void Keep(string component, string output, IReadOnlyList<IDictionary<string, object?>> rows)
     {
-        ArgumentNullException.ThrowIfNull(rows);
         if (rows.Count == 0)
         {
             return;
@@ -62,7 +61,6 @@ internal sealed class FlowRejectedRows
     /// <returns>The rows rejected by those components, every error output added.</returns>
     public long CountOf(IReadOnlySet<string> components)
     {
-        ArgumentNullException.ThrowIfNull(components);
         lock (_gate)
         {
             return _counted.Values.Where(counted => components.Contains(counted.Component)).Sum(counted => counted.Count);

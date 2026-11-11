@@ -18,7 +18,6 @@ public static class LinkHeader
     /// <returns>The link's target as the header gives it; null when no link names the relation.</returns>
     public static string? Target(HttpResponseHeaders headers, string relation)
     {
-        ArgumentNullException.ThrowIfNull(headers);
         return headers.TryGetValues("Link", out var values) ? Target(string.Join(",", values), relation) : null;
     }
 
@@ -28,7 +27,6 @@ public static class LinkHeader
     /// <returns>The link's target; null when no link names the relation.</returns>
     public static string? Target(string header, string relation)
     {
-        ArgumentNullException.ThrowIfNull(header);
         var position = 0;
         while (position < header.Length)
         {

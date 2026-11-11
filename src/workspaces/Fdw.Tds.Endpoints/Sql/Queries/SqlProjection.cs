@@ -27,10 +27,6 @@ public static class SqlProjection
     /// <returns>The result, or the refusal.</returns>
     public static IGenericResult<SqlSelectOutput> Project(QuerySpecification query, SqlRowSet source, SqlScope outer, ProjectionSteps steps)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(outer);
-
         if (query.GroupByClause is not null || query.HavingClause is not null)
             return SqlRefusal.Refuse<SqlSelectOutput>(SqlServerErrors.NotSupported("GROUP BY", query.StartLine), outer.Context.Logger);
 

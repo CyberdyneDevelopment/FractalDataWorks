@@ -22,8 +22,6 @@ public sealed class OrchestrationNodeConfigurationValidator : AbstractValidator<
     /// <param name="serverDefaults">Reads the server's policy defaults, which a node may tighten but not relax.</param>
     public OrchestrationNodeConfigurationValidator(IServerPolicyDefaultConfigurationProvider serverDefaults)
     {
-        if (serverDefaults == null) throw new ArgumentNullException(nameof(serverDefaults));
-
         RegisterBasicRules();
         RegisterNodeTypeRules();
         RegisterPolicyRules(serverDefaults);

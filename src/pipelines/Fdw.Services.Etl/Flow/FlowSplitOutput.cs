@@ -15,7 +15,7 @@ public sealed class FlowSplitOutput
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
-        Filter = filter ?? throw new ArgumentNullException(nameof(filter));
+        Filter = filter;
     }
 
     /// <summary>Gets the output node's name.</summary>

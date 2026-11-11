@@ -20,7 +20,7 @@ public class TypeParameterExpectations
     /// <param name="constraintClause">The constraint clause associated with this type parameter, if any.</param>
     public TypeParameterExpectations(TypeParameterSyntax typeParameter, TypeParameterConstraintClauseSyntax? constraintClause = null)
     {
-        _typeParameter = typeParameter ?? throw new ArgumentNullException(nameof(typeParameter));
+        _typeParameter = typeParameter;
         _constraintClause = constraintClause;
     }
 

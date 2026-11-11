@@ -109,7 +109,19 @@ on:
         type: string
         default: ''
       full_build_wait_minutes:
-        description: 'Allocated stable release only: how long to wait for a green full-build CI run of this exact commit before the release fails. Empty = variable NUGET_FULL_BUILD_WAIT_MINUTES, else the declared default.'
+        description: 'Allocated real run, when run_tests is false: how long to wait for a green full-build CI run of this exact commit before the release fails. Empty = variable NUGET_FULL_BUILD_WAIT_MINUTES, else the declared default.'
+        type: string
+        default: ''
+      reuse_dry_run:
+        description: 'Allocated real run only: require = take the packed packages and the decided files of the dry run of this exact commit (a dry run keeps them as the artifact release-dryrun-<sha>) and only decide, push and publish the bundle; the run stops, and says why, when there is no matching dry run. never = build in this run. Empty = variable NUGET_REUSE_DRY_RUN, else the declared default.'
+        type: string
+        default: ''
+      run_tests:
+        description: 'Allocated only: true = the release job also runs the tests of the packages it builds; false = it does not, and the real run then requires a green CI run of the commit, which runs every test, stable or candidate (a stop RELEASE-UNPROVEN-1 or -2 otherwise). Empty = variable NUGET_RUN_TESTS, else the declared default.'
+        type: string
+        default: ''
+      dry_run_retention_days:
+        description: 'Allocated dry run only: how many days the artifact release-dryrun-<sha> is kept for the real run. Empty = variable NUGET_DRY_RUN_RETENTION_DAYS, else the declared default.'
         type: string
         default: ''
       package_ids:
@@ -161,6 +173,9 @@ jobs:
       full-build-wait-minutes: ${{ steps.settings.outputs.full-build-wait-minutes }}
       levels-max-rounds: ${{ steps.settings.outputs.levels-max-rounds }}
       max-level: ${{ steps.settings.outputs.max-level }}
+      reuse-dry-run: ${{ steps.settings.outputs.reuse-dry-run }}
+      run-tests: ${{ steps.settings.outputs.run-tests }}
+      dry-run-retention-days: ${{ steps.settings.outputs.dry-run-retention-days }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -190,6 +205,9 @@ jobs:
           DEFAULT_FULL_BUILD_WAIT_MINUTES: '120'
           DEFAULT_LEVELS_MAX_ROUNDS: '200'
           DEFAULT_MAX_LEVEL: ''
+          DEFAULT_REUSE_DRY_RUN: 'require'
+          DEFAULT_RUN_TESTS: 'false'
+          DEFAULT_DRY_RUN_RETENTION_DAYS: '7'
           INPUT_QUOTA_MAX_WAITS: ${{ inputs.quota_max_waits }}
           INPUT_QUOTA_WAIT_SECONDS: ${{ inputs.quota_wait_seconds }}
           INPUT_QUOTA_BACKOFF_FACTOR: ${{ inputs.quota_backoff_factor }}
@@ -203,6 +221,9 @@ jobs:
           INPUT_FULL_BUILD_WAIT_MINUTES: ${{ inputs.full_build_wait_minutes }}
           INPUT_LEVELS_MAX_ROUNDS: ${{ inputs.levels_max_rounds }}
           INPUT_MAX_LEVEL: ${{ inputs.max_level }}
+          INPUT_REUSE_DRY_RUN: ${{ inputs.reuse_dry_run }}
+          INPUT_RUN_TESTS: ${{ inputs.run_tests }}
+          INPUT_DRY_RUN_RETENTION_DAYS: ${{ inputs.dry_run_retention_days }}
           VAR_QUOTA_MAX_WAITS: ${{ vars.NUGET_QUOTA_MAX_WAITS }}
           VAR_QUOTA_WAIT_SECONDS: ${{ vars.NUGET_QUOTA_WAIT_SECONDS }}
           VAR_QUOTA_BACKOFF_FACTOR: ${{ vars.NUGET_QUOTA_BACKOFF_FACTOR }}
@@ -216,6 +237,9 @@ jobs:
           VAR_FULL_BUILD_WAIT_MINUTES: ${{ vars.NUGET_FULL_BUILD_WAIT_MINUTES }}
           VAR_LEVELS_MAX_ROUNDS: ${{ vars.NUGET_LEVELS_MAX_ROUNDS }}
           VAR_MAX_LEVEL: ${{ vars.NUGET_MAX_LEVEL }}
+          VAR_REUSE_DRY_RUN: ${{ vars.NUGET_REUSE_DRY_RUN }}
+          VAR_RUN_TESTS: ${{ vars.NUGET_RUN_TESTS }}
+          VAR_DRY_RUN_RETENTION_DAYS: ${{ vars.NUGET_DRY_RUN_RETENTION_DAYS }}
         run: |
           set -euo pipefail
           resolve() {
@@ -234,6 +258,12 @@ jobs:
             fi
             if [ "$kind" = bump ] && [ -n "$value" ] && [ "$value" != patch ] && [ "$value" != minor ] && [ "$value" != major ]; then
               echo "::error::Release setting $name is '$value' (from the $source) but must be patch, minor or major."; exit 1
+            fi
+            if [ "$kind" = reuse ] && [ "$value" != require ] && [ "$value" != never ]; then
+              echo "::error::Release setting $name is '$value' (from the $source) but must be require or never."; exit 1
+            fi
+            if [ "$kind" = boolean ] && [ "$value" != true ] && [ "$value" != false ]; then
+              echo "::error::Release setting $name is '$value' (from the $source) but must be true or false."; exit 1
             fi
             if [ "$kind" = text ] && [ -z "$value" ]; then
               echo "::error::Release setting $name is empty."; exit 1
@@ -254,6 +284,9 @@ jobs:
           resolve FULL_BUILD_WAIT_MINUTES integer full-build-wait-minutes
           resolve LEVELS_MAX_ROUNDS integer levels-max-rounds
           resolve MAX_LEVEL bump max-level
+          resolve REUSE_DRY_RUN reuse reuse-dry-run
+          resolve RUN_TESTS boolean run-tests
+          resolve DRY_RUN_RETENTION_DAYS integer dry-run-retention-days
           TIMEOUT=$(grep -oP '^publish-timeout-minutes=\K.*' "$GITHUB_OUTPUT")
           if [ "$TIMEOUT" -lt 1 ] || [ "$TIMEOUT" -gt 360 ]; then
             echo "::error::Push setting PUBLISH_TIMEOUT_MINUTES is $TIMEOUT but a GitHub-hosted job runs 1 to 360 minutes."; exit 1
@@ -605,12 +638,13 @@ jobs:
         run: bash scripts/release-allocated.sh plan
 
       # The safety net (FDW-3356). The fast path builds only the packages that changed, so a behaviour change
-      # that leaves a package's API untouched passes it. A stable release therefore waits for a green CI run of
-      # THIS commit (ci.yml builds every project from source and runs every test on main). It waits while a
-      # run is queued or running, fails at once when every run for the commit failed, and fails when none is
-      # green within the wait. Candidates (prerelease) are not gated: they are the proof the stable one rests on.
-      - name: Require a green full build of this commit (stable only)
-        if: ${{ steps.plan.outputs.should-release == 'true' && github.ref_name == 'main' && !inputs.dry_run }}
+      # that leaves a package's API untouched passes it. A real release, stable or candidate, therefore waits for a green
+      # CI run of THIS commit (ci.yml builds every project from source and runs every test, and runs on main and prerelease)
+      # unless the job tests it itself (run_tests=true: the tests ran in the build step, or in the dry run this run reuses).
+      # Nothing ships untested without someone saying so. It waits while a run is queued or running, and stops with a
+      # coded reason (RELEASE-UNPROVEN-1: every run failed; RELEASE-UNPROVEN-2: none green within the wait).
+      - name: Require a green CI run of this commit, unless the job tests it (run_tests)
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && needs.check.outputs.run-tests != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           WAIT_MINUTES: ${{ needs.check.outputs.full-build-wait-minutes }}
@@ -627,16 +661,38 @@ jobs:
               exit 0
             fi
             if [ "$total" -gt 0 ] && [ "$active" -eq 0 ]; then
-              echo "::error::Every full-build CI run of $GITHUB_SHA failed: $(jq -r '[.[].url] | join(", ")' <<<"$runs"). The stable release is not built. Fix the failure and push again."
+              echo "::error::RELEASE-UNPROVEN-1: every full-build CI run of $GITHUB_SHA failed: $(jq -r '[.[].url] | join(", ")' <<<"$runs"). Nothing is released untested. Fix the failure and push again, or dispatch with run_tests=true to test in the job."
               exit 1
             fi
             if [ "$(date +%s)" -ge "$deadline" ]; then
-              echo "::error::No green full-build CI run of $GITHUB_SHA within ${WAIT_MINUTES} minutes ($total run(s) seen, $active still running). The stable release is not built. Rerun this workflow once CI has finished green."
+              echo "::error::RELEASE-UNPROVEN-2: no green full-build CI run of $GITHUB_SHA within ${WAIT_MINUTES} minutes ($total run(s) seen, $active still running). Nothing is released untested. Rerun this workflow once CI has finished green, or dispatch with run_tests=true to test in the job."
               exit 1
             fi
             echo "Waiting for the full-build CI run of $GITHUB_SHA ($total seen, $active active)..."
             sleep 60
           done
+
+      # The real run does not make again what the dry run of this exact commit made (FDW-5175). It takes the dry run's packed packages
+      # and decided files (artifact release-dryrun-<sha>), proves they belong to this release (the same commit, the same inputs, and the
+      # plan this run has just made equals the plan the dry run was made from), and goes on to decide against nuget.org as it is now.
+      # No matching dry run: the run stops and says why. It never builds silently; reuse_dry_run=never is the explicit way to build here.
+      - name: Take the results of the dry run of this commit
+        id: reuse
+        if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run && needs.check.outputs.reuse-dry-run == 'require' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          LINE: ${{ steps.line.outputs.line }}
+          BUMP: ${{ needs.check.outputs.release-bump }}
+          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
+          BASELINE_FILE: ${{ needs.check.outputs.baseline-file }}
+          MAX_LEVEL: ${{ needs.check.outputs.max-level }}
+          LEVELS_MAX_ROUNDS: ${{ needs.check.outputs.levels-max-rounds }}
+          RUN_TESTS: ${{ needs.check.outputs.run-tests }}
+          WORK_DIR: release-work
+          DRYRUN_DIR: dryrun-download
+        run: bash scripts/release-allocated.sh reuse
 
       # Each package's own version (FDW-4784): the changed packages are packed once at a stand-in version only to read
       # their public surface (Fdw.ApiSurface), compared with the surface of their last stable version on nuget.org by
@@ -645,7 +701,7 @@ jobs:
       # in scripts/release-allocated.sh at the lines marked ASSUMES-DUMPER-CLI.
       - name: Decide each package's version from its public surface
         id: levels
-        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        if: ${{ steps.plan.outputs.should-release == 'true' && (inputs.dry_run || needs.check.outputs.reuse-dry-run == 'never') }}
         env:
           BRANCH: ${{ github.ref_name }}
           BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
@@ -657,20 +713,38 @@ jobs:
           MAX_LEVEL: ${{ needs.check.outputs.max-level }}
         run: bash scripts/release-allocated.sh levels
 
-      - name: Build and test the build set
-        if: ${{ steps.plan.outputs.should-release == 'true' }}
+      - name: Build the build set (and test it when run_tests asks)
+        if: ${{ steps.plan.outputs.should-release == 'true' && (inputs.dry_run || needs.check.outputs.reuse-dry-run == 'never') }}
         env:
           MEMBERS: ${{ steps.levels.outputs.members }}
           WORK_DIR: release-work
+          RUN_TESTS: ${{ needs.check.outputs.run-tests }}
         run: bash scripts/release-allocated.sh build
 
       # The assembly versions are frozen at a floor for the whole 1.x line (FDW-4784): a package that is not rebuilt still asks for its
       # dependencies at the version it was built against, and the runtime will not bind a lower one. This proves it before anything is pushed.
       - name: Check that packages left as they are still bind
-        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        if: ${{ steps.plan.outputs.should-release == 'true' && (inputs.dry_run || needs.check.outputs.reuse-dry-run == 'never') }}
         env:
           WORK_DIR: release-work
         run: bash scripts/release-allocated.sh bindings
+
+      # A dry run keeps what it made, for the real run: staged before decide moves any package aside, uploaded only when decide passed.
+      - name: Keep the dry run's results for the real run
+        if: ${{ steps.plan.outputs.should-release == 'true' && inputs.dry_run }}
+        env:
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          LINE: ${{ steps.line.outputs.line }}
+          BUMP: ${{ needs.check.outputs.release-bump }}
+          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
+          BASELINE_FILE: ${{ needs.check.outputs.baseline-file }}
+          MAX_LEVEL: ${{ needs.check.outputs.max-level }}
+          LEVELS_MAX_ROUNDS: ${{ needs.check.outputs.levels-max-rounds }}
+          RUN_TESTS: ${{ needs.check.outputs.run-tests }}
+          WORK_DIR: release-work
+          KEPT_DIR: dryrun-kept
+        run: bash scripts/release-allocated.sh keep
 
       - name: Decide every package before pushing any
         id: decide
@@ -678,6 +752,16 @@ jobs:
         env:
           WORK_DIR: release-work
         run: bash scripts/release-allocated.sh decide
+
+      - name: Upload the dry run's results (release-dryrun-<commit>)
+        if: ${{ steps.plan.outputs.should-release == 'true' && inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dryrun-${{ github.sha }}
+          path: dryrun-kept
+          retention-days: ${{ fromJSON(needs.check.outputs.dry-run-retention-days) }}
+          compression-level: 0
+          if-no-files-found: error
 
       - name: NuGet login 1 (OIDC to short-lived key)
         id: rlogin1
@@ -832,7 +916,7 @@ jobs:
       - name: Pack the bundle
         if: ${{ steps.plan.outputs.should-release == 'true' && !inputs.dry_run }}
         env:
-          VERSION: ${{ steps.levels.outputs.version }}
+          VERSION: ${{ steps.levels.outputs.version || steps.reuse.outputs.version }}
           BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
           WORK_DIR: release-work
         run: bash scripts/release-allocated.sh bundle
@@ -869,7 +953,7 @@ jobs:
 
       - name: Dry run summary
         if: ${{ inputs.dry_run }}
-        run: echo "Dry run - planned, built, tested and decided release ${{ steps.levels.outputs.version }} but did not push."
+        run: echo "Dry run - planned, built and decided release ${{ steps.levels.outputs.version }}, kept its results as the artifact release-dryrun-${{ github.sha }} for the real run, and did not push."
 
   unlist:
     name: Unlist ${{ inputs.unlist_version }}

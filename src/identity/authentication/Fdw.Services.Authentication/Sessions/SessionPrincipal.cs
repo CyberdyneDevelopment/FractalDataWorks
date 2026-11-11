@@ -56,8 +56,6 @@ internal static class SessionPrincipal
     /// </remarks>
     public static IReadOnlyList<Claim> Claims(SessionRecord session)
     {
-        ArgumentNullException.ThrowIfNull(session);
-
         var assertion = session.Assertion;
         var claims = new List<Claim>
         {
@@ -93,8 +91,6 @@ internal static class SessionPrincipal
     /// <returns>The authenticated session identity, or null.</returns>
     public static ClaimsIdentity? Identity(ClaimsPrincipal principal)
     {
-        ArgumentNullException.ThrowIfNull(principal);
-
         return principal.Identities.FirstOrDefault(identity =>
             identity.IsAuthenticated
             && identity.AuthenticationType is { } scheme
@@ -112,8 +108,6 @@ internal static class SessionPrincipal
     /// </remarks>
     public static IGenericResult<IssuanceRequest> Assertion(ClaimsIdentity identity, DateTimeOffset notAfter, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(identity);
-
         if (!Guid.TryParse(identity.FindFirst(ClaimDefinitions.sub.Name)?.Value, out var principalId))
             return Unreadable(logger, $"'{ClaimDefinitions.sub.Name}' is not a principal id");
 

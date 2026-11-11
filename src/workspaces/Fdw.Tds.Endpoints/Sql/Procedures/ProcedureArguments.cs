@@ -21,7 +21,6 @@ public static class ProcedureArguments
     /// <returns>The text, or the refusal.</returns>
     public static IGenericResult<string> Text(SqlProcedureCall call, string name, int position, bool required)
     {
-        ArgumentNullException.ThrowIfNull(call);
         if (!call.TryArgument(name, position, out var argument) || argument.Value is null)
         {
             return required
@@ -39,7 +38,6 @@ public static class ProcedureArguments
     /// <returns>The handle, or the refusal.</returns>
     public static IGenericResult<int> Handle(SqlProcedureCall call, string name, int position)
     {
-        ArgumentNullException.ThrowIfNull(call);
         if (call.TryArgument(name, position, out var argument) && argument.Value is { } value
             && SqlValues.TryNumber(value, out var number) && number is >= int.MinValue and <= int.MaxValue)
         {
@@ -55,7 +53,6 @@ public static class ProcedureArguments
     /// <returns>The output, against the argument at position 0.</returns>
     public static SqlProcedureOutput HandleOutput(SqlProcedureCall call, int handle)
     {
-        ArgumentNullException.ThrowIfNull(call);
         var name = call.Arguments.Count > 0 ? call.Arguments[0].Name : string.Empty;
         return new SqlProcedureOutput(0, name, handle, HandleType);
     }

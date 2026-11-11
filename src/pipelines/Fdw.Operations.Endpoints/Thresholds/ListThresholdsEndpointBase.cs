@@ -21,7 +21,7 @@ public abstract class ListThresholdsEndpointBase : CrudPageEndpointBase<IThresho
     protected ListThresholdsEndpointBase(ILogger<ListThresholdsEndpointBase> logger, IThresholdConfigurationProvider thresholds)
         : base(logger)
     {
-        _thresholds = thresholds ?? throw new ArgumentNullException(nameof(thresholds));
+        _thresholds = thresholds;
     }
 
     /// <inheritdoc />

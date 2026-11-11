@@ -19,10 +19,6 @@ public static class WaitThresholdResolver
     /// <returns>The level of the owner chosen; a failure when the server inherits.</returns>
     public static IGenericResult<WaitThresholdLayer> Owner(WaitThresholdLayer server, WaitThresholdLayer pipeline, WaitThresholdLayer? schedule, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(server);
-        ArgumentNullException.ThrowIfNull(pipeline);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (server.Mode.InheritsFromParent)
         {
             return GenericResult<WaitThresholdLayer>.Failure(WaitThresholdLog.ServerInherits(logger, server.Mode.Name));

@@ -19,7 +19,7 @@ public sealed class EffectiveDefinition<T>
         }
 
         Definition = definition;
-        SetAt = setAt ?? throw new ArgumentNullException(nameof(setAt));
+        SetAt = setAt;
         LockedAt = lockedAt;
     }
 

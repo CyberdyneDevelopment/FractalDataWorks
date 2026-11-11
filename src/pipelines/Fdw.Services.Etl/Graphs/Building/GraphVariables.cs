@@ -36,8 +36,6 @@ public static class GraphVariables
     public static IGenericResult<FlowVariables> Declare(
         GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?>? supplied, DateTimeOffset? runStarted, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(logger);
         var variables = new FlowVariables();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var parameters = DeclareParameters(graph, supplied, variables, seen, logger);

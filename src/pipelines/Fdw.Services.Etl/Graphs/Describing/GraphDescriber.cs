@@ -40,10 +40,6 @@ public static class GraphDescriber
     public static async Task<IGenericResult<IReadOnlyList<GraphNodeFields>>> Describe(
         GraphPipelineConfiguration graph, DescribeContext context, ILogger logger, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var links = CompletionLines.Rows(graph.Links);
         var produced = new Dictionary<(string Component, string Node), IReadOnlyList<GraphField>?>(new NodeComparer());
         var nodes = new List<GraphNodeFields>();

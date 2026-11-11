@@ -22,7 +22,6 @@ public sealed record PipelineUse(string Relation, string Kind, string Name, IRea
     /// <returns><see langword="true"/> when both name the same relation, kind, name and parents.</returns>
     public bool Matches(PipelineUse other)
     {
-        ArgumentNullException.ThrowIfNull(other);
         return string.Equals(Relation, other.Relation, StringComparison.Ordinal)
             && string.Equals(Kind, other.Kind, StringComparison.Ordinal)
             && string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)

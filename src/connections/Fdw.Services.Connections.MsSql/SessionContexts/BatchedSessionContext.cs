@@ -59,8 +59,6 @@ public sealed class BatchedSessionContext
     /// <returns><see langword="true"/> when <see cref="Attach"/> will accept it.</returns>
     public static bool CanCarry(SqlCommand command)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         return command.CommandType == CommandType.Text;
     }
 
@@ -82,10 +80,6 @@ public sealed class BatchedSessionContext
         SqlCommand command,
         ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (!CanCarry(command))
         {
             return GenericResult<BatchedSessionContext>.Failure(
@@ -129,8 +123,6 @@ public sealed class BatchedSessionContext
     /// <returns><see langword="true"/> when the context could not be set, so the command never ran.</returns>
     public static bool IsContextFailure(SqlException exception)
     {
-        ArgumentNullException.ThrowIfNull(exception);
-
         foreach (SqlError error in exception.Errors)
         {
             if (IsContextProcedure(error.Procedure))

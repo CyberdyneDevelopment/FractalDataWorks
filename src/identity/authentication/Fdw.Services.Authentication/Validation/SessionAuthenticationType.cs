@@ -102,8 +102,6 @@ public sealed class SessionAuthenticationType : AuthenticationServiceTypeBase
     /// <returns>The mode, or a failure when the row names anything but Strict, Lax or None.</returns>
     public static IGenericResult<SameSiteMode> SameSiteOf(ISessionAuthenticationConfiguration configuration, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-
         return configuration.SameSite switch
         {
             "Strict" => GenericResult<SameSiteMode>.Success(SameSiteMode.Strict),
@@ -120,8 +118,6 @@ public sealed class SessionAuthenticationType : AuthenticationServiceTypeBase
     /// <returns>The protection, or a failure when the row names one that is not registered.</returns>
     public static IGenericResult<ISessionCsrfProtection> CsrfProtectionOf(ISessionAuthenticationConfiguration configuration, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-
         var protection = SessionCsrfProtectionTypes.ByName(configuration.CsrfProtection);
         return protection == SessionCsrfProtectionTypes.NotFound
             ? GenericResult<ISessionCsrfProtection>.Failure(SessionLog.SessionServiceInvalid(
@@ -162,9 +158,6 @@ public sealed class SessionAuthenticationType : AuthenticationServiceTypeBase
         IServiceProvider services,
         ILoggerFactory? loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-        ArgumentNullException.ThrowIfNull(schemes);
-
         var log = loggerFactory?.CreateLogger<SessionAuthenticationType>()
             ?? NullLogger<SessionAuthenticationType>.Instance;
 

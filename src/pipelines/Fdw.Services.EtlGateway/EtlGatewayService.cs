@@ -38,9 +38,9 @@ public sealed class EtlGatewayService : IEtlGateway
         IAuthenticationContextAccessor? authentication = null,
         ILogger<EtlGatewayService>? logger = null)
     {
-        _dataStores = dataStores ?? throw new ArgumentNullException(nameof(dataStores));
-        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
-        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
+        _dataStores = dataStores;
+        _connections = connections;
+        _dataStoreProvider = dataStoreProvider;
         _authentication = authentication;
         _logger = logger ?? NullLogger<EtlGatewayService>.Instance;
     }
@@ -48,7 +48,6 @@ public sealed class EtlGatewayService : IEtlGateway
     /// <inheritdoc />
     public async Task<IGenericResult<T>> Execute<T>(IScriptedDataCommand<T> command, string dataStore, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
         if (string.IsNullOrWhiteSpace(dataStore))
         {
             return ScriptRefusal<T>("the data store's name is required");

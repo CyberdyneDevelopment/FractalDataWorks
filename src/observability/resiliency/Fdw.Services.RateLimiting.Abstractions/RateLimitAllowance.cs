@@ -46,11 +46,11 @@ public sealed class RateLimitAllowance
         Window = window;
         AllowBurst = allowBurst;
         BurstLimit = burstLimit;
-        Algorithm = algorithm ?? throw new ArgumentNullException(nameof(algorithm));
+        Algorithm = algorithm;
         SegmentsPerWindow = segmentsPerWindow;
         QueueExceededRequests = queueExceededRequests;
         QueueLimit = queueLimit;
-        Partitioning = partitioning ?? throw new ArgumentNullException(nameof(partitioning));
+        Partitioning = partitioning;
     }
 
     /// <summary>

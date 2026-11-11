@@ -54,9 +54,9 @@ public abstract class WorkspaceDocumentEndpointBase<TRequest> : ApiReferenceDocu
         IWorkspaceReadService readService)
         : base(logger, systemRoles)
     {
-        Workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
-        Access = access ?? throw new ArgumentNullException(nameof(access));
-        _readService = readService ?? throw new ArgumentNullException(nameof(readService));
+        Workspaces = workspaces;
+        Access = access;
+        _readService = readService;
     }
 
     /// <summary>Gets the provider that resolves workspaces.</summary>
@@ -77,9 +77,6 @@ public abstract class WorkspaceDocumentEndpointBase<TRequest> : ApiReferenceDocu
         string title,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(document);
-        ArgumentNullException.ThrowIfNull(workspaces);
-
         if (document.Paths.FirstOrDefault(path => path.EndsWith(DataRouteSuffix, StringComparison.OrdinalIgnoreCase)) is not { } routePath)
         {
             return GenericResult.Failure(

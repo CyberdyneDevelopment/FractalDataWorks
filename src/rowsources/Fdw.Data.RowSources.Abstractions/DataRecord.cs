@@ -39,12 +39,11 @@ public readonly struct DataRecord : IEquatable<DataRecord>
     /// The field values, positionally aligned to <paramref name="schema"/>. Length must equal
     /// <see cref="RecordSchema.FieldCount"/>.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="schema"/> or <paramref name="values"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when the value count does not match the schema field count.</exception>
     public DataRecord(RecordSchema schema, object?[] values)
     {
-        _schema = schema ?? throw new ArgumentNullException(nameof(schema));
-        _values = values ?? throw new ArgumentNullException(nameof(values));
+        _schema = schema;
+        _values = values;
         if (values.Length != schema.FieldCount)
         {
             throw new ArgumentException(

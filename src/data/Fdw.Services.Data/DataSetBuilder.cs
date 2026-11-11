@@ -39,7 +39,6 @@ public sealed class DataSetBuilder : IDataSetBuilder
     /// <inheritdoc />
     public IGenericResult Configure(IDataSetImplementationConfiguration dataSetConfig)
     {
-        ArgumentNullException.ThrowIfNull(dataSetConfig);
         _config = dataSetConfig;
         return GenericResult.Success();
     }

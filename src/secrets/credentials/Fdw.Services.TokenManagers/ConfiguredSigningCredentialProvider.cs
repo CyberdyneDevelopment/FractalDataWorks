@@ -23,7 +23,7 @@ internal sealed class ConfiguredSigningCredentialProvider : ISigningCredentialPr
     /// <param name="resolver">Resolves the configured key.</param>
     public ConfiguredSigningCredentialProvider(JwtIssuanceResolver resolver)
     {
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _resolver = resolver;
     }
 
     /// <inheritdoc />

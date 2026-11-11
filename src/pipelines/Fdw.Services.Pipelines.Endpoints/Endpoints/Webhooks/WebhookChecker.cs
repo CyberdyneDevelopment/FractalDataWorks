@@ -16,8 +16,6 @@ public static class WebhookChecker
     /// <returns>Each problem, in words written for the caller; empty when there is none.</returns>
     public static IReadOnlyList<string> Problems(WebhookPayload payload, IReadOnlyCollection<string> declaredParameters)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        ArgumentNullException.ThrowIfNull(declaredParameters);
         var problems = new List<string>();
         if (!IsAddressName(payload.Name))
         {

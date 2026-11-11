@@ -26,7 +26,7 @@ public sealed class InMemoryOrchestrationCache : IOrchestrationCache
     /// <param name="cache">The memory cache instance.</param>
     public InMemoryOrchestrationCache(IMemoryCache cache)
     {
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cache = cache;
         _keys = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
     }
 

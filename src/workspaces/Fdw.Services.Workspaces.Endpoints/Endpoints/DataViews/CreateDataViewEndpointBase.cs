@@ -50,9 +50,9 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
         IFilterCalculations? calculations = null) : base(logger)
     {
         _calculations = calculations;
-        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _variations = variations;
+        _dataSets = dataSets;
+        _authContext = authContext;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

@@ -28,9 +28,6 @@ public static class McpToolEventBusExtensions
         ulong? causation = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(bus);
-        ArgumentNullException.ThrowIfNull(view);
-
         var payload = JsonSerializer.SerializeToUtf8Bytes(args);
         var draft = new McpEventDraft(
             Topic: McpTopics.ToolInvoke(serverName, toolName),
@@ -57,9 +54,6 @@ public static class McpToolEventBusExtensions
         ulong? causation,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(bus);
-        ArgumentNullException.ThrowIfNull(view);
-
         var payload = JsonSerializer.SerializeToUtf8Bytes(result);
         var draft = new McpEventDraft(
             Topic: McpTopics.ToolResult(serverName, toolName),
@@ -85,7 +79,6 @@ public static class McpToolEventBusExtensions
         ulong? causation,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(bus);
         ArgumentException.ThrowIfNullOrWhiteSpace(errorMessage);
 
         var draft = new McpEventDraft(

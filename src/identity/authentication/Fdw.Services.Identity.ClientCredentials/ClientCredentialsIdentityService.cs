@@ -35,7 +35,6 @@ public sealed class ClientCredentialsIdentityService
     /// <param name="configuration">The typed configuration body for this identity.</param>
     /// <param name="tokenEndpoint">The shared token-endpoint client.</param>
     /// <param name="secretManagers">Provider resolving the named secret manager that holds this identity's client secret.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tokenEndpoint"/> or <paramref name="secretManagers"/> is null.</exception>
     public ClientCredentialsIdentityService(
         ILogger<ClientCredentialsIdentityService>? logger,
         ClientCredentialsConfiguration configuration,
@@ -43,8 +42,8 @@ public sealed class ClientCredentialsIdentityService
         ISecretManagerProvider secretManagers)
         : base(logger, configuration)
     {
-        _tokenEndpoint = tokenEndpoint ?? throw new ArgumentNullException(nameof(tokenEndpoint));
-        _secretManagers = secretManagers ?? throw new ArgumentNullException(nameof(secretManagers));
+        _tokenEndpoint = tokenEndpoint;
+        _secretManagers = secretManagers;
     }
 
     /// <inheritdoc/>

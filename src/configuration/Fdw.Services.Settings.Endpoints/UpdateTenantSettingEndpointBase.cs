@@ -18,7 +18,7 @@ public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<U
 {
     private readonly ITenantSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateTenantSettingEndpointBase"/> class.</summary>
     protected UpdateTenantSettingEndpointBase(ILogger<UpdateTenantSettingEndpointBase> logger, ITenantSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

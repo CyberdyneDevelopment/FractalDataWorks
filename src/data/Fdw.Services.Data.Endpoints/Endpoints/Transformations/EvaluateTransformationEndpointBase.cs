@@ -35,7 +35,7 @@ public abstract class EvaluateTransformationEndpointBase : Endpoint<EvaluateTran
     protected EvaluateTransformationEndpointBase(ILogger<EvaluateTransformationEndpointBase> logger, IFilterCalculations calculations)
     {
         Logger = logger ?? NullLogger<EvaluateTransformationEndpointBase>.Instance;
-        _calculations = calculations ?? throw new ArgumentNullException(nameof(calculations));
+        _calculations = calculations;
     }
 
     /// <summary>Gets the logger.</summary>

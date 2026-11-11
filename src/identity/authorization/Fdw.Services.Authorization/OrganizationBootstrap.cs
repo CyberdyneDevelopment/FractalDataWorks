@@ -41,9 +41,9 @@ public sealed class OrganizationBootstrap : IOrganizationBootstrap
         IGrantRule grantRule,
         ILogger<OrganizationBootstrap>? logger)
     {
-        _roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        _access = access ?? throw new ArgumentNullException(nameof(access));
-        _grantRule = grantRule ?? throw new ArgumentNullException(nameof(grantRule));
+        _roles = roles;
+        _access = access;
+        _grantRule = grantRule;
         _logger = logger ?? NullLogger<OrganizationBootstrap>.Instance;
     }
 

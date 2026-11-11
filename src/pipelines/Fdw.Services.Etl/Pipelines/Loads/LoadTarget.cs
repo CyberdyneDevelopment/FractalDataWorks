@@ -21,8 +21,8 @@ public sealed class LoadTarget
     /// <param name="connectionId">The connection of the container's data store.</param>
     public LoadTarget(string description, IDataContainer container, Guid connectionId)
     {
-        Description = description ?? throw new ArgumentNullException(nameof(description));
-        Container = container ?? throw new ArgumentNullException(nameof(container));
+        Description = description;
+        Container = container;
         ConnectionId = connectionId;
     }
 

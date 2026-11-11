@@ -21,7 +21,7 @@ public abstract class PreviewStandInEndpointBase : Endpoint<PreviewStandInReques
     private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ILogger<PreviewStandInEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="PreviewStandInEndpointBase"/> class.</summary>
     protected PreviewStandInEndpointBase(
         DataSetConfigurationProvider dataSets,
         IConfigurationGatewayProvider configurationGateways,

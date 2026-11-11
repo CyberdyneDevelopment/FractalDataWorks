@@ -23,8 +23,6 @@ public static class DataSetStatusResolver
     /// <returns>The status, or the coded failure when no option applies.</returns>
     public static IGenericResult<IDataSetStatus> Resolve(string dataSetName, DataSetStatusInput input, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(input);
-        ArgumentNullException.ThrowIfNull(logger);
         var status = DataSetStatuses.All()
             .OrderByDescending(option => option.Rank)
             .ThenBy(option => option.Name, StringComparer.Ordinal)

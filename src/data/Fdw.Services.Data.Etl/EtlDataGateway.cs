@@ -150,7 +150,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
         _authenticationContextAccessor = authenticationContextAccessor;
         _connectionConfigProvider = connectionConfigProvider;
         _configurationGateways = configurationGateways;
-        _fieldTransformations = fieldTransformations ?? throw new ArgumentNullException(nameof(fieldTransformations));
+        _fieldTransformations = fieldTransformations;
 
         // Get internal implementation details - these are not injected
         _predicatePushdown = new PredicatePushdownAnalyzer(factory.CreateLogger<PredicatePushdownAnalyzer>());
@@ -370,8 +370,6 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
     /// <inheritdoc/>
     public void InvalidateCachedResults(DataStoreTarget target)
     {
-        ArgumentNullException.ThrowIfNull(target);
-
         if (!CacheEnabled)
             return;
 

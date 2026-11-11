@@ -25,7 +25,7 @@ public sealed class WaitThresholdOwnerRelease
     /// <param name="logger">The logger.</param>
     public WaitThresholdOwnerRelease(IConfigurationGatewayProvider gateways, ILogger? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
+        _gateways = gateways;
         _logger = logger ?? NullLogger.Instance;
         _rows = new WaitThresholdRows(_logger);
     }
@@ -46,7 +46,9 @@ public sealed class WaitThresholdOwnerRelease
 
     private async Task<IGenericResult> Release(string kind, string name, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (string.IsNullOrWhiteSpace(name))
+            return GenericResult.Failure(WaitThresholdLog.OwnerNameRequired(_logger, kind));
+
         var gateway = _gateways.Get(EtlPipelineTypes.ConfigurationConnection);
         if (gateway.IsFailure || gateway.Value is null)
         {

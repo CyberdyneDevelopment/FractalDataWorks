@@ -46,7 +46,7 @@ public sealed class DataSetQuery
     /// </param>
     public DataSetQuery(IDataGatewayProvider dataGateways, ILogger? logger = null, IFilterCalculations? calculations = null)
     {
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _dataGateways = dataGateways;
         _calculations = calculations;
         _logger = logger ?? NullLogger.Instance;
     }
@@ -113,7 +113,6 @@ public sealed class DataSetQuery
         Func<CancellationToken, Task<IGenericResult<QueryFilterNode?>>> scope,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(gateway);
         return RunWith(() => gateway, dataSet, request, take, rowCap, scope, cancellationToken);
     }
 
@@ -128,10 +127,6 @@ public sealed class DataSetQuery
         Func<CancellationToken, Task<IGenericResult<QueryFilterNode?>>> scope,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(dataSet);
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(scope);
-
         var queryable = DataQueryGrouping.IsRequested(request) ? DataSetReadGate.Groupable(dataSet, _logger) : DataSetReadGate.Pageable(dataSet, _logger);
         if (queryable.IsFailure) return queryable.ToNewResult<DataQueryPage>();
 

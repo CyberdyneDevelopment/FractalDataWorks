@@ -25,9 +25,9 @@ internal sealed class ConnectionDocumentLinks : IDocumentLinks
     /// <param name="targets">Answers whether a link's target is there.</param>
     public ConnectionDocumentLinks(DocumentRecordCommandRunner runner, IDocumentDefinitions<ILinkKindDefinition> linkKinds, ILinkTargets targets)
     {
-        _runner = runner ?? throw new ArgumentNullException(nameof(runner));
-        _linkKinds = linkKinds ?? throw new ArgumentNullException(nameof(linkKinds));
-        _targets = targets ?? throw new ArgumentNullException(nameof(targets));
+        _runner = runner;
+        _linkKinds = linkKinds;
+        _targets = targets;
     }
 
     /// <inheritdoc />
@@ -41,11 +41,6 @@ internal sealed class ConnectionDocumentLinks : IDocumentLinks
     /// <inheritdoc />
     public async Task<IGenericResult<long>> Add(Guid organizationId, IDocumentLink link, long expectedRevision, CancellationToken cancellationToken = default)
     {
-        if (link is null)
-        {
-            throw new ArgumentNullException(nameof(link));
-        }
-
         var linkKinds = await _linkKinds.Rows(_runner.TenantId, organizationId, cancellationToken).ConfigureAwait(false);
         if (linkKinds.IsFailure || linkKinds.Value is not { } rows)
         {

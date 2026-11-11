@@ -85,8 +85,6 @@ public abstract class PostgreSqlDataCommandTranslatorBase : SqlDataCommandTransl
     protected static string ReportingUnmatched(
         string write, int? sample, string target, string source, System.Collections.Generic.IReadOnlyList<string> keys, ISqlDialect dialect, NpgsqlCommand command)
     {
-        ArgumentNullException.ThrowIfNull(keys);
-        ArgumentNullException.ThrowIfNull(dialect);
         if (sample is not { } size)
             return write;
 

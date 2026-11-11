@@ -58,7 +58,6 @@ public static class SqlArithmetic
     /// <returns>The value, or the refusal.</returns>
     public static IGenericResult<object?> Binary(BinaryExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
         var left = SqlExpressions.Evaluate(expression.FirstExpression, scope);
         if (left.IsFailure)
             return left;
@@ -83,7 +82,6 @@ public static class SqlArithmetic
     /// <returns>The value, or the refusal.</returns>
     public static IGenericResult<object?> Unary(UnaryExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
         var operand = SqlExpressions.Evaluate(expression.Expression, scope);
         if (operand.IsFailure || operand.Value is null)
             return operand;

@@ -25,16 +25,6 @@ public static class ConnectionFailures
     /// <returns>A failed result whose messages are the cause's, then the context.</returns>
     public static IGenericResult<T> Caused<T>(IGenericResult cause, IGenericMessage context)
     {
-        if (cause is null)
-        {
-            throw new System.ArgumentNullException(nameof(cause));
-        }
-
-        if (context is null)
-        {
-            throw new System.ArgumentNullException(nameof(context));
-        }
-
         var messages = new List<IGenericMessage>(cause.Messages) { context };
         var failure = GenericResult.Failure(messages);
 
@@ -51,11 +41,6 @@ public static class ConnectionFailures
     /// <returns>The failure with its Code, messages and chain unchanged and the connection named in its details.</returns>
     public static IGenericResult<T> RaisedBy<T>(IGenericResult failure, Guid connectionId)
     {
-        if (failure is null)
-        {
-            throw new ArgumentNullException(nameof(failure));
-        }
-
         return GenericResult<T>.WithDetails(failure, ResultDetails.Create(ConnectionIdKey, connectionId.ToString("D")));
     }
 
@@ -64,11 +49,6 @@ public static class ConnectionFailures
     /// <returns>The Id of the connection that raised it; null when the failure names none, which means a connection did not raise it.</returns>
     public static Guid? ConnectionOf(IGenericResult failure)
     {
-        if (failure is null)
-        {
-            throw new ArgumentNullException(nameof(failure));
-        }
-
         for (var link = failure; link is not null; link = link.InnerResult)
         {
             if (link.Details is { } details

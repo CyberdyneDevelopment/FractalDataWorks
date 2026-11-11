@@ -29,15 +29,10 @@ public abstract class DataCommandBase : IDatabaseConnectionCommand
     /// <param name="category">The command category (defaults to "Data").</param>
     protected DataCommandBase(string commandType, string category = "Data")
     {
-        if (commandType is null)
-        {
-            DataCommandBaseLog.CommandTypeMissing(NullLogger<DataCommandBase>.Instance);
-        }
-
         CommandId = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
-        CommandType = commandType ?? throw new ArgumentNullException(nameof(commandType));
-        Category = category ?? throw new ArgumentNullException(nameof(category));
+        CommandType = commandType;
+        Category = category;
         Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         DataCommandBaseLog.CommandCreated(NullLogger<DataCommandBase>.Instance, CommandId, CommandType, Category);

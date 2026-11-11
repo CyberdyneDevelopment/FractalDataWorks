@@ -30,7 +30,7 @@ public abstract class ListApiReferencePagesEndpointBase : EndpointWithoutRequest
         ISystemRoleConfiguration systemRoles)
     {
         Logger = logger ?? NullLogger<ListApiReferencePagesEndpointBase>.Instance;
-        _systemRoles = systemRoles ?? throw new ArgumentNullException(nameof(systemRoles));
+        _systemRoles = systemRoles;
     }
 
     /// <summary>Gets the logger.</summary>

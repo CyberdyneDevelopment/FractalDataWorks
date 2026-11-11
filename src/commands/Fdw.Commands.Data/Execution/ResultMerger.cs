@@ -32,8 +32,8 @@ public sealed class ResultMerger : IResultMerger
     /// <param name="nameParser">The qualified name parser.</param>
     public ResultMerger(IFieldValueExtractor fieldExtractor, IQualifiedNameParser nameParser)
     {
-        _fieldExtractor = fieldExtractor ?? throw new ArgumentNullException(nameof(fieldExtractor));
-        _nameParser = nameParser ?? throw new ArgumentNullException(nameof(nameParser));
+        _fieldExtractor = fieldExtractor;
+        _nameParser = nameParser;
     }
 
     /// <summary>
@@ -53,11 +53,6 @@ public sealed class ResultMerger : IResultMerger
         IJoinDefinition joinDefinition,
         Func<TLeft, TRight, TResult> resultSelector)
     {
-        ArgumentNullException.ThrowIfNull(leftRecords);
-        ArgumentNullException.ThrowIfNull(rightRecords);
-        ArgumentNullException.ThrowIfNull(joinDefinition);
-        ArgumentNullException.ThrowIfNull(resultSelector);
-
         if (joinDefinition.Conditions.Count == 0)
         {
             throw new InvalidOperationException("Join definition must have at least one condition");
@@ -99,11 +94,6 @@ public sealed class ResultMerger : IResultMerger
         IJoinDefinition joinDefinition,
         Func<TLeft, TRight, TResult> resultSelector)
     {
-        ArgumentNullException.ThrowIfNull(leftRecords);
-        ArgumentNullException.ThrowIfNull(rightRecords);
-        ArgumentNullException.ThrowIfNull(joinDefinition);
-        ArgumentNullException.ThrowIfNull(resultSelector);
-
         if (joinDefinition.Conditions.Count == 0)
         {
             throw new InvalidOperationException("Join definition must have at least one condition");

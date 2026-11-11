@@ -31,14 +31,11 @@ public abstract class RealTimeHubOptionBase : TypeOptionBase<RealTimeHubOptionBa
     /// default policy (an authenticated principal). Never a path to anonymous access — authentication
     /// is mandatory for every FDW real-time hub.
     /// </param>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="route"/> or <paramref name="hubType"/> is <see langword="null"/>.
-    /// </exception>
     protected RealTimeHubOptionBase(string name, string route, Type hubType, string? authorizationPolicy)
         : base(name)
     {
-        Route = route ?? throw new ArgumentNullException(nameof(route));
-        HubType = hubType ?? throw new ArgumentNullException(nameof(hubType));
+        Route = route;
+        HubType = hubType;
         AuthorizationPolicy = authorizationPolicy;
     }
 

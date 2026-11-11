@@ -37,9 +37,9 @@ public sealed class FlowVariableCalculation
         ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(transformation);
-        _input = input ?? throw new ArgumentNullException(nameof(input));
+        _input = input;
         _transformation = transformation;
-        _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+        _parameters = parameters;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -51,8 +51,6 @@ public sealed class FlowVariableCalculation
     [ConventionOverride(MaxMethodLines = 70, MaxCyclomaticComplexity = 15)]  // One sequence of checks that each end the step with its reason, then the transformation
     public async Task<IGenericResult<object?>> Work(string step, FlowVariables variables, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(variables);
-
         if (TransformationTypes.ByName(_transformation) is not FieldTransformationBase transformer)
         {
             return GenericResult<object?>.Failure(FlowLog.CalculateTransformationUnknown(_logger, step, _transformation));

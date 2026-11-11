@@ -35,26 +35,6 @@ public sealed class ConfiguredDataStoreProviderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void CtorThrowsArgumentNullExceptionWhenConfigurationProviderIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new ConfiguredDataStoreProvider(_logger.Object, null!, _builderSelector.Object));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void CtorThrowsArgumentNullExceptionWhenBuilderSelectorIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() =>
-            new ConfiguredDataStoreProvider(_logger.Object, _configurationProvider.Object, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void CtorAcceptsNullLoggerAndFallsBackToNullLogger()
     {
         // Act

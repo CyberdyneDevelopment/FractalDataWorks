@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -19,10 +20,12 @@ namespace Fdw.Data.RowSources.FixedWidth.Abstractions;
 /// Each field is laid into its <see cref="FixedWidthField.StartIndex"/>/<see cref="FixedWidthField.Length"/>
 /// window, padded to width with <see cref="FixedWidthField.PaddingChar"/> on the side indicated by
 /// <see cref="FixedWidthField.Padding"/>. Reading the written output back through
-/// <see cref="FixedWidthStreamRowSource"/> with the same field list yields the original (trimmed) rows.
+/// <see cref="FixedWidthStreamRowSource"/> with the same field list yields the original (trimmed) rows. The target writer is not owned:
+/// whoever made it and asked the format for this writer disposes it.
 /// </remarks>
 public sealed class FixedWidthStreamRowWriter : IRowWriter
 {
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the target writer; whoever made it and asked the format for this writer (the response sink's DrainingTextWriter, a file writer) disposes it.")]
     private readonly TextWriter _target;
     private readonly FixedWidthRowWriterOptions _options;
     private readonly int _recordWidth;
@@ -38,8 +41,8 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     /// <exception cref="ArgumentException">Thrown when no field definitions are supplied.</exception>
     public FixedWidthStreamRowWriter(TextWriter target, FixedWidthRowWriterOptions options)
     {
-        _target = target ?? throw new ArgumentNullException(nameof(target));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _target = target;
+        _options = options;
         if (_options.Fields.Count == 0)
         {
             throw new ArgumentException(
@@ -60,7 +63,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IReadOnlyDictionary<string, object?> row)
     {
-        if (row is null) throw new ArgumentNullException(nameof(row));
         EnsureHeader();
         WriterExtensions.WriteRecords(_target, [row], _formatRow);
     }
@@ -68,7 +70,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         EnsureHeader();
         WriterExtensions.WriteRecords(_target, rows, _formatRow);
     }
@@ -81,7 +82,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     /// <returns>A task that completes when all rows have been written.</returns>
     public ValueTask WriteAll(IEnumerable<IReadOnlyDictionary<string, object?>> rows, CancellationToken cancellationToken)
     {
-        if (rows is null) throw new ArgumentNullException(nameof(rows));
         cancellationToken.ThrowIfCancellationRequested();
         EnsureHeader();
         WriterExtensions.WriteRecords(_target, rows, _formatRow);
@@ -94,7 +94,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public void Write(IEnumerable<DataRecord> records)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         foreach (var record in records)
         {
             Write(record);
@@ -104,7 +103,6 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
     /// <inheritdoc />
     public async ValueTask Write(IAsyncEnumerable<DataRecord> records, CancellationToken cancellationToken = default)
     {
-        if (records is null) throw new ArgumentNullException(nameof(records));
         await foreach (var record in records.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             Write(record);

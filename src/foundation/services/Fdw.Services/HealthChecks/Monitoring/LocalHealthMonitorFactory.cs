@@ -41,8 +41,8 @@ public sealed class LocalHealthMonitorFactory
         IServiceProvider services,
         ILoggerFactory? loggerFactory = null)
     {
-        _healthCheckables = healthCheckables ?? throw new ArgumentNullException(nameof(healthCheckables));
-        _services = services ?? throw new ArgumentNullException(nameof(services));
+        _healthCheckables = healthCheckables;
+        _services = services;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory?.CreateLogger<LocalHealthMonitorFactory>()
             ?? NullLogger<LocalHealthMonitorFactory>.Instance;
@@ -51,9 +51,6 @@ public sealed class LocalHealthMonitorFactory
     /// <inheritdoc/>
     public override IGenericResult<IHealthMonitorService> Create(LocalHealthMonitorConfiguration configuration)
     {
-        if (configuration is null)
-            throw new ArgumentNullException(nameof(configuration));
-
         var instance = _instances.GetOrAdd(
             configuration.Name,
             _ => new Lazy<IHealthMonitorService>(() =>

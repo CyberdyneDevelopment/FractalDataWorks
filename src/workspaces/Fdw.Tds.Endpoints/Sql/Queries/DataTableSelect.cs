@@ -31,10 +31,6 @@ public static class DataTableSelect
     /// <returns>The result, or the refusal.</returns>
     public static async Task<IGenericResult<SqlSelectOutput>> Run(QuerySpecification query, NamedTableReference named, SqlScope scope, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(named);
-        ArgumentNullException.ThrowIfNull(scope);
-
         var table = await Resolve(named, scope, cancellationToken).ConfigureAwait(false);
         if (table.IsFailure)
             return table.ToNewResult<SqlSelectOutput>();

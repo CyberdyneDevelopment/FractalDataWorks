@@ -14,7 +14,7 @@ public abstract class DeleteThemeEndpointBase : Endpoint<DeleteThemeRequest>
 {
     private readonly IThemeConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeleteThemeEndpointBase"/> class.</summary>
     protected DeleteThemeEndpointBase(IThemeConfigurationProvider provider)
     {
         _provider = provider;

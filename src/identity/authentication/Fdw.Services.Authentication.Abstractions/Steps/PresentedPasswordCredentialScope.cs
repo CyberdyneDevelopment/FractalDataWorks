@@ -31,7 +31,7 @@ public sealed class PresentedPasswordCredentialScope : IDisposable
     /// <param name="password">The password the caller presented, or null when none was.</param>
     public PresentedPasswordCredentialScope(IPresentedPasswordCredentialAccessor accessor, string? username, string? password)
     {
-        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
+        _accessor = accessor;
         _previous = accessor.Current;
         accessor.Current = new PresentedPasswordCredential(username, password);
     }

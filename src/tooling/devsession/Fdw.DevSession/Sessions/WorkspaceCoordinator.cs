@@ -43,8 +43,8 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
         IMcpEventBus bus,
         ILogger<WorkspaceCoordinator>? logger = null)
     {
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
-        _bus = bus ?? throw new ArgumentNullException(nameof(bus));
+        _sessions = sessions;
+        _bus = bus;
         _logger = logger ?? NullLogger<WorkspaceCoordinator>.Instance;
     }
 
@@ -54,8 +54,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
         ScopeRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
-
         var session = _sessions.Get(sessionId);
         if (session.IsFailure) return session.ToNewResult<ScopeClaim>();
 
@@ -126,8 +124,6 @@ public sealed class WorkspaceCoordinator : IWorkspaceCoordinator
         StrandInfo strand,
         CancellationToken cancellationToken = default)
     {
-        if (strand is null) throw new ArgumentNullException(nameof(strand));
-
         var session = _sessions.Get(sessionId);
         if (session.IsFailure) return session;
 

@@ -24,7 +24,6 @@ public static class ComponentSettings
     /// <returns>The names, each once.</returns>
     public static IReadOnlyList<string> Stated(PipelineComponentConfiguration component)
     {
-        ArgumentNullException.ThrowIfNull(component);
         var names = new HashSet<string>(
             ComponentSettingBindings.Scalars.Where(setting => setting.Get(component) is not null).Select(setting => setting.Name),
             StringComparer.OrdinalIgnoreCase);
@@ -62,7 +61,6 @@ public static class ComponentSettings
     /// <returns>The problems: an unknown kind, each required setting left out, each setting the kind does not take.</returns>
     public static IReadOnlyList<GraphProblem> Problems(PipelineComponentConfiguration component)
     {
-        ArgumentNullException.ThrowIfNull(component);
         var kind = ComponentTypes.ByName(component.ComponentType);
         if (ReferenceEquals(kind, ComponentTypes.NotFound))
         {
@@ -94,8 +92,6 @@ public static class ComponentSettings
     /// <returns>Success, or the first refusal: an unknown kind, a required setting left out, or a setting the kind does not take.</returns>
     public static IGenericResult Check(PipelineComponentConfiguration component, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(logger);
         var problems = Problems(component);
         return problems.Count == 0
             ? GenericResult.Success()

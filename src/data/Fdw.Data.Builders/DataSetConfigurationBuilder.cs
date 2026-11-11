@@ -91,7 +91,7 @@ public sealed class DataSetConfigurationBuilder
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetConfigurationBuilder WithVersion(string version)
     {
-        _version = version ?? throw new ArgumentNullException(nameof(version));
+        _version = version;
         return this;
     }
 
@@ -124,10 +124,6 @@ public sealed class DataSetConfigurationBuilder
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetConfigurationBuilder WithRecordType(Type recordType)
     {
-        if (recordType == null)
-        {
-            throw new ArgumentNullException(nameof(recordType));
-        }
         _recordTypeName = recordType.AssemblyQualifiedName ?? throw new ArgumentException($"{recordType} has no assembly-qualified name, so it cannot be named as a record type.", nameof(recordType));
         return this;
     }

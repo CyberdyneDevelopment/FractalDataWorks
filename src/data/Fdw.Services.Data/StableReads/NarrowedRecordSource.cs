@@ -28,8 +28,7 @@ public sealed class NarrowedRecordSource : IRecordSource<DataRecord>
     /// <param name="fieldNames">The fields to keep, matched to the cursor's by name, ordinal and case-insensitive as the statement names them.</param>
     public NarrowedRecordSource(IRecordSource<DataRecord> inner, IReadOnlyCollection<string> fieldNames)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        ArgumentNullException.ThrowIfNull(fieldNames);
+        _inner = inner;
 
         var kept = new HashSet<string>(fieldNames, StringComparer.OrdinalIgnoreCase);
         var fields = inner.Schema.Fields;

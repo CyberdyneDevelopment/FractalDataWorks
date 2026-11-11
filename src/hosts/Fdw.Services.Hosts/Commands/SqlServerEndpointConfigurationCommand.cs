@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "SqlServerEndpoint")]
 public sealed class SqlServerEndpointConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SqlServerEndpointConfigurationCommand"/> class.</summary>
     public SqlServerEndpointConfigurationCommand() : base("SqlServerEndpoint") { }
 }

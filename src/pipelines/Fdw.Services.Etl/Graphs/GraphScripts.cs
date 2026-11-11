@@ -22,7 +22,6 @@ public static class GraphScripts
     /// <returns>The names of the components, in the order the graph lists them; empty when the graph holds no script text.</returns>
     public static IReadOnlyList<string> ComponentsHolding(GraphPipelineConfiguration graph)
     {
-        ArgumentNullException.ThrowIfNull(graph);
         return [.. graph.Components.Where(Holds).Select(component => component.Name)];
     }
 

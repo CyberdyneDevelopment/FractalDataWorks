@@ -14,7 +14,7 @@ public sealed class CatalogTable
     /// <param name="schemaId">Its schema's id.</param>
     public CatalogTable(SqlTable table, int objectId, int schemaId)
     {
-        Table = table ?? throw new ArgumentNullException(nameof(table));
+        Table = table;
         ObjectId = objectId;
         SchemaId = schemaId;
     }

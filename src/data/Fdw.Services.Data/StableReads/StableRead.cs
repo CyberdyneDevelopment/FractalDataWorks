@@ -59,12 +59,6 @@ public static class StableRead
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(container);
-        ArgumentNullException.ThrowIfNull(connection);
-        ArgumentNullException.ThrowIfNull(readPage);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (command is not IQueryCommand query)
             return NeedsQuery(command, target, logger);
 
@@ -96,9 +90,6 @@ public static class StableRead
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(kind);
-        ArgumentNullException.ThrowIfNull(context);
-
         return OpenDataSet(
             command,
             context.Config,
@@ -132,11 +123,6 @@ public static class StableRead
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(dataSet);
-        ArgumentNullException.ThrowIfNull(execute);
-        ArgumentNullException.ThrowIfNull(logger);
-
         if (command is not IQueryCommand query)
             return NeedsQuery(command, dataSet.Name, logger);
 

@@ -49,10 +49,9 @@ public sealed class AlertKindSettingsService : IAlertKindSettingsService
         _logger = logger ?? NullLogger<AlertKindSettingsService>.Instance;
         _store = new AlertStore(_logger, dataGateways, messaging);
         _choices = new AlertKindChoices(_store);
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _userNames = userNames ?? throw new ArgumentNullException(nameof(userNames));
-        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
-        ArgumentNullException.ThrowIfNull(sources);
+        _authContext = authContext;
+        _userNames = userNames;
+        _clock = clock;
         _sources = sources.ToDictionary(source => source.Kind, StringComparer.OrdinalIgnoreCase);
     }
 

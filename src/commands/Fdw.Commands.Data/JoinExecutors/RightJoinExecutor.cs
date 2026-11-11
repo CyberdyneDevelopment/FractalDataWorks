@@ -27,11 +27,6 @@ public sealed class RightJoinExecutor : JoinExecutorBase
         (string LeftField, string RightField) condition,
         Func<TLeft, TRight, TResult> resultSelector)
     {
-        ArgumentNullException.ThrowIfNull(leftRecords);
-        ArgumentNullException.ThrowIfNull(rightRecords);
-        ArgumentNullException.ThrowIfNull(fieldExtractor);
-        ArgumentNullException.ThrowIfNull(resultSelector);
-
         // Build hash table for left side
         var leftLookup = leftRecords
             .ToLookup(l => fieldExtractor.GetValue(l, condition.LeftField));

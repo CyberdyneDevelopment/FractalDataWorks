@@ -65,13 +65,4 @@ public sealed class DeclaredConnectionProviderTests
 
         result.IsFailure.ShouldBeTrue();
     }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructionRequiresTheSchemaAndTheServices()
-    {
-        Should.Throw<ArgumentNullException>(() => new DeclaredConnectionProvider(null!, new ServiceCollection().BuildServiceProvider()));
-        Should.Throw<ArgumentNullException>(() => new DeclaredConnectionProvider(new ConfigurationSchema(), null!));
-    }
 }

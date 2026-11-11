@@ -29,4 +29,9 @@ public static partial class DataSetResolverLog
     [MessageLogging(EventId = 40001, Level = LogLevel.Error,
         Message = "The {kind} variation '{name}' narrows the view {parentId}, which no longer exists")]
     public static partial IGenericMessage ParentMissing(ILogger logger, string name, string kind, string parentId);
+
+    /// <summary>Error: resolving a data set needs its name; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "Resolving a data set needs its name, and the name given is empty")]
+    public static partial IGenericMessage DataSetNameRequired(ILogger logger);
 }

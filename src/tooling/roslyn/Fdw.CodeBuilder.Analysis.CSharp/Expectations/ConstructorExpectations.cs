@@ -28,8 +28,8 @@ public class ConstructorExpectations
     /// <param name="className">The name of the containing class.</param>
     public ConstructorExpectations(ConstructorDeclarationSyntax constructorSyntax, string className)
     {
-        _constructorSyntax = constructorSyntax ?? throw new ArgumentNullException(nameof(constructorSyntax));
-        _className = className ?? throw new ArgumentNullException(nameof(className));
+        _constructorSyntax = constructorSyntax;
+        _className = className;
         _isStatic = false;
     }
 
@@ -43,7 +43,7 @@ public class ConstructorExpectations
     internal ConstructorExpectations(ConstructorDeclarationSyntax? staticConstructorSyntax, string className, bool isStatic)
     {
         _constructorSyntax = staticConstructorSyntax;
-        _className = className ?? throw new ArgumentNullException(nameof(className));
+        _className = className;
         _isStatic = isStatic;
     }
 

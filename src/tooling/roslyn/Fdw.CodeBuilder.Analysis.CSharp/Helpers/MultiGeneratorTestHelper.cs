@@ -26,8 +26,6 @@ public static class MultiGeneratorTestHelper
         CancellationToken cancellationToken,
         params IIncrementalGenerator[] generators)
     {
-        if (compilation == null)
-            throw new ArgumentNullException(nameof(compilation));
         if (generators == null || generators.Length == 0)
             throw new ArgumentException("At least one generator must be provided", nameof(generators));
 

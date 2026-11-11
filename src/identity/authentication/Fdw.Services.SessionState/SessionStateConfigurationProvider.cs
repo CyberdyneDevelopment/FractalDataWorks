@@ -44,7 +44,7 @@ public class SessionStateConfigurationProvider
         IConfigurationGatewayProvider gatewayProvider,
         ILogger<SessionStateConfigurationProvider>? logger = null)
     {
-        _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
+        _gatewayProvider = gatewayProvider;
         _logger = logger ?? NullLogger<SessionStateConfigurationProvider>.Instance;
     }
 

@@ -26,7 +26,7 @@ public abstract class DenyWorkspaceMembershipRequestEndpointBase : Endpoint<Deny
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly ILogger<DenyWorkspaceMembershipRequestEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DenyWorkspaceMembershipRequestEndpointBase"/> class.</summary>
     protected DenyWorkspaceMembershipRequestEndpointBase(
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,

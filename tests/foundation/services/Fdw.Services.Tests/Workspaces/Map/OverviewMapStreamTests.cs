@@ -359,7 +359,7 @@ public class OverviewMapStreamTests
         return dataStore.Object;
     }
 
-    private static IPipelineImplementationConfiguration Pipeline(Guid id, string name, string source, string destination) => new GraphPipelineConfiguration
+    private static GraphPipelineConfiguration Pipeline(Guid id, string name, string source, string destination) => new GraphPipelineConfiguration
     {
         Id = id,
         Name = name,

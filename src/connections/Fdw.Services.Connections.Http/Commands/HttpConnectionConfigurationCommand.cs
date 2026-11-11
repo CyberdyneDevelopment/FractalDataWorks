@@ -7,6 +7,6 @@ namespace Fdw.Services.Connections.Http.Commands;
 [TypeOption(typeof(ConfigurationCommands), "HttpConnectionConfiguration")]
 public sealed class HttpConnectionConfigurationCommand : ConfigurationCommandBase<HttpConnectionConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="HttpConnectionConfigurationCommand"/> class.</summary>
     public HttpConnectionConfigurationCommand() : base("HttpConnectionConfiguration") { }
 }

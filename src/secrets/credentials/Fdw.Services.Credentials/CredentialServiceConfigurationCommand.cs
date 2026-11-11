@@ -11,6 +11,6 @@ namespace Fdw.Services.Credentials;
 [TypeOption(typeof(ConfigurationCommands), "CredentialService")]
 public sealed class CredentialServiceConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="CredentialServiceConfigurationCommand"/> class.</summary>
     public CredentialServiceConfigurationCommand() : base("CredentialService") { }
 }

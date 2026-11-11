@@ -42,7 +42,7 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
     {
         EndpointLogger = logger;
         _userProvider = userProvider;
-        _signIns = signIns ?? throw new ArgumentNullException(nameof(signIns));
+        _signIns = signIns;
     }
 
     /// <summary>

@@ -23,7 +23,7 @@ public sealed class TdsMessage
     public TdsMessage(byte packetType, byte[] payload, bool resetsConnection)
     {
         PacketType = packetType;
-        Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+        Payload = payload;
         ResetsConnection = resetsConnection;
     }
 

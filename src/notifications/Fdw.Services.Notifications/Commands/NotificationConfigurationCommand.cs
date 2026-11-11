@@ -8,6 +8,6 @@ namespace Fdw.Services.Notifications.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Notification")]
 public sealed class NotificationConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="NotificationConfigurationCommand"/> class.</summary>
     public NotificationConfigurationCommand() : base("Notification") { }
 }

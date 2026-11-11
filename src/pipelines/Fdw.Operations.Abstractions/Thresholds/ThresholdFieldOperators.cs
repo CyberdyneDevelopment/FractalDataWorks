@@ -24,11 +24,6 @@ public static class ThresholdFieldOperators
     /// <returns>The names of the FilterOperators options, in the order a builder offers them.</returns>
     public static IReadOnlyList<string> For(Type valueType)
     {
-        if (valueType is null)
-        {
-            throw new ArgumentNullException(nameof(valueType));
-        }
-
         var underlying = Nullable.GetUnderlyingType(valueType);
         var type = underlying is null ? valueType : underlying;
         if (type == typeof(string))

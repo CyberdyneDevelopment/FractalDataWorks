@@ -563,7 +563,9 @@ public sealed class PipelineRunStarterTests : IDisposable
         {
             childRanWhileWaiting = await Task.Run(async () =>
             {
-                using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+                // Why seconds: the child enters as soon as the hand-back lets it, so this guard is reached only if the hand-back is broken, and a
+                // slow machine cannot reach it. A short guard here failed correct runs by chance.
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 try
                 {
                     var childPlace = await _scheduler.Enter(claim, timeout.Token);

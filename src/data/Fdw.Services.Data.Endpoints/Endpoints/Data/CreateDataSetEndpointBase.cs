@@ -36,8 +36,8 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
         IAuthenticationContextAccessor authContext) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
-        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _categories = categories;
+        _authContext = authContext;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

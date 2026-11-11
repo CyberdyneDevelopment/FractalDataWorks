@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ namespace Fdw.Protocols.Tds;
 /// </remarks>
 public sealed class ReplayPrefixStream : Stream
 {
+    [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the connection's socket stream; the connection that opened the socket disposes it.")]
     private readonly Stream _inner;
     private readonly byte[] _prefix;
     private int _prefixOffset;
@@ -25,8 +27,8 @@ public sealed class ReplayPrefixStream : Stream
     /// <param name="prefix">The bytes already read from it, to be answered first.</param>
     public ReplayPrefixStream(Stream inner, byte[] prefix)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _prefix = prefix ?? throw new ArgumentNullException(nameof(prefix));
+        _inner = inner;
+        _prefix = prefix;
     }
 
     /// <inheritdoc />

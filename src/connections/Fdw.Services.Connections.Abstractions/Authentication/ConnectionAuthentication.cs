@@ -55,7 +55,6 @@ public sealed class ConnectionAuthentication<TConfiguration>
     public static ConnectionAuthentication<TConfiguration> Of(string dictionaryProperty, Func<TConfiguration, IConnectionAuthenticationType> method)
     {
         if (string.IsNullOrWhiteSpace(dictionaryProperty)) throw new ArgumentException("A dictionary property is required.", nameof(dictionaryProperty));
-        if (method is null) throw new ArgumentNullException(nameof(method));
 
         return new ConnectionAuthentication<TConfiguration>(dictionaryProperty, method, null);
     }
@@ -70,7 +69,6 @@ public sealed class ConnectionAuthentication<TConfiguration>
     /// <returns>The declaration with the second owner.</returns>
     public ConnectionAuthentication<TConfiguration> SharedWith(Func<TConfiguration, IReadOnlyList<string>> sharedProperties)
     {
-        if (sharedProperties is null) throw new ArgumentNullException(nameof(sharedProperties));
         if (DictionaryProperty is null || Method is null)
             throw new InvalidOperationException("A kind that declares no authentication dictionary has no dictionary to share.");
 

@@ -175,24 +175,6 @@ public sealed class UpdateCommandBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void DataStoreThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Update.In<TestEntity>("Customers").DataStore(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void PathThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Update.In<TestEntity>("Customers").Path(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void BuildUpdateWithNoFilterHasNullFilter()
     {
         var entity = new TestEntity();

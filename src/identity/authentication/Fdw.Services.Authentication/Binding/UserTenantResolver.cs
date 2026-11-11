@@ -42,8 +42,8 @@ public sealed class UserTenantResolver : ITenantResolver
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserTenantResolver>? logger = null)
     {
-        _memberships = memberships ?? throw new ArgumentNullException(nameof(memberships));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _memberships = memberships;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<UserTenantResolver>.Instance;
     }
 

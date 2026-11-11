@@ -15,7 +15,7 @@ public sealed class DescribeContext
     /// <param name="dataSetFields">Reads the fields of a data set by name, in order.</param>
     public DescribeContext(Func<string, CancellationToken, Task<IGenericResult<IReadOnlyList<GraphField>>>> dataSetFields)
     {
-        DataSetFields = dataSetFields ?? throw new ArgumentNullException(nameof(dataSetFields));
+        DataSetFields = dataSetFields;
     }
 
     /// <summary>

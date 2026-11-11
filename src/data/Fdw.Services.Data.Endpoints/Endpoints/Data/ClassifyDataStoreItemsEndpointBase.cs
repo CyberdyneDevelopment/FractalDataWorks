@@ -37,7 +37,7 @@ public abstract class ClassifyDataStoreItemsEndpointBase
     protected ClassifyDataStoreItemsEndpointBase(
         ILogger<ClassifyDataStoreItemsEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
-        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
+        _dataStoreProvider = dataStoreProvider;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

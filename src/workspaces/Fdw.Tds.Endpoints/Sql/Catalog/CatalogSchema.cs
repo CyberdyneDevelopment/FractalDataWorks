@@ -13,7 +13,7 @@ public sealed class CatalogSchema
     /// <param name="isSystem">Whether it is one of SQL Server's own schemas rather than one the caller reads.</param>
     public CatalogSchema(string name, int schemaId, bool isSystem)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         SchemaId = schemaId;
         IsSystem = isSystem;
     }

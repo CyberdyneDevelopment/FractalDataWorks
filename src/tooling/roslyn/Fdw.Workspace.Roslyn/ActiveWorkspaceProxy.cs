@@ -26,7 +26,7 @@ public sealed class ActiveWorkspaceProxy : IRoslynWorkspace
     /// </summary>
     public ActiveWorkspaceProxy(IWorkspaceManager workspaceManager, ILogger<ActiveWorkspaceProxy>? logger = null)
     {
-        _workspaceManager = workspaceManager ?? throw new ArgumentNullException(nameof(workspaceManager));
+        _workspaceManager = workspaceManager;
         _logger = logger ?? NullLogger<ActiveWorkspaceProxy>.Instance;
     }
 

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Fdw.Data.SchemaImporters.Abstractions.Configuration;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Shouldly;
@@ -24,6 +25,9 @@ namespace Fdw.Data.DataStores.Rest.Tests;
 /// </remarks>
 public sealed class RestOpenApiSchemaImporterTests : IDisposable
 {
+    // The importer reads no option on these paths: the caller states options, and these state no filter (FDW-5184).
+    private static readonly SchemaImporterOptions NoFilters = new() { IncludeExtendedProperties = true };
+
     private readonly string _tempDirectory = Directory.CreateTempSubdirectory("fdw-rest-openapi-tests-").FullName;
 
     private static RestOpenApiSchemaImporter CreateImporter() => new(Mock.Of<ILogger<RestOpenApiSchemaImporter>>());
@@ -80,7 +84,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var importer = CreateImporter();
 
         // Act
-        var result = await importer.Import(source!, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(source!, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -153,7 +157,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = Path.Combine(_tempDirectory, "missing-spec.json");
 
         // Act
-        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(path, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -172,7 +176,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = WriteTempFile("garbage.json", "{ this is not a valid OpenAPI document");
 
         // Act
-        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(path, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -194,7 +198,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = WriteTempFile("petstore.json", PetStoreOpenApiJson);
 
         // Act
-        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(path, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -277,7 +281,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = WriteTempFile("integer-no-format.json", OneFieldSpec("""{ "type": "integer" }"""));
 
         // Act
-        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(path, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -294,7 +298,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = WriteTempFile("field-no-type.json", OneFieldSpec("{ }"));
 
         // Act
-        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(path, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -315,7 +319,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         var path = WriteTempFile("field-unmapped-type.json", OneFieldSpec("""{ "type": "file" }"""));
 
         // Act
-        var result = await importer.Import(path, null, TestContext.Current.CancellationToken);
+        var result = await importer.Import(path, NoFilters, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();

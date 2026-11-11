@@ -24,7 +24,7 @@ public abstract class ListWebhooksEndpointBase : CrudPageEndpointBase<DomainConf
     /// <param name="provider">The stored webhook triggers.</param>
     protected ListWebhooksEndpointBase(ILogger<ListWebhooksEndpointBase> logger, WebhookTriggerConfigurationProvider provider) : base(logger)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
     }
 
     /// <inheritdoc />

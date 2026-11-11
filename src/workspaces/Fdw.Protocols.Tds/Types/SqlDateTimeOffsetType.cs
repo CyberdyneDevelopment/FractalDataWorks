@@ -24,22 +24,18 @@ public sealed class SqlDateTimeOffsetType : SqlDataTypeBase
     /// <inheritdoc/>
     public override string Declaration(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return string.Create(CultureInfo.InvariantCulture, $"datetimeoffset({column.Scale})");
     }
 
     /// <inheritdoc/>
     public override short CatalogMaxLength(TdsColumnType column)
     {
-        ArgumentNullException.ThrowIfNull(column);
         return (short)(TdsTimeEncoding.TimeLength(column.Scale) + 5);
     }
 
     /// <inheritdoc/>
     public override void WriteTypeInfo(TdsPayloadWriter writer, TdsColumnType column, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(column);
         writer.WriteByte(TdsTypeIds.DateTimeOffsetN);
         writer.WriteByte(column.Scale);
     }

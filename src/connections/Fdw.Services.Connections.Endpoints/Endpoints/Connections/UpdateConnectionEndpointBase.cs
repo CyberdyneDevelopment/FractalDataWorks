@@ -35,7 +35,7 @@ public abstract class UpdateConnectionEndpointBase : CrudUpdateEndpointBase<Upda
 {
     private readonly IConnectionConfigurationProvider _connectionProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateConnectionEndpointBase"/> class.</summary>
     protected UpdateConnectionEndpointBase(ILogger<UpdateConnectionEndpointBase> logger, IConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _connectionProvider = connectionProvider;

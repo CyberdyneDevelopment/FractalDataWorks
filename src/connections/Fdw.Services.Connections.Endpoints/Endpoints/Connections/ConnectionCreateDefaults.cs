@@ -38,8 +38,6 @@ public static class ConnectionCreateDefaults
         JsonElement body, IConnectionEndpointBehavior behavior, IServiceType connectionType, Lazy<IEffectiveSettingsProvider> settings, Guid? tenantId,
         string connectionName, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(behavior);
-
         var filled = JsonNode.Parse(body.GetRawText())!.AsObject();
         var result = ConfigurationCreateDefaults.Fill(
             filled, behavior.ConfigurationType, connectionType, property => IsStated(filled, property, behavior.Aliases), settings, tenantId, "connection",

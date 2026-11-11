@@ -61,10 +61,6 @@ public sealed class KeysetRecordSource : IRecordSource<DataRecord>
         string target,
         ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(schema);
-        ArgumentNullException.ThrowIfNull(readPage);
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(keyFields);
         ArgumentOutOfRangeException.ThrowIfLessThan(keyFields.Count, 1, nameof(keyFields));
         ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
         ArgumentException.ThrowIfNullOrWhiteSpace(target);
@@ -201,7 +197,6 @@ public sealed class KeysetRecordSource : IRecordSource<DataRecord>
 
         public int GetHashCode(IReadOnlyList<object?> obj)
         {
-            ArgumentNullException.ThrowIfNull(obj);
             var hash = default(HashCode);
             foreach (var value in obj)
                 hash.Add(value);

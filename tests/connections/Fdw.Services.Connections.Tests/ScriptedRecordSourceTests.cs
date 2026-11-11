@@ -215,7 +215,10 @@ public sealed class ScriptedRecordSourceTests
     {
         using var source = Open(new CountingReader(Ids(2)), null, new Released());
 
-        source.Read().ShouldHaveSingleItem().IsSuccess.ShouldBeFalse();
+        // The synchronous overload on purpose: this test is that it answers a failed record. Taken as a typed delegate so the call is
+        // plainly the token-less one (xUnit1051 asks for the token overload, which is the asynchronous read this test is not about).
+        Func<IEnumerable<IGenericResult<DataRecord>>> synchronousRead = source.Read;
+        synchronousRead().ShouldHaveSingleItem().IsSuccess.ShouldBeFalse();
     }
 
     [Fact]

@@ -14,6 +14,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "FieldTransformationConfigurationParameter")]
 public sealed class FieldTransformationParameterConfigurationCommand : ConfigurationCommandBase<FieldTransformationParameterConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="FieldTransformationParameterConfigurationCommand"/> class.</summary>
     public FieldTransformationParameterConfigurationCommand() : base("FieldTransformationConfigurationParameter") { }
 }

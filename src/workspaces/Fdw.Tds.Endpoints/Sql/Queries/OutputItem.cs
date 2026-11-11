@@ -40,7 +40,6 @@ internal sealed class OutputItem
     /// <returns>The value, or the refusal.</returns>
     public IGenericResult<object?> Read(SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(scope);
         return _expression is null
             ? GenericResult<object?>.Success(scope.Row[_sourceIndex])
             : SqlExpressions.Evaluate(_expression, scope);

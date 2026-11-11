@@ -16,7 +16,7 @@ public partial class AuthenticationFlowStepConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public Guid Id { get; set; }
 
-    /// <inheritdoc />
+    /// <summary>Gets or sets the step's name.</summary>
     /// <remarks>The step's registered name, which is also what addresses this row.</remarks>
     public string Name { get; set; } = string.Empty;
 

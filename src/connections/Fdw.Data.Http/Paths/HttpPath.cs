@@ -32,7 +32,7 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>, IReaddres
         IReadOnlyDictionary<string, PathParameter>? parameters = null)
         : base("HttpPath")
     {
-        PathValue = path ?? throw new ArgumentNullException(nameof(path));
+        PathValue = path;
         _containers = containers?.ToList() ?? [];
         _parameters = parameters != null
             ? parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal)

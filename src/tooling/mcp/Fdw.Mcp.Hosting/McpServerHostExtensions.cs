@@ -39,8 +39,6 @@ public static class McpServerHostExtensions
         this IServiceCollection services,
         ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(services);
-
         var resolvedLogger = logger ?? NullLogger.Instance;
 
         var toolClasses = new List<Type>();

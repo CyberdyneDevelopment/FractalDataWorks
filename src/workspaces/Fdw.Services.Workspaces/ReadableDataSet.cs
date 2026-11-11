@@ -27,9 +27,9 @@ public sealed class ReadableDataSet
     /// </param>
     public ReadableDataSet(string name, IDataSetImplementationConfiguration executionTarget, IReadOnlyList<string> viewFilters)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        ExecutionTarget = executionTarget ?? throw new ArgumentNullException(nameof(executionTarget));
-        ViewFilters = viewFilters ?? throw new ArgumentNullException(nameof(viewFilters));
+        Name = name;
+        ExecutionTarget = executionTarget;
+        ViewFilters = viewFilters;
     }
 
     /// <summary>Gets the name the data set is attached to the workspace under.</summary>

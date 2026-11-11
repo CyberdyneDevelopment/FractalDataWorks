@@ -104,9 +104,10 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
     public Type? ProviderInterface { get; set; }
 
     /// <summary>
-    /// The service category for configuration loading (e.g., "Connection", "SecretManager").
-    /// When specified with a database connection, Configure() will automatically add
-    /// an MsSqlConfigurationSource to load configurations from the database.
+    /// The service category of the collection (e.g., "Connection", "SecretManager").
+    /// When specified, the generator emits it as the collection's static <c>ServiceCategory</c> property,
+    /// which its options read as their category, and records it on the collection's
+    /// <c>TypeCollectionMetadata</c>, which is written to <c>types.TypeCollection</c>. It loads no configuration.
     /// </summary>
     public string? ServiceCategory { get; set; }
 

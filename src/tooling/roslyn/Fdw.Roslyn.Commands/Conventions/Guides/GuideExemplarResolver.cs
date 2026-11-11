@@ -31,12 +31,12 @@ internal static class GuideExemplarResolver
     {
         var document = FindDocument(solution, exemplar.Cite);
         if (document is null)
-            return Describe(exemplar, GuideExemplarResolution.FileNotInSolution, null, null, null);
+            return Describe(exemplar, GuideExemplarResolutions.FileNotInSolution, null, null, null);
 
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var model = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
         if (root is null || model is null)
-            return Describe(exemplar, GuideExemplarResolution.TypeNotInFile, document.FilePath, null, null);
+            return Describe(exemplar, GuideExemplarResolutions.TypeNotInFile, document.FilePath, null, null);
 
         foreach (var declaration in root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>())
         {
@@ -44,10 +44,10 @@ internal static class GuideExemplarResolver
             if (!string.Equals(GuideTypeResolver.FullName(symbol), exemplar.Type, StringComparison.Ordinal)) continue;
 
             var line = declaration.Identifier.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
-            return Describe(exemplar, GuideExemplarResolution.Resolved, document.FilePath, line, GuideDocumentation.Summary(symbol));
+            return Describe(exemplar, GuideExemplarResolutions.Resolved, document.FilePath, line, GuideDocumentation.Summary(symbol));
         }
 
-        return Describe(exemplar, GuideExemplarResolution.TypeNotInFile, document.FilePath, null, null);
+        return Describe(exemplar, GuideExemplarResolutions.TypeNotInFile, document.FilePath, null, null);
     }
 
     private static Document? FindDocument(Solution solution, string cite)
@@ -65,7 +65,7 @@ internal static class GuideExemplarResolver
 
     private static GuideExemplarInfo Describe(
         GuideExemplarModel exemplar,
-        GuideExemplarResolution resolution,
+        IGuideExemplarResolution resolution,
         string? filePath,
         int? line,
         string? summary) =>

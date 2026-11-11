@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,14 +31,43 @@ internal static class RoleHolderSessions
         ILogger logger,
         CancellationToken ct)
     {
+        var holders = await Holders(userRoles, roleId, roleName, logger, ct).ConfigureAwait(false);
+        if (holders.IsFailure) return holders;
+
+        return await End(revocations, holders.Value!, roleName, logger, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Reads who holds the role now: the person (or service identity) of each current, non-deleted assignment, each once.</summary>
+    /// <remarks>
+    /// Read apart from <see cref="End(ITokenRevocationStore, IReadOnlyList{string}, string, ILogger, CancellationToken)"/> for a change that
+    /// removes the assignments themselves: deleting a role removes them with it (FDW-5222), so its holders are read before the delete.
+    /// </remarks>
+    public static async Task<IGenericResult<IReadOnlyList<string>>> Holders(
+        IUserRoleConfigurationProvider userRoles,
+        Guid roleId,
+        string roleName,
+        ILogger logger,
+        CancellationToken ct)
+    {
         var holders = await userRoles
             .Find<IUserRoleImplementationConfiguration>(ur => ur.RoleId == roleId && ur.IsCurrent && !ur.IsDeleted, ct)
             .ConfigureAwait(false);
         if (holders.IsFailure || holders.Value is null)
-            return GenericResult.Failure(AuthorizationEndpointLog.RoleHoldersUnreadable(logger, roleName));
+            return GenericResult<IReadOnlyList<string>>.Failure(AuthorizationEndpointLog.RoleHoldersUnreadable(logger, roleName));
 
+        return GenericResult<IReadOnlyList<string>>.Success(
+            [.. holders.Value.Select(h => h.UserId).Distinct(StringComparer.OrdinalIgnoreCase)]);
+    }
+
+    /// <summary>Ends the sessions of the holders already read.</summary>
+    public static async Task<IGenericResult> End(
+        ITokenRevocationStore revocations,
+        IReadOnlyList<string> holderIds,
+        string roleName,
+        ILogger logger,
+        CancellationToken ct)
+    {
         var revokedAt = DateTimeOffset.UtcNow;
-        var holderIds = holders.Value.Select(h => h.UserId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         // Every holder is attempted, whatever happened to the one before: stopping at the first that cannot be
         // ended would leave every later holder carrying the old grants, after the change itself has committed.

@@ -7,6 +7,6 @@ namespace Fdw.Services.Calculations.Commands;
 [TypeOption(typeof(ConfigurationCommands), "WindowedCalculationConfiguration")]
 public sealed class WindowedCalculationConfigurationCommand : ConfigurationCommandBase<WindowedCalculationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="WindowedCalculationConfigurationCommand"/> class.</summary>
     public WindowedCalculationConfigurationCommand() : base("WindowedCalculationConfiguration") { }
 }

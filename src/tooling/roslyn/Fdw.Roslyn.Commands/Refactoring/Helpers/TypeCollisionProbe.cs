@@ -89,10 +89,6 @@ public static class TypeCollisionProbe
         IReadOnlyDictionary<string, int>? baseline,
         CancellationToken cancellationToken = default)
     {
-        if (solution is null) throw new ArgumentNullException(nameof(solution));
-        if (projectIds is null) throw new ArgumentNullException(nameof(projectIds));
-        if (command is null) throw new ArgumentNullException(nameof(command));
-
         var findings = new List<BreakFinding>();
 
         foreach (var projectId in projectIds)

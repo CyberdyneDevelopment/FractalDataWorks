@@ -138,24 +138,6 @@ public sealed class PathParameterTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenNameIsNull()
-    {
-        // Arrange & Act & Assert
-        Should.Throw<ArgumentNullException>(() => new PathParameter(null!, typeof(int)));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenParameterTypeIsNull()
-    {
-        // Arrange & Act & Assert
-        Should.Throw<ArgumentNullException>(() => new PathParameter("id", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void CanCreateWithStringType()
     {
         // Arrange & Act

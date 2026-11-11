@@ -22,7 +22,6 @@ public sealed class NavigationService : INavigationService
     /// <inheritdoc />
     public void Push(IScreen screen)
     {
-        ArgumentNullException.ThrowIfNull(screen);
         _stack.Push(screen);
     }
 
@@ -35,7 +34,6 @@ public sealed class NavigationService : INavigationService
     /// <inheritdoc />
     public void Replace(IScreen screen)
     {
-        ArgumentNullException.ThrowIfNull(screen);
         if (_stack.Count > 0)
         {
             _stack.Pop();

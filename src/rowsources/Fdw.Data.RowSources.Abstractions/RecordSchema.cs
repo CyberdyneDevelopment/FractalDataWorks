@@ -28,10 +28,9 @@ public sealed class RecordSchema
     /// The ordered <see cref="IDataField"/> children of the container. The field at index <c>i</c> describes
     /// the value at index <c>i</c> of every <see cref="DataRecord"/> produced against this schema.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="fields"/> is null.</exception>
     public RecordSchema(IReadOnlyList<IDataField> fields)
     {
-        _fields = fields ?? throw new ArgumentNullException(nameof(fields));
+        _fields = fields;
         _ordinalsByName = new Dictionary<string, int>(_fields.Count, StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < _fields.Count; i++)
         {

@@ -40,13 +40,4 @@ public class RateLimitAllowanceFieldsTests
         // RateLimitAllowance has nine members that are read from settings; a tenth without a field would be a number no setting sets.
         RateLimitAllowanceFields.All.Count.ShouldBe(9);
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void SettingNameThrowsOnNullArguments()
-    {
-        Should.Throw<ArgumentNullException>(() => RateLimitAllowanceFields.SettingName(null!, RateLimitAllowanceFields.QueueLimit));
-        Should.Throw<ArgumentNullException>(() => RateLimitAllowanceFields.SettingName("Admin", null!));
-    }
 }

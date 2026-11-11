@@ -50,11 +50,11 @@ public sealed class ConnectionDisabledStates : IConnectionDisabledStates
     public ConnectionDisabledStates(
         IConfigurationGatewayProvider gateways, string dataStoreName, IAuthenticationContextAccessor accessor, ICrossTenantChangePolicy crossTenant, TimeProvider time, ILogger<ConnectionDisabledStates>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
-        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
-        _crossTenant = crossTenant ?? throw new ArgumentNullException(nameof(crossTenant));
-        _time = time ?? throw new ArgumentNullException(nameof(time));
+        _gateways = gateways;
+        _dataStoreName = dataStoreName;
+        _accessor = accessor;
+        _crossTenant = crossTenant;
+        _time = time;
         _logger = logger ?? NullLogger<ConnectionDisabledStates>.Instance;
     }
 
@@ -81,11 +81,6 @@ public sealed class ConnectionDisabledStates : IConnectionDisabledStates
     public async Task<IGenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>> ReadMany(
         IReadOnlyCollection<Guid> connectionIds, CancellationToken cancellationToken = default)
     {
-        if (connectionIds is null)
-        {
-            throw new ArgumentNullException(nameof(connectionIds));
-        }
-
         if (connectionIds.Count == 0)
         {
             return GenericResult<IReadOnlyDictionary<Guid, ConnectionDisabledRecord>>.Success(new Dictionary<Guid, ConnectionDisabledRecord>());

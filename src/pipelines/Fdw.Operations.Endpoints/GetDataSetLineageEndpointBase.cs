@@ -36,7 +36,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     private readonly IPipelineConfigurationProvider _pipelineProvider;
     private readonly ICalculationConfigurationProvider _calculations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataSetLineageEndpointBase"/> class.</summary>
     protected GetDataSetLineageEndpointBase(
         DataSetConfigurationProvider dataSetProvider,
         IPipelineConfigurationProvider pipelineProvider,

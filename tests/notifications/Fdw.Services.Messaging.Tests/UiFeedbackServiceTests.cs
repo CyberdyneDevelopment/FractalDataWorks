@@ -605,9 +605,10 @@ public sealed class UiFeedbackServiceTests
         var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
         var opened = await fixture.Service.Get(pending.Id, Ct);
 
-        listed.Value!.Single(c => c.Id == acknowledged.Id).AcknowledgedByMe.ShouldBeTrue();
-        listed.Value.Single(c => c.Id == pending.Id).AcknowledgedByMe.ShouldBeFalse();
-        opened.Value!.AcknowledgedByMe.ShouldBeFalse();
+        var comments = listed.Value.ShouldNotBeNull();
+        comments.Single(c => c.Id == acknowledged.Id).AcknowledgedByMe.ShouldBeTrue();
+        comments.Single(c => c.Id == pending.Id).AcknowledgedByMe.ShouldBeFalse();
+        opened.Value.ShouldNotBeNull().AcknowledgedByMe.ShouldBeFalse();
     }
 
     // ── Reach ───────────────────────────────────────────────────────────────
@@ -787,8 +788,9 @@ public sealed class UiFeedbackServiceTests
         var result = await fixture.Service.List(new UiFeedbackQuery { SortByUrgency = true }, Ct);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Select(c => c.Urgency).ShouldBe(["SecurityIssue", "High", "High", "Low"]);
-        result.Value[1].CreatedAt.ShouldBeGreaterThan(result.Value[2].CreatedAt);
+        var byUrgency = result.Value.ShouldNotBeNull();
+        byUrgency.Select(c => c.Urgency).ShouldBe(["SecurityIssue", "High", "High", "Low"]);
+        byUrgency[1].CreatedAt.ShouldBeGreaterThan(byUrgency[2].CreatedAt);
     }
 
     [Fact]
@@ -803,8 +805,9 @@ public sealed class UiFeedbackServiceTests
 
         var result = await fixture.Service.List(new UiFeedbackQuery { Tag = "FeatureRequest" }, Ct);
 
-        result.Value!.Select(c => c.Id).ShouldBe([tagged.Id]);
-        result.Value[0].Tags.ShouldBe(["FeatureRequest"]);
+        var taggedOnly = result.Value.ShouldNotBeNull();
+        taggedOnly.Select(c => c.Id).ShouldBe([tagged.Id]);
+        taggedOnly[0].Tags.ShouldBe(["FeatureRequest"]);
     }
 
     [Theory]

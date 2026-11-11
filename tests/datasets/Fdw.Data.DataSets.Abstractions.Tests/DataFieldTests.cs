@@ -65,16 +65,6 @@ public class DataFieldTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenTypeIsNull()
-    {
-        Should.Throw<ArgumentNullException>(() => new DataField(
-            name: "Field1",
-            type: null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DisplayNameReturnsDescriptionWhenProvided()
     {
         // Arrange

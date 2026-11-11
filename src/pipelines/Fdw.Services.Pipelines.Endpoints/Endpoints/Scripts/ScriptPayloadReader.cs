@@ -23,7 +23,6 @@ public static class ScriptPayloadReader
     /// <returns>The stored script, or the refusal that names the first problem.</returns>
     public static IGenericResult<SqlScriptConfiguration> Read(ScriptPayload payload, Guid id)
     {
-        ArgumentNullException.ThrowIfNull(payload);
         var problems = ScriptChecker.Problems(payload);
         if (problems.Count > 0)
         {

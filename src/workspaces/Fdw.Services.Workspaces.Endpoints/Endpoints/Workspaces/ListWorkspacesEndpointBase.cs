@@ -19,11 +19,11 @@ public abstract class ListWorkspacesEndpointBase : CrudPageEndpointBase<IWorkspa
     private readonly IWorkspaceConfigurationProvider _provider;
     private readonly IWorkspaceAccessPolicy _access;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListWorkspacesEndpointBase"/> class.</summary>
     protected ListWorkspacesEndpointBase(ILogger<ListWorkspacesEndpointBase> logger, IWorkspaceConfigurationProvider provider, IWorkspaceAccessPolicy access) : base(logger)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-        _access = access ?? throw new ArgumentNullException(nameof(access));
+        _provider = provider;
+        _access = access;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -68,7 +68,7 @@ public abstract class ListWorkspacesEndpointBase : CrudPageEndpointBase<IWorkspa
             : GenericResult<bool>.Success(views.IsSuccess);
     }
 
-    /// <inheritdoc />
+    /// <summary>Whether the workspace belongs to the organization the request asks for; with no organization asked, every workspace does. An organization that is not a Guid is refused.</summary>
     /// <remarks>Each item carries the tenant that owns it and the organization that names it as its default (FDW-1101).</remarks>
     // ?organizationId= lists one organization's workspaces (FDW-2338); left out, every workspace the caller may view is listed.
     private IGenericResult<bool> InOrganization(IWorkspaceImplementationConfiguration item)

@@ -10,6 +10,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Commands;
 [TypeOption(typeof(ConfigurationCommands), "ExternalIdentityProvisioner")]
 public sealed class ExternalIdentityProvisionerConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerConfigurationCommand"/> class.</summary>
     public ExternalIdentityProvisionerConfigurationCommand() : base("ExternalIdentityProvisioner") { }
 }

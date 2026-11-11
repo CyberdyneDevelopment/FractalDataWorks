@@ -23,7 +23,7 @@ internal sealed class ConnectionLimitLease : IDisposable
     /// <param name="limits">The limits that applied to the admitted call; empty when none are configured.</param>
     public ConnectionLimitLease(IReadOnlyList<ConnectionLimitConfiguration> limits)
     {
-        Limits = limits ?? throw new ArgumentNullException(nameof(limits));
+        Limits = limits;
     }
 
     /// <summary>Gets the limits that applied to the admitted call.</summary>

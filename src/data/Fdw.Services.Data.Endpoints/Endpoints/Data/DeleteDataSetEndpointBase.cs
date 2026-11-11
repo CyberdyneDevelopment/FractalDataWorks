@@ -22,7 +22,7 @@ public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSet
     private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly IDataSetVariationConfigurationProvider _variations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DeleteDataSetEndpointBase"/> class.</summary>
     protected DeleteDataSetEndpointBase(
         ILogger<DeleteDataSetEndpointBase> logger,
         IDataSetConfigurationProvider dataSetProvider,

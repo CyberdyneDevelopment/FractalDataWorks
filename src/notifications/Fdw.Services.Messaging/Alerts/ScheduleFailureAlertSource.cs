@@ -47,7 +47,6 @@ public sealed class ScheduleFailureAlertSource : IAlertSource
         ILogger<ScheduleFailureAlertSource>? logger, IAuthenticationContextAccessor authContext, IExecutionTracker? tracker = null)
     {
         _logger = logger ?? NullLogger<ScheduleFailureAlertSource>.Instance;
-        ArgumentNullException.ThrowIfNull(authContext);
         _authContext = authContext;
         _tracker = tracker;
     }

@@ -34,7 +34,7 @@ internal sealed class EscalationAlertStore : IEscalationAlertStore
 
     public EscalationAlertStore(IDataGatewayProvider dataGateways, string? dataStoreName, ILogger? logger = null)
     {
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _dataGateways = dataGateways;
         _dataStoreName = dataStoreName;
         _logger = logger ?? NullLogger.Instance;
     }
@@ -48,7 +48,6 @@ internal sealed class EscalationAlertStore : IEscalationAlertStore
 
     public async Task<IGenericResult> Add(EscalationAlertRow alert, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(alert);
         if (!StoreIsNamed)
         {
             return GenericResult.Failure(EscalationAlertLog.StoreNotNamed(_logger));
@@ -60,7 +59,6 @@ internal sealed class EscalationAlertStore : IEscalationAlertStore
 
     public async Task<IGenericResult> Update(EscalationAlertRow alert, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(alert);
         if (!StoreIsNamed)
         {
             return GenericResult.Failure(EscalationAlertLog.StoreNotNamed(_logger));

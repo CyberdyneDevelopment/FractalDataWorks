@@ -21,7 +21,7 @@ public class InterfaceExpectations
     /// <param name="interfaceDeclaration">The interface declaration to verify.</param>
     public InterfaceExpectations(InterfaceDeclarationSyntax interfaceDeclaration)
     {
-        _interfaceDeclaration = interfaceDeclaration ?? throw new ArgumentNullException(nameof(interfaceDeclaration));
+        _interfaceDeclaration = interfaceDeclaration;
     }
 
     /// <summary>

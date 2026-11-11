@@ -30,8 +30,8 @@ internal sealed class FlowChannelOutput : IFlowOutput
     {
         _pauseGate = pauseGate;
         Name = name;
-        _links = links ?? throw new ArgumentNullException(nameof(links));
-        _component = component ?? throw new ArgumentNullException(nameof(component));
+        _links = links;
+        _component = component;
         _rejected = rejected;
     }
 
@@ -41,8 +41,6 @@ internal sealed class FlowChannelOutput : IFlowOutput
     /// <inheritdoc />
     public async Task Write(FlowBatch batch, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(batch);
-
         // Why before the batch leaves: a paused run holds every component at the point it would pass rows on, so nothing new enters the
         // run while it is paused and every batch already passed on is finished (FDW-2950).
         if (_pauseGate is not null)

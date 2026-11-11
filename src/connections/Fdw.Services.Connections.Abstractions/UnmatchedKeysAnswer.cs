@@ -30,10 +30,6 @@ public static class UnmatchedKeysAnswer
     public static async Task<IGenericResult<T>> Execute<T>(
         IDataCommand command, ILogger logger, Func<Task<IGenericResult<IReadOnlyList<IReadOnlyList<IReadOnlyDictionary<string, object?>>>>>> readSets)
     {
-        if (command is null)
-            throw new ArgumentNullException(nameof(command));
-        if (readSets is null)
-            throw new ArgumentNullException(nameof(readSets));
         if (command is not IReportsUnmatchedKeys { UnmatchedKeySample: { } sample })
             return GenericResult<T>.Failure(ConnectionLogger.AnswerNotAskedFor(logger, command.CommandType));
         if (typeof(T) != typeof(BulkWriteAnswer))

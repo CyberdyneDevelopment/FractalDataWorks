@@ -28,9 +28,6 @@ public static class MsSqlBulkCopy
         SqlTransaction? transaction,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(plan);
-        ArgumentNullException.ThrowIfNull(settings);
-
         // Constraints checked, triggers fired, identity values kept; a table lock only when the connection's settings ask for one.
         var options = SqlBulkCopyOptions.CheckConstraints
             | SqlBulkCopyOptions.FireTriggers

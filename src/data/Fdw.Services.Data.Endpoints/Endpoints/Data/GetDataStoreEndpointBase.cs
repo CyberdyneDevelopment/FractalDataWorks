@@ -34,7 +34,7 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
         IAuthorizationService authorization)
         : base(logger)
     {
-        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
+        _dataStoreProvider = dataStoreProvider;
         _connectionNames = new ConnectionNames(connectionProvider, authorization, logger);
     }
 

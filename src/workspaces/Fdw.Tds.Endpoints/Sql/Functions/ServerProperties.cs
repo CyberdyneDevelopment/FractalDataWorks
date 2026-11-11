@@ -77,7 +77,6 @@ public static class ServerProperties
     /// <returns>The locale id, such as 1033.</returns>
     public static int Lcid(SqlExecutionContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
         var bytes = context.Server.Collation.Bytes;
         return bytes[0] | (bytes[1] << 8) | ((bytes[2] & 0x0F) << 16);
     }

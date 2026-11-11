@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Calculations;
 using Fdw.Calculations.Abstractions.WindowedCalculationTypeOptions;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Services.Calculations.Abstractions;
@@ -131,9 +132,8 @@ public abstract class WindowedCalculationEndpointBase : Endpoint<WindowedCalcula
     protected IGenericResult<WindowedCalculationResponse> ToResponse(
         string calculationName, WindowedCalculationSpec spec, string resultJson)
     {
-        if (!TryReadCounts(resultJson, out var partitionCount, out var rowCount))
-            return GenericResult<WindowedCalculationResponse>.Failure(
-                CalculationEndpointLog.WindowedResultCountsMissing(EndpointLogger, calculationName));
+        if (CountsProblem(calculationName, resultJson, out var partitionCount, out var rowCount) is { } problem)
+            return GenericResult<WindowedCalculationResponse>.Failure(problem);
 
         return GenericResult<WindowedCalculationResponse>.Success(new WindowedCalculationResponse
         {
@@ -146,7 +146,9 @@ public abstract class WindowedCalculationEndpointBase : Endpoint<WindowedCalcula
         });
     }
 
-    private static bool TryReadCounts(string resultJson, out int partitionCount, out int rowCount)
+    // Reads both counts from the result JSON, or returns why it cannot: the JSON states them not (WindowedResultCountsMissing), or is not
+    // JSON at all (WindowedResultNotJson, carrying the parser's exception, FDW-5189).
+    private IGenericMessage? CountsProblem(string calculationName, string resultJson, out int partitionCount, out int rowCount)
     {
         partitionCount = 0;
         rowCount = 0;
@@ -155,11 +157,13 @@ public abstract class WindowedCalculationEndpointBase : Endpoint<WindowedCalcula
             using var document = JsonDocument.Parse(resultJson);
             return document.RootElement.ValueKind == JsonValueKind.Object
                 && document.RootElement.TryGetProperty("PartitionCount", out var partitions) && partitions.TryGetInt32(out partitionCount)
-                && document.RootElement.TryGetProperty("RowCount", out var rows) && rows.TryGetInt32(out rowCount);
+                && document.RootElement.TryGetProperty("RowCount", out var rows) && rows.TryGetInt32(out rowCount)
+                ? null
+                : CalculationEndpointLog.WindowedResultCountsMissing(EndpointLogger, calculationName);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return false;
+            return CalculationEndpointLog.WindowedResultNotJson(EndpointLogger, ex, calculationName);
         }
     }
 

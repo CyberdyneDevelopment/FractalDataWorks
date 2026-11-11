@@ -26,7 +26,6 @@ public static class BoundSettings
     /// <returns>The component to build from (the stored one when nothing is bound, otherwise a copy), or the failure that names the parameter.</returns>
     public static IGenericResult<PipelineComponentConfiguration> Apply(PipelineComponentConfiguration component, FlowBuildContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
         return Apply(component, context.Parameters, context.Logger);
     }
 
@@ -42,9 +41,6 @@ public static class BoundSettings
     public static IGenericResult<PipelineComponentConfiguration> Apply(
         PipelineComponentConfiguration component, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(parameters);
-        ArgumentNullException.ThrowIfNull(logger);
         if (component.SettingBindings.Count == 0)
         {
             return GenericResult<PipelineComponentConfiguration>.Success(component);

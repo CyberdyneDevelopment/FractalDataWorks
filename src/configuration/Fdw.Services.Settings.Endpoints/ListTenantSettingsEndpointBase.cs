@@ -19,7 +19,7 @@ public abstract class ListTenantSettingsEndpointBase : CrudListEndpointBase<Tena
 {
     private readonly ITenantSettingConfigurationProvider _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListTenantSettingsEndpointBase"/> class.</summary>
     protected ListTenantSettingsEndpointBase(ILogger<ListTenantSettingsEndpointBase> logger, ITenantSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;

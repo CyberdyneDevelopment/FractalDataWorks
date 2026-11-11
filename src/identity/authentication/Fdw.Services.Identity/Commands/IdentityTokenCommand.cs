@@ -18,10 +18,9 @@ public sealed class IdentityTokenCommand : IGenericCommand
 {
     /// <summary>Initializes a new instance of the <see cref="IdentityTokenCommand"/> class.</summary>
     /// <param name="request">The audience and scopes being asked for.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="request"/> is null.</exception>
     public IdentityTokenCommand(IdentityTokenRequest request)
     {
-        Request = request ?? throw new ArgumentNullException(nameof(request));
+        Request = request;
         CommandId = Guid.CreateVersion7();
         CreatedAt = DateTime.UtcNow;
     }

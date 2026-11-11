@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "SecurityHeaders")]
 public sealed class SecurityHeadersConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SecurityHeadersConfigurationCommand"/> class.</summary>
     public SecurityHeadersConfigurationCommand() : base("SecurityHeaders") { }
 }

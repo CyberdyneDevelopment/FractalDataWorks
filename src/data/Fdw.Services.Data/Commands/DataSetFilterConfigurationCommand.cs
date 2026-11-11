@@ -9,6 +9,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataSetFilter")]
 public sealed class DataSetFilterConfigurationCommand : ConfigurationCommandBase<DataSetFilterConditionConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataSetFilterConfigurationCommand"/> class.</summary>
     public DataSetFilterConfigurationCommand() : base("DataSetFilter") { }
 }

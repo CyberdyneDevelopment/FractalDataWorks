@@ -38,7 +38,6 @@ public sealed class ConfigurationPage<T>
     /// </param>
     public ConfigurationPage(int skip, int take, bool hasMore, Func<Action<IGenericResult>, IAsyncEnumerable<T>> items, int? total = null)
     {
-        if (items is null) throw new ArgumentNullException(nameof(items));
         Skip = skip;
         Take = take;
         HasMore = hasMore;

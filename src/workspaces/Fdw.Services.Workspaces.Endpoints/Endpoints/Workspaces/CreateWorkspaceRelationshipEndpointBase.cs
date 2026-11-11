@@ -26,7 +26,7 @@ public abstract class CreateWorkspaceRelationshipEndpointBase
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IDataSetConfigurationProvider _dataSets;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateWorkspaceRelationshipEndpointBase"/> class.</summary>
     protected CreateWorkspaceRelationshipEndpointBase(
         ILogger<CreateWorkspaceRelationshipEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

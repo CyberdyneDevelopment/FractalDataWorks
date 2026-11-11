@@ -8,6 +8,6 @@ namespace Fdw.Services.TokenManagers.Commands;
 [TypeOption(typeof(ConfigurationCommands), "TokenManager")]
 public sealed class TokenManagerConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="TokenManagerConfigurationCommand"/> class.</summary>
     public TokenManagerConfigurationCommand() : base("TokenManager") { }
 }

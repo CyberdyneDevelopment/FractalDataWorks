@@ -23,8 +23,8 @@ internal sealed class ConnectionDocumentDefinitions<T> : IDocumentDefinitions<T>
     /// <param name="read">Makes the kind's read command for a tenant and, when named, an organization.</param>
     public ConnectionDocumentDefinitions(DocumentRecordCommandRunner runner, Func<Guid, Guid?, IDocumentRecordCommand<IReadOnlyList<T>>> read)
     {
-        _runner = runner ?? throw new ArgumentNullException(nameof(runner));
-        _read = read ?? throw new ArgumentNullException(nameof(read));
+        _runner = runner;
+        _read = read;
     }
 
     /// <inheritdoc />

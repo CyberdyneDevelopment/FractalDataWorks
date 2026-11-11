@@ -25,7 +25,7 @@ public abstract class ClearDataSetFieldStandInEndpointBase : Endpoint<DataSetFie
     private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ILogger<ClearDataSetFieldStandInEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ClearDataSetFieldStandInEndpointBase"/> class.</summary>
     protected ClearDataSetFieldStandInEndpointBase(
         DataSetConfigurationProvider dataSets,
         IConfigurationGatewayProvider configurationGateways,

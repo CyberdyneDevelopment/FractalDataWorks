@@ -16,7 +16,7 @@ public sealed class QueryResult<T> : IRoslynCommandResult
     /// <param name="data">The query result data.</param>
     public QueryResult(string summary, T data)
     {
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
+        Summary = summary;
         Data = data;
     }
 

@@ -37,14 +37,12 @@ public abstract class StateOptionBase<TSelf> : TypeOptionBase<TSelf>, IStateOpti
     /// <inheritdoc />
     public virtual Task<IGenericResult> OnEnter(IStateContext<TSelf> context, CancellationToken cancellationToken)
     {
-        if (context is null) throw new ArgumentNullException(nameof(context));
         return Task.FromResult(GenericResult.Success());
     }
 
     /// <inheritdoc />
     public virtual Task<IGenericResult> OnExit(IStateContext<TSelf> context, CancellationToken cancellationToken)
     {
-        if (context is null) throw new ArgumentNullException(nameof(context));
         return Task.FromResult(GenericResult.Success());
     }
 }

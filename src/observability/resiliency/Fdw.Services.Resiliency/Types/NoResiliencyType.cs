@@ -35,7 +35,6 @@ public sealed class NoResiliencyType : ResiliencyTypeBase
         IResiliencyExecutionContext ctx,
         CancellationToken cancellationToken)
     {
-        if (runStage == null) throw new ArgumentNullException(nameof(runStage));
         return runStage(cancellationToken);
     }
 }

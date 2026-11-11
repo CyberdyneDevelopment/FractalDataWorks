@@ -16,7 +16,6 @@ public static class CompletionLines
     /// <returns><see langword="true"/> when it leaves a <c>done</c> output.</returns>
     public static bool Is(PipelineLinkConfiguration link)
     {
-        ArgumentNullException.ThrowIfNull(link);
         return CompletionNodes.IsDone(link.FromOutput);
     }
 
@@ -25,7 +24,6 @@ public static class CompletionLines
     /// <returns>The row lines, in order.</returns>
     public static IReadOnlyList<PipelineLinkConfiguration> Rows(IEnumerable<PipelineLinkConfiguration> links)
     {
-        ArgumentNullException.ThrowIfNull(links);
         return [.. links.Where(link => !Is(link))];
     }
 
@@ -34,7 +32,6 @@ public static class CompletionLines
     /// <returns>The completion lines, in order.</returns>
     public static IReadOnlyList<PipelineLinkConfiguration> Completions(IEnumerable<PipelineLinkConfiguration> links)
     {
-        ArgumentNullException.ThrowIfNull(links);
         return [.. links.Where(Is)];
     }
 
@@ -43,7 +40,6 @@ public static class CompletionLines
     /// <returns>The component that must finish and the one that waits for it.</returns>
     public static FlowCompletion ToCompletion(PipelineLinkConfiguration link)
     {
-        ArgumentNullException.ThrowIfNull(link);
         return new FlowCompletion(link.FromComponent, link.ToComponent);
     }
 }

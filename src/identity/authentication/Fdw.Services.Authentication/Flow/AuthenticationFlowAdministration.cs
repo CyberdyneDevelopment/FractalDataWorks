@@ -76,15 +76,15 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         Func<IEnumerable<IAuthenticationStep>> steps,
         ILogger<AuthenticationFlowAdministration>? logger = null)
     {
-        _rows = rows ?? throw new ArgumentNullException(nameof(rows));
-        _flows = flows ?? throw new ArgumentNullException(nameof(flows));
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _rolePermissions = rolePermissions ?? throw new ArgumentNullException(nameof(rolePermissions));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _userPermissions = userPermissions ?? throw new ArgumentNullException(nameof(userPermissions));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
-        _step = step ?? throw new ArgumentNullException(nameof(step));
-        _steps = steps ?? throw new ArgumentNullException(nameof(steps));
+        _rows = rows;
+        _flows = flows;
+        _permissions = permissions;
+        _rolePermissions = rolePermissions;
+        _tenants = tenants;
+        _userPermissions = userPermissions;
+        _authContextAccessor = authContextAccessor;
+        _step = step;
+        _steps = steps;
         _logger = logger ?? NullLogger<AuthenticationFlowAdministration>.Instance;
     }
 
@@ -158,8 +158,6 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         Func<AuthenticationFlowImplementationConfiguration, IGenericResult<IAdministrablePermissionGate>, IGenericResult<bool>> edit,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(administrator);
-
         var rows = await Rows(flowName, cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure)
             return rows.ToNewResult<AuthenticationFlowState>();

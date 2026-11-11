@@ -31,8 +31,6 @@ public static class ConfigurationGatewayCallExtensions
         DataGatewayCall call,
         CancellationToken cancellationToken = default)
     {
-        if (gateways is null) throw new ArgumentNullException(nameof(gateways));
-
         var gateway = gateways.Get(connectionName);
         if (gateway.IsFailure)
             return gateway.ToNewResult<T>();

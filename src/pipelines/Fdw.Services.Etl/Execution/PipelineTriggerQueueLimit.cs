@@ -20,9 +20,6 @@ public static class PipelineTriggerQueueLimit
     /// <returns>The number, or the failure naming the setting.</returns>
     public static IGenericResult<int> Read(IEffectiveSettingsProvider settings, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var capacity = settings.GetEffectiveValue<int>(SettingDefinitions.MaxQueuedPipelineTriggers);
         return capacity <= 0
             ? GenericResult<int>.Failure(PipelineRunSchedulerLog.LimitSettingMissing(logger, SettingDefinitions.MaxQueuedPipelineTriggers))

@@ -34,9 +34,9 @@ public sealed class ThresholdLinks : IThresholdLinks
     /// <param name="logger">The logger.</param>
     public ThresholdLinks(IConfigurationGatewayProvider gateways, IThresholdConfigurationProvider thresholds, string dataStoreName, ILogger<ThresholdLinks>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _thresholds = thresholds ?? throw new ArgumentNullException(nameof(thresholds));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _gateways = gateways;
+        _thresholds = thresholds;
+        _dataStoreName = dataStoreName;
         _logger = logger ?? NullLogger<ThresholdLinks>.Instance;
     }
 

@@ -85,8 +85,6 @@ public class ExecutionSummaryResponse
     /// <returns>The summary.</returns>
     public static ExecutionSummaryResponse Of(IExecutionItem item)
     {
-        ArgumentNullException.ThrowIfNull(item);
-
         return new ExecutionSummaryResponse
         {
             Id = item.Id,

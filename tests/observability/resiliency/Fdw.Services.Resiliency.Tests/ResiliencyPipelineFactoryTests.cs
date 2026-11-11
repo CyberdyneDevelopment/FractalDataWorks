@@ -26,15 +26,6 @@ public sealed class ResiliencyPipelineFactoryTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void ConstructorThrowsWhenLoggerIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new ResiliencyPipelineFactory(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void GetOrCreatePipelineByPolicyReturnsPipeline()
     {
         // Arrange

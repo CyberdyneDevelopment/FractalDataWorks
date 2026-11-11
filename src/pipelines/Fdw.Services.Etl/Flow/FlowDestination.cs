@@ -27,7 +27,6 @@ public sealed class FlowDestination : IFlowComponent
     public FlowDestination(string name, Func<FlowBatch, CancellationToken, Task<IGenericResult>> write)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(write);
         Name = name;
         _write = write;
     }

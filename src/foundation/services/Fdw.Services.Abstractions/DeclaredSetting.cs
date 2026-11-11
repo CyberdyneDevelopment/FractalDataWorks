@@ -25,7 +25,6 @@ public static class DeclaredSetting
     /// <returns>The number; a failure naming the type and field when none is declared or it is below one.</returns>
     public static IGenericResult<int> Count(ITypeOption option, string field, ILogger? logger)
     {
-        if (option is null) throw new ArgumentNullException(nameof(option));
         var log = logger ?? NullLogger.Instance;
         if (!ServiceTypeDefaults.TryResolve(option, field, out var value) || value is not int number)
             return GenericResult<int>.Failure(ServiceTypeLog.DeclaredCountNotDeclared(log, option.Name, field));
@@ -42,7 +41,6 @@ public static class DeclaredSetting
     /// <returns>The choice; a failure naming the type and field when none is declared.</returns>
     public static IGenericResult<bool> Flag(ITypeOption option, string field, ILogger? logger)
     {
-        if (option is null) throw new ArgumentNullException(nameof(option));
         return ServiceTypeDefaults.TryResolve(option, field, out var value) && value is bool flag
             ? GenericResult<bool>.Success(flag)
             : GenericResult<bool>.Failure(ServiceTypeLog.DeclaredFlagNotDeclared(logger ?? NullLogger.Instance, option.Name, field));

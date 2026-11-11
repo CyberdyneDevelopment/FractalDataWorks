@@ -20,9 +20,8 @@ public static class WaitThresholdValidator
     /// <returns>Success, or a refusal naming the member and what is wrong with it.</returns>
     public static IGenericResult Check(string ownerKind, WaitThresholdLevelPayload level, ILogger logger)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ownerKind);
-        ArgumentNullException.ThrowIfNull(level);
-        ArgumentNullException.ThrowIfNull(logger);
+        if (string.IsNullOrWhiteSpace(ownerKind))
+            return GenericResult.Failure(WaitThresholdLog.OwnerKindRequired(logger));
 
         var mode = ModeOf(ownerKind, level, logger);
         return mode.IsFailure ? mode : GenericResult.Success();

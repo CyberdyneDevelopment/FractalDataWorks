@@ -20,9 +20,6 @@ public static class TdsLoginResponse
     /// <param name="acknowledgeFeatures">Whether the client sent feature extensions, which are acknowledged as none supported.</param>
     public static void Write(TdsPayloadWriter payload, TdsSession session, TdsServerIdentity identity, uint tdsVersion, int packetSize, bool acknowledgeFeatures)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(identity);
         TdsTokenWriter.EnvironmentChange(payload, TdsEnvironmentChangeTypes.Database, session.Database, "master");
         TdsTokenWriter.Message(payload, new SqlServerMessage(5701, 2, 0, $"Changed database context to '{session.Database}'.", 1), identity.ServerName);
         TdsTokenWriter.EnvironmentChange(payload, TdsEnvironmentChangeTypes.Language, identity.Language, string.Empty);

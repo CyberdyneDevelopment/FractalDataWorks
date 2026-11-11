@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "WebMcp")]
 public sealed class WebMcpConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="WebMcpConfigurationCommand"/> class.</summary>
     public WebMcpConfigurationCommand() : base("WebMcp") { }
 }

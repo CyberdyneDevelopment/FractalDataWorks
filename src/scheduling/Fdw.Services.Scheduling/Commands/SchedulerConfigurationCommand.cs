@@ -8,6 +8,6 @@ namespace Fdw.Services.Scheduling.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Scheduler")]
 public sealed class SchedulerConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="SchedulerConfigurationCommand"/> class.</summary>
     public SchedulerConfigurationCommand() : base("Scheduler") { }
 }

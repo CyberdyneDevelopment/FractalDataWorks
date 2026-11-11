@@ -107,7 +107,7 @@ public sealed class ThemeConfigurationProvider
         IThemeImplementationConfiguration? previous, IThemeImplementationConfiguration chosen, CancellationToken ct)
     {
         var scope = await BeginWriteScope(ct).ConfigureAwait(false);
-        if (scope.Value is not { } opened) return scope;
+        if (scope.IsFailure || scope.Value is not { } opened) return scope;
 
         await using var unit = opened;
 

@@ -112,9 +112,6 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
         IServiceProvider services,
         ILoggerFactory? loggerFactory)
     {
-        if (configuration is null) throw new ArgumentNullException(nameof(configuration));
-        if (schemes is null) throw new ArgumentNullException(nameof(schemes));
-
         var log = loggerFactory?.CreateLogger<LocalKeyAuthenticationType>()
             ?? NullLogger<LocalKeyAuthenticationType>.Instance;
 

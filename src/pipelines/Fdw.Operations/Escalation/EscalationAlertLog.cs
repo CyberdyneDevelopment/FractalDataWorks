@@ -86,4 +86,14 @@ public static partial class EscalationAlertLog
     /// <summary>Logs a level that could not be sent.</summary>
     [MessageLogging(EventId = 71007, Level = LogLevel.Error, Message = "Alert {alertId} level {level} of policy '{policy}' could not be sent through '{channel}': {reason}")]
     public static partial IGenericMessage LevelNotSent(ILogger logger, Guid alertId, int level, string policy, string channel, string? reason);
+
+    /// <summary>Error: acknowledging an alert needs who acknowledges it; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "Acknowledging escalation alert {alertId} needs who acknowledges it, and the name given is empty")]
+    public static partial IGenericMessage AcknowledgedByRequired(ILogger logger, Guid alertId);
+
+    /// <summary>Error: resolving an alert needs who resolves it; an empty name is refused.</summary>
+    [MessageLogging(EventId = 21801, Level = LogLevel.Error,
+        Message = "Resolving escalation alert {alertId} needs who resolves it, and the name given is empty")]
+    public static partial IGenericMessage ResolvedByRequired(ILogger logger, Guid alertId);
 }

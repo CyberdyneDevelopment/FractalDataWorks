@@ -54,10 +54,9 @@ public sealed class AlertActionService : IAlertActionService
         _logger = logger ?? NullLogger<AlertActionService>.Instance;
         _store = new AlertStore(_logger, dataGateways, messaging);
         _choices = new AlertKindChoices(_store);
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _userNames = userNames ?? throw new ArgumentNullException(nameof(userNames));
-        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
-        ArgumentNullException.ThrowIfNull(sources);
+        _authContext = authContext;
+        _userNames = userNames;
+        _clock = clock;
         _sources = sources.ToDictionary(source => source.Kind, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -65,7 +64,6 @@ public sealed class AlertActionService : IAlertActionService
     public async Task<IGenericResult<AlertList>> List(IReadOnlyList<AlertKey> alerts, CancellationToken cancellationToken = default)
     {
         MessagingLog.TraceAlertEntry(_logger, "List");
-        ArgumentNullException.ThrowIfNull(alerts);
 
         try
         {

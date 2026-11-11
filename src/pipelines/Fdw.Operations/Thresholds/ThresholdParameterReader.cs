@@ -20,8 +20,6 @@ public static class ThresholdParameterReader
     /// <returns>The parameters by name: one value, or the values in order for a list parameter; a failure naming what is wrong.</returns>
     public static IGenericResult<IReadOnlyDictionary<string, object?>> From(IThreshold type, string threshold, IEnumerable<ThresholdParameterConfiguration> stored)
     {
-        ArgumentNullException.ThrowIfNull(type);
-        ArgumentNullException.ThrowIfNull(stored);
         var rows = stored.OrderBy(row => row.Name, StringComparer.Ordinal).ThenBy(row => row.Ordinal).ToList();
         var parameters = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var group in rows.GroupBy(row => row.Name, StringComparer.Ordinal))

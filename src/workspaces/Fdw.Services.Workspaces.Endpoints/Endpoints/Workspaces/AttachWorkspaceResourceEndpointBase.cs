@@ -41,7 +41,7 @@ public abstract class AttachWorkspaceResourceEndpointBase
     // endpoint instance, so this is never stale or shared across requests.
     private WorkspaceResourceConfiguration? _conflict;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="AttachWorkspaceResourceEndpointBase"/> class.</summary>
     protected AttachWorkspaceResourceEndpointBase(
         ILogger<AttachWorkspaceResourceEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,

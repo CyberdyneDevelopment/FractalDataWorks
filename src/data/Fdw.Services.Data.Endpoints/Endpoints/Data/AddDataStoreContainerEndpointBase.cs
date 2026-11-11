@@ -22,7 +22,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
 {
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="AddDataStoreContainerEndpointBase"/> class.</summary>
     protected AddDataStoreContainerEndpointBase(ILogger<AddDataStoreContainerEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
@@ -238,9 +238,6 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
     protected internal IGenericResult<List<DataContainerKeyConfiguration>> BuildKeys(
         AddDataStoreContainerRequest request, DataContainerConfiguration container, IDataStoreImplementationConfiguration store)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(store);
-
         return DataStoreContainerBuilder.Keys(
             request.Name, request.Keys, container, store.Paths.SelectMany(p => p.Containers), Logger);
     }

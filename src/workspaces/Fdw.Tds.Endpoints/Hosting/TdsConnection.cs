@@ -43,9 +43,9 @@ public sealed class TdsConnection
     /// <param name="logger">The logger.</param>
     public TdsConnection(TdsEndpointOptions options, IServiceScopeFactory scopes, ILogger logger)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _options = options;
+        _scopes = scopes;
+        _logger = logger;
         _dispatcher = new TdsRequestDispatcher(options, scopes, logger);
     }
 
@@ -56,7 +56,6 @@ public sealed class TdsConnection
     /// <returns>Why the connection ended.</returns>
     public async Task<string> Serve(Stream network, int sessionId, CancellationToken stopping)
     {
-        ArgumentNullException.ThrowIfNull(network);
         using var login = CancellationTokenSource.CreateLinkedTokenSource(stopping);
         login.CancelAfter(_options.LoginTimeout);
 

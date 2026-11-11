@@ -24,7 +24,7 @@ internal sealed class ClassMemberExpectationsDelegate
     /// <param name="classDeclaration">The class declaration to verify.</param>
     public ClassMemberExpectationsDelegate(ClassDeclarationSyntax classDeclaration)
     {
-        _classDeclaration = classDeclaration ?? throw new ArgumentNullException(nameof(classDeclaration));
+        _classDeclaration = classDeclaration;
     }
 
     /// <summary>

@@ -16,9 +16,9 @@ public sealed class SqlProcedureOutput
     public SqlProcedureOutput(int ordinal, string name, object? value, TdsColumnType type)
     {
         Ordinal = ordinal;
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         Value = value;
-        Type = type ?? throw new ArgumentNullException(nameof(type));
+        Type = type;
     }
 
     /// <summary>Gets the argument's position in the call.</summary>

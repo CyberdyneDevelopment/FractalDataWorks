@@ -32,7 +32,6 @@ public abstract class SqlScalarFunctionBase : TypeOptionBase<SqlScalarFunctionBa
     /// <inheritdoc/>
     public IGenericResult<object?> Evaluate(SqlFunctionCall call)
     {
-        ArgumentNullException.ThrowIfNull(call);
         if (call.Arguments.Count < _fewest || call.Arguments.Count > _most)
         {
             return call.Refuse(new SqlServerMessage(174, 1, 15,

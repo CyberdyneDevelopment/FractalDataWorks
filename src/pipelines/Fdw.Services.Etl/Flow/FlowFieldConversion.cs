@@ -22,7 +22,6 @@ public sealed class FlowFieldConversion
     /// <param name="chain">The Transformations the value goes through, in order; empty when it goes through none.</param>
     public FlowFieldConversion(string? targetType, string? defaultValue, bool isRequired, IReadOnlyList<IFieldMappingTransformation> chain)
     {
-        ArgumentNullException.ThrowIfNull(chain);
         TargetType = targetType;
         DefaultValue = defaultValue;
         IsRequired = isRequired;

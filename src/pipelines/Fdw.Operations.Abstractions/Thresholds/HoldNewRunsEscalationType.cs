@@ -22,10 +22,6 @@ public sealed class HoldNewRunsEscalationType : EscalationTypeBase
     /// <inheritdoc/>
     public override Task<IGenericResult> Handle(EscalationFiring firing, IServiceProvider services, CancellationToken cancellationToken = default)
     {
-        if (firing is null)
-        {
-            throw new ArgumentNullException(nameof(firing));
-        }
         return Task.FromResult(GenericResult.Success());
     }
 }

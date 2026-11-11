@@ -10,6 +10,6 @@ namespace Fdw.Services.Data.Commands;
 [TypeOption(typeof(ConfigurationCommands), "DataSet")]
 public sealed class DataSetConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataSetConfigurationCommand"/> class.</summary>
     public DataSetConfigurationCommand() : base("DataSet") { }
 }

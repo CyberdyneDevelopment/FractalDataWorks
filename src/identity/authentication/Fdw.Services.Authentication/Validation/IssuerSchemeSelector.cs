@@ -48,8 +48,6 @@ public static class IssuerSchemeSelector
     /// </returns>
     public static string Select(HttpContext context)
     {
-        if (context is null) throw new ArgumentNullException(nameof(context));
-
         var logger = context.RequestServices.GetService<ILoggerFactory>()?.CreateLogger(typeof(IssuerSchemeSelector))
             ?? (ILogger)NullLogger.Instance;
 

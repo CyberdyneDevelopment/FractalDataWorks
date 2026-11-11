@@ -20,7 +20,7 @@ public abstract class DataflowLayerEndpointBase : EndpointWithoutRequest<Dataflo
     private readonly IPipelineConfigurationProvider _pipelineProvider;
     private readonly ILogger _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="DataflowLayerEndpointBase"/> class.</summary>
     private protected DataflowLayerEndpointBase(
         DataflowGraphConfigurationProvider provider,
         IPipelineConfigurationProvider pipelineProvider,

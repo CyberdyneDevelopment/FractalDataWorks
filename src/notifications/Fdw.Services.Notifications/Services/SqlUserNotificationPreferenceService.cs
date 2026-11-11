@@ -42,8 +42,6 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
         IConfigurationGatewayProvider configurationGateways,
         ILogger<SqlUserNotificationPreferenceService>? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(configurationGateways);
-
         _configurationGateways = configurationGateways;
         _logger = logger ?? NullLogger<SqlUserNotificationPreferenceService>.Instance;
     }
@@ -93,8 +91,6 @@ public sealed class SqlUserNotificationPreferenceService : IUserNotificationPref
         IReadOnlyList<NotificationPreference> preferences,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(preferences);
-
         UserNotificationPreferenceLog.SavingPreferences(_logger, preferences.Count, userId);
 
         try

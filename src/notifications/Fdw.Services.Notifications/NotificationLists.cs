@@ -34,8 +34,8 @@ public sealed class NotificationLists : INotificationLists
     /// <param name="logger">The logger.</param>
     public NotificationLists(IConfigurationGatewayProvider gateways, string dataStoreName, ILogger<NotificationLists>? logger)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _gateways = gateways;
+        _dataStoreName = dataStoreName;
         _logger = logger ?? NullLogger<NotificationLists>.Instance;
     }
 

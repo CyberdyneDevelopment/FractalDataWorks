@@ -53,9 +53,9 @@ public abstract class DataVaultBase : IDataVault, IDisposable
         byte[] pepper,
         ILogger<DataVaultBase>? logger)
     {
-        _vaultName = vaultName ?? throw new ArgumentNullException(nameof(vaultName));
-        _connection = connection ?? throw new ArgumentNullException(nameof(connection));
-        _pepper = pepper ?? throw new ArgumentNullException(nameof(pepper));
+        _vaultName = vaultName;
+        _connection = connection;
+        _pepper = pepper;
         _logger = logger ?? NullLogger<DataVaultBase>.Instance;
     }
 
@@ -121,9 +121,6 @@ public abstract class DataVaultBase : IDataVault, IDisposable
     /// <param name="derivedHash">The KDF output to pepper.</param>
     protected byte[] Pepper(byte[] derivedHash)
     {
-        if (derivedHash is null)
-            throw new ArgumentNullException(nameof(derivedHash));
-
         using var hmac = new HMACSHA256(_pepper);
         return hmac.ComputeHash(derivedHash);
     }

@@ -24,7 +24,7 @@ public sealed class DefaultOrgAccessProvider : IOrgAccessProvider
         TenantOrgAccessConfigurationProvider provider,
         ILogger<DefaultOrgAccessProvider>? logger = null)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
         _logger = logger ?? NullLogger<DefaultOrgAccessProvider>.Instance;
     }
 

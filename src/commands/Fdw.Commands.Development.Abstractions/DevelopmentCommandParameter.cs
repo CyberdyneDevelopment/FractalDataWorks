@@ -42,9 +42,9 @@ public sealed class DevelopmentCommandParameter
         bool isRequired = true,
         object? defaultValue = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Description = description ?? throw new ArgumentNullException(nameof(description));
-        ParameterType = parameterType ?? throw new ArgumentNullException(nameof(parameterType));
+        Name = name;
+        Description = description;
+        ParameterType = parameterType;
         IsRequired = isRequired;
         DefaultValue = defaultValue;
     }

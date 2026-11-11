@@ -47,7 +47,6 @@ public static class CatalogKinds
     /// <returns>The position, compared without regard to case.</returns>
     public static int IndexOf(string kind)
     {
-        ArgumentNullException.ThrowIfNull(kind);
         for (var i = 0; i < All.Count; i++)
         {
             if (string.Equals(All[i], kind, StringComparison.OrdinalIgnoreCase))

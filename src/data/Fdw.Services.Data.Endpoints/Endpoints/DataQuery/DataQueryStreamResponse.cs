@@ -30,7 +30,7 @@ public class DataQueryStreamResponse
     /// <param name="skip">The rows skipped.</param>
     public DataQueryStreamResponse(DataQueryStream stream, int skip)
     {
-        _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+        _stream = stream;
         Skip = skip;
         HasMoreRows = false;
     }

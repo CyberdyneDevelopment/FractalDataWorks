@@ -25,8 +25,6 @@ public static class SetBasedRows
     /// <returns>The rows, one for each key, in the order each key's last row came.</returns>
     public static IReadOnlyList<object> LastPerKey(IEnumerable rows, IReadOnlyList<string> keyColumns, out int collapsed)
     {
-        ArgumentNullException.ThrowIfNull(rows);
-        ArgumentNullException.ThrowIfNull(keyColumns);
         var all = rows.Cast<object>().ToList();
         var last = new Dictionary<string, int>(StringComparer.Ordinal);
         for (var index = 0; index < all.Count; index++)
@@ -50,8 +48,6 @@ public static class SetBasedRows
     /// <returns>The JSON array, or <see langword="null"/> when <paramref name="problem"/> is set.</returns>
     public static string? Json(IReadOnlyList<object> rows, IReadOnlyList<string> columns, out string? problem)
     {
-        ArgumentNullException.ThrowIfNull(rows);
-        ArgumentNullException.ThrowIfNull(columns);
         var written = new List<Dictionary<string, object?>>(rows.Count);
         for (var index = 0; index < rows.Count; index++)
         {

@@ -64,17 +64,16 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         _logger = logger ?? NullLogger<UiFeedbackService>.Instance;
         _store = new UiFeedbackStore(_logger, dataGateways, messaging);
         _alerts = new AlertStore(_logger, dataGateways, messaging);
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
-        _userNames = userNames ?? throw new ArgumentNullException(nameof(userNames));
-        _holders = holders ?? throw new ArgumentNullException(nameof(holders));
-        _messages = messages ?? throw new ArgumentNullException(nameof(messages));
+        _authContext = authContext;
+        _userNames = userNames;
+        _holders = holders;
+        _messages = messages;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<UiFeedbackPayload>> Create(CreateUiFeedbackRequest request, CancellationToken cancellationToken = default)
     {
         MessagingLog.TraceUiFeedbackEntry(_logger, "Create");
-        ArgumentNullException.ThrowIfNull(request);
 
         try
         {
@@ -121,7 +120,6 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
     public async Task<IGenericResult<IReadOnlyList<UiFeedbackPayload>>> List(UiFeedbackQuery query, CancellationToken cancellationToken = default)
     {
         MessagingLog.TraceUiFeedbackEntry(_logger, "List");
-        ArgumentNullException.ThrowIfNull(query);
 
         try
         {

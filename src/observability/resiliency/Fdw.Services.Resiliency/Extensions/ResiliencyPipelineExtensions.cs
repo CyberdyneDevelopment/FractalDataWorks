@@ -26,17 +26,11 @@ public static class ResiliencyPipelineExtensions
     /// <param name="logger">Optional logger for pipeline events.</param>
     /// <param name="operationName">The operation name the log lines carry. Defaults to policy name.</param>
     /// <returns>A configured ResiliencePipeline instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when policy is null.</exception>
     public static ResiliencePipeline Create(
         this IResiliencyPolicy policy,
         string operationName,
         ILogger? logger = null)
     {
-        if (policy == null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
         if (logger != null)
         {
             ResiliencyLog.CreatingPipeline(logger, policy.Name);
@@ -65,17 +59,11 @@ public static class ResiliencyPipelineExtensions
     /// <param name="logger">Optional logger for pipeline events.</param>
     /// <param name="operationName">The operation name the log lines carry. Defaults to policy name.</param>
     /// <returns>A configured ResiliencePipeline{TResult} instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when policy is null.</exception>
     public static ResiliencePipeline<TResult> CreatePipeline<TResult>(
         this IResiliencyPolicy policy,
         string operationName,
         ILogger? logger = null)
     {
-        if (policy == null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
         if (logger != null)
         {
             ResiliencyLog.CreatingPipeline(logger, policy.Name);
@@ -113,16 +101,6 @@ public static class ResiliencyPipelineExtensions
         ILogger? logger = null,
         CancellationToken cancellationToken = default)
     {
-        if (policy == null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
-        if (operation == null)
-        {
-            throw new ArgumentNullException(nameof(operation));
-        }
-
         try
         {
             var pipeline = policy.CreatePipeline<TResult>(operationName, logger);
@@ -175,16 +153,6 @@ public static class ResiliencyPipelineExtensions
         ILogger? logger = null,
         CancellationToken cancellationToken = default)
     {
-        if (policy == null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
-        if (operation == null)
-        {
-            throw new ArgumentNullException(nameof(operation));
-        }
-
         var effectiveLogger = logger ?? NullLogger.Instance;
 
         try

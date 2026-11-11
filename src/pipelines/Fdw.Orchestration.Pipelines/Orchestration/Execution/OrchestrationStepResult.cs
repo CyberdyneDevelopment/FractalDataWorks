@@ -28,9 +28,9 @@ public class OrchestrationStepResult : IOrchestrationStepResult
         DateTimeOffset startTime,
         DateTimeOffset? endTime = null)
     {
-        StepId = stepId ?? throw new ArgumentNullException(nameof(stepId));
-        StepName = stepName ?? throw new ArgumentNullException(nameof(stepName));
-        Status = status ?? throw new ArgumentNullException(nameof(status));
+        StepId = stepId;
+        StepName = stepName;
+        Status = status;
         StartTime = startTime;
         EndTime = endTime;
     }

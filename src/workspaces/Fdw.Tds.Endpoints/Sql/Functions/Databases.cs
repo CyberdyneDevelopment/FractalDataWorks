@@ -21,7 +21,6 @@ public static class Databases
     /// <returns>The name, or null for an id no database has.</returns>
     public static string? NameOf(long? id, SqlExecutionContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
         if (id == TdsServerIdentity.DatabaseId)
             return context.Server.DatabaseName;
 
@@ -34,7 +33,6 @@ public static class Databases
     /// <returns>The id, or null for a name no database has.</returns>
     public static int? IdOf(string? name, SqlExecutionContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
         if (string.Equals(name, context.Server.DatabaseName, StringComparison.OrdinalIgnoreCase))
             return TdsServerIdentity.DatabaseId;
 

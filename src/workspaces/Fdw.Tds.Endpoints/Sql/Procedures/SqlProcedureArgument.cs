@@ -15,7 +15,7 @@ public sealed class SqlProcedureArgument
     public SqlProcedureArgument(int ordinal, string name, object? value, bool isOutput)
     {
         Ordinal = ordinal;
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Name = name;
         Value = value;
         IsOutput = isOutput;
     }

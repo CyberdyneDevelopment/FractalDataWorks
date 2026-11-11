@@ -22,8 +22,6 @@ public static class SetBasedColumns
     /// <returns>The refusal, or <see langword="null"/>.</returns>
     public static IGenericMessage? Problem(BulkUpdateOptions options, IStorageContainer container)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(container);
         var general = options.FirstProblem();
         if (general is not null)
             return general;
@@ -44,8 +42,6 @@ public static class SetBasedColumns
     /// <returns>The refusal, or <see langword="null"/>.</returns>
     public static IGenericMessage? Problem(BulkDeleteOptions options, IStorageContainer container)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(container);
         var general = options.FirstProblem();
         if (general is not null)
             return general;
@@ -60,7 +56,6 @@ public static class SetBasedColumns
     /// <returns>The declared name.</returns>
     public static string Declared(IStorageContainer container, string column)
     {
-        ArgumentNullException.ThrowIfNull(container);
         return Field(container, column) is { } field
             ? field.Name
             : throw new InvalidOperationException($"Container {container.Name} does not declare column '{column}'");
@@ -72,7 +67,6 @@ public static class SetBasedColumns
     /// <returns>The declared names.</returns>
     public static IReadOnlyList<string> Declared(IStorageContainer container, IReadOnlyList<string> columns)
     {
-        ArgumentNullException.ThrowIfNull(columns);
         return columns.Select(column => Declared(container, column)).ToList();
     }
 

@@ -21,7 +21,6 @@ public static class GraphScopeEntries
     /// </returns>
     public static IReadOnlyList<GraphScopeEntryPayload> Of(GraphPipelineConfiguration graph)
     {
-        System.ArgumentNullException.ThrowIfNull(graph);
         return
         [
             .. graph.Parameters.Select(parameter => new GraphScopeEntryPayload

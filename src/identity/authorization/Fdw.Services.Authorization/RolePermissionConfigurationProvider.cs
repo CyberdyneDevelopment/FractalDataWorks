@@ -38,9 +38,6 @@ public sealed class RolePermissionConfigurationProvider
         IReadOnlyList<IRolePermissionImplementationConfiguration> mappings,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(retiring);
-        ArgumentNullException.ThrowIfNull(mappings);
-
         var scope = await BeginWriteScope(cancellationToken).ConfigureAwait(false);
         if (scope.IsFailure) return scope;
 
@@ -68,6 +65,22 @@ public sealed class RolePermissionConfigurationProvider
         }
 
         return await unit.Commit(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<int>> RemoveGrantsOf(Guid roleId, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
+    {
+        var granted = await Find<IRolePermissionImplementationConfiguration>(grant => grant.RoleId == roleId, cancellationToken).ConfigureAwait(false);
+        if (granted.IsFailure) return granted.ToNewResult<int>();
+
+        var grants = granted.Value ?? [];
+        for (var i = 0; i < grants.Count; i++)
+        {
+            var removed = await Delete(grants[i].Id, unit, cancellationToken).ConfigureAwait(false);
+            if (removed.IsFailure) return removed.ToNewResult<int>();
+        }
+
+        return GenericResult<int>.Success(grants.Count);
     }
 
     // The domain and the implementation are both named for the record itself; the endpoint used to

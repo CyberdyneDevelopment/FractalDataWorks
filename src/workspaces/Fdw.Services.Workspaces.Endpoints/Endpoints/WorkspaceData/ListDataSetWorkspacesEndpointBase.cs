@@ -68,9 +68,9 @@ public abstract class ListDataSetWorkspacesEndpointBase
         IDataSetVariationConfigurationProvider variations)
     {
         Logger = logger ?? NullLogger<ListDataSetWorkspacesEndpointBase>.Instance;
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
-        _access = access ?? throw new ArgumentNullException(nameof(access));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
+        _workspaces = workspaces;
+        _access = access;
+        _dataSets = dataSets;
         _variations = variations;
     }
 

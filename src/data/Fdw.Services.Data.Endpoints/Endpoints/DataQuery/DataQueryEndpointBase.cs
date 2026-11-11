@@ -62,7 +62,7 @@ public abstract class DataQueryEndpointBase<TRequest, TResponse> : Endpoint<TReq
     protected DataQueryEndpointBase(ILogger logger, IDataGatewayProvider dataGateways, IFilterCalculations? calculations = null)
     {
         Logger = logger ?? NullLogger.Instance;
-        _query = new DataSetQuery(dataGateways ?? throw new ArgumentNullException(nameof(dataGateways)), Logger, calculations);
+        _query = new DataSetQuery(dataGateways, Logger, calculations);
     }
 
     /// <summary>Gets the logger.</summary>
@@ -111,9 +111,6 @@ public abstract class DataQueryEndpointBase<TRequest, TResponse> : Endpoint<TReq
     /// <returns>A response the stream's rows are written into, ending in <c>rowCount</c> and <c>complete</c>.</returns>
     protected virtual DataQueryStreamResponse NewStreamResponse(TRequest req, DataQueryStream stream)
     {
-        ArgumentNullException.ThrowIfNull(req);
-        ArgumentNullException.ThrowIfNull(stream);
-
         return new DataQueryStreamResponse(stream, req.Skip);
     }
 

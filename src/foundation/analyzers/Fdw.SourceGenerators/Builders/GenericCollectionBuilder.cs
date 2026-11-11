@@ -26,7 +26,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
     private readonly StaticConstructorGenerator<TId> _staticConstructorGenerator;
     private readonly ValuePropertyGenerator<TId> _valuePropertyGenerator;
 
-    private CollectionGenerationMode _mode;
+    private ICollectionGenerationMode? _mode;
     private GenericTypeInfoModel<TId>? _definition;
     private IList<GenericValueInfoModel<TId>>? _values;
     private string? _returnType;
@@ -40,7 +40,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
     /// <param name="config">The configuration for collection generation.</param>
     public GenericCollectionBuilder(CollectionBuilderConfiguration config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _config = config;
         _config.Validate();
 
         // Initialize generators
@@ -56,7 +56,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
     /// </summary>
     /// <param name="mode">The generation mode to use.</param>
     /// <returns>The builder instance for method chaining.</returns>
-    public IGenericCollectionBuilder<TId> Configure(CollectionGenerationMode mode)
+    public IGenericCollectionBuilder<TId> Configure(ICollectionGenerationMode mode)
     {
         _mode = mode;
         return this;
@@ -69,7 +69,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
     /// <returns>The builder instance for method chaining.</returns>
     public IGenericCollectionBuilder<TId> WithDefinition(GenericTypeInfoModel<TId> definition)
     {
-        _definition = definition ?? throw new ArgumentNullException(nameof(definition));
+        _definition = definition;
         return this;
     }
 
@@ -80,7 +80,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
     /// <returns>The builder instance for method chaining.</returns>
     public IGenericCollectionBuilder<TId> WithValues(IList<GenericValueInfoModel<TId>> values)
     {
-        _values = values ?? throw new ArgumentNullException(nameof(values));
+        _values = values;
         return this;
     }
 
@@ -105,7 +105,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
     /// <returns>The builder instance for method chaining.</returns>
     public IGenericCollectionBuilder<TId> WithCompilation(Compilation compilation)
     {
-        _compilation = compilation ?? throw new ArgumentNullException(nameof(compilation));
+        _compilation = compilation;
         return this;
     }
 
@@ -202,21 +202,11 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
             }
         }
 
-        // Add strategy-specific namespaces
-#pragma warning disable FDW018
-        switch (_definition!.CollectionStrategy)
+        // Add the namespace the strategy's dictionary needs (Dictionary is in System.Collections.Generic, already included)
+        if (_definition!.CollectionStrategy.RequiredNamespace.Length > 0)
         {
-            case CollectionStrategy.Immutable:
-                namespaces.Add("System.Collections.Frozen");
-                break;
-            case CollectionStrategy.Mutable:
-                namespaces.Add("System.Collections.Concurrent");
-                break;
-            case CollectionStrategy.Factory:
-                // Dictionary is in System.Collections.Generic, already included by default
-                break;
+            namespaces.Add(_definition.CollectionStrategy.RequiredNamespace);
         }
-#pragma warning restore FDW018
 
         // Add any additional required namespaces from the definition
         // This includes namespaces for generic type arguments that may not be detected by string parsing
@@ -285,8 +275,7 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
         classBuilder.WithMethod(notFoundMethod);
 
         // Generate Register() method for Mutable and Factory strategies
-        if (_definition!.CollectionStrategy == CollectionStrategy.Mutable ||
-            _definition!.CollectionStrategy == CollectionStrategy.Factory)
+        if (_definition!.CollectionStrategy.AllowsRegistration)
         {
             var registerBody = new StringBuilder();
             registerBody.AppendLine("if (item == null) throw new ArgumentNullException(nameof(item));");

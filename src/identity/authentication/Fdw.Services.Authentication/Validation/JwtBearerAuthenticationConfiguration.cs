@@ -62,7 +62,7 @@ public partial class JwtBearerAuthenticationConfiguration : IJwtBearerAuthentica
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
+    /// <summary>Gets or sets the Id of the authentication service this bearer validation belongs to.</summary>
     public Guid AuthenticationServiceId { get; set; }
 
     /// <inheritdoc />

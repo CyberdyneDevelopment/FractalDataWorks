@@ -46,14 +46,10 @@ public sealed class ProcessorChain<TCommand>
     /// <param name="processor">The processor to add.</param>
     /// <param name="context">The context to use when this processor executes.</param>
     /// <returns>This chain for fluent method chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when processor is null.</exception>
     public ProcessorChain<TCommand> Add<TContext>(
         IProcessor<TCommand, TContext> processor,
         TContext context)
     {
-        if (processor == null)
-            throw new ArgumentNullException(nameof(processor));
-
         _processors.Add(cmd => processor.Process(cmd, context));
         return this;
     }
@@ -77,9 +73,6 @@ public sealed class ProcessorChain<TCommand>
     {
         if (condition)
         {
-            if (processor == null)
-                throw new ArgumentNullException(nameof(processor));
-
             _processors.Add(cmd => processor.Process(cmd, context));
         }
         return this;

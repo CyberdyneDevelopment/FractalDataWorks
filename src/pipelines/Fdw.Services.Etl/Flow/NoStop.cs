@@ -20,8 +20,6 @@ public sealed class NoStop : FlowStopKindBase
     /// <inheritdoc />
     public override Task EndRecord(IFlowReporter reporter, Guid record, IGenericResult outcome, bool unfinished, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(reporter);
-        ArgumentNullException.ThrowIfNull(outcome);
         return reporter.StepFinished(record, unfinished ? outcome : GenericResult.Success(), cancellationToken);
     }
 }

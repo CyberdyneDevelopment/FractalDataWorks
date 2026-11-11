@@ -36,15 +36,17 @@ public sealed class PipelineTriggerKeys : IPipelineTriggerKeys
     /// <param name="logger">The logger.</param>
     public PipelineTriggerKeys(IServiceScopeFactory scopes, TimeProvider time, ILogger<PipelineTriggerKeys>? logger = null)
     {
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
-        _time = time ?? throw new ArgumentNullException(nameof(time));
+        _scopes = scopes;
+        _time = time;
         _logger = logger ?? NullLogger<PipelineTriggerKeys>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<PipelineTriggerKeyClaim>> Claim(Guid tenantId, string key, DateTimeOffset fireTime, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (string.IsNullOrWhiteSpace(key))
+            return GenericResult<PipelineTriggerKeyClaim>.Failure(PipelineTriggerKeyLog.TriggerKeyRequired(_logger, "claim"));
+
         var scope = _scopes.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
@@ -110,7 +112,9 @@ public sealed class PipelineTriggerKeys : IPipelineTriggerKeys
     /// <inheritdoc />
     public async Task<IGenericResult> Bind(Guid tenantId, string key, Guid executionId, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (string.IsNullOrWhiteSpace(key))
+            return GenericResult.Failure(PipelineTriggerKeyLog.TriggerKeyRequired(_logger, "bind"));
+
         var scope = _scopes.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
@@ -135,7 +139,9 @@ public sealed class PipelineTriggerKeys : IPipelineTriggerKeys
     /// <inheritdoc />
     public async Task<IGenericResult> Release(Guid tenantId, string key, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (string.IsNullOrWhiteSpace(key))
+            return GenericResult.Failure(PipelineTriggerKeyLog.TriggerKeyRequired(_logger, "release"));
+
         var scope = _scopes.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {

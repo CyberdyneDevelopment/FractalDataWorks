@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
@@ -29,5 +32,21 @@ public sealed class UserRoleConfigurationProvider
         string containerName)
         : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<int>> RemoveAssignmentsOf(Guid roleId, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
+    {
+        var held = await Find<IUserRoleImplementationConfiguration>(assignment => assignment.RoleId == roleId, cancellationToken).ConfigureAwait(false);
+        if (held.IsFailure) return held.ToNewResult<int>();
+
+        var assignments = held.Value ?? [];
+        for (var i = 0; i < assignments.Count; i++)
+        {
+            var removed = await Delete(assignments[i].Id, unit, cancellationToken).ConfigureAwait(false);
+            if (removed.IsFailure) return removed.ToNewResult<int>();
+        }
+
+        return GenericResult<int>.Success(assignments.Count);
     }
 }

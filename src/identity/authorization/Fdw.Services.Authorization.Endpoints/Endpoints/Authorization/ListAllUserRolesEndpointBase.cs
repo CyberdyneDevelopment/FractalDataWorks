@@ -47,8 +47,8 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
         IUserRoleConfigurationProvider userRoleProvider)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
-        _userRoleProvider = userRoleProvider ?? throw new ArgumentNullException(nameof(userRoleProvider));
+        _roleProvider = roleProvider;
+        _userRoleProvider = userRoleProvider;
     }
 
     /// <summary>Gets the RBAC policy required by this endpoint. Defaults to "users:read".</summary>

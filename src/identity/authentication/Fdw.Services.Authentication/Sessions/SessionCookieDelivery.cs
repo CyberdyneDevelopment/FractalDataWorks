@@ -43,8 +43,8 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
         ISessionStore sessions,
         ILogger<SessionCookieDelivery>? logger = null)
     {
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
+        _configuration = configuration;
+        _sessions = sessions;
         _logger = logger ?? NullLogger<SessionCookieDelivery>.Instance;
     }
 
@@ -52,10 +52,6 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
     public async Task<IGenericResult> Deliver(
         HttpContext context, AuthenticationFlow flow, IssuedToken session, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(flow);
-        ArgumentNullException.ThrowIfNull(session);
-
         if (flow.SessionServiceName is not { } serviceName)
             return GenericResult.Failure(SessionLog.SessionServiceNotDeclared(_logger, flow.Name, "(none)"));
 
@@ -76,8 +72,6 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
     public async Task<IGenericResult> Replace(
         HttpContext context, AuthenticationFlow flow, IssuedToken session, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         if (SessionOf(context.User) is not { } current)
             return GenericResult.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "replace"));
 
@@ -93,9 +87,6 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
     /// <inheritdoc />
     public async Task<IGenericResult> Set(HttpContext context, IssuedToken session, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(session);
-
         if (SessionOf(context.User) is not { } current)
             return GenericResult.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "point the cookie of"));
 
@@ -115,8 +106,6 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
     /// <inheritdoc />
     public async Task<IGenericResult> End(HttpContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         if (SessionOf(context.User) is not { } current)
             return GenericResult.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "end"));
 
@@ -142,8 +131,6 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
     /// <inheritdoc />
     public async Task<IGenericResult<string>> IssueCsrfToken(HttpContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         if (SessionOf(context.User) is not { } current)
             return GenericResult<string>.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "issue a CSRF token for"));
 
@@ -163,7 +150,6 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
     /// <inheritdoc />
     public bool IsSessionRequest(HttpContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
         return SessionOf(context.User) is not null;
     }
 

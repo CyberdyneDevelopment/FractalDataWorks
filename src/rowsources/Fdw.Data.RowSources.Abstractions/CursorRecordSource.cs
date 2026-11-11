@@ -47,11 +47,10 @@ public class CursorRecordSource : IRecordSource<DataRecord>
     /// <param name="reader">The low-level cursor/reader to project records from.</param>
     /// <param name="fields">The container's field children — the flyweight schema for produced records.</param>
     /// <param name="logger">Logger for record-source diagnostics; falls back to <see cref="NullLogger.Instance"/> when null.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="reader"/> or <paramref name="fields"/> is null.</exception>
     public CursorRecordSource(IRowSourceReader reader, IReadOnlyList<IDataField> fields, ILogger? logger = null)
     {
-        _reader = reader ?? throw new ArgumentNullException(nameof(reader));
-        Schema = new RecordSchema(fields ?? throw new ArgumentNullException(nameof(fields)));
+        _reader = reader;
+        Schema = new RecordSchema(fields);
         _asyncReader = reader as IAsyncRowSourceReader;
         _logger = logger ?? NullLogger.Instance;
         RowSourceLog.RecordSourceCreated(_logger, GetType().Name, Schema.Fields.Count);

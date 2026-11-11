@@ -8,6 +8,6 @@ namespace Fdw.Services.Calculations.Commands;
 [TypeOption(typeof(ConfigurationCommands), "WindowedCalculationInput")]
 public sealed class WindowedCalculationInputConfigurationCommand : ConfigurationCommandBase<WindowedCalculationInputConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="WindowedCalculationInputConfigurationCommand"/> class.</summary>
     public WindowedCalculationInputConfigurationCommand() : base("WindowedCalculationInput") { }
 }

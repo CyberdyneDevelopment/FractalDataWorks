@@ -34,7 +34,7 @@ public sealed class RunRoleAuthority
     /// <param name="grants">Confirms the roles exist.</param>
     public RunRoleAuthority(IRoleGrants grants)
     {
-        _grants = grants ?? throw new System.ArgumentNullException(nameof(grants));
+        _grants = grants;
     }
 
     /// <summary>Decides whether <paramref name="caller"/> may record <paramref name="requested"/> as the roles of a schedule.</summary>

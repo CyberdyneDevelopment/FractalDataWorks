@@ -166,4 +166,19 @@ public static partial class PipelineRunRecoveryLog
     [MessageLogging(EventId = 72129, Level = LogLevel.Warning,
         Message = "The stored request of pipeline run {executionId} could not be removed: {reason}")]
     public static partial IGenericMessage RequestNotRemoved(ILogger logger, Guid executionId, string? reason);
+
+    /// <summary>Error: closing a run's open records needs their result code; an empty code is refused.</summary>
+    [MessageLogging(EventId = 21800, Level = LogLevel.Error,
+        Message = "Closing the open records of run {runId} needs the result code they state, and the code given is empty")]
+    public static partial IGenericMessage CloseResultCodeRequired(ILogger logger, Guid runId);
+
+    /// <summary>Error: closing a run's open records needs their reason; an empty reason is refused.</summary>
+    [MessageLogging(EventId = 21801, Level = LogLevel.Error,
+        Message = "Closing the open records of run {runId} needs the reason they state, and the reason given is empty")]
+    public static partial IGenericMessage CloseMessageRequired(ILogger logger, Guid runId);
+
+    /// <summary>Error: giving up an interrupted run needs the reason; an empty reason is refused.</summary>
+    [MessageLogging(EventId = 21802, Level = LogLevel.Error,
+        Message = "Giving up an interrupted run needs the reason, and the reason given is empty")]
+    public static partial IGenericMessage GiveUpReasonRequired(ILogger logger);
 }

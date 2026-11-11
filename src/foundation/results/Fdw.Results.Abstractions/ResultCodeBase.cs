@@ -44,11 +44,11 @@ public abstract class ResultCodeBase : TypeOptionBase<int, ResultCodeBase>, IRes
         bool isRetryable = false)
         : base(id, name)
     {
-        Code = code ?? throw new ArgumentNullException(nameof(code));
+        Code = code;
         EventId = eventId;
-        Severity = severity ?? throw new ArgumentNullException(nameof(severity));
-        Domain = domain ?? throw new ArgumentNullException(nameof(domain));
-        MessageTemplate = messageTemplate ?? throw new ArgumentNullException(nameof(messageTemplate));
+        Severity = severity;
+        Domain = domain;
+        MessageTemplate = messageTemplate;
         IsRetryable = isRetryable;
     }
 
@@ -67,16 +67,11 @@ public abstract class ResultCodeBase : TypeOptionBase<int, ResultCodeBase>, IRes
         bool isRetryable = false)
         : base(number, name)
     {
-        if (prefix is null)
-        {
-            throw new ArgumentNullException(nameof(prefix));
-        }
-
         Code = $"{prefix}-{number}";
         EventId = number;
-        Severity = severity ?? throw new ArgumentNullException(nameof(severity));
+        Severity = severity;
         Domain = prefix;
-        MessageTemplate = messageTemplate ?? throw new ArgumentNullException(nameof(messageTemplate));
+        MessageTemplate = messageTemplate;
         IsRetryable = isRetryable;
     }
 

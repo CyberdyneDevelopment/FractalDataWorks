@@ -16,14 +16,10 @@ public abstract class PageTypeBase : TypeOptionBase<PageTypeBase>, IPageType
     /// </summary>
     /// <param name="name">The option name.</param>
     /// <param name="pages">The pages this group contributes.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="pages"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="pages"/> is empty, or two pages share a name.</exception>
     protected PageTypeBase(string name, IReadOnlyList<IPage> pages)
         : base(name)
     {
-        if (pages is null)
-            throw new ArgumentNullException(nameof(pages));
-
         if (pages.Count == 0)
             throw new ArgumentException($"Page type '{name}' declares no pages.", nameof(pages));
 

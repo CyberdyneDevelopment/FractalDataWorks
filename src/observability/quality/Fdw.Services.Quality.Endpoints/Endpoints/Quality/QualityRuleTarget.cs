@@ -41,8 +41,6 @@ public static class QualityRuleTarget
     public static async Task<IGenericResult<IReadOnlyList<Dictionary<string, object>>>> ReadRows(
         IDataGateway gateway, string dataSetName, ILogger logger, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(gateway);
-
         var read = await gateway.Execute<IEnumerable<Dictionary<string, object>>>(
             new QueryCommand<Dictionary<string, object>>(), new DataSetTarget(dataSetName), cancellationToken).ConfigureAwait(false);
         if (read.IsFailure || read.Value is not { } rows)

@@ -64,18 +64,6 @@ public class DataFieldTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void Constructor_WithNullType_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        var exception = Should.Throw<ArgumentNullException>(() =>
-            new DataField("TestField", null!));
-
-        exception.ParamName.ShouldBe("type");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DisplayName_WithDescription_ReturnsDescription()
     {
         // Arrange

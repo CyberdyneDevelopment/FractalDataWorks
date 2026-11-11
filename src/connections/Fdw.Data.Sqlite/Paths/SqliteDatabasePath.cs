@@ -31,7 +31,7 @@ public sealed class SqliteDatabasePath : PathBase, IDataPath<IStorageContainer>,
         IEnumerable<IStorageContainer>? containers = null)
         : base("SqliteDatabasePath")
     {
-        ObjectName = objectName ?? throw new ArgumentNullException(nameof(objectName));
+        ObjectName = objectName;
         _containers = containers?.ToList() ?? [];
     }
 

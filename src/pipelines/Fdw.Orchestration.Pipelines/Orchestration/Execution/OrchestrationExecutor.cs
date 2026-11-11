@@ -67,8 +67,8 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         IOrchestrationCache? cache = null,
         ILogger<OrchestrationExecutor>? logger = null)
     {
-        _resilienceFactory = resilienceFactory ?? throw new ArgumentNullException(nameof(resilienceFactory));
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _resilienceFactory = resilienceFactory;
+        _serviceProvider = serviceProvider;
         _cache = cache;
         _logger = logger ?? NullLogger<OrchestrationExecutor>.Instance;
     }
@@ -79,9 +79,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         IOrchestrationContext context,
         CancellationToken cancellationToken = default)
     {
-        if (orchestration == null) throw new ArgumentNullException(nameof(orchestration));
-        if (context == null) throw new ArgumentNullException(nameof(context));
-
         OrchestrationLogger.OrchestrationStarted(
             _logger,
             context.ExecutionId.ToString(),

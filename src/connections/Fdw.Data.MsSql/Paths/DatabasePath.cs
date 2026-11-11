@@ -28,7 +28,6 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
     /// <param name="schema">The schema name; always stated, never assumed (FDW-3454).</param>
     /// <param name="objectName">The object name (table, view, stored procedure).</param>
     /// <param name="containers">Optional containers at this path.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="schema"/> or <paramref name="objectName"/> is null.</exception>
     /// <exception cref="ArgumentException"><paramref name="schema"/> is empty or blank: a path with no schema would read as <c>.Customers</c>.</exception>
     public DatabasePath(
         string? database,
@@ -38,11 +37,11 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
         : base("DatabasePath")
     {
         Database = database ?? string.Empty;
-        Schema = schema ?? throw new ArgumentNullException(nameof(schema));
+        Schema = schema;
         if (string.IsNullOrWhiteSpace(schema))
             throw new ArgumentException("A database path states its schema; none is assumed.", nameof(schema));
 
-        ObjectName = objectName ?? throw new ArgumentNullException(nameof(objectName));
+        ObjectName = objectName;
         _containers = containers?.ToList() ?? [];
     }
 

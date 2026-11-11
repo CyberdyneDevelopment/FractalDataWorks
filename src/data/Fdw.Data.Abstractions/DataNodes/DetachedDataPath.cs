@@ -27,8 +27,8 @@ public sealed class DetachedDataPath : IDataNodePath
     /// <param name="logger">Logger for navigation diagnostics. Defaults to a null logger.</param>
     public DetachedDataPath(string name, IDataStore store, ILogger? logger = null)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Store = store ?? throw new ArgumentNullException(nameof(store));
+        Name = name;
+        Store = store;
         _logger = logger ?? NullLogger.Instance;
     }
 

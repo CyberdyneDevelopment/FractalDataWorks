@@ -29,8 +29,6 @@ public sealed class FileEventLogSink : IHostedService, IAsyncDisposable
     /// <summary>Initializes the file event log sink.</summary>
     public FileEventLogSink(IMcpEventBus bus, IOptions<McpEventBusOptions> options, ILogger<FileEventLogSink>? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(bus);
-        ArgumentNullException.ThrowIfNull(options);
         _bus = bus;
         _options = options.Value;
         _logger = logger ?? NullLogger<FileEventLogSink>.Instance;

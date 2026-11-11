@@ -52,7 +52,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
         IConfigurationContainerLookup containerLookup,
         ILogger<GetConfigurationInstanceEndpointBase> logger)
     {
-        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
+        _configurationGateways = configurationGateways;
         _containerLookup = containerLookup;
         _logger = logger ?? NullLogger<GetConfigurationInstanceEndpointBase>.Instance;
     }

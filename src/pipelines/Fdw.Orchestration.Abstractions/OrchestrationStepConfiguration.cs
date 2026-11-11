@@ -11,11 +11,11 @@ public class OrchestrationStepConfiguration : IGenericConfiguration
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    /// <inheritdoc/>
+    /// <summary>Gets or sets the step's name.</summary>
     public string Name { get; set; } = string.Empty;
 
 
-    /// <inheritdoc/>
+    /// <summary>Gets or sets the service type this record configures: "OrchestrationStep" here, a derived kind's own name in a derived record.</summary>
     public virtual string ServiceType { get; set; } = "OrchestrationStep";
 
     /// <summary>Gets or sets the maximum number of retry attempts for this step.</summary>

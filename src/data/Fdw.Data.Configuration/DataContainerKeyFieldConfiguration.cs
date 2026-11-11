@@ -23,11 +23,11 @@ public partial class DataContainerKeyFieldConfiguration : IGenericConfiguration
     public Guid Id { get; set; }
 
 
-    /// <inheritdoc />
+    /// <summary>Gets or sets the Id of the container field that is part of the key.</summary>
     public Guid DataContainerFieldId { get; set; }
 
 
-    /// <inheritdoc />
+    /// <summary>Gets or sets the field's position in the key, for a key of more than one field.</summary>
     public int Ordinal { get; set; }
 
     /// <summary>

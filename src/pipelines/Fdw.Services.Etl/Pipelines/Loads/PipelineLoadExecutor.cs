@@ -58,7 +58,7 @@ public sealed class PipelineLoadExecutor
         IConnectionTypeResolver? connectionTypes,
         ILogger? logger = null)
     {
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _resolver = resolver;
         _connections = connections;
         _connectionTypes = connectionTypes;
         _logger = logger ?? NullLogger.Instance;
@@ -287,7 +287,6 @@ public sealed class PipelineLoadExecutor
     /// <returns>The target rows flagged, or the first failure.</returns>
     public async Task<IGenericResult<int>> Sweep(string pipelineName, LoadUnit unit, long stagedRows, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(unit);
         if (unit.StageKey is null)
             return GenericResult<int>.Failure(PipelineRunLog.StageNotNamed(_logger, unit.Owner));
 
@@ -327,7 +326,6 @@ public sealed class PipelineLoadExecutor
     /// <returns>The stage rows removed, or the first failure.</returns>
     public async Task<IGenericResult<int>> ClearStage(string pipelineName, LoadUnit unit, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(unit);
         if (unit.StageKey is null)
             return GenericResult<int>.Failure(PipelineRunLog.StageNotNamed(_logger, unit.Owner));
 

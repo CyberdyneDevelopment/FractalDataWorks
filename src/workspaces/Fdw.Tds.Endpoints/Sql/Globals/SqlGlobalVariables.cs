@@ -29,8 +29,6 @@ public abstract partial class SqlGlobalVariables : TypeCollectionBase<SqlGlobalV
     /// <returns>The value (null for NULL), or error 137.</returns>
     public static IGenericResult<object?> Evaluate(GlobalVariableExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
-        ArgumentNullException.ThrowIfNull(scope);
         return BySqlName.Value.TryGetValue(expression.Name, out var variable)
             ? GenericResult<object?>.Success(variable.Read(scope.Context))
             : SqlRefusal.Refuse<object?>(SqlServerErrors.MustDeclareVariable(expression.Name, expression.StartLine), scope.Context.Logger);

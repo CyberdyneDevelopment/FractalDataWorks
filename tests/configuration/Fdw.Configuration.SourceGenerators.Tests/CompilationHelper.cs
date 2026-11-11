@@ -17,7 +17,10 @@ internal static class CompilationHelper
 {
     private static readonly CSharpParseOptions ParseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview);
 
-    public static Compilation CreateCompilation(string source, MetadataReference[]? additionalReferences = null)
+    public static Compilation CreateCompilation(
+        string source,
+        MetadataReference[]? additionalReferences = null,
+        string assemblyName = "TestAssembly")
     {
         var references = new List<MetadataReference>
         {
@@ -42,7 +45,7 @@ internal static class CompilationHelper
         var syntaxTree = CSharpSyntaxTree.ParseText(withUsing, ParseOptions);
 
         return CSharpCompilation.Create(
-            assemblyName: "TestAssembly",
+            assemblyName: assemblyName,
             syntaxTrees: new[] { syntaxTree },
             references: references,
             options: new CSharpCompilationOptions(
@@ -52,9 +55,10 @@ internal static class CompilationHelper
 
     public static (Compilation OutputCompilation, ImmutableArray<Diagnostic> Diagnostics) RunGenerator(
         string source,
-        MetadataReference[]? additionalReferences = null)
+        MetadataReference[]? additionalReferences = null,
+        string assemblyName = "TestAssembly")
     {
-        var compilation = CreateCompilation(source, additionalReferences);
+        var compilation = CreateCompilation(source, additionalReferences, assemblyName);
         var generator = new ConfigurationSourceGenerator();
         var driver = CSharpGeneratorDriver.Create(
             generators: new[] { generator.AsSourceGenerator() },

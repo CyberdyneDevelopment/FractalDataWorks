@@ -36,9 +36,6 @@ public static class GenericTypeHelper
     /// </summary>
     public static string GetMetadataName(INamedTypeSymbol typeSymbol)
     {
-        if (typeSymbol == null)
-            throw new ArgumentNullException(nameof(typeSymbol));
-
         var arity = GetArity(typeSymbol);
         var name = typeSymbol.Name;
 
@@ -56,9 +53,6 @@ public static class GenericTypeHelper
     /// </summary>
     public static string GetFullMetadataName(INamedTypeSymbol typeSymbol)
     {
-        if (typeSymbol == null)
-            throw new ArgumentNullException(nameof(typeSymbol));
-
         var metadataName = GetMetadataName(typeSymbol);
         var namespaceStr = typeSymbol.ContainingNamespace?.ToDisplayString();
 
@@ -137,9 +131,6 @@ public static class GenericTypeHelper
     /// </summary>
     public static string GetSimpleTypeName(INamedTypeSymbol typeSymbol)
     {
-        if (typeSymbol == null)
-            throw new ArgumentNullException(nameof(typeSymbol));
-
         return typeSymbol.Name;
     }
 
@@ -150,9 +141,6 @@ public static class GenericTypeHelper
     /// </summary>
     public static string GetSimpleTypeNameWithParameters(INamedTypeSymbol typeSymbol)
     {
-        if (typeSymbol == null)
-            throw new ArgumentNullException(nameof(typeSymbol));
-
         var name = typeSymbol.Name;
         var parameters = GetTypeParameterList(typeSymbol);
         return $"{name}{parameters}";
@@ -164,9 +152,6 @@ public static class GenericTypeHelper
     /// </summary>
     public static string GetFullyQualifiedNameWithParameters(INamedTypeSymbol typeSymbol)
     {
-        if (typeSymbol == null)
-            throw new ArgumentNullException(nameof(typeSymbol));
-
         var ns = typeSymbol.ContainingNamespace?.ToDisplayString();
         var nameWithParams = GetSimpleTypeNameWithParameters(typeSymbol);
 

@@ -32,10 +32,10 @@ public sealed class FlowLazyComponent : IFlowComponent, IFlowErrorOutputs, IFlow
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
-        Inputs = inputs ?? throw new ArgumentNullException(nameof(inputs));
-        Outputs = outputs ?? throw new ArgumentNullException(nameof(outputs));
-        ErrorOutputs = errorOutputs ?? throw new ArgumentNullException(nameof(errorOutputs));
-        _build = build ?? throw new ArgumentNullException(nameof(build));
+        Inputs = inputs;
+        Outputs = outputs;
+        ErrorOutputs = errorOutputs;
+        _build = build;
     }
 
     /// <inheritdoc />
@@ -51,7 +51,7 @@ public sealed class FlowLazyComponent : IFlowComponent, IFlowErrorOutputs, IFlow
     public IReadOnlyList<string> ErrorOutputs { get; }
 
     /// <inheritdoc />
-    void IFlowStepBound.Bind(FlowStepContext context) => _context = context ?? throw new ArgumentNullException(nameof(context));
+    void IFlowStepBound.Bind(FlowStepContext context) => _context = context;
 
     /// <inheritdoc />
     public async Task<IGenericResult> Run(IFlowPorts ports, CancellationToken cancellationToken = default)

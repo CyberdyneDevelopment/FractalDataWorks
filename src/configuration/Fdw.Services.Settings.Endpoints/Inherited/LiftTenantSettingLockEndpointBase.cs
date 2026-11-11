@@ -54,6 +54,13 @@ public abstract class LiftTenantSettingLockEndpointBase : Endpoint<TenantInherit
 
         var scope = SettingScope.ForTenant(req.TenantId);
         var before = await _settings.Get(scope, req.SettingName, ct).ConfigureAwait(false);
+        // The setting as it stood is what the audit records as before, so a read that fails stops the change before anything is written (FDW-5189).
+        if (before.IsFailure)
+        {
+            await Send.ResultAsync(InheritedSettingProblem.Of(before, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         var lifted = await _settings.Lift(scope, req.SettingName, ct).ConfigureAwait(false);
         if (lifted.IsFailure || lifted.Value is null)
         {

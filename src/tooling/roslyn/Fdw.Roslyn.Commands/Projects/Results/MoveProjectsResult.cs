@@ -16,9 +16,9 @@ public sealed class MoveProjectsResult
         IReadOnlyList<CsprojChangeDetail> csprojChanges,
         SlnxChangeDetail slnxChanges)
     {
-        ProjectMoves = projectMoves ?? throw new ArgumentNullException(nameof(projectMoves));
-        CsprojChanges = csprojChanges ?? throw new ArgumentNullException(nameof(csprojChanges));
-        SlnxChanges = slnxChanges ?? throw new ArgumentNullException(nameof(slnxChanges));
+        ProjectMoves = projectMoves;
+        CsprojChanges = csprojChanges;
+        SlnxChanges = slnxChanges;
     }
 
     /// <summary>

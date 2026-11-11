@@ -27,8 +27,8 @@ internal sealed class DocumentRecordCommandRunner
     /// <param name="logger">The logger.</param>
     public DocumentRecordCommandRunner(IDocumentRecordConnection connection, Guid organizationId, Guid tenantId, ILogger logger)
     {
-        _connection = connection ?? throw new ArgumentNullException(nameof(connection));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _connection = connection;
+        _logger = logger;
         OrganizationId = organizationId;
         TenantId = tenantId;
     }

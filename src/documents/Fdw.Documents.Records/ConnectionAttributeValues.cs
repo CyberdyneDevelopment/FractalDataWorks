@@ -17,7 +17,7 @@ internal sealed class ConnectionAttributeValues : IAttributeValues
     /// <param name="runner">Sends the commands for the store's organization.</param>
     public ConnectionAttributeValues(DocumentRecordCommandRunner runner)
     {
-        _runner = runner ?? throw new ArgumentNullException(nameof(runner));
+        _runner = runner;
     }
 
     /// <inheritdoc />

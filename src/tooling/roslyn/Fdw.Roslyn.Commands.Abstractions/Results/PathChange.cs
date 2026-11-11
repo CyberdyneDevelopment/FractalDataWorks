@@ -12,9 +12,9 @@ public sealed class PathChange
     /// </summary>
     public PathChange(string oldPath, string newPath, string kind)
     {
-        OldPath = oldPath ?? throw new ArgumentNullException(nameof(oldPath));
-        NewPath = newPath ?? throw new ArgumentNullException(nameof(newPath));
-        Kind = kind ?? throw new ArgumentNullException(nameof(kind));
+        OldPath = oldPath;
+        NewPath = newPath;
+        Kind = kind;
     }
 
     /// <summary>

@@ -20,14 +20,12 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     /// </summary>
     public EffectivePolicyResolver(IServerPolicyDefaultConfigurationProvider serverDefaults)
     {
-        _serverDefaults = serverDefaults ?? throw new ArgumentNullException(nameof(serverDefaults));
+        _serverDefaults = serverDefaults;
     }
 
     /// <inheritdoc/>
     public async Task<IGenericResult<ExecutionPolicySnapshot>> ResolveForProject(ProjectConfiguration project, CancellationToken cancellationToken = default)
     {
-        if (project == null) throw new ArgumentNullException(nameof(project));
-
         var server = await ServerSnapshot(cancellationToken).ConfigureAwait(false);
         if (server.IsFailure || server.Value is not { } parent)
         {
@@ -47,9 +45,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     /// <inheritdoc/>
     public ExecutionPolicySnapshot ResolveForStage(StageConfiguration stage, ExecutionPolicySnapshot parentProjectEffective)
     {
-        if (stage == null) throw new ArgumentNullException(nameof(stage));
-        if (parentProjectEffective == null) throw new ArgumentNullException(nameof(parentProjectEffective));
-
         return new ExecutionPolicySnapshot(
             StepFailurePolicy: stage.StepFailurePolicy ?? parentProjectEffective.StepFailurePolicy,
             StageFailurePolicy: stage.StageFailurePolicy ?? parentProjectEffective.StageFailurePolicy,
@@ -63,9 +58,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     /// <inheritdoc/>
     public ExecutionPolicySnapshot ResolveForStep(StepConfiguration step, ExecutionPolicySnapshot parentStageEffective)
     {
-        if (step == null) throw new ArgumentNullException(nameof(step));
-        if (parentStageEffective == null) throw new ArgumentNullException(nameof(parentStageEffective));
-
         return new ExecutionPolicySnapshot(
             StepFailurePolicy: step.StepFailurePolicy ?? parentStageEffective.StepFailurePolicy,
             StageFailurePolicy: step.StageFailurePolicy ?? parentStageEffective.StageFailurePolicy,
@@ -79,9 +71,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     /// <inheritdoc/>
     public ExecutionPolicySnapshot ResolveForNode(IOrchestrationNodeImplementationConfiguration node, ExecutionPolicySnapshot parentEffective)
     {
-        if (node == null) throw new ArgumentNullException(nameof(node));
-        if (parentEffective == null) throw new ArgumentNullException(nameof(parentEffective));
-
         return new ExecutionPolicySnapshot(
             StepFailurePolicy: node.StepFailurePolicy ?? parentEffective.StepFailurePolicy,
             StageFailurePolicy: node.StageFailurePolicy ?? parentEffective.StageFailurePolicy,
@@ -95,8 +84,6 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     /// <inheritdoc/>
     public async Task<IGenericResult<ExecutionPolicySnapshot>> ResolveForRootNode(IOrchestrationNodeImplementationConfiguration node, CancellationToken cancellationToken = default)
     {
-        if (node == null) throw new ArgumentNullException(nameof(node));
-
         var server = await ServerSnapshot(cancellationToken).ConfigureAwait(false);
         return server.IsFailure || server.Value is not { } parent
             ? GenericResult<ExecutionPolicySnapshot>.Failure(server.NoValueReason())

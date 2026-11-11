@@ -32,8 +32,6 @@ public sealed record BulkWriteAnswer(long RowsAffected, long UnmatchedKeys, IRea
     /// <returns>The answer, or why the sets cannot be one.</returns>
     public static IGenericResult<BulkWriteAnswer> From(string commandType, IReadOnlyList<IReadOnlyList<IReadOnlyDictionary<string, object?>>> sets, int sampleLimit)
     {
-        if (sets is null)
-            throw new ArgumentNullException(nameof(sets));
         var logger = NullLogger.Instance;
         if (sets.Count != 2)
             return GenericResult<BulkWriteAnswer>.Failure(BulkWriteAnswerLog.SetsNotTwo(logger, commandType, sets.Count));

@@ -61,7 +61,7 @@ public abstract class QueryWorkspaceDataSetEndpointBase
         IFilterCalculations? calculations = null)
         : base(logger ?? NullLogger<QueryWorkspaceDataSetEndpointBase>.Instance, dataGateways, calculations)
     {
-        _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
+        _workspaces = workspaces;
     }
 
     /// <inheritdoc />

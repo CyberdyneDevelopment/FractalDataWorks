@@ -7,7 +7,7 @@ public sealed class QueryResult<T> : ISqlCommandResult
 {
     public QueryResult(string summary, T data)
     {
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
+        Summary = summary;
         Data = data;
     }
 

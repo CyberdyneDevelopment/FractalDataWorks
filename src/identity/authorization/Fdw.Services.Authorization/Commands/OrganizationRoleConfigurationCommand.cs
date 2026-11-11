@@ -14,6 +14,6 @@ namespace Fdw.Services.Authorization.Commands;
 [TypeOption(typeof(ConfigurationCommands), "OrganizationRole")]
 public sealed class OrganizationRoleConfigurationCommand : ConfigurationCommandBase<OrganizationRoleImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="OrganizationRoleConfigurationCommand"/> class.</summary>
     public OrganizationRoleConfigurationCommand() : base("OrganizationRole") { }
 }

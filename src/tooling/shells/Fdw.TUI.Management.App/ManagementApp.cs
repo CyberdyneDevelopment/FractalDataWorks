@@ -26,10 +26,10 @@ public sealed class ManagementApp
         INavigationService navigation,
         IScreenFactory screenFactory)
     {
-        _console = console ?? throw new ArgumentNullException(nameof(console));
-        _theme = theme ?? throw new ArgumentNullException(nameof(theme));
-        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        _screenFactory = screenFactory ?? throw new ArgumentNullException(nameof(screenFactory));
+        _console = console;
+        _theme = theme;
+        _navigation = navigation;
+        _screenFactory = screenFactory;
     }
 
     /// <summary>

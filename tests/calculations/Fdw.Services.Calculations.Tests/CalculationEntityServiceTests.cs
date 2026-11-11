@@ -282,7 +282,6 @@ public class CalculationEntityServiceTests
 
     [Theory]
     [InlineData("Windowed")]
-    [InlineData("Windowed")]
     public async Task ValidateCalculationKnownTypeReturnsSuccess(string entityType)
     {
         var service = ServiceOver(new CalculationStore());

@@ -42,7 +42,7 @@ public abstract class CrudPageEndpointBase<TItem, TSummary> : EndpointWithoutReq
     /// <param name="logger">The logger.</param>
     protected CrudPageEndpointBase(ILogger logger)
     {
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        Logger = logger;
     }
 
     /// <summary>Gets the plural resource name used for routing and policy generation (e.g., "datastores").</summary>

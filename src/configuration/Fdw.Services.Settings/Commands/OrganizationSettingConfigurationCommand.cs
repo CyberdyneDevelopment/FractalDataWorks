@@ -8,6 +8,6 @@ namespace Fdw.Services.Settings.Commands;
 [TypeOption(typeof(ConfigurationCommands), "OrganizationSetting")]
 public sealed class OrganizationSettingConfigurationCommand : ConfigurationCommandBase<OrganizationSettingImplementationConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="OrganizationSettingConfigurationCommand"/> class.</summary>
     public OrganizationSettingConfigurationCommand() : base("OrganizationSetting") { }
 }

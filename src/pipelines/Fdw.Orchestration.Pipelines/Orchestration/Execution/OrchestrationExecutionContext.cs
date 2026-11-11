@@ -39,8 +39,8 @@ public sealed class OrchestrationExecutionContext : IOrchestrationContext
         IReadOnlyDictionary<string, object?>? parameters = null)
     {
         ExecutionId = executionId;
-        Orchestration = orchestration ?? throw new ArgumentNullException(nameof(orchestration));
-        Services = services ?? throw new ArgumentNullException(nameof(services));
+        Orchestration = orchestration;
+        Services = services;
         Logger = logger ?? NullLogger<OrchestrationExecutionContext>.Instance;
         CancellationToken = cancellationToken;
         Parameters = parameters ?? ImmutableDictionary<string, object?>.Empty;
@@ -128,7 +128,7 @@ public sealed class OrchestrationExecutionContext<TOrchestration> : IOrchestrati
         CancellationToken cancellationToken,
         IReadOnlyDictionary<string, object?>? parameters = null)
     {
-        Orchestration = orchestration ?? throw new ArgumentNullException(nameof(orchestration));
+        Orchestration = orchestration;
         _inner = new OrchestrationExecutionContext(
             executionId,
             orchestration,

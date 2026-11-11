@@ -40,7 +40,7 @@ public abstract class ListConfigurationInstancesEndpointBase : Endpoint<ListConf
         IConfigurationContainerLookup containerLookup,
         ILogger<ListConfigurationInstancesEndpointBase> logger)
     {
-        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
+        _configurationGateways = configurationGateways;
         _containerLookup = containerLookup;
         _logger = logger ?? NullLogger<ListConfigurationInstancesEndpointBase>.Instance;
     }

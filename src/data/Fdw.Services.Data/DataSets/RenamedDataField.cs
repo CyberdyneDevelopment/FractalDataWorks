@@ -18,7 +18,7 @@ internal sealed class RenamedDataField : IDataField
     /// <param name="name">The data set's logical name for it.</param>
     public RenamedDataField(IDataField field, string name)
     {
-        _field = field ?? throw new ArgumentNullException(nameof(field));
+        _field = field;
         Name = string.IsNullOrWhiteSpace(name) ? throw new ArgumentException("The logical name must be given.", nameof(name)) : name;
     }
 

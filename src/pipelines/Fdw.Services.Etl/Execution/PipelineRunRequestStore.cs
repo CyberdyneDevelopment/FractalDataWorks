@@ -41,14 +41,13 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     /// <param name="logger">The logger.</param>
     public PipelineRunRequestStore(IServiceScopeFactory scopes, ILogger<PipelineRunRequestStore>? logger = null)
     {
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+        _scopes = scopes;
         _logger = logger ?? NullLogger<PipelineRunRequestStore>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult> Record(PipelineExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
         if (request.TenantId is not { } tenantId)
         {
             return GenericResult.Failure(PipelineRunRecoveryLog.RunHasNoTenant(_logger, request.ExecutionId, request.PipelineName));
@@ -80,7 +79,6 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     /// <inheritdoc />
     public async Task<IGenericResult> RecordHeld(PipelineExecutionRequest request, DateTimeOffset heldUntil, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
         var scope = _scopes.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
@@ -117,7 +115,6 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     /// <inheritdoc />
     public async Task<IGenericResult<PipelineExecutionRequest>> StartAgain(InterruptedRun run, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(run);
         var old = run.Request;
         if (old.TenantId is not { } tenantId)
         {
@@ -181,7 +178,6 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<CommittedLoad>>> CommittedLoads(InterruptedRun run, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(run);
         var scope = _scopes.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
@@ -209,8 +205,9 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     /// <inheritdoc />
     public async Task<IGenericResult> GiveUp(InterruptedRun run, string reason, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(run);
-        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        if (string.IsNullOrWhiteSpace(reason))
+            return GenericResult.Failure(PipelineRunRecoveryLog.GiveUpReasonRequired(_logger));
+
         var scope = _scopes.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {

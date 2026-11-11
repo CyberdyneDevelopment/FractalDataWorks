@@ -20,7 +20,7 @@ public class NamespaceExpectations
     /// <param name="namespaceDeclaration">The namespace declaration to verify.</param>
     public NamespaceExpectations(BaseNamespaceDeclarationSyntax namespaceDeclaration)
     {
-        _namespaceDeclaration = namespaceDeclaration ?? throw new ArgumentNullException(nameof(namespaceDeclaration));
+        _namespaceDeclaration = namespaceDeclaration;
         _isFileScoped = namespaceDeclaration is FileScopedNamespaceDeclarationSyntax;
     }
 
@@ -32,7 +32,7 @@ public class NamespaceExpectations
     /// <param name="namespaceDeclaration">The file-scoped namespace declaration to verify.</param>
     public NamespaceExpectations(FileScopedNamespaceDeclarationSyntax namespaceDeclaration)
     {
-        _namespaceDeclaration = namespaceDeclaration ?? throw new ArgumentNullException(nameof(namespaceDeclaration));
+        _namespaceDeclaration = namespaceDeclaration;
         _isFileScoped = true;
     }
 

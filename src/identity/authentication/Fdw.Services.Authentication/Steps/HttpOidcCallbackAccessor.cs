@@ -20,7 +20,7 @@ public sealed class HttpOidcCallbackAccessor : IOidcCallbackAccessor
     /// <summary>Initializes a new instance of the <see cref="HttpOidcCallbackAccessor"/> class.</summary>
     /// <param name="context">Supplies the current request.</param>
     public HttpOidcCallbackAccessor(IHttpContextAccessor context)
-        => _context = context ?? throw new ArgumentNullException(nameof(context));
+        => _context = context;
 
     /// <inheritdoc />
     public string? Code => Query("code");

@@ -25,9 +25,6 @@ public static class FlowGraphValidator
     /// <returns>Success, or the failure naming the first rule the graph breaks.</returns>
     public static IGenericResult Validate(FlowGraph graph, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(graph);
-        ArgumentNullException.ThrowIfNull(logger);
-
         var problems = Problems(graph);
         return problems.Count == 0
             ? GenericResult.Success()
@@ -39,7 +36,6 @@ public static class FlowGraphValidator
     /// <returns>The problems, in the order the rules are listed; empty when the graph can run.</returns>
     public static IReadOnlyList<FlowGraphProblem> Problems(FlowGraph graph)
     {
-        ArgumentNullException.ThrowIfNull(graph);
         return [.. ComponentProblems(graph), .. LinkProblems(graph), .. NodeCoverageProblems(graph), .. CycleProblems(graph), .. StageProblems(graph), .. CompletionProblems(graph)];
     }
 

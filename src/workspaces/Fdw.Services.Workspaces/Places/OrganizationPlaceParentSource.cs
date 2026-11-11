@@ -22,7 +22,7 @@ public sealed class OrganizationPlaceParentSource : IPlaceParentSource
     /// <param name="logger">The logger.</param>
     public OrganizationPlaceParentSource(IOrganizationProvider organizations, ILogger<OrganizationPlaceParentSource>? logger)
     {
-        _organizations = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _organizations = organizations;
         _logger = logger ?? NullLogger<OrganizationPlaceParentSource>.Instance;
     }
 

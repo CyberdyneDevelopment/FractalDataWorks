@@ -19,7 +19,6 @@ public readonly record struct DecimalFacets(byte Precision, byte Scale)
     /// <returns>The facets; <see cref="Unstated"/> when there are no values to measure.</returns>
     public static DecimalFacets Of(IReadOnlyList<object> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
         if (values.Count == 0)
             return Unstated;
 

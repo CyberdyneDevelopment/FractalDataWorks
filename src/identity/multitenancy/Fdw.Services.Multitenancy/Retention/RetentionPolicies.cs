@@ -41,10 +41,10 @@ public sealed class RetentionPolicies : IRetentionPolicies
         IConfigurationGatewayProvider gateways, RetentionTables tables, IOrganizationScope organizations,
         IRetainedDocuments documents, ILogger<RetentionPolicies>? logger)
     {
-        _documents = documents ?? throw new ArgumentNullException(nameof(documents));
+        _documents = documents;
         _logger = logger ?? NullLogger<RetentionPolicies>.Instance;
         _store = new RetentionStore(gateways, tables, _logger);
-        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _scope = organizations;
     }
 
     /// <inheritdoc />
@@ -66,11 +66,6 @@ public sealed class RetentionPolicies : IRetentionPolicies
     public async Task<IGenericResult<RetentionPolicy>> Set(
         Guid organizationId, NewRetentionPolicy policy, CancellationToken cancellationToken = default)
     {
-        if (policy is null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
-
         var tenant = await _scope.TenantOf(RetentionScope.PolicyWriteRight, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {

@@ -24,9 +24,6 @@ public static class McpToolSourceServiceCollectionExtensions
         string serverName,
         Func<string, JsonElement, CancellationToken, Task<object>> handler)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(handler);
-
         EnsureToolSourceHost(services);
         services.AddSingleton<IMcpToolSource>(sp =>
             new InProcMcpToolSource(serverName, handler, sp.GetService<ILogger<InProcMcpToolSource>>()));
@@ -44,7 +41,6 @@ public static class McpToolSourceServiceCollectionExtensions
         string command,
         IReadOnlyList<string>? arguments = null)
     {
-        ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
 
         EnsureToolSourceHost(services);

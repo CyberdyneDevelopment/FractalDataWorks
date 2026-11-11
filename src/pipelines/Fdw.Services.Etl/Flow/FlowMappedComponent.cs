@@ -36,8 +36,6 @@ public sealed class FlowMappedComponent : IFlowComponent, IFlowErrorOutputs
     /// <param name="logger">The logger.</param>
     public FlowMappedComponent(IFlowComponent inner, IReadOnlyDictionary<string, IReadOnlyList<FlowFieldMap>> mappings, ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(inner);
-        ArgumentNullException.ThrowIfNull(mappings);
         if (mappings.Count == 0)
         {
             throw new ArgumentException("A mapped component maps at least one input.", nameof(mappings));

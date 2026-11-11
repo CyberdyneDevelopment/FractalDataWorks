@@ -25,7 +25,7 @@ public sealed class CrossTenantChangePolicy : ICrossTenantChangePolicy
     /// <param name="logger">The logger.</param>
     public CrossTenantChangePolicy(IEffectiveSettingsProvider settings, ILogger<CrossTenantChangePolicy>? logger = null)
     {
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _settings = settings;
         _logger = logger ?? NullLogger<CrossTenantChangePolicy>.Instance;
     }
 

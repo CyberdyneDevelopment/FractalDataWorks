@@ -39,7 +39,7 @@ public abstract class ListPipelinesEndpointBase : CrudPageEndpointBase<DomainCon
         PipelineServiceConfigurationProvider configProvider,
         ITagService? tags = null) : base(logger)
     {
-        _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
+        _configProvider = configProvider;
         _tags = tags;
     }
 

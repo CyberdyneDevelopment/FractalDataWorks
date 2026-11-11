@@ -46,8 +46,6 @@ public static class ServiceCollectionExtensions
     /// <returns>The HTTP client builder for chaining.</returns>
     public static IHttpClientBuilder AddBearerTokenHandler(this IHttpClientBuilder builder)
     {
-        if (builder is null) throw new System.ArgumentNullException(nameof(builder));
-
         builder.Services.TryAddTransient<BearerTokenHandler>();
         return builder.AddHttpMessageHandler<BearerTokenHandler>();
     }
@@ -59,8 +57,6 @@ public static class ServiceCollectionExtensions
     /// <returns>The HTTP client builder for chaining.</returns>
     public static IHttpClientBuilder AddRetryingBearerTokenHandler(this IHttpClientBuilder builder)
     {
-        if (builder is null) throw new System.ArgumentNullException(nameof(builder));
-
         builder.Services.TryAddTransient<RetryingBearerTokenHandler>();
         return builder.AddHttpMessageHandler<RetryingBearerTokenHandler>();
     }
@@ -101,8 +97,6 @@ public static class ServiceCollectionExtensions
     /// <returns>The HTTP client builder for chaining.</returns>
     public static IHttpClientBuilder AddApiKeyHandler(this IHttpClientBuilder builder)
     {
-        if (builder is null) throw new System.ArgumentNullException(nameof(builder));
-
         builder.Services.TryAddTransient<ApiKeyDelegatingHandler>();
         return builder.AddHttpMessageHandler<ApiKeyDelegatingHandler>();
     }

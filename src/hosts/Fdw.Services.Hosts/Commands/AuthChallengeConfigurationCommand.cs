@@ -8,6 +8,6 @@ namespace Fdw.Services.Hosts.Commands;
 [TypeOption(typeof(ConfigurationCommands), "AuthChallenge")]
 public sealed class AuthChallengeConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="AuthChallengeConfigurationCommand"/> class.</summary>
     public AuthChallengeConfigurationCommand() : base("AuthChallenge") { }
 }

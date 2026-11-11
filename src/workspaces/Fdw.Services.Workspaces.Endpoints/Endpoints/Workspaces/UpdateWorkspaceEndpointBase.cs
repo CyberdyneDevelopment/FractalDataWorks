@@ -23,7 +23,7 @@ public abstract class UpdateWorkspaceEndpointBase : CrudUpdateEndpointBase<Updat
     private readonly IWorkspaceConfigurationProvider _provider;
     private readonly IWorkspaceAccessPolicy _access;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="UpdateWorkspaceEndpointBase"/> class.</summary>
     protected UpdateWorkspaceEndpointBase(
         ILogger<UpdateWorkspaceEndpointBase> logger,
         IWorkspaceConfigurationProvider provider,

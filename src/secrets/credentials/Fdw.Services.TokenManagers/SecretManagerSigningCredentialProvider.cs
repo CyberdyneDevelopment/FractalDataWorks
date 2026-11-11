@@ -52,11 +52,11 @@ public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialP
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<SecretManagerSigningCredentialProvider>? logger = null)
     {
-        _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
-        _secretManagerName = secretManagerName ?? throw new ArgumentNullException(nameof(secretManagerName));
-        _keyName = keyName ?? throw new ArgumentNullException(nameof(keyName));
+        _secrets = secrets;
+        _secretManagerName = secretManagerName;
+        _keyName = keyName;
         _cacheLifetime = cacheLifetime;
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<SecretManagerSigningCredentialProvider>.Instance;
     }
 

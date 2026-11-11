@@ -27,10 +27,10 @@ public abstract class ListNotificationsEndpointBase : CrudPageEndpointBase<Notif
 {
     private readonly IDomainRecordProvider<NotificationDomainConfiguration> _provider;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListNotificationsEndpointBase"/> class.</summary>
     protected ListNotificationsEndpointBase(ILogger<ListNotificationsEndpointBase> logger, IDomainRecordProvider<NotificationDomainConfiguration> provider) : base(logger)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        _provider = provider;
     }
 
     /// <inheritdoc />

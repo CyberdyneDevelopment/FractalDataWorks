@@ -21,7 +21,7 @@ public class EtlRowMapperConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    /// <inheritdoc />
+    /// <summary>Gets or sets the mapper's name.</summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>

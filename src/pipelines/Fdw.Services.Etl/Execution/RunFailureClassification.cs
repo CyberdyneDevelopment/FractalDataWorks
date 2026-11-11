@@ -36,7 +36,6 @@ public sealed record RunFailureClassification(bool Classified, string? Category,
     /// <returns>The classification. Its connection is the one the failure names as its raiser (<see cref="ConnectionFailures.ConnectionOf"/>); a failure that names none was not raised by a connection, so it attributes to none (FDW-4279).</returns>
     public static RunFailureClassification Of(IGenericResult failure)
     {
-        ArgumentNullException.ThrowIfNull(failure);
         var connectionId = ConnectionFailures.ConnectionOf(failure);
         var category = FailureCategory.Of(failure);
         var code = CodeText(failure);

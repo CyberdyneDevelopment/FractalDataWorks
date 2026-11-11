@@ -125,24 +125,6 @@ public sealed class HttpConnectionCommandTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenMethodIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new HttpConnectionCommand(null!, "/api/test"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsWhenRelativePathIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new HttpConnectionCommand(HttpMethod.Get, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DifferentHttpMethodsAreSupported()
     {
         // Assert GET

@@ -118,9 +118,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <param name="option">The option to register.</param>
     public static void RegisterMember(IServiceTypeRegistration option)
     {
-        if (option is null)
-            throw new ArgumentNullException(nameof(option));
-
         lock (_gate)
         {
             if (!_registeredTypes.Add(option.GetType()))
@@ -287,9 +284,6 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// </remarks>
     protected static void Requires<TRequired>(Func<ILogger, IGenericMessage> message)
     {
-        if (message is null)
-            throw new ArgumentNullException(nameof(message));
-
         lock (_gate)
             _requirements.Add(new ServiceRequirement(typeof(TRequired), message));
     }
@@ -351,7 +345,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <param name="method">The replacement delegate.</param>
     public static void Configuration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
     {
-        _configurationFunc = method ?? throw new ArgumentNullException(nameof(method));
+        _configurationFunc = method;
         ConfigurationIsCustom = true;
     }
 
@@ -398,7 +392,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <param name="method">The replacement delegate.</param>
     public static void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
     {
-        _registerFunc = method ?? throw new ArgumentNullException(nameof(method));
+        _registerFunc = method;
         RegistrationIsCustom = true;
     }
 
@@ -445,7 +439,7 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     /// <param name="method">The replacement delegate.</param>
     public static void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
     {
-        _initializationFunc = method ?? throw new ArgumentNullException(nameof(method));
+        _initializationFunc = method;
         InitializationIsCustom = true;
     }
 

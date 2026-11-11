@@ -25,7 +25,7 @@ public abstract class PredicateOperatorBase : TypeOptionBase<PredicateOperatorBa
     /// <param name="category">The group the console shows it under.</param>
     /// <param name="example">A complete condition that uses the operator.</param>
     protected PredicateOperatorBase(string name, IReadOnlyList<string> symbols, string meaning, string category, string example)
-        : base(name, string.Join(" / ", symbols ?? throw new ArgumentNullException(nameof(symbols))), string.Concat(meaning, " Example: ", example), category)
+        : base(name, string.Join(" / ", symbols), string.Concat(meaning, " Example: ", example), category)
     {
         if (symbols.Count == 0)
         {
@@ -33,7 +33,7 @@ public abstract class PredicateOperatorBase : TypeOptionBase<PredicateOperatorBa
         }
 
         Symbols = [.. symbols];
-        Example = example ?? throw new ArgumentNullException(nameof(example));
+        Example = example;
     }
 
     /// <inheritdoc />

@@ -18,7 +18,7 @@ public abstract class ValidatedConfiguration<TConfiguration> : ConfigurationVali
     protected ValidatedConfiguration(string name, IValidator<TConfiguration> validator)
         : base(name, typeof(TConfiguration), NameOf(typeof(TConfiguration)))
     {
-        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+        _validator = validator;
     }
 
     /// <inheritdoc />

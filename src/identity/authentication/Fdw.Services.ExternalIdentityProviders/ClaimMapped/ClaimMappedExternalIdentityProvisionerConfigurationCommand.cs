@@ -13,7 +13,7 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 public sealed class ClaimMappedExternalIdentityProvisionerConfigurationCommand
     : ConfigurationCommandBase<ClaimMappedExternalIdentityProvisionerConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="ClaimMappedExternalIdentityProvisionerConfigurationCommand"/> class.</summary>
     public ClaimMappedExternalIdentityProvisionerConfigurationCommand()
         : base("ClaimMappedExternalIdentityProvisionerConfiguration") { }
 }

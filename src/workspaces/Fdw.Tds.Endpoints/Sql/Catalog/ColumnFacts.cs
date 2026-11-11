@@ -85,8 +85,6 @@ public sealed class ColumnFacts
     /// <returns>The facts.</returns>
     public static ColumnFacts Of(SqlTableColumn column, SqlExecutionContext context)
     {
-        ArgumentNullException.ThrowIfNull(column);
-        ArgumentNullException.ThrowIfNull(context);
         var declared = SqlColumnTyping.Declared(column, context.Logger);
         return declared.IsSuccess
             ? Of(declared.Value!, context.Server.Collation)
@@ -99,8 +97,6 @@ public sealed class ColumnFacts
     /// <returns>The facts.</returns>
     public static ColumnFacts Of(TdsColumnType type, TdsCollation collation)
     {
-        ArgumentNullException.ThrowIfNull(type);
-        ArgumentNullException.ThrowIfNull(collation);
         var isText = type.DataType.Holds(typeof(string));
         var (characters, octets) = Lengths(type, isText);
         var numbers = type.DataType.HasPrecision ? DecimalNumbers(type) : OtherNumbers(type);

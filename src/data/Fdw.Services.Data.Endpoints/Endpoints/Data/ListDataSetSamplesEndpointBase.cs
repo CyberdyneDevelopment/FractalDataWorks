@@ -21,7 +21,7 @@ public abstract class ListDataSetSamplesEndpointBase : Endpoint<DataSetNameReque
     private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ILogger<ListDataSetSamplesEndpointBase> _logger;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="ListDataSetSamplesEndpointBase"/> class.</summary>
     /// <remarks>
     /// The rows are configuration rows in the data set store the host declared, so they go through that store's
     /// configuration gateway: the main gateway refuses a request over a host-declared store.

@@ -43,9 +43,6 @@ public sealed class FlowConditionalSplit : IFlowComponent
         ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(outputs);
-        ArgumentNullException.ThrowIfNull(routing);
-        ArgumentNullException.ThrowIfNull(unmatched);
         if (ReferenceEquals(routing, SplitRoutings.NotFound))
         {
             throw new ArgumentException("A split states where a row that meets several filters goes.", nameof(routing));

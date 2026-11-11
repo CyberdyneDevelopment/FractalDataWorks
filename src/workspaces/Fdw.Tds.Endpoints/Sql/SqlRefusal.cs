@@ -26,7 +26,6 @@ public static class SqlRefusal
     /// <returns>The failed result.</returns>
     public static IGenericResult<T> Refuse<T>(SqlServerMessage message, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(message);
         return GenericResult<T>.Failure(
             TdsEndpointResultCodes.ByName("StatementRefused"), logger,
             ResultDetails.Create(MessageKey, message, "number", message.Number, "text", message.Text));
@@ -38,7 +37,6 @@ public static class SqlRefusal
     /// <returns>The failed result.</returns>
     public static IGenericResult Refuse(SqlServerMessage message, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(message);
         return GenericResult.Failure(
             TdsEndpointResultCodes.ByName("StatementRefused"), logger,
             ResultDetails.Create(MessageKey, message, "number", message.Number, "text", message.Text));

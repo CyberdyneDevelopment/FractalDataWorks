@@ -85,10 +85,6 @@ public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslator
     protected static IReadOnlyList<string> ValueSets(
         SqliteCommand command, IReadOnlyList<object> rows, IReadOnlyList<string> columns, IStorageContainer container, ISqlDialect dialect)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(rows);
-        ArgumentNullException.ThrowIfNull(columns);
-        ArgumentNullException.ThrowIfNull(dialect);
         var columnList = string.Join(", ", columns.Select(dialect.QuoteIdentifier));
         var rowsPerStatement = Math.Max(1, KeyListSpillScope.ParameterBudget / columns.Count);
         var sets = new List<string>();
@@ -133,10 +129,6 @@ public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslator
         string savepoint, SqliteCommand command, IReadOnlyList<object> rows, IReadOnlyList<string> staged, IReadOnlyList<string> keys, int sample, string target,
         IStorageContainer container, ISqlDialect dialect, Func<string, string> write)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(keys);
-        ArgumentNullException.ThrowIfNull(dialect);
-        ArgumentNullException.ThrowIfNull(write);
         var id = Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture);
         var stage = $"fdw_s_{id}";
         var counted = $"fdw_n_{id}";

@@ -55,12 +55,8 @@ public abstract class ComponentTypeBase : TypeOptionBase<ComponentTypeBase>, ICo
         IReadOnlyList<StageMember> settings)
         : base(name, displayName, description, category)
     {
-        Inputs = inputs ?? throw new ArgumentNullException(nameof(inputs));
-        Outputs = outputs ?? throw new ArgumentNullException(nameof(outputs));
-        if (settings is null)
-        {
-            throw new ArgumentNullException(nameof(settings));
-        }
+        Inputs = inputs;
+        Outputs = outputs;
 
         // Why every kind with an input takes it: a mapping is not a step of its own, it is what happens to rows as they arrive at an input.
         Settings = inputs.Count > 0 ? [.. settings, Mappings, Stage] : [.. settings, Stage];

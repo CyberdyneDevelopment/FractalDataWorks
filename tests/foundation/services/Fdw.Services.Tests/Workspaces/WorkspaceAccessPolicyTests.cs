@@ -108,14 +108,6 @@ public class WorkspaceAccessPolicyTests
         (await policy.MayRead(Workspace(owner: CallerId), TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
     }
 
-    [Fact]
-    public void MayReadThrowsForANullWorkspaceBeforeAnyAwait()
-    {
-        var policy = Policy(CallerId.ToString());
-
-        Should.Throw<ArgumentNullException>(() => policy.MayRead(null!, TestContext.Current.CancellationToken));
-    }
-
     // ── FDW-936: additive access, visibility, per-workspace permissions, 404 vs 403 ──────────
 
     [Theory]

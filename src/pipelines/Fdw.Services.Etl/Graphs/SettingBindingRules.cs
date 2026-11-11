@@ -24,7 +24,6 @@ public static class SettingBindingRules
     /// <returns><see langword="true"/> unless the kind states that the setting shapes the graph.</returns>
     public static bool CanBindComponentSetting(IFlowComponentShape kind, string setting)
     {
-        ArgumentNullException.ThrowIfNull(kind);
         return !kind.Settings.Any(member => member.ShapesGraph && string.Equals(member.Name, setting, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -35,7 +34,6 @@ public static class SettingBindingRules
     /// <returns>The kind the binding rules judge the setting by.</returns>
     public static string BoundKind(StageMember setting)
     {
-        ArgumentNullException.ThrowIfNull(setting);
         return setting.TakesPairList ? FieldMapPairsKind : setting.Kind;
     }
 
@@ -45,7 +43,6 @@ public static class SettingBindingRules
     /// <returns>The setting when the kind lists a setting of that name that holds a list of column names; otherwise <see langword="null"/>.</returns>
     public static StageMember? ListSetting(IFlowComponentShape kind, string setting)
     {
-        ArgumentNullException.ThrowIfNull(kind);
         return kind.Settings.FirstOrDefault(member =>
             IsListKind(BoundKind(member)) && string.Equals(member.Name, setting, StringComparison.OrdinalIgnoreCase));
     }
@@ -86,7 +83,6 @@ public static class SettingBindingRules
     /// <returns><see langword="true"/> when the value is of the setting's kind or converts to it.</returns>
     public static bool TryConvert(string settingKind, object value, out object? typed)
     {
-        ArgumentNullException.ThrowIfNull(value);
         typed = null;
         switch (settingKind)
         {
@@ -122,7 +118,6 @@ public static class SettingBindingRules
     /// <returns>The problems, each with its path: a setting that does not exist or cannot be bound, a parameter the pipeline does not declare or of the wrong type, a setting that is bound twice or also holds a value.</returns>
     public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph)
     {
-        ArgumentNullException.ThrowIfNull(graph);
         var parameters = new Dictionary<string, (string Type, bool IsList)>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in graph.Parameters.Where(parameter => !string.IsNullOrWhiteSpace(parameter.Name)))
         {

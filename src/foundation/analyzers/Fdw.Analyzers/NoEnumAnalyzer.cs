@@ -12,10 +12,12 @@ namespace Fdw.Analyzers;
 /// enums are "expressly forbidden in fdw"; FDW-4143).
 /// </summary>
 /// <remarks>
-/// Exempt: an enum named MessageSeverity (Mike: "replace all of those other than messageseverity"), and the Roslyn-side code
-/// (Mike: "the roslyn ones are an allowable exception"), meaning an assembly whose name ends in <c>.SourceGenerators</c>,
-/// <c>.Analyzers</c> or <c>.CodeFixes</c>, and a file under <c>/tooling/roslyn/</c>. Using a library enum where the library is
-/// called is not reported; only declaring or parsing one is.
+/// Exempt: an enum named MessageSeverity (Mike: "replace all of those other than messageseverity"), and the TypeCollection layer:
+/// the assemblies that define the TypeCollection types and what they depend on (Fdw.Collections, Fdw.Collections.SourceGenerators,
+/// Fdw.Abstractions, Fdw.Results.Abstractions). Mike: "there should not be any enums outside of type collections", and "the packages
+/// that contain the type collection types can stay. because type collections don't exist prior to that" (FDW-5188, FDW-5194). That
+/// replaces the earlier exemption of the Roslyn-side code. Using a library enum where the library is called is not reported; only
+/// declaring or parsing one is.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class NoEnumAnalyzer : DiagnosticAnalyzer
@@ -27,9 +29,11 @@ public sealed class NoEnumAnalyzer : DiagnosticAnalyzer
 
     private const string ExemptEnumName = "MessageSeverity";
     private const string EnumTypeName = "System.Enum";
-    private const string RoslynToolingPath = "/tooling/roslyn/";
 
-    private static readonly string[] ExemptAssemblySuffixes = [".SourceGenerators", ".Analyzers", ".CodeFixes"];
+    // The TypeCollection layer: Fdw.Collections defines the TypeCollection types, Fdw.Collections.SourceGenerators generates them,
+    // and the other two are what those reference. Nothing below them can use a TypeCollection.
+    private static readonly string[] TypeCollectionLayer =
+        ["Fdw.Collections", "Fdw.Collections.SourceGenerators", "Fdw.Abstractions", "Fdw.Results.Abstractions"];
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
@@ -38,7 +42,7 @@ public sealed class NoEnumAnalyzer : DiagnosticAnalyzer
         "Usage",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "FDW takes no enums. A choice is a TypeCollection whose options carry their behaviour; a library enum at a boundary is carried on an option and read only where the library is called. MessageSeverity and the Roslyn-side projects are exempt.");
+        description: "FDW takes no enums. A choice is a TypeCollection whose options carry their behaviour; a library enum at a boundary is carried on an option and read only where the library is called. MessageSeverity and the TypeCollection layer (Fdw.Collections, Fdw.Collections.SourceGenerators, Fdw.Abstractions, Fdw.Results.Abstractions) are exempt.");
 
     /// <inheritdoc/>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
@@ -50,7 +54,7 @@ public sealed class NoEnumAnalyzer : DiagnosticAnalyzer
         context.EnableConcurrentExecution();
         context.RegisterCompilationStartAction(start =>
         {
-            if (IsExemptAssembly(start.Compilation.AssemblyName))
+            if (IsTypeCollectionLayer(start.Compilation.AssemblyName))
                 return;
 
             start.RegisterSymbolAction(AnalyzeNamedType, SymbolKind.NamedType);
@@ -66,7 +70,7 @@ public sealed class NoEnumAnalyzer : DiagnosticAnalyzer
 
         foreach (var location in type.Locations)
         {
-            if (location.IsInSource && !IsRoslynTooling(location.SourceTree?.FilePath))
+            if (location.IsInSource)
                 context.ReportDiagnostic(Diagnostic.Create(Rule, location, $"enum {type.Name}"));
         }
     }
@@ -75,27 +79,23 @@ public sealed class NoEnumAnalyzer : DiagnosticAnalyzer
     {
         var method = ((IInvocationOperation)context.Operation).TargetMethod;
         if ((!string.Equals(method.Name, "Parse", StringComparison.Ordinal) && !string.Equals(method.Name, "TryParse", StringComparison.Ordinal))
-            || !string.Equals(method.ContainingType?.ToDisplayString(), EnumTypeName, StringComparison.Ordinal)
-            || IsRoslynTooling(context.Operation.Syntax.SyntaxTree.FilePath))
+            || !string.Equals(method.ContainingType?.ToDisplayString(), EnumTypeName, StringComparison.Ordinal))
             return;
 
         context.ReportDiagnostic(Diagnostic.Create(Rule, context.Operation.Syntax.GetLocation(), $"Enum.{method.Name}"));
     }
 
-    private static bool IsExemptAssembly(string? assemblyName)
+    private static bool IsTypeCollectionLayer(string? assemblyName)
     {
         if (assemblyName is null)
             return false;
 
-        foreach (var suffix in ExemptAssemblySuffixes)
+        foreach (var layerAssembly in TypeCollectionLayer)
         {
-            if (assemblyName.EndsWith(suffix, StringComparison.Ordinal))
+            if (string.Equals(assemblyName, layerAssembly, StringComparison.Ordinal))
                 return true;
         }
 
         return false;
     }
-
-    private static bool IsRoslynTooling(string? filePath) =>
-        filePath is not null && filePath.Replace('\\', '/').IndexOf(RoslynToolingPath, StringComparison.Ordinal) >= 0;
 }

@@ -20,30 +20,6 @@ public class RuntimeDataSetConstructorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void SuccessThrowsWhenNameIsNull()
-    {
-        // Arrange
-        var rows = new[] { Mock.Of<IDataRow>() };
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => RuntimeDataSet.Success(null!, _mockSchema.Object, rows));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void SuccessThrowsWhenSchemaIsNull()
-    {
-        // Arrange
-        var rows = new[] { Mock.Of<IDataRow>() };
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => RuntimeDataSet.Success("TestDataSet", null!, rows));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void SuccessThrowsWhenRowsIsNull()
     {
         // Act & Assert
@@ -53,61 +29,10 @@ public class RuntimeDataSetConstructorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void EmptyThrowsWhenNameIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => RuntimeDataSet.Empty(null!, _mockSchema.Object));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void EmptyThrowsWhenSchemaIsNull()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => RuntimeDataSet.Empty("TestDataSet", null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void FromRowsThrowsWhenNameIsNull()
-    {
-        // Arrange
-        var row = Mock.Of<IDataRow>();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => RuntimeDataSet.FromRows(null!, _mockSchema.Object, row));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void FromRowsThrowsWhenSchemaIsNull()
-    {
-        // Arrange
-        var row = Mock.Of<IDataRow>();
-
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => RuntimeDataSet.FromRows("TestDataSet", null!, row));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void FromRowsThrowsWhenRowsIsNull()
     {
         // Act & Assert
         Should.Throw<ArgumentNullException>(() => RuntimeDataSet.FromRows("TestDataSet", _mockSchema.Object, null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void FailureCreatesFailedDataSetWithNullName()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => RuntimeDataSet.Failure(null!, "Error message"));
     }
 
     [Fact]

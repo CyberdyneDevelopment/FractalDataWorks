@@ -8,6 +8,6 @@ namespace Fdw.Services.Identity.Commands;
 [TypeOption(typeof(ConfigurationCommands), "Identity")]
 public sealed class IdentityServiceConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="IdentityServiceConfigurationCommand"/> class.</summary>
     public IdentityServiceConfigurationCommand() : base("Identity") { }
 }

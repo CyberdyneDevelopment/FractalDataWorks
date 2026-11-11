@@ -26,7 +26,7 @@ public sealed class StateMachine<TState> : IStateMachine<TState>
     /// <summary>Initializes a state machine bound to one entity's context.</summary>
     public StateMachine(IStateContext<TState> context, ILogger<StateMachine<TState>>? logger = null)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _context = context;
         _logger = logger ?? NullLogger<StateMachine<TState>>.Instance;
         _current = context.CurrentState;
     }

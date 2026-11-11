@@ -103,13 +103,4 @@ public sealed class GenericResultFailureSeverityTests
         withValue.IsSuccess.ShouldBeTrue();
         withValue.Value.ShouldBe(7);
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void AFailureWithACodeStillRefusesANullCodeNamingIt()
-    {
-        Should.Throw<ArgumentNullException>(() => GenericResult.Failure((IResultCode)null!)).ParamName.ShouldBe("code");
-        Should.Throw<ArgumentNullException>(() => GenericResult.Success((IResultCode)null!)).ParamName.ShouldBe("code");
-    }
 }

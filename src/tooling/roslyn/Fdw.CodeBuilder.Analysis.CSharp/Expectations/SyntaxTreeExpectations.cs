@@ -23,7 +23,7 @@ public class SyntaxTreeExpectations
     /// <param name="syntaxTree">The syntax tree to verify.</param>
     public SyntaxTreeExpectations(SyntaxTree syntaxTree)
     {
-        _syntaxTree = syntaxTree ?? throw new ArgumentNullException(nameof(syntaxTree));
+        _syntaxTree = syntaxTree;
     }
 
     /// <summary>

@@ -29,9 +29,6 @@ internal sealed class BatchShapedRecordSource : IRecordSource<DataRecord>
         Func<List<Dictionary<string, object?>>, CancellationToken, Task<IGenericResult<IEnumerable<Dictionary<string, object?>>>>> shape,
         int batchSize)
     {
-        ArgumentNullException.ThrowIfNull(schema);
-        ArgumentNullException.ThrowIfNull(cursor);
-        ArgumentNullException.ThrowIfNull(shape);
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
 
         Schema = schema;

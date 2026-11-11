@@ -31,7 +31,7 @@ public sealed class PipelineServiceConfigurationProvider
         IConfigurationPlacement placement)
         : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
-        Placement = placement ?? throw new ArgumentNullException(nameof(placement));
+        Placement = placement;
     }
 
     /// <inheritdoc />

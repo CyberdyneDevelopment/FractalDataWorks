@@ -48,8 +48,8 @@ internal sealed class TokenRevocationStore : ITokenRevocationStore
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<TokenRevocationStore>? logger = null)
     {
-        _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
+        _gateways = gateways;
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<TokenRevocationStore>.Instance;
     }
 

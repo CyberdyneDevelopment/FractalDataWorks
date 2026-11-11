@@ -10,6 +10,6 @@ namespace Fdw.Services.Data.Commands;
 public sealed class DataGatewayDomainConfigurationCommand
     : ConfigurationCommandBase<DomainConfiguration>
 {
-    /// <inheritdoc/>
+    /// <summary>Initializes a new instance of the <see cref="DataGatewayDomainConfigurationCommand"/> class.</summary>
     public DataGatewayDomainConfigurationCommand() : base("DataGateway") { }
 }

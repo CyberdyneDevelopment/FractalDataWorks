@@ -63,7 +63,7 @@ public abstract class HttpAuthenticationConfiguration
     /// <inheritdoc />
     public override IReadOnlyList<string> ExpectedProperties { get; } = [];
 
-    /// <inheritdoc />
+    /// <summary>Gets the properties a connection must state for this authentication type; a connection that leaves one out is refused.</summary>
     public IReadOnlyList<string> RequiredProperties { get; } = [];
 
     /// <summary>
@@ -72,11 +72,11 @@ public abstract class HttpAuthenticationConfiguration
     [ValuesFrom(typeof(HttpAuthenticationTypes))]
     public string Type => Name;
 
-    /// <inheritdoc />
+    /// <summary>Gets a value indicating whether this is the empty sentinel, which has no name.</summary>
     public bool IsEmpty => string.IsNullOrEmpty(Name);
 
 
-    /// <inheritdoc />
+    /// <summary>Creates a new configuration of this authentication type, for a connection to fill in.</summary>
     public abstract HttpAuthenticationConfiguration CreateInstance();
 
     /// <summary>

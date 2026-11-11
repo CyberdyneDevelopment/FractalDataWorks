@@ -14,7 +14,7 @@ public sealed class ProjectListResult
     public ProjectListResult(int projectCount, IReadOnlyList<ProjectSummary> projects)
     {
         ProjectCount = projectCount;
-        Projects = projects ?? throw new ArgumentNullException(nameof(projects));
+        Projects = projects;
     }
 
     /// <summary>

@@ -51,7 +51,6 @@ public sealed class PaginatedListRequest
     /// <returns>The page, with <see cref="PaginatedResponse{T}.TotalCount"/> set to the full count.</returns>
     public PaginatedResponse<T> Apply<T>(IReadOnlyList<T> all)
     {
-        ArgumentNullException.ThrowIfNull(all);
         var page = all.Skip(Skip).Take(Take).ToList();
         return PaginatedResponse<T>.Create(page, Skip, Take, all.Count);
     }

@@ -39,7 +39,7 @@ public sealed class DefaultSystemRoleConfiguration : ISystemRoleConfiguration
         ILogger<DefaultSystemRoleConfiguration>? logger)
     {
         var log = logger ?? NullLogger<DefaultSystemRoleConfiguration>.Instance;
-        var cfg = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        var cfg = configuration;
 
         if (cfg.AdminRoleName is null || cfg.AdminRoleName.Trim().Length == 0)
         {

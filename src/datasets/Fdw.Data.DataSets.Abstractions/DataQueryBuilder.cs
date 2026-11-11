@@ -24,7 +24,7 @@ public sealed class DataQueryBuilder<TSource> : IDataQuery<TSource>
     /// <param name="expression">The current expression tree, or null for a root query.</param>
     public DataQueryBuilder(string dataSetName, Expression? expression = null)
     {
-        DataSetName = dataSetName ?? throw new ArgumentNullException(nameof(dataSetName));
+        DataSetName = dataSetName;
         // For root queries, create a constant representing the queryable source
         // Using QueryableSource instead of 'this' to avoid circular references in ToString()
         QueryExpression = expression is null
@@ -42,8 +42,8 @@ public sealed class DataQueryBuilder<TSource> : IDataQuery<TSource>
     /// <param name="resultType">The expected result type after transformation.</param>
     internal DataQueryBuilder(string dataSetName, Expression expression, Type resultType)
     {
-        DataSetName = dataSetName ?? throw new ArgumentNullException(nameof(dataSetName));
-        QueryExpression = expression ?? throw new ArgumentNullException(nameof(expression));
+        DataSetName = dataSetName;
+        QueryExpression = expression;
         SourceType = typeof(TSource);
         ResultType = resultType;
     }
@@ -63,9 +63,6 @@ public sealed class DataQueryBuilder<TSource> : IDataQuery<TSource>
     /// <inheritdoc/>
     public IDataQuery<TSource> Where(Expression<Func<TSource, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
         // Get a method call expression for Where
         var methodCall = Expression.Call(
             type: typeof(Queryable),
@@ -79,9 +76,6 @@ public sealed class DataQueryBuilder<TSource> : IDataQuery<TSource>
     /// <inheritdoc/>
     public IDataQuery<TResult> Select<TResult>(Expression<Func<TSource, TResult>> selector)
     {
-        if (selector == null)
-            throw new ArgumentNullException(nameof(selector));
-
         // Get a method call expression for Select
         var methodCall = Expression.Call(
             type: typeof(Queryable),
@@ -95,9 +89,6 @@ public sealed class DataQueryBuilder<TSource> : IDataQuery<TSource>
     /// <inheritdoc/>
     public IDataQuery<TSource> OrderBy<TKey>(Expression<Func<TSource, TKey>> keySelector)
     {
-        if (keySelector == null)
-            throw new ArgumentNullException(nameof(keySelector));
-
         var methodCall = Expression.Call(
             type: typeof(Queryable),
             methodName: nameof(Queryable.OrderBy),
@@ -110,9 +101,6 @@ public sealed class DataQueryBuilder<TSource> : IDataQuery<TSource>
     /// <inheritdoc/>
     public IDataQuery<TSource> OrderByDescending<TKey>(Expression<Func<TSource, TKey>> keySelector)
     {
-        if (keySelector == null)
-            throw new ArgumentNullException(nameof(keySelector));
-
         var methodCall = Expression.Call(
             type: typeof(Queryable),
             methodName: nameof(Queryable.OrderByDescending),

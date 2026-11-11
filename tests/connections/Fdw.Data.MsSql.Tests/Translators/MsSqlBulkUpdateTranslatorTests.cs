@@ -22,9 +22,10 @@ public sealed class MsSqlBulkUpdateTranslatorTests
 {
     private readonly MsSqlBulkUpdateTranslator _sut = new();
 
+    // Codes are "code_q<n>": 'o', '_' and 'q' are not hex digits, so a code never shows up by chance in the random #fdw_<guid> staging name.
     private static List<Dictionary<string, object?>> Rows(int count) =>
         Enumerable.Range(1, count)
-            .Select(i => new Dictionary<string, object?> { ["Code"] = $"C{i}", ["Name"] = $"Name {i}", ["Status"] = "open" })
+            .Select(i => new Dictionary<string, object?> { ["Code"] = $"code_q{i}", ["Name"] = $"Name {i}", ["Status"] = "open" })
             .ToList();
 
     private async Task<IGenericResult<SqlCommand>> Run(
@@ -72,7 +73,7 @@ public sealed class MsSqlBulkUpdateTranslatorTests
         var result = await Run(Rows(2), new BulkUpdateOptions(["Code"], ["Name"]));
 
         result.Value!.CommandText.ShouldNotContain("Name 1");
-        result.Value.CommandText.ShouldNotContain("C2");
+        result.Value.CommandText.ShouldNotContain("code_q2");
     }
 
     [Fact]

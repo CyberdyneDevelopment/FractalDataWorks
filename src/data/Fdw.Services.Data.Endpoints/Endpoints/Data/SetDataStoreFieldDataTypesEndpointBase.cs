@@ -35,7 +35,7 @@ public abstract class SetDataStoreFieldDataTypesEndpointBase
     protected SetDataStoreFieldDataTypesEndpointBase(
         ILogger<SetDataStoreFieldDataTypesEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
     {
-        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
+        _dataStoreProvider = dataStoreProvider;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

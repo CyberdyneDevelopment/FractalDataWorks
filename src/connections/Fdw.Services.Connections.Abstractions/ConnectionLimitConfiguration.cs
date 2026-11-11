@@ -29,7 +29,7 @@ public class ConnectionLimitConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public Guid Id { get; set; }
 
-    /// <inheritdoc />
+    /// <summary>Gets or sets the limit's name.</summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>

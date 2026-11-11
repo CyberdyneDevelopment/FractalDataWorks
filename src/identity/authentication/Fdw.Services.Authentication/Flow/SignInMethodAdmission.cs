@@ -44,11 +44,11 @@ public sealed class SignInMethodAdmission : ISignInMethodAdmission
         Func<string, IAuthenticationStep?> step,
         ILogger<SignInMethodAdmission>? logger = null)
     {
-        _flows = flows ?? throw new ArgumentNullException(nameof(flows));
-        _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
-        _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
-        _step = step ?? throw new ArgumentNullException(nameof(step));
+        _flows = flows;
+        _tenants = tenants;
+        _permissions = permissions;
+        _authContextAccessor = authContextAccessor;
+        _step = step;
         _logger = logger ?? NullLogger<SignInMethodAdmission>.Instance;
     }
 
@@ -75,8 +75,6 @@ public sealed class SignInMethodAdmission : ISignInMethodAdmission
     public async Task<IGenericResult<bool>> MayUse(
         IReadOnlyCollection<string> heldPermissions, string authenticationMethod, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(heldPermissions);
-
         var proving = await Proving(authenticationMethod, cancellationToken).ConfigureAwait(false);
         if (proving.IsFailure)
             return proving.ToNewResult<bool>();

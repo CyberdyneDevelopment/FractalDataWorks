@@ -40,9 +40,6 @@ public sealed class PolicyElevationValidator : IPolicyElevationValidator
     /// <inheritdoc/>
     public IGenericResult Validate(StageConfiguration stage, ExecutionPolicySnapshot parentEffective)
     {
-        if (stage == null) throw new ArgumentNullException(nameof(stage));
-        if (parentEffective == null) throw new ArgumentNullException(nameof(parentEffective));
-
         var violations = CollectViolations(
             stage.StepFailurePolicy,
             stage.StageFailurePolicy,
@@ -63,9 +60,6 @@ public sealed class PolicyElevationValidator : IPolicyElevationValidator
     /// <inheritdoc/>
     public IGenericResult Validate(StepConfiguration step, ExecutionPolicySnapshot parentEffective)
     {
-        if (step == null) throw new ArgumentNullException(nameof(step));
-        if (parentEffective == null) throw new ArgumentNullException(nameof(parentEffective));
-
         var violations = CollectViolations(
             step.StepFailurePolicy,
             step.StageFailurePolicy,

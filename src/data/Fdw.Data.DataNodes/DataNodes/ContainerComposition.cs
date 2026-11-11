@@ -61,8 +61,6 @@ public static class ContainerComposition
     /// </remarks>
     public static IReadOnlyDictionary<string, object> BuildMetadata(DataContainerConfiguration cfg, IFormatType format)
     {
-        ArgumentNullException.ThrowIfNull(format);
-
         var meta = new Dictionary<string, object>(StringComparer.Ordinal);
         Put(meta, "RecordSelector", cfg.RecordSelector);
         Put(meta, "FlattenNestedObjects", cfg.FlattenNestedObjects);

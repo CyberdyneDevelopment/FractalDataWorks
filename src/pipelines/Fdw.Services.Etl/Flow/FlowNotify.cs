@@ -49,17 +49,16 @@ public sealed class FlowNotify : IFlowStep, IFlowFailureHook
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(ruleName);
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
-        ArgumentNullException.ThrowIfNull(run);
         Name = name;
-        _notifier = notifier ?? throw new ArgumentNullException(nameof(notifier));
+        _notifier = notifier;
         _ruleName = ruleName;
-        _runPoint = runPoint ?? throw new ArgumentNullException(nameof(runPoint));
+        _runPoint = runPoint;
         _message = message;
         _pipelineId = run.PipelineId;
         _pipelineName = run.PipelineName;
         _executionId = run.ExecutionId;
         _startedAt = run.StartedAt;
-        _loaded = loaded ?? throw new ArgumentNullException(nameof(loaded));
+        _loaded = loaded;
         _logger = logger ?? NullLogger.Instance;
         var unknown = NotifyTemplate.Unknown(message);
         if (unknown.Count > 0)
@@ -74,7 +73,6 @@ public sealed class FlowNotify : IFlowStep, IFlowFailureHook
     /// <inheritdoc />
     public Task<IGenericResult> Run(FlowStepContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
         return _runPoint.FiresOnFailure
             ? Task.FromResult<IGenericResult>(GenericResult.Success())
             : Send(context, "Succeeded", cancellationToken);
@@ -83,8 +81,6 @@ public sealed class FlowNotify : IFlowStep, IFlowFailureHook
     /// <inheritdoc />
     public async Task<IGenericResult> OnFailure(FlowStepContext context, IGenericResult failure, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(failure);
         return _runPoint.FiresOnFailure
             ? await Send(context, "Failed", cancellationToken).ConfigureAwait(false)
             : GenericResult.Success();

@@ -31,6 +31,12 @@ public sealed class UserRolesHeldTests
     private static Dictionary<string, object?> Domain(int key, bool current = true)
         => InMemoryConfigurationStore.Row(("RowId", key + 1000), ("Id", DomainId(key)), ("IsCurrent", current));
 
+    // A role's domain row: the role an assignment names exists while this row is current and not deleted (FDW-5222).
+    private static Dictionary<string, object?> Role(int key, Guid id, bool deleted = false)
+        => InMemoryConfigurationStore.Row(("RowId", key + 2000), ("Id", id), ("IsDeleted", deleted));
+
+    private static IEnumerable<Dictionary<string, object?>> BothRoles => [Role(1, Admin), Role(2, Viewer)];
+
     private static UserRolesHeld Reader(InMemoryConfigurationStore store) => new(store.Gateways, "PlatformConfiguration", "authz", NullLogger<UserRolesHeld>.Instance);
 
     [Fact]
@@ -44,7 +50,8 @@ public sealed class UserRolesHeldTests
                 Assignment(2, 12, Person.ToString("D"), Viewer, expires),
                 Assignment(3, 13, Guid.NewGuid().ToString("D"), Admin),
             ])
-            .Holds("UserRole", [Domain(11), Domain(12), Domain(13)]);
+            .Holds("UserRole", [Domain(11), Domain(12), Domain(13)])
+            .Holds("Role", BothRoles);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
 
@@ -58,14 +65,15 @@ public sealed class UserRolesHeldTests
         var others = Enumerable.Range(100, 5000).Select(key => Assignment(key, key, Guid.NewGuid().ToString("D"), Admin)).ToList();
         var store = new InMemoryConfigurationStore()
             .Holds("UserRoleConfiguration", [Assignment(1, 11, Person.ToString("D"), Admin), Assignment(2, 12, Person.ToString("D"), Viewer), .. others])
-            .Holds("UserRole", [Domain(11), Domain(12), .. others.Select(row => Domain(Convert.ToInt32(row["RowId"])))]);
+            .Holds("UserRole", [Domain(11), Domain(12), .. others.Select(row => Domain(Convert.ToInt32(row["RowId"])))])
+            .Holds("Role", BothRoles);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
 
         held.Value!.Count.ShouldBe(2);
-        // The person's two assignments, then their two domain rows: nothing of the 5000 others.
-        store.RowsReturned.ShouldBe(4);
-        store.Queries.ToArray().ShouldBe(new[] { "UserRoleConfiguration", "UserRole" });
+        // The person's two assignments, their two domain rows, then the two roles they name: nothing of the 5000 others.
+        store.RowsReturned.ShouldBe(6);
+        store.Queries.ToArray().ShouldBe(new[] { "UserRoleConfiguration", "UserRole", "Role" });
     }
 
     [Theory]
@@ -76,7 +84,8 @@ public sealed class UserRolesHeldTests
         var spelled = upper ? Person.ToString("D").ToUpperInvariant() : Person.ToString("D").ToLowerInvariant();
         var store = new InMemoryConfigurationStore()
             .Holds("UserRoleConfiguration", [Assignment(1, 11, spelled, Admin)])
-            .Holds("UserRole", [Domain(11)]);
+            .Holds("UserRole", [Domain(11)])
+            .Holds("Role", BothRoles);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
 
@@ -100,7 +109,8 @@ public sealed class UserRolesHeldTests
     {
         var store = new InMemoryConfigurationStore()
             .Holds("UserRoleConfiguration", [Assignment(1, 11, Person.ToString("D"), Admin), Assignment(2, 12, Person.ToString("D"), Viewer)])
-            .Holds("UserRole", [Domain(11, current: false), Domain(12)]);
+            .Holds("UserRole", [Domain(11, current: false), Domain(12)])
+            .Holds("Role", BothRoles);
 
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
 
@@ -153,5 +163,50 @@ public sealed class UserRolesHeldTests
         var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
 
         held.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task AnAssignmentToARoleThatNoLongerExistsFailsTheReadWithItsOwnCode()
+    {
+        var store = new InMemoryConfigurationStore()
+            .Holds("UserRoleConfiguration", [Assignment(1, 11, Person.ToString("D"), Admin), Assignment(2, 12, Person.ToString("D"), Viewer)])
+            .Holds("UserRole", [Domain(11), Domain(12)])
+            .Holds("Role", [Role(2, Viewer)]);
+
+        var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
+
+        // FDW-5222: the role was deleted and the assignment was left behind. The read says so, with a code of its own whose category is
+        // Conflict (409), rather than handing the caller a role it will not find.
+        held.IsFailure.ShouldBeTrue();
+        held.Messages[0].Code.ShouldBe("AUTHORIZATION-42795");
+        held.CurrentMessage.ShouldNotBeNull().ShouldContain(Admin.ToString("D"));
+    }
+
+    [Fact]
+    public async Task AnAssignmentToADeletedRoleFailsTheRead()
+    {
+        var store = new InMemoryConfigurationStore()
+            .Holds("UserRoleConfiguration", [Assignment(1, 11, Person.ToString("D"), Admin)])
+            .Holds("UserRole", [Domain(11)])
+            .Holds("Role", [Role(1, Admin, deleted: true)]);
+
+        var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
+
+        held.IsFailure.ShouldBeTrue();
+        held.Messages[0].Code.ShouldBe("AUTHORIZATION-42795");
+    }
+
+    [Fact]
+    public async Task OnlyTheRolesThePersonHoldsAreRead()
+    {
+        var store = new InMemoryConfigurationStore()
+            .Holds("UserRoleConfiguration", [Assignment(1, 11, Person.ToString("D"), Admin)])
+            .Holds("UserRole", [Domain(11)])
+            .Holds("Role", BothRoles);
+
+        var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
+
+        held.Value!.ShouldHaveSingleItem().RoleId.ShouldBe(Admin);
+        store.RowsReturned.ShouldBe(3);
     }
 }

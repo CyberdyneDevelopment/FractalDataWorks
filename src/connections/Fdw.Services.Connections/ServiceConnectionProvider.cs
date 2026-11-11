@@ -62,9 +62,6 @@ public sealed class ServiceConnectionProvider : IServiceConnectionProvider, IDis
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentNullException(nameof(name));
 
-        if (connection is null)
-            throw new ArgumentNullException(nameof(connection));
-
         ServiceConnectionProviderLog.Registering(_logger, name);
 
         if (!_registry.TryAdd(name, connection))

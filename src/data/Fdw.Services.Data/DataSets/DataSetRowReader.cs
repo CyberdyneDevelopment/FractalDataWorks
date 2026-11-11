@@ -46,7 +46,7 @@ public sealed class DataSetRowReader : IDataSetRowReader
     /// </param>
     public DataSetRowReader(IDataSetResolver resolver, ILogger<DataSetRowReader>? logger = null, IFilterCalculations? calculations = null)
     {
-        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        _resolver = resolver;
         _logger = logger ?? NullLogger<DataSetRowReader>.Instance;
         _query = new DataSetQuery(_logger, calculations);
     }
@@ -58,8 +58,9 @@ public sealed class DataSetRowReader : IDataSetRowReader
         int rowCap,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(gateway);
-        ArgumentException.ThrowIfNullOrWhiteSpace(dataSetName);
+        if (string.IsNullOrWhiteSpace(dataSetName))
+            return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(DataSetRowReaderLog.DataSetNameRequired(_logger));
+
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rowCap);
 
         var resolved = await _resolver.Resolve(dataSetName, cancellationToken).ConfigureAwait(false);

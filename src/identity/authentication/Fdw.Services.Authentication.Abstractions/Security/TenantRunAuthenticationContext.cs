@@ -40,10 +40,10 @@ public sealed class TenantRunAuthenticationContext : IAuthenticationContext
         if (principalId == Guid.Empty) throw new ArgumentException("A tenant run names its principal.", nameof(principalId));
         if (tenantId == Guid.Empty) throw new ArgumentException("A tenant run names its tenant.", nameof(tenantId));
         PrincipalId = principalId;
-        Username = principalName ?? throw new ArgumentNullException(nameof(principalName));
+        Username = principalName;
         ActiveTenantId = tenantId;
-        Roles = roles ?? throw new ArgumentNullException(nameof(roles));
-        Permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
+        Roles = roles;
+        Permissions = permissions;
     }
 
     /// <summary>Gets the run's principal: the id of the pipeline that is running.</summary>

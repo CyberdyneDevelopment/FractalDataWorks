@@ -31,8 +31,8 @@ public sealed class EscalationBackgroundService : BackgroundService
     /// <param name="logger">The logger.</param>
     public EscalationBackgroundService(IServiceScopeFactory scopes, TimeProvider clock, ILogger<EscalationBackgroundService>? logger = null)
     {
-        _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
-        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _scopes = scopes;
+        _clock = clock;
         _logger = logger ?? NullLogger<EscalationBackgroundService>.Instance;
     }
 

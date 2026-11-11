@@ -11,7 +11,7 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public abstract class GetDataflowSourcesEndpointBase : DataflowLayerEndpointBase
 {
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="GetDataflowSourcesEndpointBase"/> class.</summary>
     protected GetDataflowSourcesEndpointBase(
         DataflowGraphConfigurationProvider provider,
         IPipelineConfigurationProvider pipelineProvider,

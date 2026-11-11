@@ -147,87 +147,83 @@ public static class ConfigurationFormModelGenerator
         }
         else
         {
-#pragma warning disable FDW018
-            switch (property.ComponentType)
+            if (property.ComponentType == ComponentTypeMapping.Switch)
             {
-                case ComponentTypeMapping.Switch:
-                    builder.AppendLine($"        {property.PropertyName}Component = new CheckboxModel");
-                    builder.AppendLine("        {");
-                    builder.AppendLine($"            Id = \"{property.PropertyName}\",");
-                    builder.AppendLine($"            Label = \"{label}\",");
-                    builder.AppendLine($"            HelpText = {helpText},");
-                    builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
-                    builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
-                    builder.AppendLine($"            Order = {property.Order},");
-                    builder.AppendLine($"            Value = configuration.{property.PropertyName}");
-                    builder.AppendLine("        };");
-                    break;
-
-                case ComponentTypeMapping.NumericInput:
-                    var numericType = property.PropertyType;
-                    builder.AppendLine($"        {property.PropertyName}Component = new NumericInputModel<{numericType}>");
-                    builder.AppendLine("        {");
-                    builder.AppendLine($"            Id = \"{property.PropertyName}\",");
-                    builder.AppendLine($"            Label = \"{label}\",");
-                    builder.AppendLine($"            HelpText = {helpText},");
-                    builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
-                    builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
-                    builder.AppendLine($"            Order = {property.Order},");
-                    builder.AppendLine($"            Value = configuration.{property.PropertyName}");
-                    if (property.ValidationRules.TryGetValue("min", out var min))
-                    {
-                        builder.AppendLine($"            , MinValue = ({numericType}){min}");
-                    }
-                    if (property.ValidationRules.TryGetValue("max", out var max))
-                    {
-                        builder.AppendLine($"            , MaxValue = ({numericType}){max}");
-                    }
-                    builder.AppendLine("        };");
-                    break;
-
-                case ComponentTypeMapping.DateTimePicker:
-                    builder.AppendLine($"        {property.PropertyName}Component = new DatePickerModel");
-                    builder.AppendLine("        {");
-                    builder.AppendLine($"            Id = \"{property.PropertyName}\",");
-                    builder.AppendLine($"            Label = \"{label}\",");
-                    builder.AppendLine($"            HelpText = {helpText},");
-                    builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
-                    builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
-                    builder.AppendLine($"            Order = {property.Order},");
-                    builder.AppendLine($"            Value = configuration.{property.PropertyName}");
-                    builder.AppendLine("        };");
-                    break;
-
-                case ComponentTypeMapping.TextArea:
-                    builder.AppendLine($"        {property.PropertyName}Component = new TextInputModel");
-                    builder.AppendLine("        {");
-                    builder.AppendLine($"            Id = \"{property.PropertyName}\",");
-                    builder.AppendLine($"            Label = \"{label}\",");
-                    builder.AppendLine($"            HelpText = {helpText},");
-                    builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
-                    builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
-                    builder.AppendLine($"            Order = {property.Order},");
-                    builder.AppendLine($"            IsMultiline = true,");
-                    builder.AppendLine($"            Value = configuration.{property.PropertyName}");
-                    AppendTextValidationRules(builder, property);
-                    builder.AppendLine("        };");
-                    break;
-
-                default: // TextInput
-                    builder.AppendLine($"        {property.PropertyName}Component = new TextInputModel");
-                    builder.AppendLine("        {");
-                    builder.AppendLine($"            Id = \"{property.PropertyName}\",");
-                    builder.AppendLine($"            Label = \"{label}\",");
-                    builder.AppendLine($"            HelpText = {helpText},");
-                    builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
-                    builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
-                    builder.AppendLine($"            Order = {property.Order},");
-                    builder.AppendLine($"            Value = configuration.{property.PropertyName}");
-                    AppendTextValidationRules(builder, property);
-                    builder.AppendLine("        };");
-                    break;
+                builder.AppendLine($"        {property.PropertyName}Component = new CheckboxModel");
+                builder.AppendLine("        {");
+                builder.AppendLine($"            Id = \"{property.PropertyName}\",");
+                builder.AppendLine($"            Label = \"{label}\",");
+                builder.AppendLine($"            HelpText = {helpText},");
+                builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
+                builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
+                builder.AppendLine($"            Order = {property.Order},");
+                builder.AppendLine($"            Value = configuration.{property.PropertyName}");
+                builder.AppendLine("        };");
             }
-#pragma warning restore FDW018
+            else if (property.ComponentType == ComponentTypeMapping.NumericInput)
+            {
+                var numericType = property.PropertyType;
+                builder.AppendLine($"        {property.PropertyName}Component = new NumericInputModel<{numericType}>");
+                builder.AppendLine("        {");
+                builder.AppendLine($"            Id = \"{property.PropertyName}\",");
+                builder.AppendLine($"            Label = \"{label}\",");
+                builder.AppendLine($"            HelpText = {helpText},");
+                builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
+                builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
+                builder.AppendLine($"            Order = {property.Order},");
+                builder.AppendLine($"            Value = configuration.{property.PropertyName}");
+                if (property.ValidationRules.TryGetValue("min", out var min))
+                {
+                    builder.AppendLine($"            , MinValue = ({numericType}){min}");
+                }
+                if (property.ValidationRules.TryGetValue("max", out var max))
+                {
+                    builder.AppendLine($"            , MaxValue = ({numericType}){max}");
+                }
+                builder.AppendLine("        };");
+            }
+            else if (property.ComponentType == ComponentTypeMapping.DateTimePicker)
+            {
+                builder.AppendLine($"        {property.PropertyName}Component = new DatePickerModel");
+                builder.AppendLine("        {");
+                builder.AppendLine($"            Id = \"{property.PropertyName}\",");
+                builder.AppendLine($"            Label = \"{label}\",");
+                builder.AppendLine($"            HelpText = {helpText},");
+                builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
+                builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
+                builder.AppendLine($"            Order = {property.Order},");
+                builder.AppendLine($"            Value = configuration.{property.PropertyName}");
+                builder.AppendLine("        };");
+            }
+            else if (property.ComponentType == ComponentTypeMapping.TextArea)
+            {
+                builder.AppendLine($"        {property.PropertyName}Component = new TextInputModel");
+                builder.AppendLine("        {");
+                builder.AppendLine($"            Id = \"{property.PropertyName}\",");
+                builder.AppendLine($"            Label = \"{label}\",");
+                builder.AppendLine($"            HelpText = {helpText},");
+                builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
+                builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
+                builder.AppendLine($"            Order = {property.Order},");
+                builder.AppendLine($"            IsMultiline = true,");
+                builder.AppendLine($"            Value = configuration.{property.PropertyName}");
+                AppendTextValidationRules(builder, property);
+                builder.AppendLine("        };");
+            }
+            else // TextInput
+            {
+                builder.AppendLine($"        {property.PropertyName}Component = new TextInputModel");
+                builder.AppendLine("        {");
+                builder.AppendLine($"            Id = \"{property.PropertyName}\",");
+                builder.AppendLine($"            Label = \"{label}\",");
+                builder.AppendLine($"            HelpText = {helpText},");
+                builder.AppendLine($"            IsRequired = {(property.IsRequired ? "true" : "false")},");
+                builder.AppendLine($"            IsReadOnly = {(property.IsReadOnly ? "true" : "false")},");
+                builder.AppendLine($"            Order = {property.Order},");
+                builder.AppendLine($"            Value = configuration.{property.PropertyName}");
+                AppendTextValidationRules(builder, property);
+                builder.AppendLine("        };");
+            }
         }
 
         builder.AppendLine();
@@ -280,26 +276,22 @@ public static class ConfigurationFormModelGenerator
         }
         else
         {
-#pragma warning disable FDW018
-            switch (property.ComponentType)
+            if (property.ComponentType == ComponentTypeMapping.Switch)
             {
-                case ComponentTypeMapping.Switch:
-                    builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? false;");
-                    break;
-
-                case ComponentTypeMapping.NumericInput:
-                    builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? default;");
-                    break;
-
-                case ComponentTypeMapping.DateTimePicker:
-                    builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? default;");
-                    break;
-
-                default:
-                    builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? \"\";");
-                    break;
+                builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? false;");
             }
-#pragma warning restore FDW018
+            else if (property.ComponentType == ComponentTypeMapping.NumericInput)
+            {
+                builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? default;");
+            }
+            else if (property.ComponentType == ComponentTypeMapping.DateTimePicker)
+            {
+                builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? default;");
+            }
+            else
+            {
+                builder.AppendLine($"        config.{property.PropertyName} = {property.PropertyName}Component.Value ?? \"\";");
+            }
         }
     }
 
@@ -395,23 +387,8 @@ public static class ConfigurationFormModelGenerator
             }
             else
             {
-#pragma warning disable FDW018
-                switch (property.ComponentType)
-                {
-                    case ComponentTypeMapping.Switch:
-                        builder.AppendLine($"        {property.PropertyName}Component.Value = Configuration.{property.PropertyName};");
-                        break;
-
-                    case ComponentTypeMapping.NumericInput:
-                    case ComponentTypeMapping.DateTimePicker:
-                        builder.AppendLine($"        {property.PropertyName}Component.Value = Configuration.{property.PropertyName};");
-                        break;
-
-                    default:
-                        builder.AppendLine($"        {property.PropertyName}Component.Value = Configuration.{property.PropertyName};");
-                        break;
-                }
-#pragma warning restore FDW018
+                // Every component type reads its value back the same way.
+                builder.AppendLine($"        {property.PropertyName}Component.Value = Configuration.{property.PropertyName};");
             }
         }
 
@@ -444,17 +421,13 @@ public static class ConfigurationFormModelGenerator
             return $"CollectionModel<{property.CollectionItemType}>";
         }
 
-#pragma warning disable FDW018
-        return property.ComponentType switch
-        {
-            ComponentTypeMapping.Switch => "CheckboxModel",
-            ComponentTypeMapping.NumericInput => $"NumericInputModel<{property.PropertyType}>",
-            ComponentTypeMapping.DateTimePicker => "DatePickerModel",
-            ComponentTypeMapping.Dropdown => $"SelectModel<{property.PropertyType}>",
-            ComponentTypeMapping.Collection => $"CollectionModel<{property.CollectionItemType ?? "object"}>",
-            _ => "TextInputModel"
-        };
-#pragma warning restore FDW018
+        var componentType = property.ComponentType;
+        return componentType == ComponentTypeMapping.Switch ? "CheckboxModel"
+            : componentType == ComponentTypeMapping.NumericInput ? $"NumericInputModel<{property.PropertyType}>"
+            : componentType == ComponentTypeMapping.DateTimePicker ? "DatePickerModel"
+            : componentType == ComponentTypeMapping.Dropdown ? $"SelectModel<{property.PropertyType}>"
+            : componentType == ComponentTypeMapping.Collection ? $"CollectionModel<{property.CollectionItemType ?? "object"}>"
+            : "TextInputModel";
     }
 
     private static string EscapeString(string input)

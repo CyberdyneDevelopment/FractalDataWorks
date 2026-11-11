@@ -41,10 +41,10 @@ internal sealed class LatestPipelineRunReader
     /// <param name="logger">The logger.</param>
     public LatestPipelineRunReader(IDataGateway gateway, string dataStoreName, int chunkSize, ILogger logger)
     {
-        _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
-        _dataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
+        _gateway = gateway;
+        _dataStoreName = dataStoreName;
         _chunkSize = chunkSize;
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
     }
 
     /// <summary>Gets the id of the latest run of each name that has one.</summary>

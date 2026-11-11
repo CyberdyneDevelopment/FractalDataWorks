@@ -62,9 +62,6 @@ public abstract class SqlDataTypeBase : TypeOptionBase<SqlDataTypeBase>, ISqlDat
     /// <inheritdoc/>
     public bool TryWriteValue(TdsPayloadWriter writer, TdsColumnType column, object? value)
     {
-        ArgumentNullException.ThrowIfNull(writer);
-        ArgumentNullException.ThrowIfNull(column);
-
         if (value is null or DBNull)
         {
             WriteNull(writer, column);

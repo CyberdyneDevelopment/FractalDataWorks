@@ -27,12 +27,12 @@ public sealed class LoadCommandInput
         DateTimeOffset now,
         ILogger logger)
     {
-        Owner = owner ?? throw new ArgumentNullException(nameof(owner));
-        Row = row ?? throw new ArgumentNullException(nameof(row));
-        Rows = rows ?? throw new ArgumentNullException(nameof(rows));
+        Owner = owner;
+        Row = row;
+        Rows = rows;
         Source = source;
         Now = now;
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        Logger = logger;
     }
 
     /// <summary>Gets what the load is, for refusal messages.</summary>

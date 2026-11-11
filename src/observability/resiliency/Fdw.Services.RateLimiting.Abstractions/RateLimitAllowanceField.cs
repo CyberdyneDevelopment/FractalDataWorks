@@ -16,9 +16,9 @@ public sealed class RateLimitAllowanceField
     /// <param name="description">What it is for, in plain words.</param>
     public RateLimitAllowanceField(string name, string dataType, string description)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        DataType = dataType ?? throw new ArgumentNullException(nameof(dataType));
-        Description = description ?? throw new ArgumentNullException(nameof(description));
+        Name = name;
+        DataType = dataType;
+        Description = description;
     }
 
     /// <summary>

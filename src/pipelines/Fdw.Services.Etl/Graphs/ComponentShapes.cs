@@ -24,8 +24,6 @@ public static class ComponentShapes
     public static (IReadOnlyList<string> Inputs, IReadOnlyList<string> Outputs) Of(
         PipelineComponentConfiguration component, IReadOnlyList<PipelineLinkConfiguration> links)
     {
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(links);
         var kind = ComponentTypes.ByName(component.ComponentType);
         if (ReferenceEquals(kind, ComponentTypes.NotFound))
         {
@@ -46,8 +44,6 @@ public static class ComponentShapes
     /// <returns>The names of the kind's error outputs, resolved as <see cref="Of"/> resolves its outputs.</returns>
     public static IReadOnlyList<string> ErrorOutputsOf(PipelineComponentConfiguration component, IReadOnlyList<PipelineLinkConfiguration> links)
     {
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(links);
         var kind = ComponentTypes.ByName(component.ComponentType);
         if (ReferenceEquals(kind, ComponentTypes.NotFound))
         {

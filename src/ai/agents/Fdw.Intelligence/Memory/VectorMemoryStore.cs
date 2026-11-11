@@ -41,7 +41,6 @@ public sealed class VectorMemoryStore : IVectorMemoryStore
     /// <inheritdoc />
     public Task<IGenericResult> Set(Guid key, VectorMemoryEntry value, CancellationToken ct = default)
     {
-        if (value == null) throw new ArgumentNullException(nameof(value));
         _store[key] = value;
         IntelligenceLog.MemoryRecorded(_logger, key);
         return Task.FromResult(GenericResult.Success());

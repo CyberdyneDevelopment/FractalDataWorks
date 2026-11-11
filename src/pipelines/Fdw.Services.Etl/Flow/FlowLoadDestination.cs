@@ -92,9 +92,6 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound, IFlow
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(pipelineName);
-        ArgumentNullException.ThrowIfNull(executor);
-        ArgumentNullException.ThrowIfNull(unit);
-        ArgumentNullException.ThrowIfNull(parameters);
         ArgumentOutOfRangeException.ThrowIfLessThan(commitReportInterval, TimeSpan.Zero);
         _name = name;
         _executor = executor;
@@ -120,12 +117,12 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound, IFlow
     /// <inheritdoc />
     void IFlowStageBound.BindStages(FlowStageRecords records, int stage)
     {
-        _records = records ?? throw new ArgumentNullException(nameof(records));
+        _records = records;
         _stage = stage;
     }
 
     /// <inheritdoc />
-    void IFlowRejectionsBound.BindRejections(Func<long> rejectedUpstream) => _rejectedUpstream = rejectedUpstream ?? throw new ArgumentNullException(nameof(rejectedUpstream));
+    void IFlowRejectionsBound.BindRejections(Func<long> rejectedUpstream) => _rejectedUpstream = rejectedUpstream;
 
     /// <summary>Gets how many rows the load commands affected over the run.</summary>
     public int RowsLoaded { get; private set; }
@@ -139,7 +136,6 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound, IFlow
     /// <returns><see langword="true"/> when the load must be given every row at once.</returns>
     internal static bool NeedsWholeSet(LoadUnit unit)
     {
-        ArgumentNullException.ThrowIfNull(unit);
         return unit.Addressing is not null
             || (unit.StageKey is null
                 && !string.IsNullOrWhiteSpace(unit.Row.SoftDeleteMode)

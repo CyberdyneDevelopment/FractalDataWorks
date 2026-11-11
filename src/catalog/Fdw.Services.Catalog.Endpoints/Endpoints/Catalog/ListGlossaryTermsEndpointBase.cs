@@ -69,12 +69,12 @@ public abstract class ListGlossaryTermsEndpointBase : CrudPageEndpointBase<Gloss
         IAuthenticationContextAccessor authContext)
         : base(logger)
     {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
-        _versions = versions ?? throw new ArgumentNullException(nameof(versions));
-        _ancestry = ancestry ?? throw new ArgumentNullException(nameof(ancestry));
-        _authority = authority ?? throw new ArgumentNullException(nameof(authority));
-        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _provider = provider;
+        _categories = categories;
+        _versions = versions;
+        _ancestry = ancestry;
+        _authority = authority;
+        _authContext = authContext;
     }
 
     /// <inheritdoc />

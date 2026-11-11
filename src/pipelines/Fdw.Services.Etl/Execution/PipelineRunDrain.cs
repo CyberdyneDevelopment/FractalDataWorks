@@ -26,8 +26,6 @@ internal static class PipelineRunDrain
     /// <returns>How many runs finished in the time and how many were stopped.</returns>
     public static async Task<PipelineRunDrained> Wait(IReadOnlyList<Task> runs, TimeSpan grace, Action stopRuns, ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(runs);
-        ArgumentNullException.ThrowIfNull(stopRuns);
         var log = logger ?? NullLogger.Instance;
 
         var inFlight = runs.Where(run => !run.IsCompleted).ToList();

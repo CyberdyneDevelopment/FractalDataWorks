@@ -39,7 +39,7 @@ public sealed class AgentActionService : IAgentActionService
     /// </summary>
     public AgentActionService(IConfigurationGatewayProvider configurationGateways, ILogger<AgentActionService>? logger)
     {
-        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
+        _configurationGateways = configurationGateways;
         _logger = logger ?? NullLogger<AgentActionService>.Instance;
     }
 

@@ -15,7 +15,6 @@ public static class GraphValues
     /// <returns>Whether the type is a data type and reads the text; a failed read changes nothing.</returns>
     public static bool TryRead(string typeName, string? text, out object? value)
     {
-        ArgumentNullException.ThrowIfNull(typeName);
         value = null;
         var type = DataTypes.ByName(typeName);
         if (ReferenceEquals(type, DataTypes.NotFound))

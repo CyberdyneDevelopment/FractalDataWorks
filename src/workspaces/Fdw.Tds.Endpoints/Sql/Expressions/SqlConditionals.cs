@@ -16,7 +16,6 @@ public static class SqlConditionals
     /// <returns>The chosen value, or the refusal.</returns>
     public static IGenericResult<object?> Searched(SearchedCaseExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
         foreach (var when in expression.WhenClauses)
         {
             var holds = SqlPredicates.Evaluate(when.WhenExpression, scope);
@@ -36,7 +35,6 @@ public static class SqlConditionals
     /// <returns>The chosen value, or the refusal.</returns>
     public static IGenericResult<object?> Simple(SimpleCaseExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
         var input = SqlExpressions.Evaluate(expression.InputExpression, scope);
         if (input.IsFailure)
             return input;
@@ -60,7 +58,6 @@ public static class SqlConditionals
     /// <returns>The value, NULL when every argument is, or the refusal.</returns>
     public static IGenericResult<object?> Coalesce(CoalesceExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
         foreach (var candidate in expression.Expressions)
         {
             var value = SqlExpressions.Evaluate(candidate, scope);
@@ -77,7 +74,6 @@ public static class SqlConditionals
     /// <returns>The value, or the refusal.</returns>
     public static IGenericResult<object?> NullIf(NullIfExpression expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
         var first = SqlExpressions.Evaluate(expression.FirstExpression, scope);
         if (first.IsFailure)
             return first;
@@ -95,7 +91,6 @@ public static class SqlConditionals
     /// <returns>The chosen value, or the refusal.</returns>
     public static IGenericResult<object?> IIf(IIfCall expression, SqlScope scope)
     {
-        ArgumentNullException.ThrowIfNull(expression);
         var holds = SqlPredicates.Evaluate(expression.Predicate, scope);
         if (holds.IsFailure)
             return holds.ToNewResult<object?>();

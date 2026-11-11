@@ -29,10 +29,6 @@ public static class WebhookPayloadReader
     public static IGenericResult<WebhookTriggerConfiguration> Read(
         WebhookPayload payload, Guid id, IPipelineImplementationConfiguration pipeline, IReadOnlyList<string> roles, WebhookSecretHash secret)
     {
-        ArgumentNullException.ThrowIfNull(payload);
-        ArgumentNullException.ThrowIfNull(pipeline);
-        ArgumentNullException.ThrowIfNull(roles);
-        ArgumentNullException.ThrowIfNull(secret);
         var problems = WebhookChecker.Problems(payload, DeclaredNames(pipeline));
         if (problems.Count > 0 || payload.Enabled is not { } enabled)
         {

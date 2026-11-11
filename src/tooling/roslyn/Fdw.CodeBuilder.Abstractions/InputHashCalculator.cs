@@ -15,14 +15,8 @@ public static class InputHashCalculator
     /// </summary>
     /// <param name="inputInfoModel">The input info to calculate hash for.</param>
     /// <returns>A hash string representing the input info.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when inputInfoModel is null.</exception>
     public static string CalculateHash(IInputInfoModel inputInfoModel)
     {
-        if (inputInfoModel == null)
-        {
-            throw new ArgumentNullException(nameof(inputInfoModel), "Input info cannot be null.");
-        }
-
         using var stream = new MemoryStream();
         using var writer = new StreamWriter(stream, Encoding.UTF8);
 

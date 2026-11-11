@@ -64,6 +64,6 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
             defaultContainerName: defaultContainerName)
     {
         _channelName = channelName;
-        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        Settings = settings;
     }
 }
