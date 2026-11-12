@@ -224,6 +224,55 @@ public sealed class HttpPagingStylesTests
         next.Value.ShouldBeNull();
     }
 
+    [Fact]
+    public void APageNumberReadWithATotalPagesPathEndsOnTheLastPageAndAsksForNoneAfterIt()
+    {
+        var plan = PageNumberPlanWithTotal("metadata.totalPages");
+        var body = """{"metadata": {"totalPages": 3}}""";
+
+        Unescaped(plan.FirstPage(new Uri("https://remote.test/api/items"))).ShouldContain("page[number]=1");
+        var second = plan.Next(Outcome(body));
+        var third = plan.Next(Outcome(body));
+        var past = plan.Next(Outcome(body));
+
+        Unescaped(second.Value!).ShouldContain("page[number]=2");
+        Unescaped(third.Value!).ShouldContain("page[number]=3");
+        past.IsSuccess.ShouldBeTrue(past.CurrentMessage);
+        past.Value.ShouldBeNull();
+    }
+
+    [Fact]
+    public void APageNumberReadOfOnePageWithATotalPagesPathAsksForNoSecondPage()
+    {
+        var next = PageNumberPlanWithTotal("meta.total_pages").Next(Outcome("""{"meta": {"total_pages": 1}}"""));
+
+        next.IsSuccess.ShouldBeTrue(next.CurrentMessage);
+        next.Value.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData("""{}""")]
+    [InlineData("""{"metadata": {"totalPages": null}}""")]
+    [InlineData("""{"metadata": {"totalPages": "many"}}""")]
+    [InlineData("""{"metadata": {"totalPages": 2.5}}""")]
+    [InlineData("""{"metadata": {"totalPages": -1}}""")]
+    public void APageNumberReadWhoseBodyStatesNoWholeNumberOfPagesAtThePathFailsNamingIt(string body)
+    {
+        var next = PageNumberPlanWithTotal("metadata.totalPages").Next(Outcome(body));
+
+        next.IsFailure.ShouldBeTrue();
+        next.CurrentMessage!.ShouldContain("metadata.totalPages");
+    }
+
+    [Fact]
+    public void APageNumberReadWithNoTotalPagesPathStillAsksForTheNextPageUntilOneIsEmpty()
+    {
+        var plan = HttpPaging.PlanFor("PageNumber", PageNumberSettings(), HttpReadWindow.All).Value!;
+
+        plan.ReadsBody.ShouldBeFalse();
+        Unescaped(plan.Next(Outcome("""{"metadata": {"totalPages": 1}}""")).Value!).ShouldContain("page[number]=2");
+    }
+
     private static HttpPagingSettings SettingsFor(string style) => style switch
     {
         "PageNumber" => PageNumberSettings(),
@@ -244,6 +293,18 @@ public sealed class HttpPagingStylesTests
         using var response = new HttpResponseMessage();
         return new HttpPageOutcome(1, new Uri("https://remote.test/api/items"), 7, response.Headers, System.Text.Encoding.UTF8.GetBytes(body));
     }
+
+    private static HttpPagingPlan PageNumberPlanWithTotal(string path)
+    {
+        var plan = HttpPaging.PlanFor("PageNumber", Settings(
+            [(HttpPagingProperties.PageNumberParameter, "page[number]"), (HttpPagingProperties.PageSizeParameter, "page[size]"), (HttpPagingProperties.FirstPageNumber, "1"), (HttpPagingProperties.TotalPagesPath, path)]),
+            HttpReadWindow.All);
+        plan.IsSuccess.ShouldBeTrue(plan.CurrentMessage);
+        plan.Value!.ReadsBody.ShouldBeTrue();
+        return plan.Value;
+    }
+
+    private static string Unescaped(Uri address) => Uri.UnescapeDataString(address.Query);
 
     private static HttpPagingSettings PageNumberSettings() => Settings(
         [(HttpPagingProperties.PageNumberParameter, "page[number]"), (HttpPagingProperties.PageSizeParameter, "page[size]"), (HttpPagingProperties.FirstPageNumber, "1")]);

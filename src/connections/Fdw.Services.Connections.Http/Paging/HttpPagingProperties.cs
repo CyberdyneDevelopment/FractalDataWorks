@@ -31,6 +31,12 @@ public static class HttpPagingProperties
     /// <summary>The number of the remote's first page, 0 or 1 as the remote counts.</summary>
     public const string FirstPageNumber = "PagingFirstPageNumber";
 
+    /// <summary>
+    /// The path in a page's JSON body of the total number of pages (metadata.totalPages, meta.total_pages). Optional for a page-number style: stated, the read ends
+    /// on the last page the body counts and never asks for one past it, for a remote that answers a page past the last with an error.
+    /// </summary>
+    public const string TotalPagesPath = "PagingTotalPagesPath";
+
     /// <summary>The path in a page's JSON body of the next page's address (@odata.nextLink, links.next, next...).</summary>
     public const string NextLinkPath = "PagingNextLinkPath";
 

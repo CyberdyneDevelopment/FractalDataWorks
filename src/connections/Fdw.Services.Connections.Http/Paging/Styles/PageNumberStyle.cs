@@ -11,8 +11,16 @@ namespace Fdw.Services.Connections.Http.Paging.Styles;
 /// states both parameter names and the number of the remote's first page. An empty page is the end.
 /// </summary>
 /// <remarks>
+/// <para>
+/// A remote that answers a page past the last with an error, not an empty page, cannot be read to its end by asking until a page is empty: the connection
+/// then states the path of the total number of pages in the body (<see cref="HttpPagingProperties.TotalPagesPath"/>), and the read ends on the last of them.
+/// No page is taken to be the last because it holds fewer rows than were asked for: a remote that caps its page size below the size asked would be cut short.
+/// A body that states no whole number of pages at that path fails the read, naming the path; no page count is guessed.
+/// </para>
+/// <para>
 /// A window can be asked for only when it starts on a page boundary: a query that skips a number of rows that is not a whole number of pages
 /// is refused, never rounded to the page it falls in (which returned rows the query did not ask for).
+/// </para>
 /// </remarks>
 [TypeOption(typeof(HttpPagingStyles), "PageNumber")]
 public sealed class PageNumberStyle : HttpPagingStyleBase
@@ -23,7 +31,7 @@ public sealed class PageNumberStyle : HttpPagingStyleBase
             "PageNumber",
             "Page number",
             "The remote pages by a page number and a page size, in query parameters the connection names, counting pages from the first page number it states",
-            [HttpPagingProperties.PageNumberParameter, HttpPagingProperties.PageSizeParameter, HttpPagingProperties.FirstPageNumber, HttpPagingProperties.PageSize, HttpPagingProperties.MaxPages],
+            [HttpPagingProperties.PageNumberParameter, HttpPagingProperties.PageSizeParameter, HttpPagingProperties.FirstPageNumber, HttpPagingProperties.PageSize, HttpPagingProperties.MaxPages, HttpPagingProperties.TotalPagesPath],
             [HttpPagingProperties.PageNumberParameter, HttpPagingProperties.PageSizeParameter, HttpPagingProperties.FirstPageNumber])
     {
     }
@@ -42,7 +50,8 @@ public sealed class PageNumberStyle : HttpPagingStyleBase
 
         return GenericResult<HttpPagingPlan>.Success(new Numbered(
             Name, settings, pageSize.Value, maxPages.Value, window, start.Value,
-            Stated(settings, HttpPagingProperties.PageNumberParameter)!, Stated(settings, HttpPagingProperties.PageSizeParameter)!));
+            Stated(settings, HttpPagingProperties.PageNumberParameter)!, Stated(settings, HttpPagingProperties.PageSizeParameter)!,
+            first.Value, Stated(settings, HttpPagingProperties.TotalPagesPath)));
     }
 
     /// <inheritdoc/>
@@ -73,10 +82,14 @@ public sealed class PageNumberStyle : HttpPagingStyleBase
                 settings.Logger, settings.ConnectionName, Name, skip,
                 $"it is not a whole number of pages of {pageSize}, and a page number cannot start inside a page"));
 
-    private sealed class Numbered(string style, HttpPagingSettings settings, int pageSize, int maxPages, HttpReadWindow window, long startPage, string numberName, string sizeName)
+    private sealed class Numbered(
+        string style, HttpPagingSettings settings, int pageSize, int maxPages, HttpReadWindow window, long startPage, string numberName, string sizeName,
+        int firstPage, string? totalPagesPath)
         : HttpPagingPlan(style, settings, pageSize, maxPages, window)
     {
         private long _page = startPage;
+
+        public override bool ReadsBody => totalPagesPath is not null;
 
         public override Uri FirstPage(Uri request) => At(request);
 
@@ -85,8 +98,29 @@ public sealed class PageNumberStyle : HttpPagingStyleBase
             if (outcome.Rows == 0)
                 return GenericResult<Uri?>.Success(null);
 
+            if (totalPagesPath is not null)
+            {
+                var total = TotalPages(outcome, totalPagesPath);
+                if (total.IsFailure)
+                    return total.ToNewResult<Uri?>();
+
+                if (_page >= firstPage + total.Value - 1)
+                    return GenericResult<Uri?>.Success(null);
+            }
+
             _page++;
             return GenericResult<Uri?>.Success(At(outcome.Request));
+        }
+
+        private IGenericResult<long> TotalPages(HttpPageOutcome outcome, string path)
+        {
+            var text = JsonBodyPath.Text(ConnectionName, Logger, outcome.Page, outcome.Body, path);
+            if (text.IsFailure)
+                return text.ToNewResult<long>();
+
+            return text.Value is { } digits && long.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var total)
+                ? GenericResult<long>.Success(total)
+                : GenericResult<long>.Failure(HttpPagingLog.PageBodyUnreadable(Logger, ConnectionName, outcome.Page, path, "it holds no whole number of pages"));
         }
 
         private Uri At(Uri request) => HttpQuery.With(
