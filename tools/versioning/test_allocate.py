@@ -24,6 +24,9 @@ def nupkg(pid, version, tree=None):
     return buf.getvalue()
 
 
+UNREADABLE = object()  # as the tree of a version: the feed lists it but its package cannot be read
+
+
 class FakeFeed:
     """A feed that remembers what was pushed to it: package id -> {version: tree}."""
     def __init__(self, held=None):
@@ -34,6 +37,12 @@ class FakeFeed:
 
     def held_tree(self, pid, version):
         return self.held[pid][version]
+
+    def readable_tree(self, pid, version):
+        tree = self.held[pid][version]
+        if tree is UNREADABLE:
+            raise feeds.FeedError(f"nuget.org lists {pid} {version} but its package cannot be read")
+        return tree
 
     def held_file(self, pid, version, path):
         return getattr(self, "files", {}).get((pid, version, path))

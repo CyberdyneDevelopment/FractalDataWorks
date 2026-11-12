@@ -5,9 +5,11 @@ import os
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+from unittest import mock
 
 import bundle
 import hostprops
+import test_bundle
 
 
 def manifest(**packages):
@@ -139,7 +141,9 @@ class BundleCarriesTheFileTests(unittest.TestCase):
         with open(p, "w", encoding="utf-8") as f:
             f.write(hostprops.render(manifest()))
         out = os.path.join(d, "out")
-        bundle.main(["generate", "--manifest", m, "--out", out, "--package-versions", p])
+        held = {(pid, v): test_bundle.nupkg(pid, v) for pid, v in manifest()["packages"].items()}
+        with mock.patch.object(bundle, "NugetOrg", lambda: test_bundle.Feed(held)):
+            bundle.main(["generate", "--manifest", m, "--out", out, "--package-versions", p, "--package-dir", d])
         self.assertTrue(os.path.exists(os.path.join(out, "Fdw.PackageVersions.props")))
         with open(os.path.join(out, "Fdw.Bundle.csproj"), encoding="utf-8") as f:
             self.assertIn("Fdw.PackageVersions.props", f.read())

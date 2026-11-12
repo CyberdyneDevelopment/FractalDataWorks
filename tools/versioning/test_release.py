@@ -10,7 +10,7 @@ import bundle
 import changeset
 import release
 from fdwprojects import snapshot
-from test_allocate import FakeFeed
+from test_allocate import UNREADABLE, FakeFeed
 from test_changeset import Repo, base_files, proj
 
 ALL = ("A", "B", "C", "D", "E", "Gen.SourceGenerators")
@@ -119,6 +119,89 @@ class ReleasePlanTests(unittest.TestCase):
         held = {n: {"1.4.4": "t"} for n in ALL if n != "D"}
         with self.assertRaisesRegex(release.ReleaseError, r"'D'"):
             self.plan(FakeFeed(held))
+
+    def replan(self, feed):
+        """The plan again, on the same tree, against a feed that now holds what an earlier run pushed."""
+        return release.release_plan(snapshot(self.repo.root), changeset.baseline_from_ref(self.repo.root, self.base) | {"assemblyVersionFloors": FLOORS, "packagesWithoutRuntimeAssembly": []},
+                                    feed, [], "1.4", lambda dirs: "patch", "Fdw.Bundle")
+
+    PLAN_FILES = ("plan", "versions", "trees", "manifest", "levels-input")
+
+    def test_a_rerun_after_every_member_was_pushed_makes_the_same_plan(self):
+        first = self.plan()
+        tree = snapshot(self.repo.root).trees["C"]
+        again = self.replan(feed_at(C={"1.4.4": "t", "1.4.5": tree}))
+        for key in self.PLAN_FILES:
+            self.assertEqual(again[key], first[key], key)
+        self.assertEqual((again["plan"]["release"], again["levels-input"]["last_stable"]["C"]), ("1.4.5", "1.4.4"))
+
+    def test_a_rerun_after_some_members_were_pushed_makes_the_same_plan(self):
+        first = self.plan(files={"public/src/Gen.SourceGenerators/G.cs": "class G { int x; }\n"})
+        self.assertEqual(first["plan"]["members"], ["D", "E", "Gen.SourceGenerators"])
+        trees = snapshot(self.repo.root).trees
+        again = self.replan(feed_at(D={"1.4.4": "t", "1.4.5": trees["D"]}, **{"Gen.SourceGenerators": {"1.4.4": "t", "1.4.5": trees["Gen.SourceGenerators"]}}))
+        for key in self.PLAN_FILES:
+            self.assertEqual(again[key], first[key], key)
+
+    def test_a_held_version_built_from_another_tree_is_not_this_releases_own(self):
+        self.plan()
+        again = self.replan(feed_at(C={"1.4.4": "t", "1.4.5": "some other tree"}))
+        self.assertEqual(again["plan"]["release"], "1.4.6")
+
+    def test_a_held_version_with_no_tree_marker_is_not_shown_to_be_its_own(self):
+        self.plan()
+        again = self.replan(feed_at(C={"1.4.4": "t", "1.4.5": None}))
+        self.assertEqual(again["plan"]["release"], "1.4.6")
+
+    def test_only_the_highest_stable_version_can_be_the_releases_own(self):
+        self.plan()
+        tree = snapshot(self.repo.root).trees["C"]
+        again = self.replan(feed_at(C={"1.4.3": tree, "1.4.4": "t", "1.4.5-rc.1": tree}))
+        self.assertEqual((again["plan"]["release"], again["levels-input"]["last_stable"]["C"]), ("1.4.5", "1.4.4"))
+
+    def test_without_own_versions_drops_only_the_matching_highest_version(self):
+        feed = FakeFeed({"A": {"1.0.0": "t0", "1.0.1": "t1"}, "B": {"1.0.0": "t0", "1.0.2": "other"}, "C": {"1.0.0": "t0"}})
+        held = {p: feed.versions(p) for p in ("A", "B", "C")}
+        self.assertEqual(release.without_own_versions(held, {"A": "t1", "B": "t1", "C": "t1"}, feed),
+                         {"A": ["1.0.0"], "B": ["1.0.0", "1.0.2"], "C": ["1.0.0"]})
+
+    def test_a_package_at_the_resumed_version_with_another_tree_stops_the_plan(self):
+        feed = FakeFeed({"A": {"1.0.0": "t0", "1.0.1": "t1"}, "B": {"1.0.0": "t0", "1.0.1": "other"}})
+        held = {p: feed.versions(p) for p in ("A", "B")}
+        with self.assertRaisesRegex(release.ReleaseError, r"RESUME_CONFLICT.*\(1\.0\.1\).*B 1\.0\.1: built from tree other, not t1"):
+            release.without_own_versions(held, {"A": "t1", "B": "t1"}, feed)
+
+    def test_a_package_at_the_resumed_version_with_no_marker_stops_the_plan(self):
+        feed = FakeFeed({"A": {"1.0.0": "t0", "1.0.1": "t1"}, "B": {"1.0.0": "t0", "1.0.1": None}})
+        held = {p: feed.versions(p) for p in ("A", "B")}
+        with self.assertRaisesRegex(release.ReleaseError, r"RESUME_CONFLICT.*B 1\.0\.1: no tree marker"):
+            release.without_own_versions(held, {"A": "t1", "B": "t1"}, feed)
+
+    def test_a_listed_version_that_cannot_be_read_stops_the_plan(self):
+        feed = FakeFeed({"A": {"1.0.0": "t0", "1.0.1": UNREADABLE}})
+        with self.assertRaisesRegex(release.ReleaseError, "A 1.0.1 but its package cannot be read"):
+            release.without_own_versions({"A": feed.versions("A")}, {"A": "t1"}, feed)
+
+    def test_without_a_resume_an_old_package_with_no_marker_is_not_an_error(self):
+        feed = FakeFeed({"A": {"1.0.0": None}, "B": {"1.0.0": "t0"}})
+        held = {p: feed.versions(p) for p in ("A", "B")}
+        self.assertEqual(release.without_own_versions(held, {"A": "t1", "B": "t1"}, feed), held)
+
+    def test_a_rerun_with_one_member_changed_since_the_push_stops_instead_of_renumbering(self):
+        first = self.plan(files={"public/src/Gen.SourceGenerators/G.cs": "class G { int x; }\n"})
+        trees = snapshot(self.repo.root).trees
+        with self.assertRaisesRegex(release.ReleaseError, "RESUME_CONFLICT.*E 1.4.5"):
+            self.replan(feed_at(D={"1.4.4": "t", "1.4.5": trees["D"]}, E={"1.4.4": "t", "1.4.5": "another tree"}))
+
+    def test_a_rerun_against_an_unreadable_listed_version_stops(self):
+        self.plan()
+        with self.assertRaisesRegex(release.ReleaseError, "cannot be read"):
+            self.replan(feed_at(C={"1.4.4": "t", "1.4.5": UNREADABLE}))
+
+    def test_a_package_the_release_does_not_change_keeps_every_version(self):
+        feed = FakeFeed({"A": {"1.0.0": "t0", "1.0.1": "t1"}})
+        held = {"A": feed.versions("A")}
+        self.assertEqual(release.without_own_versions(held, {}, feed), held)
 
     def test_a_declared_minor_moves_the_release(self):
         self.assertEqual(self.plan(bump="minor")["plan"]["release"], "1.5.0")

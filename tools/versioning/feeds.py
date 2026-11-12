@@ -12,6 +12,10 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
 
+class FeedError(Exception):
+    """The feed does not answer as it should for a request that must work (a listed version whose package cannot be read)."""
+
+
 TREE_MARKER = "fdw/tree.txt"  # where a package records the git tree id of the directory it was built from
 
 
@@ -38,6 +42,14 @@ def identity_from_nupkg(data):
     meta = root.find(f"{ns.group(0) if ns else ''}metadata")
     get = lambda tag: meta.find(f"{ns.group(0) if ns else ''}{tag}").text.strip()
     return get("id"), get("version")
+
+
+def package_types(data):
+    """The package types the nuspec inside a package declares: [] when it declares none, which means an ordinary dependency."""
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        name = next(n for n in z.namelist() if n.endswith(".nuspec") and "/" not in n)
+        root = ET.fromstring(z.read(name))
+    return [e.get("name") for e in root.iter() if e.tag.split("}")[-1] == "packageType" and e.get("name")]
 
 
 class NugetOrg:
@@ -71,6 +83,14 @@ class NugetOrg:
     def held_tree(self, package_id, version):
         body = self._package(package_id, version)
         return tree_from_nupkg(body) if body else None
+
+    def readable_tree(self, package_id, version):
+        """The tree id a held version was built from; None when its package carries no marker. Raises FeedError when the feed lists the
+        version but its package cannot be read, which is not the same as having no marker."""
+        body = self._package(package_id, version)
+        if body is None:
+            raise FeedError(f"nuget.org lists {package_id} {version} but its package cannot be read")
+        return tree_from_nupkg(body)
 
     def held_file(self, package_id, version, path):
         """The text of `path` inside a held package. None when the package or the file is not there."""

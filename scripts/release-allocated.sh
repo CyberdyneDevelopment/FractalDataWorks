@@ -420,7 +420,8 @@ bundle() {
   python3 "$TOOLS/hostprops.py" generate --manifest "$WORK_DIR/manifest.json" --out "$WORK_DIR/Fdw.PackageVersions.props" \
     || fail "hostprops.py could not write Fdw.PackageVersions.props from $WORK_DIR/manifest.json; its message is above."
   python3 "$TOOLS/bundle.py" generate --manifest "$WORK_DIR/manifest.json" --out bundle-src \
-    --project-manifest "$WORK_DIR/project-manifest.json" --package-versions "$WORK_DIR/Fdw.PackageVersions.props" || fail "bundle.py could not generate the bundle from $WORK_DIR/manifest.json; its message is above."
+    --project-manifest "$WORK_DIR/project-manifest.json" --package-versions "$WORK_DIR/Fdw.PackageVersions.props" \
+    --package-dir "$ARTIFACTS" --package-dir artifacts-skipped || fail "bundle.py could not generate the bundle from $WORK_DIR/manifest.json; its message is above."
   dotnet pack "bundle-src/$BUNDLE_ID.csproj" -c Release -o "$BUNDLE_OUT" -p:Version="$VERSION" \
     || fail "dotnet pack of the bundle $BUNDLE_ID $VERSION failed; its output is above."
   [ "$(find "$BUNDLE_OUT" -maxdepth 1 -name '*.nupkg' | wc -l)" -eq 1 ] || fail "expected exactly one bundle package in $BUNDLE_OUT/."

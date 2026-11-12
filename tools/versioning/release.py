@@ -53,6 +53,7 @@ import json
 import os
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 import allocate
 import apisurface
@@ -61,7 +62,7 @@ import bundle
 import changeset
 import levelplan
 import levelrun
-from feeds import MANIFEST_FILE, NugetOrg
+from feeds import MANIFEST_FILE, FeedError, NugetOrg
 from fdwprojects import git, snapshot
 
 
@@ -83,6 +84,45 @@ class SurfaceMissing(ReleaseError):
         self.package, self.side = package, side
 
 
+def without_own_versions(held, own_trees, feed, workers=16):
+    """`held` ({package id: versions on the feed}) without the versions this release has already pushed itself (FDW-5279).
+
+    own_trees is {package id: the git tree id of the package as it is being released}, for each package the release changes. A package's
+    highest stable version on the feed whose tree marker (fdw/tree.txt, the git tree id of its folder) equals that tree was built from
+    exactly what is being released: it is this release's own, pushed by an earlier run that stopped part way. The plan must not count it
+    when it allocates, or a re-run takes the next numbers (every package one patch higher, the bundle too) and pushes everything again.
+    With it dropped the plan comes out as it did on the first run, and `decide` skips what is already there. The commit sha and the
+    assemblies' InformationalVersion are not part of it.
+
+    Nothing is guessed. A version the feed lists but whose package cannot be read stops the plan. Once at least one package of the release
+    is found already pushed (a resume), any other package of the release whose highest stable version is one of those same versions but
+    carries another tree, or no marker, stops the plan too: the release was pushed from different content, and it is never renumbered
+    silently. With nothing pushed (a normal first run) a changed package's older version has another tree and an old package may have no
+    marker; neither is an error."""
+    def read(pid):
+        stable = [v for v in held.get(pid, []) if "-" not in v and allocate.triple(v)]
+        if not stable:
+            return None
+        latest = allocate.highest(stable)
+        try:
+            return latest, feed.readable_tree(pid, latest)
+        except FeedError as e:
+            raise ReleaseError(str(e))
+    pids = sorted(own_trees)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        latest = dict(zip(pids, pool.map(read, pids)))
+    own = {pid: found[0] for pid, found in latest.items() if found and found[1] is not None and found[1] == own_trees[pid]}
+    resumed = set(own.values())
+    conflicts = sorted(f"{pid} {found[0]}: " + ("no tree marker" if found[1] is None else f"built from tree {found[1]}, not {own_trees[pid]}")
+                       for pid, found in latest.items() if found and pid not in own and found[0] in resumed)
+    if conflicts:
+        raise ReleaseError("RESUME_CONFLICT: this release was already pushed in part (" + ", ".join(sorted(resumed)) + "), but these packages are on the feed at that "
+                           "version with other contents, so the release was pushed from different content and a re-run would renumber it: "
+                           + "; ".join(conflicts[:10]) + (f"; and {len(conflicts) - 10} more" if len(conflicts) > 10 else "")
+                           + ". Re-run from the commit that was pushed, or take the packages that differ out of the release by hand.")
+    return {pid: [v for v in versions if v != own.get(pid)] for pid, versions in held.items()}
+
+
 def release_plan(current, baseline, feed, tags, line, bump_of, bundle_id, api_breaks=()):
     """The plan as a dict. `bump_of(directories)` gives the highest bump declared for commits that touched them."""
     floors, bare = baseline_floors(baseline), baseline_bare(baseline)
@@ -90,6 +130,7 @@ def release_plan(current, baseline, feed, tags, line, bump_of, bundle_id, api_br
     projects = current.projects
     members = list(result["build_set"])  # changeset.plan lists packable projects only
     held = allocate.held_versions(projects, feed)
+    held = without_own_versions(held, {projects[n].package_id: current.trees[n] for n in members}, feed)
     in_set = {projects[n].package_id for n in members}
     bump = bump_of([projects[n].path for n in members]) if members else "patch"
     numbers = {b: allocate.release_number(held, line, tags, b) for b in BUMPS}
