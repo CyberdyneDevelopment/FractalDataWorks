@@ -24,6 +24,7 @@ TREE_MARKER = "fdw/tree.txt"  # where a package records the git tree id of the d
 
 
 MANIFEST_FILE = "fdw/manifest.json"  # where a bundle records the project manifest its release was planned from
+NOT_PINNED_FILE = "fdw/not-pinned.json"  # where a bundle states the packages it does not pin (a dotnet tool) and their versions
 
 
 def file_from_nupkg(data, path):

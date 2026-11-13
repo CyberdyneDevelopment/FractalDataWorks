@@ -45,6 +45,21 @@ class BaselineFromBundleTests(unittest.TestCase):
             release.baseline_from_bundle(self.feed(["1.4.5"], None), "Fdw.Bundle")
 
 
+class BaselinePinsTests(unittest.TestCase):
+    def feed(self, not_pinned_text):
+        feed = FakeFeed({"Fdw.Bundle": {"1.4.4": "t", "1.4.5-rc.1": "t"}})
+        feed.pins_of = {("Fdw.Bundle", "1.4.4"): {"A": "1.4.4", "B": "1.4.3"}}
+        feed.files = {("Fdw.Bundle", "1.4.4", "fdw/not-pinned.json"): not_pinned_text}
+        return feed
+
+    def test_the_versions_of_the_packages_the_bundle_does_not_pin_come_from_its_not_pinned_file(self):
+        feed = self.feed('{"Tool": {"types": ["DotnetTool"], "version": "1.4.2"}}')
+        self.assertEqual(release.baseline_pins(feed, "Fdw.Bundle"), {"A": "1.4.4", "B": "1.4.3", "Tool": "1.4.2"})
+
+    def test_a_bundle_that_left_no_package_out_of_its_pins_has_no_not_pinned_file(self):
+        self.assertEqual(release.baseline_pins(self.feed(None), "Fdw.Bundle"), {"A": "1.4.4", "B": "1.4.3"})
+
+
 def snapshot_trees(repo, name):
     """The git tree id of a project folder at HEAD, as the plan reads it (the tree a package built from it carries)."""
     return snapshot(repo.root).trees[name]
@@ -203,6 +218,22 @@ class ReleasePlanTests(unittest.TestCase):
         again = self.replan(feed)
         self.assertEqual(again["plan"]["release"], "1.4.5")
         self.assertEqual(again["package-versions"]["B"], "1.4.5")
+
+    def test_an_unpinned_package_pushed_by_this_release_is_a_resume_not_a_conflict(self):
+        # FDW-5635, 1.5.7 run 43516432943: B is a dotnet tool. The baseline bundle does not pin it (it states it in fdw/not-pinned.json), its folder is
+        # unchanged since the baseline, and this release already pushed it at 1.4.5. Judged by the tree alone, its own 1.4.5 was taken for the
+        # baseline's and the plan stopped with RESUME_CONFLICT, 'built from tree X, not X'.
+        self.plan(files={"public/src/A/A.cs": "class A { int x; }\n"})
+        trees = snapshot(self.repo.root).trees
+        feed = feed_at(A={"1.4.4": "t", "1.4.5": trees["A"]}, B={"1.4.4": trees["B"], "1.4.5": trees["B"]}, C={"1.4.4": trees["C"], "1.4.5": trees["C"]})
+        pins = {n: "1.4.4" for n in ALL if n != "B"}   # what baseline_pins gave before: the exact pins, which leave the tool out
+        again = release.release_plan(snapshot(self.repo.root), self.baseline(), feed, [], "1.4", "patch", "Fdw.Bundle", {}, baseline_pins=pins)
+        self.assertEqual(again["plan"]["release"], "1.4.5")
+        self.assertEqual(again["package-versions"], {"A": "1.4.5", "B": "1.4.5", "C": "1.4.5"})
+        # with the tool's own baseline version stated (not-pinned.json), its baseline 1.4.4 is still the baseline's, not a resume
+        baseline_only = feed_at(A={"1.4.4": "t", "1.4.5": trees["A"]}, B={"1.4.4": trees["B"]}, C={"1.4.4": trees["C"]})
+        stated = release.release_plan(snapshot(self.repo.root), self.baseline(), baseline_only, [], "1.4", "patch", "Fdw.Bundle", {}, baseline_pins=pins | {"B": "1.4.4"})
+        self.assertEqual(stated["plan"]["release"], "1.4.5")
 
     def test_without_pins_an_unchanged_own_folder_is_taken_for_the_baseline_version(self):
         self.plan(files={"public/src/A/A.cs": "class A { int x; }\n"})

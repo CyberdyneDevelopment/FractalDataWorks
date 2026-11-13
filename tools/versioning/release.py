@@ -52,7 +52,7 @@ import bindcheck
 import bundle
 import changeset
 import levelplan
-from feeds import MANIFEST_FILE, FeedError, NugetOrg
+from feeds import MANIFEST_FILE, NOT_PINNED_FILE, FeedError, NugetOrg
 from fdwprojects import git, snapshot
 
 
@@ -82,13 +82,15 @@ def without_own_versions(held, own_trees, feed, workers=16, baseline_pins=None, 
     The baseline release is never a resume (FDW-5589). With the closure rule a package is in the release because something below it
     changed, so its own folder may be unchanged since the last release: that release's version then carries the current tree, and would be
     taken for a partial push of this one. So a held version that is the baseline's own version of the package is not this release's own:
-    `baseline_pins` is {package id: version} from the exact pins of the baseline bundle; for a package the bundle does not pin (a dotnet tool),
-    `baseline_trees` ({package id: the tree in the baseline manifest}) decides: an own folder unchanged since the baseline means the held
-    version with that tree is the baseline's. A partial push of this release by a package that is neither pinned nor changed cannot be
-    told from the baseline release and is numbered again; that touches unpinned packages only."""
+    `baseline_pins` is {package id: version}, the exact versions the baseline bundle shipped: its pins and, for the packages it does not pin
+    (a dotnet tool), the versions in its fdw/not-pinned.json (FDW-5635: with the tree alone a tool whose folder is unchanged had its own
+    held version of this release taken for the baseline's, and the plan stopped with a false RESUME_CONFLICT). With the pins every held
+    version is compared exactly, and a package the baseline did not ship has no baseline version. Only when the baseline is a file or a git
+    ref (`baseline_pins` is None) there are no versions to compare: `baseline_trees` ({package id: the tree in the baseline manifest})
+    decides, an own folder unchanged since the baseline meaning the held version with that tree is the baseline's."""
     def is_baseline_version(pid, version):
-        if baseline_pins is not None and pid in baseline_pins:
-            return baseline_pins[pid] == version
+        if baseline_pins is not None:
+            return baseline_pins.get(pid) == version
         if baseline_trees is not None and baseline_trees.get(pid) is not None:
             return baseline_trees[pid] == own_trees[pid]
         return False
@@ -261,14 +263,21 @@ def assembly_version_of(version, floor):
 
 
 def baseline_pins(feed, bundle_id):
-    """{package id: version}: the exact pins of the latest stable bundle on the feed, the versions the last release shipped."""
+    """{package id: version}: the versions the last release shipped, from the latest stable bundle on the feed: its exact pins, and the versions of
+    the packages it does not pin (a dotnet tool), which it states in fdw/not-pinned.json. The bundle carries that file exactly when it leaves a
+    package out of its pins, so no file means the bundle left none out."""
     stable = [v for v in feed.versions(bundle_id) if "-" not in v and allocate.triple(v)]
     if not stable:
         raise ReleaseError(f"no stable {bundle_id} on the feed to read the baseline versions from")
+    version = allocate.highest(stable)
     try:
-        return feed.pins(bundle_id, allocate.highest(stable))
+        shipped = dict(feed.pins(bundle_id, version))
+        text = feed.held_file(bundle_id, version, NOT_PINNED_FILE)
     except FeedError as e:
         raise ReleaseError(str(e))
+    if text is not None:
+        shipped.update({pid: stated["version"] for pid, stated in json.loads(text).items()})
+    return shipped
 
 
 def baseline_from_bundle(feed, bundle_id):
