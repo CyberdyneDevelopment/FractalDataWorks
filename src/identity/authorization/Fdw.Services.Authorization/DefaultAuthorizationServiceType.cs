@@ -109,6 +109,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
                     sp.GetRequiredService<IUserRoleConfigurationProvider>(),
                     sp.GetRequiredService<ITenantProvider>(),
+                    sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
                     sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<PermissionHolders>()));
 

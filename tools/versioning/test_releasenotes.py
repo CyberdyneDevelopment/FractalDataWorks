@@ -44,6 +44,24 @@ class NotesTests(unittest.TestCase):
         self.write("assembly-versions.json", {"A": av_a, "B": "1.5.1.0", "C": "1.5.1.0"})
         self.write("plan.json", {"assembly_version_floors": {"Fdw.A": floor_a, "Fdw.B": "1.5.1.0", "Fdw.C": "1.5.1.0"}, "version": "2.0.0", "bump": bump, "bump_stated": stated})
 
+    def test_a_new_package_does_not_make_the_bundle_fail_the_follows_check(self):
+        # FDW-5591: a release stated as patch that adds a package is a patch; the notes must not say the bundle does not follow.
+        self.commits()
+        self.files(bump="patch", stated="patch")
+        with open(os.path.join(self.work, "levels.json")) as f:
+            levels = json.load(f)
+        levels["packages"] = {"Fdw.A": {"last": "1.5.5", "level": "patch", "next": "1.5.6", "reasons": ["its source changed", "its level is patch"]},
+                              "Fdw.B": {"last": "1.5.5", "level": "patch", "next": "1.5.6", "reasons": ["its source changed", "its level is patch"]},
+                              "Fdw.C": {"last": None, "level": "new", "next": "1.5.6", "reasons": ["its source changed", "it is a new package", "first version declared in first-versions.json"]}}
+        self.write("levels.json", levels)
+        with open(os.path.join(self.work, "plan.json")) as f:
+            plan = json.load(f)
+        self.write("plan.json", plan | {"version": "1.5.6"})
+        table, low, bundle, floors = releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline)
+        self.assertEqual((bundle["bump"], bundle["derived"], bundle["stated"]), ("patch", "patch", "patch"))
+        lines, failed = releasenotes.render(table, low, bundle, floors)
+        self.assertFalse(failed, lines)
+
     def test_each_package_gets_its_level_reason_and_driving_items(self):
         self.commits()
         self.files()
@@ -134,18 +152,6 @@ class NotesTests(unittest.TestCase):
         newer = {n: self.repo.git("rev-parse", f"HEAD~1:public/src/{n}") for n in ("A", "B", "C")}
         table = releasenotes.build(self.work, self.repo.root, self.base, "HEAD", newer)[0]
         self.assertEqual({r["package"]: r["items"] for r in table}["Fdw.A"], ["FDW-200"])
-
-    def test_a_capped_package_shows_what_its_surface_said_and_is_counted(self):
-        self.commits()
-        self.files()
-        with open(os.path.join(self.work, "levels.json")) as f:
-            levels = json.load(f)
-        levels["packages"]["Fdw.A"].update(level="patch", next="1.5.6", capped_from="major")
-        self.write("levels.json", levels)
-        lines, _ = releasenotes.render(*releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline))
-        text = "\n".join(lines)
-        self.assertIn("| patch (surface: major) |", text)
-        self.assertIn("1 package(s) ship below what their surface says, by the release's level cap: 1 major.", text)
 
     def test_the_command_prints_the_table(self):
         self.commits()

@@ -203,7 +203,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
                 ? property.Name
                 : $"{prefix}{_options.FlattenSeparator}{property.Name}";
 
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
             switch (property.Value.ValueKind)
             {
                 case JsonValueKind.Object when _options.FlattenNestedObjects:
@@ -260,7 +259,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
                     AddFieldValue(fieldName, property.Value.GetRawText());
                     break;
             }
-#pragma warning restore FDW018
         }
     }
 
@@ -272,7 +270,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
         {
             var indexedName = $"{fieldName}{_options.FlattenSeparator}{index}";
 
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
             switch (element.ValueKind)
             {
                 case JsonValueKind.Object:
@@ -319,7 +316,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
                     AddFieldValue(indexedName, element.GetRawText());
                     break;
             }
-#pragma warning restore FDW018
 
             index++;
         }

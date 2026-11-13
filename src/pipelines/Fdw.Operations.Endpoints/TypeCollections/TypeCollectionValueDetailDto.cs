@@ -17,6 +17,12 @@ public sealed class TypeCollectionValueDetailDto
     /// <summary>Gets or sets the required configuration properties for this TypeOption.</summary>
     public IReadOnlyList<string> RequiredProperties { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the properties of this TypeOption that a container which states the option takes from its connection even when the connection states a different
+    /// option (FDW-5562); empty for an option that has none. The option declares them, so the console holds no list of them.
+    /// </summary>
+    public IReadOnlyList<string> InheritableProperties { get; set; } = [];
+
     /// <summary>Gets or sets the full property metadata extracted from the configuration type.</summary>
     public IReadOnlyList<ConfigurationPropertyInfoDto> PropertyMetadata { get; set; } = [];
 }

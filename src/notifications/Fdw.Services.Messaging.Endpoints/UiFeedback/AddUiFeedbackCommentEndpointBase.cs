@@ -33,7 +33,7 @@ public abstract class AddUiFeedbackCommentEndpointBase : Endpoint<AddUiFeedbackC
     public override void Configure()
     {
         Post("/ui-feedback/{Id}/comments");
-        Policies("ui-feedback:write");
+        Policies("authenticated");
         Summary(s => s.Summary = "Comment on a UI note");
         ConfigureEndpoint();
     }

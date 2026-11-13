@@ -69,7 +69,7 @@ public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSet
             return GenericResult<List<DataSetFieldPayload>?>.Success((List<DataSetFieldPayload>?)null);
         }
 
-        var read = await _dataSetProvider.Get<DataSetFieldConfiguration>(named.DataSet.Name, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        var read = await ReadFields(named.DataSet, ct).ConfigureAwait(false);
         if (read.IsFailure) return read.ToNewResult<List<DataSetFieldPayload>?>();
 
         var fields = read.Value!
@@ -78,6 +78,22 @@ public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSet
             .ToList();
 
         return GenericResult<List<DataSetFieldPayload>?>.Success((List<DataSetFieldPayload>?)fields);
+    }
+
+    // The shared field table's child-collection read for a kind that keeps its fields there, and the kind's own for one that keeps them apart: the data set read with
+    // its children and asked for its fields (FDW-5505). The child read is by field type, which a kind with its own field table has no collection of.
+    private async Task<IGenericResult<IReadOnlyList<DataSetFieldConfiguration>>> ReadFields(IDataSetImplementationConfiguration dataSet, CancellationToken ct)
+    {
+        if (DataSetFieldAccess.Kept(dataSet.Implementation) is not { } keeping)
+        {
+            return await _dataSetProvider.Get<DataSetFieldConfiguration>(dataSet.Name, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        }
+
+        var whole = await _dataSetProvider.Get(dataSet.Name, ConfigurationLevels.Children, ct).ConfigureAwait(false);
+        if (whole.IsFailure) return whole.ToNewResult<IReadOnlyList<DataSetFieldConfiguration>>();
+        return whole.Value is { } found
+            ? GenericResult<IReadOnlyList<DataSetFieldConfiguration>>.Success(keeping.FieldsOf(found))
+            : GenericResult<IReadOnlyList<DataSetFieldConfiguration>>.Failure(DataSetEndpointLog.DataSetNotFound(Logger, dataSet.Name));
     }
 
     /// <summary>

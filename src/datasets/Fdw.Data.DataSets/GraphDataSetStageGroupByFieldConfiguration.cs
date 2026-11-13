@@ -1,0 +1,41 @@
+using System;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration;
+using Fdw.Data;
+
+namespace Fdw.Data.DataSets.Abstractions;
+
+/// <summary>
+/// Configuration for a single group-by field within an Aggregate transform. Cascade child of
+/// <see cref="GraphDataSetStageConfiguration"/> (data.GraphDataSetStageGroupByField), ordered by
+/// <see cref="Ordinal"/>.
+/// </summary>
+/// <remarks>
+/// Why: implements <see cref="IGenericConfiguration"/>
+/// so the configuration cascade-save discovers and persists this collection when the parent transform is
+/// saved. Without this interface the GroupByFields collection would be silently skipped.
+/// </remarks>
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+public sealed partial class GraphDataSetStageGroupByFieldConfiguration : IGenericConfiguration
+{
+    /// <summary>
+    /// Gets or sets the unique identifier.
+    /// </summary>
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+
+    /// <summary>
+    /// Gets or sets the name for display/binding.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the field name to group by.
+    /// </summary>
+    public string FieldName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the ordinal position among the group-by fields on the same transform.
+    /// </summary>
+    public int Ordinal { get; set; }
+}

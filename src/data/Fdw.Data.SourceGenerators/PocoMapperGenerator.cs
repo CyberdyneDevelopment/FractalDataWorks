@@ -587,7 +587,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     }
 
     // Exhaustive type mapping for DbDataReader methods
-#pragma warning disable FDW006, FDW007, FDW018 // External Roslyn SpecialType enum — cannot convert to TypeCollection
+#pragma warning disable FDW006, FDW007
     private static string GetReaderMethod(SpecialType specialType, string fullTypeName)
     {
         var baseType = fullTypeName.TrimEnd('?');
@@ -611,7 +611,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             }
         };
     }
-#pragma warning restore FDW006, FDW007, FDW018
+#pragma warning restore FDW006, FDW007
 
     /// <summary>
     /// Gets the appropriate default value expression for a property type.

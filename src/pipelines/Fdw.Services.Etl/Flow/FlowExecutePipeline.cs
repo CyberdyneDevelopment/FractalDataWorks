@@ -138,7 +138,17 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
             return scope;
         }
 
-        var started = await context.Starter.Start(StartRequest(context, scope.Value), cancellationToken).ConfigureAwait(false);
+        PipelineRunStart request;
+        try
+        {
+            request = StartRequest(context, scope.Value);
+        }
+        catch (InvalidOperationException ex) when (VariableListNotWritable.TryRead(ex, out var listName))
+        {
+            return GenericResult.Failure(FlowDataOptionsLog.ListNotWritable(_logger, Name, "parameters", listName));
+        }
+
+        var started = await context.Starter.Start(request, cancellationToken).ConfigureAwait(false);
         if (started.IsFailure)
         {
             return started;

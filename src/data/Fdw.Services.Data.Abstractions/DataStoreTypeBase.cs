@@ -60,4 +60,8 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     /// <remarks>False unless the transport overrides it: a SQL or HTTP store finds a container by its own name.</remarks>
     public virtual bool AddressesContainersAsFiles => false;
 
+    /// <inheritdoc />
+    /// <remarks>Null unless the transport overrides it: a store whose containers do not page states no paging rules.</remarks>
+    public virtual IContainerPagingRules? ContainerPaging => null;
+
 }

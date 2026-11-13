@@ -89,7 +89,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
         config.ClassificationId = request.ClassificationId;
         config.CreatedAt = DateTimeOffset.UtcNow;
 
-        var tree = ApplyTree(config, request.Paths, storeType.Value!);
+        var tree = ApplyTree(config, request.Paths, storeType.Value!, connection);
         if (tree.IsFailure)
         {
             return tree.ToNewResult<DataStoreDetailResponse>();
@@ -129,13 +129,15 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
     /// <param name="target">The configuration about to be saved.</param>
     /// <param name="paths">The paths the caller asked for, if any.</param>
     /// <param name="storeTypeName">The data store type the store is being created as, for the rules of how its containers are addressed.</param>
+    /// <param name="connection">The connection the store is created over, which a container's own paging is checked against (FDW-5562).</param>
     /// <returns>Success, or the first container the store cannot take or key that could not be resolved.</returns>
     /// <remarks>
     /// Keys are resolved in two passes over every container in the request - the other keys first, then
     /// the Foreign ones - so a Foreign key may reference a key of any container in the same request,
     /// wherever it sits in the tree (FDW-920).
     /// </remarks>
-    protected IGenericResult ApplyTree(TConfig target, IList<CreateDataStorePathRequest>? paths, string storeTypeName)
+    protected IGenericResult ApplyTree(
+        TConfig target, IList<CreateDataStorePathRequest>? paths, string storeTypeName, IConnectionImplementationConfiguration connection)
     {
         ArgumentNullException.ThrowIfNull(target);
 
@@ -144,7 +146,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
             return GenericResult.Success();
         }
 
-        if (ContainerRefusal(paths, DataStoreTypes.ByName(storeTypeName).AddressesContainersAsFiles) is { } refusal)
+        if (ContainerRefusal(paths, DataStoreTypes.ByName(storeTypeName), connection) is { } refusal)
         {
             return refusal;
         }
@@ -217,7 +219,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
         return await _schema.DiscoverInto(config, options.Value!, refresh: false, ct).ConfigureAwait(false);
     }
 
-    private IGenericResult? ContainerRefusal(IList<CreateDataStorePathRequest> paths, bool storeAddressesContainersAsFiles)
+    private IGenericResult? ContainerRefusal(IList<CreateDataStorePathRequest> paths, IDataStoreType storeType, IConnectionImplementationConfiguration connection)
     {
         foreach (var container in paths.SelectMany(p => p.Containers))
         {
@@ -256,10 +258,17 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
                 return target;
             }
 
-            var named = DataStoreContainerBuilder.NameRefusal(container.Name, container.Format, storeAddressesContainersAsFiles, Logger);
+            var named = DataStoreContainerBuilder.NameRefusal(container.Name, container.Format, storeType.AddressesContainersAsFiles, Logger);
             if (named is not null)
             {
                 return named;
+            }
+
+            var paging = ContainerPagingBuilder.Refusal(
+                storeType, connection, container.Name, ContainerPagingBuilder.StyleOf(container.PagingStyle), ContainerPagingBuilder.Stated(container.PagingSettings), Logger);
+            if (paging is not null)
+            {
+                return paging;
             }
         }
 
@@ -314,6 +323,8 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
                     ClassificationId = containerRequest.ClassificationId,
                     Fields = DataStoreContainerBuilder.Fields(containerRequest.Fields),
                 };
+                ContainerPagingBuilder.Apply(
+                    container, ContainerPagingBuilder.StyleOf(containerRequest.PagingStyle), ContainerPagingBuilder.Stated(containerRequest.PagingSettings));
                 path.Containers.Add(container);
                 containers.Add((containerRequest, container));
             }

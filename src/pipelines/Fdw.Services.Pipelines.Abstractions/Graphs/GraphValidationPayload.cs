@@ -10,4 +10,10 @@ public class GraphValidationPayload
 
     /// <summary>Gets or sets every problem found; empty when the draft is valid.</summary>
     public IList<GraphProblemPayload> Problems { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets what the check could not judge (FDW-5457): a SQL step on a data store whose scripts this host cannot read, names outside the data
+    /// store, or a data store not yet discovered. A warning does not stop a save; empty when there is none.
+    /// </summary>
+    public IList<GraphProblemPayload> Warnings { get; set; } = [];
 }

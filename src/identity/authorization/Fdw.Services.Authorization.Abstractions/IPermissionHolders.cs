@@ -11,8 +11,9 @@ namespace Fdw.Services.Authorization.Abstractions;
 /// </summary>
 /// <remarks>
 /// A person holds a permission in a tenant when a current, unexpired role assignment they have in that tenant carries it, the same rule
-/// <see cref="IUserPermissions"/> applies when it bakes a token. The organization tier is not counted. Assignments whose subject is not a person's Guid, such as
-/// a service identity's name, are not people and are left out.
+/// <see cref="IUserPermissions"/> applies when it bakes a token. <see cref="Get"/> and <see cref="GetOnPlatform"/> do not count the organization tier;
+/// <see cref="GetInOrganization"/> counts only it. Assignments whose subject is not a person's Guid, such as a service identity's name, are not people and are
+/// left out.
 /// </remarks>
 public interface IPermissionHolders
 {
@@ -32,4 +33,16 @@ public interface IPermissionHolders
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The people, each once, or the failure naming what could not be read, including when exactly one tenant is not marked global.</returns>
     Task<IGenericResult<IReadOnlyList<Guid>>> GetOnPlatform(string permissionName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the people who hold a permission in one organization of a tenant through what the organization grants them: the role they were given there,
+    /// whose permissions are kept as the organization's access rows, the tier <see cref="IUserPermissions"/> adds when a token names the organization.
+    /// </summary>
+    /// <param name="permissionName">The permission. It must exist.</param>
+    /// <param name="tenantId">The tenant the organization belongs to.</param>
+    /// <param name="organizationId">The organization.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The people, each once, or the failure naming what could not be read.</returns>
+    /// <remarks>A person who holds the permission only through a role assigned in the tenant is not listed here; <see cref="Get"/> lists them.</remarks>
+    Task<IGenericResult<IReadOnlyList<Guid>>> GetInOrganization(string permissionName, Guid tenantId, Guid organizationId, CancellationToken cancellationToken = default);
 }

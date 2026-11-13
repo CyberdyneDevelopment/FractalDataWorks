@@ -50,6 +50,8 @@ public static class ConnectionRequestBody
         if (request.UseMtls is { } useMtls)
             body["useMtls"] = useMtls;
         SetText(body, "defaultValuePolicy", request.DefaultValuePolicy);
+        // The name a refusal reads: a configuration refused before it is saved has no stored name yet, so a refusal that names the connection takes it from here (FDW-5562).
+        SetText(body, "name", request.Name);
 
         return Overlay(body, request.Configuration);
     }

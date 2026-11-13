@@ -54,7 +54,7 @@ public static class InMemoryQuery
         return (actual is not null || !op.RequiresValue) && op.Matches(actual, condition.Value);
     }
 
-    private static IEnumerable<Dictionary<string, object?>> Sort(IEnumerable<Dictionary<string, object?>> rows, IOrderingExpression ordering)
+    internal static IEnumerable<Dictionary<string, object?>> Sort(IEnumerable<Dictionary<string, object?>> rows, IOrderingExpression ordering)
     {
         IOrderedEnumerable<Dictionary<string, object?>>? ordered = null;
         foreach (var field in ordering.OrderedFields)

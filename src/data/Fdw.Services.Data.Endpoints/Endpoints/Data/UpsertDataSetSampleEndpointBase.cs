@@ -60,6 +60,9 @@ public abstract class UpsertDataSetSampleEndpointBase : Endpoint<DataSetSampleRe
         if (dataSet.IsFailure) { await SendError(dataSet, ct).ConfigureAwait(false); return; }
         if (dataSet.Value is null) { await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(DataSetSampleEndpointLog.UpsertDataSetSampleNotFound(_logger)), HttpContext)).ConfigureAwait(false); return; }
 
+        var allowed = DataSetFieldAccess.AllowStandIns(dataSet.Value, _logger);
+        if (allowed.IsFailure) { await SendError(allowed, ct).ConfigureAwait(false); return; }
+
         var fieldIdsByName = dataSet.Value.Fields.ToDictionary(f => f.Name, f => f.Id, System.StringComparer.OrdinalIgnoreCase);
 
         var gateway = _configurationGateways.Get(_dataSets.DataStoreName);

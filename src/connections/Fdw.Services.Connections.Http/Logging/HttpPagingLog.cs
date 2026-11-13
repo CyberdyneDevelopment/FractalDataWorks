@@ -6,7 +6,7 @@ namespace Fdw.Services.Connections.Http.Logging;
 
 /// <summary>
 /// MessageLogging for reading an HTTP source page by page in the paging style its connection states (FDW-4938). One message, with its own
-/// code, for each reason a paged read is refused or stopped. EventIds: trace 11016-11018, configuration 61010-61018, remote 71007-71012.
+/// code, for each reason a paged read is refused or stopped. EventIds: trace 11016-11018, validation 21010-21013, 21015, 21017-21021, configuration 61014 and 61016, remote 71007-71012. A code's number band is its category, and the category is the HTTP status: a refusal the caller can correct (a style or setting the request states wrongly, a query's window) is validation and answers 400 (FDW-5562), what the host's own setup must fix is configuration (500), and what the remote does is a dependency failure (502). A name that holds a slash is a container of the connection before it (FDW-5562): the container's own paging overrides the connection's.
 /// </summary>
 [MessageLoggingTypeCode("HTTP")]
 public static partial class HttpPagingLog
@@ -44,14 +44,14 @@ public static partial class HttpPagingLog
     public static partial IGenericMessage ReadComplete(ILogger logger, string connectionName, int pages, long rows);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Configuration (61010-61018)
+    // Validation (21010-21013, 21015, 21017-21021) and configuration (61014, 61016)
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>Logs that a paged read was refused because the connection states no paging style.</summary>
     /// <param name="logger">The logger used to emit the log event.</param>
     /// <param name="connectionName">The HTTP connection's name.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61010, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states no PagingStyle, so it cannot be read page by page; state the style its remote pages by (SingleResponse when it does not page)")]
+    [MessageLogging(EventId = 21010, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states no PagingStyle, so it cannot be read page by page; state the style its remote pages by (SingleResponse when it does not page)", ClientMessage = "'{connectionName}' states no paging style, and neither does its connection, so it cannot be read page by page; state the style its remote pages by (SingleResponse when it does not page)")]
     public static partial IGenericMessage PagingStyleNotStated(ILogger logger, string connectionName);
 
     /// <summary>Logs that a paged read was refused because the connection names a paging style no option answers to.</summary>
@@ -59,7 +59,7 @@ public static partial class HttpPagingLog
     /// <param name="connectionName">The HTTP connection's name.</param>
     /// <param name="style">The style it names.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61011, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states PagingStyle '{style}', which is not an HTTP paging style")]
+    [MessageLogging(EventId = 21011, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states PagingStyle '{style}', which is not an HTTP paging style", ClientMessage = "'{connectionName}' states the paging style '{style}', which is not an HTTP paging style")]
     public static partial IGenericMessage PagingStyleUnknown(ILogger logger, string connectionName, string style);
 
     /// <summary>Logs that a paged read was refused because the connection leaves out a property its paging style needs.</summary>
@@ -68,7 +68,7 @@ public static partial class HttpPagingLog
     /// <param name="style">The style it states.</param>
     /// <param name="property">The additional property it leaves out.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61012, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' pages in style '{style}', which needs the additional property '{property}'; the connection does not state it")]
+    [MessageLogging(EventId = 21012, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' pages in style '{style}', which needs the additional property '{property}'; the connection does not state it", ClientMessage = "'{connectionName}' pages in style '{style}', which needs the setting '{property}'; it is not stated")]
     public static partial IGenericMessage PagingPropertyMissing(ILogger logger, string connectionName, string style, string property);
 
     /// <summary>Logs that a paged read was refused because a numeric paging property is not a whole number in its range.</summary>
@@ -78,7 +78,7 @@ public static partial class HttpPagingLog
     /// <param name="value">The value it states.</param>
     /// <param name="minimum">The smallest value the property accepts.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61013, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states '{value}' for '{property}', which must be a whole number of at least {minimum}")]
+    [MessageLogging(EventId = 21013, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states '{value}' for '{property}', which must be a whole number of at least {minimum}", ClientMessage = "'{connectionName}' states '{value}' for '{property}', which must be a whole number of at least {minimum}")]
     public static partial IGenericMessage PagingPropertyNotWholeNumber(ILogger logger, string connectionName, string property, string value, int minimum);
 
     /// <summary>Logs that a paged read was refused because the paging style declares no default for a property the connection leaves out.</summary>
@@ -87,7 +87,7 @@ public static partial class HttpPagingLog
     /// <param name="style">The style it states.</param>
     /// <param name="property">The property neither the connection, the host nor the style gives a value for.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61014, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states no '{property}', and paging style '{style}' declares no positive whole-number default for it")]
+    [MessageLogging(EventId = 61014, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states no '{property}', and paging style '{style}' declares no positive whole-number default for it", ClientMessage = "'{connectionName}' states no '{property}', and paging style '{style}' declares no positive whole-number default for it")]
     public static partial IGenericMessage PagingDefaultNotDeclared(ILogger logger, string connectionName, string style, string property);
 
     /// <summary>Logs that a query asking for a window of rows was refused because the stated paging style cannot address that window.</summary>
@@ -97,7 +97,7 @@ public static partial class HttpPagingLog
     /// <param name="skip">The rows the query skips.</param>
     /// <param name="reason">Why the style cannot address the window.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61015, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' pages in style '{style}', which cannot ask its remote for the rows of a query that skips {skip}: {reason}")]
+    [MessageLogging(EventId = 21015, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' pages in style '{style}', which cannot ask its remote for the rows of a query that skips {skip}: {reason}")]
     public static partial IGenericMessage PagingWindowNotAddressable(ILogger logger, string connectionName, string style, int skip, string reason);
 
     /// <summary>Logs that a paged read was refused because the protocol does not carry its query in the request address, where the paging style writes.</summary>
@@ -114,7 +114,7 @@ public static partial class HttpPagingLog
     /// <param name="connectionName">The HTTP connection's name.</param>
     /// <param name="skip">The rows the query skips.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61017, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}': a query skips {skip} rows, and a query cannot skip a negative number of rows")]
+    [MessageLogging(EventId = 21017, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}': a query skips {skip} rows, and a query cannot skip a negative number of rows")]
     public static partial IGenericMessage PagingSkipNegative(ILogger logger, string connectionName, int skip);
 
     /// <summary>
@@ -126,8 +126,35 @@ public static partial class HttpPagingLog
     /// <param name="take">The rows the query takes.</param>
     /// <param name="minimum">The fewest rows the read may take.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 61018, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}': a query takes {take} rows, and this read takes at least {minimum}")]
+    [MessageLogging(EventId = 21018, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}': a query takes {take} rows, and this read takes at least {minimum}")]
     public static partial IGenericMessage PagingTakeTooSmall(ILogger logger, string connectionName, int take, int minimum);
+
+    /// <summary>Logs that paging settings were refused because they state a key the paging style does not read.</summary>
+    /// <param name="logger">The logger used to emit the log event.</param>
+    /// <param name="connectionName">The HTTP connection's name, or the connection's and the container's joined by a slash.</param>
+    /// <param name="style">The style the settings are read in.</param>
+    /// <param name="property">The key the style does not read.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 21019, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' pages in style '{style}', which does not read the paging setting '{property}'; state only the settings its style reads",
+        ClientMessage = "'{connectionName}' pages in style '{style}', which does not read the setting '{property}'; state only the settings its style reads, or choose a style that reads it")]
+    public static partial IGenericMessage PagingPropertyNotExpected(ILogger logger, string connectionName, string style, string property);
+
+    /// <summary>Logs that a container's paging was refused because the connection of its data store is not an HTTP connection.</summary>
+    /// <param name="logger">The logger used to emit the log event.</param>
+    /// <param name="connectionName">The connection's name.</param>
+    /// <param name="containerName">The container that states paging.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 21020, Level = LogLevel.Error, Message = "Container '{containerName}' states paging, and its data store's connection '{connectionName}' is not an HTTP connection, which is the only kind that pages in an HTTP paging style",
+        ClientMessage = "Container '{containerName}' states paging, and its data store's connection '{connectionName}' is not an HTTP connection, so the container cannot page in an HTTP paging style")]
+    public static partial IGenericMessage PagingConnectionNotHttp(ILogger logger, string connectionName, string containerName);
+
+    /// <summary>Logs that a container's paging was refused because it states paging settings and no paging style.</summary>
+    /// <param name="logger">The logger used to emit the log event.</param>
+    /// <param name="connectionName">The HTTP connection's name, or the connection's and the container's joined by a slash.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 21021, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}' states paging settings and no paging style; a container's settings are for the style it names, so name the style (the connection's own is allowed)",
+        ClientMessage = "'{connectionName}' states paging settings and no paging style; name the style the settings are for (the connection's own style is allowed), or state no settings to take the connection's paging")]
+    public static partial IGenericMessage PagingSettingsWithoutStyle(ILogger logger, string connectionName);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Remote (71007-71012)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Work out which packages a change needs built.
 
-  changeset.py plan     --repo R [--ref HEAD] (--base-ref REF | --baseline FILE) [--api-breaks FILE] [--json]
+  changeset.py plan     --repo R [--ref HEAD] (--base-ref REF | --baseline FILE) [--api-breaks FILE] [--closure] [--json]
   changeset.py manifest --repo R [--ref HEAD]
   changeset.py replay   --repo R [--count 353]
 
@@ -14,6 +14,10 @@ set is the changed packages, plus more only when one of these holds:
     into each of them and no API check sees that;
   - a package in --api-breaks (a JSON list of package ids from the API check): everything above it;
   - a project packs another project's build output by file path: both go together.
+
+With closure=True (--closure; the release uses it, FDW-5272) a package is also in the set when anything it depends on changed: every
+src project above a changed project, directly or through others. A package whose closure did not change is then unchanged by
+construction, because everything it is built from is byte-identical, so no API comparison is needed to leave it alone.
 
 Projects that cannot be packages are built from source whenever a member needs them. Nothing is written but stdout.
 """
@@ -42,7 +46,7 @@ def dependents(projects, start):
     return seen
 
 
-def plan(current, baseline, api_breaks=()):
+def plan(current, baseline, api_breaks=(), closure=False):
     projects = current.projects
     src = {n for n, p in projects.items() if p.kind == "src"}
     base_trees = baseline["projects"] if baseline else {}
@@ -74,6 +78,10 @@ def plan(current, baseline, api_breaks=()):
     for x in sorted(n for n in differs - current.build_time if not projects[n].packable):
         for d in sorted(dependents(projects, x)):
             add(d, f"{x} cannot be a package and changed")
+    if closure and baseline:
+        for n in sorted(differs):
+            for d in sorted(dependents(projects, n)):
+                add(d, f"{n} changed, and {d} is built from it")
     by_id = {p.package_id: p.name for p in projects.values() if p.kind == "src"}
     for pid in sorted(api_breaks):
         if pid in by_id:
@@ -166,6 +174,7 @@ def main(argv=None):
     sub.choices["plan"].add_argument("--base-ref")
     sub.choices["plan"].add_argument("--baseline")
     sub.choices["plan"].add_argument("--api-breaks")
+    sub.choices["plan"].add_argument("--closure", action="store_true")
     sub.choices["plan"].add_argument("--json", action="store_true")
     sub.choices["replay"].add_argument("--count", type=int, default=353)
     a = ap.parse_args(argv)
@@ -178,7 +187,7 @@ def main(argv=None):
             ap.error("give exactly one of --base-ref and --baseline")
         base = baseline_from_ref(a.repo, a.base_ref) if a.base_ref else json.load(open(a.baseline))
         breaks = json.load(open(a.api_breaks)) if a.api_breaks else []
-        result = plan(snapshot(a.repo, a.ref), base, breaks)
+        result = plan(snapshot(a.repo, a.ref), base, breaks, a.closure)
         print(json.dumps(result, indent=1) if a.json else report(result))
 
 

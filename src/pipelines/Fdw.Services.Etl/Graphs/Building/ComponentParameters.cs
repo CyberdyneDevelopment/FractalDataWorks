@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -173,6 +174,7 @@ public static partial class ComponentParameters
         string component, string setting, string text, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
     {
         string? missing = null;
+        string? notQuotable = null;
         var rendered = Reference().Replace(text, match =>
         {
             var name = match.Groups["name"].Value;
@@ -183,11 +185,28 @@ public static partial class ComponentParameters
                 return string.Empty;
             }
 
-            return Convert.ToString(found.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+            if (!VariableListText.IsList(found.Value))
+            {
+                return Convert.ToString(found.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+            }
+
+            // A list is written quoted and comma-separated (FDW-5347); an item that cannot be quoted fails the render, and nothing is written for it.
+            if (VariableListText.TryRender((IEnumerable)found.Value, out var list))
+            {
+                return list;
+            }
+
+            notQuotable ??= name;
+            return string.Empty;
         });
-        return missing is null
+        if (missing is not null)
+        {
+            return GenericResult<string>.Failure(GraphLog.ParameterNotGiven(logger, component, setting, missing));
+        }
+
+        return notQuotable is null
             ? GenericResult<string>.Success(rendered)
-            : GenericResult<string>.Failure(GraphLog.ParameterNotGiven(logger, component, setting, missing));
+            : GenericResult<string>.Failure(FlowDataOptionsLog.ListNotWritable(logger, component, setting, notQuotable));
     }
 
     // Why the registry and no switch: the catalogue names the settings that take text, and the registry is where each is kept; a setting the

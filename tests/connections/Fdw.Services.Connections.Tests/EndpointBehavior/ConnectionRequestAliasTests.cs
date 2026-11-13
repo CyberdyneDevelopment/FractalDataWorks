@@ -44,6 +44,16 @@ public sealed class ConnectionRequestAliasTests
 
     [Fact]
     [Trait("Priority", "P1")]
+    public void CreateBodyCarriesTheConnectionsNameSoARefusalBeforeTheSaveCanNameIt()
+    {
+        // FDW-5562: a configuration is refused before it is saved and has no stored name yet; the rules read the request's.
+        var body = ConnectionRequestBody.ForCreate(new CreateConnectionRequest { Name = "ops", ServiceType = "MsSql", Server = "db" });
+
+        body.GetProperty("name").GetString().ShouldBe("ops");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
     public void CreateBodyLetsTheTypedConfigurationWin()
     {
         var body = ConnectionRequestBody.ForCreate(new CreateConnectionRequest

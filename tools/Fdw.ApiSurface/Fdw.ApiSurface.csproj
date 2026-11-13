@@ -9,8 +9,8 @@
     <RootNamespace>Fdw.ApiSurface</RootNamespace>
     <AssemblyName>Fdw.ApiSurface</AssemblyName>
 
-    <!-- Why: a release-time helper run with dotnet run and the project option, like Fdw.PasswordHasher. It is not in the
-         main solution and is not a package, so a release neither builds nor pushes it. It reads a package's
+    <!-- Why: an optional helper run with dotnet run and the project option, like Fdw.PasswordHasher. It is in the main solution
+         (FDW-5264) so the gate compiles it, it is not a package, and the release does not use it (FDW-5272). It reads a package's
          assemblies without loading them (System.Reflection.Metadata) and writes the public surface that
          public/tools/versioning/apisurface.py compares. -->
     <IsPackable>false</IsPackable>

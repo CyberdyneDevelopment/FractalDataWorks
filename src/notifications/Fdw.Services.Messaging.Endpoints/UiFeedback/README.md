@@ -10,6 +10,8 @@ The service is `IUiFeedbackService` (Fdw.Services.Messaging); these endpoint bas
 | `ui-feedback:write` | Save a comment. Change the note of, or delete, your own. |
 | `ui-feedback:read` | List and open every comment, read a picture, and be told of a new one. |
 | `ui-feedback:resolve` | Resolve and reopen a comment. |
+| (signed in) | Ask a question: save a comment whose every tag asks for an answer (`Question`), and comment in its thread. |
+| the permission mapped to a question's screen | Be told of the question, open it, read its picture and its thread, and answer in it (see Questions). |
 
 The author and tenant of a comment are the caller's, never stated by the request. A reader reaches the comments of the tenant they act in. A caller acting in the global tenant (the platform administrator) reaches every tenant's. A comment out of reach is answered `404`, as if it did not exist. A permission is carried in the token, so a user who was just given one signs in again.
 
@@ -17,17 +19,17 @@ The author and tenant of a comment are the caller's, never stated by the request
 
 | Route | Permission | Answers |
 |---|---|---|
-| `POST /ui-feedback` | write | `201` with the comment |
-| `GET /ui-feedback` | read | `200` with `{ items: [...] }`, no pictures |
-| `GET /ui-feedback/{id}` | read | `200` with the comment |
-| `GET /ui-feedback/{id}/screenshot` | read | `200` with the PNG; `404` when the comment has none |
+| `POST /ui-feedback` | signed in; write unless a question | `201` with the comment; `403` (`MESSAGING-100002`) when a caller without write saves anything but a question |
+| `GET /ui-feedback` | signed in | `200` with `{ items: [...] }`, no pictures; a caller with neither read nor write lists their own comments and the questions put to them |
+| `GET /ui-feedback/{id}` | signed in | `200` with the comment; `404` for one the caller may not see |
+| `GET /ui-feedback/{id}/screenshot` | signed in | `200` with the PNG; `404` when the comment has none or the caller may not see it |
 | `PATCH /ui-feedback/{id}` `{ body }` | write | `200`; `403` when the comment is another person's |
 | `DELETE /ui-feedback/{id}` | write | `204`; `403` when it is another person's |
 | `POST /ui-feedback/{id}/acknowledge` | read | `200` with `acknowledgedByMe` true; asking again changes nothing and still answers `200` |
 | `POST /ui-feedback/{id}/agree` | write | `200` with `agreedByMe` true and `agreeCount` (people who agree, the author not counted); asking again changes nothing; the author gets `409` |
 | `DELETE /ui-feedback/{id}/agree` | write | `200` with `agreedByMe` false; taking back an agreement not given changes nothing |
-| `POST /ui-feedback/{id}/comments` | write | `201` with the comment (`id`, `feedbackId`, `authorUserId`, `authorName`, `body`, `createdAt`); `body` is required, at most 4000 characters |
-| `GET /ui-feedback/{id}/comments?skip=&take=` | read or write | `200` with `{items}`, oldest first; `take` from 1 to 200 |
+| `POST /ui-feedback/{id}/comments` | signed in; write unless a question the caller asked or was asked | `403` (`MESSAGING-100003`) otherwise; `201` with the comment (`id`, `feedbackId`, `authorUserId`, `authorName`, `body`, `createdAt`); `body` is required, at most 4000 characters |
+| `GET /ui-feedback/{id}/comments?skip=&take=` | signed in, who may see the comment | `200` with `{items}`, oldest first; `take` from 1 to 200 |
 | `POST /ui-feedback/{id}/resolve` | resolve | `200`; `409` when already resolved |
 | `POST /ui-feedback/{id}/reopen` | resolve | `200`; `409` when already open |
 
@@ -38,8 +40,17 @@ Nothing is cut or defaulted: a missing or wrong field is a `400` that names the 
 
 ### List
 
-Query: `state` (`Open` or `Resolved`), `route`, `urgency`, `tag`, `sort=urgency` (most urgent first, by the rank the urgency states), `skip`, `take` (1 to 200, 50 when left out). Newest first when `sort` is left out.
-The store cannot filter by tag or order by rank, so with `tag` or `sort=urgency` the list looks at the 1000 newest comments that match the other conditions and pages over those.
+Query: `state` (`Open` or `Resolved`), `route`, `urgency`, `tag`, `mine=true` (only the caller's own), `askedOfMe=true` (only the questions put to the caller), `sort=urgency` (most urgent first, by the rank the urgency states), `skip`, `take` (1 to 200, 50 when left out). Newest first when `sort` is left out.
+The store cannot filter by tag, by the questions put to the caller or order by rank, so with `tag`, `askedOfMe` or `sort=urgency`, and for a caller with neither read nor write, the list looks at the 1000 newest comments that match the other conditions and pages over those.
+
+## Questions
+
+A comment tagged `Question` (a `UiFeedbackTags` option whose `AsksForAnAnswer` is true) asks someone who knows the screen for information or an answer. A console's guided tour posts it as an ordinary comment: the components chosen in `anchors`, the question in `body`.
+
+- **Who may ask.** Any signed-in person: the save route asks only for a signed-in caller, and the service refuses a caller without `ui-feedback:write` whose comment has a tag that does not ask for an answer, or no tag (`403`, `MESSAGING-100002`).
+- **Who answers.** The setting `UiFeedbackQuestionAnswerers` (a server setting, overridable per tenant; DataType `String`) holds a JSON array of `{ "routePrefix": "/documents", "permission": "document-setup:write" }`. The longest prefix that matches the question's `route` on whole segments wins (`/data` matches `/data/x`, not `/datasets`). The answerers are the people who hold that permission through a role in the question's tenant and, when the asker acts in an organization, through what that organization grants them (its roles' access rows, `IPermissionHolders.GetInOrganization`). No setting, or no prefix that matches: only the readers are told. A value that is not such a list is reported (`MESSAGING-61005`) and only the readers are told.
+- **Telling them.** Each answerer gets one message (type `UiFeedback`, action URL `/feedback/{id}`, subject `"{author} asked a question on {route}"`, the subject the readers of a question get too); the author and anyone already told as a reader are left out. An answerer who cannot be told (`MESSAGING-71007`) or holders who cannot be found (`MESSAGING-71008`) are logged and returned beside the saved question; the save still answers `201`.
+- **Opening and answering.** A person whose session holds the permission mapped to a question's route (the roles held in the tenant they act in and what the organization they act in grants) may open the question, read its picture and its thread, find its alert and comment in its thread, without `ui-feedback:read`. The person who asked may comment in its thread too. Agreeing, editing, deleting, acknowledging and resolving keep their rights. A comment that is not a question put to the caller is `404` to them, as any comment they may not see.
 
 ## Walking it on dev
 

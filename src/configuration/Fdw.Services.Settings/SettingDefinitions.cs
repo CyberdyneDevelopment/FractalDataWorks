@@ -193,6 +193,18 @@ public static class SettingDefinitions
     public const string DataSetStatusWindowHours = "DataSetStatusWindowHours";
 
     /// <summary>
+    /// Who can answer a question left on a screen: a UI comment whose tag asks for an answer is also told to the holders of the permission mapped to the
+    /// screen's route. DataType: String, a JSON array of <c>{ "routePrefix": "/documents", "permission": "document-setup:write" }</c>.
+    /// </summary>
+    /// <remarks>
+    /// A prefix matches a route that is the prefix or continues it after a <c>/</c>, so <c>/data</c> does not match <c>/datasets</c>; the longest prefix that
+    /// matches wins. A route no prefix matches has no answerers, and so does a deployment with no setting: the question is told to the comment readers only.
+    /// A value that is not such a list (a blank prefix or permission, a prefix that does not start with <c>/</c>, a prefix stated twice) is a configuration
+    /// failure, reported beside the saved question, never read as an empty list. It resolves server, then tenant, so a tenant can map its own screens.
+    /// </remarks>
+    public const string UiFeedbackQuestionAnswerers = "UiFeedbackQuestionAnswerers";
+
+    /// <summary>
     /// Whether a host that serves no real-time hub relays its pipeline events to the host that does (FDW-3773). DataType: Boolean.
     /// </summary>
     /// <remarks>
@@ -415,7 +427,8 @@ public static class SettingDefinitions
             [MaxQueuedPipelineTriggers] = new("Int32", "The most pipeline triggers the ETL host holds before it starts them; a trigger past that is dropped. Read at host start."),
             [LineageLinePipelines] = new("Int32", "The most pipelines one line of the lineage groups names; the line still counts all of them."),
             [DataSetStatusWindowHours] = new("Int32", "How many hours a completed run of a pipeline that writes a data set counts as recent: inside it the data set is Current, outside it Idle. Not set: the data set list stops and names this setting."),
-            [LiveViewRefreshSeconds] = new("Int32", "How often, in seconds, the console reads the run queue again while the queue tab is open. Not set: the tab does not read again by itself."),
+            [UiFeedbackQuestionAnswerers] = new("String", "Who can answer a question left on a screen: a JSON array of { routePrefix, permission }; the longest prefix that matches the route wins, and the permission's holders are told of the question and may open and answer it. Not set, or no prefix matches: only the comment readers are told."),
+            [LiveViewRefreshSeconds] =new("Int32", "How often, in seconds, the console reads the run queue again while the queue tab is open. Not set: the tab does not read again by itself."),
             [PipelineEventRelayEnabled] = new("Boolean", "Whether a host that serves no real-time hub relays its pipeline events to the host that does."),
             [CrossTenantConnectionEnable] = new("Boolean", "Whether an administrator of one tenant may enable a disabled connection that belongs to another tenant when they can see it. Not set: the value the host or the service type declares applies."),
             [FoundingMakesDefaultWorkspace] = new("Boolean", "Whether founding a tenant or an organization makes a default workspace. Not set: the value the host or the service type declares applies (true)."),

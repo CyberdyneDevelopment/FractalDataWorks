@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 namespace Fdw.Operations.Endpoints;
 
 /// <summary>
@@ -20,4 +21,10 @@ public class LineageSourceResponse
     public string? PhysicalLocation { get; set; }
     /// <summary>Gets or sets the source priority for the DataSet.</summary>
     public int Priority { get; set; }
+    /// <summary>
+    /// Gets or sets whether this is a source a Graph data set only intends to read (FDW-5296): true for an intended source, left out (null) for every other, so no answer for
+    /// any other data set changes.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsIntended { get; set; }
 }

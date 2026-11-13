@@ -22,6 +22,24 @@ public class LineageGraphTests
         walk.Flows.Select(flow => flow.PipelineId).ShouldBe(new[] { PipelineId(1), PipelineId(2) }, ignoreOrder: true);
     }
 
+    /// <summary>FDW-5296: an edge a Graph data set draws for a source it only intends to read is a lineage step marked intended; every other step is not.</summary>
+    [Fact]
+    public void AnIntendedEdgeIsAnIntendedStepAndAStoredEdgeIsNot()
+    {
+        var intended = DerivedFrom(DataSetId(2), DataSetId(1));
+        intended.Metadata[MapEdges.IntendedKey] = true;
+        var graph = LineageProjection.Of(
+            [NewDataSet(1, "Prices"), NewDataSet(2, "Revenue"), NewDataSet(3, "Orders"), NewStore(1, "Warehouse")],
+            [intended, DerivedFrom(DataSetId(2), DataSetId(3)), StoredIn(DataSetId(2), StoreId(1))],
+            null);
+
+        var walk = graph.Neighbourhood(DataSetId(2), LineageDirections.Up, 1, KindsOf("DataSet,DataStore"));
+
+        walk.Flows.Count.ShouldBe(3);
+        walk.Flows.Single(flow => flow.From == DataSetId(1)).Intended.ShouldBeTrue();
+        walk.Flows.Where(flow => flow.From != DataSetId(1)).ShouldAllBe(flow => !flow.Intended);
+    }
+
     [Fact]
     public void UpstreamDepthsAreNegativeAndDownstreamDepthsPositive()
     {

@@ -1,0 +1,45 @@
+using System;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration;
+using Fdw.Data;
+
+namespace Fdw.Data.DataSets.Abstractions;
+
+/// <summary>
+/// Configuration for a single computed column within a Calculate transform. Cascade child of
+/// <see cref="GraphDataSetStageConfiguration"/> (data.GraphDataSetStageCalculation).
+/// </summary>
+/// <remarks>
+/// Why: implements <see cref="IGenericConfiguration"/>
+/// so the configuration cascade-save discovers and persists this collection when the parent transform is
+/// saved. Without this interface the Calculations collection would be silently skipped.
+/// </remarks>
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+public sealed partial class GraphDataSetStageCalculationConfiguration : IGenericConfiguration
+{
+    /// <summary>
+    /// Gets or sets the unique identifier.
+    /// </summary>
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+
+    /// <summary>
+    /// Gets or sets the name for display/binding.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the output field name.
+    /// </summary>
+    public string OutputField { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the calculation expression.
+    /// </summary>
+    public string Expression { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the execution order within the calculation.
+    /// </summary>
+    public int ExecutionOrder { get; set; }
+}

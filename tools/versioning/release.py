@@ -1,52 +1,44 @@
 #!/usr/bin/env python3
-"""Plan a release: the one read-only step that turns a baseline and the feed into everything the later steps read.
+"""Plan a release: the one read-only step that turns a baseline, the feed and the level the release's owner states into everything the
+later steps read (FDW-4784, FDW-5272). Nothing is compiled and no API is read to decide a version.
 
-  release.py plan   --repo R --line 1.4 --bundle-id Fdw.Bundle --out DIR [--ref HEAD] [--api-breaks FILE]
-                    (--base-ref REF | --baseline-from-bundle | --baseline FILE --bump patch|minor|major)
-  release.py decide --plan-dir DIR --old-surfaces DIR --new-surfaces DIR --first-versions FILE --settings FILE --out DIR
-                    [--candidate K] [--missing-out FILE]
+  release.py plan --repo R --line 1.4 --bundle-id Fdw.Bundle --out DIR --first-versions FILE --bump patch|minor|major
+                  [--ref HEAD] [--prerelease] [--assembly-info FILE]
+                  (--base-ref REF | --baseline-from-bundle | --baseline FILE)
 
-The baseline (what the last release was made from) comes from exactly one of: a git ref such as a release tag
-(--base-ref; the highest `bump:` trailer since it is read from the commit messages), the project manifest inside the
-latest stable bundle on nuget.org (--baseline-from-bundle), or a manifest file (--baseline). The last two need no tags
-and no history, which is what the GitHub mirror has; there the bump cannot be read from commits, so --bump is required
-and nothing is assumed. A bundle with no manifest inside stops the plan and says so.
+The baseline (what the last release was made from) comes from exactly one of: a git ref such as a release tag (--base-ref), the project
+manifest inside the latest stable bundle on nuget.org (--baseline-from-bundle), or a manifest file (--baseline). The manifest records the
+git tree id of every project at that release, which is the tag's content: the last two need no tags and no history, which is what the
+GitHub mirror has. A bundle with no manifest inside stops the plan and says so.
 
-It combines changeset.py (which packages changed), allocate.py (the one release number N, the highest declared bump)
-and the feed (the version every unchanged package last shipped with), and writes six files into DIR:
+A package gets a new version when anything in its closure changed since the baseline: its own folder, any project it references (directly
+or through others), the repo-wide build files (changeset.py with closure=True). A package whose closure did not change is not built, not
+bumped and not pushed: everything it is made from is identical, so it keeps the highest stable version on the feed. The level is stated by
+whoever cuts the release (--bump); it is the level of every package that changed. Each takes its OWN last stable version raised by it.
+A package with no stable version takes the first version first-versions.json declares for it (level "new", see levelplan.py).
 
-  plan.json      the release number, the bump, the build set and why each member is in it, the tests to run, and the assembly version floors
-                 the baseline release recorded (assemblyVersionFloors, and packagesWithoutRuntimeAssembly for the generators and tools that have
-                 none; a baseline without them stops the plan)
+The bundle has one number, the release's identity: the number for the stated bump. A new package changes neither it nor any other package's
+version (its own version is the first version first-versions.json declares; FDW-5591). With
+--prerelease every package and the bundle are release candidates, N-rc.<k>, k being one above the candidates of N the bundle already has.
+
+It writes into --out:
+
+  plan.json      the release number, the bump, the build set and why each member is in it, the tests to run, the assembly version floors the
+                 baseline recorded (assemblyVersionFloors, and packagesWithoutRuntimeAssembly for the generators and tools that have none; a
+                 baseline without them stops the plan) and the bundle's version
   versions.json  {package id: version} for every packable package OUTSIDE the set: input to `buildset.py prepare`
-  trees.json     {project name: git tree id} for the packable members: input to `buildset.py prepare`
+  trees.json     {project name: git tree id} for the members: input to `buildset.py prepare`
   manifest.json  {id, version, packages} for the whole release: input to `bundle.py generate`
-  project-manifest.json  the project manifest of the tree planned from: `bundle.py generate --project-manifest`
-                 carries it in the bundle, and the next release reads it back as its baseline
-  levels-input.json  what `decide` needs to give each package its own version: the reference graph, each package's last stable
-                 version, the generators and the packages they caused, and the names and trees of every packable project
-
-An unchanged package keeps the highest stable version on the feed. A package outside the set with no stable version
-there is an error that names it: it cannot be shown to be unchanged, and nothing is assumed. Nothing is pushed and the
-repository is not touched; the only files written are the six above.
-
-`decide` is the per-package step (FDW-4784). It runs after the members were built once and each package's public surface was
-dumped (Fdw.ApiSurface) next to the surface of its last stable version: OLD/<package id>.surface and NEW/<package id>.surface. It asks
-levelrun.decide() for each package's own level, adds the packages a major pulls in, gives every package its next version from its
-OWN last stable one, and writes into --out the same files `plan` wrote, now with per-package versions, plus:
-
+  project-manifest.json  the project manifest of the tree planned from; the bundle carries it, and the next release reads it as its baseline
+  levels-input.json  the reference graph, each package's last stable version, the generators, and the names, folders and trees of every
+                 packable project: what bindings, the release notes and the plan itself read
   package-versions.json  {project name: version} for every package to build: input to `buildset.py prepare --package-versions`
-  assembly-versions.json {project name: x.y.z.w}, each package's AssemblyVersion: the floor the baseline recorded for its assembly, or N.0.0.0 for its
-                         own major N when that is higher; input to `buildset.py prepare --assembly-versions`
-  levels.json            {package id: last, level, next, reasons} and the report lines `levelrun.report` prints
+  assembly-versions.json {project name: x.y.z.w}, each package's AssemblyVersion: the floor the baseline recorded for its assembly, or N.0.0.0
+                 for its own major N when that is higher; input to `buildset.py prepare --assembly-versions`
+  levels.json    {package id: last, level, next, reasons} and the report lines
 
-The bundle has one number, the release's identity, and every member of it has its own: `plan` allocated the number for each bump, and
-`decide` takes the one for the highest package level (a major in the release makes the bundle a major; the bump stated to `plan` is the
-least it can be). With --candidate K the bundle is N-rc.K as well. A package that
-a declared first version replaces leaves the manifest. A surface that is missing stops the run and names the package, so the caller
-builds and dumps it and runs `decide` again: nothing is assumed. With --missing-out the missing package and side ('old' or 'new') are
-written there as JSON and the run exits 3, which is how the job knows to make that surface; any other failure exits 1. With
---candidate K every package is a release candidate: its version is the next one followed by -rc.K, and so is the bundle (N-rc.K).
+An unchanged package keeps the highest stable version on the feed. A package outside the set with no stable version there is an error that
+names it: it cannot be shown to be unchanged, and nothing is assumed. Nothing is pushed and the repository is not touched.
 """
 import argparse
 import json
@@ -56,17 +48,12 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 import allocate
-import apisurface
 import bindcheck
 import bundle
 import changeset
 import levelplan
-import levelrun
 from feeds import MANIFEST_FILE, FeedError, NugetOrg
 from fdwprojects import git, snapshot
-
-
-MISSING_SURFACE_EXIT = 3  # `decide` ends with this when a surface is missing, so the job can make it and run decide again
 
 
 BUMPS = ("patch", "minor", "major")  # in order of size
@@ -76,15 +63,7 @@ class ReleaseError(Exception):
     pass
 
 
-class SurfaceMissing(ReleaseError):
-    """A package's surface file is not there: `side` is 'old' (its last stable version) or 'new' (as built now)."""
-
-    def __init__(self, package, side, path):
-        super().__init__(f"no {side} surface for {package}: {path} does not exist. Build it, dump its public surface and run decide again.")
-        self.package, self.side = package, side
-
-
-def without_own_versions(held, own_trees, feed, workers=16):
+def without_own_versions(held, own_trees, feed, workers=16, baseline_pins=None, baseline_trees=None):
     """`held` ({package id: versions on the feed}) without the versions this release has already pushed itself (FDW-5279).
 
     own_trees is {package id: the git tree id of the package as it is being released}, for each package the release changes. A package's
@@ -98,7 +77,21 @@ def without_own_versions(held, own_trees, feed, workers=16):
     is found already pushed (a resume), any other package of the release whose highest stable version is one of those same versions but
     carries another tree, or no marker, stops the plan too: the release was pushed from different content, and it is never renumbered
     silently. With nothing pushed (a normal first run) a changed package's older version has another tree and an old package may have no
-    marker; neither is an error."""
+    marker; neither is an error.
+
+    The baseline release is never a resume (FDW-5589). With the closure rule a package is in the release because something below it
+    changed, so its own folder may be unchanged since the last release: that release's version then carries the current tree, and would be
+    taken for a partial push of this one. So a held version that is the baseline's own version of the package is not this release's own:
+    `baseline_pins` is {package id: version} from the exact pins of the baseline bundle; for a package the bundle does not pin (a dotnet tool),
+    `baseline_trees` ({package id: the tree in the baseline manifest}) decides: an own folder unchanged since the baseline means the held
+    version with that tree is the baseline's. A partial push of this release by a package that is neither pinned nor changed cannot be
+    told from the baseline release and is numbered again; that touches unpinned packages only."""
+    def is_baseline_version(pid, version):
+        if baseline_pins is not None and pid in baseline_pins:
+            return baseline_pins[pid] == version
+        if baseline_trees is not None and baseline_trees.get(pid) is not None:
+            return baseline_trees[pid] == own_trees[pid]
+        return False
     def read(pid):
         stable = [v for v in held.get(pid, []) if "-" not in v and allocate.triple(v)]
         if not stable:
@@ -111,7 +104,8 @@ def without_own_versions(held, own_trees, feed, workers=16):
     pids = sorted(own_trees)
     with ThreadPoolExecutor(max_workers=workers) as pool:
         latest = dict(zip(pids, pool.map(read, pids)))
-    own = {pid: found[0] for pid, found in latest.items() if found and found[1] is not None and found[1] == own_trees[pid]}
+    own = {pid: found[0] for pid, found in latest.items()
+           if found and found[1] is not None and found[1] == own_trees[pid] and not is_baseline_version(pid, found[0])}
     resumed = set(own.values())
     conflicts = sorted(f"{pid} {found[0]}: " + ("no tree marker" if found[1] is None else f"built from tree {found[1]}, not {own_trees[pid]}")
                        for pid, found in latest.items() if found and pid not in own and found[0] in resumed)
@@ -123,18 +117,21 @@ def without_own_versions(held, own_trees, feed, workers=16):
     return {pid: [v for v in versions if v != own.get(pid)] for pid, versions in held.items()}
 
 
-def release_plan(current, baseline, feed, tags, line, bump_of, bundle_id, api_breaks=()):
-    """The plan as a dict. `bump_of(directories)` gives the highest bump declared for commits that touched them."""
+def release_plan(current, baseline, feed, tags, line, bump, bundle_id, first_versions, prerelease=False, baseline_pins=None):
+    """All the files of a release as a dict. `bump` is the level the release's owner states; `first_versions` is
+    levelplan.load_first_versions(); `prerelease` makes every package and the bundle a candidate; `baseline_pins` is {package id: version},
+    the exact pins of the baseline bundle (None when the baseline is a file or a git ref)."""
+    if bump not in BUMPS:
+        raise ReleaseError(f"the bump is {bump!r}; it must be patch, minor or major")
     floors, bare = baseline_floors(baseline), baseline_bare(baseline)
-    result = changeset.plan(current, baseline, api_breaks)
+    result = changeset.plan(current, baseline, (), True)
     projects = current.projects
     members = list(result["build_set"])  # changeset.plan lists packable projects only
     held = allocate.held_versions(projects, feed)
-    held = without_own_versions(held, {projects[n].package_id: current.trees[n] for n in members}, feed)
+    held = without_own_versions(held, {projects[n].package_id: current.trees[n] for n in members}, feed, baseline_pins=baseline_pins,
+                                baseline_trees={projects[n].package_id: baseline.get("projects", {}).get(n) for n in members})
     in_set = {projects[n].package_id for n in members}
-    bump = bump_of([projects[n].path for n in members]) if members else "patch"
     numbers = {b: allocate.release_number(held, line, tags, b) for b in BUMPS}
-    number = numbers[bump]
 
     unchanged, missing = {}, []
     for pid, versions in sorted(held.items()):
@@ -149,16 +146,55 @@ def release_plan(current, baseline, feed, tags, line, bump_of, bundle_id, api_br
         raise ReleaseError("packages outside the build set have no stable version on the feed, so they cannot be shown "
                            f"to be unchanged: {missing[:10]}" + (f" and {len(missing) - 10} more" if len(missing) > 10 else ""))
 
-    manifest = {"id": bundle_id, "version": number, "packages": {**unchanged, **{projects[n].package_id: number for n in members}}}
+    info = levels_input(current, result, held)
+    base = {"line": line, "assembly_version_floors": floors, "packages_without_runtime_assembly": bare, "built_from_source_only": result["built_from_source_only"],
+            "tests": result["tests"], "removed": result["removed"], "bump_stated": bump, "release_numbers": numbers}
+    if not members:
+        manifest = {"id": bundle_id, "version": numbers[bump], "packages": dict(unchanged)}
+        return {"plan": {**base, "release": numbers[bump], "bump": bump, "version": numbers[bump], "members": [], "package_ids": {}, "reasons": {},
+                         "unchanged_packages": len(unchanged), "per_package": True, "pulled_in": [], "retired": []},
+                "versions": unchanged, "trees": {}, "manifest": manifest, "project-manifest": current.manifest(), "levels-input": info,
+                "package-versions": {}, "assembly-versions": {}, "levels": {"packages": {}, "report": levelplan.report({})}}
+    names = info["names"]
+    first_why = {pid: result["reasons"][names[pid]][0] for pid in info["members"]}
+    try:
+        rows = levelplan.plan_levels({p: set(v) for p, v in info["depends"].items()}, info["members"], lambda package: bump, info["last_stable"],
+                                     first_versions, {g: set(c) for g, c in info["generators"].items()}, first_why)
+    except levelplan.LevelPlanError as e:
+        raise ReleaseError(str(e))
+    joined = sorted(rows)
+    assembly_versions = {}
+    for p in joined:
+        assembly = info["assemblies"][p]
+        if assembly not in floors and p in info["last_stable"] and p not in bare:
+            raise ReleaseError(f"ASSEMBLY_FLOOR_MISSING: {p} (assembly {assembly}) has a last stable version, but the baseline records no floor for it "
+                               "and does not list it as carrying no runtime assembly; nothing is assumed. Measure the baseline again, or fix the assembly name.")
+        assembly_versions[names[p]] = assembly_version_of(rows[p]["next"], floors.get(assembly))
+    # The bundle follows the highest level among the packages that already existed: the stated bump is the least it can be. A new package raises
+    # nothing (FDW-5591), so adding one to a release at a stated patch leaves the bundle at that patch.
+    derived = max((r["level"] for r in rows.values() if r["level"] != levelplan.NEW), key=BUMPS.index, default=bump)
+    final = max(bump, derived, key=BUMPS.index)
+    number = numbers[final]
+    candidate = None
+    if prerelease:
+        candidate = len([v for v in feed.versions(bundle_id) if v.lower().startswith(number + "-rc.")]) + 1
+    published = {p: rows[p]["next"] + (f"-rc.{candidate}" if candidate else "") for p in rows}
+    bundle_version = f"{number}-rc.{candidate}" if candidate else number
+    replaced = levelplan.replaced_packages(first_versions)
+    outside = {p: v for p, v in unchanged.items() if p not in rows and p not in replaced}
+    manifest = {"id": bundle_id, "version": bundle_version, "packages": {**outside, **published}}
     problems = bundle.check(manifest)
     if problems:
         raise ReleaseError("the release manifest would not make a valid bundle: " + "; ".join(problems))
-    return {"plan": {"release": number, "release_numbers": numbers, "bump": bump, "line": line, "members": members, "assembly_version_floors": floors, "packages_without_runtime_assembly": bare,
-                     "package_ids": {n: projects[n].package_id for n in members}, "reasons": {n: result["reasons"][n] for n in members},
-                     "built_from_source_only": result["built_from_source_only"], "tests": result["tests"],
-                     "removed": result["removed"], "unchanged_packages": len(unchanged)},
-            "versions": unchanged, "trees": {n: current.trees[n] for n in members}, "manifest": manifest,
-            "project-manifest": current.manifest(), "levels-input": levels_input(current, result, held)}
+    member_names = sorted(names[p] for p in joined)
+    pulled = set(member_names) - set(members)
+    reasons = {n: (result["reasons"][n] if n in result["reasons"] else rows[next(p for p in joined if names[p] == n)]["reasons"]) for n in member_names}
+    tests = sorted(set(result["tests"]) | {t for t, refs in info["test_references"].items() if pulled & set(refs) or t[:-len(".Tests")] in pulled and t.endswith(".Tests")})
+    plan = {**base, "release": number, "bump": final, "version": bundle_version, "members": member_names, "package_ids": {names[p]: p for p in joined},
+            "reasons": reasons, "tests": tests, "unchanged_packages": len(outside), "per_package": True, "pulled_in": sorted(pulled), "retired": replaced}
+    return {"plan": plan, "versions": outside, "trees": {names[p]: info["trees"][p] for p in joined}, "manifest": manifest, "project-manifest": current.manifest(),
+            "levels-input": info, "package-versions": {names[p]: published[p] for p in joined}, "assembly-versions": assembly_versions,
+            "levels": {"packages": rows, "report": levelplan.report(rows)}}
 
 
 def packable_references(projects, name):
@@ -193,73 +229,13 @@ def levels_input(current, result, held):
             "test_references": {n: sorted(p.refs) for n, p in sorted(projects.items()) if p.kind == "tests"}}
 
 
-def surface_reader(directory, side):
-    """old_surface/new_surface for levelrun: the text of DIR/<package id>.surface. A missing file raises SurfaceMissing naming the package."""
-    def read(package):
-        path = os.path.join(directory, package + ".surface")
-        try:
-            with open(path, encoding="utf-8") as f:
-                return f.read()
-        except FileNotFoundError:
-            raise SurfaceMissing(package, side, path)
-    return read
-
-
-def decide_release(files, old_surface, new_surface, first_versions, settings, candidate=None, cap=None):
-    """The files of a per-package release: `files` is the content of what `plan` wrote, by name ('plan', 'versions', 'trees', 'manifest',
-    'levels-input'). Returns the same names with per-package versions, plus 'package-versions', 'levels' and the report lines.
-    `candidate` (k) makes every package a release candidate: its version is the next one followed by -rc.k.
-    `cap` is the highest level a package may take (a setting of the release; None = none): see levelrun.decide."""
-    plan, versions, manifest, info = files["plan"], files["versions"], files["manifest"], files["levels-input"]
-    try:
-        rows, surface_reasons = levelrun.decide(
-            {p: set(v) for p, v in info["depends"].items()}, info["members"], old_surface, new_surface, info["last_stable"], first_versions,
-            settings, {g: set(c) for g, c in info["generators"].items()}, cap)
-    except (levelplan.LevelPlanError, apisurface.SurfaceError) as e:
-        raise ReleaseError(str(e))
-    names, joined = info["names"], sorted(rows)
-    floors = plan["assembly_version_floors"]
-    assembly_versions = {}
-    for p in joined:
-        assembly = info["assemblies"][p]
-        if assembly not in floors and p in info["last_stable"] and p not in plan["packages_without_runtime_assembly"]:
-            raise ReleaseError(f"ASSEMBLY_FLOOR_MISSING: {p} (assembly {assembly}) has a last stable version, but the baseline records no floor for it "
-                               "and does not list it as carrying no runtime assembly; nothing is assumed. Measure the baseline again, or fix the assembly name.")
-        assembly_versions[names[p]] = assembly_version_of(rows[p]["next"], floors.get(assembly))
-    published = {p: rows[p]["next"] + (f"-rc.{candidate}" if candidate else "") for p in rows}
-    replaced = levelplan.replaced_packages(first_versions)
-    unchanged = {p: v for p, v in versions.items() if p not in rows and p not in replaced}
-    packages = {**{p: v for p, v in manifest["packages"].items() if p not in rows and p not in replaced}, **published}
-    # The bundle's version follows the highest level among the packages (a new package counts as a minor): the bump that was stated is
-    # the least it can be, never the most. The number for each bump was allocated by `plan` from the feed and the release tags.
-    derived = max(("minor" if r["level"] == levelplan.NEW else r["level"] for r in rows.values()), key=BUMPS.index)
-    bump = max(plan["bump"], derived, key=BUMPS.index)
-    number = plan["release_numbers"][bump]
-    bundle_version = f"{number}-rc.{candidate}" if candidate else number
-    new_manifest = {"id": manifest["id"], "version": bundle_version, "packages": packages}
-    problems = bundle.check(new_manifest)
-    if problems:
-        raise ReleaseError("the release manifest would not make a valid bundle: " + "; ".join(problems))
-    members = sorted(names[p] for p in joined)
-    pulled = set(members) - set(plan["members"])
-    reasons = {**{n: plan["reasons"][n] for n in plan["members"] if n in members},
-               **{names[p]: rows[p]["reasons"] for p in joined if names[p] in pulled}}
-    tests = sorted(set(plan["tests"]) | {t for t, refs in info["test_references"].items() if pulled & set(refs) or t[:-len(".Tests")] in pulled and t.endswith(".Tests")})
-    out_plan = {**plan, "members": members, "package_ids": {names[p]: p for p in joined}, "reasons": reasons, "tests": tests,
-                "unchanged_packages": len(unchanged), "per_package": True, "pulled_in": sorted(pulled), "retired": replaced,
-                "release": number, "bump": bump, "bump_stated": plan["bump"], "version": bundle_version, "level_cap": cap}
-    return {"plan": out_plan, "versions": unchanged, "trees": {names[p]: info["trees"][p] for p in joined}, "manifest": new_manifest,
-            "package-versions": {names[p]: published[p] for p in joined}, "assembly-versions": assembly_versions,
-            "levels": {"packages": rows, "report": levelrun.report(rows, surface_reasons)}}
-
-
 def baseline_floors(baseline):
     """{assembly: x.y.z.w}: the assembly version floor of each assembly, as the baseline release recorded it in its manifest. A baseline
     without them stops the plan: they are measured from the release's own dlls (bindcheck.py floors) and never assumed."""
     floors = baseline.get(bindcheck.FLOORS_KEY) if baseline else None
     if floors is None:
         raise ReleaseError(f"BASELINE_FLOORS_MISSING: the baseline manifest does not state {bindcheck.FLOORS_KEY}. Measure them from the baseline release's "
-                           "packages (Fdw.ApiSurface --identity on each, then bindcheck.py floors --dir DIR) and add them to the baseline manifest.")
+                           "packages (assemblyid.py identity on each, then bindcheck.py floors --dir DIR) and add them to the baseline manifest.")
     if not isinstance(floors, dict):
         raise ReleaseError(f"BASELINE_FLOORS_INVALID: {bindcheck.FLOORS_KEY} must be an object of {{assembly: x.y.z.w}}")
     try:
@@ -282,6 +258,17 @@ def assembly_version_of(version, floor):
     package is in major N and that is higher. Never lower than the floor, so a dll that asks for it at the floor still binds."""
     base = bindcheck.version_tuple(floor) if floor else (0, 0, 0, 0)
     return ".".join(str(n) for n in max(base, (int(version.split(".")[0]), 0, 0, 0)))
+
+
+def baseline_pins(feed, bundle_id):
+    """{package id: version}: the exact pins of the latest stable bundle on the feed, the versions the last release shipped."""
+    stable = [v for v in feed.versions(bundle_id) if "-" not in v and allocate.triple(v)]
+    if not stable:
+        raise ReleaseError(f"no stable {bundle_id} on the feed to read the baseline versions from")
+    try:
+        return feed.pins(bundle_id, allocate.highest(stable))
+    except FeedError as e:
+        raise ReleaseError(str(e))
 
 
 def baseline_from_bundle(feed, bundle_id):
@@ -311,24 +298,6 @@ def write(out, files):
             f.write("\n")
 
 
-def decide_main(a):
-    files = {name: read_json(os.path.join(a.plan_dir, name + ".json")) for name in ("plan", "versions", "trees", "manifest", "levels-input")}
-    try:
-        result = decide_release(files, surface_reader(a.old_surfaces, "old"), surface_reader(a.new_surfaces, "new"),
-                                levelplan.load_first_versions(a.first_versions), apisurface.load_settings(a.settings), a.candidate, a.max_level)
-    except SurfaceMissing as e:
-        if a.missing_out:
-            with open(a.missing_out, "w", encoding="utf-8", newline="\n") as f:
-                json.dump({"package": e.package, "side": e.side}, f)
-        print(f"release not decided; nothing was written:\n  {e}", file=sys.stderr)
-        sys.exit(MISSING_SURFACE_EXIT)
-    except (ReleaseError, levelplan.LevelPlanError, apisurface.SurfaceError) as e:
-        sys.exit(f"release not decided; nothing was written:\n  {e}")
-    write(a.out, {**{k: v for k, v in files.items() if k not in result}, **result})
-    print("\n".join(result["levels"]["report"]))
-    print(f"{len(result['plan']['members'])} package(s) to build and push, {len(result['plan']['pulled_in'])} pulled in by a major; files in {a.out}")
-
-
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -338,50 +307,39 @@ def main(argv=None):
     p.add_argument("--base-ref")
     p.add_argument("--baseline-from-bundle", action="store_true")
     p.add_argument("--baseline")
-    p.add_argument("--bump", choices=["patch", "minor", "major"])
+    p.add_argument("--bump", required=True, choices=["patch", "minor", "major"], help="the level of every package that changed; stated by whoever cuts the release")
     p.add_argument("--bundle-id", required=True)
+    p.add_argument("--first-versions", required=True, help="tools/versioning/first-versions.json: the declared first version of each new package (required, may declare none)")
+    p.add_argument("--prerelease", action="store_true", help="every package and the bundle are release candidates, N-rc.<k>")
     p.add_argument("--out", required=True)
     p.add_argument("--ref", default="HEAD")
-    p.add_argument("--api-breaks")
     p.add_argument("--assembly-info", help="only with --base-ref: a git ref holds no dlls, so what is measured from the release's packages is given here (a JSON file "
                                            "with assemblyVersionFloors and packagesWithoutRuntimeAssembly)")
-    d = sub.add_parser("decide")
-    for name in ("plan-dir", "old-surfaces", "new-surfaces", "first-versions", "settings", "out"):
-        d.add_argument("--" + name, required=True)
-    d.add_argument("--candidate", type=int, help="k: make every package a release candidate, version-rc.k")
-    d.add_argument("--max-level", choices=["patch", "minor", "major"], help="the highest level any package may take in this release (the setting max_level); none by default")
-    d.add_argument("--missing-out", help="where to write {package, side} when a surface is missing (the run then exits 3)")
     a = ap.parse_args(argv)
-    if a.cmd == "decide":
-        return decide_main(a)
     if not re.fullmatch(r"\d+\.\d+", a.line):
         ap.error("--line is major.minor, for example 1.4")
     if sum([bool(a.base_ref), a.baseline_from_bundle, bool(a.baseline)]) != 1:
         ap.error("give exactly one of --base-ref, --baseline-from-bundle and --baseline")
     if a.assembly_info and not a.base_ref:
         ap.error("--assembly-info is only for --base-ref; a baseline file or bundle manifest carries its own")
-    if a.base_ref and a.bump:
-        ap.error("--bump is only for a baseline that is not a git ref; with --base-ref the bump is read from the commits")
-    if not a.base_ref and not a.bump:
-        ap.error("--bump is required without --base-ref: the commits that would declare it are not available")
     current = snapshot(a.repo, a.ref)
-    breaks = read_json(a.api_breaks) if a.api_breaks else []
     tags = git(a.repo, "tag", "-l", "release-*").decode().split()
     feed = NugetOrg()
     try:
         if a.base_ref:
-            baseline, bump_of = changeset.baseline_from_ref(a.repo, a.base_ref), lambda dirs: allocate.bumps_in_range(a.repo, dirs, a.base_ref, a.ref)
+            baseline = changeset.baseline_from_ref(a.repo, a.base_ref)
             if a.assembly_info:
                 baseline = baseline | read_json(a.assembly_info)
         else:
             baseline = baseline_from_bundle(feed, a.bundle_id) if a.baseline_from_bundle else read_json(a.baseline)
-            bump_of = lambda dirs: a.bump
-        result = release_plan(current, baseline, feed, tags, a.line, bump_of, a.bundle_id, breaks)
-    except ReleaseError as e:
+        pins = baseline_pins(feed, a.bundle_id) if a.baseline_from_bundle else None
+        result = release_plan(current, baseline, feed, tags, a.line, a.bump, a.bundle_id, levelplan.load_first_versions(a.first_versions), a.prerelease, pins)
+    except (ReleaseError, levelplan.LevelPlanError) as e:
         sys.exit(f"release not planned; nothing was written:\n  {e}")
     write(a.out, result)
     p = result["plan"]
-    print(f"release {p['release']} ({p['bump']}), line {a.line}: {len(p['members'])} packages to build and push, "
+    print("\n".join(result["levels"]["report"]))
+    print(f"release {p['release']} ({p['bump']}), version {p['version']}, line {a.line}: {len(p['members'])} packages to build and push, "
           f"{p['unchanged_packages']} unchanged, {len(p['tests'])} test projects; files in {a.out}")
 
 

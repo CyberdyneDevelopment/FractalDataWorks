@@ -92,6 +92,66 @@ public class MapEdgesTests
         MapEdges.ForPipelines(state).ShouldBeEmpty();
     }
 
+    /// <summary>FDW-5296: what a Graph data set only intends to read is drawn as the edge it would have once bound, marked intended.</summary>
+    [Fact]
+    public void AnIntendedStoreAndAnIntendedDataSetAreDrawnMarkedIntendedWithIdsOfTheirOwn()
+    {
+        var state = new MapState();
+        state.DataStoresByName["Warehouse"] = Warehouse;
+        state.DataSetsByName["Customers"] = Customers;
+        state.AddNode(MapNodeIds.DataSet(Customers));
+        state.DataSets.Add(new MapDataSetLinks(Orders, [], [], []) { IntendedDataStoreNames = ["warehouse"], IntendedFromNames = ["customers"] });
+
+        var edges = MapEdges.ForDataSets(state).ToList();
+
+        edges.Count.ShouldBe(2);
+        edges.ShouldAllBe(edge => edge.Metadata.ContainsKey(MapEdges.IntendedKey) && edge.Metadata[MapEdges.IntendedKey].Equals(true));
+        edges.Single(edge => edge.RelationType == MapRelations.StoredIn).Target.ShouldBe(MapNodeIds.DataStore(Warehouse));
+        edges.Single(edge => edge.RelationType == MapRelations.DerivedFrom).Target.ShouldBe(MapNodeIds.DataSet(Customers));
+        edges.Select(edge => edge.Id).ShouldAllBe(id => id.StartsWith(MapEdges.IntendedKey + ":", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AnIntendedSourceThatWasNotSentGetsNoEdgeAndNeitherDoesAnIntentForItself()
+    {
+        var state = new MapState();
+        state.DataSetsByName["Orders"] = Orders;
+        state.AddNode(MapNodeIds.DataSet(Orders));
+        state.DataSets.Add(new MapDataSetLinks(Orders, [], [], []) { IntendedDataStoreNames = ["ExternalCrm"], IntendedFromIds = [Customers], IntendedFromNames = ["Orders"] });
+
+        MapEdges.ForDataSets(state).ShouldBeEmpty();
+    }
+
+    /// <summary>FDW-5456: every edge a Graph data set draws is marked, so the groups route can draw its reads; the edges of every other kind are not.</summary>
+    [Fact]
+    public void EveryEdgeOfAGraphDataSetIsMarkedAndNoEdgeOfAnyOtherKindIs()
+    {
+        var state = new MapState();
+        state.DataStoresByName["Warehouse"] = Warehouse;
+        state.DataSetsByName["Customers"] = Customers;
+        state.AddNode(MapNodeIds.DataSet(Customers));
+        state.DataSets.Add(new MapDataSetLinks(Orders, ["Warehouse"], [], []) { IsGraph = true, IntendedFromNames = ["customers"] });
+        var joined = Guid.Parse("00000000-0000-0000-0000-0000000000a3");
+        state.DataSets.Add(new MapDataSetLinks(joined, ["Warehouse"], [], []));
+
+        var edges = MapEdges.ForDataSets(state).ToList();
+
+        var ofTheGraph = edges.Where(edge => edge.Source == MapNodeIds.DataSet(Orders)).ToList();
+        ofTheGraph.Count.ShouldBe(2);
+        ofTheGraph.ShouldAllBe(edge => edge.Metadata.ContainsKey(MapEdges.GraphKey) && edge.Metadata[MapEdges.GraphKey].Equals(true));
+        edges.Single(edge => edge.Source == MapNodeIds.DataSet(joined)).Metadata.ShouldNotContainKey(MapEdges.GraphKey);
+    }
+
+    [Fact]
+    public void AStoredEdgeCarriesNoIntendedMark()
+    {
+        var state = new MapState();
+        state.DataStoresByName["Warehouse"] = Warehouse;
+        state.DataSets.Add(new MapDataSetLinks(Orders, ["Warehouse"], [], []));
+
+        MapEdges.ForDataSets(state).ShouldHaveSingleItem().Metadata.ShouldNotContainKey(MapEdges.IntendedKey);
+    }
+
     [Fact]
     public void AnEdgeHasTheSameIdWhicheverWayItWasDerived()
     {

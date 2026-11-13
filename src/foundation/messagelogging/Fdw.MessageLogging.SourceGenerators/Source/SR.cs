@@ -8,8 +8,13 @@ namespace Fdw.MessageLogging.Generators
 {
     internal static class SR
     {
+        // Why the name is spelled out: the resx is embedded as Fdw.MessageLogging.Generators.Strings.resources (the LogicalName in the
+        // csproj). A ResourceManager built from typeof(FxResources...SR) looks for FxResources.Fdw.MessageLogging.Generators.SR.resources,
+        // finds nothing, and every diagnostic's text came back empty (FDW-5581).
+        private const string ResourceBaseName = "Fdw.MessageLogging.Generators.Strings";
+
         private static ResourceManager? s_resourceManager;
-        internal static ResourceManager ResourceManager => s_resourceManager ?? (s_resourceManager = new ResourceManager(typeof(FxResources.Fdw.MessageLogging.Generators.SR)));
+        internal static ResourceManager ResourceManager => s_resourceManager ?? (s_resourceManager = new ResourceManager(ResourceBaseName, typeof(SR).Assembly));
 
         internal static string InvalidLoggingMethodNameMessage => GetResourceString("InvalidLoggingMethodNameMessage");
         internal static string ShouldntMentionLogLevelInMessageTitle => GetResourceString("ShouldntMentionLogLevelInMessageTitle");

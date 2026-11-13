@@ -65,7 +65,7 @@ public class TypeCollectionColorRankTests
     {
         // Why the options are read first: the resolver scans the loaded assemblies, and reading them loads this one.
         UiFeedbackUrgencies.All().Select(urgency => urgency.Name).Order().ShouldBe(["High", "Low", "Normal", "SecurityIssue"]);
-        UiFeedbackTags.All().Select(tag => tag.Name).Order().ShouldBe(["CalculationIssue", "FeatureRequest", "UsabilityIssue"]);
+        UiFeedbackTags.All().Select(tag => tag.Name).Order().ShouldBe(["CalculationIssue", "FeatureRequest", "Question", "UsabilityIssue"]);
 
         TypeCollectionResolver.FindCollectionType("UiFeedbackUrgencies").ShouldNotBeNull();
         TypeCollectionResolver.FindCollectionType("UiFeedbackTags").ShouldNotBeNull();

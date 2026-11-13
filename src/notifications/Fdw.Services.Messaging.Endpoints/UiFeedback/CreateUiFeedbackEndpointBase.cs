@@ -34,7 +34,7 @@ public abstract class CreateUiFeedbackEndpointBase : Endpoint<CreateUiFeedbackEn
     public override void Configure()
     {
         Post("/ui-feedback");
-        Policies("ui-feedback:write");
+        Policies("authenticated");
         Summary(s => s.Summary = "Leave a UI comment");
         ConfigureEndpoint();
     }

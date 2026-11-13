@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Connections;
 
@@ -86,6 +87,10 @@ public static class ContainerComposition
         Put(meta, "Endpoint", cfg.WriteEndpoint);
         Put(meta, "Method", cfg.WriteMethod);
         Put(meta, "ContentType", cfg.WriteContentType);
+        // The container's own paging (FDW-5562): its style, and each setting it states under its own key, for the connection that reads it to lay over its own.
+        Put(meta, ContainerPagingMetadata.Style, cfg.PagingStyle);
+        foreach (var setting in cfg.PagingSettings.Where(row => row.IsCurrent && !row.IsDeleted))
+            Put(meta, ContainerPagingMetadata.SettingPrefix + setting.Name, setting.Value);
         return meta;
     }
 

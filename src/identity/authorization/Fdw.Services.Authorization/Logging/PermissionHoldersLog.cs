@@ -18,6 +18,12 @@ public static partial class PermissionHoldersLog
     public static partial IGenericMessage HoldersResolved(ILogger logger, int count, string permission, string tenantId);
 
     /// <summary>
+    /// Logs the people found to hold a permission in an organization through what the organization grants them.
+    /// </summary>
+    [MessageLogging(EventId = 12731, Level = LogLevel.Debug, Message = "{count} user(s) hold '{permission}' in organization {organizationId} of tenant {tenantId}")]
+    public static partial IGenericMessage OrganizationHoldersResolved(ILogger logger, int count, string permission, string organizationId, string tenantId);
+
+    /// <summary>
     /// Logs that the permission asked about does not exist.
     /// </summary>
     [MessageLogging(EventId = 32730, Level = LogLevel.Warning, Message = "Who holds '{permission}' cannot be found: no such permission exists")]

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Connections.Http.Logging;
@@ -22,6 +23,9 @@ namespace Fdw.Services.Connections.Http.Paging;
 /// </remarks>
 public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>, IDeclaresDefaults
 {
+    // The tuning values: the properties that mean the same in every style, so a container takes them from a connection that pages in another style.
+    private static readonly string[] Tuning = [HttpPagingProperties.PageSize, HttpPagingProperties.MaxPages];
+
     private static readonly IReadOnlyDictionary<string, object> Shared = ServiceTypeDefaults.With(
         new Dictionary<string, object>(StringComparer.Ordinal),
         (HttpPagingProperties.PageSize, 100),
@@ -49,6 +53,7 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
     {
         ExpectedProperties = expectedProperties;
         RequiredProperties = requiredProperties;
+        InheritableProperties = [.. expectedProperties.Where(property => Tuning.Contains(property, StringComparer.OrdinalIgnoreCase))];
     }
 
     /// <summary>Gets every additional property the style reads; the endpoint shows these and accepts them beside the authentication keys.</summary>
@@ -56,6 +61,14 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
 
     /// <summary>Gets the additional properties a connection must state for the style.</summary>
     public IReadOnlyList<string> RequiredProperties { get; } = [];
+
+    /// <summary>
+    /// Gets the properties of this style a container that pages in this style takes from its connection even when the connection pages in another style
+    /// (FDW-5562): the tuning values, which mean the same in every style. Every other property is the container's to state; it is never read off a
+    /// connection that states it for a style of its own. When the container and the connection page in the same style, every property is taken from the
+    /// connection that the container does not state.
+    /// </summary>
+    public IReadOnlyList<string> InheritableProperties { get; } = [];
 
     /// <summary>Gets whether this is the Empty/NotFound sentinel.</summary>
     public bool IsEmpty => string.IsNullOrEmpty(Name);
@@ -78,6 +91,43 @@ public abstract class HttpPagingStyleBase : TypeOptionBase<HttpPagingStyleBase>,
         // A read of no rows (Take 0) asks for nothing and returns nothing; only a negative window is refused.
         var counted = Counted(settings, window.Skip, window.Take, minimumTake: 0);
         return counted.IsFailure ? counted.ToNewResult<HttpPagingPlan>() : CreatePlan(settings, window);
+    }
+
+    /// <summary>
+    /// Checks paging settings once, as the same code every place that stores or reads them does (FDW-5562): every property the style needs is stated, and
+    /// every number it reads is a whole number in its range, or the style declares a default for it. A connection or a container that states a bad value is
+    /// refused when it is saved, not at the first read.
+    /// </summary>
+    /// <param name="settings">The effective paging settings: the connection's, overlaid by the container's.</param>
+    /// <returns>Success, or the refusal naming the property that is missing or wrong.</returns>
+    public IGenericResult Check(HttpPagingSettings settings)
+    {
+        var stated = RequiredStated(settings);
+        if (stated.IsFailure) return stated;
+
+        foreach (var property in ExpectedProperties)
+        {
+            var minimum = NumberMinimum(property);
+            if (minimum is null) continue;
+
+            var number = WholeNumber(settings, property, minimum.Value);
+            if (number.IsFailure) return number;
+        }
+
+        return GenericResult.Success();
+    }
+
+    /// <summary>Gets the keys, among those given, that this style does not read.</summary>
+    /// <param name="keys">The setting names a connection or a container states.</param>
+    /// <returns>The keys the style does not read, in the order given.</returns>
+    public IReadOnlyList<string> UnexpectedProperties(IEnumerable<string> keys)
+        => [.. keys.Where(key => !ExpectedProperties.Contains(key, StringComparer.OrdinalIgnoreCase))];
+
+    // The smallest value of a numeric property, or null for one that is not a number.
+    private static int? NumberMinimum(string property)
+    {
+        if (string.Equals(property, HttpPagingProperties.FirstPageNumber, StringComparison.OrdinalIgnoreCase)) return 0;
+        return Tuning.Contains(property, StringComparer.OrdinalIgnoreCase) ? 1 : null;
     }
 
     /// <summary>

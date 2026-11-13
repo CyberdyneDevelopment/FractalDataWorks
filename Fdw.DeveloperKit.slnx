@@ -215,6 +215,8 @@
     <Project Path="src/data/Fdw.Data.DataPaths/Fdw.Data.DataPaths.csproj" />
     <Project Path="src/data/Fdw.Data.Files/Fdw.Data.Files.csproj" />
     <Project Path="src/data/Fdw.Data.Importers.Abstractions/Fdw.Data.Importers.Abstractions.csproj" />
+    <Project Path="src/data/Fdw.Data.Options.Abstractions/Fdw.Data.Options.Abstractions.csproj" />
+    <Project Path="src/data/Fdw.Data.Options/Fdw.Data.Options.csproj" />
     <Project Path="src/data/Fdw.Data.Serialization/Fdw.Data.Serialization.csproj" />
     <Project Path="src/data/Fdw.Data.SourceGenerators/Fdw.Data.SourceGenerators.csproj" />
     <Project Path="src/data/Fdw.Data/Fdw.Data.csproj" />
@@ -224,6 +226,7 @@
     <Project Path="src/data/Fdw.Services.Data.Endpoints/Fdw.Services.Data.Endpoints.csproj" />
     <Project Path="src/data/Fdw.Services.Data.Etl.Registration/Fdw.Services.Data.Etl.Registration.csproj" />
     <Project Path="src/data/Fdw.Services.Data.Etl/Fdw.Services.Data.Etl.csproj" />
+    <Project Path="src/data/Fdw.Services.Data.Graphs/Fdw.Services.Data.Graphs.csproj" />
     <Project Path="src/data/Fdw.Services.Data.SignalR/Fdw.Services.Data.SignalR.csproj" />
     <Project Path="src/data/Fdw.Services.Data/Fdw.Services.Data.csproj" />
     <Project Path="src/data/Fdw.Services.Execution.Abstractions/Fdw.Services.Execution.Abstractions.csproj" />
@@ -612,6 +615,10 @@
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/data/Fdw.Data.Importers.Abstractions.Tests/Fdw.Data.Importers.Abstractions.Tests.csproj" />
+    <Project Path="tests/data/Fdw.Data.Options.Tests/Fdw.Data.Options.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/data/Fdw.Data.SourceGenerators.Tests/Fdw.Data.SourceGenerators.Tests.csproj" />
     <Project Path="tests/data/Fdw.Data.Tests/Fdw.Data.Tests.csproj" />
     <Project Path="tests/data/Fdw.Services.Data.Abstractions.Tests/Fdw.Services.Data.Abstractions.Tests.csproj" />
@@ -621,6 +628,10 @@
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/data/Fdw.Services.Data.Etl.Tests/Fdw.Services.Data.Etl.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/data/Fdw.Services.Data.Graphs.Tests/Fdw.Services.Data.Graphs.Tests.csproj">
       <BuildType Solution="Develop|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>

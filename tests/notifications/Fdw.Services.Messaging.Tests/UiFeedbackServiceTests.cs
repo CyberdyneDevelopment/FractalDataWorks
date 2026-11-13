@@ -12,6 +12,7 @@ using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Configuration;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Messaging.Tests;
@@ -36,6 +37,25 @@ public sealed class UiFeedbackServiceTests
     private sealed class StubAccessor : IAuthenticationContextAccessor
     {
         public IAuthenticationContext? Current { get; set; }
+    }
+
+    // The settings the service reads: only the setting that maps routes to the permissions that answer them, as the fixture states it.
+    private sealed class StubSettings(Fixture fixture) : IEffectiveSettingsProvider
+    {
+        public T GetEffectiveValue<T>(string settingName, Guid? tenantId = null, string? roleName = null)
+            => TryGetEffectiveValue<T>(settingName, out var value, tenantId, roleName) ? value : throw new InvalidOperationException(settingName + " is not set");
+
+        public bool TryGetEffectiveValue<T>(string settingName, out T value, Guid? tenantId = null, string? roleName = null)
+        {
+            if (string.Equals(settingName, SettingDefinitions.UiFeedbackQuestionAnswerers, StringComparison.Ordinal) && fixture.AnswerersSetting is { } stated)
+            {
+                value = (T)(object)stated;
+                return true;
+            }
+
+            value = default!;
+            return false;
+        }
     }
 
     private sealed class Fixture
@@ -85,7 +105,17 @@ public sealed class UiFeedbackServiceTests
             var holders = new Mock<IPermissionHolders>(MockBehavior.Loose);
             holders
                 .Setup(h => h.Get(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => TenantLookup ?? GenericResult<IReadOnlyList<Guid>>.Success(TenantReaders));
+                .ReturnsAsync((string permission, Guid _, CancellationToken _) => string.Equals(permission, "ui-feedback:read", StringComparison.Ordinal)
+                    ? TenantLookup ?? GenericResult<IReadOnlyList<Guid>>.Success(TenantReaders)
+                    : AnswererLookup ?? GenericResult<IReadOnlyList<Guid>>.Success(TenantAnswerers.Where(h => h.Permission == permission).Select(h => h.UserId).ToList()));
+            holders
+                .Setup(h => h.GetInOrganization(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string permission, Guid _, Guid organization, CancellationToken _) =>
+                {
+                    OrganizationsAsked.Add(organization);
+                    return GenericResult<IReadOnlyList<Guid>>.Success(
+                        OrganizationAnswerers.Where(h => h.Permission == permission && h.OrganizationId == organization).Select(h => h.UserId).ToList());
+                });
             holders
                 .Setup(h => h.GetOnPlatform(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => PlatformLookup ?? GenericResult<IReadOnlyList<Guid>>.Success(PlatformReaders));
@@ -120,8 +150,26 @@ public sealed class UiFeedbackServiceTests
                     : GenericResult<string>.Failure(new GenericMessage("the signed-in person has no account")));
 
             Service = new UiFeedbackService(
-                NullLogger<UiFeedbackService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, names.Object, holders.Object, messages.Object);
+                NullLogger<UiFeedbackService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, names.Object, holders.Object, messages.Object,
+                new Lazy<IEffectiveSettingsProvider>(() => new StubSettings(this)));
         }
+
+        /// <summary>The value of the setting that maps routes to the permissions that answer them; null when the deployment states none.</summary>
+        public string? AnswerersSetting { get; set; } =
+            "[{\"routePrefix\":\"/documents\",\"permission\":\"document-setup:write\"},{\"routePrefix\":\"/data\",\"permission\":\"data:write\"},"
+            + "{\"routePrefix\":\"/datasets\",\"permission\":\"datasets:write\"},{\"routePrefix\":\"/datasets/$name/fields\",\"permission\":\"fields:write\"}]";
+
+        /// <summary>The people who hold a permission through a role in the comment's tenant, other than the read permission.</summary>
+        public List<(Guid UserId, string Permission)> TenantAnswerers { get; } = [];
+
+        /// <summary>The people who hold a permission through what an organization grants them.</summary>
+        public List<(Guid UserId, string Permission, Guid OrganizationId)> OrganizationAnswerers { get; } = [];
+
+        /// <summary>The organizations whose holders were asked for.</summary>
+        public List<Guid> OrganizationsAsked { get; } = [];
+
+        /// <summary>When set, the lookup of the tenant's answerers answers this.</summary>
+        public IGenericResult<IReadOnlyList<Guid>>? AnswererLookup { get; set; }
 
         public UiFeedbackService Service { get; }
 
@@ -178,8 +226,13 @@ public sealed class UiFeedbackServiceTests
         /// <summary>The number (from 1) of the write that fails; 0 for none.</summary>
         public int FailWrite { get; set; }
 
+        // Why read and write: the routes that save and comment asked for the write right before the service did, so a reader in these tests could always write.
         public Fixture SignedInAs(Guid userId, Guid tenantId, string name, bool globalTenant = false)
-            => SignedIn(userId, tenantId, name, globalTenant, ["ui-feedback:read"]);
+            => SignedIn(userId, tenantId, name, globalTenant, ["ui-feedback:read", "ui-feedback:write"]);
+
+        /// <summary>Signs in a person who holds none of the comment rights, only the permissions stated, acting in an organization when one is named.</summary>
+        public Fixture SignedInHolding(Guid userId, Guid tenantId, string name, string[] permissions, Guid? organizationId = null)
+            => SignedIn(userId, tenantId, name, false, permissions, organizationId);
 
         /// <summary>Signs in a person who holds neither right to see comments.</summary>
         public Fixture SignedInWithoutRights(Guid userId, Guid tenantId, string name)
@@ -189,7 +242,7 @@ public sealed class UiFeedbackServiceTests
         public Fixture SignedInAsReviewer(Guid userId, Guid tenantId, string name)
             => SignedIn(userId, tenantId, name, false, ["ui-feedback:write"]);
 
-        private Fixture SignedIn(Guid userId, Guid tenantId, string name, bool globalTenant, string[] permissions)
+        private Fixture SignedIn(Guid userId, Guid tenantId, string name, bool globalTenant, string[] permissions, Guid? organizationId = null)
         {
             var context = new Mock<IAuthenticationContext>(MockBehavior.Loose);
             context.SetupGet(c => c.IsAuthenticated).Returns(true);
@@ -198,6 +251,7 @@ public sealed class UiFeedbackServiceTests
             context.SetupGet(c => c.Username).Returns(userId.ToString("D"));
             AccountNames[userId] = name;
             context.SetupGet(c => c.ActiveTenantId).Returns(tenantId);
+            context.SetupGet(c => c.ActiveOrgId).Returns(organizationId);
             context.SetupGet(c => c.IsSystemContext).Returns(false);
             context.SetupGet(c => c.Permissions).Returns(permissions);
             context.SetupGet(c => c.Claims).Returns(globalTenant
@@ -1507,5 +1561,442 @@ public sealed class UiFeedbackServiceTests
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Message == "the stand-in call failed");
         fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackTag", "UiFeedbackAnchor", "UiFeedbackAnchor", "UiFeedbackComment", "UiFeedbackAgreement", "AlertAction", "AlertEveryoneAction", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
+    }
+
+    // ── Questions ───────────────────────────────────────────────────────────
+
+    private static readonly Guid Eve = Guid.NewGuid();
+    private static readonly Guid Fay = Guid.NewGuid();
+    private static readonly Guid Finance = Guid.NewGuid();
+
+    private static CreateUiFeedbackRequest QuestionOn(string route, params string[] tags)
+    {
+        var request = ValidRequest();
+        request.Route = route;
+        request.Urgency = "Normal";
+        request.Tags = tags.Length == 0 ? ["Question"] : tags;
+        request.Body = "Where does this number come from?";
+        return request;
+    }
+
+    private static UiFeedbackRow QuestionIn(Fixture fixture, Guid authorId, string route, string urgency = "Normal")
+    {
+        var row = fixture.Add(TenantA, authorId, urgency);
+        row.Route = route;
+        fixture.Tags.Add(new UiFeedbackTagRow { FeedbackId = row.Id, Tag = "Question" });
+        return row;
+    }
+
+    private static Fixture DatasetOwnerEve() => new Fixture().SignedInHolding(Eve, TenantA, "Eve", ["datasets:write"]);
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AQuestionIsToldToTheHoldersOfThePermissionItsScreenMapsToOnceAndAsAQuestion()
+    {
+        var fixture = AnaInA();
+        fixture.TenantReaders.Add(Ben);
+        fixture.TenantAnswerers.AddRange([(Eve, "datasets:write"), (Eve, "datasets:write"), (Fay, "data:write")]);
+
+        var result = await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Messages.ShouldBeEmpty();
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben, Eve], ignoreOrder: true);
+        var asked = fixture.Told.Single(m => m.RecipientUserId == Eve);
+        asked.Subject.ShouldBe("Ana asked a question on /datasets/$name");
+        asked.MessageType.ShouldBe("UiFeedback");
+        asked.ActionUrl.ShouldBe($"/feedback/{result.Value!.Id:D}");
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    [InlineData("/datasets/$name/fields/$field", "fields:write")]
+    [InlineData("/datasets/$name/fields", "fields:write")]
+    [InlineData("/datasets", "datasets:write")]
+    [InlineData("/datasets/$name", "datasets:write")]
+    [InlineData("/data/sources", "data:write")]
+    [InlineData("/documents/", "document-setup:write")]
+    public async Task TheLongestRoutePrefixThatMatchesWholeSegmentsSaysWhoAnswers(string route, string permission)
+    {
+        var fixture = AnaInA();
+        fixture.TenantAnswerers.Add((Eve, permission));
+        fixture.TenantAnswerers.AddRange(new[] { "fields:write", "datasets:write", "data:write", "document-setup:write" }
+            .Where(other => other != permission).Select(other => (Fay, other)));
+
+        await fixture.Service.Create(QuestionOn(route), Ct);
+
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Eve]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AQuestionOnAScreenNoPrefixMatchesIsToldOnlyToTheReaders()
+    {
+        var fixture = AnaInA();
+        fixture.TenantReaders.Add(Ben);
+        fixture.TenantAnswerers.Add((Eve, "datasets:write"));
+
+        var result = await fixture.Service.Create(QuestionOn("/pipelines"), Ct);
+
+        result.Messages.ShouldBeEmpty();
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ADeploymentWithNoAnswerersSettingTellsAQuestionOnlyToTheReaders()
+    {
+        var fixture = AnaInA();
+        fixture.AnswerersSetting = null;
+        fixture.TenantReaders.Add(Ben);
+        fixture.TenantAnswerers.Add((Eve, "datasets:write"));
+
+        var result = await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Messages.ShouldBeEmpty();
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben]);
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData("not json")]
+    [InlineData("[{\"routePrefix\":\"datasets\",\"permission\":\"datasets:write\"}]")]
+    [InlineData("[{\"routePrefix\":\"/datasets\",\"permission\":\" \"}]")]
+    [InlineData("[{\"routePrefix\":\"/datasets\",\"permission\":\"a:write\"},{\"routePrefix\":\"/datasets/\",\"permission\":\"b:write\"}]")]
+    public async Task ASettingThatIsNotAListOfPrefixesAndPermissionsIsReportedAndTheQuestionIsKeptAndToldToItsReaders(string setting)
+    {
+        var fixture = AnaInA();
+        fixture.AnswerersSetting = setting;
+        fixture.TenantReaders.Add(Ben);
+
+        var result = await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-61005");
+        fixture.Writes.ShouldContain("UiFeedback");
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AnAnswererWhoIsTheAuthorOrAlreadyAReaderIsNotToldTwice()
+    {
+        var fixture = AnaInA();
+        fixture.TenantReaders.Add(Ben);
+        fixture.PlatformReaders.Add(Cy);
+        fixture.TenantAnswerers.AddRange([(Ana, "datasets:write"), (Ben, "datasets:write"), (Cy, "datasets:write"), (Eve, "datasets:write")]);
+
+        await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben, Cy, Eve], ignoreOrder: true);
+        fixture.Told.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AQuestionAskedInAnOrganizationIsToldToThoseItsRolesGiveThePermissionToo()
+    {
+        var other = Guid.NewGuid();
+        var fixture = new Fixture().SignedInHolding(Ana, TenantA, "Ana", [], Finance);
+        fixture.TenantAnswerers.Add((Eve, "document-setup:write"));
+        fixture.OrganizationAnswerers.AddRange([(Fay, "document-setup:write", Finance), (Dee, "document-setup:write", other), (Cy, "datasets:write", Finance)]);
+
+        await fixture.Service.Create(QuestionOn("/documents/$id"), Ct);
+
+        fixture.OrganizationsAsked.ShouldBe([Finance]);
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Eve, Fay], ignoreOrder: true);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AQuestionAskedInNoOrganizationAsksForNoOrganizationsHolders()
+    {
+        var fixture = AnaInA();
+        fixture.OrganizationAnswerers.Add((Fay, "datasets:write", Finance));
+
+        await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        fixture.OrganizationsAsked.ShouldBeEmpty();
+        fixture.Told.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ACommentThatIsNotAQuestionIsToldToNoAnswerer()
+    {
+        var fixture = AnaInA();
+        fixture.TenantAnswerers.Add((Eve, "datasets:write"));
+
+        await fixture.Service.Create(QuestionOn("/datasets/$name", "UsabilityIssue"), Ct);
+
+        fixture.Told.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AnAnswererWhoCannotBeToldIsReportedAndTheQuestionAndTheOtherAnswerersAreKept()
+    {
+        var fixture = AnaInA();
+        fixture.TenantAnswerers.AddRange([(Eve, "datasets:write"), (Fay, "datasets:write")]);
+        fixture.UnreachableReader = Eve;
+
+        var result = await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71007");
+        fixture.Writes.ShouldContain("UiFeedback");
+        fixture.Told.Select(m => m.RecipientUserId).ShouldContain(Fay);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AnswerersThatCannotBeFoundAreReportedAndTheQuestionIsKept()
+    {
+        var fixture = AnaInA();
+        fixture.TenantReaders.Add(Ben);
+        fixture.AnswererLookup = GenericResult<IReadOnlyList<Guid>>.Failure(new GenericMessage("the roles are unreadable"));
+
+        var result = await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71008");
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task APersonWithoutTheCommentRightsMayAskAQuestion()
+    {
+        var fixture = new Fixture().SignedInHolding(Ana, TenantA, "Ana", []);
+
+        var result = await fixture.Service.Create(QuestionOn("/datasets/$name"), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Tags.ShouldBe(["Question"]);
+        result.Value.IsMine.ShouldBeTrue();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    [InlineData("UsabilityIssue")]
+    [InlineData("Question,FeatureRequest")]
+    public async Task APersonWithoutTheWriteRightMayLeaveNothingButAQuestion(string tags)
+    {
+        var fixture = new Fixture().SignedInHolding(Ana, TenantA, "Ana", ["ui-feedback:read"]);
+
+        var result = await fixture.Service.Create(QuestionOn("/datasets/$name", tags.Split(',')), Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-100002");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task APersonWithoutTheWriteRightMayNotLeaveACommentWithNoTag()
+    {
+        var fixture = new Fixture().SignedInHolding(Ana, TenantA, "Ana", []);
+        var request = QuestionOn("/datasets/$name");
+        request.Tags = [];
+
+        var result = await fixture.Service.Create(request, Ct);
+
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-100002");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnAnswererOpensTheQuestionItsPictureAndItsThreadAndAnswersIt()
+    {
+        var fixture = DatasetOwnerEve();
+        var question = QuestionIn(fixture, Ana, "/datasets/$name");
+        question.HasScreenshot = true;
+        fixture.Pictures.Add(new UiFeedbackScreenshotRow { FeedbackId = question.Id, ContentType = "image/png", Picture = [1, 2, 3] });
+        fixture.Comments.Add(new UiFeedbackCommentRow { Id = Guid.NewGuid(), FeedbackId = question.Id, AuthorUserId = Ana, AuthorName = "Ana", Body = "Anyone?", CreatedAt = DateTimeOffset.UtcNow });
+
+        var opened = await fixture.Service.Get(question.Id, Ct);
+        var picture = await fixture.Service.GetPicture(question.Id, Ct);
+        var thread = await fixture.Service.ListComments(question.Id, 0, 50, Ct);
+        var answer = await fixture.Service.AddComment(question.Id, "It is the sum of the rows", Ct);
+
+        opened.IsSuccess.ShouldBeTrue();
+        picture.IsSuccess.ShouldBeTrue();
+        thread.IsSuccess.ShouldBeTrue();
+        thread.Value!.Count.ShouldBe(1);
+        answer.IsSuccess.ShouldBeTrue();
+        fixture.Writes.ShouldBe(["UiFeedbackComment"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnAnswererFindsTheAlertOfAQuestionPutToThem()
+    {
+        var fixture = DatasetOwnerEve();
+        var question = QuestionIn(fixture, Ana, "/datasets/$name");
+
+        var found = await fixture.Service.Find(question.Id, Ct);
+
+        found.Value.ShouldNotBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnAnswerersRightOpensASecurityQuestionPutToThem()
+    {
+        var fixture = DatasetOwnerEve();
+        var question = QuestionIn(fixture, Ana, "/datasets/$name", "SecurityIssue");
+
+        var opened = await fixture.Service.Get(question.Id, Ct);
+
+        opened.IsSuccess.ShouldBeTrue();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    [InlineData("/datasets/$name", false)]
+    [InlineData("/documents/$id", true)]
+    [InlineData("/pipelines", true)]
+    public async Task AnAnswererCannotOpenWhatWasNotPutToThemAndItDoesNotExistForThem(string route, bool question)
+    {
+        var fixture = DatasetOwnerEve();
+        var comment = question ? QuestionIn(fixture, Ana, route) : fixture.Add(TenantA, Ana);
+        comment.Route = route;
+
+        var opened = await fixture.Service.Get(comment.Id, Ct);
+        var picture = await fixture.Service.GetPicture(comment.Id, Ct);
+        var thread = await fixture.Service.ListComments(comment.Id, 0, 50, Ct);
+        var answer = await fixture.Service.AddComment(comment.Id, "An answer", Ct);
+        var found = await fixture.Service.Find(comment.Id, Ct);
+
+        opened.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        picture.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        thread.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        answer.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        found.Value.ShouldBeNull();
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnAnswererCannotOpenAQuestionOfAnotherTenant()
+    {
+        var fixture = DatasetOwnerEve();
+        var question = QuestionIn(fixture, Ana, "/datasets/$name");
+        question.TenantId = TenantB;
+
+        var opened = await fixture.Service.Get(question.Id, Ct);
+
+        opened.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnAnswererMayNotChangeTheQuestion()
+    {
+        var fixture = DatasetOwnerEve();
+        var question = QuestionIn(fixture, Ana, "/datasets/$name");
+
+        var edited = await fixture.Service.Edit(question.Id, "changed", Ct);
+
+        edited.Messages.ShouldContain(m => m.Code == "MESSAGING-100000");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task TheAskerWithoutTheCommentRightsRepliesInTheThreadOfTheirQuestion()
+    {
+        var fixture = new Fixture().SignedInHolding(Ana, TenantA, "Ana", []);
+        var question = QuestionIn(fixture, Ana, "/pipelines");
+
+        var reply = await fixture.Service.AddComment(question.Id, "Thanks", Ct);
+
+        reply.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReaderWithoutTheWriteRightMayNotCommentOnANoteThatIsNotAQuestionPutToThem()
+    {
+        var fixture = new Fixture().SignedInHolding(Ben, TenantA, "Ben", ["ui-feedback:read"]);
+        var note = fixture.Add(TenantA, Ana);
+
+        var comment = await fixture.Service.AddComment(note.Id, "Seen", Ct);
+
+        comment.Messages.ShouldContain(m => m.Code == "MESSAGING-100003");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task APersonWithoutTheCommentRightsListsTheirOwnCommentsAndTheQuestionsPutToThem()
+    {
+        var fixture = DatasetOwnerEve();
+        var own = fixture.Add(TenantA, Eve);
+        var asked = QuestionIn(fixture, Ana, "/datasets/$name");
+        QuestionIn(fixture, Ana, "/documents/$id");
+        fixture.Add(TenantA, Ana);
+
+        var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        listed.IsSuccess.ShouldBeTrue();
+        listed.Value!.Select(c => c.Id).ShouldBe([own.Id, asked.Id], ignoreOrder: true);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AskedOfMeListsOnlyTheQuestionsPutToTheCaller()
+    {
+        var fixture = new Fixture().SignedInHolding(Eve, TenantA, "Eve", ["ui-feedback:read", "ui-feedback:write", "datasets:write"]);
+        fixture.Add(TenantA, Eve);
+        var asked = QuestionIn(fixture, Ana, "/datasets/$name");
+        QuestionIn(fixture, Ana, "/documents/$id");
+        fixture.Add(TenantA, Ana);
+
+        var listed = await fixture.Service.List(new UiFeedbackQuery { AskedOfMe = true }, Ct);
+
+        listed.IsSuccess.ShouldBeTrue();
+        listed.Value!.Select(c => c.Id).ShouldBe([asked.Id]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AListThatWouldShowAnAnswererAnotherTenantsQuestionFailsInsteadOfShowingIt()
+    {
+        var fixture = DatasetOwnerEve();
+        var question = QuestionIn(fixture, Ana, "/datasets/$name");
+        question.TenantId = TenantB;
+
+        var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        listed.IsFailure.ShouldBeTrue();
+        listed.Messages.ShouldContain(m => m.Code == "MESSAGING-91001");
     }
 }

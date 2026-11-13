@@ -29,6 +29,7 @@ public sealed class PermissionHolders : IPermissionHolders
     private readonly IRolePermissionConfigurationProvider _rolePermissions;
     private readonly IUserRoleConfigurationProvider _userRoles;
     private readonly ITenantProvider _tenants;
+    private readonly TenantOrgAccessConfigurationProvider _organizationAccess;
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly ILogger<PermissionHolders> _logger;
 
@@ -40,6 +41,7 @@ public sealed class PermissionHolders : IPermissionHolders
     /// <param name="rolePermissions">Reads what each role carries.</param>
     /// <param name="userRoles">Reads who holds each role.</param>
     /// <param name="tenants">Finds the global tenant.</param>
+    /// <param name="organizationAccess">Reads what each organization grants its members (FDW-1593's access rows).</param>
     /// <param name="authContext">The accessor the system scope is opened on.</param>
     /// <param name="logger">The logger.</param>
     public PermissionHolders(
@@ -48,6 +50,7 @@ public sealed class PermissionHolders : IPermissionHolders
         IRolePermissionConfigurationProvider rolePermissions,
         IUserRoleConfigurationProvider userRoles,
         ITenantProvider tenants,
+        TenantOrgAccessConfigurationProvider organizationAccess,
         IAuthenticationContextAccessor authContext,
         ILogger<PermissionHolders>? logger)
     {
@@ -56,6 +59,7 @@ public sealed class PermissionHolders : IPermissionHolders
         _rolePermissions = rolePermissions;
         _userRoles = userRoles;
         _tenants = tenants;
+        _organizationAccess = organizationAccess;
         _authContext = authContext;
         _logger = logger ?? NullLogger<PermissionHolders>.Instance;
     }
@@ -80,6 +84,36 @@ public sealed class PermissionHolders : IPermissionHolders
         return marked.Count == 1
             ? await HoldersIn(permissionName, marked[0].Id, cancellationToken).ConfigureAwait(false)
             : GenericResult<IReadOnlyList<Guid>>.Failure(PermissionHoldersLog.GlobalTenantNotSingle(_logger, permissionName, marked.Count));
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<Guid>>> GetInOrganization(
+        string permissionName, Guid tenantId, Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        using var systemScope = new SystemAuthenticationContextScope(_authContext);
+
+        var permissions = await _permissions.Get(cancellationToken).ConfigureAwait(false);
+        if (!permissions.IsSuccess || permissions.Value is null)
+            return GenericResult<IReadOnlyList<Guid>>.Failure(PermissionHoldersLog.ReadFailed(_logger, permissionName, "the permissions", permissions.CurrentMessage));
+
+        if (!permissions.Value.Any(candidate => string.Equals(candidate.Name, permissionName, StringComparison.OrdinalIgnoreCase)))
+            return GenericResult<IReadOnlyList<Guid>>.Failure(PermissionHoldersLog.PermissionNotFound(_logger, permissionName));
+
+        var rows = await _organizationAccess.Members(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        if (!rows.IsSuccess || rows.Value is null)
+            return GenericResult<IReadOnlyList<Guid>>.Failure(PermissionHoldersLog.ReadFailed(_logger, permissionName, "the organization's access rows", rows.CurrentMessage));
+
+        // Why PermissionCoverage over each person's rows: a token that names the organization carries those rows' permission names, and enforcement asks
+        // PermissionCoverage.Covers over them, so a row that grants `resource:*` counts for `resource:write` here as it does at the endpoint.
+        var people = rows.Value
+            .Where(row => row.TenantId == tenantId && row.OrgId == organizationId)
+            .GroupBy(row => row.UserId)
+            .Where(person => PermissionCoverage.Covers(person.Select(row => row.PermissionName), permissionName))
+            .Select(person => person.Key)
+            .ToList();
+
+        PermissionHoldersLog.OrganizationHoldersResolved(_logger, people.Count, permissionName, organizationId.ToString("D"), tenantId.ToString("D"));
+        return GenericResult<IReadOnlyList<Guid>>.Success(people);
     }
 
     private async Task<IGenericResult<IReadOnlyList<Guid>>> HoldersIn(string permissionName, Guid tenantId, CancellationToken cancellationToken)

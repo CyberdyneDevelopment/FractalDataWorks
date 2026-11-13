@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\..\src\pipelines\Fdw.Services.Etl.Abstractions\Fdw.Services.Etl.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
     <ProjectReference Include="..\..\..\src\pipelines\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />
+    <ProjectReference Include="..\..\..\src\datasets\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <!-- Only include Fdw.Services.Etl.Abstractions in coverage -->

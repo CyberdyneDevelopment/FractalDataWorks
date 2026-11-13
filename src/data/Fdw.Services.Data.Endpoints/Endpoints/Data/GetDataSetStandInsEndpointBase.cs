@@ -58,7 +58,7 @@ public abstract class GetDataSetStandInsEndpointBase : Endpoint<DataSetNameReque
     {
         StandInEndpointLog.GettingStandIns(_logger, req.Name);
 
-        var fields = await DataSetFieldResolver.ResolveAll(_dataSets, req.Name, ct).ConfigureAwait(false);
+        var fields = await DataSetFieldResolver.ResolveAll(_dataSets, req.Name, DataSetFieldAccess.AllowStandIns, _logger, ct).ConfigureAwait(false);
         if (fields.IsFailure) { await SendError(fields, ct).ConfigureAwait(false); return; }
         if (fields.Value is null)
         {

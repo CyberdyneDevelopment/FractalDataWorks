@@ -49,6 +49,14 @@ public interface IDataStoreType : ITypeOption<Guid, IDataStoreType>
     /// </remarks>
     bool AddressesContainersAsFiles { get; }
 
+    /// <summary>
+    /// Gets the rules for how a container of this store type pages its rows, or <see langword="null"/> when its containers do not page (FDW-5562).
+    /// </summary>
+    /// <remarks>
+    /// A container that states paging in a store whose type has none is refused. Declared on the option, so no endpoint names a connection type.
+    /// </remarks>
+    IContainerPagingRules? ContainerPaging { get; }
+
 }
 
 /// <summary>

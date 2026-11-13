@@ -132,7 +132,7 @@ public abstract class ListDataSetsEndpointBase
     }
 
     /// <inheritdoc />
-    protected override Task<IGenericResult<DataSetSummaryResponse>> ToSummary(
+    protected override async Task<IGenericResult<DataSetSummaryResponse>> ToSummary(
         IDataSetImplementationConfiguration item, CancellationToken ct)
     {
         var summary = DataSetQueryHelper.MapToSummary(item);
@@ -140,17 +140,17 @@ public abstract class ListDataSetsEndpointBase
             _tree ?? throw new InvalidOperationException("The category tree is read before a page is."), item.CategoryId, Logger);
         if (label.IsFailure || label.Value is null)
         {
-            return Task.FromResult(label.ToNewResult<DataSetSummaryResponse>());
+            return label.ToNewResult<DataSetSummaryResponse>();
         }
 
         summary.Category = label.Value.Name;
         summary.CategoryPath = label.Value.Path;
 
-        // A variation has no status of its own: the view answers success with none.
-        var status = (_statusView ?? throw new InvalidOperationException("The statuses are read before a page is.")).StatusOf(item);
+        // A variation has no status of its own: the view answers success with none. A Graph data set is followed through the data sets it nests (FDW-5299).
+        var status = await (_statusView ?? throw new InvalidOperationException("The statuses are read before a page is.")).StatusOfNested(item, ct).ConfigureAwait(false);
         if (status.IsFailure)
         {
-            return Task.FromResult(status.ToNewResult<DataSetSummaryResponse>());
+            return status.ToNewResult<DataSetSummaryResponse>();
         }
 
         if (status.Value is { } named)
@@ -158,7 +158,7 @@ public abstract class ListDataSetsEndpointBase
             summary.Status = named.Name;
         }
 
-        return Task.FromResult(GenericResult<DataSetSummaryResponse>.Success(summary));
+        return GenericResult<DataSetSummaryResponse>.Success(summary);
     }
 
     private static async IAsyncEnumerable<IDataSetImplementationConfiguration> Stream(

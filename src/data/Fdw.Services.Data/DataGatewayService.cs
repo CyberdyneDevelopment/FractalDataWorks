@@ -77,6 +77,7 @@ public sealed partial class DataGatewayService : IDataGateway
 
     private readonly IConnectionConfigurationProvider? _connectionConfigProvider;
     private readonly FieldMappingTransformationResolver _fieldTransformations;
+    private readonly IGraphDataSetRunner? _graphRunner;
     private readonly DataGatewayResultCache? _cache;
     private readonly MainDataGatewayConfiguration? _options;
 
@@ -118,6 +119,10 @@ public sealed partial class DataGatewayService : IDataGateway
     /// (<see cref="IDataStore.DeclaredByHost"/>). Without it such a request fails loud; a non-system request over one
     /// is refused either way (FDW-1068).
     /// </param>
+    /// <param name="graphRunner">
+    /// What runs the graph of a Graph data set when one is read (FDW-5291). Without it a read of a Graph data set fails loud with
+    /// <c>GraphDataSetRunnerMissing</c>; every other kind of data set is read as before.
+    /// </param>
     public DataGatewayService(
         ILoggerFactory? loggerFactory,
         IDataConnectionProvider connectionProvider,
@@ -132,7 +137,8 @@ public sealed partial class DataGatewayService : IDataGateway
         MainDataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
         IConnectionConfigurationProvider? connectionConfigProvider = null,
-        IConfigurationGatewayProvider? configurationGateways = null)
+        IConfigurationGatewayProvider? configurationGateways = null,
+        IGraphDataSetRunner? graphRunner = null)
     {
         var factory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = factory.CreateLogger<DataGatewayService>();
@@ -150,6 +156,7 @@ public sealed partial class DataGatewayService : IDataGateway
         _connectionConfigProvider = connectionConfigProvider;
         _configurationGateways = configurationGateways;
         _fieldTransformations = fieldTransformations;
+        _graphRunner = graphRunner;
 
         // Get internal implementation details - these are not injected
         _predicatePushdown = new PredicatePushdownAnalyzer(factory.CreateLogger<PredicatePushdownAnalyzer>());
@@ -658,7 +665,7 @@ public sealed partial class DataGatewayService : IDataGateway
 
         DataGatewayLogger.RoutingToDataSet(_logger, target.DataSet);
         return GenericResult<(IDataSetType, DataSetExecutionContext)>.Success(
-            (strategy, new DataSetExecutionContext(config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger)));
+            (strategy, new DataSetExecutionContext(config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger, this, _graphRunner)));
     }
 
 

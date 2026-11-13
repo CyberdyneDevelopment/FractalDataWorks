@@ -85,6 +85,12 @@ public class DataStoreContainerResponse
     /// <summary>Gets or sets the content type the rows are sent as, or null when not stated.</summary>
     public string? WriteContentType { get; set; }
 
+    /// <summary>Gets or sets whether the container states paging of its own: true when it names a paging style (FDW-5562).</summary>
+    public bool HasPagingOverride { get; set; }
+
+    /// <summary>Gets or sets the paging style the container names, or null when it takes its connection's.</summary>
+    public string? PagingStyle { get; set; }
+
     /// <summary>Gets or sets the auto-generated key field names.</summary>
     public IList<string> SurrogateKeyFields { get; set; } = [];
 

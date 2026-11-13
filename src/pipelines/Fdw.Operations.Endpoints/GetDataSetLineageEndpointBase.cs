@@ -78,7 +78,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         }
 
         var sources = GetSources(dataSet);
-        var upstreamSources = BuildUpstreamSources(sources);
+        var upstreamSources = BuildUpstreamSources(sources).Concat(BuildGraphSources(dataSet)).ToList();
         var fieldLineage = await BuildFieldLineage(dataSet, sources, ct).ConfigureAwait(false);
 
         // Who reads each field (API-173). An unreadable relation fails the request: an empty
@@ -161,6 +161,29 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
                 Priority = s.Priority
             };
         }).ToList();
+    }
+
+    /// <summary>Builds the upstream sources of a Graph data set (FDW-5296): what its components and stage tools read, and what it only intends to read, the latter marked.</summary>
+    /// <remarks>
+    /// A Graph has no source list (its <c>Sources</c> are empty by design), so what it reads comes from <see cref="GraphDataSetReads"/>, the one reading lineage and status take of a graph.
+    /// Every other kind answers an empty list here and keeps the sources <see cref="BuildUpstreamSources"/> builds. Priority is the position among the Graph's reads.
+    /// </remarks>
+    protected virtual IReadOnlyList<LineageSourceResponse> BuildGraphSources(IDataSetImplementationConfiguration dataSet)
+    {
+        if (dataSet is not IGraphDataSetConfiguration graph)
+        {
+            return [];
+        }
+
+        return [.. GraphDataSetReads.Of(graph).Select((read, position) => new LineageSourceResponse
+        {
+            Name = read.Name,
+            SourceType = string.Equals(read.Kind, GraphDataSetReadKinds.DataSet, StringComparison.Ordinal) ? GraphDataSetReadKinds.DataSet : "Database",
+            DataStoreName = read.DataStoreName,
+            PhysicalLocation = string.Equals(read.Kind, GraphDataSetReadKinds.Container, StringComparison.Ordinal) ? string.Join('.', read.Parents.Skip(1).Append(read.Name)) : null,
+            Priority = position,
+            IsIntended = read.IsIntended ? true : null,
+        })];
     }
 
     /// <summary>Builds field-level lineage: one row for each field of the data set, with the sources that map it.</summary>

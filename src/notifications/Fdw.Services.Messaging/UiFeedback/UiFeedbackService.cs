@@ -11,6 +11,7 @@ using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Logging;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -37,6 +38,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
     private readonly ILogger<UiFeedbackService> _logger;
     private readonly UiFeedbackStore _store;
     private readonly AlertStore _alerts;
+    private readonly UiFeedbackAnswerers _answerers;
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly IPermissionHolders _holders;
     private readonly IMessageService _messages;
@@ -52,6 +54,8 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
     /// <param name="userNames">Reads the caller's user name from their account, for the rows that record who acted (FDW-2199).</param>
     /// <param name="holders">Says who holds the permission to read comments, the people a new comment is told to.</param>
     /// <param name="messages">Tells each of them, and marks an alert read when it is acknowledged.</param>
+    /// <param name="settings">The host's settings, which say who answers the questions left on each screen
+    /// (<see cref="SettingDefinitions.UiFeedbackQuestionAnswerers"/>); <see langword="null"/> in a host that registers none.</param>
     public UiFeedbackService(
         ILogger<UiFeedbackService> logger,
         IDataGatewayProvider dataGateways,
@@ -59,11 +63,13 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         IAuthenticationContextAccessor authContext,
         IUserNames userNames,
         IPermissionHolders holders,
-        IMessageService messages)
+        IMessageService messages,
+        Lazy<IEffectiveSettingsProvider>? settings = null)
     {
         _logger = logger ?? NullLogger<UiFeedbackService>.Instance;
         _store = new UiFeedbackStore(_logger, dataGateways, messaging);
         _alerts = new AlertStore(_logger, dataGateways, messaging);
+        _answerers = new UiFeedbackAnswerers(_logger, settings);
         _authContext = authContext;
         _userNames = userNames;
         _holders = holders;
@@ -84,6 +90,13 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             if (UiFeedbackChecks.Problem(_logger, request) is { } problem)
                 return GenericResult<UiFeedbackPayload>.Failure(problem);
 
+            // Why the route asks only for a signed-in person: anyone may ask a question, so the right to leave any other comment is asked here, where the
+            // tags are known. A question is a comment whose every tag asks for an answer, and there is at least one.
+            var tags = UiFeedbackMapping.TagNames(request);
+            var question = IsQuestion(tags);
+            if (!caller.Value.Writes && !(question && tags.All(tag => UiFeedbackTags.ByName(tag).AsksForAnAnswer)))
+                return GenericResult<UiFeedbackPayload>.Failure(MessagingLog.UiFeedbackOnlyQuestions(_logger, caller.Value.UserId.ToString("D"), WritePermission));
+
             var picture = request.Screenshot is null ? null : UiFeedbackPictures.Decode(_logger, request.Screenshot);
             if (picture is { IsSuccess: false })
                 return picture.ToNewResult<UiFeedbackPayload>();
@@ -93,7 +106,6 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
                 return author.ToNewResult<UiFeedbackPayload>();
 
             var row = UiFeedbackMapping.NewRow(caller.Value, author.Value!, request, picture is not null);
-            var tags = UiFeedbackMapping.TagNames(request);
             var saved = await _store.Add(
                 row,
                 tags.Select(tag => new UiFeedbackTagRow { FeedbackId = row.Id, Tag = tag }).ToList(),
@@ -107,7 +119,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
 
             // Why the comment is answered as saved whatever happens next: it is kept, and a reader who could not be told is a failure to report beside it, not a
             // reason to lose it.
-            var untold = await TellReaders(row, cancellationToken).ConfigureAwait(false);
+            var untold = await Tell(row, question, caller.Value.OrganizationId, cancellationToken).ConfigureAwait(false);
             return GenericResult<UiFeedbackPayload>.Success(UiFeedbackMapping.ToPayload(row, tags, request.AnchorsJson!, caller.Value.UserId, false, new UiFeedbackAgreements(Enumerable.Empty<UiFeedbackAgreementRow>().ToLookup(agreement => agreement.FeedbackId)), UiFeedbackCommentCounts.None), untold);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -131,29 +143,12 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             if (!request.IsSuccess)
                 return request.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
 
-            List<UiFeedbackFilter> reads = caller.Value.SeesAll ? [request.Value.Filter] : NarrowedFilters(request.Value.Filter, caller.Value.UserId);
-            var windowed = request.Value.NeedsWindow || reads.Count > 1;
-            var rows = await ReadRows(reads, request.Value, windowed, cancellationToken).ConfigureAwait(false);
-            if (!rows.IsSuccess)
-                return rows.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
+            var visible = await VisibleRows(caller.Value, query, request.Value, cancellationToken).ConfigureAwait(false);
+            if (!visible.IsSuccess)
+                return visible.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
 
-            // Why checked again after the query narrowed by tenant and by who may see what: a query built with no tenant would return everyone's comments, so the
-            // rule the single read applies (Reachable) is applied to every row of the page, and a row the caller may not see fails the list loudly.
-            foreach (var row in rows.Value!)
-            {
-                var seen = MaySee(caller.Value, row);
-                if (!seen.IsSuccess)
-                    return seen.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
-
-                if (!seen.Value)
-                    return GenericResult<IReadOnlyList<UiFeedbackPayload>>.Failure(MessagingLog.UiFeedbackUnexpected(
-                        _logger, "list", $"the store returned comment {row.Id:D}, which the caller may not see"));
-            }
-
-            var ids = rows.Value!.Select(row => row.Id).ToList();
-            var tags = await _store.FindTags(ids, cancellationToken).ConfigureAwait(false);
-            if (!tags.IsSuccess)
-                return tags.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
+            var (rows, tags, windowed) = visible.Value;
+            var ids = rows.Select(row => row.Id).ToList();
 
             var anchors = await _store.FindAnchors(ids, cancellationToken).ConfigureAwait(false);
             if (!anchors.IsSuccess)
@@ -169,7 +164,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
 
             var comments = await _store.FindCommentCounts(ids, cancellationToken).ConfigureAwait(false);
             return comments.IsSuccess
-                ? Page(caller.Value, request.Value, windowed, rows.Value!, tags.Value!, anchors.Value!, acknowledged.Value!, agreements.Value!, comments.Value!)
+                ? Page(caller.Value, request.Value, windowed, rows, tags, anchors.Value!, acknowledged.Value!, agreements.Value!, comments.Value!)
                 : comments.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -311,6 +306,18 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             var note = await Reachable(caller.Value, id, cancellationToken).ConfigureAwait(false);
             if (!note.IsSuccess)
                 return note.ToNewResult<UiFeedbackCommentPayload>();
+
+            // Why asked here and not by the route: a person without the right to leave comments answers a question put to them, and replies on one they asked.
+            if (!caller.Value.Writes)
+            {
+                var engaged = await InQuestion(caller.Value, note.Value!, cancellationToken).ConfigureAwait(false);
+                if (!engaged.IsSuccess)
+                    return engaged.ToNewResult<UiFeedbackCommentPayload>();
+
+                if (!engaged.Value)
+                    return GenericResult<UiFeedbackCommentPayload>.Failure(
+                        MessagingLog.UiFeedbackMayNotComment(_logger, id.ToString("D"), caller.Value.UserId.ToString("D"), WritePermission));
+            }
 
             // Why the text is checked after the note is found: a person who may not see the note learns nothing from the refusal, not even that it has a rule for text.
             if (UiFeedbackChecks.BodyProblem(_logger, body) is { } problem)
@@ -465,11 +472,8 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             if (!caller.IsSuccess)
                 return caller.ToNewResult<AlertSubject?>();
 
-            // Why a right: the alert routes ask only for a signed-in person, so a comment's alert is shown to someone who holds one of the rights to see comments.
-            if (_authContext.Current is not { } context
-                || (!PermissionCoverage.Covers(context.Permissions, ReadPermission) && !PermissionCoverage.Covers(context.Permissions, WritePermission)))
-                return GenericResult<AlertSubject?>.Success(null);
-
+            // Why no right is asked first: the alert routes ask only for a signed-in person, and a comment's alert is shown to whoever may see the comment, which
+            // a person with neither right to see comments may only when it is a question put to them or one they asked.
             var found = await _store.FindRow(id, cancellationToken).ConfigureAwait(false);
             if (!found.IsSuccess)
                 return found.ToNewResult<AlertSubject?>();
@@ -477,7 +481,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             if (found.Value is not { } row)
                 return GenericResult<AlertSubject?>.Success(null);
 
-            var seen = MaySee(caller.Value, row);
+            var seen = await Sees(caller.Value, row, cancellationToken).ConfigureAwait(false);
             if (!seen.IsSuccess)
                 return seen.ToNewResult<AlertSubject?>();
 
@@ -577,12 +581,70 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         }
     }
 
-    // Tells each person who can read comments, in the comment's tenant and on the platform, except the author. Returns the failures to report beside the saved
-    // comment: one reader who could not be told does not stop the others from being told.
-    private async Task<IReadOnlyList<IGenericMessage>> TellReaders(UiFeedbackRow comment, CancellationToken cancellationToken)
+    // Tells the readers of comments and, for a question, the people who can answer for its screen. Returns the failures to report beside the saved comment.
+    private async Task<IReadOnlyList<IGenericMessage>> Tell(UiFeedbackRow comment, bool question, Guid? organizationId, CancellationToken cancellationToken)
+    {
+        var untold = new List<IGenericMessage>();
+        var readers = await TellReaders(comment, question, untold, cancellationToken).ConfigureAwait(false);
+        if (question)
+            await TellAnswerers(comment, organizationId, readers, untold, cancellationToken).ConfigureAwait(false);
+
+        return untold;
+    }
+
+    // Tells each person who holds the permission that answers for the question's screen, in the question's tenant and, when it was asked in an organization,
+    // through what that organization grants them; not the author, and not a reader, who was told already. One answerer who could not be told does not stop
+    // the others, and nothing here fails the saved question.
+    private async Task TellAnswerers(UiFeedbackRow comment, Guid? organizationId, HashSet<Guid> readers, List<IGenericMessage> untold, CancellationToken cancellationToken)
     {
         var feedbackId = comment.Id.ToString("D");
-        var untold = new List<IGenericMessage>();
+        var permission = _answerers.PermissionFor(comment.Route, comment.TenantId);
+        if (!permission.IsSuccess)
+        {
+            untold.AddRange(permission.Messages);
+            return;
+        }
+
+        if (permission.Value is not { } answering)
+            return;
+
+        var lookups = new List<IGenericResult<IReadOnlyList<Guid>>>
+        {
+            await _holders.Get(answering, comment.TenantId, cancellationToken).ConfigureAwait(false)
+        };
+        if (organizationId is { } organization)
+            lookups.Add(await _holders.GetInOrganization(answering, comment.TenantId, organization, cancellationToken).ConfigureAwait(false));
+
+        var answerers = new HashSet<Guid>();
+        foreach (var lookup in lookups)
+        {
+            if (lookup.IsSuccess && lookup.Value is { } found)
+                answerers.UnionWith(found);
+            else
+                untold.Add(MessagingLog.UiFeedbackAnswerersNotFound(_logger, feedbackId, answering, lookup.CurrentMessage));
+        }
+
+        answerers.Remove(comment.AuthorUserId);
+        answerers.ExceptWith(readers);
+
+        var told = 0;
+        foreach (var answerer in answerers)
+        {
+            var sent = await _messages.CreateMessage(AlertFor(comment, answerer, true), cancellationToken).ConfigureAwait(false);
+            if (sent.IsSuccess)
+                told++;
+            else
+                untold.Add(MessagingLog.UiFeedbackAnswererNotTold(_logger, feedbackId, answerer.ToString("D"), sent.CurrentMessage));
+        }
+
+        MessagingLog.UiFeedbackAnswerersTold(_logger, feedbackId, told, answering);
+    }
+
+    // Tells each person who can read comments, in the comment's tenant and on the platform, except the author, and answers who they are. The failures go to
+    // untold, to report beside the saved comment: one reader who could not be told does not stop the others from being told.
+    private async Task<HashSet<Guid>> TellReaders(UiFeedbackRow comment, bool question, List<IGenericMessage> untold, CancellationToken cancellationToken)
+    {
+        var feedbackId = comment.Id.ToString("D");
 
         // Each lookup stands on its own: a failed one is reported, and the readers the other found are still told.
         var readers = new HashSet<Guid>();
@@ -601,7 +663,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         var told = 0;
         foreach (var reader in readers)
         {
-            var sent = await _messages.CreateMessage(AlertFor(comment, reader), cancellationToken).ConfigureAwait(false);
+            var sent = await _messages.CreateMessage(AlertFor(comment, reader, question), cancellationToken).ConfigureAwait(false);
             if (sent.IsSuccess)
                 told++;
             else
@@ -609,10 +671,10 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         }
 
         MessagingLog.UiFeedbackReadersTold(_logger, feedbackId, told);
-        return untold;
+        return readers;
     }
 
-    private static CreateMessageRequest AlertFor(UiFeedbackRow comment, Guid reader)
+    private static CreateMessageRequest AlertFor(UiFeedbackRow comment, Guid reader, bool question)
     {
         var id = comment.Id.ToString("D");
         return new CreateMessageRequest
@@ -622,7 +684,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             SenderUserId = comment.AuthorUserId,
             MessageType = AlertType,
             Severity = UiFeedbackUrgencies.ByName(comment.Urgency).Severity,
-            Subject = $"{comment.AuthorName} left a UI comment on {comment.Route}",
+            Subject = question ? $"{comment.AuthorName} asked a question on {comment.Route}" : $"{comment.AuthorName} left a UI comment on {comment.Route}",
             Body = comment.Body,
             ResourceType = AlertType,
             ResourceId = id,
@@ -657,7 +719,15 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             || context.ActiveTenantId is not { } tenantId)
             return GenericResult<UiFeedbackCaller>.Failure(MessagingLog.UiFeedbackCallerRequired(_logger, operation));
 
-        return GenericResult<UiFeedbackCaller>.Success(new UiFeedbackCaller(userId, tenantId, ExecutionTenantScope.For(context), PermissionCoverage.Covers(context.Permissions, ReadPermission)));
+        var permissions = context.Permissions.ToList();
+        return GenericResult<UiFeedbackCaller>.Success(new UiFeedbackCaller(
+            userId,
+            tenantId,
+            ExecutionTenantScope.For(context),
+            PermissionCoverage.Covers(permissions, ReadPermission),
+            PermissionCoverage.Covers(permissions, WritePermission),
+            context.ActiveOrgId,
+            permissions));
     }
 
     // A comment the caller does not reach does not exist for them.
@@ -670,7 +740,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         if (found.Value is not { } row)
             return GenericResult<UiFeedbackRow>.Failure(MessagingLog.UiFeedbackNotFound(_logger, id.ToString("D")));
 
-        var seen = MaySee(caller, row);
+        var seen = await Sees(caller, row, cancellationToken).ConfigureAwait(false);
         if (!seen.IsSuccess)
             return seen.ToNewResult<UiFeedbackRow>();
 
@@ -679,9 +749,20 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             : GenericResult<UiFeedbackRow>.Failure(MessagingLog.UiFeedbackNotFound(_logger, id.ToString("D")));
     }
 
-    // Whether the caller may see a comment: it is in their company's reach, and they either hold the read right, wrote it, or it is not a security issue.
-    // A security issue is an urgency whose collection entry needs acknowledging, never one picked out by its name (FDW-2246).
-    private IGenericResult<bool> MaySee(UiFeedbackCaller caller, UiFeedbackRow row)
+    // MaySee for one comment, reading its tags only when the rights the caller holds do not decide.
+    private async Task<IGenericResult<bool>> Sees(UiFeedbackCaller caller, UiFeedbackRow row, CancellationToken cancellationToken)
+    {
+        if (!caller.Scope.Reaches(row.TenantId) || caller.SeesAll || row.AuthorUserId == caller.UserId)
+            return MaySee(caller, row, []);
+
+        var tags = await _store.FindTags([row.Id], cancellationToken).ConfigureAwait(false);
+        return tags.IsSuccess ? MaySee(caller, row, tags.Value![row.Id]) : tags.ToNewResult<bool>();
+    }
+
+    // Whether the caller may see a comment: it is in their company's reach, and they hold the read right, wrote it, hold the write right and it is not a
+    // security issue, or it is a question put to them. A security issue is an urgency whose collection entry needs acknowledging, never one picked out by its
+    // name (FDW-2246).
+    private IGenericResult<bool> MaySee(UiFeedbackCaller caller, UiFeedbackRow row, IEnumerable<string> tags)
     {
         if (!caller.Scope.Reaches(row.TenantId))
             return GenericResult<bool>.Success(false);
@@ -689,12 +770,113 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         if (caller.SeesAll || row.AuthorUserId == caller.UserId)
             return GenericResult<bool>.Success(true);
 
-        var urgency = UiFeedbackUrgencies.ByName(row.Urgency);
-        return ReferenceEquals(urgency, UiFeedbackUrgencies.NotFound)
-            ? GenericResult<bool>.Failure(MessagingLog.UiFeedbackUnexpected(
-                _logger, "decide who may see", $"comment {row.Id:D} carries the urgency '{row.Urgency}', which UiFeedbackUrgencies does not declare"))
-            : GenericResult<bool>.Success(!urgency.NeedsAcknowledgement);
+        if (caller.Writes)
+        {
+            var urgency = UiFeedbackUrgencies.ByName(row.Urgency);
+            if (ReferenceEquals(urgency, UiFeedbackUrgencies.NotFound))
+                return GenericResult<bool>.Failure(MessagingLog.UiFeedbackUnexpected(
+                    _logger, "decide who may see", $"comment {row.Id:D} carries the urgency '{row.Urgency}', which UiFeedbackUrgencies does not declare"));
+
+            if (!urgency.NeedsAcknowledgement)
+                return GenericResult<bool>.Success(true);
+        }
+
+        return AskedOf(caller, row, tags);
     }
+
+    // Whether a comment is a question put to the caller: a tag of it asks for an answer, and the caller's session holds the permission the setting maps its
+    // route to. The session's permissions are the roles the person holds in the tenant they act in and what the organization they act in grants them.
+    private IGenericResult<bool> AskedOf(UiFeedbackCaller caller, UiFeedbackRow row, IEnumerable<string> tags)
+    {
+        if (!IsQuestion(tags))
+            return GenericResult<bool>.Success(false);
+
+        var permission = _answerers.PermissionFor(row.Route, row.TenantId);
+        if (!permission.IsSuccess)
+            return permission.ToNewResult<bool>();
+
+        return GenericResult<bool>.Success(permission.Value is { } answering && PermissionCoverage.Covers(caller.Permissions, answering));
+    }
+
+    // Whether the caller takes part in a question: it is one, and they asked it or it was put to them.
+    private async Task<IGenericResult<bool>> InQuestion(UiFeedbackCaller caller, UiFeedbackRow row, CancellationToken cancellationToken)
+    {
+        var tags = await _store.FindTags([row.Id], cancellationToken).ConfigureAwait(false);
+        if (!tags.IsSuccess)
+            return tags.ToNewResult<bool>();
+
+        if (!IsQuestion(tags.Value![row.Id]))
+            return GenericResult<bool>.Success(false);
+
+        return row.AuthorUserId == caller.UserId ? GenericResult<bool>.Success(true) : AskedOf(caller, row, tags.Value![row.Id]);
+    }
+
+    // The comments of a list the caller may see, with their tags, and whether the list pages over a window rather than the store's own paging.
+    private async Task<IGenericResult<(IReadOnlyList<UiFeedbackRow> Rows, ILookup<Guid, string> Tags, bool Windowed)>> VisibleRows(
+        UiFeedbackCaller caller, UiFeedbackQuery query, UiFeedbackListRequest request, CancellationToken cancellationToken)
+    {
+        if (query.Mine)
+            request.Filter.AuthorUserId = caller.UserId;
+
+        // Why the questions are picked out after the read: which comments were put to the caller follows from their tags and from the setting that maps
+        // routes to permissions, neither of which the store can filter by. A caller who holds neither right to see comments sees their own and those.
+        var asked = query.AskedOfMe || (!caller.SeesAll && !caller.Writes);
+        List<UiFeedbackFilter> reads = caller.SeesAll || asked ? [request.Filter] : NarrowedFilters(request.Filter, caller.UserId);
+        var windowed = request.NeedsWindow || reads.Count > 1 || asked;
+        var read = await ReadRows(reads, request, windowed, cancellationToken).ConfigureAwait(false);
+        if (!read.IsSuccess)
+            return read.ToNewResult<(IReadOnlyList<UiFeedbackRow>, ILookup<Guid, string>, bool)>();
+
+        var tags = await _store.FindTags([.. read.Value!.Select(row => row.Id)], cancellationToken).ConfigureAwait(false);
+        if (!tags.IsSuccess)
+            return tags.ToNewResult<(IReadOnlyList<UiFeedbackRow>, ILookup<Guid, string>, bool)>();
+
+        var rows = asked ? PutToCaller(caller, read.Value!, tags.Value!, query.AskedOfMe) : GenericResult<IReadOnlyList<UiFeedbackRow>>.Success(read.Value!);
+        if (!rows.IsSuccess)
+            return rows.ToNewResult<(IReadOnlyList<UiFeedbackRow>, ILookup<Guid, string>, bool)>();
+
+        // Why checked again after the query narrowed by tenant and by who may see what: a query built with no tenant would return everyone's comments, so the
+        // rule the single read applies (Reachable) is applied to every row of the page, and a row the caller may not see fails the list loudly.
+        foreach (var row in rows.Value!)
+        {
+            var seen = MaySee(caller, row, tags.Value![row.Id]);
+            if (!seen.IsSuccess)
+                return seen.ToNewResult<(IReadOnlyList<UiFeedbackRow>, ILookup<Guid, string>, bool)>();
+
+            if (!seen.Value)
+                return GenericResult<(IReadOnlyList<UiFeedbackRow>, ILookup<Guid, string>, bool)>.Failure(MessagingLog.UiFeedbackUnexpected(
+                    _logger, "list", $"the store returned comment {row.Id:D}, which the caller may not see"));
+        }
+
+        return GenericResult<(IReadOnlyList<UiFeedbackRow>, ILookup<Guid, string>, bool)>.Success((rows.Value!, tags.Value!, windowed));
+    }
+
+    // The comments of a read a caller is shown when only the questions put to them are listed, or when they hold neither right to see comments (then their
+    // own as well).
+    private IGenericResult<IReadOnlyList<UiFeedbackRow>> PutToCaller(UiFeedbackCaller caller, IReadOnlyList<UiFeedbackRow> rows, ILookup<Guid, string> tags, bool onlyAsked)
+    {
+        var kept = new List<UiFeedbackRow>();
+        foreach (var row in rows)
+        {
+            // Why a row out of the caller's reach is not dropped here: the list fails loudly on it afterwards, as it does for any read the store got wrong.
+            if (!onlyAsked && row.AuthorUserId == caller.UserId)
+            {
+                kept.Add(row);
+                continue;
+            }
+
+            var asked = AskedOf(caller, row, tags[row.Id]);
+            if (!asked.IsSuccess)
+                return asked.ToNewResult<IReadOnlyList<UiFeedbackRow>>();
+
+            if (asked.Value)
+                kept.Add(row);
+        }
+
+        return GenericResult<IReadOnlyList<UiFeedbackRow>>.Success(kept);
+    }
+
+    private static bool IsQuestion(IEnumerable<string> tags) => tags.Any(tag => UiFeedbackTags.ByName(tag).AsksForAnAnswer);
 
     // The reads that together give a caller without the read right what they may see: the comments of every urgency that is not a security issue, and their own
     // comments of the urgencies that are. The two sets do not overlap, so their union has no duplicate.

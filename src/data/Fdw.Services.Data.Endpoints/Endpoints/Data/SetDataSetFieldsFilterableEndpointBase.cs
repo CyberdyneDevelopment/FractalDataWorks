@@ -52,7 +52,7 @@ public abstract class SetDataSetFieldsFilterableEndpointBase
         if (dataSet.IsFailure) return dataSet.ToNewResult<List<FilterableFieldResponse>?>();
         if (dataSet.Value is null) return GenericResult<List<FilterableFieldResponse>?>.Success(null);
 
-        var fields = Find(dataSet.Value, request);
+        var fields = Find(dataSet.Value, DataSetFieldAccess.Of(dataSet.Value), request);
         return fields.IsFailure
             ? fields.ToNewResult<List<FilterableFieldResponse>?>()
             : GenericResult<List<FilterableFieldResponse>?>.Success(fields.Value!.Select(Describe).ToList());
@@ -72,13 +72,16 @@ public abstract class SetDataSetFieldsFilterableEndpointBase
             return GenericResult<List<FilterableFieldResponse>>.Failure(
                 DataSetEndpointLog.DataSetNotFound(Logger, request.Name));
 
-        var fields = Find(current, request);
+        var all = DataSetFieldAccess.Of(current);
+        var fields = Find(current, all, request);
         if (fields.IsFailure) return fields.ToNewResult<List<FilterableFieldResponse>>();
 
         var previous = fields.Value!.Select(field => (field, field.IsFilterable)).ToList();
         foreach (var field in fields.Value!)
             field.IsFilterable = request.IsFilterable;
 
+        // Why the fields are put back before the save: a kind that keeps its fields apart gave a copy, and a change to the copy is not a change to the data set (FDW-5505).
+        DataSetFieldAccess.Keep(current, all);
         var saved = await _dataSetProvider.Update(current, "DataSet", current.Implementation, current.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
@@ -92,14 +95,14 @@ public abstract class SetDataSetFieldsFilterableEndpointBase
 
     // Every field the request names, or the failure naming the ones the data set does not have. A
     // repeated id is one field.
-    private IGenericResult<IReadOnlyList<DataSetFieldConfiguration>> Find(IDataSetImplementationConfiguration dataSet, SetDataSetFieldsFilterableRequest request)
+    private IGenericResult<IReadOnlyList<DataSetFieldConfiguration>> Find(IDataSetImplementationConfiguration dataSet, IList<DataSetFieldConfiguration> all, SetDataSetFieldsFilterableRequest request)
     {
         var wanted = request.FieldIds.Distinct().ToList();
         if (wanted.Count == 0)
             return GenericResult<IReadOnlyList<DataSetFieldConfiguration>>.Failure(
                 DataStoreEndpointLog.BulkTargetsMissing(Logger, "filterable", "field", dataSet.Name));
 
-        var byId = dataSet.Fields.ToDictionary(field => field.Id);
+        var byId = all.ToDictionary(field => field.Id);
         var missing = wanted.Where(id => !byId.ContainsKey(id)).ToList();
         if (missing.Count > 0)
             return GenericResult<IReadOnlyList<DataSetFieldConfiguration>>.Failure(

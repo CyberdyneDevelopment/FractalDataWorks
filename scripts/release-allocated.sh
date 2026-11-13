@@ -1,48 +1,33 @@
 #!/usr/bin/env bash
-# One allocated release (FDW-3350 / FDW-3364 / FDW-4784), in phases, for .github/workflows/publish-nuget.yml on the GitHub
-# mirror (the repository root holds src/ and tests/). Each phase is one workflow step; the push itself is the
-# workflow's (sign-in rounds, scripts/push-nuget.sh), so a long quota wait never uses a dead key.
+# One allocated release (FDW-3350 / FDW-3364 / FDW-4784 / FDW-5272), in phases, for .github/workflows/publish-nuget.yml on the GitHub
+# mirror (the repository root holds src/ and tests/). A release is ONE real run: there is no dry run. Each phase is one workflow step; the
+# push itself is the workflow's (sign-in rounds, scripts/push-nuget.sh), so a long quota wait never uses a dead key.
 #
-#   release-allocated.sh plan     plan the release from the baseline and the feed; allocate the bundle's number
-#   release-allocated.sh levels   give every package its own version: read each changed package's public surface (and its last
-#                                 stable version's), let tools/versioning/release.py decide the lowest level each needs, add the
-#                                 packages a major pulls in
-#   release-allocated.sh build    prepare the build set, build it (and test it only when RUN_TESTS is true), pack its members into artifacts/ at their own versions
-#   release-allocated.sh bindings prove that a package left as it is still loads with the rebuilt ones: no built assembly is below
-#                                 the floor or lower than a version the last release's dlls ask for (tools/versioning/bindcheck.py)
-#   release-allocated.sh keep     (dry run) stage the results of levels, build and bindings, with the packages, for the real run (FDW-5175)
-#   release-allocated.sh reuse    (real run) take the dry run's results instead of making them: download the artifact of this commit, prove it
-#                                 belongs to this release, restore it; stops with the reason when it cannot. Replaces levels, build and bindings.
-#   release-allocated.sh decide   check-then-push: decide every package before anything is pushed
+#   release-allocated.sh plan     decide the whole release from the baseline and the feed: which packages changed (anything in a package's
+#                                 closure), each package's own next version at the level BUMP states, the AssemblyVersions, the bundle's
+#                                 number. Nothing is compiled and no API is read (tools/versioning/release.py plan)
+#   release-allocated.sh build    prepare the build set, build it (and test it only when RUN_TESTS is true), pack its members into artifacts/
+#   release-allocated.sh bindings prove that a package left as it is still loads with the rebuilt ones: no built assembly is below the floor
+#                                 or lower than a version the last release's dlls ask for (tools/versioning/bindcheck.py, assemblyid.py)
+#   release-allocated.sh decide   check-then-push: decide every package against nuget.org before anything is pushed
 #   release-allocated.sh bundle   generate and pack the release bundle into bundle/ (pushed last, by the workflow)
 #
-# Every value comes from the environment; the workflow declares the defaults once. A missing value fails the run and
-# names it. Nothing is assumed.
+# Every value comes from the environment; the workflow declares the defaults once. A missing value fails the run and names it. Nothing is
+# assumed.
 #
 #   BRANCH            main or prerelease: main publishes the stable version N, prerelease the candidate N-rc.<k>
 #   LINE              the release line, major.minor (for example 1.5)
-#   BUMP              patch | minor | major: the mirror has no commits to read it from, so the person cutting the
-#                     release states it
+#   BUMP              patch | minor | major: the level of every package that changed. The mirror has no commits to read it from, so the person
+#                     cutting the release states it (the workflow's declared default is patch)
 #   BUNDLE_ID         the bundle package id (Fdw.Bundle)
-#   BASELINE_FILE     the project manifest of the last release tree, for the first release under this scheme; empty
-#                     reads the baseline from the latest stable bundle on nuget.org
-#   (levels phase)
-#   (the bundle's version is not an input: `levels` decides it, N or N-rc.<k> on prerelease, from the highest package level, and prints it)
-#   DUMPER_PROJECT    the Fdw.ApiSurface project folder (tools/Fdw.ApiSurface)
-#   FIRST_VERSIONS_FILE, SETTINGS_FILE   tools/versioning/first-versions.json and apisurface-settings.json
+#   BASELINE_FILE     the project manifest of the last release tree, for the first release under this scheme; empty reads the baseline from
+#                     the latest stable bundle on nuget.org
+#   FIRST_VERSIONS_FILE   tools/versioning/first-versions.json: the declared first version of each new package
 #   The assembly version floors are not environment values: `plan` reads them from the baseline manifest (assemblyVersionFloors, one per
-#   assembly) into plan.json, `levels` works out each package's AssemblyVersion from them (assembly-versions.json), `bindings` checks the
-#   built dlls against them, and `bindings` records the floors for the NEXT release in project-manifest.json.
-#   LEVELS_MAX_ROUNDS how many packages may join after the first pass before the phase stops
-#   MAX_LEVEL         optional: the highest level any package may take in this release (patch, minor or major). Empty = no cap. A package
-#                     whose surface says a higher level takes the cap; levels.json keeps what the surface said (capped_from) for the
-#                     release notes. It is the release owner's decision, stated by the setting max_level; nothing in the job sets it.
-#   RUN_TESTS         (build phase) true or false: whether the members' tests run in this job. The real run's gate (stable and candidate) requires a green CI run
-#                     of the commit, which runs every test, so the workflow's declared default is false.
-#   (keep and reuse phases) SHA, BRANCH, LINE, BUMP, BUNDLE_ID, BASELINE_FILE (may be empty), MAX_LEVEL (may be empty), LEVELS_MAX_ROUNDS,
-#                     RUN_TESTS: the key a dry run is matched on (tools/versioning/dryrun.py). reuse also needs GITHUB_REPOSITORY, a GH_TOKEN
-#                     that may read the repository's workflow artifacts, and DRYRUN_DIR (where the artifact is downloaded).
-#   KEPT_DIR          (keep) the folder the dry run's results are staged in, uploaded by the workflow as release-dryrun-<SHA>
+#   assembly) into plan.json and works out each package's AssemblyVersion from them (assembly-versions.json), `bindings` checks the built
+#   dlls against them, and `bindings` records the floors for the NEXT release in project-manifest.json.
+#   RUN_TESTS         (build phase) true or false: whether the members' tests run in this job. The real run's gate (stable and candidate)
+#                     requires a green CI run of the commit, which runs every test, so the workflow's declared default is false.
 #   WORK_DIR          where the plan files and reports go (not the packages)
 #   GITHUB_OUTPUT     GitHub's step output file
 #
@@ -52,8 +37,6 @@ set -uo pipefail
 TOOLS="tools/versioning"
 ARTIFACTS="artifacts"
 BUNDLE_OUT="bundle"
-# The version a package is packed at only to read its public surface. It is never published and never reaches a manifest.
-SURFACE_PACK_VERSION="0.0.0-surface.1"
 
 fail() {
   echo "::error::release-allocated: $*"
@@ -71,22 +54,26 @@ json_get() {
 }
 
 plan() {
-  require BRANCH LINE BUMP BUNDLE_ID WORK_DIR GITHUB_OUTPUT
+  require BRANCH LINE BUMP BUNDLE_ID WORK_DIR FIRST_VERSIONS_FILE GITHUB_OUTPUT
   [[ "$LINE" =~ ^[0-9]+[.][0-9]+$ ]] || fail "LINE is '$LINE' but must be major.minor, for example 1.5."
   case "$BUMP" in patch|minor|major) ;; *) fail "BUMP is '$BUMP' but must be patch, minor or major." ;; esac
-  case "$BRANCH" in main|prerelease) ;; *) fail "BRANCH is '$BRANCH': an allocated release runs on main (stable) or prerelease (candidate) only." ;; esac
-
+  local baseline=() prerelease=()
+  case "$BRANCH" in
+    main) ;;
+    prerelease) prerelease=(--prerelease) ;;
+    *) fail "BRANCH is '$BRANCH': an allocated release runs on main (stable) or prerelease (candidate) only." ;;
+  esac
   if [ -n "${BASELINE_FILE:-}" ]; then
     [ -f "$BASELINE_FILE" ] || fail "BASELINE_FILE '$BASELINE_FILE' does not exist."
-    python3 "$TOOLS/release.py" plan --repo . --line "$LINE" --bundle-id "$BUNDLE_ID" --out "$WORK_DIR" \
-      --baseline "$BASELINE_FILE" --bump "$BUMP" || fail "release.py could not plan the release from baseline file $BASELINE_FILE; its message is above."
+    baseline=(--baseline "$BASELINE_FILE")
   else
-    python3 "$TOOLS/release.py" plan --repo . --line "$LINE" --bundle-id "$BUNDLE_ID" --out "$WORK_DIR" \
-      --baseline-from-bundle --bump "$BUMP" || fail "release.py could not plan the release from the latest stable $BUNDLE_ID; its message is above. For the first release under this scheme set NUGET_BASELINE_FILE."
+    baseline=(--baseline-from-bundle)
   fi
+  python3 "$TOOLS/release.py" plan --repo . --line "$LINE" --bundle-id "$BUNDLE_ID" --out "$WORK_DIR" "${baseline[@]}" --bump "$BUMP" \
+    --first-versions "$FIRST_VERSIONS_FILE" "${prerelease[@]}" \
+    || fail "release.py could not plan the release; its message is above. For the first release under this scheme set NUGET_BASELINE_FILE."
 
-  local number members version
-  number=$(json_get "$WORK_DIR/plan.json" release) || fail "no release number in $WORK_DIR/plan.json."
+  local members
   members=$(python3 -c 'import json,sys; print(",".join(json.load(open(sys.argv[1]))["members"]))' "$WORK_DIR/plan.json") \
     || fail "no members in $WORK_DIR/plan.json."
   if [ -z "$members" ]; then
@@ -94,161 +81,15 @@ plan() {
     echo "should-release=false" >> "$GITHUB_OUTPUT"
     return 0
   fi
-
-  if [ "$BRANCH" = "main" ]; then
-    version="$number"
-  else
-    # The candidate number k: one above the candidates of this release the bundle already has. The bundle is
-    # published for every release, so it counts them for the whole set. A rerun after a candidate that pushed
-    # nothing reuses its k; one that pushed some is a new candidate.
-    local k
-    k=$(PYTHONPATH="$TOOLS" python3 -c '
-import sys
-from feeds import NugetOrg
-bundle, number = sys.argv[1], sys.argv[2]
-held = [v for v in NugetOrg().versions(bundle) if v.lower().startswith(number + "-rc.")]
-print(len(held) + 1)' "$BUNDLE_ID" "$number") || fail "could not read the candidates of $BUNDLE_ID $number from nuget.org; nothing is assumed."
-    version="${number}-rc.${k}"
-  fi
-
-  # The manifest carries the version the bundle will have: N, or N-rc.<k>. The unchanged packages keep their stable
-  # versions either way.
-  python3 -c '
-import json,sys
-p=sys.argv[1]; m=json.load(open(p)); m["version"]=sys.argv[2]
-for k,v in list(m["packages"].items()):
-    if v==sys.argv[3]: m["packages"][k]=sys.argv[2]
-json.dump(m,open(p,"w"),indent=1,sort_keys=True)' "$WORK_DIR/manifest.json" "$version" "$number" \
-    || fail "could not write version $version into $WORK_DIR/manifest.json."
-
-  echo "release-allocated: release $number ($BUMP), version $version, $(echo "$members" | tr ',' '\n' | wc -l) package(s) to build and push."
+  local number version
+  number=$(json_get "$WORK_DIR/plan.json" release) || fail "no release number in $WORK_DIR/plan.json."
+  version=$(json_get "$WORK_DIR/plan.json" version) || fail "no version in $WORK_DIR/plan.json."
   {
     echo "should-release=true"
     echo "number=$number"
     echo "version=$version"
     echo "members=$members"
   } >> "$GITHUB_OUTPUT"
-}
-
-# Dumps a public surface with Fdw.ApiSurface. Every use of the dumper's command line is on a line marked ASSUMES-DUMPER-CLI, so
-# the first run can check exactly those lines against tools/Fdw.ApiSurface/README.md and Program.cs.
-dump_surface() {
-  # ASSUMES-DUMPER-CLI: `dotnet <dll> --package <file.nupkg> --out <file>` writes the sorted surface records and exits 0.
-  dotnet "$WORK_DIR/dumper/Fdw.ApiSurface.dll" --package "$1" --out "$2" || fail "Fdw.ApiSurface could not dump $1; its message is above."
-}
-
-make_surface() {
-  local side="$1" package="$2" what="$3" nupkg
-  local packs="$WORK_DIR/surface-packs"
-  case "$side" in
-    old)
-      mkdir -p "$packs/old"
-      python3 "$TOOLS/surfaces.py" fetch --package-id "$package" --version "$what" --out "$packs/old/$package.nupkg" \
-        || fail "could not fetch $package $what from nuget.org for its old surface; its message is above."
-      dump_surface "$packs/old/$package.nupkg" "$WORK_DIR/surfaces/old/$package.surface"
-      ;;
-    new)
-      rm -rf "$packs/new/$package"
-      # Build, then pack with no build: a project that sets GeneratePackageOnBuild (every source generator) is not built by `dotnet pack`,
-      # so a pack alone has no dll to put in the package (NU5019). The same properties go to both, or the pack would rebuild.
-      dotnet build "$what" -c Release -p:Version="$SURFACE_PACK_VERSION" \
-        || fail "dotnet build of $what, to read the surface of $package, failed; its output is above."
-      dotnet pack "$what" -c Release --no-build -p:Version="$SURFACE_PACK_VERSION" -o "$packs/new/$package" \
-        || fail "dotnet pack of $what, to read the surface of $package, failed; its output is above."
-      # dotnet pack of a project also packs the packable projects it references into the same folder, so the package is taken by its
-      # id and the stand-in version, never by "the only one".
-      nupkg="$packs/new/$package/$package.$SURFACE_PACK_VERSION.nupkg"
-      [ -f "$nupkg" ] || fail "packing $what left no $package.$SURFACE_PACK_VERSION.nupkg in $packs/new/$package/; found: $(ls "$packs/new/$package" 2>/dev/null | tr '\n' ' ')."
-      dump_surface "$nupkg" "$WORK_DIR/surfaces/new/$package.surface"
-      ;;
-    *) fail "unknown surface side '$side' for $package." ;;
-  esac
-}
-
-levels() {
-  require WORK_DIR BRANCH BUNDLE_ID DUMPER_PROJECT FIRST_VERSIONS_FILE SETTINGS_FILE LEVELS_MAX_ROUNDS GITHUB_OUTPUT
-  [[ "$LEVELS_MAX_ROUNDS" =~ ^[0-9]+$ ]] || fail "LEVELS_MAX_ROUNDS is '$LEVELS_MAX_ROUNDS' but must be a whole number."
-  rm -rf "$WORK_DIR/surfaces" "$WORK_DIR/surface-packs" "$WORK_DIR/decided" "$WORK_DIR/dumper"
-  mkdir -p "$WORK_DIR/surfaces/old" "$WORK_DIR/surfaces/new"
-
-  case "$BRANCH" in main|prerelease) ;; *) fail "BRANCH is '$BRANCH': an allocated release runs on main (stable) or prerelease (candidate) only." ;; esac
-  local cap=()
-  if [ -n "${MAX_LEVEL:-}" ]; then
-    case "$MAX_LEVEL" in patch|minor|major) cap=(--max-level "$MAX_LEVEL") ;; *) fail "MAX_LEVEL is '$MAX_LEVEL' but must be patch, minor, major or empty." ;; esac
-    echo "release-allocated: level cap $MAX_LEVEL: a package whose surface says more takes $MAX_LEVEL, and the release notes keep what the surface said."
-  fi
-
-  # ASSUMES-DUMPER-CLI: publishing the project leaves Fdw.ApiSurface.dll (a framework-dependent console app) in the output folder.
-  dotnet publish "$DUMPER_PROJECT" -c Release -o "$WORK_DIR/dumper" || fail "Fdw.ApiSurface did not publish; its output is above."
-  [ -f "$WORK_DIR/dumper/Fdw.ApiSurface.dll" ] || fail "publishing $DUMPER_PROJECT left no Fdw.ApiSurface.dll in $WORK_DIR/dumper."
-
-  # First pass: every changed package that has a surface of its own. Later passes make only what `decide` reports missing.
-  python3 "$TOOLS/surfaces.py" needed --plan-dir "$WORK_DIR" > "$WORK_DIR/surfaces-needed.tsv" \
-    || fail "surfaces.py could not list the surfaces to make; its message is above."
-  local side package what
-  # The list is read on descriptor 3 so a dotnet command inside make_surface cannot swallow it from stdin.
-  while IFS=$'\t' read -r side package what <&3; do
-    make_surface "$side" "$package" "$what"
-  done 3< "$WORK_DIR/surfaces-needed.tsv"
-
-  local code round=0
-  while true; do
-    python3 "$TOOLS/release.py" decide --plan-dir "$WORK_DIR" --old-surfaces "$WORK_DIR/surfaces/old" --new-surfaces "$WORK_DIR/surfaces/new" \
-      --first-versions "$FIRST_VERSIONS_FILE" --settings "$SETTINGS_FILE" --out "$WORK_DIR/decided" \
-      --missing-out "$WORK_DIR/missing-surface.json" "${cap[@]}"
-    code=$?
-    [ "$code" -eq 0 ] && break
-    [ "$code" -eq 3 ] || fail "release.py decide could not decide the versions; its message is above. Nothing is assumed."
-    round=$((round + 1))
-    [ "$round" -le "$LEVELS_MAX_ROUNDS" ] || fail "more than $LEVELS_MAX_ROUNDS surfaces were still missing after the first pass (LEVELS_MAX_ROUNDS); the last was in $WORK_DIR/missing-surface.json."
-    package=$(json_get "$WORK_DIR/missing-surface.json" package)
-    side=$(json_get "$WORK_DIR/missing-surface.json" side)
-    python3 "$TOOLS/surfaces.py" needed --plan-dir "$WORK_DIR" --package "$package" --side "$side" > "$WORK_DIR/surfaces-needed.tsv" \
-      || fail "surfaces.py could not say how to make the $side surface of $package; its message is above."
-    IFS=$'\t' read -r side package what < "$WORK_DIR/surfaces-needed.tsv"
-    make_surface "$side" "$package" "$what"
-  done
-
-  # The bundle's number follows the highest package level, so it is known only now. On prerelease the candidate number k counts the
-  # candidates of THAT number the bundle already has, and every package takes the same -rc.<k>: decide runs once more with it.
-  local number version
-  number=$(json_get "$WORK_DIR/decided/plan.json" release) || fail "no release number in $WORK_DIR/decided/plan.json."
-  version="$number"
-  if [ "$BRANCH" = "prerelease" ]; then
-    local k
-    k=$(PYTHONPATH="$TOOLS" python3 -c '
-import sys
-from feeds import NugetOrg
-bundle, number = sys.argv[1], sys.argv[2]
-held = [v for v in NugetOrg().versions(bundle) if v.lower().startswith(number + "-rc.")]
-print(len(held) + 1)' "$BUNDLE_ID" "$number") || fail "could not read the candidates of $BUNDLE_ID $number from nuget.org; nothing is assumed."
-    version="${number}-rc.${k}"
-    python3 "$TOOLS/release.py" decide --plan-dir "$WORK_DIR" --old-surfaces "$WORK_DIR/surfaces/old" --new-surfaces "$WORK_DIR/surfaces/new" \
-      --first-versions "$FIRST_VERSIONS_FILE" --settings "$SETTINGS_FILE" --out "$WORK_DIR/decided" --candidate "$k" "${cap[@]}" \
-      || fail "release.py decide could not make the release candidate $version; its message is above."
-  fi
-
-  # The decided files replace the planned ones for every later phase; the planned ones are kept for the record.
-  mkdir -p "$WORK_DIR/planned"
-  local f
-  for f in plan versions trees manifest; do
-    cp "$WORK_DIR/$f.json" "$WORK_DIR/planned/$f.json"
-    cp "$WORK_DIR/decided/$f.json" "$WORK_DIR/$f.json"
-  done
-  cp "$WORK_DIR/decided/package-versions.json" "$WORK_DIR/decided/assembly-versions.json" "$WORK_DIR/decided/levels.json" "$WORK_DIR"
-  python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["report"]))' "$WORK_DIR/levels.json"
-
-  local members
-  members=$(python3 -c 'import json,sys; print(",".join(json.load(open(sys.argv[1]))["members"]))' "$WORK_DIR/plan.json") \
-    || fail "no members in the decided $WORK_DIR/plan.json."
-  [ -n "$members" ] || fail "decide left no package to build, but the plan had members."
-  echo "release-allocated: versions decided for $(echo "$members" | tr ',' '\n' | wc -l) package(s); the bundle is $version."
-  # The same three lines go into a file the dry run keeps: the real run puts them back as this step's outputs instead of deciding again.
-  {
-    echo "members=$members"
-    echo "number=$number"
-    echo "version=$version"
-  } | tee "$WORK_DIR/levels-outputs.env" >> "$GITHUB_OUTPUT"
 }
 
 build() {
@@ -289,8 +130,7 @@ PY
 
 
 dump_identity() {
-  # ASSUMES-DUMPER-CLI: `dotnet <dll> --package <file.nupkg> --identity --out <file>` writes DEF and REF records of the package's runtime assemblies.
-  dotnet "$WORK_DIR/dumper/Fdw.ApiSurface.dll" --package "$1" --identity --out "$2" || fail "Fdw.ApiSurface could not dump the identity of $1; its message is above."
+  python3 "$TOOLS/assemblyid.py" identity --package "$1" --out "$2" || fail "assemblyid.py could not read the identity of $1; its message is above."
 }
 
 bindings() {
@@ -299,7 +139,6 @@ bindings() {
 import json, sys
 json.dump(json.load(open(sys.argv[1]))["assembly_version_floors"], open(sys.argv[2], "w"), indent=1, sort_keys=True)' "$WORK_DIR/plan.json" "$WORK_DIR/floors.json" \
     || fail "no assembly_version_floors in $WORK_DIR/plan.json; the baseline manifest must state them."
-  [ -f "$WORK_DIR/dumper/Fdw.ApiSurface.dll" ] || fail "the dumper from the levels phase is not in $WORK_DIR/dumper; run that phase first."
   local ident="$WORK_DIR/identities" packs="$WORK_DIR/identity-packs"
   rm -rf "$ident" "$packs"
   mkdir -p "$ident/new" "$ident/held" "$packs"
@@ -318,7 +157,7 @@ for package, version in sorted(json.load(open(sys.argv[1]))["last_stable"].items
     || fail "could not list the last stable versions from $WORK_DIR/levels-input.json."
   local package version
   while IFS=$'\t' read -r package version <&3; do
-    python3 "$TOOLS/surfaces.py" fetch --package-id "$package" --version "$version" --out "$packs/$package.nupkg" \
+    python3 "$TOOLS/feeds.py" fetch --package-id "$package" --version "$version" --out "$packs/$package.nupkg" \
       || fail "could not fetch $package $version from nuget.org for the binding check; its message is above."
     dump_identity "$packs/$package.nupkg" "$ident/held/$package.txt"
   done 3< "$WORK_DIR/identities-held.tsv"
@@ -341,43 +180,6 @@ with open(path, "w", encoding="utf-8", newline="\n") as f:
     f.write("\n")
 PY
   echo "release-allocated: bindings ok; the floors for the next release are in $WORK_DIR/next-floors.json."
-}
-
-# The key a dry run is matched on: the commit and every input the release was decided from (tools/versioning/dryrun.py).
-write_key() {
-  require SHA BRANCH LINE BUMP BUNDLE_ID LEVELS_MAX_ROUNDS RUN_TESTS
-  python3 "$TOOLS/dryrun.py" key --out "$1" --sha "$SHA" --branch "$BRANCH" --line "$LINE" --bump "$BUMP" --bundle-id "$BUNDLE_ID" \
-    --baseline-file "${BASELINE_FILE:-}" --max-level "${MAX_LEVEL:-}" --levels-max-rounds "$LEVELS_MAX_ROUNDS" --run-tests "$RUN_TESTS" \
-    || fail "dryrun.py could not write the key of this release; its message is above."
-}
-
-keep() {
-  require WORK_DIR KEPT_DIR
-  write_key "$WORK_DIR/dryrun-key.json"
-  python3 "$TOOLS/dryrun.py" package --key "$WORK_DIR/dryrun-key.json" --work-dir "$WORK_DIR" --artifacts "$ARTIFACTS" --out "$KEPT_DIR" \
-    || fail "could not stage the dry run's results for the real run; its message is above."
-}
-
-reuse() {
-  require WORK_DIR GITHUB_OUTPUT GITHUB_REPOSITORY SHA GH_TOKEN DRYRUN_DIR
-  local name="release-dryrun-$SHA" run_id
-  rm -rf "$DRYRUN_DIR"
-  run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name&per_page=100" \
-    --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | reverse | .[0].workflow_run.id // empty') \
-    || fail "could not list the workflow artifacts of $GITHUB_REPOSITORY; its message is above. Nothing is rebuilt silently."
-  [ -n "$run_id" ] || fail "no dry run of commit $SHA has left its results (artifact $name, not expired). Nothing is rebuilt silently. Run this workflow with dry_run=true on this commit first, or set reuse_dry_run to never to build in this run."
-  echo "release-allocated: taking the results of dry run $run_id (artifact $name)."
-  gh run download "$run_id" -R "$GITHUB_REPOSITORY" -n "$name" -D "$DRYRUN_DIR" \
-    || fail "could not download artifact $name of run $run_id; its message is above. Nothing is rebuilt silently."
-  write_key "$WORK_DIR/real-key.json"
-  python3 "$TOOLS/dryrun.py" verify --dir "$DRYRUN_DIR" --expect "$WORK_DIR/real-key.json" --work-dir "$WORK_DIR" \
-    || fail "dry run $run_id does not belong to this release (listed above). Nothing is rebuilt silently. Run the dry run again on this commit with the same inputs, or set reuse_dry_run to never."
-  rm -rf "$ARTIFACTS"
-  python3 "$TOOLS/dryrun.py" restore --dir "$DRYRUN_DIR" --work-dir "$WORK_DIR" --artifacts "$ARTIFACTS" \
-    || fail "could not restore the dry run's results; its message is above."
-  # The levels step's outputs (members, number, version), as the dry run decided them.
-  cat "$WORK_DIR/levels-outputs.env" >> "$GITHUB_OUTPUT"
-  echo "release-allocated: the dry run's levels, packages and bindings are in place; they are not made again."
 }
 
 decide() {
@@ -429,6 +231,6 @@ bundle() {
 }
 
 case "${1:-}" in
-  plan|levels|build|bindings|keep|reuse|decide|bundle) "$1" ;;
-  *) fail "unknown phase '${1:-}': plan, levels, build, bindings, keep, reuse, decide or bundle." ;;
+  plan|build|bindings|decide|bundle) "$1" ;;
+  *) fail "unknown phase '${1:-}': plan, build, bindings, decide or bundle." ;;
 esac

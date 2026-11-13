@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Connections;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -18,11 +19,17 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContainerRequest, DataStoreContainerDetailDto>
 {
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IConnectionConfigurationProvider _connectionProvider;
 
     /// <summary>Initializes a new instance of the <see cref="GetContainerEndpointBase"/> class.</summary>
-    protected GetContainerEndpointBase(ILogger<GetContainerEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    /// <param name="logger">The logger.</param>
+    /// <param name="dataStoreProvider">Reads the store, its paths, containers and fields.</param>
+    /// <param name="connectionProvider">Reads the connection of the container's data store, which its paging is laid over (FDW-5562).</param>
+    protected GetContainerEndpointBase(
+        ILogger<GetContainerEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider, IConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
+        _connectionProvider = connectionProvider;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -57,9 +64,20 @@ public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContaine
             return GenericResult<DataStoreContainerDetailDto?>.Success(null);
 
         var fields = await ContainerFields.Get(_dataStoreProvider, request.Name, container.Id, ct).ConfigureAwait(false);
-        return fields.IsFailure
-            ? fields.ToNewResult<DataStoreContainerDetailDto?>()
-            : GenericResult<DataStoreContainerDetailDto?>.Success(MapToDetail(container, fields.Value!));
+        if (fields.IsFailure)
+            return fields.ToNewResult<DataStoreContainerDetailDto?>();
+
+        var store = await _dataStoreProvider.Get(request.Name, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        if (store.IsFailure || store.Value is null)
+            return store.ToNewResult<DataStoreContainerDetailDto?>();
+
+        var paging = await ContainerPagingBuilder.Detail(_dataStoreProvider, _connectionProvider, store.Value, container, Logger, ct).ConfigureAwait(false);
+        if (paging.IsFailure)
+            return paging.ToNewResult<DataStoreContainerDetailDto?>();
+
+        var detail = MapToDetail(container, fields.Value!);
+        detail.Paging = paging.Value;
+        return GenericResult<DataStoreContainerDetailDto?>.Success(detail);
     }
 
     /// <summary>Maps a container configuration and its fields to a detail DTO.</summary>
@@ -95,6 +113,8 @@ public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContaine
             WriteEndpoint = container.WriteEndpoint,
             WriteMethod = container.WriteMethod,
             WriteContentType = container.WriteContentType,
+            HasPagingOverride = !string.IsNullOrWhiteSpace(container.PagingStyle),
+            PagingStyle = container.PagingStyle,
             Fields = fields
         };
     }

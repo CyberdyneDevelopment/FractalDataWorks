@@ -35,7 +35,7 @@ public abstract class ListUiFeedbackEndpointBase : Endpoint<ListUiFeedbackEndpoi
     public override void Configure()
     {
         Get("/ui-feedback");
-        Policies("ui-feedback:read|ui-feedback:write");
+        Policies("authenticated");
         Summary(s => s.Summary = "List UI comments");
         ConfigureEndpoint();
     }
@@ -65,6 +65,8 @@ public abstract class ListUiFeedbackEndpointBase : Endpoint<ListUiFeedbackEndpoi
                 Route = req.Route,
                 Urgency = req.Urgency,
                 Tag = req.Tag,
+                Mine = req.Mine,
+                AskedOfMe = req.AskedOfMe,
                 SortByUrgency = req.Sort is not null,
                 Skip = req.Skip,
                 Take = req.Take

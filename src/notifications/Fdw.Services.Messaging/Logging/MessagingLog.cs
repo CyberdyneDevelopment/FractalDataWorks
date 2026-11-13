@@ -226,6 +226,43 @@ public static partial class MessagingLog
     [MessageLogging(EventId = 11033, Level = LogLevel.Information, Message = "UI comment {feedbackId} commented on by {user}")]
     public static partial IGenericMessage UiFeedbackCommented(ILogger logger, string feedbackId, string user);
 
+    /// <summary>Logs the answerers told about a new question.</summary>
+    // Why Debug, not Information: it fires on every question saved; the save itself is the Information record (UiFeedbackSaved).
+    [MessageLogging(EventId = 11034, Level = LogLevel.Debug, Message = "UI comment {feedbackId}: {count} answerer(s) holding {permission} told")]
+    public static partial IGenericMessage UiFeedbackAnswerersTold(ILogger logger, string feedbackId, int count, string permission);
+
+    /// <summary>The question was saved but one answerer could not be told.</summary>
+    [MessageLogging(EventId = 71007, Level = LogLevel.Error, Message = "UI comment {feedbackId} was saved but answerer {userId} could not be told: {reason}")]
+    public static partial IGenericMessage UiFeedbackAnswererNotTold(ILogger logger, string feedbackId, string userId, string? reason);
+
+    /// <summary>The question was saved but the holders of the permission that answers for its screen could not be found.</summary>
+    [MessageLogging(EventId = 71008, Level = LogLevel.Error, Message = "UI comment {feedbackId} was saved but the holders of {permission}, who answer for its screen, could not be found: {reason}")]
+    public static partial IGenericMessage UiFeedbackAnswerersNotFound(ILogger logger, string feedbackId, string permission, string? reason);
+
+    /// <summary>
+    /// Who answers for a screen cannot be read because the host registers no settings, or reading them failed. A configuration failure (category 6): the
+    /// question is kept and told to its readers, and no one is taken to be an answerer.
+    /// </summary>
+    [MessageLogging(EventId = 61004, Level = LogLevel.Error, Message = "Who answers a question on {route} cannot be read: the setting {setting} {reason}")]
+    public static partial IGenericMessage UiFeedbackAnswerersUnreadable(ILogger logger, string route, string setting, string reason);
+
+    /// <summary>
+    /// The setting that says who answers for a screen is not a list of route prefixes and permissions. A configuration failure (category 6), never read as an
+    /// empty list.
+    /// </summary>
+    [MessageLogging(EventId = 61005, Level = LogLevel.Error, Message = "The setting {setting} is not a list of route prefixes and permissions: {reason}")]
+    public static partial IGenericMessage UiFeedbackAnswerersSettingInvalid(ILogger logger, string setting, string reason);
+
+    /// <summary>A person without the right to leave UI comments left one that is not only a question. A forbidden refusal (category 10).</summary>
+    [MessageLogging(EventId = 100002, Level = LogLevel.Warning, Message = "{user} may not save a UI comment that is not a question without {permission}",
+        ClientMessage = "Without {permission} you can only ask a question: give the comment the tags that ask for an answer, and no other")]
+    public static partial IGenericMessage UiFeedbackOnlyQuestions(ILogger logger, string user, string permission);
+
+    /// <summary>A person who may see a comment but may not comment on it: they hold no right to leave comments, and it is not a question they asked or were asked. A forbidden refusal (category 10).</summary>
+    [MessageLogging(EventId = 100003, Level = LogLevel.Warning, Message = "UI comment {feedbackId}: {user} may not comment on it without {permission}",
+        ClientMessage = "Without {permission} you can comment only on a question you asked or were asked")]
+    public static partial IGenericMessage UiFeedbackMayNotComment(ILogger logger, string feedbackId, string user, string permission);
+
     // ── Alerts (FDW-2420) ────────────────────────────────────────────────────
 
     /// <summary>Trace entry for an alert operation.</summary>

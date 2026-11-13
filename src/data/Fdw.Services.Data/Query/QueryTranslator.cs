@@ -460,9 +460,7 @@ public sealed class QueryTranslator
 
     private static bool IsObject(JsonElement element)
     {
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
         return element.ValueKind == JsonValueKind.Object;
-#pragma warning restore FDW018
     }
 
     private static bool IsDateOnly(JsonElement element, string fieldName)
@@ -583,12 +581,10 @@ public sealed class QueryTranslator
     {
         public static Reading? Of(JsonElement element, string fieldName)
         {
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
             var kind = element.ValueKind;
             var isText = kind == JsonValueKind.String;
             var isNumber = kind == JsonValueKind.Number;
             var isBool = kind is JsonValueKind.True or JsonValueKind.False;
-#pragma warning restore FDW018
             if (!isText && !isNumber && !isBool)
                 return null;
 
@@ -623,7 +619,6 @@ public sealed class QueryTranslator
 
     private IGenericResult<object?> Scalar(JsonElement element, string fieldName)
     {
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
         switch (element.ValueKind)
         {
             case JsonValueKind.String:
@@ -641,7 +636,6 @@ public sealed class QueryTranslator
             default:
                 return _refusals.Invalid<object?>($"value for '{fieldName}' must be a string, number or boolean, not {element.ValueKind}");
         }
-#pragma warning restore FDW018
     }
 
     private IGenericResult<IOrderingExpression?> Ordering(IReadOnlyList<QuerySort?>? sort)

@@ -8,6 +8,7 @@ using Fdw.Data.Transformations.Configuration;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -54,7 +55,7 @@ public abstract class ValidateGraphEndpointBase : Endpoint<GraphPayload, GraphVa
         Summary(s =>
         {
             s.Summary = "Check a graph pipeline draft without saving it";
-            s.Description = "Takes the body of POST /pipelines/graph and answers every problem saving it would be refused for, each with the path to the part it concerns. An empty list means saving would accept the draft.";
+            s.Description = "Takes the body of POST /pipelines/graph and answers every problem saving it would be refused for, each with the path to the part it concerns. An empty list means saving would accept the draft. warnings lists what the check cannot judge (a SQL step on a data store whose scripts this host cannot read, names outside the data store, a data store not yet discovered); they do not stop a save.";
         });
     }
 
@@ -69,13 +70,17 @@ public abstract class ValidateGraphEndpointBase : Endpoint<GraphPayload, GraphVa
                 IsValid = false,
                 Problems = [new GraphProblemPayload { Path = [], Reason = PipelineProblems.ReasonOf(graph.CurrentMessage, "reading the graph") }],
             }
-            : Answer([.. unread, .. await GraphSave.Problems(graph.Value, _dataSets, _logger, ct).ConfigureAwait(false)]);
+            : Answer(unread, await GraphSave.Judge(graph.Value, _dataSets, Resolve<IDataStoreConfigurationProvider>(), _logger, ct).ConfigureAwait(false));
         await Send.OkAsync(answer, ct).ConfigureAwait(false);
     }
 
-    private static GraphValidationPayload Answer(System.Collections.Generic.IReadOnlyList<GraphProblem> problems) => new()
+    // The draft's unread parts are problems as the judged ones are; a warning (FDW-5457) is information and leaves the draft valid.
+    private static GraphValidationPayload Answer(System.Collections.Generic.List<GraphProblem> unread, GraphFindings findings) => new()
     {
-        IsValid = problems.Count == 0,
-        Problems = [.. problems.Select(problem => new GraphProblemPayload { Path = [.. problem.Path], Reason = problem.Reason })],
+        IsValid = unread.Count == 0 && findings.Problems.Count == 0,
+        Problems = [.. unread.Concat(findings.Problems).Select(Payload)],
+        Warnings = [.. findings.Warnings.Select(Payload)],
     };
+
+    private static GraphProblemPayload Payload(GraphProblem problem) => new() { Path = [.. problem.Path], Reason = problem.Reason };
 }

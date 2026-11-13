@@ -1,5 +1,10 @@
 # Fdw.ApiSurface
 
+**Not used by the release (FDW-5272).** The release job decides which packages need a new version from the git tree ids of each package's
+closure and the level its owner states, so it no longer builds, packs or reads any surface, and it reads assembly identity with
+`public/tools/versioning/assemblyid.py` instead of `--identity`. This tool and `apisurface.py` stay for an optional advisory
+breaking-change check (a CI step that reports, and never blocks a release) and for working out by hand what a change did to a package's API.
+
 Writes the public surface of a package, or of one assembly, as sorted text records. `public/tools/versioning/apisurface.py`
 compares two such files and decides the lowest level (patch, minor or major) the change needs. This tool only lists what is
 public; every rule is in the Python, which has the tests.

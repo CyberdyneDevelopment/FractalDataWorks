@@ -5,7 +5,7 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Messaging;
 
 /// <summary>
-/// The tags a UI comment can carry: Usability Issue, Feature Request and Calculation Issue (FDW-2142). A comment carries any number, or none.
+/// The tags a UI comment can carry: Usability Issue, Feature Request, Calculation Issue (FDW-2142) and Question. A comment carries any number, or none.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeCollection(typeof(UiFeedbackTagBase), typeof(IUiFeedbackTag), typeof(UiFeedbackTags))]

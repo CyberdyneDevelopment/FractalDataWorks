@@ -25,6 +25,26 @@ public static class GraphScripts
         return [.. graph.Components.Where(Holds).Select(component => component.Name)];
     }
 
+    /// <summary>Lists the SQL steps of a graph (FDW-5457): each component that holds script text and names the data store it runs on, with its script.</summary>
+    /// <param name="graph">The stored graph.</param>
+    /// <returns>The steps, in the order the graph lists them; a component that names no data store is left out, as the graph check refuses it.</returns>
+    public static IReadOnlyList<GraphScript> Held(GraphPipelineConfiguration graph)
+    {
+        return [.. graph.Components.SelectMany(StepsOf)];
+    }
+
+    private static IEnumerable<GraphScript> StepsOf(PipelineComponentConfiguration component) =>
+        component.DataStoreName is { } store && !string.IsNullOrWhiteSpace(store)
+            ? TextsOf(component).Select(text => new GraphScript(component.Name, store, text))
+            : [];
+
+    private static IEnumerable<string> TextsOf(PipelineComponentConfiguration component) =>
+        ComponentTypes.ByName(component.ComponentType).Settings
+            .Where(setting => string.Equals(setting.Kind, SettingKind, StringComparison.Ordinal))
+            .Select(setting => ComponentSettingBindings.Find(setting.Name)?.Get(component))
+            .OfType<string>()
+            .Where(text => !string.IsNullOrWhiteSpace(text));
+
     private static bool Holds(PipelineComponentConfiguration component) =>
         ComponentTypes.ByName(component.ComponentType).Settings
             .Where(setting => string.Equals(setting.Kind, SettingKind, StringComparison.Ordinal))

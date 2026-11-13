@@ -92,7 +92,6 @@ public abstract class EvaluateTransformationEndpointBase : Endpoint<EvaluateTran
         var values = new Dictionary<string, object?>(req.Inputs.Count, StringComparer.Ordinal);
         foreach (var input in req.Inputs)
         {
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
             switch (input.Value.ValueKind)
             {
                 case JsonValueKind.Number when input.Value.TryGetDecimal(out var number):
@@ -111,7 +110,6 @@ public abstract class EvaluateTransformationEndpointBase : Endpoint<EvaluateTran
                     return GenericResult<IReadOnlyDictionary<string, object?>>.Failure(
                         FilterCalculationLog.InputWrongType(Logger, req.Name, input.Key, "Number, Flag or Date", input.Value.ValueKind.ToString()));
             }
-#pragma warning restore FDW018
         }
 
         return GenericResult<IReadOnlyDictionary<string, object?>>.Success(values);

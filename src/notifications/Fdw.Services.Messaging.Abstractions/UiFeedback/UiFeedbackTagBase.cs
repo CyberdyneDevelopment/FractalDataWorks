@@ -22,4 +22,7 @@ public abstract class UiFeedbackTagBase : TypeOptionBase<UiFeedbackTagBase>, IUi
 
     /// <inheritdoc/>
     public string Color { get; }
+
+    /// <inheritdoc/>
+    public virtual bool AsksForAnAnswer => false;
 }

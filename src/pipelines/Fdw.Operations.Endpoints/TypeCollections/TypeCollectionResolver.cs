@@ -192,6 +192,7 @@ internal static class TypeCollectionResolver
             Category = string.IsNullOrEmpty(typeOption.Category) ? null : typeOption.Category,
             ExpectedProperties = GetStringListProperty(typeOption, "ExpectedProperties"),
             RequiredProperties = GetStringListProperty(typeOption, "RequiredProperties"),
+            InheritableProperties = GetStringListProperty(typeOption, "InheritableProperties"),
             Parameters = TypeCollectionParameters.For(typeOption),
             Levels = typeOption is IWaitThresholdMode mode ? mode.Levels : null,
             AcceptsRejectedRecords = typeOption is IAcceptsRejectedRecordsShape rejects ? rejects.AcceptsRejectedRecords : null,

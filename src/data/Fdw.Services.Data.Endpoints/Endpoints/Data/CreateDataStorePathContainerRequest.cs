@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 
@@ -109,6 +110,19 @@ public class CreateDataStorePathContainerRequest
     /// refused. Left out, a destination that needs it fails naming it when it runs.
     /// </summary>
     public string? WriteContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paging style the container pages in when it pages differently from its connection (FDW-5562): the name of an <c>HttpPagingStyles</c>
+    /// option, which may be its connection's own. Left out, the container takes its connection's paging. Only the containers of an HTTP data store page.
+    /// </summary>
+    public string? PagingStyle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paging settings the container states, by name: <c>PagingPageSize</c>, <c>PagingMaxPages</c> and the keys its style reads (FDW-5562). A setting
+    /// is for the style the container names, so settings are stated only with <see cref="PagingStyle"/>. A setting left out, or sent blank, is taken from the
+    /// connection when the container pages in its connection's style, and from the style's declared default otherwise.
+    /// </summary>
+    public IDictionary<string, string?> PagingSettings { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets or sets the <c>ClassificationId</c> of the container's data classification level (see

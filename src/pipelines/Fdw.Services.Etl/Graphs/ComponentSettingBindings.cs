@@ -57,6 +57,8 @@ public static class ComponentSettingBindings
         new("transformation", "Text", c => c.TransformationName, (c, v) => c.TransformationName = (string?)v),
         new("awaitCompletion", "Boolean", c => c.AwaitCompletion, (c, v) => c.AwaitCompletion = (bool?)v),
         new("resultVariable", "Text", c => c.ResultVariable, (c, v) => c.ResultVariable = (string?)v),
+        new("optionsDataStore", "Text", c => c.OptionsDataStoreName, (c, v) => c.OptionsDataStoreName = (string?)v),
+        new("optionsContainer", "Text", c => c.OptionsContainerName, (c, v) => c.OptionsContainerName = (string?)v),
         new("failOnChildFailure", "Boolean", c => c.FailOnChildFailure, (c, v) => c.FailOnChildFailure = (bool?)v),
         new("effectiveFromColumn", "Text", c => c.EffectiveFromColumn, (c, v) => c.EffectiveFromColumn = (string?)v),
         new("effectiveToColumn", "Text", c => c.EffectiveToColumn, (c, v) => c.EffectiveToColumn = (string?)v),

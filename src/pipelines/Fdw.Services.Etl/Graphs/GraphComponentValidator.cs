@@ -380,6 +380,7 @@ public static class GraphComponentValidator
             .Concat(SetVariableProblems(component, scope, Problem))
             .Concat(ExecuteProblems(component, scope, Problem))
             .Concat(ExecuteSqlProblems(component, scope, Problem))
+            .Concat(ReadDataOptionsProblems(component, scope, Problem))
             .Concat(NotifyProblems(component, Problem))
             .Concat(ReadOnlyTargetProblems(graph, component, Problem))
             .Concat(BatchSizeProblems(component, Problem))
@@ -465,7 +466,8 @@ public static class GraphComponentValidator
             yield return problem("variable", $"Set variable '{component.Name}' sets '{component.VariableName}', which is a read-only parameter");
         }
 
-        var keepsResult = component.ComponentType.Equals("ExecutePipeline", StringComparison.OrdinalIgnoreCase) || component.ComponentType.Equals("ExecuteSql", StringComparison.OrdinalIgnoreCase);
+        var keepsResult = component.ComponentType.Equals("ExecutePipeline", StringComparison.OrdinalIgnoreCase) || component.ComponentType.Equals("ExecuteSql", StringComparison.OrdinalIgnoreCase)
+            || component.ComponentType.Equals("ReadDataOptions", StringComparison.OrdinalIgnoreCase);
         if (keepsResult && IsReadOnly(component.ResultVariable))
         {
             yield return problem("resultVariable", $"'{component.Name}' keeps its result in '{component.ResultVariable}', which is a read-only parameter");
@@ -624,6 +626,26 @@ public static class GraphComponentValidator
         foreach (var parameterProblem in ParameterProblems(component, scope, problem))
         {
             yield return parameterProblem;
+        }
+    }
+
+    // Read data options (FDW-5347): the variable that keeps the list is one in scope, and the most rows it may read is at least one.
+    private static IEnumerable<GraphProblem> ReadDataOptionsProblems(
+        PipelineComponentConfiguration component, VariableScope scope, Func<string, string, GraphProblem> problem)
+    {
+        if (!component.ComponentType.Equals("ReadDataOptions", StringComparison.OrdinalIgnoreCase))
+        {
+            yield break;
+        }
+
+        if (component.ResultVariable is { } result && !scope.Contains(result))
+        {
+            yield return problem("resultVariable", $"read data options '{component.Name}' keeps its list in '{result}', which is not a variable in scope");
+        }
+
+        if (component.MaxRows < 1)
+        {
+            yield return problem("maxRows", $"read data options '{component.Name}' may read at most {component.MaxRows} option rows, which is not at least one");
         }
     }
 

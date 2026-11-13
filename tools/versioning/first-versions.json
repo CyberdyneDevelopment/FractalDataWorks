@@ -1,3 +1,7 @@
 {
-  "firstVersions": {}
+  "firstVersions": {
+    "Fdw.Data.Options.Abstractions": "1.5.7",
+    "Fdw.Data.Options": "1.5.7",
+    "Fdw.Services.Data.Graphs": "1.5.7"
+  }
 }

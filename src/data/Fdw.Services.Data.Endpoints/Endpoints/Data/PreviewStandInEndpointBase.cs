@@ -66,7 +66,7 @@ public abstract class PreviewStandInEndpointBase : Endpoint<PreviewStandInReques
         var validated = StandInParameterValidator.Validate(req.Name, req.Field, req.Strategy, req);
         if (validated.IsFailure) { await SendError(validated, ct).ConfigureAwait(false); return; }
 
-        var resolved = await DataSetFieldResolver.Resolve(_dataSets, req.Name, req.Field, ct).ConfigureAwait(false);
+        var resolved = await DataSetFieldResolver.Resolve(_dataSets, req.Name, req.Field, DataSetFieldAccess.AllowStandIns, _logger, ct).ConfigureAwait(false);
         if (resolved.IsFailure) { await SendError(resolved, ct).ConfigureAwait(false); return; }
         if (resolved.Value is null)
         {

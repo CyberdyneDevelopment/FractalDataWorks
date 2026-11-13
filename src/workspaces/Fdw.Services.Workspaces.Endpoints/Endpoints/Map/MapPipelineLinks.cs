@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fdw.Services.Etl.Graphs;
 
 namespace Fdw.Services.Workspaces.Endpoints;
 
@@ -14,4 +15,8 @@ internal sealed record MapPipelineLinks(
     IReadOnlyList<string> SourceDataSetNames,
     IReadOnlyList<string> DestinationDataSetNames,
     IReadOnlyList<PipelineContainerRef> SourceContainers,
-    IReadOnlyList<PipelineContainerRef> DestinationContainers);
+    IReadOnlyList<PipelineContainerRef> DestinationContainers)
+{
+    /// <summary>Gets the SQL steps of the pipeline (FDW-5457): the lineage reads each script for the containers it reads and writes.</summary>
+    public IReadOnlyList<GraphScript> Scripts { get; init; } = [];
+}

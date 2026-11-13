@@ -58,7 +58,7 @@ public abstract class ClearDataSetFieldStandInEndpointBase : Endpoint<DataSetFie
     {
         StandInEndpointLog.ClearingStandIn(_logger, req.Name, req.Field);
 
-        var resolved = await DataSetFieldResolver.Resolve(_dataSets, req.Name, req.Field, ct).ConfigureAwait(false);
+        var resolved = await DataSetFieldResolver.Resolve(_dataSets, req.Name, req.Field, DataSetFieldAccess.AllowStandIns, _logger, ct).ConfigureAwait(false);
         if (resolved.IsFailure) { await SendError(resolved, ct).ConfigureAwait(false); return; }
         if (resolved.Value is not { } found)
         {

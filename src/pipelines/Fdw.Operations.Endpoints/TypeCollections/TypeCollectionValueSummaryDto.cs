@@ -28,6 +28,12 @@ public sealed class TypeCollectionValueSummaryDto
     /// <summary>Gets or sets the required configuration properties for this TypeOption.</summary>
     public IReadOnlyList<string> RequiredProperties { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the properties of this TypeOption that a container which states the option takes from its connection even when the connection states a different
+    /// option (FDW-5562); empty for an option that has none. The option declares them, so the console holds no list of them.
+    /// </summary>
+    public IReadOnlyList<string> InheritableProperties { get; set; } = [];
+
     /// <summary>Gets or sets the levels the option may be stated at (FDW-3161); null for an option that does not say. A mode of thresholds on waiting runs states the levels it applies to, so the console offers the server only the modes that list the server.</summary>
     public IReadOnlyList<string>? Levels { get; set; }
 

@@ -420,7 +420,6 @@ namespace Fdw.MessageLogging.Generators
                                         }
 
                                         string? qualifier = null;
-#pragma warning disable FDW019 // External Roslyn RefKind enum — cannot convert to TypeCollection
                                         if (paramSymbol.RefKind == RefKind.In)
                                         {
                                             qualifier = "in";
@@ -435,7 +434,6 @@ namespace Fdw.MessageLogging.Generators
                                             keepMethod = false;
                                             break;
                                         }
-#pragma warning restore FDW019
 
                                         string typeName = paramTypeSymbol.ToDisplayString(
                                             SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(

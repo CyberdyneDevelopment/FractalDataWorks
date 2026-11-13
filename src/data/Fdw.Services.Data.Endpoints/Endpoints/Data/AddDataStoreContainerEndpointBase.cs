@@ -7,6 +7,7 @@ using Fdw.Data.Abstractions.Results;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -21,11 +22,17 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase<AddDataStoreContainerRequest, DataStoreContainerResponse>
 {
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IConnectionConfigurationProvider _connectionProvider;
 
     /// <summary>Initializes a new instance of the <see cref="AddDataStoreContainerEndpointBase"/> class.</summary>
-    protected AddDataStoreContainerEndpointBase(ILogger<AddDataStoreContainerEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider) : base(logger)
+    /// <param name="logger">The logger.</param>
+    /// <param name="dataStoreProvider">Reads and saves the data store the container is added to.</param>
+    /// <param name="connectionProvider">Reads the connection of the data store, which the container's own paging is checked against (FDW-5562).</param>
+    protected AddDataStoreContainerEndpointBase(
+        ILogger<AddDataStoreContainerEndpointBase> logger, IDataStoreConfigurationProvider dataStoreProvider, IConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _dataStoreProvider = dataStoreProvider;
+        _connectionProvider = connectionProvider;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -51,7 +58,69 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
         var invalid = RefuseInvalid(request);
         if (invalid.IsFailure) return invalid.ToNewResult<DataStoreContainerResponse>();
 
-        var container = new DataContainerConfiguration
+        var container = ContainerOf(request);
+
+        // A container hangs from a path, which hangs from the store, so the write is a save of the
+        // store carrying it. The store-exists and path-exists invariants the old AddContainer
+        // enforced are stated here, where the rows they are about are in hand.
+        var storeResult = await WritableStore(request.Name, ct).ConfigureAwait(false);
+        if (storeResult.IsFailure)
+            return storeResult.ToNewResult<DataStoreContainerResponse>();
+
+        var store = storeResult.Value!;
+        var path = store.Paths.FirstOrDefault(
+            p => string.Equals(p.Name, request.PathName, StringComparison.OrdinalIgnoreCase));
+        if (path is null)
+            return GenericResult<DataStoreContainerResponse>.Failure(
+                DataStoreEndpointLog.PathNotFoundInDataStore(Logger, request.PathName, request.Name));
+
+        if (path.Containers.Any(c => string.Equals(c.Name, container.Name, StringComparison.OrdinalIgnoreCase)))
+            return GenericResult<DataStoreContainerResponse>.Failure(
+                DataStoreEndpointLog.ContainerAlreadyExists(Logger, container.Name, request.PathName, request.Name));
+
+        var named = DataStoreContainerBuilder.NameRefusal(
+            container.Name, container.Format, DataStoreTypes.ByName(store.Implementation).AddressesContainersAsFiles, Logger);
+        if (named is not null)
+            return named.ToNewResult<DataStoreContainerResponse>();
+
+        var keysResult = BuildKeys(request, container, store);
+        if (keysResult.IsFailure)
+            return keysResult.ToNewResult<DataStoreContainerResponse>();
+        container.Keys = keysResult.Value!;
+
+        var paged = await ApplyPaging(request, container, store, ct).ConfigureAwait(false);
+        if (paged.IsFailure)
+            return paged.ToNewResult<DataStoreContainerResponse>();
+
+        path.Containers.Add(container);
+
+        var addResult = await _dataStoreProvider
+            .UpdateStore(store, ct)
+            .ConfigureAwait(false);
+        if (addResult.IsFailure)
+            return addResult.ToNewResult<DataStoreContainerResponse>();
+
+        DataStoreEndpointLog.ContainerAdded(Logger, request.ContainerName, request.PathName, request.Name);
+
+        return GenericResult<DataStoreContainerResponse>.Success(BuildResponse(container));
+    }
+
+    // The store a container is added to, once the caller's tenant has been asked: before anything is said about the store, so a refusal that names its paths, its type or
+    // its connection cannot tell a caller what a store it may not change is made of (FDW-5562).
+    private async Task<IGenericResult<IDataStoreImplementationConfiguration>> WritableStore(string name, CancellationToken ct)
+    {
+        var store = await _dataStoreProvider.Get(name, ct).ConfigureAwait(false);
+        if (!store.IsSuccess || store.Value is null)
+            return GenericResult<IDataStoreImplementationConfiguration>.Failure(DataStoreEndpointLog.DataStoreNotFound(Logger, name));
+
+        var permitted = await _dataStoreProvider.PermitWrite(store.Value.Id, ct).ConfigureAwait(false);
+        return permitted.IsFailure ? permitted.ToNewResult<IDataStoreImplementationConfiguration>() : store;
+    }
+
+    // The container a request describes, before it is checked against its store: every setting the request states, and its fields.
+    private static DataContainerConfiguration ContainerOf(AddDataStoreContainerRequest request)
+    {
+        return new DataContainerConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = request.ContainerName,
@@ -82,47 +151,30 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             ClassificationId = request.ClassificationId,
             Fields = BuildFields(request.Fields),
         };
+    }
 
-        // A container hangs from a path, which hangs from the store, so the write is a save of the
-        // store carrying it. The store-exists and path-exists invariants the old AddContainer
-        // enforced are stated here, where the rows they are about are in hand.
-        var storeResult = await _dataStoreProvider.Get(request.Name, ct).ConfigureAwait(false);
-        if (!storeResult.IsSuccess || storeResult.Value is null)
-            return GenericResult<DataStoreContainerResponse>.Failure(
-                DataStoreEndpointLog.DataStoreNotFound(Logger, request.Name));
+    /// <summary>
+    /// Gives the container the paging the request states for it (FDW-5562), after checking it against the connection of its data store: a container that states
+    /// none takes its connection's.
+    /// </summary>
+    private async Task<IGenericResult> ApplyPaging(
+        AddDataStoreContainerRequest request, DataContainerConfiguration container, IDataStoreImplementationConfiguration store, CancellationToken ct)
+    {
+        var style = ContainerPagingBuilder.StyleOf(request.PagingStyle);
+        var settings = ContainerPagingBuilder.Stated(request.PagingSettings);
+        if (style is not null || settings.Count > 0)
+        {
+            var connection = await _connectionProvider.Get(store.ConnectionId, ct).ConfigureAwait(false);
+            if (connection.IsFailure || connection.Value is null)
+                return GenericResult.Failure(DataStoreEndpointLog.ConnectionNameUnresolved(Logger, store.ConnectionId, store.Name));
 
-        var store = storeResult.Value;
-        var path = store.Paths.FirstOrDefault(
-            p => string.Equals(p.Name, request.PathName, StringComparison.OrdinalIgnoreCase));
-        if (path is null)
-            return GenericResult<DataStoreContainerResponse>.Failure(
-                DataStoreEndpointLog.PathNotFoundInDataStore(Logger, request.PathName, request.Name));
+            var refusal = ContainerPagingBuilder.Refusal(DataStoreTypes.ByName(store.Implementation), connection.Value, container.Name, style, settings, Logger);
+            if (refusal is not null)
+                return refusal;
+        }
 
-        if (path.Containers.Any(c => string.Equals(c.Name, container.Name, StringComparison.OrdinalIgnoreCase)))
-            return GenericResult<DataStoreContainerResponse>.Failure(
-                DataStoreEndpointLog.ContainerAlreadyExists(Logger, container.Name, request.PathName, request.Name));
-
-        var named = DataStoreContainerBuilder.NameRefusal(
-            container.Name, container.Format, DataStoreTypes.ByName(store.Implementation).AddressesContainersAsFiles, Logger);
-        if (named is not null)
-            return named.ToNewResult<DataStoreContainerResponse>();
-
-        var keysResult = BuildKeys(request, container, store);
-        if (keysResult.IsFailure)
-            return keysResult.ToNewResult<DataStoreContainerResponse>();
-        container.Keys = keysResult.Value!;
-
-        path.Containers.Add(container);
-
-        var addResult = await _dataStoreProvider
-            .UpdateStore(store, ct)
-            .ConfigureAwait(false);
-        if (addResult.IsFailure)
-            return addResult.ToNewResult<DataStoreContainerResponse>();
-
-        DataStoreEndpointLog.ContainerAdded(Logger, request.ContainerName, request.PathName, request.Name);
-
-        return GenericResult<DataStoreContainerResponse>.Success(BuildResponse(container));
+        ContainerPagingBuilder.Apply(container, style, settings);
+        return GenericResult.Success();
     }
 
     /// <summary>Refuses a request whose classifications, datum types, data types or file options are not ones the system holds.</summary>
@@ -205,6 +257,8 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             WriteEndpoint = container.WriteEndpoint,
             WriteMethod = container.WriteMethod,
             WriteContentType = container.WriteContentType,
+            HasPagingOverride = !string.IsNullOrWhiteSpace(container.PagingStyle),
+            PagingStyle = container.PagingStyle,
             Fields = container.Fields.Select(f => new DataStoreFieldResponse
             {
                 Id = f.Id,

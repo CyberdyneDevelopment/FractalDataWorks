@@ -10,6 +10,7 @@ using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Pipelines.Clients.Abstractions;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -72,7 +73,7 @@ public abstract class CreateGraphEndpointBase : CrudCreateEndpointBase<GraphPayl
             return graph.ToNewResult<GraphPayload>();
         }
 
-        return await GraphSave.Save(_provider, graph.Value, _owner, request.OrgId, _dataSets, GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
+        return await GraphSave.Save(_provider, graph.Value, _owner, request.OrgId, _dataSets, Resolve<IDataStoreConfigurationProvider>(), GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

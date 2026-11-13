@@ -106,6 +106,8 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Data.Files` | File-based data access |
 | `Fdw.Data.Http` | HTTP data access |
 | `Fdw.Data.Importers.Abstractions` | Data import interfaces |
+| `Fdw.Data.Options.Abstractions` | Data options: the root collection of option types, the context and outcome of applying one |
+| `Fdw.Data.Options` | Data options: option types a person turns on or off for a column's values (SelectList: Include, Exclude) |
 | `Fdw.Data.JsonSchema` | JSON Schema support |
 | `Fdw.Data.Lineage` | Data lineage graph |
 | `Fdw.Data.MsSql` | SQL Server data utilities |

@@ -63,6 +63,10 @@ public sealed class FlowVariableCalculation
             parameters = _parameters.ToDictionary(parameter => parameter.Name, parameter => parameter.Value(variables), StringComparer.Ordinal);
             input = _input(variables);
         }
+        catch (InvalidOperationException ex) when (VariableListNotWritable.TryRead(ex, out var listName))
+        {
+            return GenericResult<object?>.Failure(FlowDataOptionsLog.ListNotWritable(_logger, step, "value or parameters", listName));
+        }
         catch (InvalidOperationException ex) when (ex is not null)
         {
             return GenericResult<object?>.Failure(FlowLog.CalculateInputUnreadable(_logger, step, ex.Message));

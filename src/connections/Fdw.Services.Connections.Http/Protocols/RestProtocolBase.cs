@@ -83,6 +83,8 @@ public abstract class RestProtocolBase : HttpProtocolBase
     {
         try
         {
+            // The container travels on the context, so the paging it states for itself is the paging its request is written in (FDW-5562).
+            context = context with { Container = container };
             var method = GetHttpMethod(command, container, context);
             var pathResult = GetRequestPath(command, container, context);
             if (!pathResult.IsSuccess)
@@ -439,11 +441,12 @@ public abstract class RestProtocolBase : HttpProtocolBase
             return GenericResult<HttpPagingWindow?>.Failure(HttpPagingLog.PagingStyleNotStated(logger, context.Configuration.GetType().Name));
         }
 
-        var window = HttpPaging.WindowFor(
-            connection.PagingStyle,
-            new HttpPagingSettings(connection.Name, new Dictionary<string, string?>(connection.AdditionalProperties, StringComparer.OrdinalIgnoreCase), logger),
-            paging.Skip,
-            paging.Take);
+        // The container's own paging laid over the connection's (FDW-5562), in the one place that is done.
+        var resolved = HttpPaging.ResolveFor(connection, context.Container, logger);
+        if (resolved.IsFailure || resolved.Value is null)
+            return resolved.ToNewResult<HttpPagingWindow?>();
+
+        var window = resolved.Value.Style.Window(resolved.Value.Settings, paging.Skip, paging.Take);
         return window.IsFailure ? window.ToNewResult<HttpPagingWindow?>() : GenericResult<HttpPagingWindow?>.Success(window.Value);
     }
 

@@ -143,9 +143,19 @@ class NewPackageTests(unittest.TestCase):
             levelplan.plan_levels({}, {"Solo"}, levels(), LAST, declared(Typo="1.0.0"))
         self.assertEqual(caught.exception.code, "FIRST_VERSION_NOT_IN_RELEASE")
 
-    def test_a_new_package_counts_as_an_addition_for_the_generator_rule(self):
+    def test_a_generator_is_not_raised_by_a_new_consumer(self):
+        # FDW-5591: the 1.5.7 plan raised three generators to 1.6.0 because new packages consume them.
         plan = levelplan.plan_levels({}, {"NewOne", "Gen"}, levels(), LAST, declared(NewOne="1.0.0"), {"Gen": {"NewOne"}})
+        self.assertEqual((plan["Gen"]["level"], plan["Gen"]["next"]), ("patch", "1.5.3"))
+        self.assertEqual(plan["NewOne"]["next"], "1.0.0")
+
+    def test_a_generator_is_still_raised_by_a_changed_consumer_next_to_a_new_one(self):
+        plan = levelplan.plan_levels({}, {"NewOne", "Solo", "Gen"}, levels(Solo="minor"), LAST, declared(NewOne="1.0.0"), {"Gen": {"NewOne", "Solo"}})
         self.assertEqual((plan["Gen"]["level"], plan["Gen"]["next"]), ("minor", "1.6.0"))
+
+    def test_a_new_package_keeps_exactly_the_first_version_declared_whatever_it_consumes(self):
+        plan = levelplan.plan_levels({"NewOne": {"Solo"}}, {"NewOne", "Solo"}, levels(Solo="major"), LAST, declared(NewOne="1.5.7"))
+        self.assertEqual((plan["NewOne"]["level"], plan["NewOne"]["next"]), ("new", "1.5.7"))
 
 
 class RenameAndSplitTests(unittest.TestCase):
@@ -206,9 +216,11 @@ class LoadTests(unittest.TestCase):
         for bad in ('"1.0"', '"1.0.0-rc.1"', '"1.*"', '{"version": 3}', "7"):
             self.assertEqual(self.code('{"firstVersions": {"A": %s}}' % bad), "FIRST_VERSION_INVALID", bad)
 
-    def test_the_file_in_the_repository_loads_and_declares_nothing(self):
+    def test_the_file_in_the_repository_loads_and_every_entry_is_a_plain_first_version(self):
         here = os.path.dirname(os.path.abspath(__file__))
-        self.assertEqual(levelplan.load_first_versions(os.path.join(here, "first-versions.json")), {})
+        declared = levelplan.load_first_versions(os.path.join(here, "first-versions.json"))
+        for package, entry in declared.items():
+            self.assertRegex(entry["version"], levelplan.STABLE.pattern, package)
 
 
 class RetireTests(unittest.TestCase):

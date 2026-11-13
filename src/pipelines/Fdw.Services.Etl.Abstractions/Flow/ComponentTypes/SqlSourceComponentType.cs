@@ -18,7 +18,7 @@ public sealed class SqlSourceComponentType : ComponentTypeBase
         ],
         [
             new StageMember("dataStore", "DataStore", true, "The data store the script runs on.", TakesParameterText: true),
-            new StageMember("script", "SqlText", true, "The query; its values are named parameters such as @Year, never part of the text. A name that changes (a schema, table or column) is written $(Name) and taken from a parameter or variable whose value is letters, digits, underscore and dot only."),
+            new StageMember("script", "SqlText", true, "The query; its values are named parameters such as @Year, never part of the text. A name that changes (a schema, table or column) is written $(Name) and taken from a parameter or variable whose value is letters, digits, underscore and dot only. The tables it reads and writes are taken from a parse of the script: they are drawn in lineage and checked against the data store's catalogue when the pipeline is saved. A procedure it runs (EXEC) and a table-valued function it reads are neither checked nor drawn."),
             new StageMember("parameters", "FieldMaps", false, "The values of the script's named parameters: each names a parameter and gives a typed constant."),
             new StageMember("maxRows", "Number", true, "The most rows the script may select; the run fails when it selects more."),
             new StageMember("batchSize", "Number", true, "How many rows go in a batch; at least one."),

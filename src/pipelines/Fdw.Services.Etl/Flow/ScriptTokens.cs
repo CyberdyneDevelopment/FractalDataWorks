@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -15,10 +16,15 @@ namespace Fdw.Services.Etl.Flow;
 /// </summary>
 /// <remarks>
 /// Why a value must be a name: it is put into SQL text, so anything but letters, digits, underscore and dot would let a caller write SQL. A value
-/// that is not a name fails the script and is not echoed; there is no escaping and no fallback.
+/// that is not a name fails the script and is not echoed; there is no escaping and no fallback. A list is the one value that is not a name: it is
+/// written as <c>"A","B","C"</c> (<see cref="VariableListText"/>), and an item that holds a double quote fails the script in the same way.
 /// </remarks>
 public static partial class ScriptTokens
 {
+    // The identifier a token is replaced by when the script is read before it runs: letters, digits and underscores, so every SQL dialect reads it as a name.
+    private const string MarkerPrefix = "__fdw_run_time_name_";
+    private const string MarkerSuffix = "__";
+
     [GeneratedRegex(@"\$\(\s*(?<name>[^()\s]+)\s*\)", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex Token();
 
@@ -36,6 +42,24 @@ public static partial class ScriptTokens
     public static IReadOnlyList<string> Names(string text)
     {
         return [.. Token().Matches(text).Select(match => match.Groups["name"].Value)];
+    }
+
+    /// <summary>
+    /// Replaces every token with an identifier that stands for the name it is given at run time (FDW-5457), so a parser can read the script before it
+    /// runs and know which of its names are not known yet.
+    /// </summary>
+    /// <param name="text">The script text.</param>
+    /// <returns>The text with each token replaced, and the identifiers that replaced them.</returns>
+    public static ScriptTokenMarks Mark(string text)
+    {
+        var markers = new List<string>();
+        var marked = Token().Replace(text, _ =>
+        {
+            var marker = string.Concat(MarkerPrefix, markers.Count.ToString(CultureInfo.InvariantCulture), MarkerSuffix);
+            markers.Add(marker);
+            return marker;
+        });
+        return new ScriptTokenMarks(marked, markers);
     }
 
     /// <summary>Replaces every token with the value of the parameter or variable it names.</summary>
@@ -59,6 +83,18 @@ public static partial class ScriptTokens
             if (found.Key is null || found.Value is null)
             {
                 refused = FlowLog.ScriptTokenNotGiven(logger, owner, name);
+                return match.Value;
+            }
+
+            // A list is written quoted and comma-separated (FDW-5347), for a clause such as IN ($(Names)); its items are held to the same rule everywhere.
+            if (VariableListText.IsList(found.Value))
+            {
+                if (VariableListText.TryRender((IEnumerable)found.Value, out var list))
+                {
+                    return list;
+                }
+
+                refused = FlowDataOptionsLog.ListNotWritable(logger, owner, "script", name);
                 return match.Value;
             }
 

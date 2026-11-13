@@ -28,7 +28,7 @@ public interface IDataSetStatuses
     /// <summary>Counts the data sets the caller may see by status.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
-    /// Every status of <c>DataSetStatuses</c>, highest rank first, with the number of data sets that have it, so a status nothing has reads 0. Variations are not counted. Or the
+    /// Every status of <c>DataSetStatuses</c>, highest rank first, with the number of data sets that have it, so a status nothing has reads 0, except a status a kind states (<c>NotApplicable</c>, FDW-5296), which is listed only when a data set has it. Variations are not counted. Or the
     /// failure that names what could not be read.
     /// </returns>
     Task<IGenericResult<IReadOnlyList<DataSetStatusCount>>> Counts(CancellationToken cancellationToken = default);

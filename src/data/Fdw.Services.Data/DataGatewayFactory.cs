@@ -7,6 +7,7 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Limits;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Transformations;
@@ -37,6 +38,7 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
     private readonly IConnectionConfigurationProvider? _connectionConfigProvider;
     private readonly IConfigurationGatewayProvider? _configurationGateways;
+    private readonly IGraphDataSetRunner? _graphRunner;
     private readonly IConnectionLimitResolver _limitResolver;
     private readonly ConnectionLimitCounterStore _counters;
     private readonly FieldMappingTransformationResolver _fieldTransformations;
@@ -58,7 +60,8 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
         IConnectionConfigurationProvider? connectionConfigProvider = null,
         ILoggerFactory? loggerFactory = null,
         ILogger<DataGatewayFactory>? logger = null,
-        IConfigurationGatewayProvider? configurationGateways = null)
+        IConfigurationGatewayProvider? configurationGateways = null,
+        IGraphDataSetRunner? graphRunner = null)
     {
         _connectionProvider = connectionProvider;
         _dataSetProvider = dataSetProvider;
@@ -72,6 +75,7 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
         _authenticationContextAccessor = authenticationContextAccessor;
         _connectionConfigProvider = connectionConfigProvider;
         _configurationGateways = configurationGateways;
+        _graphRunner = graphRunner;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = logger ?? NullLogger<DataGatewayFactory>.Instance;
     }
@@ -91,7 +95,8 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
             configuration,
             _authenticationContextAccessor,
             _connectionConfigProvider,
-            _configurationGateways);
+            _configurationGateways,
+            _graphRunner);
 
     /// <inheritdoc />
     public IGenericResult<IGenericService> Create(IServiceConfiguration configuration)

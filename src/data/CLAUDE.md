@@ -17,6 +17,8 @@ fractaldataworks:
 - `Fdw.Data.DataPaths`
 - `Fdw.Data.Files`
 - `Fdw.Data.Importers.Abstractions`
+- `Fdw.Data.Options.Abstractions`: Data options, abstractions (FDW-5344): the `DataOptions` root collection of option types, the context and outcome of applying an option, its `DATAOPTION` result codes and the fields of a stored option row.
+- `Fdw.Data.Options`: Data options (FDW-5344): the `SelectList` option type of `DataOptions`, with `Include` and `Exclude`. The `ReadDataOptions` pipeline step (`Fdw.Services.Etl`) reads the stored rows and keeps the resulting list in a variable.
 - `Fdw.Data.Serialization`
 - `Fdw.Data.SourceGenerators`: Incremental source generator that creates reflection-free POCO mappers from [GenerateMapper] attributes.
 - `Fdw.Services.Data`

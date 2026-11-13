@@ -91,7 +91,7 @@ internal static class LineageResponses
     {
         LineageViaDto? via = null;
         if (flow.PipelineId is not null) vias.TryGetValue(flow.PipelineId, out via);
-        return new LineageEdgeDto { From = flow.From, To = flow.To, Relation = flow.Relation, Via = via };
+        return new LineageEdgeDto { From = flow.From, To = flow.To, Relation = flow.Relation, Via = via, Intended = flow.Intended ? true : null };
     }
 
     private static List<LineagePipelineDto> Pipelines(Dictionary<string, LineageViaDto> vias)

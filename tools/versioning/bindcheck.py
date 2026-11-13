@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that packages which are not rebuilt can still bind to the dependencies that are (FDW-4784).
+"""Check that packages which are not rebuilt can still bind to the dependencies that are (FDW-4784, FDW-5272).
 
   bindcheck.py check --new-dir DIR --held-dir DIR --floors FILE
   bindcheck.py floors --dir DIR [--dir DIR ...]
@@ -7,11 +7,11 @@
 
 A package that is not rebuilt keeps its dll, which asks for each dependency at the assembly version it was built against, and the
 runtime will not bind a lower one. So with per-package releases a rebuilt dependency must never carry a lower assembly version than
-any dll that may stay as it is. Fdw.ApiSurface --identity writes, for a package, one DEF record per assembly (its name and version) and
+any dll that may stay as it is. assemblyid.py writes, for a package, one DEF record per assembly (its name and version) and
 one REF record per assembly it references (the version it asks for). In DIR files of those records:
 
   --new-dir   the packages built now: their DEF records are what the held dlls will bind to
-  --held-dir  the packages that stay as they are (or, in a dry run, every package of the last release): their REF records are the demands
+  --held-dir  the packages that stay as they are (the release checks every package of the last release): their REF records are the demands
 
 The floors are not a setting: each assembly has one, recorded in the baseline release's manifest (assemblyVersionFloors, {assembly: version}),
 which `floors` computes from the identity files of a release's packages: for each assembly the higher of the version it carries and the

@@ -66,7 +66,7 @@ public abstract class GetDataSetFieldHistoryEndpointBase : Endpoint<DataSetField
     {
         DataSetFieldHistoryEndpointLog.ReadingHistory(_logger, req.Name, req.Field);
 
-        var resolved = await DataSetFieldResolver.Resolve(_dataSets, req.Name, req.Field, ct).ConfigureAwait(false);
+        var resolved = await DataSetFieldResolver.Resolve(_dataSets, req.Name, req.Field, DataSetFieldAccess.AllowHistory, _logger, ct).ConfigureAwait(false);
         if (resolved.IsFailure) { await SendError(resolved, ct).ConfigureAwait(false); return; }
         if (resolved.Value is not { } found)
         {

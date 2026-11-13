@@ -75,6 +75,7 @@ internal static class DataDomainRegistrations
         yield return () => domain.Register(CompoundDataSetConfiguration.ImplementationName, sp.GetRequiredService<CompoundDataSetConfigurationProvider>());
         yield return () => domain.Register(FederatedDataSetConfiguration.ImplementationName, sp.GetRequiredService<FederatedDataSetConfigurationProvider>());
         yield return () => domain.Register(VariationDataSetConfiguration.ImplementationName, sp.GetRequiredService<VariationDataSetConfigurationProvider>());
+        yield return () => domain.Register(GraphDataSetConfiguration.ImplementationName, sp.GetRequiredService<GraphDataSetConfigurationProvider>());
     }
 
     private static IEnumerable<Func<IGenericResult>> Categories(IServiceProvider sp)

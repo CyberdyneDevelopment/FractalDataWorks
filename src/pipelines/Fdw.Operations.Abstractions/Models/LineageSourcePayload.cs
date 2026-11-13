@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Fdw.Operations.Clients.Models;
 
 /// <summary>
@@ -17,4 +19,7 @@ public sealed class LineageSourcePayload
     public string? PhysicalLocation { get; set; }
     /// <summary>Gets or sets the source priority.</summary>
     public int Priority { get; set; }
+    /// <summary>Gets or sets whether the source is one a Graph data set only intends to read; absent for every other source.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsIntended { get; set; }
 }

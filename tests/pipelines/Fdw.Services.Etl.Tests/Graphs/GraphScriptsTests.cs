@@ -57,4 +57,29 @@ public sealed class GraphScriptsTests
 
         kinds.ShouldBe(["ExecuteSql", "SqlSource"], ignoreOrder: true);
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void TheSqlStepsOfAGraphAreListedWithTheirStoreAndScript()
+    {
+        var graph = Graph([SqlSource("read", "SELECT Id FROM dbo.T"), DataSetSource("plain"), ExecuteSql("purge", "DELETE FROM dbo.T"), ExecuteSql("none", "  ")], []);
+
+        GraphScripts.Held(graph).ShouldBe(
+        [
+            new GraphScript("read", "Warehouse", "SELECT Id FROM dbo.T"),
+            new GraphScript("purge", "Warehouse", "DELETE FROM dbo.T"),
+        ]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "Etl")]
+    public void AScriptStepThatNamesNoStoreIsNotListed()
+    {
+        var step = ExecuteSql("loose", "DELETE FROM dbo.T");
+        step.DataStoreName = null;
+
+        GraphScripts.Held(Graph([step], [])).ShouldBeEmpty();
+    }
 }

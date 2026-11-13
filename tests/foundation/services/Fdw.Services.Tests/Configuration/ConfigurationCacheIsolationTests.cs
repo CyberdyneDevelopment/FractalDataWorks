@@ -249,16 +249,18 @@ public sealed class ConfigurationCacheIsolationTests
         }
         private static IDataStore BuildTree()
         {
-            // DataContainer owns its Fields and Keys, and a Key owns its KeyFields, as data.* declares.
+            // DataContainer owns its Fields, Keys and PagingSettings, and a Key owns its KeyFields, as data.* declares.
             var fieldContainer = Container("DataContainerField", [],
                 [Key("Physical", "PK_DataContainerField", "RowId", null), Key("Logical", "AK_DataContainerField", "Id", null)]);
+            var pagingSettingContainer = Container("DataContainerPagingSetting", [],
+                [Key("Physical", "PK_DataContainerPagingSetting", "RowId", null), Key("Logical", "AK_DataContainerPagingSetting", "Id", null)]);
             var keyFieldContainer = Container("DataContainerKeyField", [],
                 [Key("Physical", "PK_DataContainerKeyField", "RowId", null), Key("Logical", "AK_DataContainerKeyField", "Id", null)]);
             var keyContainer = Container("DataContainerKey",
                 [Binding("DataContainerKeyRowId", keyFieldContainer)],
                 [Key("Physical", "PK_DataContainerKey", "RowId", null), Key("Logical", "AK_DataContainerKey", "Id", null)]);
             var containerContainer = Container("DataContainer",
-                [Binding("DataContainerRowId", fieldContainer), Binding("DataContainerRowId", keyContainer)],
+                [Binding("DataContainerRowId", fieldContainer), Binding("DataContainerRowId", keyContainer), Binding("DataContainerRowId", pagingSettingContainer)],
                 [Key("Physical", "PK_DataContainer", "RowId", null), Key("Logical", "AK_DataContainer", "Id", null)]);
 
             // DataPath owns Containers (joined on DataPathRowId) — it must carry Physical + Logical keys.
@@ -281,7 +283,7 @@ public sealed class ConfigurationCacheIsolationTests
 
             var implementationContainer = Container("DataStoreConfiguration", [Binding("DataStoreConfigurationRowId", pathContainer)], [Key("Physical", "PK_Impl", "RowId", null), Key("Logical", "AK_Impl", "Id", null), Key("Foreign", "FK_Impl", "DataStoreRowId", storeContainer)]);
             storeReferencing.Add(Binding("DataStoreRowId", implementationContainer));
-            var containers = new List<IDataContainer> { storeContainer, implementationContainer, pathContainer, containerContainer, fieldContainer, keyContainer, keyFieldContainer, policyContainer, segmentContainer, handlerOverrideContainer };
+            var containers = new List<IDataContainer> { storeContainer, implementationContainer, pathContainer, containerContainer, fieldContainer, pagingSettingContainer, keyContainer, keyFieldContainer, policyContainer, segmentContainer, handlerOverrideContainer };
 
             var path = new Mock<IDataNodePath>();
             path.Setup(p => p.Name).Returns("data");

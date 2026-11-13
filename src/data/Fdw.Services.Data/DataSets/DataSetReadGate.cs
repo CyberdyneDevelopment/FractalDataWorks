@@ -41,6 +41,21 @@ public static class DataSetReadGate
             : GenericResult.Success();
     }
 
+    /// <summary>Refuses a data set whose kind neither pages in the store nor shapes its own read, or that aggregates, so a row route has no page to answer from it.</summary>
+    /// <remarks>
+    /// The gate of the row routes (<c>DataSetQuery</c>). It passes what <see cref="Pageable"/> passes, and a kind that states
+    /// <see cref="IShapesItsOwnRead"/>, which builds its whole set and applies the filter, the order and the page to the rows it holds (FDW-5300). It asks the
+    /// kind's capability and never names a kind. A read that makes a data set a source of another read still asks <see cref="Pageable"/>, so a kind
+    /// that does not page in the store is read whole there and never in pages (<c>StableRead</c>).
+    /// </remarks>
+    /// <param name="dataSet">The data set the route is asked to read.</param>
+    /// <param name="logger">The logger the refusal is written to.</param>
+    /// <returns>Success, or the refusal the caller is answered with.</returns>
+    public static IGenericResult Readable(IDataSetImplementationConfiguration dataSet, ILogger logger)
+        => DataSetTypes.ByName(dataSet.Implementation) is IShapesItsOwnRead { ShapesItsOwnRead: true } && dataSet.AggregatesOrNone().Count == 0
+            ? GenericResult.Success()
+            : Pageable(dataSet, logger);
+
     /// <summary>Refuses a data set whose kind builds its rows from several reads, or that already aggregates, so a grouping has no one query to join.</summary>
     /// <remarks>
     /// Asked of the data set's own kind through <see cref="IDataSetType.AggregatesInStore"/>, the same way paging is.

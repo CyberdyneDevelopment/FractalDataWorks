@@ -27,5 +27,8 @@ public abstract class DataSetStatusBase : TypeOptionBase<DataSetStatusBase>, IDa
     public int Rank { get; }
 
     /// <inheritdoc/>
+    public virtual bool IsStatedByKind => false;
+
+    /// <inheritdoc/>
     public abstract bool Applies(DataSetStatusInput input);
 }

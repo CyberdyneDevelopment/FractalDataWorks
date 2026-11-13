@@ -27,13 +27,17 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
     /// <param name="pushdown">Translates logical filters to physical for predicate pushdown.</param>
     /// <param name="fieldTransformations">Resolves the transformation chains attached to a source's field mappings.</param>
     /// <param name="logger">Logger for execution diagnostics.</param>
+    /// <param name="gateway">The gateway this execution runs for, which a kind that reads other data sets through it needs (optional).</param>
+    /// <param name="graphRunner">What runs the graph of a Graph data set (optional; a host that does not register one cannot read a Graph data set).</param>
     public DataSetExecutionContext(
         IDataSetImplementationConfiguration config,
         IDataConnectionProvider connectionProvider,
         IDataStoreProvider dataStoreProvider,
         PredicatePushdownAnalyzer pushdown,
         FieldMappingTransformationResolver fieldTransformations,
-        ILogger logger)
+        ILogger logger,
+        IDataGateway? gateway = null,
+        IGraphDataSetRunner? graphRunner = null)
     {
         FieldTransformations = fieldTransformations;
         Config = config;
@@ -41,6 +45,8 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
         DataStoreProvider = dataStoreProvider;
         Pushdown = pushdown;
         Logger = logger;
+        Gateway = gateway;
+        GraphRunner = graphRunner;
     }
 
     /// <inheritdoc />
@@ -63,4 +69,10 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
 
     /// <summary>Gets the execution logger.</summary>
     public ILogger Logger { get; }
+
+    /// <summary>Gets the gateway this execution runs for; null when the caller of the context did not state one.</summary>
+    public IDataGateway? Gateway { get; }
+
+    /// <summary>Gets what runs the graph of a Graph data set; null when the host registered none.</summary>
+    public IGraphDataSetRunner? GraphRunner { get; }
 }

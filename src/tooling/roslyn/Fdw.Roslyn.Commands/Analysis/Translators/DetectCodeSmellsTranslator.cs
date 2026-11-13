@@ -215,7 +215,6 @@ public sealed class DetectCodeSmellsTranslator
 
         foreach (var node in method.DescendantNodes())
         {
-#pragma warning disable FDW018 // External Roslyn SyntaxKind enum — cannot convert to TypeCollection
             complexity += node.Kind() switch
             {
                 SyntaxKind.IfStatement => 1,
@@ -232,7 +231,6 @@ public sealed class DetectCodeSmellsTranslator
                 SyntaxKind.SwitchExpressionArm => 1,
                 _ => 0
             };
-#pragma warning restore FDW018
         }
 
         return complexity;

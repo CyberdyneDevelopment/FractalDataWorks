@@ -26,7 +26,18 @@ public static class GraphShapeValidator
     /// <param name="graph">The stored graph.</param>
     /// <param name="logger">The logger a condition's refusal is written to.</param>
     /// <returns>The problems, each with its path; empty when the graph is sound.</returns>
-    public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph, ILogger logger)
+    public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph, ILogger logger) => Problems(graph, null, logger);
+
+    /// <summary>Lists every rule a graph that is read and not loaded breaks (FDW-5291).</summary>
+    /// <remarks>
+    /// The end's output is judged as the read builds it: consumed by the read's own component (<see cref="GraphEnd.ToReader"/>), so it is neither unlinked
+    /// nor lost. An end that names a component that is not a top-level component of the graph is a problem of its own.
+    /// </remarks>
+    /// <param name="graph">The stored graph.</param>
+    /// <param name="end">The output the read takes the rows of; none for a graph that is run and not read.</param>
+    /// <param name="logger">The logger a condition's refusal is written to.</param>
+    /// <returns>The problems, each with its path; empty when the graph is sound.</returns>
+    public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph, GraphEnd? end, ILogger logger)
     {
         if (graph.Components.Count == 0)
         {
@@ -51,11 +62,12 @@ public static class GraphShapeValidator
 
         problems.AddRange(DelayedStartProblems(graph));
         problems.AddRange(LinkEndProblems(graph));
+        problems.AddRange(EndProblems(graph, end));
         var broken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         problems.AddRange(GraphComponentValidator.Problems(graph, broken, logger));
         foreach (var level in Levels(graph))
         {
-            problems.AddRange(LevelProblems(graph, level, broken, logger));
+            problems.AddRange(LevelProblems(graph, level, level is null ? end : null, broken, logger));
         }
 
         return problems;
@@ -110,7 +122,7 @@ public static class GraphShapeValidator
 
     // One level: the shape of its flow by the engine's own graph check, over components that have only their nodes, and a line that leaves
     // the level is refused (a loop's body runs again each round, so its lines cannot reach outside it).
-    private static IEnumerable<GraphProblem> LevelProblems(GraphPipelineConfiguration graph, string? parent, HashSet<string> broken, ILogger logger)
+    private static IEnumerable<GraphProblem> LevelProblems(GraphPipelineConfiguration graph, string? parent, GraphEnd? end, HashSet<string> broken, ILogger logger)
     {
         var members = graph.Components.Where(component => string.Equals(component.ParentComponent, parent, StringComparison.OrdinalIgnoreCase)).ToList();
         if (members.Count == 0)
@@ -156,7 +168,7 @@ public static class GraphShapeValidator
             yield return problem;
         }
 
-        foreach (var problem in FlowShapeProblems(graph, movers, rows, inLevel, broken, logger))
+        foreach (var problem in FlowShapeProblems(graph, movers, rows, inLevel, end, broken, logger))
         {
             yield return problem;
         }
@@ -168,6 +180,7 @@ public static class GraphShapeValidator
         IReadOnlyList<PipelineComponentConfiguration> movers,
         IReadOnlyList<PipelineLinkConfiguration> rows,
         HashSet<string> inLevel,
+        GraphEnd? end,
         HashSet<string> broken,
         ILogger logger)
     {
@@ -179,13 +192,36 @@ public static class GraphShapeValidator
             })
             .ToList();
         var flow = new FlowGraph(
-            shapes,
-            [.. rows.Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
+            WithReader(shapes, end, inLevel, logger),
+            WithReaderLink([.. rows.Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))], end, inLevel),
             [.. graph.DroppedOutputs.Where(output => inLevel.Contains(output.ComponentName)).Select(output => new FlowDroppedOutput(output.ComponentName, output.OutputName))],
             ComponentStages.Of(movers));
         foreach (var problem in FlowGraphValidator.Problems(flow).Where(problem => problem.Component is null || !broken.Contains(problem.Component)))
         {
-            yield return new GraphProblem(PathOf(problem, graph.Links, rows), problem.Reason);
+            // Why the read's own line has its own path: it is added after the stored lines (WithReaderLink), so its index is one past them and no stored line is at it; the line is the stated fields out, named at fieldsOutOutput.
+            yield return new GraphProblem(
+                end is not null && inLevel.Contains(end.Component) && problem.LinkIndex == rows.Count ? ["fieldsOutOutput"] : PathOf(problem, graph.Links, rows),
+                problem.Reason);
+        }
+    }
+
+    // Why the read's own component is judged here: the read adds it after the end (GraphFlowBuilder.BuildRead), so the check judges the flow the read builds. Only an
+    // end among the components of the level counts; one that names a component elsewhere is a problem of its own (EndProblems).
+    private static List<IFlowComponent> WithReader(List<IFlowComponent> shapes, GraphEnd? end, HashSet<string> inLevel, ILogger logger) =>
+        end is not null && inLevel.Contains(end.Component)
+            ? [.. shapes, new ShapeFlowComponent(GraphEnd.ReaderName, [FlowDestination.InputName], [], logger)]
+            : shapes;
+
+    private static List<FlowLink> WithReaderLink(List<FlowLink> rows, GraphEnd? end, HashSet<string> inLevel) =>
+        end is not null && inLevel.Contains(end.Component) ? [.. rows, end.ToReader()] : rows;
+
+    // An end whose component is not a top-level component of the graph: the read adds its component at the top level, so a component in a loop's body, or none, has no
+    // output for it to take.
+    private static IEnumerable<GraphProblem> EndProblems(GraphPipelineConfiguration graph, GraphEnd? end)
+    {
+        if (end is not null && !graph.Components.Any(component => component.ParentComponent is null && string.Equals(component.Name, end.Component, StringComparison.OrdinalIgnoreCase)))
+        {
+            yield return new GraphProblem(["fieldsOutComponent"], $"the fields out come from component '{end.Component}', which is not a component of graph '{graph.Name}'");
         }
     }
 

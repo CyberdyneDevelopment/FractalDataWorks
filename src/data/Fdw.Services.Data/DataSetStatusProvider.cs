@@ -70,7 +70,7 @@ public sealed class DataSetStatusProvider : IDataSetStatuses
         var runs = await _writerRuns.ByDataSet(cancellationToken).ConfigureAwait(false);
         return runs.IsFailure || runs.Value is null
             ? runs.ToNewResult<IDataSetStatusView>()
-            : GenericResult<IDataSetStatusView>.Success(new DataSetStatusView(runs.Value, TimeSpan.FromHours(hours), _time.GetUtcNow(), _logger));
+            : GenericResult<IDataSetStatusView>.Success(new DataSetStatusView(runs.Value, TimeSpan.FromHours(hours), _time.GetUtcNow(), _dataSets, _logger));
     }
 
     /// <inheritdoc/>
@@ -91,7 +91,7 @@ public sealed class DataSetStatusProvider : IDataSetStatuses
         var counts = statuses.ToDictionary(status => status.Name, _ => 0, StringComparer.Ordinal);
         foreach (var dataSet in dataSets.Value)
         {
-            var status = view.Value.StatusOf(dataSet);
+            var status = await view.Value.StatusOfNested(dataSet, cancellationToken).ConfigureAwait(false);
             if (status.IsFailure)
                 return status.ToNewResult<IReadOnlyList<DataSetStatusCount>>();
 
@@ -99,6 +99,8 @@ public sealed class DataSetStatusProvider : IDataSetStatuses
                 counts[counted.Name]++;
         }
 
-        return GenericResult<IReadOnlyList<DataSetStatusCount>>.Success([.. statuses.Select(status => new DataSetStatusCount(status, counts[status.Name]))]);
+        // A status the kind states (FDW-5296) is listed only when a data set has it: a host with no such data set returns the rows it always did.
+        return GenericResult<IReadOnlyList<DataSetStatusCount>>.Success(
+            [.. statuses.Where(status => !status.IsStatedByKind || counts[status.Name] > 0).Select(status => new DataSetStatusCount(status, counts[status.Name]))]);
     }
 }

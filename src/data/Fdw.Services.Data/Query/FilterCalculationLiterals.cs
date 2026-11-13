@@ -37,7 +37,6 @@ internal static class FilterCalculationLiterals
     /// <returns>A decimal for a number, a bool for a flag, a DateOnly for a text of the form yyyy-MM-dd, or the refusal.</returns>
     public static IGenericResult<object?> Input(JsonElement value, string input, string calculation, IQueryRefusals refusals)
     {
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
         switch (value.ValueKind)
         {
             case JsonValueKind.Number when value.TryGetDecimal(out var number):
@@ -51,7 +50,6 @@ internal static class FilterCalculationLiterals
             default:
                 return refusals.Invalid<object?>($"input '{input}' of calculation '{calculation}' must be a number, true or false, or a date written yyyy-MM-dd");
         }
-#pragma warning restore FDW018
     }
 
     /// <summary>Checks a calculation's result against the type of the field it is compared with.</summary>

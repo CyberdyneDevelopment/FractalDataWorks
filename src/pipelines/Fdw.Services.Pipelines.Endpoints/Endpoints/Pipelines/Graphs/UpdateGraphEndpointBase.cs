@@ -9,6 +9,7 @@ using Fdw.Services.Results;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Pipelines.Clients.Abstractions;
+using Fdw.Services.Data;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -86,6 +87,6 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
             return unchanged.ToNewResult<GraphPayload>();
         }
 
-        return await GraphSave.Update(_provider, graph.Value, _dataSets, GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
+        return await GraphSave.Update(_provider, graph.Value, _dataSets, Resolve<IDataStoreConfigurationProvider>(), GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);
     }
 }

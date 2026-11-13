@@ -199,8 +199,6 @@ internal sealed class FilterCalculationResolver
 
     private static bool IsObject(JsonElement element)
     {
-#pragma warning disable FDW018 // External System.Text.Json JsonValueKind enum — cannot convert to TypeCollection
         return element.ValueKind == JsonValueKind.Object;
-#pragma warning restore FDW018
     }
 }

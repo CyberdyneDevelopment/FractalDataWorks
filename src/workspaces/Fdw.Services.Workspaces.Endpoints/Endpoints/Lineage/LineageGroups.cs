@@ -69,7 +69,42 @@ internal static class LineageGroups
         }
 
         if (string.Equals(query.GroupBy, ByCategory, StringComparison.Ordinal)) AddAncestors(keys, query.CategoryPath);
-        return new LineageGroupsResponse { Groups = Groups(keys, members), Lines = Lines(graph, groupsOf, query.MaxPipelinesPerLine) };
+
+        // A data store sits in no group of its own, but a Graph data set reads from stores, so for those reads a store takes the group a container under it would.
+        var readGroupsOf = GraphReadGroups(graph, groupsOf, query, keys);
+        return new LineageGroupsResponse { Groups = Groups(keys, members), Lines = Lines(graph, groupsOf, readGroupsOf, query.MaxPipelinesPerLine) };
+    }
+
+    // Where the ends of a Graph data set's reads sit: the groups every node already has, and for a data store the group a container directly under it would sit in, or the
+    // groups of the tags it carries when containers take their store's tags. A group made only for a store has no members. The groups every node already has are not changed.
+    private static Dictionary<string, List<string>> GraphReadGroups(
+        LineageGraph graph, Dictionary<string, List<string>> groupsOf, LineageGroupsQuery query, Dictionary<string, LineageGroupKey> keys)
+    {
+        var readGroupsOf = new Dictionary<string, List<string>>(groupsOf, StringComparer.Ordinal);
+        foreach (var flow in graph.Flows.Where(flow => flow.Graph))
+        {
+            if (readGroupsOf.ContainsKey(flow.From) || graph.Node(flow.From) is not { } node
+                || !string.Equals(node.Kind, MapKinds.DataStore, StringComparison.Ordinal)) continue;
+
+            var inScope = StoreKeys(node, query).Where(key => InScope(key, query)).ToList();
+            if (inScope.Count == 0) continue;
+
+            readGroupsOf[node.Id] = [.. inScope.Select(key => key.Id)];
+            foreach (var key in inScope) keys.TryAdd(key.Id, key);
+        }
+
+        return readGroupsOf;
+    }
+
+    private static IReadOnlyList<LineageGroupKey> StoreKeys(LineageNode store, LineageGroupsQuery query)
+    {
+        if (string.Equals(query.GroupBy, ByTag, StringComparison.Ordinal) && query.ContainersTakeStoreTags)
+        {
+            var tags = MapNodeIds.TryParse(store.Id, out _, out var id) && query.TagsOfDataStores.TryGetValue(id, out var found) ? found : [];
+            return TagKeys(tags, query.Tag);
+        }
+
+        return query.Tag is null ? [new LineageGroupKey(StorePathPrefix + store.Name, StorePathKind, store.Name, null)] : [];
     }
 
     // A data store and a pipeline sit in no group.
@@ -166,8 +201,22 @@ internal static class LineageGroups
             })
             .ToList();
 
+    // A line is drawn wherever a pipeline runs between two groups, and wherever a Graph data set reads from one group into another (FDW-5456).
+    private static List<LineageLineDto> Lines(
+        LineageGraph graph, Dictionary<string, List<string>> groupsOf, Dictionary<string, List<string>> readGroupsOf, int maxPipelines)
+    {
+        var pipelinesByLine = PipelineLines(graph, groupsOf);
+        var readsByLine = ReadLines(graph, readGroupsOf);
+        return pipelinesByLine.Keys
+            .Union(readsByLine.Keys)
+            .OrderBy(line => line.From, StringComparer.Ordinal)
+            .ThenBy(line => line.To, StringComparer.Ordinal)
+            .Select(line => Line(graph, line.From, line.To, pipelinesByLine.GetValueOrDefault(line) ?? [], readsByLine.GetValueOrDefault(line), maxPipelines))
+            .ToList();
+    }
+
     // A step through a pipeline joins every pair of different groups its ends sit in; the same pipeline along the same pair counts once however many steps cross it.
-    private static List<LineageLineDto> Lines(LineageGraph graph, Dictionary<string, List<string>> groupsOf, int maxPipelines)
+    private static Dictionary<(string From, string To), HashSet<string>> PipelineLines(LineageGraph graph, Dictionary<string, List<string>> groupsOf)
     {
         var pipelinesByLine = new Dictionary<(string From, string To), HashSet<string>>();
         foreach (var flow in graph.Flows)
@@ -180,11 +229,24 @@ internal static class LineageGroups
                     AddStep(pipelinesByLine, source, target, flow.PipelineId);
         }
 
-        return pipelinesByLine
-            .OrderBy(line => line.Key.From, StringComparer.Ordinal)
-            .ThenBy(line => line.Key.To, StringComparer.Ordinal)
-            .Select(line => Line(graph, line.Key.From, line.Key.To, line.Value, maxPipelines))
-            .ToList();
+        return pipelinesByLine;
+    }
+
+    // A read of a Graph data set joins the group of what it reads to the group of the data set; the same read along the same pair counts once.
+    private static Dictionary<(string From, string To), HashSet<(string Origin, string Reader, bool Intended)>> ReadLines(
+        LineageGraph graph, Dictionary<string, List<string>> readGroupsOf)
+    {
+        var readsByLine = new Dictionary<(string From, string To), HashSet<(string Origin, string Reader, bool Intended)>>();
+        foreach (var flow in graph.Flows.Where(flow => flow.Graph))
+        {
+            if (!readGroupsOf.TryGetValue(flow.From, out var from) || !readGroupsOf.TryGetValue(flow.To, out var to)) continue;
+
+            foreach (var source in from)
+                foreach (var target in to)
+                    AddRead(readsByLine, source, target, flow);
+        }
+
+        return readsByLine;
     }
 
     private static void AddStep(Dictionary<(string From, string To), HashSet<string>> pipelinesByLine, string from, string to, string pipelineId)
@@ -200,7 +262,22 @@ internal static class LineageGroups
         pipelines.Add(pipelineId);
     }
 
-    private static LineageLineDto Line(LineageGraph graph, string from, string to, HashSet<string> pipelineIds, int maxPipelines) => new()
+    private static void AddRead(
+        Dictionary<(string From, string To), HashSet<(string Origin, string Reader, bool Intended)>> readsByLine, string from, string to, LineageFlow flow)
+    {
+        if (string.Equals(from, to, StringComparison.Ordinal)) return;
+
+        if (!readsByLine.TryGetValue((from, to), out var reads))
+        {
+            reads = [];
+            readsByLine[(from, to)] = reads;
+        }
+
+        reads.Add((flow.From, flow.To, flow.Intended));
+    }
+
+    private static LineageLineDto Line(
+        LineageGraph graph, string from, string to, HashSet<string> pipelineIds, HashSet<(string Origin, string Reader, bool Intended)>? reads, int maxPipelines) => new()
     {
         From = from,
         To = to,
@@ -213,5 +290,7 @@ internal static class LineageGroups
             .Take(maxPipelines)
             .Select(pipeline => new LineagePipelineDto { Id = pipeline.Id, Name = pipeline.Name })
             .ToList(),
+        Reads = reads is { Count: > 0 } ? reads.Count : null,
+        IntendedReads = reads is not null && reads.Any(read => read.Intended) ? reads.Count(read => read.Intended) : null,
     };
 }

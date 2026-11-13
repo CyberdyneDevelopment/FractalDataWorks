@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Why stated: the registration generator writes the TypeOption module initializer only into an executable, and the test project must be one. -->
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/data/Fdw.Data.Options/Fdw.Data.Options.csproj" />
+    <!-- Why: SelectList joins DataOptions from another assembly, and a module initializer runs only when its assembly loads. The registration generator scans the referenced assemblies and writes the TypeOption module initializer into this entry point, as a host gets it. -->
+    <ProjectReference Include="../../../src/foundation/registration/Fdw.Registration.SourceGenerators/Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -30,7 +30,21 @@ public static class GraphFlowBuilder
     /// <param name="graph">The stored graph.</param>
     /// <param name="context">What the run builds with.</param>
     /// <returns>The pipeline, or the failure that names the first component that cannot be built.</returns>
-    public static IGenericResult<FlowPipeline> Build(GraphPipelineConfiguration graph, FlowBuildContext context)
+    public static IGenericResult<FlowPipeline> Build(GraphPipelineConfiguration graph, FlowBuildContext context) =>
+        Build(graph, context, null);
+
+    /// <summary>
+    /// Builds the pipeline of a graph that is read and not loaded (FDW-5291): the same pipeline, with one component added at the top level that takes the
+    /// rows of the terminal's output.
+    /// </summary>
+    /// <param name="graph">The stored graph.</param>
+    /// <param name="context">What the run builds with.</param>
+    /// <param name="terminal">Where the rows end.</param>
+    /// <returns>The pipeline, or the failure that names the first component that cannot be built.</returns>
+    public static IGenericResult<FlowPipeline> BuildRead(GraphPipelineConfiguration graph, FlowBuildContext context, GraphReadTerminal terminal) =>
+        Build(graph, context, terminal);
+
+    private static IGenericResult<FlowPipeline> Build(GraphPipelineConfiguration graph, FlowBuildContext context, GraphReadTerminal? terminal)
     {
         if (graph.Components.Count == 0)
         {
@@ -46,14 +60,20 @@ public static class GraphFlowBuilder
             }
         }
 
-        var top = BuildLevel(graph, null, graph.Name, context);
+        if (terminal is not null && !seen.Add(GraphEnd.ReaderName))
+        {
+            return GenericResult<FlowPipeline>.Failure(GraphLog.ComponentNameRepeated(context.Logger, graph.Name, GraphEnd.ReaderName));
+        }
+
+        var top = BuildLevel(graph, null, graph.Name, context, terminal);
         return top.IsFailure || top.Value is null
             ? top.ToNewResult<FlowPipeline>()
             : GenericResult<FlowPipeline>.Success(new FlowPipeline(graph.Name, [top.Value]));
     }
 
     // One level: the components that share a parent, wired by the links between them, as a flow graph the engine runs until every component has finished.
-    private static IGenericResult<IFlowStep> BuildLevel(GraphPipelineConfiguration graph, string? parent, string name, FlowBuildContext context)
+    private static IGenericResult<IFlowStep> BuildLevel(
+        GraphPipelineConfiguration graph, string? parent, string name, FlowBuildContext context, GraphReadTerminal? terminal = null)
     {
         var members = graph.Components.Where(component => string.Equals(component.ParentComponent, parent, StringComparison.OrdinalIgnoreCase)).ToList();
         if (members.Count == 0)
@@ -80,12 +100,22 @@ public static class GraphFlowBuilder
         }
 
         var flow = new FlowGraph(
-            built,
-            [.. links.Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
+            WithReadEnd(built, terminal),
+            WithReadLinks(links, terminal),
             [.. graph.DroppedOutputs.Where(output => inLevel.Contains(output.ComponentName)).Select(output => new FlowDroppedOutput(output.ComponentName, output.OutputName))],
             ComponentStages.Of(members),
             [.. CompletionLines.Completions(levelLinks).Select(CompletionLines.ToCompletion)]);
         return GenericResult<IFlowStep>.Success(new FlowStageStep(name, flow, context.Logger));
+    }
+
+    // Why the read's component is added here and nowhere in the stored graph: a graph data set holds no destination, and a read still needs one end for its rows.
+    private static List<IFlowComponent> WithReadEnd(List<IFlowComponent> built, GraphReadTerminal? terminal) =>
+        terminal is null ? built : [.. built, new FlowDestination(GraphEnd.ReaderName, terminal.Write)];
+
+    private static List<FlowLink> WithReadLinks(IReadOnlyList<PipelineLinkConfiguration> links, GraphReadTerminal? terminal)
+    {
+        List<FlowLink> stored = [.. links.Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))];
+        return terminal is null ? stored : [.. stored, terminal.End.ToReader()];
     }
 
     private static IGenericResult<IFlowComponent> BuildComponent(

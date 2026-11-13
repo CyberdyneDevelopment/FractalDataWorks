@@ -15,7 +15,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 /// <remarks>
 /// Every status of <c>DataSetStatuses</c> is listed, highest rank first, with the number of data sets that have it, so a status nothing has reads 0 and a status a
-/// developer added appears. The data set domain counts them (<see cref="IDataSetStatuses.Counts"/>): the endpoint only maps the answer.
+/// developer added appears; except the status a kind states (<c>NotApplicable</c>, FDW-5296), which is listed only when a data set has it. The data set domain counts them (<see cref="IDataSetStatuses.Counts"/>): the endpoint only maps the answer.
 /// </remarks>
 public abstract class ListDataSetStatusCountsEndpointBase : CrudListEndpointBase<DataSetStatusCountDto>
 {

@@ -12,10 +12,18 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// </remarks>
 internal static class MapEdges
 {
+    /// <summary>The key of the metadata entry that marks an edge as intended: a Graph data set says it will read the origin, and nothing reads it yet (FDW-5296).</summary>
+    public const string IntendedKey = "intended";
+
+    /// <summary>The metadata key that marks an edge a Graph data set draws for what it reads (FDW-5456).</summary>
+    public const string GraphKey = "graph";
+
     /// <summary>The edges of the data sets: where each is stored, and what each is derived from.</summary>
     /// <param name="state">What the nodes sent recorded.</param>
     public static IEnumerable<MapEdgeDto> ForDataSets(MapState state)
-        => state.DataSets.SelectMany(dataSet => StoredIn(state, dataSet).Concat(DerivedFrom(state, dataSet)));
+        => state.DataSets.SelectMany(dataSet => StoredIn(state, dataSet).Concat(DerivedFrom(state, dataSet)).Concat(Intended(state, dataSet))
+            .Select(edge => dataSet.IsGraph ? MarkedGraph(edge) : edge));
+
 
     /// <summary>The edges of the pipelines: the data set each reads, and the data set each writes.</summary>
     /// <param name="state">What the nodes sent recorded.</param>
@@ -59,6 +67,33 @@ internal static class MapEdges
             .Distinct()
             .Where(origin => origin != dataSet.Id && state.HasNode(MapNodeIds.DataSet(origin)))
             .Select(origin => Between(MapRelations.DerivedFrom, MapNodeIds.DataSet(dataSet.Id), MapNodeIds.DataSet(origin)));
+
+    // An intent is drawn as the edge the data set would have when bound, marked intended in its metadata, and with an id of its own so it never collides with a stored edge.
+    // Both ends must still be nodes the stream sent: an intent for a store that is not registered (an external one) has no node to draw to.
+    private static IEnumerable<MapEdgeDto> Intended(MapState state, MapDataSetLinks dataSet)
+        => dataSet.IntendedDataStoreNames
+            .Where(name => state.DataStoresByName.ContainsKey(name))
+            .Select(name => Between(MapRelations.StoredIn, MapNodeIds.DataSet(dataSet.Id), MapNodeIds.DataStore(state.DataStoresByName[name])))
+            .Concat(dataSet.IntendedFromIds
+                .Concat(dataSet.IntendedFromNames.Where(name => state.DataSetsByName.ContainsKey(name)).Select(name => state.DataSetsByName[name]))
+                .Distinct()
+                .Where(origin => origin != dataSet.Id && state.HasNode(MapNodeIds.DataSet(origin)))
+                .Select(origin => Between(MapRelations.DerivedFrom, MapNodeIds.DataSet(dataSet.Id), MapNodeIds.DataSet(origin))))
+            .Select(MarkedIntended);
+
+    // Every edge of a Graph data set says so in its metadata, so a view that draws only Graph reads (the lineage groups) can tell them from the edges of a Compound or Federated data set.
+    private static MapEdgeDto MarkedGraph(MapEdgeDto edge)
+    {
+        edge.Metadata[GraphKey] = true;
+        return edge;
+    }
+
+    private static MapEdgeDto MarkedIntended(MapEdgeDto edge)
+    {
+        edge.Id = string.Create(CultureInfo.InvariantCulture, $"{IntendedKey}:{edge.Id}");
+        edge.Metadata[IntendedKey] = true;
+        return edge;
+    }
 
     private static IEnumerable<MapEdgeDto> Consumes(MapState state, MapPipelineLinks pipeline)
         => Named(state, pipeline.SourceDataSetNames)

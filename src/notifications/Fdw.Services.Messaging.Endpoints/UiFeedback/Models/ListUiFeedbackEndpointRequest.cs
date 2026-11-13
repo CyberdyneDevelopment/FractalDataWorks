@@ -17,6 +17,12 @@ public class ListUiFeedbackEndpointRequest
     /// <summary>Gets or sets the tag to list; leave it out to list every tag.</summary>
     public string? Tag { get; set; }
 
+    /// <summary>Gets or sets whether to list only the comments the caller left.</summary>
+    public bool Mine { get; set; }
+
+    /// <summary>Gets or sets whether to list only the questions put to the caller.</summary>
+    public bool AskedOfMe { get; set; }
+
     /// <summary>Gets or sets the order: <c>urgency</c> for the most urgent first; leave it out for the newest first.</summary>
     public string? Sort { get; set; }
 

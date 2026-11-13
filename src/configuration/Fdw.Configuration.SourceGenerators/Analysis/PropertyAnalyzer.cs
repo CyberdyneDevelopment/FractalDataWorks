@@ -151,7 +151,6 @@ public static class PropertyAnalyzer
 
     private static bool IsPrimitiveType(ITypeSymbol typeSymbol)
     {
-#pragma warning disable FDW018 // External Roslyn SpecialType enum — cannot convert to TypeCollection
         switch (typeSymbol.SpecialType)
         {
             case SpecialType.System_Boolean:
@@ -171,7 +170,6 @@ public static class PropertyAnalyzer
             case SpecialType.System_DateTime:
                 return true;
         }
-#pragma warning restore FDW018
 
         // Check for other known types
         var fullName = typeSymbol.ToDisplayString();

@@ -127,7 +127,7 @@ public sealed class DataSetQuery
         Func<CancellationToken, Task<IGenericResult<QueryFilterNode?>>> scope,
         CancellationToken cancellationToken)
     {
-        var queryable = DataQueryGrouping.IsRequested(request) ? DataSetReadGate.Groupable(dataSet, _logger) : DataSetReadGate.Pageable(dataSet, _logger);
+        var queryable = DataQueryGrouping.IsRequested(request) ? DataSetReadGate.Groupable(dataSet, _logger) : DataSetReadGate.Readable(dataSet, _logger);
         if (queryable.IsFailure) return queryable.ToNewResult<DataQueryPage>();
 
         var translator = DataQueryTranslator.Create(dataSet.Fields.Where(f => f.IsCurrent && !f.IsDeleted), dataSet.Name, _logger);

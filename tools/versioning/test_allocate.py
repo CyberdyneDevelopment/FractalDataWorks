@@ -38,6 +38,12 @@ class FakeFeed:
     def held_tree(self, pid, version):
         return self.held[pid][version]
 
+    def pins(self, pid, version):
+        text = getattr(self, "pins_of", {}).get((pid, version))
+        if text is None:
+            raise feeds.FeedError(f"nuget.org lists {pid} {version} but its package cannot be read")
+        return dict(text)
+
     def readable_tree(self, pid, version):
         tree = self.held[pid][version]
         if tree is UNREADABLE:

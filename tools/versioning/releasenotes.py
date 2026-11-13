@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""The table for a release's notes, and the checks the release owner asks for (FDW-4784).
+"""The table for a release's notes, and the checks the release owner asks for (FDW-4784, FDW-5272).
 
   releasenotes.py --work DIR --repo R --base REF --baseline FILE [--head REF] [--path-prefix public/] [--fallback-ref REF ...]
 
-DIR is the release job's work folder after the `levels` phase (release-work): plan.json, levels.json, levels-input.json, package-versions.json,
+DIR is the release job's work folder after the `plan` phase (release-work): plan.json, levels.json, levels-input.json, package-versions.json,
 assembly-versions.json. For every package that changes version it prints one line: the package, its last and next version, the level,
-the first reason (the first change the surface comparison found, or why it joined) and the items that drive it, which are the item keys
+the first reason (why the package is in the release) and the items that drive it, which are the item keys
 (FDW-1234, RUI-12 ...) named in the commits that changed the package's folder since the baseline. Then three checks:
 
   - no assembly version goes down: each package's AssemblyVersion is not below the floor the baseline recorded for its assembly;
-  - the bundle follows the highest package level: its bump is the highest level among the packages (a new package counts as a minor), and
+  - the bundle follows the highest package level: its bump is the highest level among the packages that already existed (a new package raises nothing, FDW-5591), and
     never lower than the bump that was stated;
-  - the packages that joined only because a package they reference went major are counted apart.
+  - the packages that joined only because a package they reference went major are counted apart (none, now that the plan puts every package
+    above a changed one in the release).
 
 Which commits are "since the baseline": the release trees are squashed commits on another branch, so BASE..HEAD would list every item ever
 merged. Each package's folder in the baseline manifest (--baseline, `projects`) is a git tree id, and nearly always the same tree some internal
@@ -19,7 +20,7 @@ commit left that folder in; the commits after that one are the package's changes
 (its state is on no internal commit) is anchored at the same folder in each --fallback-ref in turn (the releases before, newest first; a package
 patched in two releases only matches an older one), and the commits that are patch-equivalent to ones on BASE are left out. A package that matches neither stops the run: nothing is guessed.
 
-The dry run runs on the mirror layout (folders `src/...`) while the history is in the repository (`public/src/...`): `--path-prefix public/`
+The release runs on the mirror layout (folders `src/...`) while the history is in the repository (`public/src/...`): `--path-prefix public/`
 is put in front of each folder before the history is read. Nothing is assumed: a package with no folder in levels-input.json, or a report line that cannot be read, stops the run.
 """
 import argparse
@@ -106,7 +107,7 @@ def build(work, repo, base, head, baseline, prefix="", fallback_refs=()):
         path = info["paths"].get(package)
         if path is None:
             raise NotesError(f"levels-input.json has no folder for {package}")
-        table.append({"package": package, "last": row["last"], "next": row["next"], "level": row["level"], "capped_from": row.get("capped_from"), "why": why.get(package, ""),
+        table.append({"package": package, "last": row["last"], "next": row["next"], "level": row["level"], "why": why.get(package, ""),
                       "joined": any("went major" in r for r in row["reasons"]) and not any("its source changed" in r for r in row["reasons"]),
                       "items": items_for(repo, base, head, prefix + os.path.dirname(path), baseline.get(info["names"][package]), fallback_refs)})
     floors = plan["assembly_version_floors"]
@@ -117,7 +118,7 @@ def build(work, repo, base, head, baseline, prefix="", fallback_refs=()):
         have = assembly_versions[name]
         if floor and tuple(int(x) for x in have.split(".")) < tuple(int(x) for x in floor.split(".")):
             low.append(f"{package}: AssemblyVersion {have} is below the floor {floor}")
-    derived = max(("minor" if r["level"] == levelplan.NEW else r["level"] for r in rows.values()), key=BUMPS.index)
+    derived = max((r["level"] for r in rows.values() if r["level"] != levelplan.NEW), key=BUMPS.index, default=plan["bump_stated"])
     bundle = {"version": plan["version"], "bump": plan["bump"], "derived": derived, "stated": plan["bump_stated"]}
     return table, low, bundle, len(floors)
 
@@ -125,13 +126,9 @@ def build(work, repo, base, head, baseline, prefix="", fallback_refs=()):
 def render(table, low, bundle, floors):
     lines = ["| package | last | next | level | why | items |", "|---|---|---|---|---|---|"]
     for r in table:
-        lines.append(f"| {r['package']} | {r['last'] or '-'} | {r['next']} | {r['level']}{' (pulled in by a major)' if r['joined'] else ''}{' (surface: ' + r['capped_from'] + ')' if r['capped_from'] else ''} | {r['why']} | {', '.join(r['items']) or '-'} |")
+        lines.append(f"| {r['package']} | {r['last'] or '-'} | {r['next']} | {r['level']}{' (pulled in by a major)' if r['joined'] else ''} | {r['why']} | {', '.join(r['items']) or '-'} |")
     counts = {name: sum(1 for r in table if r["level"] == name) for name in ("major", "minor", "new", "patch")}
-    capped = [r for r in table if r["capped_from"]]
     lines += ["", f"{len(table)} package(s) change version: " + ", ".join(f"{n} {k}" for k, n in counts.items() if n) + f"; {sum(1 for r in table if r['joined'])} only because a package they reference went major."]
-    if capped:
-        by = {name: sum(1 for r in capped if r["capped_from"] == name) for name in ("major", "minor")}
-        lines.append(f"{len(capped)} package(s) ship below what their surface says, by the release's level cap: " + ", ".join(f"{n} {k}" for k, n in by.items() if n) + ".")
     lines.append("assembly versions: " + (f"{len(low)} below their floor" if low else f"none below their floor ({floors} floors checked)"))
     lines += [f"  {x}" for x in low]
     follows = BUMPS.index(bundle["bump"]) == max(BUMPS.index(bundle["derived"]), BUMPS.index(bundle["stated"]))

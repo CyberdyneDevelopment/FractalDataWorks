@@ -108,6 +108,18 @@ public static class GraphPipelineUses
             Add(uses, new PipelineUse(PipelineUseRelations.Calls, Pipeline, action.TargetPipeline, []));
         }
 
+        // Why a read of the options' store and not a use of the store the options are about (FDW-5347): a Read data options step selects from
+        // the store that holds the stored options, as a SQL source selects from its store, and touches nothing on the store the options are about.
+        if (string.Equals(action.ComponentType, "ReadDataOptions", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(action.OptionsDataStoreName))
+            {
+                Add(uses, new PipelineUse(PipelineUseRelations.Reads, DataStore, action.OptionsDataStoreName, []));
+            }
+
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(action.DataStoreName))
         {
             Add(uses, new PipelineUse(PipelineUseRelations.Uses, DataStore, action.DataStoreName, []));

@@ -13,7 +13,7 @@ further file is added here.
 
 The manifest also states `assemblyVersionFloors` ({assembly: x.y.z.w}): for each assembly, the higher of the version it carries and the
 highest version any dll of that release asks for it at. A git ref holds no dlls, so they are measured from the published packages:
-`Fdw.ApiSurface --package X.nupkg --identity --out DIR/X.txt` for each package of the release, then
+`python3 public/tools/versioning/assemblyid.py identity --package X.nupkg --out DIR/X.txt` for each package of the release, then
 `python3 public/tools/versioning/bindcheck.py floors --dir DIR`. A plan stops without them (BASELINE_FLOORS_MISSING). Each later release
 records its own in the project manifest its bundle carries. For 1.5.5 every assembly is 1.5.5.0, because each lockstep release stamped its
 own number. `packagesWithoutRuntimeAssembly` lists the packages that carry none (source generators and tools; `bindcheck.py bare --dir DIR`):

@@ -96,7 +96,9 @@ public abstract class GetDataStorePathsEndpointBase : CrudGetEndpointBase<DataSt
             NeutralizeFormulas = container.NeutralizeFormulas,
             WriteEndpoint = container.WriteEndpoint,
             WriteMethod = container.WriteMethod,
-            WriteContentType = container.WriteContentType
+            WriteContentType = container.WriteContentType,
+            HasPagingOverride = !string.IsNullOrWhiteSpace(container.PagingStyle),
+            PagingStyle = container.PagingStyle,
         };
     }
 

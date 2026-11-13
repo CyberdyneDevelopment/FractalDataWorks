@@ -7,6 +7,7 @@ using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -173,6 +174,74 @@ public sealed class PermissionHoldersTests
         result.Messages.ShouldContain(m => m.Code == "AUTHORIZATION-72730");
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task ThePeopleAnOrganizationGivesThePermissionAreItsHoldersThere()
+    {
+        var finance = Guid.NewGuid();
+        var legal = Guid.NewGuid();
+        var holders = Build(
+            [Held(Cy, DeveloperA, TenantA)],
+            organizationRows: [Granted(Ana, finance, Permission), Granted(Ana, finance, "ui-feedback:write"), Granted(Ben, legal, Permission), Granted(Cy, finance, "ui-feedback:write")]);
+
+        var result = await holders.GetInOrganization(Permission, TenantA, finance, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe([Ana]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AnOrganizationRowThatGrantsTheResourceWildcardCountsBecauseEnforcementAcceptsIt()
+    {
+        var finance = Guid.NewGuid();
+        var holders = Build([], organizationRows: [Granted(Ben, finance, "ui-feedback:*"), Granted(Cy, finance, "projects:*")]);
+
+        var result = await holders.GetInOrganization(Permission, TenantA, finance, Ct);
+
+        result.Value.ShouldBe([Ben]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AnOrganizationOfAnotherTenantGivesNothing()
+    {
+        var finance = Guid.NewGuid();
+        var holders = Build([], organizationRows: [Granted(Ben, finance, Permission, TenantB)]);
+
+        var result = await holders.GetInOrganization(Permission, TenantA, finance, Ct);
+
+        result.Value.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AnOrganizationsHoldersOfAPermissionThatDoesNotExistAreAFailure()
+    {
+        var holders = Build([], organizationRows: [Granted(Ben, Guid.NewGuid(), "ui-feedback:nothing")]);
+
+        var result = await holders.GetInOrganization("ui-feedback:nothing", TenantA, Guid.NewGuid(), Ct);
+
+        result.Messages.ShouldContain(m => m.Code == "AUTHORIZATION-32730");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task UnreadableOrganizationRowsAreAFailureAndNotAnEmptyList()
+    {
+        var holders = Build([], organizationReadable: false);
+
+        var result = await holders.GetInOrganization(Permission, TenantA, Guid.NewGuid(), Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "AUTHORIZATION-72730");
+    }
+
     private static UserRoleImplementationConfiguration Held(Guid user, Guid roleId, Guid tenant, DateTimeOffset? expiresAt = null, bool isCurrent = true, bool isDeleted = false)
         => Held(user.ToString("D"), roleId, tenant, expiresAt, isCurrent, isDeleted);
 
@@ -188,9 +257,23 @@ public sealed class PermissionHoldersTests
             IsDeleted = isDeleted,
         };
 
+    private static TenantOrgAccessConfiguration Granted(Guid user, Guid organization, string permission, Guid? tenant = null)
+        => new() { UserId = user, TenantId = tenant ?? TenantA, OrgId = organization, RoleName = "DocumentCustodian", PermissionName = permission };
+
     private static PermissionHolders Build(
-        IReadOnlyList<UserRoleImplementationConfiguration> assignments, int globalTenants = 1, bool tenantsReadable = true)
+        IReadOnlyList<UserRoleImplementationConfiguration> assignments,
+        int globalTenants = 1,
+        bool tenantsReadable = true,
+        IReadOnlyList<TenantOrgAccessConfiguration>? organizationRows = null,
+        bool organizationReadable = true)
     {
+        var access = new Mock<TenantOrgAccessConfigurationProvider>(Mock.Of<IConfigurationGatewayProvider>(), NullLogger<TenantOrgAccessConfigurationProvider>.Instance);
+        access.Setup(a => a.Members(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid tenant, Guid organization, CancellationToken _) => organizationReadable
+                ? GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(
+                    [.. (organizationRows ?? []).Where(row => row.TenantId == tenant && row.OrgId == organization)])
+                : GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Failure(new GenericMessage("the access rows are unreadable")));
+
         var roles = new List<IRoleImplementationConfiguration>
         {
             new RoleImplementationConfiguration { IsTenantScoped = true, Id = DeveloperA, Name = "Developer", TenantId = TenantA },
@@ -229,6 +312,7 @@ public sealed class PermissionHoldersTests
             ConfigurationCatalog.RolePermissions(grants),
             ConfigurationCatalog.UserRoles(assignments),
             tenants.Object,
+            access.Object,
             new AuthenticationContextAccessor(),
             NullLogger<PermissionHolders>.Instance);
     }

@@ -23,6 +23,15 @@ internal static class PipelineContainers
     /// <returns>The containers, each once.</returns>
     public static IReadOnlyList<PipelineContainerRef> Writes(IPipelineImplementationConfiguration pipeline) => Named(pipeline, PipelineUseRelations.Writes);
 
+    /// <summary>Lists the SQL steps of the pipeline (FDW-5457), whose scripts name the containers they read and write.</summary>
+    /// <param name="pipeline">The pipeline; a graph pipeline read whole.</param>
+    /// <returns>The steps; none for a pipeline that is not a graph.</returns>
+    public static IReadOnlyList<GraphScript> Scripts(IPipelineImplementationConfiguration pipeline) => pipeline switch
+    {
+        GraphPipelineConfiguration graph => GraphScripts.Held(graph),
+        _ => [],
+    };
+
     // A use names its container, with the data store first and then the path in Parents; a use with no store names no container the map can find.
     private static List<PipelineContainerRef> Named(IPipelineImplementationConfiguration pipeline, string relation) => pipeline switch
     {

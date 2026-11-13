@@ -33,7 +33,7 @@ public abstract class ListUiFeedbackCommentsEndpointBase : Endpoint<ListUiFeedba
     public override void Configure()
     {
         Get("/ui-feedback/{Id}/comments");
-        Policies("ui-feedback:read|ui-feedback:write");
+        Policies("authenticated");
         Summary(s => s.Summary = "List the comments on a UI note");
         ConfigureEndpoint();
     }

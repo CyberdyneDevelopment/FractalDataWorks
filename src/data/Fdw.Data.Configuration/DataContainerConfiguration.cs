@@ -181,6 +181,12 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     public string? WriteContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets how this container pages its rows when it pages differently from its connection (FDW-5562): the name of an <c>HttpPagingStyles</c>
+    /// option. Maps to <c>data.DataContainer.PagingStyle</c>. Null means the container takes its connection's style.
+    /// </summary>
+    public string? PagingStyle { get; set; }
+
+    /// <summary>
     /// Gets or sets the fields (columns) within this container.
     /// </summary>
     /// <remarks>
@@ -192,6 +198,12 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     /// </remarks>
 #pragma warning disable MA0016 // Prefer collection abstraction — List<T> required for provider assignment
     public List<DataContainerFieldConfiguration> Fields { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the paging settings this container states, each overriding its connection's value for one key of the container's effective paging style (FDW-5562).
+    /// Loaded as a child collection from <c>data.DataContainerPagingSetting</c>. A key left out takes the connection's value, or the style's declared default.
+    /// </summary>
+    public List<DataContainerPagingSettingConfiguration> PagingSettings { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the keys (PrimaryKey, Surrogate, Natural, Foreign, Unique) for this container.

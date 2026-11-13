@@ -144,7 +144,6 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
         if (symbol.IsImplicitlyDeclared)
             return false;
 
-#pragma warning disable FDW018 // External Roslyn Accessibility enum — cannot convert to TypeCollection
         return symbol.DeclaredAccessibility switch
         {
             Accessibility.Private => includePrivate,
@@ -152,7 +151,6 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
             Accessibility.ProtectedAndInternal => includeInternal,
             _ => false // Don't flag public/protected as unused
         };
-#pragma warning restore FDW018
     }
 
     private static bool IsExcluded(ISymbol symbol)

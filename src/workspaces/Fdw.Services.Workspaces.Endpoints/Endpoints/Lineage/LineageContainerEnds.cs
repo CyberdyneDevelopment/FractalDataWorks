@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Workspaces.Endpoints;
 
 /// <summary>
-/// Adds the containers pipelines read and write directly to the lineage read (FDW-3824): a container node, and the edge that joins it to the
+/// Adds the containers pipelines read and write directly to the lineage read (FDW-3824), and those their SQL steps' scripts read and write (FDW-5457): a container node, and the edge that joins it to the
 /// pipeline, so a step from a container to a data set or the other way is a flow like any other.
 /// </summary>
 /// <remarks>
@@ -40,8 +40,12 @@ internal static class LineageContainerEnds
                 .Concat(pipeline.DestinationContainers.Select(container => (pipeline.Id, Container: container, Reads: false))))
             .Where(end => state.DataStoresByName.ContainsKey(end.Container.Store))
             .ToList();
+        var scripts = state.Pipelines
+            .SelectMany(pipeline => pipeline.Scripts.Select(script => (pipeline.Id, Script: script)))
+            .Where(step => state.DataStoresByName.ContainsKey(step.Script.DataStore))
+            .ToList();
         var stores = new Dictionary<string, IDataStoreImplementationConfiguration>(StringComparer.OrdinalIgnoreCase);
-        foreach (var storeName in named.Select(end => end.Container.Store).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var storeName in named.Select(end => end.Container.Store).Concat(scripts.Select(step => step.Script.DataStore)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var read = await sources.DataStores.Get(storeName, PathsAndContainers, ct).ConfigureAwait(false);
             var store = MapSources.Resolve(read, MapKinds.DataStore, storeName, "a pipeline", state, logger);
@@ -56,6 +60,13 @@ internal static class LineageContainerEnds
 
         foreach (var end in named)
             AddEnd(state, stores, end.Id, end.Container, end.Reads, nodes, edges, logger);
+
+        // A SQL step's script names the tables it reads and writes (FDW-5457); each is an end like a container the pipeline names.
+        foreach (var step in scripts.Where(step => stores.ContainsKey(step.Script.DataStore)))
+        {
+            foreach (var end in LineageScriptEnds.Of(step.Id, step.Script, stores[step.Script.DataStore], logger))
+                AddEnd(state, stores, step.Id, end.Container, end.Reads, nodes, edges, logger);
+        }
     }
 
     private static void AddEnd(

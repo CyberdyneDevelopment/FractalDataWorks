@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Per-package versions from per-package levels (FDW-4784).
+"""Per-package versions from per-package levels (FDW-4784, FDW-5272).
 
 plan_levels() is the graph rule of the plan, as a pure function so it can be tested without a build:
 
-  - every package whose own source changed (the build set) has a level from its own built public surface, decided by apisurface.py;
+  - every package in the build set has the level level_of(package) gives. The release states one level for all of them (release.py
+    plan --bump), so level_of returns it; the function accepts any, which is how a per-package level (a surface comparison, apisurface.py)
+    could be fed in again;
   - a package that goes MAJOR pulls each package that references it into the release at PATCH, because a major is the only change
-    that can break a binary that was not rebuilt; that dependent's own level (from its own surface) still applies and is never
-    lower than patch, and if it goes major in turn its dependents are pulled in too, and so on until nothing new joins;
-  - a generator has nothing of its own to compare (its surface is its output), so its level is the highest level among the
-    consumers it caused, and never lower than patch;
+    that can break a binary that was not rebuilt; if it goes major in turn its dependents are pulled in too, and so on until nothing
+    new joins. (With the closure rule of changeset.py every dependent is already in the build set, so nothing is pulled in.);
+  - a generator's level is the highest level among the consumers it caused, and never lower than patch;
   - each package's next version is its OWN last stable version raised by its level;
   - a package with no last stable version (new, or the new id of a renamed or split package) takes the first version that
     first-versions.json declares for it, level "new". The file is required, and without an entry the plan stops with
@@ -34,7 +35,7 @@ import re
 import sys
 
 PATCH, MINOR, MAJOR, NEW = "patch", "minor", "major", "new"
-RANK = {PATCH: 0, MINOR: 1, NEW: 1, MAJOR: 2}  # a new package is an addition: a minor to whatever it is added to
+RANK = {PATCH: 0, MINOR: 1, NEW: 0, MAJOR: 2}  # a new package raises nothing (FDW-5591): its version is the one first-versions.json declares
 STABLE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
 
@@ -119,7 +120,7 @@ def dependents_of(depends):
     return reverse
 
 
-def plan_levels(depends, members, level_of, last_stable, first_versions, generators=None):
+def plan_levels(depends, members, level_of, last_stable, first_versions, generators=None, why=None):
     """{package: {'last', 'level', 'next', 'reasons'}} for every package in the release.
 
     depends       {package: set of packages it references}
@@ -128,26 +129,28 @@ def plan_levels(depends, members, level_of, last_stable, first_versions, generat
     last_stable   {package: its last stable version}
     first_versions  load_first_versions() of first-versions.json: the declared first version of each new package (may be empty)
     generators    {generator package: set of the consumers it caused to be rebuilt}
+    why           {package: the first reason it is in the release}; "its source changed" when not given
     """
     reverse = dependents_of(depends)
+    why = why or {}
     reasons, level, order = {}, {}, []
 
-    def join(package, why):
+    def join(package, why_joined):
         if package in level:
-            reasons[package].append(why)
+            reasons[package].append(why_joined)
             return False
         if package in last_stable:
             level[package] = level_of(package)
-            reasons[package] = [why, f"its own surface is {level[package]}"]
+            reasons[package] = [why_joined, f"its level is {level[package]}"]
         else:
             level[package] = NEW
-            reasons[package] = [why, "it is a new package"]
+            reasons[package] = [why_joined, "it is a new package"]
         order.append(package)
         return True
 
     pending = sorted(members)
     for package in pending:
-        join(package, "its source changed")
+        join(package, why.get(package, "its source changed"))
     done = set()
     while True:
         majors = [p for p in order if level[p] == MAJOR and p not in done]
@@ -158,8 +161,9 @@ def plan_levels(depends, members, level_of, last_stable, first_versions, generat
             for dependent in sorted(reverse.get(base, ())):
                 join(dependent, f"{base} went major")
     for generator, consumers in sorted((generators or {}).items()):
-        caused = highest(level[c] for c in consumers if c in level)
-        caused = MINOR if caused == NEW else caused  # a generator that exists is raised by an addition as by a minor
+        # A new package that consumes the generator raises nothing: the owner declared its first version, and a package added to a release does
+        # not change what the generator's existing consumers need (FDW-5591, decided 2026-11-13). Only the changed consumers decide.
+        caused = highest(level[c] for c in consumers if c in level and level[c] != NEW)
         if generator not in level:
             level[generator], reasons[generator] = PATCH, ["its source changed"]
             order.append(generator)
@@ -169,6 +173,23 @@ def plan_levels(depends, members, level_of, last_stable, first_versions, generat
     plan = {p: _row(p, level[p], reasons[p], last_stable, first_versions) for p in order}
     _check_declarations(plan, last_stable, first_versions)
     return plan
+
+
+def first_reason(row):
+    """The first thing worth saying about a row of plan_levels: why a new package is new, else why it is in the release."""
+    return row["reasons"][-1] if row["level"] == NEW else row["reasons"][0]
+
+
+def report(plan):
+    """Lines of the report, most severe level first, then by package id: package, last stable, level, next version, why."""
+    order = {MAJOR: 0, MINOR: 1, NEW: 2, PATCH: 3}
+    lines = [f"{'PACKAGE':40s} {'LAST':12s} {'LEVEL':6s} {'NEXT':12s} WHY"]
+    for package in sorted(plan, key=lambda p: (order[plan[p]["level"]], p.lower())):
+        row = plan[package]
+        lines.append(f"{package:40s} {row['last'] or '-':12s} {row['level']:6s} {row['next']:12s} {first_reason(row)}")
+    counts = {name: sum(1 for r in plan.values() if r["level"] == name) for name in order}
+    lines.append(f"{len(plan)} package(s): " + ", ".join(f"{n} {name}" for name, n in counts.items() if n))
+    return lines
 
 
 def _row(package, level, reasons, last_stable, first_versions):

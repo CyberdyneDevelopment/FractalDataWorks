@@ -192,6 +192,27 @@ public sealed class StableReadTests
 
     [Fact]
     [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5300")]
+    public async Task AGraphDataSetThatShapesItsOwnReadIsStillReadWholeAsASourceAndNeverInPages()
+    {
+        var store = new ShufflingStore([.. Enumerable.Range(0, 1500).Select(i => new Dictionary<string, object?> { ["Id"] = i })], compare: false);
+        var graph = new GraphDataSetConfiguration
+        {
+            Name = "GasPrices",
+            Implementation = "Graph",
+            GraphFields = [new GraphDataSetFieldConfiguration { Name = "Id", Ordinal = 0, IsKey = true }],
+        };
+
+        var opened = await StableRead.OpenDataSet(new QueryCommand<Dictionary<string, object?>>(), graph, store.Read, null, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
+        (await opened.Value.ShouldNotBeNull().Read(TestContext.Current.CancellationToken).CountAsync(TestContext.Current.CancellationToken)).ShouldBe(1500);
+        store.Reads.ShouldBe(1);
+        ((IQueryCommand)store.Commands.Single()).Paging.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task AnInMemoryJoinOverTheConfiguredCapIsRefusedWithItsCode()
     {

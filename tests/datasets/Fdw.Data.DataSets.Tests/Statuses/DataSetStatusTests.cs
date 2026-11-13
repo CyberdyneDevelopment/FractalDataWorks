@@ -74,8 +74,18 @@ public sealed class DataSetStatusTests
     {
         var ranked = DataSetStatuses.All().OrderByDescending(status => status.Rank).Select(status => status.Name).ToList();
 
-        ranked.ShouldBe(["Unwritten", "Failed", "Running", "Warning", "Current", "Idle"]);
+        ranked.ShouldBe(["NotApplicable", "Unwritten", "Failed", "Running", "Warning", "Current", "Idle"]);
         DataSetStatuses.All().Select(status => status.Rank).Distinct().Count().ShouldBe(DataSetStatuses.All().Count);
+    }
+
+    [Fact]
+    public void TheStatusAKindStatesIsNeverPickedFromWritersSoNoExistingDataSetsStatusChanges()
+    {
+        DataSetStatuses.NotApplicable.IsStatedByKind.ShouldBeTrue();
+        DataSetStatuses.NotApplicable.Applies(new DataSetStatusInput([], Window, Now)).ShouldBeFalse();
+        DataSetStatuses.NotApplicable.Applies(new DataSetStatusInput([Writer("A", ExecutionStateTypes.Completed, TimeSpan.FromHours(1))], Window, Now)).ShouldBeFalse();
+        DataSetStatuses.All().Where(status => status.IsStatedByKind).Select(status => status.Name).ShouldBe(["NotApplicable"]);
+        StatusOf().ShouldBe("Unwritten");
     }
 
     [Fact]

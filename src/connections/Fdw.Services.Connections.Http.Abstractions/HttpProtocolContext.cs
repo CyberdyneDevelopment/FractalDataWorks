@@ -1,4 +1,5 @@
 using Fdw.Configuration;
+using Fdw.Data.Abstractions;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 
@@ -41,4 +42,10 @@ public readonly record struct HttpProtocolContext(
     /// each page's position in the paging style the connection states, so the protocol writes no window of a query's paging into it.
     /// </summary>
     public bool PagedByReader { get; init; }
+
+    /// <summary>
+    /// Gets the container the request is for (FDW-5562), so the paging style a container states for itself is the one the request's window is written in.
+    /// Null for a request that is not of a container.
+    /// </summary>
+    public IStorageContainer? Container { get; init; }
 }

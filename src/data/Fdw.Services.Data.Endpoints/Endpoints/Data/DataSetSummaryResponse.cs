@@ -30,7 +30,8 @@ public class DataSetSummaryResponse : ResourceSummary
 
     /// <summary>
     /// Gets or sets the data set's status, read off the latest runs of the pipelines that write it: the name of an option of <c>DataSetStatuses</c> (Unwritten, Failed, Running, Warning, Current or Idle,
-    /// or one a developer added). Null for a variation, which holds no data of its own (FDW-4488).
+    /// or one a developer added). Null for a variation, which holds no data of its own (FDW-4488). A Graph data set, which no pipeline writes, has the status of the pipelines that write the
+    /// data sets it reads, or <c>NotApplicable</c> when it reads none (FDW-5296).
     /// </summary>
     public string? Status { get; set; }
 

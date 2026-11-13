@@ -33,7 +33,7 @@ public abstract class GetUiFeedbackScreenshotEndpointBase : Endpoint<UiFeedbackI
     public override void Configure()
     {
         Get("/ui-feedback/{Id}/screenshot");
-        Policies("ui-feedback:read|ui-feedback:write");
+        Policies("authenticated");
         Summary(s => s.Summary = "Read the picture of a UI comment");
         ConfigureEndpoint();
     }

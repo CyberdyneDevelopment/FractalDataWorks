@@ -131,6 +131,11 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<ILogger<VariationDataSetConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data", "VariationDataSetConfiguration"));
+            builder.Services.TryAddSingleton<GraphDataSetConfigurationProvider>(sp =>
+                new GraphDataSetConfigurationProvider(
+                    sp.GetRequiredService<ILogger<GraphDataSetConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection, "data", "GraphDataSetConfiguration"));
             builder.Services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
             {
                 var domain = new DataSetConfigurationProvider(

@@ -73,10 +73,10 @@ class ChangeSetTests(unittest.TestCase):
         self.repo = Repo(self._tmp.name)
         self.before = self.repo.commit(base_files(), "base")
 
-    def plan(self, files, api_breaks=()):
+    def plan(self, files, api_breaks=(), closure=False):
         self.repo.commit(files, "change")
         baseline = snapshot(self.repo.root, self.before).manifest()
-        return changeset.plan(snapshot(self.repo.root, "HEAD"), baseline, api_breaks)
+        return changeset.plan(snapshot(self.repo.root, "HEAD"), baseline, api_breaks, closure)
 
     def test_no_change_builds_nothing(self):
         self.repo.commit({"README.md": "x\n"})
@@ -90,6 +90,32 @@ class ChangeSetTests(unittest.TestCase):
         result = self.plan({"public/src/A/A.cs": "class A { int x; }\n"})
         self.assertEqual(result["build_set"], ["A"])
         self.assertIn("A.Tests", result["tests"])
+
+    def test_with_the_closure_a_change_adds_everything_above_it(self):
+        result = self.plan({"public/src/A/A.cs": "class A { int x; }\n"}, closure=True)
+        self.assertEqual(result["build_set"], ["A", "B", "C"])
+        self.assertEqual(result["reasons"]["C"], ["A changed, and C is built from it"])
+
+    def test_with_the_closure_a_leaf_change_adds_nothing(self):
+        self.assertEqual(self.plan({"public/src/C/C.cs": "class C { int x; }\n"}, closure=True)["build_set"], ["C"])
+
+    def test_with_the_closure_a_change_in_the_middle_adds_what_is_above_it_and_nothing_below_or_beside(self):
+        result = self.plan({"public/src/B/B.cs": "class B { int x; }\n"}, closure=True)
+        self.assertEqual(result["build_set"], ["B", "C"])
+        self.assertEqual({"A", "D", "E", "Gen.SourceGenerators"} & set(result["build_set"]), set())
+
+    def test_with_the_closure_a_package_whose_dependencies_did_not_change_is_left_alone(self):
+        result = self.plan({"public/src/C/C.cs": "class C { int x; }\n"}, closure=True)
+        self.assertNotIn("A", result["build_set"])
+        self.assertNotIn("B", result["build_set"])
+
+    def test_with_the_closure_the_dependents_of_a_changed_generator_are_still_added_once(self):
+        result = self.plan({"public/src/Gen.SourceGenerators/G.cs": "class G { int x; }\n"}, closure=True)
+        self.assertEqual(result["build_set"], ["D", "E", "Gen.SourceGenerators"])
+
+    def test_with_the_closure_and_no_baseline_everything_builds_as_before(self):
+        result = changeset.plan(snapshot(self.repo.root), None, (), True)
+        self.assertEqual(set(result["build_set"]), {"A", "B", "C", "D", "E", "Gen.SourceGenerators"})
 
     def test_an_api_break_adds_everything_above_it(self):
         result = self.plan({"public/src/A/A.cs": "class A { }\n"}, api_breaks=["A"])

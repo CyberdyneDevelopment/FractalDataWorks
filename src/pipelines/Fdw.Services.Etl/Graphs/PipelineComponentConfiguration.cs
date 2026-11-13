@@ -90,7 +90,7 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
     /// <summary>Gets or sets the name of the error output node; none means a row that cannot be processed fails the run.</summary>
     public string? ErrorOutput { get; set; }
 
-    /// <summary>Gets or sets the field a cross apply expands.</summary>
+    /// <summary>Gets or sets the field a cross apply expands, or the column a Read data options component reads the options of.</summary>
     public string? FieldName { get; set; }
 
     /// <summary>Gets or sets the output field a cross apply writes each value to.</summary>
@@ -141,8 +141,14 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
     /// <summary>Gets or sets whether an Execute pipeline component waits for the pipeline it started to end.</summary>
     public bool? AwaitCompletion { get; set; }
 
-    /// <summary>Gets or sets the variable an Execute SQL or Execute pipeline component sets to its outcome.</summary>
+    /// <summary>Gets or sets the variable an Execute SQL, Execute pipeline or Read data options component sets to its outcome.</summary>
     public string? ResultVariable { get; set; }
+
+    /// <summary>Gets or sets the data store that holds the stored options a Read data options component reads (FDW-5347).</summary>
+    public string? OptionsDataStoreName { get; set; }
+
+    /// <summary>Gets or sets the container that holds the stored options a Read data options component reads (FDW-5347).</summary>
+    public string? OptionsContainerName { get; set; }
 
     /// <summary>Gets or sets whether an Execute pipeline component fails when the started pipeline does not succeed.</summary>
     public bool? FailOnChildFailure { get; set; }

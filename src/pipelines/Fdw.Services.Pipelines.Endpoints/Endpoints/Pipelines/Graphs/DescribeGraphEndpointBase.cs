@@ -8,6 +8,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Data;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Etl.Graphs.Describing;
 using Fdw.Services.Pipelines.Clients.Abstractions;
@@ -74,7 +75,11 @@ public abstract class DescribeGraphEndpointBase : Endpoint<GraphPayload, GraphDe
             return;
         }
 
-        var context = new DescribeContext((name, token) => GraphDataSetFields.Read(_dataSets, name, token));
+        // Why the data store provider is resolved here: the save routes of this domain reach it the same way, and a describe that holds one more constructor parameter would change every host that derives it.
+        var sources = new GraphDataSetSources(_dataSets, Resolve<IDataStoreConfigurationProvider>());
+        var context = new DescribeContext(
+            (name, token) => GraphDataSetFields.Read(_dataSets, name, token),
+            (request, token) => GraphContainerFields.Read(sources, request, _logger, token));
         var described = await GraphDescriber.Describe(graph.Value, context, _logger, ct).ConfigureAwait(false);
         if (described.IsFailure)
         {
@@ -91,7 +96,7 @@ public abstract class DescribeGraphEndpointBase : Endpoint<GraphPayload, GraphDe
         await Send.OkAsync(
             new GraphDescriptionPayload
             {
-                Nodes = [.. described.Value.Select(Payload)],
+                Nodes = [.. described.Value.Select(GraphNodePayloads.Of)],
                 Scope = [.. GraphScopeEntries.Of(graph.Value)],
                 Problems =
                 [
@@ -101,19 +106,4 @@ public abstract class DescribeGraphEndpointBase : Endpoint<GraphPayload, GraphDe
             },
             ct).ConfigureAwait(false);
     }
-
-    private static GraphNodeDescriptionPayload Payload(GraphNodeFields node) => new()
-    {
-        Component = node.Component,
-        Node = node.Node,
-        IsInput = node.IsInput,
-        Fields = node.Fields is null
-            ? null
-            : [.. node.Fields.Select(field => new GraphFieldPayload
-            {
-                Name = field.Name,
-                Type = field.Type,
-                Origin = field.Origin is { } origin ? new GraphFieldOriginPayload { DataSet = origin.DataSet, Field = origin.Field } : null,
-            })],
-    };
 }

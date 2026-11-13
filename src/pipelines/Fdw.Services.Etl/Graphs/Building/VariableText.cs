@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Flow;
 
 namespace Fdw.Services.Etl.Graphs.Building;
 
@@ -50,13 +52,13 @@ public static partial class VariableText
     /// <summary>Replaces each reference with the value of the variable it names.</summary>
     /// <param name="text">The text.</param>
     /// <param name="variables">The variables in scope.</param>
-    /// <returns>The text with every reference replaced; a null value is the empty text.</returns>
-    /// <exception cref="InvalidOperationException">A reference names a variable that is not declared in scope; the graph check refuses such a graph before it runs.</exception>
+    /// <returns>The text with every reference replaced; a null value is the empty text, and a list is written as <c>"A","B","C"</c> (<see cref="VariableListText"/>).</returns>
+    /// <exception cref="InvalidOperationException">A reference names a variable that is not declared in scope (the graph check refuses such a graph before it runs), or a list that is empty or holds a null item or an item with a double quote (an <c>InvalidOperationException</c> the steps that render a parameter text catch and turn into the coded failure FLOW-21010).</exception>
     public static string Render(string text, FlowVariables variables)
     {
         return Reference().Replace(text, match =>
             variables.TryGet(match.Groups["name"].Value, out var value)
-                ? TextOf(value)
+                ? TextOf(match.Groups["name"].Value, value)
                 : throw Missing(match.Groups["name"].Value, variables));
     }
 
@@ -66,7 +68,16 @@ public static partial class VariableText
             ? new InvalidOperationException($"The text names the parameter '{name}', which this run was started without a value for.")
             : new InvalidOperationException($"The text names the variable '{name}', which is not declared in scope.");
 
-    // A null value renders as no text; every other value renders in the invariant culture so the text does not change with the host.
-    private static string TextOf(object? value) =>
-        value is not null && Convert.ToString(value, CultureInfo.InvariantCulture) is { } text ? text : string.Empty;
+    // A null value renders as no text; a list renders quoted and comma-separated (FDW-5347); every other value renders in the invariant culture so the text does not change with the host.
+    private static string TextOf(string name, object? value)
+    {
+        if (!VariableListText.IsList(value))
+        {
+            return value is not null && Convert.ToString(value, CultureInfo.InvariantCulture) is { } text ? text : string.Empty;
+        }
+
+        return VariableListText.TryRender((IEnumerable)value!, out var list)
+            ? list
+            : throw VariableListNotWritable.Of(name);
+    }
 }

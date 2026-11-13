@@ -85,6 +85,18 @@ public class DataStoreContainerDetailDto
     /// <summary>Gets or sets the content type the rows are sent as, or null when not stated.</summary>
     public string? WriteContentType { get; set; }
 
+    /// <summary>Gets or sets whether the container states paging of its own: true when it names a paging style (FDW-5562).</summary>
+    public bool HasPagingOverride { get; set; }
+
+    /// <summary>Gets or sets the paging style the container names, or null when it takes its connection's.</summary>
+    public string? PagingStyle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paging the container reads with, its own style and settings laid over its connection's, each value with where it came from
+    /// (<c>container</c>, <c>connection</c> or <c>style</c>). Null when its store does not page its containers, or no style is stated at either level.
+    /// </summary>
+    public ContainerPagingDto? Paging { get; set; }
+
     /// <summary>Gets or sets the fields within this container.</summary>
     public IList<DataStoreFieldResponse> Fields { get; set; } = [];
 }

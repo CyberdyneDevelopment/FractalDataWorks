@@ -70,6 +70,7 @@ public abstract class GetTypeCollectionValueDetailEndpointBase
             Name = summary.Name,
             ExpectedProperties = summary.ExpectedProperties,
             RequiredProperties = summary.RequiredProperties,
+            InheritableProperties = summary.InheritableProperties,
             PropertyMetadata = propertyMetadata
         };
     }

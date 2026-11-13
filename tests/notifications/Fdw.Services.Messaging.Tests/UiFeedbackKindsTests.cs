@@ -62,4 +62,23 @@ public class UiFeedbackKindsTests
         UiFeedbackTags.All().ShouldAllBe(tag => !string.IsNullOrWhiteSpace(tag.DisplayName) && !string.IsNullOrWhiteSpace(tag.Color));
         UiFeedbackTags.ByName("UsabilityIssue").DisplayName.ShouldBe("Usability Issue");
     }
+
+    [Fact]
+    public void AQuestionAsksForAnAnswerAndIsDrawnAsInformation()
+    {
+        var question = UiFeedbackTags.ByName("Question");
+
+        question.ShouldNotBeSameAs(UiFeedbackTags.NotFound);
+        question.DisplayName.ShouldBe("Question");
+        ((UiFeedbackTagBase)question).Description.ShouldBe("Asks someone who knows the screen for information or an answer");
+        question.Color.ShouldBe("info");
+        question.AsksForAnAnswer.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void OnlyAQuestionAsksForAnAnswer()
+    {
+        UiFeedbackTags.All().Where(tag => tag.AsksForAnAnswer).Select(tag => tag.Name).ShouldBe(["Question"]);
+        UiFeedbackTags.NotFound.AsksForAnAnswer.ShouldBeFalse();
+    }
 }

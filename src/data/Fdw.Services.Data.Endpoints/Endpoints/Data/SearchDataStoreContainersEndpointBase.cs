@@ -120,6 +120,8 @@ public abstract class SearchDataStoreContainersEndpointBase : CrudPageEndpointBa
                     WriteEndpoint = container.WriteEndpoint,
                     WriteMethod = container.WriteMethod,
                     WriteContentType = container.WriteContentType,
+                    HasPagingOverride = !string.IsNullOrWhiteSpace(container.PagingStyle),
+                    PagingStyle = container.PagingStyle,
                 }))
             .Where(item => (kind is null || string.Equals(item.ContainerType, kind, StringComparison.OrdinalIgnoreCase))
                 && Search.Selects(item.Name, item.PathName, item.ContainerType))

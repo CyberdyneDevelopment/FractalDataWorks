@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
+using Fdw.Data.DataSets;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
@@ -261,7 +262,10 @@ internal sealed class OverviewMapStream : MapStream
 
     private static MapPipelineLinks LinksOf(IPipelineImplementationConfiguration pipeline)
         => new(
-        pipeline.Id, PipelineDataSets.Reads(pipeline), PipelineDataSets.Writes(pipeline), PipelineContainers.Reads(pipeline), PipelineContainers.Writes(pipeline));
+        pipeline.Id, PipelineDataSets.Reads(pipeline), PipelineDataSets.Writes(pipeline), PipelineContainers.Reads(pipeline), PipelineContainers.Writes(pipeline))
+        {
+            Scripts = PipelineContainers.Scripts(pipeline),
+        };
 
     // A variation reads the view it narrows, else the data set it varies (FDW-3638): that is its one source.
     private static IEnumerable<Guid> VariedFrom(IDataSetImplementationConfiguration dataSet)
@@ -270,24 +274,53 @@ internal sealed class OverviewMapStream : MapStream
             yield return variation.ParentVariationId is { } parent ? parent : variation.BaseDataSetId;
     }
 
-    private static MapDataSetLinks LinksOf(IDataSetImplementationConfiguration dataSet) => new(
-        dataSet.Id,
-        dataSet.Sources
-            .Select(source => source.DataStoreName)
+    // A Graph data set has no source list (its Sources are empty by design): what it reads is what its components name, and what it only intends to read are
+    // its intents (FDW-5296). Both come from the one reading of the graph, so the map, the lineage and the status agree.
+    private static IReadOnlyList<GraphDataSetRead> GraphReads(IDataSetImplementationConfiguration dataSet)
+        => dataSet is IGraphDataSetConfiguration graph ? GraphDataSetReads.Of(graph) : [];
+
+    // The data store a read sits in: a data store is its own name, a container's is the store it is under.
+    private static IEnumerable<string> GraphStores(IEnumerable<GraphDataSetRead> reads)
+        => reads.Select(read => read.DataStoreName)
             .Where(name => !string.IsNullOrEmpty(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList(),
-        dataSet.Sources
-            .Where(source => source.SourceDataSetId.HasValue)
-            .Select(source => source.SourceDataSetId!.Value)
-            .Concat(VariedFrom(dataSet))
-            .Distinct()
-            .ToList(),
-        dataSet.Sources
-            .Select(source => source.SourceDataSetName)
-            .Append(dataSet.SourceDataSetName)
-            .Where(name => !string.IsNullOrEmpty(name))
-            .Select(name => name!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList());
+            .Select(name => name!);
+
+    private static MapDataSetLinks LinksOf(IDataSetImplementationConfiguration dataSet)
+    {
+        var reads = GraphReads(dataSet);
+        var graphReads = reads.Where(read => !read.IsIntended).ToList();
+        var graphIntents = reads.Where(read => read.IsIntended).ToList();
+        return new(
+            dataSet.Id,
+            dataSet.Sources
+                .Select(source => source.DataStoreName)
+                .Concat(GraphStores(graphReads))
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            dataSet.Sources
+                .Where(source => source.SourceDataSetId.HasValue)
+                .Select(source => source.SourceDataSetId!.Value)
+                .Concat(VariedFrom(dataSet))
+                .Distinct()
+                .ToList(),
+            dataSet.Sources
+                .Select(source => source.SourceDataSetName)
+                .Append(dataSet.SourceDataSetName)
+                .Concat(graphReads.Where(read => string.Equals(read.Kind, GraphDataSetReadKinds.DataSet, StringComparison.Ordinal)).Select(read => read.Name))
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Select(name => name!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList())
+        {
+            IsGraph = dataSet is IGraphDataSetConfiguration,
+            IntendedDataStoreNames = GraphStores(graphIntents).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            IntendedFromIds = graphIntents.Where(read => read.DataSetId.HasValue).Select(read => read.DataSetId!.Value).Distinct().ToList(),
+            IntendedFromNames = graphIntents
+                .Where(read => string.Equals(read.Kind, GraphDataSetReadKinds.DataSet, StringComparison.Ordinal))
+                .Select(read => read.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+        };
+    }
 }

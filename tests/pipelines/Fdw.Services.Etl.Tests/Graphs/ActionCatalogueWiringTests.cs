@@ -39,12 +39,12 @@ public sealed class ActionCatalogueWiringTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void OnlyTheLoopsHoldComponentsAndTheActionsAreTheSevenFormerStepKinds()
+    public void OnlyTheLoopsHoldComponentsAndTheActionsAreTheStepKinds()
     {
         ComponentTypes.All().Where(kind => kind.HoldsComponents).Select(kind => kind.Name).OrderBy(name => name, System.StringComparer.Ordinal)
             .ShouldBe(["DoWhile", "ForEach", "ForLoop"]);
         ComponentTypes.All().Where(kind => kind.IsAction).Select(kind => kind.Name).OrderBy(name => name, System.StringComparer.Ordinal)
-            .ShouldBe(["DoWhile", "ExecutePipeline", "ExecuteSql", "ForEach", "ForLoop", "Notify", "SetVariable"]);
+            .ShouldBe(["DoWhile", "ExecutePipeline", "ExecuteSql", "ForEach", "ForLoop", "Notify", "ReadDataOptions", "SetVariable"]);
         ComponentTypes.All().Where(kind => kind.IsAction).ShouldAllBe(kind => kind.Inputs.Count == 0 && kind.Outputs.Count == 0);
     }
 }

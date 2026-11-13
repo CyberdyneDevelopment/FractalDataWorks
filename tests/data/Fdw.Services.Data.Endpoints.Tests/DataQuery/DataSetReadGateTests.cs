@@ -53,6 +53,55 @@ public sealed class DataSetReadGateTests
     }
 
     [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5300")]
+    public void AFederatedSetIsStillRefusedByTheRowRoutesGateBecauseItSaysNothingAboutShapingItsOwnRead()
+    {
+        var federated = new FederatedDataSetConfiguration { Name = "BreweriesInNflCities", Implementation = "Federated" };
+
+        var result = DataSetReadGate.Readable(federated, NullLogger.Instance);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("kind 'Federated' does not page in the store");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5300")]
+    public void AGraphSetIsAnsweredAPagedQueryBecauseItShapesItsOwnReadYetItDoesNotPageInTheStore()
+    {
+        var graph = new GraphDataSetConfiguration { Name = "GasPrices", Implementation = "Graph" };
+
+        DataSetReadGate.Readable(graph, NullLogger.Instance).IsSuccess.ShouldBeTrue();
+        DataSetReadGate.Pageable(graph, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        DataSetTypes.ByName("Graph").PagesInStore.ShouldBeFalse();
+        DataSetReadGate.Groupable(graph, NullLogger.Instance).IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5300")]
+    public void TheKindsThatPageInTheStoreAreAnsweredAsBeforeAndAnUnknownKindIsStillRefused()
+    {
+        DataSetReadGate.Readable(Simple(), NullLogger.Instance).IsSuccess.ShouldBeTrue();
+        DataSetReadGate.Readable(new CompoundDataSetConfiguration { Name = "TeamsWithStadiums", Implementation = "Compound" }, NullLogger.Instance).IsSuccess.ShouldBeTrue();
+        DataSetReadGate.Readable(Simple(new DataSetAggregateConfiguration()), NullLogger.Instance).IsFailure.ShouldBeTrue();
+        DataSetReadGate.Readable(new SimpleDataSetConfiguration { Name = "Mystery", Implementation = "NotAKind" }, NullLogger.Instance).IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW5300")]
+    public void ASetThatShapesItsOwnReadHasTheCapabilityAndNoOtherShippedKindDoes()
+    {
+        DataSetTypes.ByName("Graph").ShouldBeAssignableTo<IShapesItsOwnRead>().ShapesItsOwnRead.ShouldBeTrue();
+        DataSetTypes.ByName("Simple").ShouldNotBeAssignableTo<IShapesItsOwnRead>();
+        DataSetTypes.ByName("Compound").ShouldNotBeAssignableTo<IShapesItsOwnRead>();
+        DataSetTypes.ByName("Federated").ShouldNotBeAssignableTo<IShapesItsOwnRead>();
+        DataSetTypes.ByName("Variation").ShouldNotBeAssignableTo<IShapesItsOwnRead>();
+    }
+
+    [Fact]
     public void AnUnknownKindIsRefusedBecauseNothingKnowsHowItPages()
     {
         var unknown = new SimpleDataSetConfiguration { Name = "Mystery", Implementation = "NotAKind" };

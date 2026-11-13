@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Fdw.Services.Data.Clients.Models;
 
 /// <summary>
@@ -108,4 +111,16 @@ public sealed class AddDataStoreContainerPayload
     /// refused. Left out, a destination that needs it fails naming it when it runs.
     /// </summary>
     public string? WriteContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paging style the container pages in when it pages differently from its connection (FDW-5562): the name of an <c>HttpPagingStyles</c>
+    /// option, which may be its connection's own. Left out, the container takes its connection's paging.
+    /// </summary>
+    public string? PagingStyle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the paging settings the container states, by name, for the style it names (FDW-5562). A setting left out, or sent blank, is taken from the
+    /// connection when the container pages in its connection's style, and from the style's declared default otherwise.
+    /// </summary>
+    public IDictionary<string, string?> PagingSettings { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 }

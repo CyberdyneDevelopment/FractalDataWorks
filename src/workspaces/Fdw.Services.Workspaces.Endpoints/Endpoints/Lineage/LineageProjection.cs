@@ -69,10 +69,10 @@ internal static class LineageProjection
                     Add(writes, edge.Source, edge.Target);
                     break;
                 case MapRelations.DerivedFrom:
-                    flows.Add(new LineageFlow(edge.Target, edge.Source, LineageRelations.DerivedFrom, null));
+                    flows.Add(new LineageFlow(edge.Target, edge.Source, LineageRelations.DerivedFrom, null, IntendedOf(edge), GraphOf(edge)));
                     break;
                 case MapRelations.StoredIn:
-                    flows.Add(new LineageFlow(edge.Target, edge.Source, LineageRelations.StoredIn, null));
+                    flows.Add(new LineageFlow(edge.Target, edge.Source, LineageRelations.StoredIn, null, IntendedOf(edge), GraphOf(edge)));
                     break;
             }
         }
@@ -80,6 +80,14 @@ internal static class LineageProjection
         flows.AddRange(Through(reads, writes));
         return flows;
     }
+
+    // An edge a Graph data set draws says so in its metadata (FDW-5456).
+    private static bool GraphOf(MapEdgeDto edge)
+        => edge.Metadata.TryGetValue(MapEdges.GraphKey, out var value) && value is true;
+
+    // An edge a Graph data set draws for a source it only intends to read says so in its metadata (FDW-5296).
+    private static bool IntendedOf(MapEdgeDto edge)
+        => edge.Metadata.TryGetValue(MapEdges.IntendedKey, out var value) && value is true;
 
     // A pipeline that reads several inputs and writes several outputs gives a step for each input and output pair.
     private static List<LineageFlow> Through(Dictionary<string, List<string>> reads, Dictionary<string, List<string>> writes)

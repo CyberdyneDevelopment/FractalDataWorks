@@ -82,7 +82,16 @@ public sealed class FlowExecuteSql : IFlowStep
             return text;
         }
 
-        var values = _parameters.Select(parameter => new ScriptParameter(parameter.Name, parameter.Value(context.Variables))).ToList();
+        List<ScriptParameter> values;
+        try
+        {
+            values = _parameters.Select(parameter => new ScriptParameter(parameter.Name, parameter.Value(context.Variables))).ToList();
+        }
+        catch (InvalidOperationException ex) when (VariableListNotWritable.TryRead(ex, out var listName))
+        {
+            return GenericResult.Failure(FlowDataOptionsLog.ListNotWritable(_logger, Name, "parameters", listName));
+        }
+
         var ran = await _gateway
             .Execute(new ScriptRunCommand(text.Value, values), _dataStore, cancellationToken)
             .ConfigureAwait(false);
