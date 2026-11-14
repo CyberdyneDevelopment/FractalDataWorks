@@ -69,7 +69,7 @@ stable package). `Directory.Build.props` declares only the line, `major.minor`, 
 
 Branching, building, and committing never change the line; moving it is a deliberate edit of this property, never a side effect of
 a commit. A development build is `N-internal.<date>.<commit count>` or `N-develop.<date>.<commit count>`; a release publishes plain
-versions, and a `Fdw.Bundle` package pins the whole release exactly.
+versions; each release writes a record (`tools/versioning/baseline/release-FDW-<N>.json`) of the tree it was made from and every package's version.
 
 ## Sample Solution Override
 

@@ -4,13 +4,15 @@
 # push itself is the workflow's (sign-in rounds, scripts/push-nuget.sh), so a long quota wait never uses a dead key.
 #
 #   release-allocated.sh plan     decide the whole release from the baseline and the feed: which packages changed (anything in a package's
-#                                 closure), each package's own next version at the level BUMP states, the AssemblyVersions, the bundle's
+#                                 closure), each package's own next version at the level BUMP states, the AssemblyVersions, the release's
 #                                 number. Nothing is compiled and no API is read (tools/versioning/release.py plan)
 #   release-allocated.sh build    prepare the build set, build it (and test it only when RUN_TESTS is true), pack its members into artifacts/
 #   release-allocated.sh bindings prove that a package left as it is still loads with the rebuilt ones: no built assembly is below the floor
 #                                 or lower than a version the last release's dlls ask for (tools/versioning/bindcheck.py, assemblyid.py)
 #   release-allocated.sh decide   check-then-push: decide every package against nuget.org before anything is pushed
-#   release-allocated.sh bundle   generate and pack the release bundle into bundle/ (pushed last, by the workflow)
+#   release-allocated.sh record   write the record of this release (release-work/baseline.json): the baseline of the NEXT release, every
+#                                 package's exact version in this one (tools/versioning/release.py record); the workflow uploads it, and
+#                                 after the green run and the tag the owner commits it as tools/versioning/baseline/release-FDW-<N>.json
 #
 # Every value comes from the environment; the workflow declares the defaults once. A missing value fails the run and names it. Nothing is
 # assumed.
@@ -19,13 +21,12 @@
 #   LINE              the release line, major.minor (for example 1.5)
 #   BUMP              patch | minor | major: the level of every package that changed. The mirror has no commits to read it from, so the person
 #                     cutting the release states it (the workflow's declared default is patch)
-#   BUNDLE_ID         the bundle package id (Fdw.Bundle)
-#   BASELINE_FILE     the project manifest of the last release tree, for the first release under this scheme; empty reads the baseline from
-#                     the latest stable bundle on nuget.org
+#   BASELINE_FILE     the record of the last release (tools/versioning/baseline/release-FDW-<N>.json); empty takes the record with the highest
+#                     number in tools/versioning/baseline and prints which. The plan refuses a record that is not the latest
 #   FIRST_VERSIONS_FILE   tools/versioning/first-versions.json: the declared first version of each new package
 #   The assembly version floors are not environment values: `plan` reads them from the baseline manifest (assemblyVersionFloors, one per
 #   assembly) into plan.json and works out each package's AssemblyVersion from them (assembly-versions.json), `bindings` checks the built
-#   dlls against them, and `bindings` records the floors for the NEXT release in project-manifest.json.
+#   dlls against them, and `bindings` records the floors for the NEXT release in project-manifest.json (the `record` phase adds the versions).
 #   RUN_TESTS         (build phase) true or false: whether the members' tests run in this job. The real run's gate (stable and candidate)
 #                     requires a green CI run of the commit, which runs every test, so the workflow's declared default is false.
 #   WORK_DIR          where the plan files and reports go (not the packages)
@@ -36,7 +37,6 @@ set -uo pipefail
 
 TOOLS="tools/versioning"
 ARTIFACTS="artifacts"
-BUNDLE_OUT="bundle"
 
 fail() {
   echo "::error::release-allocated: $*"
@@ -54,7 +54,7 @@ json_get() {
 }
 
 plan() {
-  require BRANCH LINE BUMP BUNDLE_ID WORK_DIR FIRST_VERSIONS_FILE GITHUB_OUTPUT
+  require BRANCH LINE BUMP WORK_DIR FIRST_VERSIONS_FILE GITHUB_OUTPUT
   [[ "$LINE" =~ ^[0-9]+[.][0-9]+$ ]] || fail "LINE is '$LINE' but must be major.minor, for example 1.5."
   case "$BUMP" in patch|minor|major) ;; *) fail "BUMP is '$BUMP' but must be patch, minor or major." ;; esac
   local baseline=() prerelease=()
@@ -67,11 +67,11 @@ plan() {
     [ -f "$BASELINE_FILE" ] || fail "BASELINE_FILE '$BASELINE_FILE' does not exist."
     baseline=(--baseline "$BASELINE_FILE")
   else
-    baseline=(--baseline-from-bundle)
+    baseline=(--baseline-dir "$TOOLS/baseline")
   fi
-  python3 "$TOOLS/release.py" plan --repo . --line "$LINE" --bundle-id "$BUNDLE_ID" --out "$WORK_DIR" "${baseline[@]}" --bump "$BUMP" \
+  python3 "$TOOLS/release.py" plan --repo . --line "$LINE" --out "$WORK_DIR" "${baseline[@]}" --bump "$BUMP" \
     --first-versions "$FIRST_VERSIONS_FILE" "${prerelease[@]}" \
-    || fail "release.py could not plan the release; its message is above. For the first release under this scheme set NUGET_BASELINE_FILE."
+    || fail "release.py could not plan the release; its message is above. The baseline is the record of the last release (release-FDW-<N>.json in $TOOLS/baseline)."
 
   local members
   members=$(python3 -c 'import json,sys; print(",".join(json.load(open(sys.argv[1]))["members"]))' "$WORK_DIR/plan.json") \
@@ -164,7 +164,7 @@ for package, version in sorted(json.load(open(sys.argv[1]))["last_stable"].items
   python3 "$TOOLS/bindcheck.py" check --new-dir "$ident/new" --held-dir "$ident/held" --floors "$WORK_DIR/floors.json" \
     || fail "a package left as it is would not load with a rebuilt one (listed above); nothing is pushed."
   # The floors for the next release: for each assembly, the higher of the version it carries and the highest any dll of this release asks
-  # for it at. They go into the project manifest the bundle carries, which the next release reads as its baseline.
+  # for it at. They go into the project manifest that the `record` phase completes, which the next release reads as its baseline.
   python3 "$TOOLS/bindcheck.py" floors --dir "$ident/new" --dir "$ident/held" > "$WORK_DIR/next-floors.json" \
     || fail "could not measure the assembly version floors of this release; its message is above."
   python3 "$TOOLS/bindcheck.py" bare --dir "$ident/held" --dir "$ident/new" > "$WORK_DIR/next-bare.json" \
@@ -216,21 +216,14 @@ PY
   echo "to-push=$left" >> "$GITHUB_OUTPUT"
 }
 
-bundle() {
-  require VERSION WORK_DIR BUNDLE_ID
-  rm -rf bundle-src "$BUNDLE_OUT"
-  python3 "$TOOLS/hostprops.py" generate --manifest "$WORK_DIR/manifest.json" --out "$WORK_DIR/Fdw.PackageVersions.props" \
-    || fail "hostprops.py could not write Fdw.PackageVersions.props from $WORK_DIR/manifest.json; its message is above."
-  python3 "$TOOLS/bundle.py" generate --manifest "$WORK_DIR/manifest.json" --out bundle-src \
-    --project-manifest "$WORK_DIR/project-manifest.json" --package-versions "$WORK_DIR/Fdw.PackageVersions.props" \
-    --package-dir "$ARTIFACTS" --package-dir artifacts-skipped || fail "bundle.py could not generate the bundle from $WORK_DIR/manifest.json; its message is above."
-  dotnet pack "bundle-src/$BUNDLE_ID.csproj" -c Release -o "$BUNDLE_OUT" -p:Version="$VERSION" \
-    || fail "dotnet pack of the bundle $BUNDLE_ID $VERSION failed; its output is above."
-  [ "$(find "$BUNDLE_OUT" -maxdepth 1 -name '*.nupkg' | wc -l)" -eq 1 ] || fail "expected exactly one bundle package in $BUNDLE_OUT/."
-  echo "release-allocated: bundle $BUNDLE_ID $VERSION packed."
+record() {
+  require WORK_DIR
+  python3 "$TOOLS/release.py" record --work "$WORK_DIR" --out "$WORK_DIR/baseline.json" \
+    || fail "release.py could not write the record of this release; its message is above. The bindings phase must have run."
+  echo "release-allocated: the record of this release is $WORK_DIR/baseline.json; after the green run and the tag it is committed as $TOOLS/baseline/release-FDW-<N>.json."
 }
 
 case "${1:-}" in
-  plan|build|bindings|decide|bundle) "$1" ;;
-  *) fail "unknown phase '${1:-}': plan, build, bindings, decide or bundle." ;;
+  plan|build|bindings|decide|record) "$1" ;;
+  *) fail "unknown phase '${1:-}': plan, build, bindings, decide or record." ;;
 esac

@@ -2,11 +2,11 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from unittest import mock
 
-import bundle
 import changeset
 import release
 from fdwprojects import snapshot
@@ -23,41 +23,116 @@ def feed_at(version="1.4.4", **over):
     return FakeFeed(held)
 
 
-class BaselineFromBundleTests(unittest.TestCase):
-    def feed(self, versions, manifest_text=None):
-        feed = FakeFeed({"Fdw.Bundle": {v: "t" for v in versions}})
-        feed.files = {("Fdw.Bundle", v, "fdw/manifest.json"): manifest_text for v in versions}
-        return feed
-
-    def test_the_latest_stable_bundles_manifest_is_the_baseline(self):
-        feed = self.feed(["1.4.4", "1.4.5", "1.4.6-rc.1"], '{"projects": {"A": "x"}, "globals": {}}')
-        feed.files[("Fdw.Bundle", "1.4.4", "fdw/manifest.json")] = '{"projects": {"A": "old"}, "globals": {}}'
-        self.assertEqual(release.baseline_from_bundle(feed, "Fdw.Bundle")["projects"], {"A": "x"})
-
-    def test_no_stable_bundle_stops_and_points_at_the_explicit_baseline(self):
-        with self.assertRaisesRegex(release.ReleaseError, "no stable Fdw.Bundle.*--baseline FILE"):
-            release.baseline_from_bundle(self.feed(["1.4.6-rc.1"]), "Fdw.Bundle")
-        with self.assertRaisesRegex(release.ReleaseError, "no stable Fdw.Bundle"):
-            release.baseline_from_bundle(FakeFeed(), "Fdw.Bundle")
-
-    def test_a_bundle_without_a_manifest_stops_and_says_why(self):
-        with self.assertRaisesRegex(release.ReleaseError, "1.4.5 has no fdw/manifest.json"):
-            release.baseline_from_bundle(self.feed(["1.4.5"], None), "Fdw.Bundle")
+PACKAGES_AT_144 = {n: "1.4.4" for n in ALL}
 
 
-class BaselinePinsTests(unittest.TestCase):
-    def feed(self, not_pinned_text):
-        feed = FakeFeed({"Fdw.Bundle": {"1.4.4": "t", "1.4.5-rc.1": "t"}})
-        feed.pins_of = {("Fdw.Bundle", "1.4.4"): {"A": "1.4.4", "B": "1.4.3"}}
-        feed.files = {("Fdw.Bundle", "1.4.4", "fdw/not-pinned.json"): not_pinned_text}
-        return feed
+def record_of(release_number="1.4.4", **over):
+    """A release record as the run writes it: the project manifest with floors, `release` and every package's exact version."""
+    return {"projects": {n: f"tree-{n}" for n in ALL}, "globals": {"Directory.Build.props": "h"}, "assemblyVersionFloors": dict(FLOORS),
+            "packagesWithoutRuntimeAssembly": [], "release": release_number, "packages": dict(PACKAGES_AT_144)} | over
 
-    def test_the_versions_of_the_packages_the_bundle_does_not_pin_come_from_its_not_pinned_file(self):
-        feed = self.feed('{"Tool": {"types": ["DotnetTool"], "version": "1.4.2"}}')
-        self.assertEqual(release.baseline_pins(feed, "Fdw.Bundle"), {"A": "1.4.4", "B": "1.4.3", "Tool": "1.4.2"})
 
-    def test_a_bundle_that_left_no_package_out_of_its_pins_has_no_not_pinned_file(self):
-        self.assertEqual(release.baseline_pins(self.feed(None), "Fdw.Bundle"), {"A": "1.4.4", "B": "1.4.3"})
+class RecordTests(unittest.TestCase):
+    """The baseline of a release is the record of the last release (FDW-5709); the plan refuses what cannot say what the last release was."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.dir = os.path.join(self._tmp.name, "baseline")
+        os.makedirs(self.dir)
+
+    def write(self, number, record=None, name=None):
+        path = os.path.join(self.dir, name or f"release-FDW-{number}.json")
+        with open(path, "w") as f:
+            json.dump(record if record is not None else record_of(number), f)
+        return path
+
+    def test_a_record_is_read_back_as_the_baseline_and_the_versions_of_the_last_release(self):
+        path = self.write("1.4.4")
+        baseline, pins = release.baseline_from_record(path)
+        self.assertEqual(sorted(baseline), ["assemblyVersionFloors", "globals", "packagesWithoutRuntimeAssembly", "projects"])
+        self.assertEqual(pins, PACKAGES_AT_144)
+
+    def test_the_latest_record_of_a_folder_is_the_one_with_the_highest_release_number(self):
+        for n in ("1.4.4", "1.4.10", "1.4.9"):
+            self.write(n)
+        self.assertEqual(os.path.basename(release.latest_record(self.dir)), "release-FDW-1.4.10.json")
+
+    def test_a_folder_with_no_record_and_a_missing_folder_stop(self):
+        with self.assertRaisesRegex(release.ReleaseError, "BASELINE_MISSING: no release record"):
+            release.latest_record(self.dir)
+        with self.assertRaisesRegex(release.ReleaseError, "BASELINE_MISSING: there is no baseline folder"):
+            release.latest_record(os.path.join(self.dir, "nowhere"))
+
+    def test_a_missing_file_stops(self):
+        with self.assertRaisesRegex(release.ReleaseError, "BASELINE_MISSING: there is no baseline file"):
+            release.read_record(os.path.join(self.dir, "release-FDW-1.4.4.json"))
+
+    def test_a_file_not_named_as_a_record_stops(self):
+        with self.assertRaisesRegex(release.ReleaseError, "BASELINE_NAME"):
+            release.read_record(self.write("1.4.4", name="baseline.json"))
+
+    def test_a_record_without_packages_or_release_stops(self):
+        for key in ("packages", "release", "assemblyVersionFloors"):
+            record = record_of()
+            del record[key]
+            with self.assertRaisesRegex(release.ReleaseError, f"BASELINE_INVALID.*no '{key}'"):
+                release.read_record(self.write("1.4.4", record))
+
+    def test_a_package_with_a_range_or_no_version_stops(self):
+        for bad in ("[1.4.4, 1.4.4]", "1.4.*", ""):
+            with self.assertRaisesRegex(release.ReleaseError, "not a plain version"):
+                release.read_record(self.write("1.4.4", record_of(packages={"A": bad})))
+
+    def test_a_record_whose_release_differs_from_its_file_name_stops(self):
+        with self.assertRaisesRegex(release.ReleaseError, "BASELINE_RELEASE_MISMATCH"):
+            release.read_record(self.write("1.4.4", record_of("1.4.5")))
+
+    def test_a_record_that_is_not_the_latest_in_its_folder_stops(self):
+        old = self.write("1.4.4")
+        self.write("1.4.5")
+        with self.assertRaisesRegex(release.ReleaseError, r"BASELINE_NOT_LATEST.*release-FDW-1\.4\.5\.json is newer"):
+            release.baseline_from_record(old)
+
+    def test_a_record_older_than_a_release_tag_of_the_checkout_stops(self):
+        path = self.write("1.4.4")
+        with self.assertRaisesRegex(release.ReleaseError, r"BASELINE_NOT_LATEST: release tag release-FDW-1\.4\.5 is newer"):
+            release.baseline_from_record(path, ["release-FDW-1.4.4", "release-FDW-1.4.5"])
+        release.baseline_from_record(path, ["release-FDW-1.4.4"])
+
+    def test_the_candidate_number_is_one_above_the_highest_any_package_has(self):
+        held = {"A": ["1.4.4", "1.4.5-rc.1", "1.4.5-rc.2"], "B": ["1.4.4", "1.4.5-rc.7"], "C": ["1.4.6-rc.9", "1.4.5-internal.20261101.3"]}
+        self.assertEqual(release.next_candidate(held, "1.4.5"), 8)
+        self.assertEqual(release.next_candidate({"A": ["1.4.4"]}, "1.4.5"), 1)
+
+    def test_the_record_of_a_release_is_written_from_the_plan_and_read_back_as_a_baseline(self):
+        work = os.path.join(self._tmp.name, "work")
+        os.makedirs(work)
+        with open(os.path.join(work, "manifest.json"), "w") as f:
+            json.dump({"release": "1.4.5", "packages": {**PACKAGES_AT_144, "C": "1.4.5"}}, f)
+        with open(os.path.join(work, "project-manifest.json"), "w") as f:
+            json.dump({k: v for k, v in record_of().items() if k not in ("release", "packages")}, f)
+        out = os.path.join(self.dir, "release-FDW-1.4.5.json")
+        text = io.StringIO()
+        with contextlib.redirect_stdout(text):
+            release.main(["record", "--work", work, "--out", out])
+        self.assertIn("release 1.4.5, 6 packages, 6 projects", text.getvalue())
+        baseline, pins = release.baseline_from_record(out)
+        self.assertEqual(pins["C"], "1.4.5")
+        self.assertEqual(pins["A"], "1.4.4")
+
+    def test_a_record_cannot_be_written_before_bindings_added_the_floors(self):
+        work = os.path.join(self._tmp.name, "work")
+        os.makedirs(work)
+        with open(os.path.join(work, "manifest.json"), "w") as f:
+            json.dump({"release": "1.4.5", "packages": PACKAGES_AT_144}, f)
+        with open(os.path.join(work, "project-manifest.json"), "w") as f:
+            json.dump({"projects": {}, "globals": {}}, f)
+        out = os.path.join(self.dir, "release-FDW-1.4.5.json")
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(io.StringIO()):
+            release.main(["record", "--work", work, "--out", out])
+        self.assertIn("bindings must run before it", str(raised.exception))
+        self.assertFalse(os.path.exists(out))
 
 
 def snapshot_trees(repo, name):
@@ -79,6 +154,18 @@ class ReleasePlanTests(unittest.TestCase):
         self.addCleanup(lambda: os.path.isfile(path) and os.remove(path))
         return path
 
+    def records(self, *numbers, packages=None):
+        """A folder of release records of the tree at `self.base`, one per release number; returns (folder, {number: path})."""
+        folder = os.path.join(self._tmp.name, "..", os.path.basename(self._tmp.name) + "-records")
+        os.makedirs(folder, exist_ok=True)
+        self.addCleanup(shutil.rmtree, folder, True)
+        paths = {}
+        for number in numbers:
+            paths[number] = os.path.join(folder, f"release-FDW-{number}.json")
+            with open(paths[number], "w") as f:
+                json.dump({**self.baseline(), "release": number, "packages": packages or {n: "1.4.4" for n in ALL}}, f)
+        return folder, paths
+
     def floors_file(self):
         path = self.tmp_path("-floors.json")
         with open(path, "w") as f:
@@ -94,9 +181,9 @@ class ReleasePlanTests(unittest.TestCase):
     def baseline(self, **over):
         return changeset.baseline_from_ref(self.repo.root, self.base) | {"assemblyVersionFloors": dict(FLOORS), "packagesWithoutRuntimeAssembly": []} | over
 
-    def plan(self, feed=None, tags=(), bump="patch", files=None, bundle_id="Fdw.Bundle", first_versions=None, prerelease=False, baseline=None):
+    def plan(self, feed=None, tags=(), bump="patch", files=None, first_versions=None, prerelease=False, baseline=None):
         self.repo.commit(files or {"public/src/C/C.cs": "class C { int x; }\n"}, "change")
-        return release.release_plan(snapshot(self.repo.root), baseline or self.baseline(), feed or feed_at(), list(tags), "1.4", bump, bundle_id,
+        return release.release_plan(snapshot(self.repo.root), baseline or self.baseline(), feed or feed_at(), list(tags), "1.4", bump,
                                     first_versions or {}, prerelease)
 
     def test_one_package_changed_gives_one_member_and_the_next_number(self):
@@ -143,18 +230,18 @@ class ReleasePlanTests(unittest.TestCase):
     def test_the_number_is_above_every_package_not_only_the_members(self):
         self.assertEqual(self.plan(feed_at(A={"1.4.8": "t"}))["plan"]["release"], "1.4.9")
 
-    def test_a_member_is_raised_from_its_own_last_stable_version_not_from_the_bundles_number(self):
+    def test_a_member_is_raised_from_its_own_last_stable_version_not_from_the_releases_number(self):
         r = self.plan(feed_at(C={"1.4.2": "t"}))
         self.assertEqual(r["package-versions"], {"C": "1.4.3"})
         self.assertEqual(r["plan"]["release"], "1.4.5")
 
     def test_the_manifest_pins_members_at_their_versions_and_the_rest_at_what_they_shipped(self):
         m = self.plan()["manifest"]
-        self.assertEqual((m["id"], m["version"]), ("Fdw.Bundle", "1.4.5"))
+        self.assertEqual(m["release"], "1.4.5")
         self.assertEqual(m["packages"]["C"], "1.4.5")
         self.assertEqual(m["packages"]["A"], "1.4.4")
         self.assertEqual(sorted(m["packages"]), sorted(ALL))
-        self.assertEqual(bundle.check(m), [])
+        self.assertEqual(release.check_packages(m["packages"]), [])
 
     def test_trees_cover_the_members_only(self):
         r = self.plan()
@@ -172,8 +259,8 @@ class ReleasePlanTests(unittest.TestCase):
 
     def replan(self, feed, pins=True):
         """The plan again, on the same tree, against a feed that now holds what an earlier run pushed. `pins` are the exact pins of the baseline
-        bundle (every package at 1.4.4 here), as the real run reads them; pins=None is a baseline from a file or a git ref."""
-        return release.release_plan(snapshot(self.repo.root), self.baseline(), feed, [], "1.4", "patch", "Fdw.Bundle", {},
+        release record (every package at 1.4.4 here), as the real run reads them; pins=None is a baseline from a git ref."""
+        return release.release_plan(snapshot(self.repo.root), self.baseline(), feed, [], "1.4", "patch", {},
                                     baseline_pins={n: "1.4.4" for n in ALL} if pins else None)
 
     PLAN_FILES = ("plan", "versions", "trees", "manifest", "levels-input", "package-versions", "assembly-versions")
@@ -220,19 +307,19 @@ class ReleasePlanTests(unittest.TestCase):
         self.assertEqual(again["package-versions"]["B"], "1.4.5")
 
     def test_an_unpinned_package_pushed_by_this_release_is_a_resume_not_a_conflict(self):
-        # FDW-5635, 1.5.7 run 43516432943: B is a dotnet tool. The baseline bundle does not pin it (it states it in fdw/not-pinned.json), its folder is
+        # FDW-5635, 1.5.7 run 43516432943: B is a dotnet tool. The baseline record states it among the packages (the old bundle left it out of its pins), its folder is
         # unchanged since the baseline, and this release already pushed it at 1.4.5. Judged by the tree alone, its own 1.4.5 was taken for the
         # baseline's and the plan stopped with RESUME_CONFLICT, 'built from tree X, not X'.
         self.plan(files={"public/src/A/A.cs": "class A { int x; }\n"})
         trees = snapshot(self.repo.root).trees
         feed = feed_at(A={"1.4.4": "t", "1.4.5": trees["A"]}, B={"1.4.4": trees["B"], "1.4.5": trees["B"]}, C={"1.4.4": trees["C"], "1.4.5": trees["C"]})
         pins = {n: "1.4.4" for n in ALL if n != "B"}   # what baseline_pins gave before: the exact pins, which leave the tool out
-        again = release.release_plan(snapshot(self.repo.root), self.baseline(), feed, [], "1.4", "patch", "Fdw.Bundle", {}, baseline_pins=pins)
+        again = release.release_plan(snapshot(self.repo.root), self.baseline(), feed, [], "1.4", "patch", {}, baseline_pins=pins)
         self.assertEqual(again["plan"]["release"], "1.4.5")
         self.assertEqual(again["package-versions"], {"A": "1.4.5", "B": "1.4.5", "C": "1.4.5"})
         # with the tool's own baseline version stated (not-pinned.json), its baseline 1.4.4 is still the baseline's, not a resume
         baseline_only = feed_at(A={"1.4.4": "t", "1.4.5": trees["A"]}, B={"1.4.4": trees["B"]}, C={"1.4.4": trees["C"]})
-        stated = release.release_plan(snapshot(self.repo.root), self.baseline(), baseline_only, [], "1.4", "patch", "Fdw.Bundle", {}, baseline_pins=pins | {"B": "1.4.4"})
+        stated = release.release_plan(snapshot(self.repo.root), self.baseline(), baseline_only, [], "1.4", "patch", {}, baseline_pins=pins | {"B": "1.4.4"})
         self.assertEqual(stated["plan"]["release"], "1.4.5")
 
     def test_without_pins_an_unchanged_own_folder_is_taken_for_the_baseline_version(self):
@@ -318,25 +405,26 @@ class ReleasePlanTests(unittest.TestCase):
         self.assertEqual((r["plan"]["members"], r["manifest"]["packages"]["C"], r["package-versions"]), ([], "1.4.4", {}))
         self.assertEqual(r["levels"]["packages"], {})
 
-    def test_a_bad_bundle_id_stops_the_plan(self):
-        with self.assertRaisesRegex(release.ReleaseError, "valid bundle"):
-            self.plan(bundle_id="Fdw Bundle")
+    def test_the_manifest_names_valid_package_ids_and_plain_versions(self):
+        self.assertEqual(release.check_packages({"Fdw.A": "1.4.4", "Fdw.B": "1.4.5-rc.1"}), [])
+        self.assertEqual(len(release.check_packages({"Fdw Spaced": "1.4.4", "Fdw.B": "[1.4.4]"})), 2)
+        self.assertEqual(len(release.check_packages({})), 1)
 
     def test_a_bump_that_is_not_one_of_the_three_stops_the_plan(self):
         with self.assertRaisesRegex(release.ReleaseError, "must be patch, minor or major"):
             self.plan(bump="huge")
 
     def test_the_stated_level_is_the_level_of_every_package_that_changed(self):
-        for bump, version, assembly, bundle_number in (("patch", "1.4.5", "1.4.1.0", "1.4.5"), ("minor", "1.5.0", "1.4.1.0", "1.5.0"), ("major", "2.0.0", "2.0.0.0", "2.0.0")):
+        for bump, version, assembly, release_number in (("patch", "1.4.5", "1.4.1.0", "1.4.5"), ("minor", "1.5.0", "1.4.1.0", "1.5.0"), ("major", "2.0.0", "2.0.0.0", "2.0.0")):
             with self.subTest(bump=bump):
                 self.setUp()
                 r = self.plan(bump=bump, files={"public/src/A/A.cs": "class A { int x; }\n"})
                 self.assertEqual(set(r["package-versions"].values()), {version})
                 self.assertEqual(set(r["assembly-versions"].values()), {assembly})
-                self.assertEqual((r["plan"]["bump"], r["plan"]["release"], r["manifest"]["version"]), (bump, bundle_number, bundle_number))
+                self.assertEqual((r["plan"]["bump"], r["plan"]["release"], r["manifest"]["release"]), (bump, release_number, release_number))
                 self.assertEqual({row["level"] for row in r["levels"]["packages"].values()}, {bump})
 
-    def test_the_plan_allocates_a_bundle_number_for_each_bump(self):
+    def test_the_plan_allocates_a_release_number_for_each_bump(self):
         p = self.plan()["plan"]
         self.assertEqual(p["release_numbers"], {"patch": "1.4.5", "minor": "1.5.0", "major": "2.0.0"})
         self.assertEqual((p["bump"], p["bump_stated"]), ("patch", "patch"))
@@ -356,14 +444,14 @@ class ReleasePlanTests(unittest.TestCase):
         with self.assertRaisesRegex(release.ReleaseError, "FIRST_VERSION_NOT_DECLARED"):
             self.plan(feed)
 
-    def test_a_new_package_takes_its_declared_first_version_and_leaves_the_bundle_at_the_stated_level(self):
+    def test_a_new_package_takes_its_declared_first_version_and_leaves_the_release_at_the_stated_level(self):
         # FDW-5591: adding a package to a release stated as a patch is still that patch.
         feed = feed_at()
         del feed.held["C"]
         floors = {k: v for k, v in FLOORS.items() if k != "C"}
         r = self.plan(feed, first_versions={"C": {"version": "1.0.0", "replaces": []}}, baseline=self.baseline(assemblyVersionFloors=floors))
         self.assertEqual(r["package-versions"], {"C": "1.0.0"})
-        self.assertEqual((r["plan"]["bump"], r["manifest"]["version"]), ("patch", "1.4.5"))
+        self.assertEqual((r["plan"]["bump"], r["manifest"]["release"]), ("patch", "1.4.5"))
         self.assertEqual(r["assembly-versions"], {"C": "1.0.0.0"})
 
     def test_a_new_package_declaring_the_release_number_keeps_exactly_that_version_and_raises_no_other(self):
@@ -376,14 +464,14 @@ class ReleasePlanTests(unittest.TestCase):
         self.assertEqual(r["package-versions"]["C"], "1.4.5")
         self.assertEqual(r["package-versions"]["Gen.SourceGenerators"], "1.4.5")
         self.assertEqual({row["level"] for p, row in r["levels"]["packages"].items() if p != "C"}, {"patch"})
-        self.assertEqual((r["plan"]["release"], r["manifest"]["version"]), ("1.4.5", "1.4.5"))
+        self.assertEqual((r["plan"]["release"], r["manifest"]["release"]), ("1.4.5", "1.4.5"))
 
     def test_a_new_package_in_a_release_that_states_a_minor_leaves_it_a_minor(self):
         feed = feed_at()
         del feed.held["C"]
         floors = {k: v for k, v in FLOORS.items() if k != "C"}
         r = self.plan(feed, bump="minor", first_versions={"C": {"version": "1.0.0", "replaces": []}}, baseline=self.baseline(assemblyVersionFloors=floors))
-        self.assertEqual((r["plan"]["bump"], r["manifest"]["version"]), ("minor", "1.5.0"))
+        self.assertEqual((r["plan"]["bump"], r["manifest"]["release"]), ("minor", "1.5.0"))
 
     def test_a_package_a_declared_entry_replaces_leaves_the_manifest(self):
         feed = feed_at()
@@ -394,17 +482,17 @@ class ReleasePlanTests(unittest.TestCase):
         self.assertNotIn("E", r["versions"])
         self.assertEqual(r["plan"]["retired"], ["E"])
 
-    def test_a_prerelease_makes_every_package_and_the_bundle_a_candidate_one_above_those_the_bundle_has(self):
-        feed = feed_at(**{"Fdw.Bundle": {"1.4.4": "t", "1.4.5-rc.1": "t", "1.4.5-rc.2": "t", "1.4.6-rc.1": "t"}})
+    def test_a_prerelease_makes_every_package_a_candidate_one_above_the_highest_any_package_has(self):
+        feed = feed_at(A={"1.4.4": "t", "1.4.5-rc.1": "t"}, B={"1.4.4": "t", "1.4.5-rc.2": "t", "1.4.6-rc.1": "t"})
         r = self.plan(feed, prerelease=True)
         self.assertEqual(r["package-versions"], {"C": "1.4.5-rc.3"})
-        self.assertEqual((r["manifest"]["version"], r["plan"]["version"], r["plan"]["release"]), ("1.4.5-rc.3", "1.4.5-rc.3", "1.4.5"))
+        self.assertEqual((r["manifest"]["release"], r["plan"]["version"], r["plan"]["release"]), ("1.4.5-rc.3", "1.4.5-rc.3", "1.4.5"))
         self.assertEqual(r["manifest"]["packages"]["C"], "1.4.5-rc.3")
         self.assertEqual(r["manifest"]["packages"]["A"], "1.4.4")
         self.assertEqual(r["levels"]["packages"]["C"]["next"], "1.4.5")
 
     def test_the_first_candidate_of_a_release_is_rc_1(self):
-        self.assertEqual(self.plan(prerelease=True)["manifest"]["version"], "1.4.5-rc.1")
+        self.assertEqual(self.plan(prerelease=True)["manifest"]["release"], "1.4.5-rc.1")
 
     def test_assembly_versions_follow_each_assemblys_own_floor_and_a_major_from_two(self):
         for version, floor, expected in (("1.4.5", "1.4.1.0", "1.4.1.0"), ("1.9.0", "1.4.1.0", "1.4.1.0"), ("2.0.0", "1.4.1.0", "2.0.0.0"),
@@ -454,7 +542,7 @@ class ReleasePlanTests(unittest.TestCase):
         self.addCleanup(lambda: os.path.isdir(out) and ([os.remove(os.path.join(out, f)) for f in os.listdir(out)], os.rmdir(out)))
         text = io.StringIO()
         with mock.patch.object(release, "NugetOrg", lambda: feed or feed_at()), contextlib.redirect_stdout(text):
-            release.main(["plan", "--repo", self.repo.root, "--line", "1.4", "--bundle-id", "Fdw.Bundle", "--first-versions", self.first_versions_file(declared), "--out", out, *extra])
+            release.main(["plan", "--repo", self.repo.root, "--line", "1.4", "--first-versions", self.first_versions_file(declared), "--out", out, *extra])
         return out, text.getvalue()
 
     def test_the_command_writes_the_files_the_later_steps_read_and_nothing_else(self):
@@ -471,40 +559,58 @@ class ReleasePlanTests(unittest.TestCase):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             self.command("--base-ref", self.base, "--assembly-info", self.floors_file())
 
-    def test_a_baseline_file_with_a_minor_bump(self):
-        baseline = self.tmp_path("-base.json")
-        with open(baseline, "w") as f:
-            json.dump(self.baseline(), f)
-        out, text = self.command("--baseline", baseline, "--bump", "minor")
+    def test_a_baseline_record_with_a_minor_bump(self):
+        folder, paths = self.records("1.4.4")
+        out, text = self.command("--baseline", paths["1.4.4"], "--bump", "minor")
         self.assertIn("release 1.5.0 (minor)", text)
 
     def test_the_prerelease_flag_makes_candidates(self):
         out, text = self.command("--base-ref", self.base, "--assembly-info", self.floors_file(), "--bump", "patch", "--prerelease")
         self.assertIn("version 1.4.5-rc.1", text)
 
-    def test_the_baseline_comes_from_the_bundle_on_the_feed(self):
-        feed = feed_at()
-        feed.held["Fdw.Bundle"] = {"1.4.4": "t"}
-        feed.files = {("Fdw.Bundle", "1.4.4", "fdw/manifest.json"): json.dumps(self.baseline())}
-        feed.pins_of = {("Fdw.Bundle", "1.4.4"): {n: "1.4.4" for n in ALL}}
-        out, text = self.command("--baseline-from-bundle", "--bump", "patch", feed=feed)
+    def test_the_baseline_is_the_highest_record_of_the_folder_and_the_log_names_it(self):
+        folder, paths = self.records("1.4.3", "1.4.4")
+        out, text = self.command("--baseline-dir", folder, "--bump", "patch")
+        self.assertIn("release-FDW-1.4.4.json", text)
         self.assertIn("release 1.4.5 (patch)", text)
         self.assertIn("1 packages to build and push", text)
         with open(os.path.join(out, "project-manifest.json")) as f:
             self.assertEqual(sorted(json.load(f)), ["globals", "projects"])
 
+    def test_a_baseline_that_is_not_the_latest_stops_the_command_and_writes_nothing(self):
+        folder, paths = self.records("1.4.3", "1.4.4")
+        with self.assertRaises(SystemExit) as raised:
+            self.command("--baseline", paths["1.4.3"], "--bump", "patch")
+        self.assertIn("BASELINE_NOT_LATEST", str(raised.exception))
+
+    def test_a_rerun_of_a_finished_release_resumes_it_from_the_last_records_versions_and_has_nothing_to_push(self):
+        # FDW-5709, the 1.5.8 case: the record of the release before (1.4.4) is the baseline; the release (1.4.5) was pushed in full from
+        # this tree; the plan comes out as the first run did (1.4.5, the same members) and its versions are all held.
+        folder, paths = self.records("1.4.4")
+        first, _ = self.command("--baseline", paths["1.4.4"], "--bump", "patch")
+        with open(os.path.join(first, "plan.json")) as f:
+            members = json.load(f)["members"]
+        trees = snapshot(self.repo.root).trees
+        held = feed_at(**{n: {"1.4.4": "t", "1.4.5": trees[n]} for n in members})
+        again, text = self.command("--baseline", paths["1.4.4"], "--bump", "patch", feed=held)
+        with open(os.path.join(again, "plan.json")) as f:
+            resumed = json.load(f)
+        self.assertEqual((resumed["release"], resumed["members"]), ("1.4.5", members))
+        self.assertIn("release 1.4.5 (patch)", text)
+
     def test_exactly_one_baseline_is_required(self):
+        folder, paths = self.records("1.4.4")
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             self.command("--bump", "patch")
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-            self.command("--base-ref", self.base, "--assembly-info", self.floors_file(), "--baseline-from-bundle", "--bump", "patch")
+            self.command("--base-ref", self.base, "--assembly-info", self.floors_file(), "--baseline-dir", folder, "--bump", "patch")
 
     def test_the_command_writes_nothing_when_it_refuses(self):
         self.repo.commit({"public/src/C/C.cs": "class C { int x; }\n"}, "change")
         out = os.path.join(self._tmp.name, "..", os.path.basename(self._tmp.name) + "-none")
         with mock.patch.object(release, "NugetOrg", lambda: feed_at(A={"1.4.4-rc.1": "t"})):
             with self.assertRaises(SystemExit) as raised:
-                release.main(["plan", "--repo", self.repo.root, "--line", "1.4", "--base-ref", self.base, "--assembly-info", self.floors_file(), "--bundle-id", "Fdw.Bundle",
+                release.main(["plan", "--repo", self.repo.root, "--line", "1.4", "--base-ref", self.base, "--assembly-info", self.floors_file(),
                               "--first-versions", self.first_versions_file(), "--bump", "patch", "--out", out])
         self.assertIn("nothing was written", str(raised.exception))
         self.assertFalse(os.path.exists(out))

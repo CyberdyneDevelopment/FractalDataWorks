@@ -9,7 +9,7 @@ the first reason (why the package is in the release) and the items that drive it
 (FDW-1234, RUI-12 ...) named in the commits that changed the package's folder since the baseline. Then three checks:
 
   - no assembly version goes down: each package's AssemblyVersion is not below the floor the baseline recorded for its assembly;
-  - the bundle follows the highest package level: its bump is the highest level among the packages that already existed (a new package raises nothing, FDW-5591), and
+  - the release follows the highest package level: its bump is the highest level among the packages that already existed (a new package raises nothing, FDW-5591), and
     never lower than the bump that was stated;
   - the packages that joined only because a package they reference went major are counted apart (none, now that the plan puts every package
     above a changed one in the release).
@@ -119,11 +119,11 @@ def build(work, repo, base, head, baseline, prefix="", fallback_refs=()):
         if floor and tuple(int(x) for x in have.split(".")) < tuple(int(x) for x in floor.split(".")):
             low.append(f"{package}: AssemblyVersion {have} is below the floor {floor}")
     derived = max((r["level"] for r in rows.values() if r["level"] != levelplan.NEW), key=BUMPS.index, default=plan["bump_stated"])
-    bundle = {"version": plan["version"], "bump": plan["bump"], "derived": derived, "stated": plan["bump_stated"]}
-    return table, low, bundle, len(floors)
+    number = {"version": plan["version"], "bump": plan["bump"], "derived": derived, "stated": plan["bump_stated"]}
+    return table, low, number, len(floors)
 
 
-def render(table, low, bundle, floors):
+def render(table, low, number, floors):
     lines = ["| package | last | next | level | why | items |", "|---|---|---|---|---|---|"]
     for r in table:
         lines.append(f"| {r['package']} | {r['last'] or '-'} | {r['next']} | {r['level']}{' (pulled in by a major)' if r['joined'] else ''} | {r['why']} | {', '.join(r['items']) or '-'} |")
@@ -131,8 +131,8 @@ def render(table, low, bundle, floors):
     lines += ["", f"{len(table)} package(s) change version: " + ", ".join(f"{n} {k}" for k, n in counts.items() if n) + f"; {sum(1 for r in table if r['joined'])} only because a package they reference went major."]
     lines.append("assembly versions: " + (f"{len(low)} below their floor" if low else f"none below their floor ({floors} floors checked)"))
     lines += [f"  {x}" for x in low]
-    follows = BUMPS.index(bundle["bump"]) == max(BUMPS.index(bundle["derived"]), BUMPS.index(bundle["stated"]))
-    lines.append(f"bundle {bundle['version']}: bump {bundle['bump']}, highest package level {bundle['derived']}, stated {bundle['stated']}: "
+    follows = BUMPS.index(number["bump"]) == max(BUMPS.index(number["derived"]), BUMPS.index(number["stated"]))
+    lines.append(f"release {number['version']}: bump {number['bump']}, highest package level {number['derived']}, stated {number['stated']}: "
                  + ("follows the highest package" if follows else "DOES NOT follow the highest package"))
     return lines, bool(low) or not follows
 

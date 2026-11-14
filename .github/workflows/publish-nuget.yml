@@ -24,13 +24,13 @@
 # FDW-4784 / FDW-5272: ONE real run, no dry run. Only the packages that changed, each at its own next version from its own last
 # stable one, are published; a package changed when anything in its closure (its folder, the projects it references, the shared build
 # files) differs from the last release, found from git tree ids with no compile, at the level release_bump states for all of them
-# (default patch); everything is decided before anything is pushed, then a bundle pins them exactly);
+# (default patch); everything is decided before anything is pushed, then the release's record is written);
 # `lockstep` is the job `publish` (every package at the hand-set version), kept for a patch branch cut from a lockstep
 # release (the 1.5.x line) and chosen with the dispatch input or the variable.
 #
-# The first allocated release has no bundle to read its baseline from: pass `baseline_file`
-# (tools/versioning/baseline/release-FDW-1.5.5.json) in the dispatch. Every later release reads it from the latest stable bundle,
-# so the default stays empty and a stale file is never used by accident.
+# The baseline of a release is the RECORD of the release before it (tools/versioning/baseline/release-FDW-<N>.json, FDW-5709): this run
+# writes its own record as an artifact, and after the green run and the tag the owner commits it. `baseline_file` names the record to plan
+# from; empty takes the record with the highest number in that folder and prints which. The plan refuses a record that is not the latest.
 #
 # Requires a Trusted Publishing policy on nuget.org (Account -> Trusted Publishing) owned by the
 # `aicolab` account, naming this repository owner, this repository, and this workflow's FILE NAME
@@ -83,19 +83,15 @@ on:
         type: string
         default: ''
       release_scheme:
-        description: 'lockstep (every package at the hand-set version) or allocated (only the packages that changed, at the next free release number, then a bundle). Empty = variable NUGET_RELEASE_SCHEME, else the default declared in the "Resolve push settings" step.'
+        description: 'lockstep (every package at the hand-set version) or allocated (only the packages that changed, at the next free release number, then a record of the release). Empty = variable NUGET_RELEASE_SCHEME, else the default declared in the "Resolve push settings" step.'
         type: string
         default: ''
       release_bump:
-        description: 'Allocated only: patch, minor or major. The level of EVERY package that changed (the mirror has no commits to read it from, so the person cutting the release states it); the bundle gets the number for the same bump. Empty = variable NUGET_RELEASE_BUMP, else the declared default (patch).'
+        description: 'Allocated only: patch, minor or major. The level of EVERY package that changed (the mirror has no commits to read it from, so the person cutting the release states it); the release gets the number for the same bump. Empty = variable NUGET_RELEASE_BUMP, else the declared default (patch).'
         type: string
         default: ''
       baseline_file:
-        description: 'Allocated only: path of the project manifest of the last release tree, for the first release under this scheme. Empty = variable NUGET_BASELINE_FILE; when both are empty the baseline is read from the latest stable bundle on nuget.org.'
-        type: string
-        default: ''
-      bundle_id:
-        description: 'Allocated only: the release bundle package id. Empty = variable NUGET_BUNDLE_ID, else the declared default.'
+        description: 'Allocated only: path of the release record to plan from (tools/versioning/baseline/release-FDW-<N>.json). Empty = variable NUGET_BASELINE_FILE; when both are empty the record with the highest number in tools/versioning/baseline is used and printed. The plan refuses a record that is not the latest.'
         type: string
         default: ''
       full_build_wait_minutes:
@@ -103,11 +99,15 @@ on:
         type: string
         default: ''
       served_wait_minutes:
-        description: 'Allocated only: how long to wait for nuget.org to SERVE what the release pushed (every package before the bundle is packed, the bundle after it is pushed) before the run fails; a push is accepted long before a restore can take it. Empty = variable NUGET_SERVED_WAIT_MINUTES, else the declared default.'
+        description: 'Allocated only: how long to wait for nuget.org to SERVE every package the release names (the gate before its record is written and it can be tagged) before the run fails; a push is accepted long before a restore can take it. Empty = variable NUGET_SERVED_WAIT_MINUTES, else the declared default.'
         type: string
         default: ''
       served_poll_seconds:
         description: 'Allocated only: seconds between two looks at what nuget.org serves while waiting. Empty = variable NUGET_SERVED_POLL_SECONDS, else the declared default.'
+        type: string
+        default: ''
+      served_looks:
+        description: 'Allocated only: how many consecutive looks must find every package served before the wait ends (nuget.org answers differently from different edges). Empty = variable NUGET_SERVED_LOOKS, else the declared default.'
         type: string
         default: ''
       run_tests:
@@ -159,10 +159,10 @@ jobs:
       release-scheme: ${{ steps.settings.outputs.release-scheme }}
       release-bump: ${{ steps.settings.outputs.release-bump }}
       baseline-file: ${{ steps.settings.outputs.baseline-file }}
-      bundle-id: ${{ steps.settings.outputs.bundle-id }}
       full-build-wait-minutes: ${{ steps.settings.outputs.full-build-wait-minutes }}
       served-wait-minutes: ${{ steps.settings.outputs.served-wait-minutes }}
       served-poll-seconds: ${{ steps.settings.outputs.served-poll-seconds }}
+      served-looks: ${{ steps.settings.outputs.served-looks }}
       run-tests: ${{ steps.settings.outputs.run-tests }}
     steps:
       - name: Checkout
@@ -189,10 +189,10 @@ jobs:
           DEFAULT_RELEASE_SCHEME: 'allocated'
           DEFAULT_RELEASE_BUMP: 'patch'
           DEFAULT_BASELINE_FILE: ''
-          DEFAULT_BUNDLE_ID: 'Fdw.Bundle'
           DEFAULT_FULL_BUILD_WAIT_MINUTES: '120'
           DEFAULT_SERVED_WAIT_MINUTES: '90'
           DEFAULT_SERVED_POLL_SECONDS: '30'
+          DEFAULT_SERVED_LOOKS: '2'
           DEFAULT_RUN_TESTS: 'false'
           INPUT_QUOTA_MAX_WAITS: ${{ inputs.quota_max_waits }}
           INPUT_QUOTA_WAIT_SECONDS: ${{ inputs.quota_wait_seconds }}
@@ -203,10 +203,10 @@ jobs:
           INPUT_RELEASE_SCHEME: ${{ inputs.release_scheme }}
           INPUT_RELEASE_BUMP: ${{ inputs.release_bump }}
           INPUT_BASELINE_FILE: ${{ inputs.baseline_file }}
-          INPUT_BUNDLE_ID: ${{ inputs.bundle_id }}
           INPUT_FULL_BUILD_WAIT_MINUTES: ${{ inputs.full_build_wait_minutes }}
           INPUT_SERVED_WAIT_MINUTES: ${{ inputs.served_wait_minutes }}
           INPUT_SERVED_POLL_SECONDS: ${{ inputs.served_poll_seconds }}
+          INPUT_SERVED_LOOKS: ${{ inputs.served_looks }}
           INPUT_RUN_TESTS: ${{ inputs.run_tests }}
           VAR_QUOTA_MAX_WAITS: ${{ vars.NUGET_QUOTA_MAX_WAITS }}
           VAR_QUOTA_WAIT_SECONDS: ${{ vars.NUGET_QUOTA_WAIT_SECONDS }}
@@ -217,10 +217,10 @@ jobs:
           VAR_RELEASE_SCHEME: ${{ vars.NUGET_RELEASE_SCHEME }}
           VAR_RELEASE_BUMP: ${{ vars.NUGET_RELEASE_BUMP }}
           VAR_BASELINE_FILE: ${{ vars.NUGET_BASELINE_FILE }}
-          VAR_BUNDLE_ID: ${{ vars.NUGET_BUNDLE_ID }}
           VAR_FULL_BUILD_WAIT_MINUTES: ${{ vars.NUGET_FULL_BUILD_WAIT_MINUTES }}
           VAR_SERVED_WAIT_MINUTES: ${{ vars.NUGET_SERVED_WAIT_MINUTES }}
           VAR_SERVED_POLL_SECONDS: ${{ vars.NUGET_SERVED_POLL_SECONDS }}
+          VAR_SERVED_LOOKS: ${{ vars.NUGET_SERVED_LOOKS }}
           VAR_RUN_TESTS: ${{ vars.NUGET_RUN_TESTS }}
         run: |
           set -euo pipefail
@@ -259,10 +259,10 @@ jobs:
           resolve RELEASE_SCHEME scheme release-scheme
           resolve RELEASE_BUMP bump release-bump
           resolve BASELINE_FILE optional baseline-file
-          resolve BUNDLE_ID text bundle-id
           resolve FULL_BUILD_WAIT_MINUTES integer full-build-wait-minutes
           resolve SERVED_WAIT_MINUTES integer served-wait-minutes
           resolve SERVED_POLL_SECONDS integer served-poll-seconds
+          resolve SERVED_LOOKS integer served-looks
           resolve RUN_TESTS boolean run-tests
           TIMEOUT=$(grep -oP '^publish-timeout-minutes=\K.*' "$GITHUB_OUTPUT")
           if [ "$TIMEOUT" -lt 1 ] || [ "$TIMEOUT" -gt 360 ]; then
@@ -553,8 +553,8 @@ jobs:
   # The allocated release (FDW-3350 / FDW-3364), chosen by the release scheme setting. It builds and pushes only the
   # packages that changed since the last release, at one release number N (main) or N-rc.<k> (prerelease), decides
   # every package BEFORE anything is pushed (a version nuget.org holds with other contents stops the run, and nothing
-  # is pushed), pushes through the same sign-in rounds and quota retry as `publish`, and publishes the bundle last,
-  # only after every package is on nuget.org, so no host ever sees half a release. The steps are in
+  # is pushed), pushes through the same sign-in rounds and quota retry as `publish`, waits until every package is
+  # served, and writes the release's record, so a green run means the release is complete and can be tagged. The steps are in
   # scripts/release-allocated.sh. `publish` above is the lockstep path and does not run when this one is chosen.
   release:
     name: Allocated release
@@ -603,7 +603,6 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           LINE: ${{ steps.line.outputs.line }}
           BUMP: ${{ needs.check.outputs.release-bump }}
-          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
           BASELINE_FILE: ${{ needs.check.outputs.baseline-file }}
           FIRST_VERSIONS_FILE: tools/versioning/first-versions.json
           WORK_DIR: release-work
@@ -816,67 +815,41 @@ jobs:
       - name: Confirm every package is on nuget.org
         if: ${{ steps.plan.outputs.should-release == 'true' && steps.decide.outputs.to-push != '0' && !(steps.rpush1.outputs.complete == 'true' || steps.rpush2.outputs.complete == 'true' || steps.rpush3.outputs.complete == 'true' || steps.rpush4.outputs.complete == 'true' || steps.rpush5.outputs.complete == 'true' || steps.rpush6.outputs.complete == 'true') }}
         run: |
-          echo "::error::The push used all 6 sign-in rounds and packages are still unpushed. The bundle is NOT published. Rerun the workflow: packages already on nuget.org with the same contents are skipped."
+          echo "::error::The push used all 6 sign-in rounds and packages are still unpushed. The release is NOT complete. Rerun the workflow: packages already on nuget.org with the same contents are skipped."
           exit 1
 
-      # FDW-5634: a push is accepted long before nuget.org serves it (245 packages took about twenty minutes for 1.5.7), and the bundle's
-      # restore needs every package it pins. This waits for them, whatever this run pushed: a rerun that pushed nothing still gets here.
+      # FDW-5634: a push is accepted long before nuget.org serves it (245 packages took about twenty minutes for 1.5.7). This waits until every
+      # package the release names is served, whatever this run pushed (a rerun that pushed nothing still gets here): the gate for the record and
+      # the tag. The output is flushed line by line (FDW-5708) and the wait ends only after the configured number of consecutive complete looks.
       - name: Wait until nuget.org serves every package of the release
         if: ${{ steps.plan.outputs.should-release == 'true' }}
         env:
           WORK_DIR: release-work
           WAIT_MINUTES: ${{ needs.check.outputs.served-wait-minutes }}
           POLL_SECONDS: ${{ needs.check.outputs.served-poll-seconds }}
-        run: python3 tools/versioning/served.py wait --manifest "$WORK_DIR/manifest.json" --timeout-minutes "$WAIT_MINUTES" --interval-seconds "$POLL_SECONDS"
+          LOOKS: ${{ needs.check.outputs.served-looks }}
+        run: python3 -u tools/versioning/served.py wait --manifest "$WORK_DIR/manifest.json" --timeout-minutes "$WAIT_MINUTES" --interval-seconds "$POLL_SECONDS" --looks "$LOOKS"
 
-      - name: Pack the bundle
+      # FDW-5709: the record of this release (the baseline of the next one): the project manifest with the floors `bindings` measured and every
+      # package's exact version. It is printed here and uploaded; after the green run and the tag it is committed as
+      # tools/versioning/baseline/release-FDW-<N>.json.
+      - name: Write the release record
         if: ${{ steps.plan.outputs.should-release == 'true' }}
         env:
-          VERSION: ${{ steps.plan.outputs.version }}
-          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
           WORK_DIR: release-work
-        run: bash scripts/release-allocated.sh bundle
-
-      - name: NuGet login (bundle)
-        id: blogin
-        if: ${{ steps.plan.outputs.should-release == 'true' }}
-        uses: NuGet/login@v1
-        with:
-          user: aicolab
-
-      - name: Push the bundle to nuget.org
-        id: bpush
-        if: ${{ steps.plan.outputs.should-release == 'true' }}
-        env:
-          NUGET_API_KEY: ${{ steps.blogin.outputs.NUGET_API_KEY }}
-          ARTIFACTS_DIR: bundle
-          NUGET_SOURCE: https://api.nuget.org/v3/index.json
-          STATE_DIR: ${{ runner.temp }}/nuget-bundle-state
-          JOB_START_EPOCH: ${{ steps.clock.outputs.start }}
-          JOB_TIMEOUT_MINUTES: ${{ needs.check.outputs.publish-timeout-minutes }}
-          QUOTA_MAX_WAITS: ${{ needs.check.outputs.quota-max-waits }}
-          QUOTA_WAIT_SECONDS: ${{ needs.check.outputs.quota-wait-seconds }}
-          QUOTA_BACKOFF_FACTOR: ${{ needs.check.outputs.quota-backoff-factor }}
-          QUOTA_RETRY_AFTER_MARGIN_SECONDS: ${{ needs.check.outputs.quota-retry-after-margin-seconds }}
-          KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
-        run: bash scripts/push-nuget.sh
-
-      # FDW-5634: green means the bundle is SERVED, so the tag can follow the run. Before, this step was only the notice for a push that did not
-      # complete and was skipped in a green run, so nothing confirmed anything.
-      - name: Confirm the bundle is on nuget.org
-        if: ${{ steps.plan.outputs.should-release == 'true' }}
-        env:
-          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
-          VERSION: ${{ steps.plan.outputs.version }}
-          BUNDLE_PUSHED: ${{ steps.bpush.outputs.complete }}
-          WAIT_MINUTES: ${{ needs.check.outputs.served-wait-minutes }}
-          POLL_SECONDS: ${{ needs.check.outputs.served-poll-seconds }}
         run: |
-          if [ "$BUNDLE_PUSHED" != true ]; then
-            echo "::error::The bundle was not pushed. Every package is on nuget.org, so rerun the workflow: it skips them and publishes the bundle."
-            exit 1
-          fi
-          python3 tools/versioning/served.py wait --package "$BUNDLE_ID" "$VERSION" --timeout-minutes "$WAIT_MINUTES" --interval-seconds "$POLL_SECONDS"
+          bash scripts/release-allocated.sh record
+          echo "::group::release record"
+          cat "$WORK_DIR/baseline.json"
+          echo "::endgroup::"
+
+      - name: Upload the release record
+        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-record-${{ steps.plan.outputs.version }}
+          path: release-work/baseline.json
+          if-no-files-found: error
 
   unlist:
     name: Unlist ${{ inputs.unlist_version }}

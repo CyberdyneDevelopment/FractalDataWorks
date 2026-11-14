@@ -44,8 +44,8 @@ class NotesTests(unittest.TestCase):
         self.write("assembly-versions.json", {"A": av_a, "B": "1.5.1.0", "C": "1.5.1.0"})
         self.write("plan.json", {"assembly_version_floors": {"Fdw.A": floor_a, "Fdw.B": "1.5.1.0", "Fdw.C": "1.5.1.0"}, "version": "2.0.0", "bump": bump, "bump_stated": stated})
 
-    def test_a_new_package_does_not_make_the_bundle_fail_the_follows_check(self):
-        # FDW-5591: a release stated as patch that adds a package is a patch; the notes must not say the bundle does not follow.
+    def test_a_new_package_does_not_make_the_release_fail_the_follows_check(self):
+        # FDW-5591: a release stated as patch that adds a package is a patch; the notes must not say the release does not follow.
         self.commits()
         self.files(bump="patch", stated="patch")
         with open(os.path.join(self.work, "levels.json")) as f:
@@ -57,15 +57,15 @@ class NotesTests(unittest.TestCase):
         with open(os.path.join(self.work, "plan.json")) as f:
             plan = json.load(f)
         self.write("plan.json", plan | {"version": "1.5.6"})
-        table, low, bundle, floors = releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline)
-        self.assertEqual((bundle["bump"], bundle["derived"], bundle["stated"]), ("patch", "patch", "patch"))
-        lines, failed = releasenotes.render(table, low, bundle, floors)
+        table, low, number, floors = releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline)
+        self.assertEqual((number["bump"], number["derived"], number["stated"]), ("patch", "patch", "patch"))
+        lines, failed = releasenotes.render(table, low, number, floors)
         self.assertFalse(failed, lines)
 
     def test_each_package_gets_its_level_reason_and_driving_items(self):
         self.commits()
         self.files()
-        table, low, bundle, floors = releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline)
+        table, low, number, floors = releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline)
         by = {r["package"]: r for r in table}
         self.assertEqual(by["Fdw.A"]["items"], ["FDW-7", "FDW-100"])
         self.assertEqual(by["Fdw.A"]["why"], "removed A.Run")
@@ -75,14 +75,14 @@ class NotesTests(unittest.TestCase):
         self.assertFalse(by["Fdw.A"]["joined"])
         self.assertEqual([r["package"] for r in table], ["Fdw.A", "Fdw.C", "Fdw.B"])
 
-    def test_the_checks_pass_when_floors_hold_and_the_bundle_follows(self):
+    def test_the_checks_pass_when_floors_hold_and_the_release_follows(self):
         self.commits()
         self.files()
         lines, failed = releasenotes.render(*releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline))
         self.assertFalse(failed)
         text = "\n".join(lines)
         self.assertIn("none below their floor (3 floors checked)", text)
-        self.assertIn("bundle 2.0.0: bump major, highest package level major, stated patch: follows the highest package", text)
+        self.assertIn("release 2.0.0: bump major, highest package level major, stated patch: follows the highest package", text)
         self.assertIn("1 major, 1 minor, 1 patch", text)
 
     def test_an_assembly_version_below_its_floor_fails_the_check(self):
@@ -92,7 +92,7 @@ class NotesTests(unittest.TestCase):
         self.assertTrue(failed)
         self.assertIn("Fdw.A: AssemblyVersion 2.0.0.0 is below the floor 2.1.0.0", "\n".join(lines))
 
-    def test_a_bundle_lower_than_the_highest_package_fails_the_check(self):
+    def test_a_release_lower_than_the_highest_package_fails_the_check(self):
         self.commits()
         self.files(bump="patch")
         lines, failed = releasenotes.render(*releasenotes.build(self.work, self.repo.root, self.base, "HEAD", self.baseline))

@@ -41,49 +41,6 @@ def package(nuspec):
     return buffer.getvalue()
 
 
-NS = 'xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"'
-
-
-class PackageTypesTests(unittest.TestCase):
-    def test_a_package_that_declares_none_is_an_ordinary_dependency(self):
-        self.assertEqual(feeds.package_types(package(f'<package {NS}><metadata><id>A</id><version>1.0.0</version></metadata></package>')), [])
-
-    def test_the_declared_types_are_listed_in_order(self):
-        text = f'<package {NS}><metadata><id>A</id><version>1.0.0</version><packageTypes><packageType name="DotnetTool" /><packageType name="McpServer" /></packageTypes></metadata></package>'
-        self.assertEqual(feeds.package_types(package(text)), ["DotnetTool", "McpServer"])
-
-    def test_a_nuspec_without_a_namespace_is_read_too(self):
-        self.assertEqual(feeds.package_types(package('<package><metadata><id>A</id><packageTypes><packageType name="Template" /></packageTypes></metadata></package>')), ["Template"])
-
-
-class PinsTests(unittest.TestCase):
-    def nuspec(self, *dependencies):
-        deps = "".join(f'<dependency id="{i}" version="{v}" />' for i, v in dependencies)
-        return package(f'<package {NS}><metadata><id>Fdw.Bundle</id><version>1.5.6</version><dependencies><group targetFramework="net10.0">{deps}</group></dependencies></metadata></package>')
-
-    def test_exact_pins_are_read_in_both_spellings(self):
-        data = self.nuspec(("Fdw.A", "[1.5.6]"), ("Fdw.B", "[1.5.6, 1.5.6]"))
-        self.assertEqual(feeds.pins_from_nupkg(data), {"Fdw.A": "1.5.6", "Fdw.B": "1.5.6"})
-
-    def test_a_range_is_not_a_pin(self):
-        data = self.nuspec(("Fdw.A", "[1.5.0, 2.0.0)"), ("Fdw.B", "1.5.0"), ("Fdw.C", "[1.5.6]"))
-        self.assertEqual(feeds.pins_from_nupkg(data), {"Fdw.C": "1.5.6"})
-
-    def test_a_package_without_dependencies_pins_nothing(self):
-        self.assertEqual(feeds.pins_from_nupkg(package(f'<package {NS}><metadata><id>A</id><version>1.0.0</version></metadata></package>')), {})
-
-    def test_the_feed_reads_the_pins_of_a_held_package(self):
-        feed = feeds.NugetOrg()
-        feed._package = lambda pid, version: self.nuspec(("Fdw.A", "[1.5.6]"))
-        self.assertEqual(feed.pins("Fdw.Bundle", "1.5.6"), {"Fdw.A": "1.5.6"})
-
-    def test_a_listed_version_that_cannot_be_read_is_an_error(self):
-        feed = feeds.NugetOrg()
-        feed._package = lambda pid, version: None
-        with self.assertRaisesRegex(feeds.FeedError, "cannot be read"):
-            feed.pins("Fdw.Bundle", "1.5.6")
-
-
 class ReadableTreeTests(unittest.TestCase):
     def feed(self, body):
         feed = feeds.NugetOrg()

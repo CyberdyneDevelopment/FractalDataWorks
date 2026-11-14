@@ -3,7 +3,7 @@
 
   allocate.py plan --repo R --line 1.4 (--base-ref REF | --baseline FILE) [--ref HEAD] [--only A,B] [--json]
 
-A release has one number N, shared by every package in it and by the bundle. N is the highest major.minor.patch in the
+A release has one number N, shared by every package in it that changed. N is the highest major.minor.patch in the
 line among every stable version of every packable package on the feed and every `release-*-x.y.z` tag, plus one. A
 version with a tail (`-rc.1`, `-internal.x`) never counts: it does not stop the plain version being published, and
 counting it would move the number on with every build. A release that fails after pushing some stable versions has
@@ -79,7 +79,7 @@ def release_number(held, line, tags, bump="patch"):
 
 
 def release_plan(names, projects, line, feed, tags, bump):
-    """One number for the whole release. It is free for every package and for the bundle because it is one above the
+    """One number for the whole release. It is free for every package because it is one above the
     highest version of any packable package, and any release tag, in the line. Only packable names in the build set
     get the number; a non-packable project in the set (an analyzer) is built, not packed."""
     held = held_versions(projects, feed)

@@ -38,20 +38,11 @@ class FakeFeed:
     def held_tree(self, pid, version):
         return self.held[pid][version]
 
-    def pins(self, pid, version):
-        text = getattr(self, "pins_of", {}).get((pid, version))
-        if text is None:
-            raise feeds.FeedError(f"nuget.org lists {pid} {version} but its package cannot be read")
-        return dict(text)
-
     def readable_tree(self, pid, version):
         tree = self.held[pid][version]
         if tree is UNREADABLE:
             raise feeds.FeedError(f"nuget.org lists {pid} {version} but its package cannot be read")
         return tree
-
-    def held_file(self, pid, version, path):
-        return getattr(self, "files", {}).get((pid, version, path))
 
     def push(self, decision, tree):
         self.held.setdefault(decision.package, {})[decision.version] = tree
@@ -126,18 +117,6 @@ class FeedTests(unittest.TestCase):
         feed = feeds.NugetOrg(self.opener(routes))
         self.assertEqual(feed.versions("Fdw.X"), ["1.4.4", "1.4.5-rc.1"])
         self.assertEqual(feed.held_tree("Fdw.X", "1.4.4"), "abc123")
-
-    def test_a_file_inside_a_held_package_is_read(self):
-        base = feeds.NugetOrg.base
-        data = nupkg("Fdw.Bundle", "1.4.5", "t")
-        buf = io.BytesIO(data)
-        with zipfile.ZipFile(buf, "a") as z:
-            z.writestr(feeds.MANIFEST_FILE, '{"projects": {}}')
-        routes = {f"{base}/fdw.bundle/1.4.5/fdw.bundle.1.4.5.nupkg": buf.getvalue()}
-        feed = feeds.NugetOrg(self.opener(routes))
-        self.assertEqual(feed.held_file("Fdw.Bundle", "1.4.5", feeds.MANIFEST_FILE), '{"projects": {}}')
-        self.assertIsNone(feed.held_file("Fdw.Bundle", "1.4.5", "fdw/nothing.json"))
-        self.assertIsNone(feed.held_file("Fdw.Bundle", "9.9.9", feeds.MANIFEST_FILE))
 
     def test_a_package_that_does_not_exist_has_no_versions(self):
         self.assertEqual(feeds.NugetOrg(self.opener({})).versions("Fdw.Nope"), [])

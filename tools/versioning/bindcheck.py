@@ -16,7 +16,7 @@ one REF record per assembly it references (the version it asks for). In DIR file
 The floors are not a setting: each assembly has one, recorded in the baseline release's manifest (assemblyVersionFloors, {assembly: version}),
 which `floors` computes from the identity files of a release's packages: for each assembly the higher of the version it carries and the
 highest version any assembly of the release asks for it at (references to the framework and to other libraries are left out). The release
-that is built records its floors for the next one the same way, in the project manifest the bundle carries. A floor per assembly means a
+that is built records its floors for the next one the same way, in the release record (the project manifest with the floors, `release.py record`). A floor per assembly means a
 package that goes to 2.0.0 never raises the floor of a 1.x one.
 
 It stops on any of:
