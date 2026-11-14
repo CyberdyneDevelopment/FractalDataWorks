@@ -392,5 +392,177 @@ class BuildSetTests(unittest.TestCase):
         self.assertIn("nothing was written", str(raised.exception))
 
 
+
+BF_PIN = '<PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />'
+ST_PIN = '<PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />'
+PINNED_PROPS = ('<Project>\n  <PropertyGroup>\n    <VersionPrefix>1.4.4</VersionPrefix>\n  </PropertyGroup>\n'
+                '  <ItemGroup Condition="$(MSBuildProjectName.StartsWith(\'Host.\')) OR $(MSBuildProjectName) == \'Roslyn.Host\'">\n    ' + BF_PIN + '\n  </ItemGroup>\n'
+                '  <ItemGroup Condition="\'$(TargetFramework)\' == \'netstandard2.0\'">\n    <PackageReference Include="PolySharp" PrivateAssets="all" />\n  </ItemGroup>\n</Project>\n')
+PINNED_PACKAGES = ('<Project>\n  <ItemGroup>\n    <PackageVersion Include="Microsoft.Build.Framework" Version="18.6.3" />\n'
+                   '    <PackageVersion Include="Microsoft.NET.StringTools" Version="18.6.3" />\n  </ItemGroup>\n</Project>\n')
+
+
+def csproj(refs=(), packages=()):
+    items = [f'<ProjectReference Include="..\\{r}\\{r}.csproj" />' for r in refs] + list(packages)
+    return ('<Project Sdk="Microsoft.NET.Sdk">\n  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>\n  <ItemGroup>\n    '
+            + "\n    ".join(items) + "\n  </ItemGroup>\n</Project>\n")
+
+
+class CarriedExclusionTests(unittest.TestCase):
+    """FDW-5705: a ProjectReference carries the target's private asset exclusions into the consumer's restore graph; a package cannot. The 1.5.8
+    build set failed MSBL001 in Fdw.Services.Connections.RoslynWorkspace because Fdw.Workspace.Roslyn (outside the set) lost its Microsoft.Build.Framework."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.repo = Repo(self._tmp.name)
+        self.files = base_files() | {"public/Directory.Build.props": PINNED_PROPS, "public/Directory.Packages.props": PINNED_PACKAGES}
+        self.files |= {"public/src/Roslyn.Host/Roslyn.Host.csproj": csproj(packages=[ST_PIN]), "public/src/Roslyn.Host/H.cs": "class H {}\n"}
+        self.files |= {"public/src/Plain/Plain.csproj": csproj(), "public/src/Consumer/Consumer.csproj": csproj(refs=["Roslyn.Host", "Plain"])}
+        self.versions = {"Roslyn.Host": "1.4.2", "Plain": "1.4.1", "A": "1.4.4", "Consumer": "1.4.0", "B": "1.4.3"}
+        self.trees = {n: f"tree-{n}" for n in ("Consumer", "Roslyn.Host", "Plain", "B", "A")}
+
+    def prepare(self, members, **over):
+        self.repo.commit(self.files | over)
+        return buildset.prepare(self.repo.root, members, self.versions, self.trees, "1.4.5")
+
+    def text(self, path):
+        with open(os.path.join(self.repo.root, path), "rb") as f:
+            return f.read().decode("utf-8-sig")
+
+    def refs(self, path):
+        return [e.attrib for e in ET.fromstring(self.text(path).encode()).iter("PackageReference")]
+
+    def test_the_consumer_gets_the_exclusion_a_props_group_gave_the_target_by_its_name(self):
+        report = self.prepare(["Consumer"])
+        self.assertIn(BF_PIN, self.text("public/src/Consumer/Consumer.csproj"))
+        self.assertEqual(report["carried_exclusions"]["Consumer"], ["Microsoft.Build.Framework", "Microsoft.NET.StringTools"])
+
+    def test_the_consumer_gets_the_exclusion_the_targets_own_project_file_holds(self):
+        self.prepare(["Consumer"])
+        self.assertIn(ST_PIN, self.text("public/src/Consumer/Consumer.csproj"))
+
+    def test_the_references_are_written_next_to_the_swapped_one_and_only_once(self):
+        self.prepare(["Consumer"])
+        self.assertEqual(self.refs("public/src/Consumer/Consumer.csproj"), [
+            {"Include": "Roslyn.Host"}, {"Include": "Microsoft.Build.Framework", "ExcludeAssets": "runtime", "PrivateAssets": "all"},
+            {"Include": "Microsoft.NET.StringTools", "ExcludeAssets": "runtime", "PrivateAssets": "all"}, {"Include": "Plain"}])
+
+    def test_a_target_with_no_exclusion_brings_nothing(self):
+        self.files["public/src/Consumer/Consumer.csproj"] = csproj(refs=["Plain"])
+        report = self.prepare(["Consumer"])
+        self.assertEqual(report["carried_exclusions"], {})
+        self.assertEqual(self.refs("public/src/Consumer/Consumer.csproj"), [{"Include": "Plain"}])
+
+    def test_a_target_in_the_set_stays_a_project_reference_and_brings_nothing(self):
+        report = self.prepare(["Consumer", "Roslyn.Host"])
+        self.assertIn("ProjectReference", self.text("public/src/Consumer/Consumer.csproj"))
+        self.assertEqual(report["carried_exclusions"], {})
+
+    def test_a_consumer_that_has_the_package_itself_keeps_its_own(self):
+        own = '<PackageReference Include="Microsoft.NET.StringTools" />'
+        self.files["public/src/Consumer/Consumer.csproj"] = csproj(refs=["Roslyn.Host"], packages=[own])
+        report = self.prepare(["Consumer"])
+        self.assertEqual([r for r in self.refs("public/src/Consumer/Consumer.csproj") if r["Include"] == "Microsoft.NET.StringTools"], [{"Include": "Microsoft.NET.StringTools"}])
+        self.assertEqual(report["carried_exclusions"]["Consumer"], ["Microsoft.Build.Framework"])
+
+    def test_a_consumer_the_props_group_already_covers_is_not_given_a_duplicate(self):
+        files = {"public/src/Host.Consumer/Host.Consumer.csproj": csproj(refs=["Roslyn.Host"])}
+        self.trees["Host.Consumer"] = "t"
+        self.versions["Host.Consumer"] = "1.4.0"
+        report = self.prepare(["Host.Consumer"], **files)
+        self.assertEqual(self.text("public/src/Host.Consumer/Host.Consumer.csproj").count("Microsoft.Build.Framework"), 0)
+        self.assertEqual(report["carried_exclusions"]["Host.Consumer"], ["Microsoft.NET.StringTools"])
+
+    def test_two_targets_with_the_same_exclusion_give_it_once(self):
+        self.files["public/src/Second/Second.csproj"] = csproj(packages=[ST_PIN])
+        self.files["public/src/Consumer/Consumer.csproj"] = csproj(refs=["Roslyn.Host", "Second"])
+        self.versions["Second"] = "1.4.0"
+        self.trees["Second"] = "t"
+        self.prepare(["Consumer"])
+        self.assertEqual(self.text("public/src/Consumer/Consumer.csproj").count('Include="Microsoft.NET.StringTools"'), 1)
+
+    def test_a_group_whose_condition_does_not_hold_for_the_target_gives_nothing(self):
+        self.files["public/src/Roslyn.Host/Roslyn.Host.csproj"] = csproj()
+        self.files["public/Directory.Build.props"] = PINNED_PROPS.replace("== 'Roslyn.Host'", "== 'Something.Else'")
+        self.assertEqual(self.prepare(["Consumer"])["carried_exclusions"], {})
+
+    def test_the_tests_project_of_a_member_gets_it_too(self):
+        self.files["public/tests/Consumer.Tests/Consumer.Tests.csproj"] = csproj(refs=["Roslyn.Host", "Consumer"])
+        report = self.prepare(["Consumer"])
+        self.assertIn("Microsoft.Build.Framework", report["carried_exclusions"]["Consumer.Tests"])
+
+    def test_the_exclusion_of_a_project_further_down_the_chain_is_carried_too(self):
+        # Consumer -> Middle -> Roslyn.Host: with Middle swapped for its package, nothing below it is a project any more, so the consumer needs
+        # what the whole chain gave it in the normal tree (the case of a release that changes only the project above Fdw.Services.Connections.RoslynWorkspace).
+        self.files["public/src/Middle/Middle.csproj"] = csproj(refs=["Roslyn.Host"])
+        self.files["public/src/Consumer/Consumer.csproj"] = csproj(refs=["Middle"])
+        self.versions["Middle"] = "1.4.0"
+        self.trees["Middle"] = "t"
+        report = self.prepare(["Consumer"])
+        self.assertEqual(report["carried_exclusions"]["Consumer"], ["Microsoft.Build.Framework", "Microsoft.NET.StringTools"])
+
+    def test_a_reference_that_does_not_flow_is_not_followed(self):
+        self.files["public/src/Middle/Middle.csproj"] = ("<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>\n  <ItemGroup>\n"
+                                                         "    <ProjectReference Include=\"..\\Roslyn.Host\\Roslyn.Host.csproj\" OutputItemType=\"Analyzer\" ReferenceOutputAssembly=\"false\" />\n"
+                                                         "    <ProjectReference Include=\"..\\Roslyn.Host\\Roslyn.Host.csproj\" PrivateAssets=\"all\" />\n  </ItemGroup>\n</Project>\n")
+        self.files["public/src/Consumer/Consumer.csproj"] = csproj(refs=["Middle"])
+        self.versions["Middle"] = "1.4.0"
+        self.trees["Middle"] = "t"
+        self.assertEqual(self.prepare(["Consumer"])["carried_exclusions"], {})
+
+    def test_a_condition_that_cannot_be_evaluated_refuses_naming_it_and_writes_nothing(self):
+        self.files["public/Directory.Build.props"] = PINNED_PROPS.replace("OR $(MSBuildProjectName) ==", "OR $([System.String]::new('x')) ==")
+        self.repo.commit(self.files)
+        with self.assertRaisesRegex(buildset.BuildSetError, r"cannot evaluate the Condition .*System\.String"):
+            buildset.prepare(self.repo.root, ["Consumer"], self.versions, self.trees, "1.4.5")
+        self.assertNotIn("PackageReference", self.text("public/src/Consumer/Consumer.csproj"))
+
+    def test_an_exclusion_with_no_central_version_refuses_and_writes_nothing(self):
+        self.files["public/Directory.Packages.props"] = "<Project>\n  <ItemGroup>\n    <PackageVersion Include=\"Microsoft.NET.StringTools\" Version=\"18.6.3\" />\n  </ItemGroup>\n</Project>\n"
+        self.repo.commit(self.files)
+        with self.assertRaisesRegex(buildset.BuildSetError, r"Microsoft\.Build\.Framework.*no version in Directory\.Packages\.props"):
+            buildset.prepare(self.repo.root, ["Consumer"], self.versions, self.trees, "1.4.5")
+        self.assertNotIn("PackageReference", self.text("public/src/Consumer/Consumer.csproj"))
+
+
+class ConditionTests(unittest.TestCase):
+    P = {"MSBuildProjectName": "Fdw.Workspace.Roslyn", "MSBuildProjectDirectory": "/repo/src/tooling/roslyn"}
+
+    def ev(self, condition):
+        return buildset.evaluate_condition(condition, self.P)
+
+    def test_the_forms_of_the_real_props_file(self):
+        self.assertTrue(self.ev("$(MSBuildProjectName.StartsWith('Fdw.Tools.')) OR $(MSBuildProjectName) == 'Fdw.Workspace.Roslyn'"))
+        self.assertFalse(self.ev("$(MSBuildProjectName.StartsWith('Fdw.Tools.')) OR $(MSBuildProjectName) == 'Other'"))
+        self.assertTrue(self.ev("!$(MSBuildProjectDirectory.Contains('/samples/')) AND !$(MSBuildProjectDirectory.Contains('\\samples\\'))"))
+
+    def test_comparison_ignores_case_and_expands_properties_in_strings(self):
+        self.assertTrue(self.ev("'$(MSBuildProjectName)' == 'fdw.workspace.roslyn'"))
+        self.assertTrue(self.ev("'$(MSBuildProjectName)' != 'x'"))
+
+    def test_and_binds_tighter_than_or_and_parentheses_group(self):
+        self.assertTrue(self.ev("'a' == 'b' AND 'a' == 'b' OR 'a' == 'a'"))
+        self.assertFalse(self.ev("'a' == 'b' AND ('a' == 'b' OR 'a' == 'a')"))
+
+    def test_a_property_that_is_not_known_refuses(self):
+        with self.assertRaisesRegex(buildset.BuildSetError, "TargetFramework is not known"):
+            self.ev("'$(TargetFramework)' == 'net10.0'")
+
+    def test_syntax_it_does_not_know_refuses_naming_the_condition(self):
+        for bad in ("$([MSBuild]::IsOSPlatform('Linux'))", "Exists('x')", "'a' ==", "('a' == 'a'", "'a' == 'a' extra"):
+            with self.assertRaisesRegex(buildset.BuildSetError, "cannot evaluate the Condition"):
+                self.ev(bad)
+
+    def test_a_pin_is_a_private_reference_that_excludes_assets(self):
+        text = ('<Project><ItemGroup><PackageReference Include="A" PrivateAssets="all" />'
+                '<PackageReference Include="B" ExcludeAssets="runtime" />'
+                '<PackageReference Include="C" ExcludeAssets="runtime" PrivateAssets="All" />'
+                '<PackageReference Include="D" Version="2.0" ExcludeAssets="runtime;native" PrivateAssets="contentfiles;all" /></ItemGroup></Project>')
+        self.assertEqual(buildset.private_pins(text, self.P), {
+            "C": {"Include": "C", "ExcludeAssets": "runtime", "PrivateAssets": "All"},
+            "D": {"Include": "D", "Version": "2.0", "ExcludeAssets": "runtime;native", "PrivateAssets": "contentfiles;all"}})
+
+
 if __name__ == "__main__":
     unittest.main()

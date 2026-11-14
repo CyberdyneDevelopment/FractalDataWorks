@@ -25,6 +25,13 @@ project outside the set becomes a <PackageReference> to the published package. R
 projects that are not packable and to anything that is not a src project stay project references. One PackageVersion
 per swapped package is added to public/Directory.Packages.props (the mirror keeps it at the root) at that package's own version.
 
+A ProjectReference also carries the referenced project's own private references into the consumer's restore graph, and a published package
+cannot (a PrivateAssets=all reference is not a nuspec dependency). Fdw.Workspace.Roslyn holds a private Microsoft.Build.Framework
+(ExcludeAssets=runtime, PrivateAssets=all); without it Microsoft.Build.Locator's MSBL001 check fails in whatever reaches Roslyn's own
+dependency on the MSBuild family (FDW-5705). So where a ProjectReference is swapped, the consumer also gets the references of the target
+that restrict assets and do not flow (PrivateAssets=all with an ExcludeAssets), read from the target's project file and from the
+Directory.Build.props groups that apply to it; a consumer that has the package already keeps its own.
+
 Each member also carries the tree id it was built from at fdw/tree.txt inside the package, supplied from outside the
 project (CustomAfterMicrosoftCommonTargets), so no project file is edited for it.
 
@@ -75,14 +82,202 @@ def scan(public):
     return found
 
 
-def swap(text, members, projects):
+PACKAGE_REF = re.compile(r"<PackageReference\b([^>]*?)(/>|>.*?</PackageReference>)", re.S)
+ITEM_GROUP = re.compile(r"<ItemGroup\b([^>]*)>(.*?)</ItemGroup>", re.S)
+PIN_ATTRS = ("Include", "Version", "IncludeAssets", "ExcludeAssets", "PrivateAssets")
+CONDITION_TOKEN = re.compile(r"""\s*(?:(?P<str>'[^']*')
+    |\$\((?P<prop>\w+)(?:\.(?P<method>StartsWith|EndsWith|Contains)\((?P<arg>'[^']*')\))?\)
+    |(?P<op>==|!=|\(|\)|!)
+    |(?P<word>AND|OR)\b)""", re.X | re.I)
+
+
+def evaluate_condition(condition, properties):
+    """The truth of an MSBuild Condition over the forms Directory.Build.props uses: $(Name), $(Name.StartsWith('x')) (also EndsWith and Contains),
+    quoted strings that may hold $(Name), == and != (case-insensitive), !, AND, OR and parentheses. `properties` is {name: value}. A property
+    that is not in it, or any other syntax, raises BuildSetError naming the condition: nothing is guessed."""
+    def refuse(why):
+        raise BuildSetError(f"cannot evaluate the Condition {condition!r}: {why}")
+    tokens, pos = [], 0
+    while pos < len(condition):
+        if not condition[pos:].strip():
+            break
+        m = CONDITION_TOKEN.match(condition, pos)
+        if not m or m.end() == pos:
+            refuse(f"unknown syntax at {condition[pos:pos + 20]!r}")
+        tokens.append(m)
+        pos = m.end()
+
+    def expand(text):
+        def one(m):
+            if m.group(1) not in properties:
+                refuse(f"the property {m.group(1)} is not known here")
+            return str(properties[m.group(1)])
+        return re.sub(r"\$\((\w+)\)", one, text)
+
+    def operand(m):
+        if m.group("str"):
+            return expand(m.group("str")[1:-1])
+        name = m.group("prop")
+        if name not in properties:
+            refuse(f"the property {name} is not known here")
+        value = str(properties[name])
+        if not m.group("method"):
+            return value
+        arg = expand(m.group("arg")[1:-1])
+        return {"startswith": value.lower().startswith(arg.lower()), "endswith": value.lower().endswith(arg.lower()),
+                "contains": arg.lower() in value.lower()}[m.group("method").lower()]
+    at = [0]
+
+    def peek():
+        return tokens[at[0]] if at[0] < len(tokens) else None
+
+    def take():
+        at[0] += 1
+        return tokens[at[0] - 1]
+
+    def truth(v):
+        if isinstance(v, bool):
+            return v
+        if v.lower() in ("true", "false"):
+            return v.lower() == "true"
+        refuse(f"{v!r} is not a boolean")
+
+    def primary():
+        t = peek()
+        if t is None:
+            refuse("it ends where a value was expected")
+        if t.group("op") == "(":
+            take()
+            v = disjunction()
+            if peek() is None or peek().group("op") != ")":
+                refuse("a parenthesis is not closed")
+            take()
+            return v
+        if t.group("op") == "!":
+            take()
+            return not truth(primary())
+        if t.group("str") is None and t.group("prop") is None:
+            refuse(f"unexpected {t.group(0).strip()!r}")
+        left = operand(take())
+        c = peek()
+        if c is not None and c.group("op") in ("==", "!="):
+            take()
+            r = peek()
+            if r is None or (r.group("str") is None and r.group("prop") is None):
+                refuse("a comparison has no right side")
+            right = operand(take())
+            same = str(left).lower() == str(right).lower()
+            return same if c.group("op") == "==" else not same
+        return left
+
+    def conjunction():
+        v = truth(primary())
+        while peek() is not None and (peek().group("word") or "").upper() == "AND":
+            take()
+            v = truth(primary()) and v
+        return v
+
+    def disjunction():
+        v = conjunction()
+        while peek() is not None and (peek().group("word") or "").upper() == "OR":
+            take()
+            v = conjunction() or v
+        return v
+    result = disjunction()
+    if peek() is not None:
+        refuse(f"unexpected {peek().group(0).strip()!r}")
+    return result
+
+
+def private_pins(text, properties):
+    """{package id: ordered attributes} of the PackageReference items of one project file or props file that restrict assets and do not flow to
+    a consumer: PrivateAssets contains `all` and ExcludeAssets is set. An item inside an ItemGroup with a Condition, or with a Condition of its
+    own, counts when the Condition holds for `properties`."""
+    pins = {}
+    for group in ITEM_GROUP.finditer(text):
+        if "ExcludeAssets" not in group.group(2):
+            continue
+        gcond = dict(ATTR.findall(group.group(1))).get("Condition")
+        for item in PACKAGE_REF.finditer(group.group(2)):
+            attrs = dict(ATTR.findall(item.group(1)))
+            private = {t.strip().lower() for t in attrs.get("PrivateAssets", "").split(";")}
+            if "all" not in private or not attrs.get("ExcludeAssets") or not attrs.get("Include"):
+                continue
+            conds = [c for c in (gcond, attrs.get("Condition")) if c]
+            if all(evaluate_condition(c, properties) for c in conds):
+                pins[attrs["Include"]] = {k: attrs[k] for k in PIN_ATTRS if k in attrs}
+    return pins
+
+
+class Masks:
+    """What a ProjectReference carried that its package cannot: for a project, the private asset-restricting references it holds itself or gets
+    from the repository's Directory.Build.props and .targets (FDW-5705). `central` is the set of package ids the central file gives a version."""
+
+    def __init__(self, public, central, projects=None):
+        self.projects = projects or {}
+        self.central = {c.lower() for c in central}
+        self.shared = []
+        for name in ("Directory.Build.props", "Directory.Build.targets"):
+            path = os.path.join(public, name)
+            if os.path.isfile(path):
+                with open(path, encoding="utf-8-sig") as f:
+                    self.shared.append(f.read())
+        self.cache = {}
+
+    def of(self, project):
+        """{id: attributes} for one scanned project."""
+        key = project["rel"]
+        if key not in self.cache:
+            props = {"MSBuildProjectName": os.path.splitext(os.path.basename(project["path"]))[0],
+                     "MSBuildProjectDirectory": os.path.dirname(project["path"])}
+            pins = {}
+            for text in self.shared + [project["text"]]:
+                pins.update(private_pins(text, props))
+            self.cache[key] = pins
+        return self.cache[key]
+
+    def reachable(self, project):
+        """{id: attributes} for a project and every src project its references reach, the way a restore graph sees them: a ProjectReference
+        brings the references of the project it names, and theirs in turn (not an analyzer reference, and not one marked PrivateAssets=all).
+        Once the project is swapped for its package, the package has no such chain below it, so the consumer needs all of it."""
+        pins, seen, todo = {}, set(), [project]
+        while todo:
+            p = todo.pop()
+            if p["rel"] in seen:
+                continue
+            seen.add(p["rel"])
+            for pid, attrs in self.of(p).items():
+                pins.setdefault(pid, attrs)
+            for m in REF.finditer(p["text"]):
+                a = dict(ATTR.findall(m.group(1)))
+                private = {t.strip().lower() for t in a.get("PrivateAssets", "").split(";")}
+                if a.get("OutputItemType") == "Analyzer" or "all" in private:
+                    continue
+                nxt = self.projects.get(("src", target_name(a.get("Include", ""))))
+                if nxt is not None:
+                    todo.append(nxt)
+        return pins
+
+    def check(self, pins, why):
+        """Refuse a pin whose package has no version in the central file and none of its own: the restore would fail with NU1010."""
+        missing = sorted(i for i, a in pins.items() if "Version" not in a and i.lower() not in self.central)
+        if missing:
+            raise BuildSetError(f"{why} give(s) the consumer a reference to {missing}, which have no version in Directory.Packages.props")
+
+
+def swap(text, members, projects, masks=None, consumer=None, added=None):
     """(new text, {project name: package id swapped}, [(project name, why kept)]) for one project file.
+
+    With `masks` (Masks) and `consumer` (the scanned project the text belongs to), a swapped reference to a project T also brings T's private
+    asset-restricting references (FDW-5705), unless the consumer already has that package, from its own text or from the repository's props;
+    `added` (a list) receives (package id, project T) for each one written.
 
     A swapped reference is written once per project file for each identical package id and attributes (FDW-5698). A project file may name
     the same ProjectReference many times (six do, since the 2026-11-01 regroup) and MSBuild accepts that, but NuGet refuses the same
     PackageReference twice (NU1504), so the further identical copies are dropped. Same id with another Condition or other attributes is
     another reference and stays."""
-    out, pos, swapped, kept, written = [], 0, {}, [], set()
+    out, pos, swapped, kept, written, carried = [], 0, {}, [], set(), set()
+    owned = None
     for m in REF.finditer(text):
         attrs = dict(ATTR.findall(m.group(1)))
         name = target_name(attrs.get("Include", ""))
@@ -110,6 +305,18 @@ def swap(text, members, projects):
             continue
         written.add((target["id"].lower(), extra))
         out.append(f'{indent}<PackageReference Include="{target["id"]}"{extra} />{newline}')
+        if masks is not None and name not in carried:
+            carried.add(name)
+            if owned is None:
+                owned = {i.lower() for i in re.findall(r'<PackageReference\b[^>]*?\b(?:Include|Update)="([^"]+)"', text)}
+                owned |= {i.lower() for i in masks.of(consumer)}
+            pins = {i: a for i, a in masks.reachable(target).items() if i.lower() not in owned}
+            masks.check(pins, f"the swap of {name} in {os.path.basename(consumer['path'])}")
+            for pid, pin in pins.items():
+                owned.add(pid.lower())
+                out.append(f'{indent}<PackageReference ' + " ".join(f'{k}="{v}"' for k, v in pin.items()) + f' />{newline}')
+                if added is not None:
+                    added.append((pid, name))
     out.append(text[pos:])
     return "".join(out), swapped, kept
 
@@ -238,11 +445,18 @@ def prepare(repo, members, versions, trees, release, package_versions=None, asse
         raise BuildSetError(f"no tree id for: {no_tree}")
     tests = [f"{m}.Tests" for m in members if ("tests", f"{m}.Tests") in projects]
 
-    rewrites, swapped, kept = {}, {}, []
+    packages = os.path.join(public, "Directory.Packages.props")
+    with open(packages, encoding="utf-8-sig", newline="") as f:
+        central = re.findall(r'<PackageVersion\s+Include="([^"]+)"', f.read())
+    masks = Masks(public, central, projects)
+    rewrites, swapped, kept, carried = {}, {}, [], {}
     for key in [("src", m) for m in members] + [("tests", t) for t in tests]:
-        new, sw, k = swap(projects[key]["text"], set(members), projects)
+        added = []
+        new, sw, k = swap(projects[key]["text"], set(members), projects, masks, projects[key], added)
         kept += [(key[1], *x) for x in k]
         swapped.update(sw)
+        if added:
+            carried[key[1]] = sorted({pid for pid, _ in added})
         if new != projects[key]["text"]:
             rewrites[key] = new
     ids = {pid for pid in swapped.values()}
@@ -261,7 +475,6 @@ def prepare(repo, members, versions, trees, release, package_versions=None, asse
         except ET.ParseError as e:
             raise BuildSetError(f"{key[1]} would not be well-formed after the swap: {e}")
 
-    packages = os.path.join(public, "Directory.Packages.props")
     with open(packages, encoding="utf-8-sig", newline="") as f:
         packages_text = central_versions(f.read(), {pid: versions[pid] for pid in ids})
     ET.fromstring(packages_text.encode("utf-8"))
@@ -285,7 +498,7 @@ def prepare(repo, members, versions, trees, release, package_versions=None, asse
             embeds.setdefault(n, set()).add(x)
     silent = sorted((n, x) for n in members for x in embeds.get(n, ()) if x not in members and x in live)
     return {"members": list(members), "tests": tests, "release": release, "package_versions": dict(sorted((package_versions or {}).items())),
-            "rewritten": sorted(k[1] for k in rewrites), "swapped": dict(sorted(swapped.items())),
+            "rewritten": sorted(k[1] for k in rewrites), "swapped": dict(sorted(swapped.items())), "carried_exclusions": dict(sorted(carried.items())),
             "kept": kept, "versions_added": {pid: versions[pid] for pid in sorted(ids)},
             "embeds_not_in_set": silent, "commands": commands(repo, members, release, tests, projects, run_tests), "run_from": os.path.relpath(public, repo)}
 
