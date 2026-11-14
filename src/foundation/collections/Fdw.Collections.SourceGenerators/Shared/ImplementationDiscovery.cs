@@ -35,7 +35,7 @@ internal static class ImplementationDiscovery
             return ImmutableArray<ImplementationModel>.Empty;
 
         // Always scan current assembly
-        var visitor = new ImplementationVisitor(optionAttrType, lookupAttrType, results);
+        var visitor = new ImplementationVisitor(optionAttrType, lookupAttrType, compilation, results);
         visitor.Visit(compilation.Assembly.GlobalNamespace);
 
         // Scan referenced assemblies unless restricted
@@ -141,15 +141,18 @@ internal static class ImplementationDiscovery
     {
         private readonly INamedTypeSymbol _optionAttrType;
         private readonly INamedTypeSymbol? _lookupAttrType;
+        private readonly Compilation _compilation;
         private readonly List<ImplementationModel> _results;
 
         public ImplementationVisitor(
             INamedTypeSymbol optionAttrType,
             INamedTypeSymbol? lookupAttrType,
+            Compilation compilation,
             List<ImplementationModel> results)
         {
             _optionAttrType = optionAttrType;
             _lookupAttrType = lookupAttrType;
+            _compilation = compilation;
             _results = results;
         }
 
@@ -192,7 +195,7 @@ internal static class ImplementationDiscovery
             var collectionMatchKey = GetMatchKey(collectionType);
             var generatedId = ComputeServiceTypeId(typeSymbol.ToDisplayString());
             var constructors = ExtractConstructors(typeSymbol);
-            var lookupProperties = DiscoverLookupProperties(typeSymbol, _lookupAttrType);
+            var lookupProperties = DiscoverLookupProperties(typeSymbol, _lookupAttrType, _compilation);
 
             return new ImplementationModel(
                 TypeName: typeSymbol.Name,
@@ -253,7 +256,8 @@ internal static class ImplementationDiscovery
 
         private static ImmutableArray<LookupPropertyModel> DiscoverLookupProperties(
             INamedTypeSymbol typeSymbol,
-            INamedTypeSymbol? lookupAttrType)
+            INamedTypeSymbol? lookupAttrType,
+            Compilation compilation)
         {
             if (lookupAttrType == null)
                 return ImmutableArray<LookupPropertyModel>.Empty;
@@ -292,7 +296,7 @@ internal static class ImplementationDiscovery
             }
 
             // Now try to extract values from the TypeOption's constructor
-            var extractedValues = ExtractBaseConstructorArguments(typeSymbol);
+            var extractedValues = ExtractBaseConstructorArguments(typeSymbol, compilation);
 
             // Build the result with extracted values where possible
             var results = new List<LookupPropertyModel>();
@@ -321,7 +325,7 @@ internal static class ImplementationDiscovery
             return results.ToImmutableArray();
         }
 
-        private static Dictionary<string, string> ExtractBaseConstructorArguments(INamedTypeSymbol typeSymbol)
+        private static Dictionary<string, string> ExtractBaseConstructorArguments(INamedTypeSymbol typeSymbol, Compilation compilation)
         {
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -335,8 +339,10 @@ internal static class ImplementationDiscovery
             if (syntaxRef == null)
                 return result;
 
+            // Why the tree is checked: an option of another project reaches a build as metadata and has no syntax to read; the same option
+            // reaches a workspace load as a compilation reference with syntax. Reading it there would give a workspace what a build never has.
             var syntax = syntaxRef.GetSyntax();
-            if (syntax is not ConstructorDeclarationSyntax ctorSyntax)
+            if (syntax is not ConstructorDeclarationSyntax ctorSyntax || !compilation.ContainsSyntaxTree(syntax.SyntaxTree))
                 return result;
 
             var initializer = ctorSyntax.Initializer;

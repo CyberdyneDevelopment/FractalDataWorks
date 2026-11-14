@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Fdw.Collections;
@@ -29,10 +30,12 @@ namespace Fdw.WebMcp.Mcp;
 /// <see cref="WebMcpHosting"/> fills, which is what <c>webmcp.js</c> is rendered from.
 /// </para>
 /// <para>
-/// A tool call goes to the tool's own route at the host's <c>SelfBaseAddress</c>, carrying the
-/// calling agent's <c>Authorization</c> header, so authentication and authorization are whatever that
-/// route already does. The address is read from the host's WebMcp configuration row; a host without
-/// one is refused at Initialize rather than failing on its first tool call.
+/// A tool call goes to the tool's own route at the host's own address, carrying the calling agent's
+/// <c>Authorization</c> header, so authentication and authorization are whatever that route already
+/// does. Where the address comes from is the source the host's WebMcp row names (FDW-5721): the
+/// address the process listens on, or a fixed one. A host whose row names none is refused at
+/// Initialize, and one whose source gives no address is stopped once it has started, rather than
+/// failing on its first tool call. It is never the request's Host header.
 /// </para>
 /// <para>
 /// ORDERING: deferred and run last, after <see cref="WebMcpHosting"/> -- see the remarks there.
@@ -71,6 +74,7 @@ public sealed class WebMcpMcpHosting
         var services = builder.Services;
         services.TryAddSingleton<WebMcpMcpCatalogue>();
         services.TryAddSingleton<WebMcpToolInvoker>();
+        services.TryAddSingleton<WebMcpSelfAddressResolver>();
         // Needed to forward the calling agent's identity to the tool's own route.
         services.AddHttpContextAccessor();
         services.AddHttpClient(WebMcpToolInvoker.ClientName);
@@ -125,13 +129,47 @@ public sealed class WebMcpMcpHosting
 
         // Refused here rather than on the first tool call: a bridge that cannot reach its own routes
         // would accept the call and have nowhere to send it.
-        if (settings.Value!.SelfBaseAddress is not { } self)
+        var resolved = settings.Value!;
+        if (resolved.SelfAddressSource is not { } source)
         {
-            return GenericResult<IHost>.Failure(McpBridgeLog.SelfBaseAddressMissing(logger));
+            return GenericResult<IHost>.Failure(McpBridgeLog.SelfAddressSourceMissing(logger));
         }
 
+        // The address itself is not read here: the ListeningAddress source reads what Kestrel bound, and
+        // Kestrel binds when the host starts. It is read once the host has started.
+        var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+        lifetime.ApplicationStarted.Register(RefuseWithoutSelfAddress(
+            host.Services.GetRequiredService<WebMcpSelfAddressResolver>(), resolved, lifetime, logger));
+
         endpoints.MapMcp(McpPath);
-        McpBridgeLog.Mapped(logger, McpPath, self.ToString());
+        McpBridgeLog.Mapped(logger, McpPath, source.Name);
         return GenericResult<IHost>.Success(host);
     }
+
+    /// <summary>
+    /// Once the host has started, works out its own address and stops the host when there is none, as a
+    /// host whose row names no source is refused at Initialize.
+    /// </summary>
+    /// <param name="selfAddress">The resolver the tool calls use, which keeps the address.</param>
+    /// <param name="settings">The host's WebMCP settings.</param>
+    /// <param name="lifetime">Stops the host.</param>
+    /// <param name="logger">The logger.</param>
+    /// <returns>The check, run when the host has started.</returns>
+    private static Action RefuseWithoutSelfAddress(
+        WebMcpSelfAddressResolver selfAddress,
+        WebMcpHostSettings settings,
+        IHostApplicationLifetime lifetime,
+        ILogger logger)
+        => () =>
+        {
+            var resolved = selfAddress.Resolve(settings);
+            if (resolved.IsSuccess)
+            {
+                return;
+            }
+
+            McpBridgeLog.StoppingWithoutSelfAddress(logger, settings.SelfAddressSource?.Name ?? string.Empty,
+                string.Join("; ", resolved.Messages.Select(static message => message.Message)));
+            lifetime.StopApplication();
+        };
 }

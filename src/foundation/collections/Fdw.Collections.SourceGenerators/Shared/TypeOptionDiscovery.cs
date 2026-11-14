@@ -150,7 +150,7 @@ internal static class TypeOptionDiscovery
             var collectionMatchKey = GetMatchKey(collectionType);
             var generatedId = GenerateIdFromTypeName(typeSymbol.ToDisplayString());
             var constructors = ExtractConstructors(typeSymbol);
-            var lookupProperties = DiscoverLookupProperties(typeSymbol, _lookupAttrType);
+            var lookupProperties = DiscoverLookupProperties(typeSymbol, _lookupAttrType, _compilation);
             var declaredId = DeclaredIdReader.Read(typeSymbol, _compilation);
 
             return new TypeOptionModel(
@@ -215,7 +215,8 @@ internal static class TypeOptionDiscovery
 
         private static ImmutableArray<LookupPropertyModel> DiscoverLookupProperties(
             INamedTypeSymbol typeSymbol,
-            INamedTypeSymbol? lookupAttrType)
+            INamedTypeSymbol? lookupAttrType,
+            Compilation compilation)
         {
             if (lookupAttrType == null)
                 return ImmutableArray<LookupPropertyModel>.Empty;
@@ -255,7 +256,7 @@ internal static class TypeOptionDiscovery
             }
 
             // Now try to extract values from the TypeOption's constructor
-            var extractedValues = ExtractBaseConstructorArguments(typeSymbol);
+            var extractedValues = ExtractBaseConstructorArguments(typeSymbol, compilation);
 
             // Build the result with extracted values where possible
             var results = new List<LookupPropertyModel>();
@@ -291,7 +292,7 @@ internal static class TypeOptionDiscovery
         /// Extracts literal argument values from the base() initializer of a TypeOption's parameterless constructor.
         /// Returns a dictionary mapping parameter names to their string representations.
         /// </summary>
-        private static Dictionary<string, string> ExtractBaseConstructorArguments(INamedTypeSymbol typeSymbol)
+        private static Dictionary<string, string> ExtractBaseConstructorArguments(INamedTypeSymbol typeSymbol, Compilation compilation)
         {
             var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -307,8 +308,10 @@ internal static class TypeOptionDiscovery
             if (syntaxRef == null)
                 return result;
 
+            // Why the tree is checked: an option of another project reaches a build as metadata and has no syntax to read; the same option
+            // reaches a workspace load as a compilation reference with syntax. Reading it there would give a workspace what a build never has.
             var syntax = syntaxRef.GetSyntax();
-            if (syntax is not ConstructorDeclarationSyntax ctorSyntax)
+            if (syntax is not ConstructorDeclarationSyntax ctorSyntax || !compilation.ContainsSyntaxTree(syntax.SyntaxTree))
                 return result;
 
             // Get the base() initializer

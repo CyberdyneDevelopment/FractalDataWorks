@@ -20,5 +20,7 @@ internal sealed class McpRow : IWebMcpImplementationConfiguration
 
     public string? SecretKeyName { get; set; }
 
+    public string? SelfAddressSource { get; set; }
+
     public string? SelfBaseAddress { get; set; }
 }

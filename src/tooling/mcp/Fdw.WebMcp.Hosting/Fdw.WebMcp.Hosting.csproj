@@ -27,6 +27,8 @@
     <ProjectReference Include="..\..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.WebMcp.Abstractions\Fdw.WebMcp.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+    <!-- Why: WebMcpSelfAddressSources is a TypeCollection (FDW-5721); its ByName/All/NotFound are generated. -->
+    <ProjectReference Include="..\..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\..\hosts\Fdw.Services.Hosts.Abstractions\Fdw.Services.Hosts.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\secrets\secretmanagers\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
   </ItemGroup>

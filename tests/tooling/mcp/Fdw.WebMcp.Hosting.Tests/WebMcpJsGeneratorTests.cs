@@ -35,7 +35,7 @@ public class WebMcpJsGeneratorTests
 
     private static string Generate(params WebMcpToolDescriptor[] tools)
         => new WebMcpJsGenerator(new Registry(tools), NullLogger<WebMcpJsGenerator>.Instance)
-            .Generate(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, SelfBaseAddress: null));
+            .Generate(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, SelfAddressSource: null, SelfBaseAddress: null));
 
     [Fact]
     [Trait("Priority", "P1")]

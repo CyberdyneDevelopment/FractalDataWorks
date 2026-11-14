@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.Services.Authentication.Abstractions.Steps;
@@ -25,4 +26,12 @@ public sealed record AuthorizationRequest
     /// exchanged at another's endpoint — the mix-up attack RFC 9207 addresses.
     /// </remarks>
     public required string Issuer { get; init; }
+
+    /// <summary>Gets the callback address the authorization request sent as its redirect_uri (FDW-5730).</summary>
+    /// <remarks>
+    /// The code exchange sends this one, never one worked out again: RFC 6749 section 4.1.3 requires the
+    /// exchange's redirect_uri to be identical to the authorization request's, and an address taken from the
+    /// request's host can only be known from the request that started the sign-in.
+    /// </remarks>
+    public required Uri RedirectUri { get; init; }
 }

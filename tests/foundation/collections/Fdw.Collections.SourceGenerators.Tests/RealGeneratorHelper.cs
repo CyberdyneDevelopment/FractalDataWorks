@@ -22,16 +22,18 @@ internal static class RealGeneratorHelper
 
     /// <summary>
     /// Runs <paramref name="generator"/> over <paramref name="source"/> and returns the compilation with its output
-    /// added, and the diagnostics the generator reported.
+    /// added, and the diagnostics the generator reported. <paramref name="extraReferences"/> are referenced besides the runtime and the
+    /// test project's own dependencies: a compilation reference as a workspace gives, or an emitted image as a build gives.
     /// </summary>
     public static (Compilation Output, ImmutableArray<Diagnostic> GeneratorDiagnostics) Run(
         IIncrementalGenerator generator,
-        string source)
+        string source,
+        IReadOnlyList<MetadataReference>? extraReferences = null)
     {
         var compilation = CSharpCompilation.Create(
             assemblyName: "SentinelGuard" + Guid.NewGuid().ToString("N"),
             syntaxTrees: [CSharpSyntaxTree.ParseText(source)],
-            references: References.Value,
+            references: extraReferences is null ? References.Value : [.. References.Value, .. extraReferences],
             options: new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
                 nullableContextOptions: NullableContextOptions.Enable));

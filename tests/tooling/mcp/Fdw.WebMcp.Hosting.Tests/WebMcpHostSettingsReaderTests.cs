@@ -32,6 +32,7 @@ public class WebMcpHostSettingsReaderTests
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value!.ApiKeyHeader.ShouldBe("X-Webmcp-Key");
         result.Value.ClientApiKey.ShouldBeNull();
+        result.Value.SelfAddressSource.ShouldBeNull();
         result.Value.SelfBaseAddress.ShouldBeNull();
     }
 
@@ -84,10 +85,11 @@ public class WebMcpHostSettingsReaderTests
     [InlineData("ftp://127.0.0.1/")]
     public async Task ASelfAddressThatIsNotAnAbsoluteHttpAddressIsRefused(string address)
     {
-        var result = await Reader(new WebMcpRow { SelfBaseAddress = address }).Read(TestContext.Current.CancellationToken);
+        var result = await Reader(new WebMcpRow { SelfAddressSource = "FixedAddress", SelfBaseAddress = address })
+            .Read(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldNotBeNull().ShouldContain("SelfBaseAddress");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("is not an absolute http or https address");
     }
 
     [Fact]
@@ -110,13 +112,90 @@ public class WebMcpHostSettingsReaderTests
     [Trait("Category", "Api")]
     public async Task TheRowIsReadOnce()
     {
-        var reader = Reader(new WebMcpRow { SelfBaseAddress = "http://127.0.0.1:5510" });
+        var reader = Reader(new WebMcpRow { SelfAddressSource = "FixedAddress", SelfBaseAddress = "http://127.0.0.1:5510" });
 
         (await reader.Read(TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         var second = await reader.Read(TestContext.Current.CancellationToken);
 
         second.Value!.SelfBaseAddress.ShouldBe(new Uri("http://127.0.0.1:5510"));
         _configurations.Verify(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task TheListeningAddressSourceReadsNoAddressFromTheRow()
+    {
+        var result = await Reader(new WebMcpRow { SelfAddressSource = "ListeningAddress" }).Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.SelfAddressSource.ShouldBeOfType<ListeningAddressSource>();
+        result.Value.SelfBaseAddress.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task TheFixedAddressSourceReadsTheRowsAddress()
+    {
+        var result = await Reader(new WebMcpRow { SelfAddressSource = "FixedAddress", SelfBaseAddress = "http://10.0.0.5:8080" })
+            .Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.SelfAddressSource.ShouldBeOfType<FixedAddressSource>();
+        result.Value.SelfBaseAddress.ShouldBe(new Uri("http://10.0.0.5:8080"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AnAddressStatedWithNoSourceIsRefusedRatherThanReadAsFixed()
+    {
+        // Today's rows say only SelfBaseAddress; the row has to say where the address comes from.
+        var result = await Reader(new WebMcpRow { SelfBaseAddress = "http://127.0.0.1:5510" }).Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("and no SelfAddressSource");
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    [InlineData("HostHeader")]
+    [InlineData("RequestHost")]
+    [InlineData("Host")]
+    [InlineData("Listening")]
+    public async Task ASourceNoOptionAnswersToIsRefused(string source)
+    {
+        // There is no source that reads the request's Host header: the caller controls it.
+        var result = await Reader(new WebMcpRow { SelfAddressSource = source }).Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("no source answers to it");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task TheFixedAddressSourceWithNoAddressIsRefused()
+    {
+        var result = await Reader(new WebMcpRow { SelfAddressSource = "FixedAddress" }).Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("the fixed address it chose is missing");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task TheListeningAddressSourceWithAnAddressStatedIsRefused()
+    {
+        // An address the chosen source would never read is a row that contradicts itself.
+        var result = await Reader(new WebMcpRow { SelfAddressSource = "ListeningAddress", SelfBaseAddress = "http://127.0.0.1:5510" })
+            .Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("which does not read SelfBaseAddress");
     }
 
     private WebMcpHostSettingsReader Reader(WebMcpRow row)

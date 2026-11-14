@@ -26,11 +26,13 @@ internal static class DeclaredIdReader
     /// <param name="compilation">The compilation the option is read from.</param>
     /// <returns>
     /// The Id as invariant text when it is read; otherwise why it cannot be read, for an option written in this compilation.
-    /// Both are <see langword="null"/> for an option compiled into another assembly, whose constructors show no initializer.
+    /// Both are <see langword="null"/> for an option compiled into another assembly, whose constructors show no initializer, and for
+    /// an option written in another compilation (a project reference in a workspace load, which carries syntax this compilation cannot
+    /// bind): it is read as the same option arriving as metadata is.
     /// </returns>
     public static (string? Id, string? Problem) Read(INamedTypeSymbol option, Compilation compilation)
     {
-        if (!option.Locations.Any(location => location.IsInSource)
+        if (!option.Locations.Any(location => location.IsInSource && location.SourceTree is { } tree && compilation.ContainsSyntaxTree(tree))
             || compilation.GetTypeByMetadataName(TypeOptionIdAttributeName) is not { } idAttribute)
         {
             return (null, null);
@@ -71,10 +73,13 @@ internal static class DeclaredIdReader
         return (null, "its constructor chain calls itself");
     }
 
-    // The this(...) or base(...) call a constructor makes, bound; none for a constructor with no initializer in source.
+    // The this(...) or base(...) call a constructor makes, bound; none for a constructor with no initializer in source, and none for
+    // one whose source is in another compilation (this compilation cannot bind a tree it does not hold, and the same constructor reaches
+    // a build as metadata, with no syntax).
     private static IInvocationOperation? Call(IMethodSymbol ctor, Compilation compilation)
     {
-        if (ctor.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not ConstructorDeclarationSyntax { Initializer: { } initializer } syntax)
+        if (ctor.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is not ConstructorDeclarationSyntax { Initializer: { } initializer } syntax
+            || !compilation.ContainsSyntaxTree(syntax.SyntaxTree))
         {
             return null;
         }

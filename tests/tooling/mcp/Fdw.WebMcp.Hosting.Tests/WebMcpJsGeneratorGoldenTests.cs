@@ -26,7 +26,7 @@ public class WebMcpJsGeneratorGoldenTests
         new WebMcpJsGenerator(
                 new WebMcpGoldenCatalogue.Registry(WebMcpGoldenCatalogue.Tools()),
                 NullLogger<WebMcpJsGenerator>.Instance)
-            .Generate(new WebMcpHostSettings("X-Webmcp-Key", "golden-key", SelfBaseAddress: null))
+            .Generate(new WebMcpHostSettings("X-Webmcp-Key", "golden-key", SelfAddressSource: null, SelfBaseAddress: null))
             .ReplaceLineEndings("\n")
             // A raw string literal drops the line break before its closing quotes; the script
             // ends with one, so it is restored here rather than trimmed off both sides -- trimming

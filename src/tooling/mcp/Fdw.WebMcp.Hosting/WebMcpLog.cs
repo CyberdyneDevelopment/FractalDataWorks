@@ -11,7 +11,7 @@ namespace Fdw.WebMcp.Hosting;
 /// canonical numbers, so the number carries the meaning: 40000 InvalidState, 60000
 /// ConfigurationMissing, 60001 NotConfigured, 60002 NotRegistered, 60004 ConfigurationInvalid.
 /// Operational traces take this package's open band: 11018-11035 informational/operational, 51002
-/// auth, 61004-61007 configuration.
+/// auth, 61004-61014 configuration (61008-61014: where the host's own address comes from, FDW-5721).
 /// </summary>
 [ExcludeFromCodeCoverage(Justification = "MessageLogging partial class - implementation is source-generated")]
 [MessageLoggingTypeCode("HOSTING")]
@@ -78,8 +78,8 @@ internal static partial class WebMcpLog
     public static partial IGenericMessage Registered(ILogger logger);
 
     // Why Information: read once, at startup, and it is what this host exposes to agents.
-    [MessageLogging(EventId = 11034, Level = LogLevel.Information, Message = "WebMCP settings read from WebMcp row '{configurationName}': header '{headerName}', client key {servesClientKey}, MCP self address {servesMcp}")]
-    public static partial IGenericMessage SettingsRead(ILogger logger, string configurationName, string headerName, bool servesClientKey, bool servesMcp);
+    [MessageLogging(EventId = 11034, Level = LogLevel.Information, Message = "WebMCP settings read from WebMcp row '{configurationName}': header '{headerName}', client key {servesClientKey}, MCP self address source '{selfAddressSource}'")]
+    public static partial IGenericMessage SettingsRead(ILogger logger, string configurationName, string headerName, bool servesClientKey, string selfAddressSource);
 
     // Why Information: once per process, and an operator checking what agents can call starts here.
     [MessageLogging(EventId = 11035, Level = LogLevel.Information, Message = "WebMCP script mapped at {path} with {toolCount} tool(s)")]
@@ -99,4 +99,25 @@ internal static partial class WebMcpLog
 
     [MessageLogging(EventId = 60004, Level = LogLevel.Error, Message = "The WebMcp row '{configurationName}' is invalid: {reason}")]
     public static partial IGenericMessage ConfigurationInvalid(ILogger logger, string configurationName, string reason);
+
+    [MessageLogging(EventId = 61008, Level = LogLevel.Error, Message = "The WebMcp row '{configurationName}' states SelfBaseAddress '{selfBaseAddress}' and no SelfAddressSource, so it does not say where the host's own address comes from. Name ListeningAddress (the address the process listens on) or FixedAddress (SelfBaseAddress)")]
+    public static partial IGenericMessage SelfAddressSourceNotStated(ILogger logger, string configurationName, string selfBaseAddress);
+
+    [MessageLogging(EventId = 61009, Level = LogLevel.Error, Message = "The WebMcp row '{configurationName}' names SelfAddressSource '{source}', and no source answers to it. The sources are ListeningAddress and FixedAddress; the request's Host header, which the caller controls, is never one")]
+    public static partial IGenericMessage SelfAddressSourceUnknown(ILogger logger, string configurationName, string source);
+
+    [MessageLogging(EventId = 61010, Level = LogLevel.Error, Message = "The WebMcp row '{configurationName}' names SelfAddressSource 'FixedAddress' and states no SelfBaseAddress, so the fixed address it chose is missing")]
+    public static partial IGenericMessage FixedSelfAddressMissing(ILogger logger, string configurationName);
+
+    [MessageLogging(EventId = 61011, Level = LogLevel.Error, Message = "The WebMcp row '{configurationName}' names SelfAddressSource '{source}', which does not read SelfBaseAddress, and also states SelfBaseAddress '{selfBaseAddress}'. Leave SelfBaseAddress empty, or name FixedAddress to use it")]
+    public static partial IGenericMessage SelfBaseAddressNotRead(ILogger logger, string configurationName, string source, string selfBaseAddress);
+
+    [MessageLogging(EventId = 61012, Level = LogLevel.Error, Message = "WebMcp self address source 'ListeningAddress' cannot read this host's listening addresses: its server ({serverType}) exposes no address list. State FixedAddress instead")]
+    public static partial IGenericMessage ServerAddressesUnavailable(ILogger logger, string serverType);
+
+    [MessageLogging(EventId = 61013, Level = LogLevel.Error, Message = "WebMcp self address source 'ListeningAddress' found no address this host can call itself on. The process listens on [{addresses}]; an address is usable when it is an absolute http or https address on a named host or a specific IP, not a wildcard (0.0.0.0, [::], +, *)")]
+    public static partial IGenericMessage NoUsableListeningAddress(ILogger logger, string addresses);
+
+    [MessageLogging(EventId = 61014, Level = LogLevel.Error, Message = "WebMcp self address source 'ListeningAddress' found more than one address this host could call itself on: [{addresses}]. None is picked: listen on one address, or state FixedAddress")]
+    public static partial IGenericMessage ListeningAddressAmbiguous(ILogger logger, string addresses);
 }

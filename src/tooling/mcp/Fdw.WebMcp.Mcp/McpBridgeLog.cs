@@ -11,8 +11,9 @@ namespace Fdw.WebMcp.Mcp;
 /// <remarks>
 /// Codes follow the catalogue: the number carries the same meaning under every prefix, so a tool an
 /// agent names that does not exist is 30000 NotFound, a missing argument is 20000
-/// RequiredValueMissing, an absent self address is 60000 ConfigurationMissing and a host that
-/// cannot reach its own route is 70000 ConnectionFailed. Only the operational traces, which no
+/// RequiredValueMissing, an absent self address source is 60000 ConfigurationMissing and a host that
+/// cannot reach its own route is 70000 ConnectionFailed. A host stopped because its source gave no
+/// address once it started takes 61000, from the configuration band. Only the operational traces, which no
 /// canonical describes, take numbers from this package's open band.
 /// </remarks>
 [ExcludeFromCodeCoverage(Justification = "MessageLogging partial class - implementation is source-generated")]
@@ -96,12 +97,37 @@ internal static partial class McpBridgeLog
         Message = "Required value '{argumentName}' was not provided for tool '{toolName}', so its URL cannot be built")]
     public static partial IGenericMessage RequiredArgumentMissing(ILogger logger, string toolName, string argumentName);
 
-    /// <summary>Logs the MCP bridge refused because the host never said where it reaches itself.</summary>
+    /// <summary>Logs the MCP bridge refused because the host's row never said where its own address comes from.</summary>
     /// <param name="logger">The logger.</param>
     /// <returns>The structured message.</returns>
     [MessageLogging(EventId = 60000, Level = LogLevel.Error,
-        Message = "Required configuration 'SelfBaseAddress' is missing from the host's WebMcp row, so a tool call has nowhere to go. It is never taken from the request's Host header, which the caller controls")]
-    public static partial IGenericMessage SelfBaseAddressMissing(ILogger logger);
+        Message = "Required configuration 'SelfAddressSource' is missing from the host's WebMcp row, so a tool call has nowhere to go. Name ListeningAddress (the address the process listens on) or FixedAddress (with SelfBaseAddress). It is never taken from the request's Host header, which the caller controls")]
+    public static partial IGenericMessage SelfAddressSourceMissing(ILogger logger);
+
+    /// <summary>Logs the address tool calls go to, once it is known.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="source">The source the row names.</param>
+    /// <param name="selfAddress">The address it gave.</param>
+    /// <returns>The structured message.</returns>
+    // Why Information: once per process, and an operator checking which instance a tool call reaches starts here.
+    [MessageLogging(EventId = 11007, Level = LogLevel.Information,
+        Message = "MCP bridge self address from source '{source}': tool calls go to {selfAddress}")]
+    public static partial IGenericMessage SelfAddressResolved(ILogger logger, string source, string selfAddress);
+
+    /// <summary>Logs a host stopped because its own address could not be worked out once it started.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="source">The source the row names.</param>
+    /// <param name="reason">Why the source gave no address.</param>
+    /// <returns>The structured message.</returns>
+    /// <remarks>
+    /// Why 61000, the configuration band: the row named a source that cannot give an address on this host.
+    /// Why Critical: the host is being stopped. A bridge that cannot reach its own routes would accept every
+    /// tool call and have nowhere to send it, so it is refused as soon as the address can be read, as a host
+    /// with no source is refused at Initialize.
+    /// </remarks>
+    [MessageLogging(EventId = 61000, Level = LogLevel.Critical,
+        Message = "Stopping the host: the MCP bridge's self address source '{source}' gave no address once the host started: {reason}")]
+    public static partial IGenericMessage StoppingWithoutSelfAddress(ILogger logger, string source, string reason);
 
     /// <summary>Logs the MCP server registered.</summary>
     /// <param name="logger">The logger.</param>
@@ -113,12 +139,12 @@ internal static partial class McpBridgeLog
     /// <summary>Logs the MCP endpoint mapped.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="path">Where the endpoint is served.</param>
-    /// <param name="selfAddress">Where tool calls are sent.</param>
+    /// <param name="source">The source the host's own address comes from.</param>
     /// <returns>The structured message.</returns>
     // Why Information: once per process, and an operator connecting an agent starts here.
     [MessageLogging(EventId = 11006, Level = LogLevel.Information,
-        Message = "MCP bridge mapped at {path}; tool calls go to {selfAddress}")]
-    public static partial IGenericMessage Mapped(ILogger logger, string path, string selfAddress);
+        Message = "MCP bridge mapped at {path}; tool calls go to the address from source '{source}', worked out once the host has started")]
+    public static partial IGenericMessage Mapped(ILogger logger, string path, string source);
 
     /// <summary>Logs a host that cannot serve the MCP endpoint because it has no route table.</summary>
     /// <param name="logger">The logger.</param>

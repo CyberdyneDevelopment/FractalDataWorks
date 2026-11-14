@@ -192,6 +192,10 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // authority a flow sends the caller to is vendor-specific.
             builder.Services.TryAddSingleton<IOidcCallbackAccessor, HttpOidcCallbackAccessor>();
 
+            // The callback address an OIDC sign-in sends is read the same way: from the source the authority row
+            // names, with the request in hand when the row names RequestHost (FDW-5730).
+            builder.Services.TryAddSingleton<IOidcRedirectAddressResolver, HttpOidcRedirectAddressResolver>();
+
             // Singleton because it caches the authority's keys across requests and refreshes them
             // on its own schedule; a scoped one would re-fetch per request and lose the point.
             builder.Services.TryAddSingleton<ISigningKeyProvider>(sp =>

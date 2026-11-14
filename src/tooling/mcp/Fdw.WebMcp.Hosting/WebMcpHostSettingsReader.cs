@@ -12,8 +12,8 @@ namespace Fdw.WebMcp.Hosting;
 
 /// <summary>
 /// Reads what a host's WebMCP surface needs from its WebMcp configuration row: the header the client
-/// key travels in, the key itself from the secret manager the row names, and the address the host
-/// reaches its own routes on.
+/// key travels in, the key itself from the secret manager the row names, and where the address the
+/// host reaches its own routes on comes from.
 /// </summary>
 /// <remarks>
 /// Read once and kept. The row is startup configuration -- an edit to it is seen after a restart, like
@@ -83,15 +83,23 @@ public sealed class WebMcpHostSettingsReader
             return clientKey.ToNewResult<WebMcpHostSettings>();
         }
 
-        var selfAddress = SelfAddress(name, configuration);
+        var source = SelfAddressSource(name, configuration);
+        if (source.IsFailure)
+        {
+            return source.ToNewResult<WebMcpHostSettings>();
+        }
+
+        var selfAddress = source.Value is { } chosen
+            ? chosen.Check(name, configuration.SelfBaseAddress, _logger)
+            : GenericResult<Uri?>.Success(null);
         if (selfAddress.IsFailure)
         {
             return selfAddress.ToNewResult<WebMcpHostSettings>();
         }
 
-        var settings = new WebMcpHostSettings(configuration.ApiKeyHeader, clientKey.Value, selfAddress.Value);
+        var settings = new WebMcpHostSettings(configuration.ApiKeyHeader, clientKey.Value, source.Value, selfAddress.Value);
         WebMcpLog.SettingsRead(_logger, name, settings.ApiKeyHeader,
-            servesClientKey: settings.ClientApiKey is not null, servesMcp: settings.SelfBaseAddress is not null);
+            servesClientKey: settings.ClientApiKey is not null, selfAddressSource: settings.SelfAddressSource?.Name ?? string.Empty);
         return GenericResult<WebMcpHostSettings>.Success(settings);
     }
 
@@ -146,22 +154,28 @@ public sealed class WebMcpHostSettingsReader
         }
     }
 
-    /// <summary>The address the row names for the host's own routes, or <see langword="null"/> when it names none.</summary>
-    private IGenericResult<Uri?> SelfAddress(string name, IWebMcpImplementationConfiguration configuration)
+    /// <summary>
+    /// The source the row names for the host's own address (FDW-5721), or <see langword="null"/> when it names
+    /// none and states no address, which is a host that does not serve MCP.
+    /// </summary>
+    /// <remarks>
+    /// An address stated with no source is refused rather than read as FixedAddress: the row has to say
+    /// where the address comes from, and nothing is assumed for it.
+    /// </remarks>
+    private IGenericResult<WebMcpSelfAddressSourceBase?> SelfAddressSource(string name, IWebMcpImplementationConfiguration configuration)
     {
-        if (string.IsNullOrWhiteSpace(configuration.SelfBaseAddress))
+        if (string.IsNullOrWhiteSpace(configuration.SelfAddressSource))
         {
-            return GenericResult<Uri?>.Success(null);
+            return string.IsNullOrWhiteSpace(configuration.SelfBaseAddress)
+                ? GenericResult<WebMcpSelfAddressSourceBase?>.Success(null)
+                : GenericResult<WebMcpSelfAddressSourceBase?>.Failure(
+                    WebMcpLog.SelfAddressSourceNotStated(_logger, name, configuration.SelfBaseAddress));
         }
 
-        if (!Uri.TryCreate(configuration.SelfBaseAddress, UriKind.Absolute, out var address)
-            || !(string.Equals(address.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
-                 || string.Equals(address.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
-        {
-            return GenericResult<Uri?>.Failure(WebMcpLog.ConfigurationInvalid(_logger, name,
-                FormattableString.Invariant($"SelfBaseAddress '{configuration.SelfBaseAddress}' is not an absolute http or https address")));
-        }
-
-        return GenericResult<Uri?>.Success(address);
+        var source = WebMcpSelfAddressSources.ByName(configuration.SelfAddressSource.Trim());
+        return source.IsEmpty
+            ? GenericResult<WebMcpSelfAddressSourceBase?>.Failure(
+                WebMcpLog.SelfAddressSourceUnknown(_logger, name, configuration.SelfAddressSource))
+            : GenericResult<WebMcpSelfAddressSourceBase?>.Success(source);
     }
 }

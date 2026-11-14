@@ -44,6 +44,13 @@ public sealed record OidcRedirectStepConfiguration : IOidcAuthorityConfiguration
     /// </remarks>
     public required Uri RedirectUri { get; init; }
 
+    /// <summary>Gets the name of the source the callback address comes from (FDW-5730).</summary>
+    /// <remarks>An option of <see cref="OidcRedirectAddressSources"/>; checked when the row was read.</remarks>
+    public required string RedirectAddressSource { get; init; }
+
+    /// <summary>Gets the origins a <c>RequestHost</c> callback may be built on; empty for <c>FixedAddress</c> (FDW-5730).</summary>
+    public required IReadOnlyList<Uri> AllowedRedirectOrigins { get; init; }
+
     /// <summary>Gets the scopes requested.</summary>
     public required IReadOnlyList<string> Scopes { get; init; }
 

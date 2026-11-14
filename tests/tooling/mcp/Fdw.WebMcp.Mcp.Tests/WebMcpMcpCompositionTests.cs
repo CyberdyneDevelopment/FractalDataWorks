@@ -39,7 +39,7 @@ public class WebMcpMcpCompositionTests
     [Trait("Category", "Api")]
     public void ADeferredInitializeClaimsThePhaseWithoutMappingAnything()
     {
-        using var app = Composed(new McpRow { SelfBaseAddress = "http://127.0.0.1:5510" });
+        using var app = Composed(new McpRow { SelfAddressSource = "FixedAddress", SelfBaseAddress = "http://127.0.0.1:5510" });
 
         WebMcpMcpHosting.Initialize(app, defer: true).IsSuccess.ShouldBeTrue();
 
@@ -62,7 +62,7 @@ public class WebMcpMcpCompositionTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ARowNamingNoSelfAddressIsRefusedBeforeAnyToolCall()
+    public void ARowNamingNoSelfAddressSourceIsRefusedBeforeAnyToolCall()
     {
         // A bridge that cannot reach its own routes would accept a tool call and have nowhere to
         // send it. It is never inferred from the request's Host header, which the caller sets.
@@ -71,15 +71,30 @@ public class WebMcpMcpCompositionTests
         var result = WebMcpMcpHosting.Initialize(app);
 
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldNotBeNull().ShouldContain("SelfBaseAddress");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Required configuration 'SelfAddressSource' is missing");
+        RouteCount(app).ShouldBe(0);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ARowNamingASelfAddressMapsTheEndpoint()
+    public void ARowNamingTheListeningAddressMapsTheEndpointWithoutReadingAnAddressBeforeStart()
     {
-        using var app = Composed(new McpRow { SelfBaseAddress = "http://127.0.0.1:5510" });
+        // Kestrel has not bound before the host starts, so the address is not read here.
+        using var app = Composed(new McpRow { SelfAddressSource = "ListeningAddress" });
+
+        var result = WebMcpMcpHosting.Initialize(app);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        RouteCount(app).ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void ARowNamingAFixedSelfAddressMapsTheEndpoint()
+    {
+        using var app = Composed(new McpRow { SelfAddressSource = "FixedAddress", SelfBaseAddress = "http://127.0.0.1:5510" });
 
         var result = WebMcpMcpHosting.Initialize(app);
 

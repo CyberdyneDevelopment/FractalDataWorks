@@ -35,25 +35,29 @@ public sealed class WebMcpToolInvoker
     private readonly WebMcpMcpCatalogue _catalogue;
     private readonly IHttpClientFactory _clients;
     private readonly WebMcpHostSettingsReader _settings;
+    private readonly WebMcpSelfAddressResolver _selfAddress;
     private readonly IHttpContextAccessor _httpContext;
     private readonly ILogger<WebMcpToolInvoker> _logger;
 
     /// <summary>Initializes the invoker.</summary>
     /// <param name="catalogue">The tools this host serves.</param>
     /// <param name="clients">Supplies the client tool calls are sent on, to absolute addresses under the host's own.</param>
-    /// <param name="settings">The host's WebMCP settings: its own address, and the client key a tool call carries.</param>
+    /// <param name="settings">The host's WebMCP settings: where its own address comes from, and the client key a tool call carries.</param>
+    /// <param name="selfAddress">Gives the host's own address from the source its row names.</param>
     /// <param name="httpContext">Gives access to the calling agent's own request, to forward its identity.</param>
     /// <param name="logger">The logger.</param>
     public WebMcpToolInvoker(
         WebMcpMcpCatalogue catalogue,
         IHttpClientFactory clients,
         WebMcpHostSettingsReader settings,
+        WebMcpSelfAddressResolver selfAddress,
         IHttpContextAccessor httpContext,
         ILogger<WebMcpToolInvoker>? logger = null)
     {
         _catalogue = catalogue;
         _clients = clients;
         _settings = settings;
+        _selfAddress = selfAddress;
         _httpContext = httpContext;
         _logger = logger ?? NullLogger<WebMcpToolInvoker>.Instance;
     }
@@ -87,9 +91,11 @@ public sealed class WebMcpToolInvoker
         }
 
         var host = settings.Value!;
-        if (host.SelfBaseAddress is not { } self)
+        // The source the row names, never the request's Host header: the caller controls that.
+        var resolved = _selfAddress.Resolve(host);
+        if (resolved.IsFailure || resolved.Value is not { } self)
         {
-            return Failed(McpBridgeLog.SelfBaseAddressMissing(_logger));
+            return Failed(resolved);
         }
 
         var client = _clients.CreateClient(ClientName);

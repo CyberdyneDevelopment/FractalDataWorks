@@ -42,7 +42,27 @@ public interface IOidcAuthorityImplementationConfiguration : IImplementationConf
     IDictionary<string, string?> AdditionalProperties { get; set; }
 
     /// <summary>Gets or sets the OidcAuthority RedirectUri.</summary>
+    /// <remarks>
+    /// Absolute for <see cref="RedirectAddressSource"/> <c>FixedAddress</c>. For <c>RequestHost</c> (FDW-5730), the
+    /// callback path (a single leading '/', no query or fragment), stated alone or as the path of an absolute http or
+    /// https address whose origin must be one of <see cref="AllowedRedirectOrigins"/> but is not used: a row that keeps its absolute address serves a build from before the
+    /// source existed, on the other A/B slot of the same database, unchanged.
+    /// </remarks>
     string RedirectUri { get; set; }
+
+    /// <summary>Gets or sets where the callback address comes from (FDW-5730).</summary>
+    /// <remarks>
+    /// Names an option of the redirect address sources: <c>RequestHost</c> or <c>FixedAddress</c>. Empty is the
+    /// "not yet supplied" marker, never a chosen default, and the reader refuses a row that carries it.
+    /// </remarks>
+    string RedirectAddressSource { get; set; }
+
+    /// <summary>Gets or sets the origins a <c>RequestHost</c> callback may be built on, comma separated (FDW-5730).</summary>
+    /// <remarks>
+    /// Each entry is scheme://host[:port], with no path and no wildcard. Required with <c>RequestHost</c> and
+    /// refused with <c>FixedAddress</c>, which does not read it.
+    /// </remarks>
+    string AllowedRedirectOrigins { get; set; }
 
     /// <summary>Gets or sets the OidcAuthority Scopes.</summary>
     string Scopes { get; set; }

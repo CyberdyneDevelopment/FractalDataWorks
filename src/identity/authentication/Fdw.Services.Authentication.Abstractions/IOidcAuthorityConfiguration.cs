@@ -54,13 +54,38 @@ public interface IOidcAuthorityConfiguration
     /// </remarks>
     IReadOnlyDictionary<string, string?> ClientAuthenticationProperties { get; }
 
-    /// <summary>Gets the redirect the provider returns the caller to.</summary>
+    /// <summary>Gets the redirect the provider returns the caller to, as the row states it.</summary>
     /// <remarks>
-    /// Registered with the provider by exact string match - no wildcard and no trailing-slash
-    /// difference, per RFC 9700. A provider that permits pattern matching is one an open redirector
-    /// can be built against.
+    /// <para>
+    /// Absolute for the <c>FixedAddress</c> source; for the <c>RequestHost</c> source, the callback path, relative,
+    /// joined to the listed origin the sign-in request came in on (FDW-5730). A row may state that path as the path of
+    /// an absolute address; the reader keeps only the path. Never send it as it stands:
+    /// <see cref="Steps.IOidcRedirectAddressResolver"/> gives the absolute address for the request in hand.
+    /// </para>
+    /// <para>
+    /// Every address it can give is registered with the provider by exact string match - no wildcard and no
+    /// trailing-slash difference, per RFC 9700. A provider that permits pattern matching is one an open
+    /// redirector can be built against.
+    /// </para>
     /// </remarks>
     Uri RedirectUri { get; }
+
+    /// <summary>Gets the name of the source the callback address comes from (FDW-5730).</summary>
+    /// <remarks>
+    /// Names an option of the redirect address sources: <c>RequestHost</c>, the sign-in request's own scheme and
+    /// host as the forwarded-headers middleware reports them, only when listed in
+    /// <see cref="AllowedRedirectOrigins"/>; or <c>FixedAddress</c>, the absolute <see cref="RedirectUri"/>. There is
+    /// no default: a row that names none is refused.
+    /// </remarks>
+    string RedirectAddressSource { get; }
+
+    /// <summary>Gets the origins a <c>RequestHost</c> callback may be built on (FDW-5730).</summary>
+    /// <remarks>
+    /// Each is scheme://host[:port] and nothing else. Empty for <c>FixedAddress</c>, which reads none. A request
+    /// whose origin is not one of these is refused, so a host header the caller chose never becomes the address a
+    /// code is sent to.
+    /// </remarks>
+    IReadOnlyList<Uri> AllowedRedirectOrigins { get; }
 
     /// <summary>Gets the scopes requested.</summary>
     IReadOnlyList<string> Scopes { get; }
