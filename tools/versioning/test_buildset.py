@@ -132,6 +132,78 @@ class BuildSetTests(unittest.TestCase):
         with self.assertRaisesRegex(buildset.BuildSetError, "not packable"):
             self.prepare(["Lint"])
 
+    # FDW-5698: since the 2026-11-01 regroup six project files repeat the same ProjectReference, often glued on one line (the shape below is the
+    # one of Fdw.Services.SecretManagers). MSBuild accepts that; NuGet refuses the same PackageReference twice (NU1504), so the 1.5.8 build set failed.
+    A_REF = '<ProjectReference Include="..\\A\\A.csproj" />'
+    GEN_REF = '<ProjectReference Include="..\\Gen.SourceGenerators\\Gen.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />'
+
+    def repeated(self, lines):
+        return "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>\n  <ItemGroup>" + "\n".join(lines) + "\n  </ItemGroup>\n</Project>\n"
+
+    def secret_managers(self):
+        glued = "    " + self.A_REF + "    " + self.A_REF + "\n    " + self.GEN_REF + "    " + self.A_REF + "\n"
+        return self.repeated(["    " + self.A_REF, glued.rstrip("\n"), "    " + self.GEN_REF, "    " + self.GEN_REF, "    " + self.A_REF])
+
+    def package_references(self, path):
+        return [e.attrib for e in ET.fromstring(self.text(path).encode()).iter("PackageReference")]
+
+    def test_a_reference_repeated_in_one_project_file_is_swapped_once(self):
+        self.files["public/src/B/B.csproj"] = self.secret_managers()
+        self.commit()
+        report = self.prepare(["B"])
+        text = self.text("public/src/B/B.csproj")
+        self.assertEqual(self.package_references("public/src/B/B.csproj"),
+                         [{"Include": "A"}, {"Include": "Gen.SourceGenerators", "PrivateAssets": "all"}])
+        self.assertEqual(text.count("PackageReference"), 2)
+        self.assertNotIn("ProjectReference", text)
+        self.assertEqual(report["swapped"], {"A": "A", "Gen.SourceGenerators": "Gen.SourceGenerators"})
+
+    def test_dropping_copies_leaves_no_glued_or_empty_line(self):
+        self.files["public/src/B/B.csproj"] = self.secret_managers()
+        self.commit()
+        self.prepare(["B"])
+        lines = self.text("public/src/B/B.csproj").splitlines()
+        self.assertFalse([ln for ln in lines if not ln.strip()])
+        self.assertTrue(all(ln.count("<PackageReference") <= 1 for ln in lines), lines)
+
+    def test_the_same_package_with_another_condition_stays_distinct(self):
+        conditional = '<ProjectReference Include="..\\A\\A.csproj" Condition="\'$(TargetFramework)\' == \'net10.0\'" />'
+        self.files["public/src/B/B.csproj"] = self.repeated(["    " + self.A_REF, "    " + conditional, "    " + conditional, "    " + self.A_REF])
+        self.commit()
+        self.prepare(["B"])
+        self.assertEqual(self.package_references("public/src/B/B.csproj"),
+                         [{"Include": "A"}, {"Include": "A", "Condition": "'$(TargetFramework)' == 'net10.0'"}])
+
+    def test_the_same_package_with_other_attributes_stays_distinct(self):
+        private = '<ProjectReference Include="..\\A\\A.csproj" PrivateAssets="all" />'
+        self.files["public/src/B/B.csproj"] = self.repeated(["    " + self.A_REF, "    " + private, "    " + private])
+        self.commit()
+        self.prepare(["B"])
+        self.assertEqual(self.package_references("public/src/B/B.csproj"), [{"Include": "A"}, {"Include": "A", "PrivateAssets": "all"}])
+
+    def test_the_repeats_of_a_reference_to_a_member_are_left_as_they_are(self):
+        self.files["public/src/C/C.csproj"] = self.repeated(["    " + self.A_REF, '    <ProjectReference Include="..\\B\\B.csproj" />', '    <ProjectReference Include="..\\B\\B.csproj" />'])
+        self.commit()
+        self.prepare(["B", "C"])
+        text = self.text("public/src/C/C.csproj")
+        self.assertEqual(text.count('<ProjectReference Include="..\\B\\B.csproj" />'), 2)
+        self.assertEqual(self.package_references("public/src/C/C.csproj"), [{"Include": "A"}])
+
+    def test_a_repeat_with_windows_line_ends_keeps_them(self):
+        self.files["public/src/B/B.csproj"] = self.secret_managers().replace("\n", "\r\n")
+        self.commit()
+        self.prepare(["B"])
+        with open(os.path.join(self.repo.root, "public/src/B/B.csproj"), "rb") as f:
+            raw = f.read()
+        self.assertEqual(raw.count(b"\n"), raw.count(b"\r\n"))
+        self.assertEqual(len(self.package_references("public/src/B/B.csproj")), 2)
+
+    def test_the_tests_of_a_member_with_a_repeated_reference_are_swapped_once_too(self):
+        self.files["public/tests/B.Tests/B.Tests.csproj"] = self.repeated(["    " + self.A_REF, "    " + self.A_REF, '    <ProjectReference Include="..\\..\\src\\B\\B.csproj" />'])
+        self.commit()
+        self.prepare(["B"])
+        self.assertEqual(self.package_references("public/tests/B.Tests/B.Tests.csproj"), [{"Include": "A"}])
+
     def test_bom_and_line_endings_are_kept(self):
         crlf = src("B", refs=["A"])["public/src/B/B.csproj"].replace("\n", "\r\n")
         self.files["public/src/B/B.csproj"] = "﻿" + crlf

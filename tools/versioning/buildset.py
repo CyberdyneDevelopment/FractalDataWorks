@@ -76,8 +76,13 @@ def scan(public):
 
 
 def swap(text, members, projects):
-    """(new text, {project name: package id swapped}, [(project name, why kept)]) for one project file."""
-    out, pos, swapped, kept = [], 0, {}, []
+    """(new text, {project name: package id swapped}, [(project name, why kept)]) for one project file.
+
+    A swapped reference is written once per project file for each identical package id and attributes (FDW-5698). A project file may name
+    the same ProjectReference many times (six do, since the 2026-11-01 regroup) and MSBuild accepts that, but NuGet refuses the same
+    PackageReference twice (NU1504), so the further identical copies are dropped. Same id with another Condition or other attributes is
+    another reference and stays."""
+    out, pos, swapped, kept, written = [], 0, {}, [], set()
     for m in REF.finditer(text):
         attrs = dict(ATTR.findall(m.group(1)))
         name = target_name(attrs.get("Include", ""))
@@ -94,9 +99,17 @@ def swap(text, members, projects):
             extra += ' PrivateAssets="all"'
         indent = re.match(r"[ \t]*", m.group(0)).group(0)
         newline = "\r\n" if "\r\n" in m.group(0) else ("\n" if m.group(0).endswith("\n") else "")
-        out += [text[pos:m.start()], f'{indent}<PackageReference Include="{target["id"]}"{extra} />{newline}']
+        out.append(text[pos:m.start()])
         pos = m.end()
         swapped[name] = target["id"]
+        if (target["id"].lower(), extra) in written:
+            # Another copy of a reference already written: drop it. When it ended a line that still holds other content, the line end stays.
+            tail = "".join(out)[-1:]
+            if newline and tail and tail not in "\r\n":
+                out.append(newline)
+            continue
+        written.add((target["id"].lower(), extra))
+        out.append(f'{indent}<PackageReference Include="{target["id"]}"{extra} />{newline}')
     out.append(text[pos:])
     return "".join(out), swapped, kept
 
