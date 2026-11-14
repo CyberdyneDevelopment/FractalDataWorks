@@ -114,10 +114,13 @@ internal sealed class TokenRevocationStore : ITokenRevocationStore
     /// <see cref="SystemAuthenticationContextScope"/> already covers for host startup, here at
     /// per-request granularity instead.
     /// <para>
-    /// A user cut-off rejects a token when any row for its subject is at or after its issued-at. The
-    /// <c>iat</c> claim has whole-second precision, so a token issued in the same second as a
-    /// revocation but after it is rejected too; the holder signs in again. Erring that way is the
-    /// safe direction.
+    /// A user cut-off rejects a token when any row for its subject is at or after its issued-at. That
+    /// comparison is exact only when the presenter passes the issue instant at the finest precision the
+    /// credential carries: a session its <c>CreatedAt</c>, a bearer token the instant its <c>jti</c>
+    /// carries (<see cref="TokenIssueSequence"/>, milliseconds). It once received the bearer token's
+    /// <c>iat</c>, whole seconds, and refused every token issued after a cut-off in the same second
+    /// (FDW-5655). Only a token issued in the same unit of its precision as the cut-off is still
+    /// refused, since nothing in it says which came first.
     /// </para>
     /// </remarks>
     public async Task<IGenericResult<bool>> IsRevoked(

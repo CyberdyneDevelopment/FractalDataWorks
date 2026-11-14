@@ -41,7 +41,13 @@ public interface ITokenRevocationStore
     /// </summary>
     /// <param name="jti">The token's <c>jti</c> claim.</param>
     /// <param name="userId">The token's <c>sub</c> claim.</param>
-    /// <param name="issuedAt">The token's <c>iat</c>.</param>
+    /// <param name="issuedAt">
+    /// When the credential was issued, floored to the finest precision it carries and never rounded up:
+    /// a session's <c>CreatedAt</c>, or for a bearer token the instant its <c>jti</c> carries
+    /// (<see cref="TokenIssueSequence.TryReadIssuedAt"/>). Never the bearer token's <c>iat</c>: it has
+    /// whole seconds, so a token issued after a cut-off in the same second would read as issued before it
+    /// (FDW-5655).
+    /// </param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     Task<IGenericResult<bool>> IsRevoked(Guid jti, Guid userId, DateTimeOffset issuedAt, CancellationToken cancellationToken = default);
 }

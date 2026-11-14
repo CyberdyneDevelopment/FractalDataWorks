@@ -102,6 +102,14 @@ on:
         description: 'Allocated real run, when run_tests is false: how long to wait for a green full-build CI run of this exact commit before the release fails. Empty = variable NUGET_FULL_BUILD_WAIT_MINUTES, else the declared default.'
         type: string
         default: ''
+      served_wait_minutes:
+        description: 'Allocated only: how long to wait for nuget.org to SERVE what the release pushed (every package before the bundle is packed, the bundle after it is pushed) before the run fails; a push is accepted long before a restore can take it. Empty = variable NUGET_SERVED_WAIT_MINUTES, else the declared default.'
+        type: string
+        default: ''
+      served_poll_seconds:
+        description: 'Allocated only: seconds between two looks at what nuget.org serves while waiting. Empty = variable NUGET_SERVED_POLL_SECONDS, else the declared default.'
+        type: string
+        default: ''
       run_tests:
         description: 'Allocated only: true = the release job also runs the tests of the packages it builds; false = it does not, and the real run then requires a green CI run of the commit, which runs every test, stable or candidate (a stop RELEASE-UNPROVEN-1 or -2 otherwise). Empty = variable NUGET_RUN_TESTS, else the declared default.'
         type: string
@@ -153,6 +161,8 @@ jobs:
       baseline-file: ${{ steps.settings.outputs.baseline-file }}
       bundle-id: ${{ steps.settings.outputs.bundle-id }}
       full-build-wait-minutes: ${{ steps.settings.outputs.full-build-wait-minutes }}
+      served-wait-minutes: ${{ steps.settings.outputs.served-wait-minutes }}
+      served-poll-seconds: ${{ steps.settings.outputs.served-poll-seconds }}
       run-tests: ${{ steps.settings.outputs.run-tests }}
     steps:
       - name: Checkout
@@ -181,6 +191,8 @@ jobs:
           DEFAULT_BASELINE_FILE: ''
           DEFAULT_BUNDLE_ID: 'Fdw.Bundle'
           DEFAULT_FULL_BUILD_WAIT_MINUTES: '120'
+          DEFAULT_SERVED_WAIT_MINUTES: '90'
+          DEFAULT_SERVED_POLL_SECONDS: '30'
           DEFAULT_RUN_TESTS: 'false'
           INPUT_QUOTA_MAX_WAITS: ${{ inputs.quota_max_waits }}
           INPUT_QUOTA_WAIT_SECONDS: ${{ inputs.quota_wait_seconds }}
@@ -193,6 +205,8 @@ jobs:
           INPUT_BASELINE_FILE: ${{ inputs.baseline_file }}
           INPUT_BUNDLE_ID: ${{ inputs.bundle_id }}
           INPUT_FULL_BUILD_WAIT_MINUTES: ${{ inputs.full_build_wait_minutes }}
+          INPUT_SERVED_WAIT_MINUTES: ${{ inputs.served_wait_minutes }}
+          INPUT_SERVED_POLL_SECONDS: ${{ inputs.served_poll_seconds }}
           INPUT_RUN_TESTS: ${{ inputs.run_tests }}
           VAR_QUOTA_MAX_WAITS: ${{ vars.NUGET_QUOTA_MAX_WAITS }}
           VAR_QUOTA_WAIT_SECONDS: ${{ vars.NUGET_QUOTA_WAIT_SECONDS }}
@@ -205,6 +219,8 @@ jobs:
           VAR_BASELINE_FILE: ${{ vars.NUGET_BASELINE_FILE }}
           VAR_BUNDLE_ID: ${{ vars.NUGET_BUNDLE_ID }}
           VAR_FULL_BUILD_WAIT_MINUTES: ${{ vars.NUGET_FULL_BUILD_WAIT_MINUTES }}
+          VAR_SERVED_WAIT_MINUTES: ${{ vars.NUGET_SERVED_WAIT_MINUTES }}
+          VAR_SERVED_POLL_SECONDS: ${{ vars.NUGET_SERVED_POLL_SECONDS }}
           VAR_RUN_TESTS: ${{ vars.NUGET_RUN_TESTS }}
         run: |
           set -euo pipefail
@@ -245,6 +261,8 @@ jobs:
           resolve BASELINE_FILE optional baseline-file
           resolve BUNDLE_ID text bundle-id
           resolve FULL_BUILD_WAIT_MINUTES integer full-build-wait-minutes
+          resolve SERVED_WAIT_MINUTES integer served-wait-minutes
+          resolve SERVED_POLL_SECONDS integer served-poll-seconds
           resolve RUN_TESTS boolean run-tests
           TIMEOUT=$(grep -oP '^publish-timeout-minutes=\K.*' "$GITHUB_OUTPUT")
           if [ "$TIMEOUT" -lt 1 ] || [ "$TIMEOUT" -gt 360 ]; then
@@ -801,6 +819,16 @@ jobs:
           echo "::error::The push used all 6 sign-in rounds and packages are still unpushed. The bundle is NOT published. Rerun the workflow: packages already on nuget.org with the same contents are skipped."
           exit 1
 
+      # FDW-5634: a push is accepted long before nuget.org serves it (245 packages took about twenty minutes for 1.5.7), and the bundle's
+      # restore needs every package it pins. This waits for them, whatever this run pushed: a rerun that pushed nothing still gets here.
+      - name: Wait until nuget.org serves every package of the release
+        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        env:
+          WORK_DIR: release-work
+          WAIT_MINUTES: ${{ needs.check.outputs.served-wait-minutes }}
+          POLL_SECONDS: ${{ needs.check.outputs.served-poll-seconds }}
+        run: python3 tools/versioning/served.py wait --manifest "$WORK_DIR/manifest.json" --timeout-minutes "$WAIT_MINUTES" --interval-seconds "$POLL_SECONDS"
+
       - name: Pack the bundle
         if: ${{ steps.plan.outputs.should-release == 'true' }}
         env:
@@ -833,11 +861,22 @@ jobs:
           KEY_MAX_AGE_SECONDS: ${{ needs.check.outputs.key-max-age-seconds }}
         run: bash scripts/push-nuget.sh
 
+      # FDW-5634: green means the bundle is SERVED, so the tag can follow the run. Before, this step was only the notice for a push that did not
+      # complete and was skipped in a green run, so nothing confirmed anything.
       - name: Confirm the bundle is on nuget.org
-        if: ${{ steps.plan.outputs.should-release == 'true' && steps.bpush.outputs.complete != 'true' }}
+        if: ${{ steps.plan.outputs.should-release == 'true' }}
+        env:
+          BUNDLE_ID: ${{ needs.check.outputs.bundle-id }}
+          VERSION: ${{ steps.plan.outputs.version }}
+          BUNDLE_PUSHED: ${{ steps.bpush.outputs.complete }}
+          WAIT_MINUTES: ${{ needs.check.outputs.served-wait-minutes }}
+          POLL_SECONDS: ${{ needs.check.outputs.served-poll-seconds }}
         run: |
-          echo "::error::The bundle was not pushed. Every package is on nuget.org, so rerun the workflow: it skips them and publishes the bundle."
-          exit 1
+          if [ "$BUNDLE_PUSHED" != true ]; then
+            echo "::error::The bundle was not pushed. Every package is on nuget.org, so rerun the workflow: it skips them and publishes the bundle."
+            exit 1
+          fi
+          python3 tools/versioning/served.py wait --package "$BUNDLE_ID" "$VERSION" --timeout-minutes "$WAIT_MINUTES" --interval-seconds "$POLL_SECONDS"
 
   unlist:
     name: Unlist ${{ inputs.unlist_version }}

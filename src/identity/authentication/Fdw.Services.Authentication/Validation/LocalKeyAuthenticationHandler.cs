@@ -133,14 +133,29 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
                 _log, ServiceName, "missing or unparseable sub claim")));
         }
 
-        if (validated.SecurityToken is not JsonWebToken { IssuedAt: var issuedAt } || issuedAt == DateTime.MinValue)
+        if (validated.SecurityToken is not JsonWebToken { IssuedAt: var claimedIssuedAt } || claimedIssuedAt == DateTime.MinValue)
         {
             return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
                 _log, ServiceName, "missing iat claim")));
         }
 
+        // The cut-off is compared with the jti's issue instant, never with iat: iat has whole seconds, so a
+        // token issued after a cut-off in the same second read as issued before it (FDW-5655). The jti
+        // carries the issue instant to the millisecond (TokenIssueSequence), and must agree with iat.
+        if (!TokenIssueSequence.TryReadIssuedAt(jti, out var issuedAt))
+        {
+            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
+                _log, ServiceName, "jti is not a version-7 issue sequence")));
+        }
+
+        if (!TokenIssueSequence.AgreesWithIssuedAt(issuedAt, new DateTimeOffset(DateTime.SpecifyKind(claimedIssuedAt, DateTimeKind.Utc))))
+        {
+            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
+                _log, ServiceName, "jti issue instant is outside the iat second")));
+        }
+
         var revoked = await _revocations
-            .IsRevoked(jti, userId, new DateTimeOffset(DateTime.SpecifyKind(issuedAt, DateTimeKind.Utc)), cancellationToken)
+            .IsRevoked(jti, userId, issuedAt, cancellationToken)
             .ConfigureAwait(false);
         if (revoked.IsFailure)
             return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(

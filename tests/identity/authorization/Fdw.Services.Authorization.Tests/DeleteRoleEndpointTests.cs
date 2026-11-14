@@ -101,6 +101,40 @@ public sealed class DeleteRoleEndpointTests
         revocations.Verify(r => r.RevokeAll(Holder, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// FDW-5655: the cut-off is the moment the change happened at full clock precision, never rounded to the second; a
+    /// sign-in that follows it in the same second must read as after it. RoleHolderSessions.End writes it, for role
+    /// delete and for setting a role's permissions alike.
+    /// </summary>
+    [Fact]
+    [Trait("Priority", "P1")]
+    public async Task TheHoldersCutOffIsTheMomentOfTheDeleteUnrounded()
+    {
+        var held = new List<IUserRoleImplementationConfiguration>
+        {
+            new UserRoleImplementationConfiguration { Id = Guid.NewGuid(), UserId = Holder.ToString("D"), RoleId = RoleId },
+        };
+        var userRoles = new Mock<IUserRoleConfigurationProvider>();
+        userRoles
+            .Setup(p => p.Find(It.IsAny<Func<IUserRoleImplementationConfiguration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Func<IUserRoleImplementationConfiguration, bool> match, CancellationToken _) =>
+                GenericResult<IReadOnlyList<IUserRoleImplementationConfiguration>>.Success([.. held.Where(match)]));
+        var cutOffs = new List<DateTimeOffset>();
+        var revocations = new Mock<ITokenRevocationStore>();
+        revocations
+            .Setup(r => r.RevokeAll(Holder, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .Callback((Guid _, DateTimeOffset revokedAt, CancellationToken _) => cutOffs.Add(revokedAt))
+            .ReturnsAsync(GenericResult.Success());
+        var endpoint = Factory.Create<DeleteRole>(Caller(), Roles([], held.Clear).Object, userRoles.Object, revocations.Object);
+
+        var before = DateTimeOffset.UtcNow;
+        await endpoint.HandleAsync(new GetRoleRequest { Name = "Analyst" }, CancellationToken.None);
+        var after = DateTimeOffset.UtcNow;
+
+        cutOffs.Count.ShouldBe(1);
+        cutOffs[0].ShouldBeInRange(before, after);
+    }
+
     [Fact]
     public async Task WhenTheHoldersCannotBeReadTheRoleIsNotDeleted()
     {

@@ -83,7 +83,11 @@ public sealed class JwtTokenIssuer : ITokenIssuer
             expiresAt = validUntil;
         }
 
-        var jti = Guid.CreateVersion7();
+        // Minted from the issue instant itself, never from a second clock reading: the jti is the token's
+        // issue sequence (TokenIssueSequence), the instant a user-wide revocation cut-off is compared with.
+        // iat has whole seconds only, and a jti read a moment later than issuedAt would place the token
+        // after a cut-off that landed in between (FDW-5655).
+        var jti = Guid.CreateVersion7(issuedAt);
 
         var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {

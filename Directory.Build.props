@@ -182,7 +182,7 @@
        revision away. A release sets both per assembly: FileVersion from the package's x.y.z, AssemblyVersion never below the floor
        the baseline release recorded (a dll that is not rebuilt asks for its dependencies at the version it was built against). -->
   <PropertyGroup>
-    <VersionPrefix>1.5.7</VersionPrefix>
+    <VersionPrefix>1.5.8</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>

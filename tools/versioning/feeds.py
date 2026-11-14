@@ -99,6 +99,23 @@ class NugetOrg:
         pid, ver = package_id.lower(), version.lower()
         return self._get(f"{self.base}/{pid}/{ver}/{pid}.{ver}.nupkg")
 
+    def serves(self, package_id, version):
+        """True when a restore can take the version now: the flat container's index lists it AND its package downloads (FDW-5634). A push
+        is accepted well before that: nuget.org validates and indexes in a queue, minutes to an hour later. A request that fails for any
+        reason other than 'not there yet' raises."""
+        if version.lower() not in (v.lower() for v in self.versions(package_id)):
+            return False
+        pid, ver = package_id.lower(), version.lower()
+        request = urllib.request.Request(f"{self.base}/{pid}/{ver}/{pid}.{ver}.nupkg", method="HEAD")
+        try:
+            with self._open(request, timeout=60):
+                return True
+        except urllib.error.HTTPError as e:
+            e.close()
+            if e.code == 404:
+                return False
+            raise
+
     def download(self, package_id, version):
         """The bytes of a held package, or None when the package or version is not there."""
         return self._package(package_id, version)
