@@ -15,16 +15,24 @@ namespace Fdw.Services.Etl.Execution;
 /// tenant. A pipeline that states no organization has none (null) and is broadcast to no firehose, as the hub documents; a read that failed is a failure the caller
 /// logs, not the same answer as "no organization".
 /// </remarks>
-internal static class OwningOrg
+public static class OwningOrg
 {
     /// <summary>Reads the owning organization of a pipeline.</summary>
     /// <param name="services">The scope's services, which supply the pipeline configuration provider.</param>
     /// <param name="pipelineId">The pipeline's Id.</param>
     /// <param name="cancellationToken">A token that ends the read.</param>
     /// <returns>The organization's Id, null when the pipeline states none, or the read's own failure.</returns>
-    internal static async Task<IGenericResult<Guid?>> Of(IServiceProvider services, Guid pipelineId, CancellationToken cancellationToken)
+    internal static Task<IGenericResult<Guid?>> Of(IServiceProvider services, Guid pipelineId, CancellationToken cancellationToken) =>
+        Of(services.GetRequiredService<IPipelineConfigurationProvider>(), pipelineId, cancellationToken);
+
+    /// <summary>Reads the owning organization of a pipeline from the pipeline configuration provider (FDW-5986: the project orchestrator holds the provider, not the scope's services).</summary>
+    /// <param name="provider">Reads the pipeline's configuration.</param>
+    /// <param name="pipelineId">The pipeline's Id.</param>
+    /// <param name="cancellationToken">A token that ends the read.</param>
+    /// <returns>The organization's Id, null when the pipeline states none, or the read's own failure.</returns>
+    public static async Task<IGenericResult<Guid?>> Of(IPipelineConfigurationProvider provider, Guid pipelineId, CancellationToken cancellationToken)
     {
-        var read = await services.GetRequiredService<IPipelineConfigurationProvider>().Get(pipelineId, cancellationToken).ConfigureAwait(false);
+        var read = await provider.Get(pipelineId, cancellationToken).ConfigureAwait(false);
         return read.IsFailure
             ? read.ToNewResult<Guid?>()
             : GenericResult<Guid?>.Success(read.Value?.OrgId);

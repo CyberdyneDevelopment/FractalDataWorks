@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Data.Abstractions;
+using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Data.SchemaImporters.Abstractions.Configuration;
 
@@ -80,4 +81,14 @@ public sealed class SchemaImporterOptions
     /// Additional metadata to include in import.
     /// </summary>
     public IReadOnlyDictionary<string, object> Metadata { get; init; } = new Dictionary<string, object>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the provider an importer that reads through a configured connection resolves its <c>source</c> with (FDW-5951): the SQL Server
+    /// importer takes the name of a configured connection as its source and asks this provider for it.
+    /// </summary>
+    /// <value>
+    /// <see langword="null"/> when the options carry none. An importer that needs one then refuses with a message that names the missing
+    /// provider; there is no other way to reach a connection and no fallback to a connection string. The OData and OpenAPI importers do not use it.
+    /// </value>
+    public IDataConnectionProvider? ConnectionProvider { get; init; }
 }

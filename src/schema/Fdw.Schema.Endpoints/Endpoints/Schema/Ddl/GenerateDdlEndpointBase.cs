@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Schema.Ddl;
+using Fdw.Schema.Ddl.Commands;
+using Fdw.Schema.Ddl.Definitions;
+using Fdw.Services.Connections;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Connections.Clients.Models;
@@ -90,6 +92,13 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
                 return;
             }
 
+            var generator = DdlGeneratorFor(connectionType);
+            if (generator.IsFailure)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(generator, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
             var containersResult = await DiscoverContainers(req.Name, ct).ConfigureAwait(false);
 
             if (containersResult.IsFailure)
@@ -105,15 +114,19 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
                 return;
             }
 
-            var containers = containersResult.Value;
-            var ddl = GenerateCreateTableStatements(containers, connectionType, req.SchemaFilter);
-            var statementCount = ddl.Split("CREATE TABLE", StringSplitOptions.None).Length - 1;
+            var commands = BuildCreateTableCommands(containersResult.Value, req.SchemaFilter);
+            var script = generator.Value!.GenerateScript(commands);
+            if (script.IsFailure)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(script, HttpContext)).ConfigureAwait(false);
+                return;
+            }
 
             await Send.OkAsync(new GenerateDdlResponse
             {
                 ConnectionName = req.Name,
-                Ddl = ddl,
-                StatementCount = statementCount
+                Ddl = script.Value!,
+                StatementCount = commands.Count
             }, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -146,63 +159,58 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
     protected abstract Task<string?> GetConnectionType(string connectionName, CancellationToken ct);
 
     /// <summary>
-    /// Generates CREATE TABLE DDL statements from discovered containers.
-    /// Override to customize DDL generation for specific database engines.
+    /// Gets the DDL generator of the connection's type: the dialect of the engine the connection is on.
+    /// </summary>
+    /// <remarks>
+    /// Why the connection type decides: the endpoint names no engine, and a type that cannot say its dialect is refused with the
+    /// coded <c>DdlDialectNotOffered</c> (FDW-5959), never given another engine's text. A type name that is not a registered
+    /// connection type is refused too.
+    /// </remarks>
+    /// <param name="connectionType">The connection type's name, as <see cref="GetConnectionType"/> answered it.</param>
+    /// <returns>The generator, or the refusal.</returns>
+    protected virtual IGenericResult<IDdlGenerator> DdlGeneratorFor(string connectionType)
+    {
+        var type = ConnectionTypes.ByName(connectionType);
+
+        // Why ReferenceEquals: ByName answers an unknown name with the NotFound sentinel, never null.
+        return ReferenceEquals(type, ConnectionTypes.NotFound)
+            ? GenericResult<IDdlGenerator>.Failure(SchemaEndpointLog.GenerateDdlConnectionTypeUnknown(_logger, connectionType))
+            : type.DdlGenerator();
+    }
+
+    /// <summary>
+    /// Builds a CREATE TABLE command for each discovered table, in the order the containers were discovered, grouped by schema.
+    /// The engine's text is the generator's: nothing here writes SQL.
     /// </summary>
     /// <param name="containers">The discovered storage containers.</param>
-    /// <param name="connectionType">The connection type (e.g., "MsSql", "PostgreSql").</param>
     /// <param name="schemaFilter">Optional schema name filter.</param>
-    /// <returns>The generated DDL script.</returns>
-    protected virtual string GenerateCreateTableStatements(
+    /// <returns>The commands.</returns>
+    protected virtual IReadOnlyList<IDdlCommand> BuildCreateTableCommands(
         IReadOnlyList<IStorageContainer> containers,
-        string connectionType,
         string? schemaFilter)
-    {
-        var sb = new StringBuilder();
-        var quoteOpen = string.Equals(connectionType, "PostgreSql", StringComparison.OrdinalIgnoreCase) ? "\"" : "[";
-        var quoteClose = string.Equals(connectionType, "PostgreSql", StringComparison.OrdinalIgnoreCase) ? "\"" : "]";
-
-        var groups = containers
+        => [.. containers
             .Where(c => !string.Equals(c.ContainerType.Name, "View", StringComparison.Ordinal))
-            .GroupBy(c => c.Path.PathValue, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(c => c.Path.PathValue, StringComparer.OrdinalIgnoreCase)
+            .Where(group => string.IsNullOrEmpty(schemaFilter) || string.Equals(group.Key, schemaFilter, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(group => group.Select(container => CreateTable(group.Key, container)))];
 
-        foreach (var group in groups)
+    private static CreateTableCommand CreateTable(string schemaName, IStorageContainer container)
+    {
+        var keyColumns = container.Schema.GetIdentityFields().Select(field => field.Name).ToList();
+
+        return new CreateTableCommand
         {
-            if (!string.IsNullOrEmpty(schemaFilter) &&
-                !string.Equals(group.Key, schemaFilter, StringComparison.OrdinalIgnoreCase))
+            SchemaName = schemaName,
+            TableName = container.Name,
+            Columns = [.. container.Schema.Fields.Select(field => new DdlColumnDefinition
             {
-                continue;
-            }
-
-            sb.AppendLine(CultureInfo.InvariantCulture, $"-- Schema: {group.Key}");
-
-            foreach (var container in group)
-            {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"CREATE TABLE {quoteOpen}{group.Key}{quoteClose}.{quoteOpen}{container.Name}{quoteClose} (");
-
-                var fields = container.Schema.Fields;
-                for (var i = 0; i < fields.Count; i++)
-                {
-                    var field = fields[i];
-                    var nullable = field.IsNullable ? "NULL" : "NOT NULL";
-                    var identity = field.IsIdentity ? " IDENTITY(1,1)" : string.Empty;
-                    var separator = i < fields.Count - 1 ? "," : string.Empty;
-
-                    sb.AppendLine(CultureInfo.InvariantCulture, $"    {quoteOpen}{field.Name}{quoteClose} {field.FieldType.TypeName}{identity} {nullable}{separator}");
-                }
-
-                var pkFields = container.Schema.GetIdentityFields().ToList();
-                if (pkFields.Count > 0)
-                {
-                    var pkCols = string.Join(", ", pkFields.Select(f => $"{quoteOpen}{f.Name}{quoteClose}"));
-                    sb.AppendLine(CultureInfo.InvariantCulture, $"    ,CONSTRAINT {quoteOpen}PK_{container.Name}{quoteClose} PRIMARY KEY ({pkCols})");
-                }
-
-                sb.AppendLine(");");
-                sb.AppendLine();
-            }
-        }
-
-        return sb.ToString();
+                Name = field.Name,
+                SqlType = field.FieldType.TypeName,
+                IsNullable = field.IsNullable,
+                IsIdentity = field.IsIdentity,
+            })],
+            PrimaryKeyName = keyColumns.Count > 0 ? $"PK_{container.Name}" : null,
+            PrimaryKeyColumns = keyColumns.Count > 0 ? keyColumns : null,
+        };
     }
 }

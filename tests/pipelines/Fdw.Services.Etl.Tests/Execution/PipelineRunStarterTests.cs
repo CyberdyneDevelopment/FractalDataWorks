@@ -34,6 +34,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     private static readonly Guid Tenant = Guid.Parse("22222222-0000-0000-0000-000000000002");
     private static readonly Guid Child = Guid.Parse("33333333-0000-0000-0000-000000000003");
     private static readonly Guid PipelineIdentity = Guid.Parse("44444444-0000-0000-0000-000000000004");
+    private static readonly Guid Organization = Guid.Parse("55555555-0000-0000-0000-000000000005");
 
     private readonly Mock<IExecutionTracker> _tracker = new();
     private readonly Mock<IDataGateway> _gateway = new();
@@ -112,9 +113,11 @@ public sealed class PipelineRunStarterTests : IDisposable
         _tracker.Object, _gateways.Object, _pipelines.Object, _queue.Object, _scheduler, _broadcaster.Object,
         withSignaler ? _signaler.Object : null, NullLogger<PipelineRunStarter>.Instance);
 
-    private void Pipeline(params PipelineParameterConfiguration[] declared)
+    private void Pipeline(params PipelineParameterConfiguration[] declared) => OwnedPipeline(null, declared);
+
+    private void OwnedPipeline(Guid? orgId, params PipelineParameterConfiguration[] declared)
     {
-        var configuration = new GraphPipelineConfiguration { Id = PipelineIdentity, Name = "Consolidate", Parameters = [.. declared] };
+        var configuration = new GraphPipelineConfiguration { Id = PipelineIdentity, Name = "Consolidate", OrgId = orgId, Parameters = [.. declared] };
         _pipelines
             .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(configuration));
@@ -141,6 +144,33 @@ public sealed class PipelineRunStarterTests : IDisposable
         Parameters = parameters,
         AwaitCompletion = awaitCompletion
     };
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public async Task ATriggeredRunIsAnnouncedToTheOrganizationThatOwnsItsPipeline()
+    {
+        OwnedPipeline(Organization);
+
+        var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        _broadcaster.Verify(b => b.BroadcastStatusChange("Consolidate", Child, "Triggered", null, Organization), Times.Once);
+        _broadcaster.Verify(b => b.BroadcastStatusChange(It.IsAny<string>(), It.IsAny<Guid>(), "Triggered", It.IsAny<string?>(), It.IsAny<Guid?>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public async Task ATriggeredRunOfAPipelineThatStatesNoOrganizationIsAnnouncedToNone()
+    {
+        OwnedPipeline(null);
+
+        var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        _broadcaster.Verify(b => b.BroadcastStatusChange("Consolidate", Child, "Triggered", null, null), Times.Once);
+    }
 
     [Fact]
     [Trait("Priority", "P1")]

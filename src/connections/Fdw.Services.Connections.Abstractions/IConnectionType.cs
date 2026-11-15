@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Configuration;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Schema.Ddl;
 using Fdw.ServiceTypes;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions.Authentication;
@@ -61,6 +62,24 @@ public interface IConnectionType : IServiceType
     /// </para>
     /// </remarks>
     IReadOnlyList<ISchemaDiscoveryType> SupportedDiscoveryTypes { get; }
+
+    /// <summary>
+    /// Gets the generator of the DDL text of this kind's engine (FDW-5959): the dialect of a connection of this type, so that
+    /// whoever writes DDL for a connection asks its type and names no engine itself.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Why a member of the type and not a lookup by the type's name: the connection type is where a connection's
+    /// capabilities are declared (<see cref="SupportedCommands"/>, <see cref="SupportedDiscoveryTypes"/>), so its DDL dialect is
+    /// declared beside them, and the engine's text stays in the connection implementation.
+    /// </para>
+    /// <para>
+    /// A kind that has no generator answers the coded refusal <c>DdlDialectNotOffered</c>, naming its type: there is no default
+    /// dialect, and never another engine's text. <c>ConnectionTypeBase</c> answers it unless a kind overrides it.
+    /// </para>
+    /// </remarks>
+    /// <returns>The generator, or the <c>DdlDialectNotOffered</c> failure.</returns>
+    IGenericResult<IDdlGenerator> DdlGenerator();
 
     /// <summary>
     /// Gets the names of the data store types a data store over this kind of connection may have, limited to

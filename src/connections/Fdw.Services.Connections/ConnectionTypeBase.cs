@@ -15,6 +15,7 @@ using Fdw.Abstractions;
 using Fdw.Configuration;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Schema.Ddl;
 using Fdw.ServiceTypes;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Abstractions.Authentication;
@@ -122,6 +123,17 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// </remarks>
     public virtual IReadOnlyList<ISchemaDiscoveryType> SupportedDiscoveryTypes =>
         [SchemaDiscoveryTypes.None];
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this refuses: a kind that says nothing offers no DDL dialect, and the answer is the coded refusal
+    /// <c>DdlDialectNotOffered</c> naming the kind, not another engine's text (FDW-5959). A kind that has a generator for its
+    /// engine overrides this and returns it, so the engine's text stays in the connection implementation.
+    /// </remarks>
+    public virtual IGenericResult<IDdlGenerator> DdlGenerator() =>
+        GenericResult<IDdlGenerator>.Failure(
+            Results.ConnectionsResultCodes.ByName("DdlDialectNotOffered"),
+            ResultDetails.Create("connectionType", Name));
 
     /// <inheritdoc/>
     /// <remarks>

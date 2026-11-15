@@ -100,15 +100,48 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         return buildResult;
     }
 
+    /// <summary>Resolves the name of the store whose row has the given Id.</summary>
+    /// <remarks>
+    /// The one place the lookup by Id decides what a read that did not give a name means, for this provider and for the host's provider that
+    /// resolves a store by Id through it (FDW-5875). A read that failed for a reason other than the row being absent is passed up as it is, as
+    /// <see cref="Get(string, CancellationToken)"/> does (FDW-4281): a dependency that is down, a transient failure, a denial or a timeout is
+    /// not "no such store". Only a row that is not there is StoreByIdNotFound, and a row that is there with no name is its own configuration
+    /// fault, StoreRowHasNoName.
+    /// </remarks>
+    /// <param name="configurationProvider">The provider the store's row is read through.</param>
+    /// <param name="id">The store's durable Id.</param>
+    /// <param name="logger">The logger the failures are written to.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The store's name, or the failure of the read, the missing row or the unusable row.</returns>
+    public static async Task<IGenericResult<string>> NameOf(
+        IDomainConfigurationProvider<IDataStoreImplementationConfiguration> configurationProvider,
+        Guid id,
+        ILogger logger,
+        CancellationToken cancellationToken = default)
+    {
+        ConfiguredDataStoreProviderLog.TraceGetByIdEntry(logger, id);
+        var cfgResult = await configurationProvider.Get(id, cancellationToken).ConfigureAwait(false);
+
+        if (cfgResult.IsFailure && !FailureCategory.IsMissing(cfgResult))
+            return cfgResult.ToNewResult<string>();
+
+        if (!cfgResult.IsSuccess || cfgResult.Value is null)
+            return GenericResult<string>.Failure(ConfiguredDataStoreProviderLog.StoreByIdNotFound(logger, id));
+
+        if (string.IsNullOrWhiteSpace(cfgResult.Value.Name))
+            return GenericResult<string>.Failure(ConfiguredDataStoreProviderLog.StoreRowHasNoName(logger, id));
+
+        return GenericResult<string>.Success(cfgResult.Value.Name);
+    }
+
     /// <inheritdoc/>
     public async Task<IGenericResult<IDataStore>> Get(Guid id, CancellationToken cancellationToken = default)
     {
-        ConfiguredDataStoreProviderLog.TraceGetByIdEntry(_logger, id);
-        var cfgResult = await _configurationProvider.Get(id, cancellationToken).ConfigureAwait(false);
-        if (!cfgResult.IsSuccess || cfgResult.Value is null || string.IsNullOrWhiteSpace(cfgResult.Value.Name))
-            return GenericResult<IDataStore>.Failure(ConfiguredDataStoreProviderLog.StoreByIdNotFound(_logger, id));
+        var name = await NameOf(_configurationProvider, id, _logger, cancellationToken).ConfigureAwait(false);
+        if (name.IsFailure || name.Value is not { } storeName)
+            return name.ToNewResult<IDataStore>();
 
-        return await Get(cfgResult.Value.Name, cancellationToken).ConfigureAwait(false);
+        return await Get(storeName, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

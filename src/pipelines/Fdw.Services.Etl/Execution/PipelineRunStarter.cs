@@ -185,7 +185,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
         if (start.AwaitCompletion)
             _signaler!.Register(executionId);
 
-        await _broadcaster.BroadcastStatusChange(pipeline.Name, executionId, "Triggered").ConfigureAwait(false);
+        await _broadcaster.BroadcastRunStatus(pipeline, executionId, "Triggered").ConfigureAwait(false);
         await RecordGivenParameters(start, planned, executionId, ct).ConfigureAwait(false);
 
         var enqueued = await _queue.Enqueue(

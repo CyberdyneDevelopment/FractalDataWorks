@@ -199,6 +199,30 @@ public static partial class OrchestrationNodeOrchestratorLog
         Message = "Root Complete failed for execution {executionId}: {message}")]
     public static partial IGenericMessage RootCompleteFailed(ILogger logger, Guid executionId, string? message);
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // The organization a run's own broadcasts are addressed to (FDW-5986)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>Logs that a run's status broadcasts state no organization because its node runs no pipeline.</summary>
+    [MessageLogging(EventId = 11332, Level = LogLevel.Trace,
+        Message = "Orchestration run {executionId} of node '{nodeName}' runs no pipeline, so its status broadcasts state no organization and reach only its own groups")]
+    public static partial IGenericMessage RunOrganizationNoPipeline(ILogger logger, Guid executionId, string nodeName);
+
+    /// <summary>Logs that a run's status broadcasts state no organization because none of its pipelines states one.</summary>
+    [MessageLogging(EventId = 11333, Level = LogLevel.Trace,
+        Message = "Orchestration run {executionId} of node '{nodeName}': none of its {pipelineCount} pipeline(s) states an organization, so its status broadcasts reach only its own groups")]
+    public static partial IGenericMessage RunOrganizationNoneStated(ILogger logger, Guid executionId, string nodeName, int pipelineCount);
+
+    /// <summary>Logs that a run's status broadcasts state no organization because its pipelines belong to more than one, and none is chosen.</summary>
+    [MessageLogging(EventId = 11334, Level = LogLevel.Trace,
+        Message = "Orchestration run {executionId} of node '{nodeName}': its pipelines belong to {organizationCount} organizations, so none is chosen and its status broadcasts reach only its own groups")]
+    public static partial IGenericMessage RunOrganizationSeveral(ILogger logger, Guid executionId, string nodeName, int organizationCount);
+
+    /// <summary>Logs that a run's status broadcasts state no organization because one of its pipelines could not be read.</summary>
+    [MessageLogging(EventId = 41012, Level = LogLevel.Warning,
+        Message = "Orchestration run {executionId} of node '{nodeName}': pipeline {pipelineId} could not be read ({message}), so its status broadcasts state no organization and reach only its own groups")]
+    public static partial IGenericMessage RunOrganizationPipelineNotRead(ILogger logger, Guid executionId, string nodeName, Guid pipelineId, string? message);
+
     /// <summary>
     /// Logs that a background node execution's DI scope was elevated to the system authentication
     /// context, which reads across every tenant.

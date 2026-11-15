@@ -13,6 +13,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Caching;
 using Fdw.Services.Data.Configuration;
 using Fdw.Services.Data.Logging;
+using Fdw.Services.Data.Slots;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
@@ -126,18 +127,30 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                         CacheChangePollInterval));
             }
 
-            var schema = ConfigurationSchemaLoader.Load(SchemaFileName);
+            var schemaLogger = loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
+                ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance;
+
+            // A placeholder of the schema takes its value from the environment or, on an A/B slot, from the slot file
+            // (FDW-5845); one with no value, or two, stops the host with a coded failure.
+            var loaded = ConfigurationSchemaLoader.Load(SchemaFileName, schemaLogger);
+            if (loaded.IsFailure || loaded.Value is not { } schema)
+                return loaded.ToNewResult<IHostApplicationBuilder>();
+
             builder.Services.TryAddSingleton(schema);
 
             // The host's own declaration of which connection plays which role, recorded now, before anything reads a
             // holder. A host that declares none does not start; nothing here names a connection for it.
-            var declared = ConnectionRoleDeclaration.Declare(
-                schema,
-                builder.Environment.ApplicationName,
-                loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
-                    ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance);
+            var declared = ConnectionRoleDeclaration.Declare(schema, builder.Environment.ApplicationName, schemaLogger);
             if (declared.IsFailure)
                 return declared.ToNewResult<IHostApplicationBuilder>();
+
+            // Whether this copy of the app may do its background work (FDW-5846): a host on an A/B slot reads its role file on
+            // every pass; one that is on a slot and cannot say which role it has does not start.
+            var role = SlotRole.Create(schemaLogger);
+            if (role.IsFailure || role.Value is not { } slotRole)
+                return role.ToNewResult<IHostApplicationBuilder>();
+
+            builder.Services.TryAddSingleton(slotRole);
 
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)

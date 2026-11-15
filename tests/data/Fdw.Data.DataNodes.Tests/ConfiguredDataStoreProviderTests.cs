@@ -657,4 +657,134 @@ public sealed class ConfiguredDataStoreProviderTests
             .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
     }
+
+    // ====================================================================
+    // A read that failed is not "not found": Get(string) and Get(Guid) answer alike (FDW-5875)
+    // ====================================================================
+
+    private static GenericMessage CodedFailure(string? code)
+        => code is null
+            ? new GenericMessage("the configuration read failed")
+            : new GenericMessage(MessageSeverity.Error, "the configuration read failed", code);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("TST-70001")]
+    [InlineData("TST-80001")]
+    [InlineData("TST-100001")]
+    [InlineData("TST-110001")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task GetByIdKeepsTheCauseOfAFailedReadOfAnyKindAndDoesNotAnswerStoreNotFound(string? code)
+    {
+        // Why: a dependency that is down (7), a transient failure (8), a denial (10) and a timeout (11) are not "no such store"; Get(string) passes them up
+        // (FDW-4281) and Get(Guid) answered them all as StoreByIdNotFound (FDW-5875).
+        var id = Guid.NewGuid();
+        _configurationProvider
+            .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(CodedFailure(code)));
+        var sut = CreateSut();
+
+        var result = await sut.Get(id, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("the configuration read failed");
+        _configurationProvider.Verify(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("TST-70001")]
+    [InlineData("TST-80001")]
+    [InlineData("TST-100001")]
+    [InlineData("TST-110001")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task GetByNameKeepsTheCauseOfAFailedReadOfAnyKindAndDoesNotAnswerStoreNotFound(string? code)
+    {
+        _configurationProvider
+            .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(CodedFailure(code)));
+        var sut = CreateSut();
+
+        var result = await sut.Get("Store1", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("the configuration read failed");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task GetByIdAnswersStoreByIdNotFoundInTheMissingCategoryForAStoreThatDoesNotExist()
+    {
+        var id = Guid.NewGuid();
+        _configurationProvider
+            .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(default!));
+        var sut = CreateSut();
+
+        var result = await sut.Get(id, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task GetByIdAnswersTheMissingCategoryWhenTheReadItselfFailedAsMissing()
+    {
+        var id = Guid.NewGuid();
+        _configurationProvider
+            .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(CodedFailure("TST-31100")));
+        var sut = CreateSut();
+
+        var result = await sut.Get(id, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task GetByNameAnswersTheMissingCategoryWhenTheReadItselfFailedAsMissing()
+    {
+        _configurationProvider
+            .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(CodedFailure("TST-31100")));
+        var sut = CreateSut();
+
+        var result = await sut.Get("Store1", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public async Task GetByIdAnswersARowWithoutANameAsAConfigurationFaultAndNotAsMissing(string name)
+    {
+        // Why: the row is there. Reporting it as "not found" sends a caller looking for a store that exists; a row that cannot be used is a
+        // configuration fault (band 6) and says so.
+        var id = Guid.NewGuid();
+        _configurationProvider
+            .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(new DataStoreImplementationConfiguration { Id = id, Name = name }));
+        var sut = CreateSut();
+
+        var result = await sut.Get(id, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        FailureCategory.IsMissing(result).ShouldBeFalse();
+        FailureCategory.Of(result).ShouldNotBeNull().Id.ShouldBe(6);
+        _configurationProvider.Verify(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

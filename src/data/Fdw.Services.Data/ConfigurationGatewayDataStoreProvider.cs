@@ -370,15 +370,21 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     public async Task<IGenericResult<IDataStore>> Get(Guid id, CancellationToken cancellationToken = default)
     {
         DataStoreProviderLog.TraceGetDataStoreByIdEntry(_logger, id);
-        var cfgResult = await _dataStoreConfigProvider.Get(id, cancellationToken).ConfigureAwait(false);
-        if (!cfgResult.IsSuccess || cfgResult.Value is null || string.IsNullOrWhiteSpace(cfgResult.Value.Name))
+        var name = await ConfiguredDataStoreProvider.NameOf(_dataStoreConfigProvider, id, _logger, cancellationToken).ConfigureAwait(false);
+
+        // Only a row that is not there is "not found" here; a failed read and a row without a name keep their own failure (FDW-5875).
+        if (name.IsFailure && FailureCategory.IsMissing(name))
         {
             DataStoreProviderLog.DataStoreByIdNotFound(_logger, id);
             return GenericResult<IDataStore>.Failure(
                 DataServiceResultCodes.ByName("DataStoreNotFound"),
                 ResultDetails.Create().With("DataStoreId", id));
         }
-        return await Get(cfgResult.Value.Name, cancellationToken).ConfigureAwait(false);
+
+        if (name.IsFailure || name.Value is not { } storeName)
+            return name.ToNewResult<IDataStore>();
+
+        return await Get(storeName, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

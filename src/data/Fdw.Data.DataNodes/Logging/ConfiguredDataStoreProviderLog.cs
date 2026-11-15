@@ -90,6 +90,15 @@ public static partial class ConfiguredDataStoreProviderLog
     public static partial IGenericMessage StoreSkippedInLoad(ILogger logger, string name);
 
     // ============================================================
+    // Configuration (cat 6) — 61090
+    // ============================================================
+
+    /// <summary>Logs when the row of a DataStore read by its Id is there but carries no name, so the store cannot be built or looked up.</summary>
+    [MessageLogging(EventId = 61090, Level = LogLevel.Error,
+        Message = "[ConfiguredDataStoreProvider] The DataStore row with Id '{id}' has no name and cannot be used")]
+    public static partial IGenericMessage StoreRowHasNoName(ILogger logger, Guid id);
+
+    // ============================================================
     // Dependency (cat 7) — 71100
     // ============================================================
 

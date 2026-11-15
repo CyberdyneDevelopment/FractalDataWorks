@@ -85,4 +85,20 @@ public static partial class SchedulerLoopLog
         Level = LogLevel.Critical,
         Message = "Scheduler loop ended while the host is still running; nothing is being scheduled")]
     public static partial IGenericMessage LoopEndedUnexpectedly(ILogger logger);
+
+    /// <summary>A pass was skipped because this copy of the app is standby (FDW-5870).</summary>
+    /// <remarks>Trace, because a standby copy skips every interval for as long as it stays standby.</remarks>
+    [MessageLogging(
+        EventId = 547,
+        Level = LogLevel.Trace,
+        Message = "Scheduler pass skipped: this copy is standby, and only the live copy evaluates schedules")]
+    public static partial IGenericMessage PassSkippedStandby(ILogger logger);
+
+    /// <summary>A pass was skipped because the role of this copy could not be read (FDW-5870).</summary>
+    /// <remarks>Warning: nothing says this copy is live, so nothing is scheduled by it until the role can be read.</remarks>
+    [MessageLogging(
+        EventId = 548,
+        Level = LogLevel.Warning,
+        Message = "Scheduler pass skipped: the role of this copy (live or standby) could not be read")]
+    public static partial IGenericMessage PassSkippedRoleUnknown(ILogger logger);
 }

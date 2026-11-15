@@ -185,6 +185,10 @@ public static partial class SchemaEndpointLog
     [MessageLogging(EventId = 21005, Level = LogLevel.Warning, Message = "Unable to determine connection type", ClientMessage = "Unable to determine connection type")]
     public static partial IGenericMessage GenerateDdlUnableToDetermineConnectionType(ILogger logger);
 
+    /// <summary>Logs that the request failed: the connection's type is not a registered connection type.</summary>
+    [MessageLogging(EventId = 31300, Level = LogLevel.Warning, Message = "Connection type '{connectionType}' is not a registered connection type", ClientMessage = "Connection type is not a registered connection type")]
+    public static partial IGenericMessage GenerateDdlConnectionTypeUnknown(ILogger logger, string connectionType);
+
     /// <summary>Logs that the request failed: DDL generation failed.</summary>
     [MessageLogging(EventId = 91004, Level = LogLevel.Error, Message = "DDL generation failed", ClientMessage = "DDL generation failed")]
     public static partial IGenericMessage GenerateDdlFaulted(ILogger logger);

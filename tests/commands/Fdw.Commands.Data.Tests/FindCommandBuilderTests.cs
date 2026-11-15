@@ -258,6 +258,6 @@ public sealed class FindCommandBuilderTests
         result.Messages.ShouldNotBeEmpty();
         var message = result.Messages.First();
         message.Code.ShouldNotBeNullOrWhiteSpace();
-        message.Source.ShouldBe("FindCommandBuilder");
+        message.Code.ShouldBe("CMDDATA-20000");
     }
 }

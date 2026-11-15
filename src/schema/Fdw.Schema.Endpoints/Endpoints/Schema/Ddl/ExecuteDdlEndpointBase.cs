@@ -105,7 +105,7 @@ public abstract class ExecuteDdlEndpointBase : Endpoint<ExecuteDdlRequest, Execu
                 {
                     Success = false,
                     Message = result.FailureReason().Message
-                }, 500, ct).ConfigureAwait(false);
+                }, ResultHttpStatusMapper.Map(result, HttpContext).StatusCode, ct).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException)

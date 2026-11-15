@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,16 +35,19 @@ namespace Fdw.Services.Scheduling;
 public abstract class SchedulerBackgroundServiceBase : BackgroundService
 {
     private readonly IAuthenticationContextAccessor _authContextAccessor;
+    private readonly ISlotRole _role;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SchedulerBackgroundServiceBase"/> class.
     /// </summary>
     /// <param name="authContextAccessor">Elevated to the system context for each evaluation.</param>
+    /// <param name="role">Says before each pass whether this copy of the app is live; a standby copy evaluates nothing (FDW-5870).</param>
     /// <param name="logger">The logger; <see cref="NullLogger.Instance"/> when DI supplies none.</param>
-    protected SchedulerBackgroundServiceBase(IAuthenticationContextAccessor authContextAccessor, ILogger? logger)
+    protected SchedulerBackgroundServiceBase(IAuthenticationContextAccessor authContextAccessor, ISlotRole role, ILogger? logger)
     {
         _authContextAccessor = authContextAccessor;
+        _role = role;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -90,25 +94,10 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             SchedulerLoopLog.Tick(_logger);
-            var started = Stopwatch.GetTimestamp();
 
             try
             {
-                // Per pass, not around the whole loop: the scope restores the previous context when
-                // the pass ends, so nothing outside an evaluation -- the delay, the logging -- runs
-                // elevated.
-                using (new SystemAuthenticationContextScope(_authContextAccessor))
-                {
-                    await Evaluate(stoppingToken).ConfigureAwait(false);
-                }
-
-                var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-                SchedulerLoopLog.EvaluationCompleted(_logger, LastEvaluatedCount, elapsed);
-
-                if (elapsed > (long)EvaluationInterval.TotalMilliseconds)
-                {
-                    SchedulerLoopLog.EvaluationOverran(_logger, elapsed, (long)EvaluationInterval.TotalMilliseconds);
-                }
+                await Pass(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -141,6 +130,48 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
 
         SchedulerLoopLog.LoopStopped(_logger);
         OnStopped();
+    }
+
+    /// <summary>
+    /// One pass: asks whether this copy of the app is live and, only if it is, evaluates (FDW-5870).
+    /// </summary>
+    /// <remarks>
+    /// The role is read on every pass, not once at start: a swap changes a running copy's role. A standby copy answers requests and
+    /// does nothing else to anything shared, and a schedule dispatched by both copies would run twice. A role that cannot be read
+    /// is not live: the pass does nothing and says so.
+    /// </remarks>
+    private async Task Pass(CancellationToken stoppingToken)
+    {
+        var mayRun = _role.BackgroundWorkMayRun();
+        if (mayRun.IsFailure)
+        {
+            SchedulerLoopLog.PassSkippedRoleUnknown(_logger);
+            return;
+        }
+
+        if (mayRun.Value is not true)
+        {
+            SchedulerLoopLog.PassSkippedStandby(_logger);
+            return;
+        }
+
+        var started = Stopwatch.GetTimestamp();
+
+        // Per pass, not around the whole loop: the scope restores the previous context when
+        // the pass ends, so nothing outside an evaluation -- the delay, the logging -- runs
+        // elevated.
+        using (new SystemAuthenticationContextScope(_authContextAccessor))
+        {
+            await Evaluate(stoppingToken).ConfigureAwait(false);
+        }
+
+        var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        SchedulerLoopLog.EvaluationCompleted(_logger, LastEvaluatedCount, elapsed);
+
+        if (elapsed > (long)EvaluationInterval.TotalMilliseconds)
+        {
+            SchedulerLoopLog.EvaluationOverran(_logger, elapsed, (long)EvaluationInterval.TotalMilliseconds);
+        }
     }
 
     /// <summary>

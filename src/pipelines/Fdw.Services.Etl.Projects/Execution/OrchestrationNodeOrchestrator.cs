@@ -13,6 +13,7 @@ using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 using Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
 using Fdw.Services.Etl.Projects.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Notifications;
 using Fdw.Services.Resiliency;
 using Fdw.Services.Resiliency.Abstractions;
@@ -45,6 +46,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     private readonly IExecutionTracker _tracker;
     private readonly IPipelineRunStarter _starter;
     private readonly IPipelineStatusBroadcaster _broadcaster;
+    private readonly IPipelineConfigurationProvider _pipelines;
     private readonly ILogger<OrchestrationNodeOrchestrator> _logger;
 
     /// <summary>Initializes a new instance of <see cref="OrchestrationNodeOrchestrator"/>.</summary>
@@ -55,6 +57,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         IExecutionTracker tracker,
         IPipelineRunStarter starter,
         IPipelineStatusBroadcaster broadcaster,
+        IPipelineConfigurationProvider pipelines,
         ILogger<OrchestrationNodeOrchestrator>? logger = null)
     {
         _nodeProvider = nodeProvider;
@@ -63,6 +66,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         _tracker = tracker;
         _starter = starter;
         _broadcaster = broadcaster;
+        _pipelines = pipelines;
         _logger = logger ?? NullLogger<OrchestrationNodeOrchestrator>.Instance;
     }
 
@@ -75,7 +79,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         if (!configResult.IsSuccess || configResult.Value is null)
         {
             OrchestrationNodeOrchestratorLog.NodeNotFound(_logger, request.RootNodeId);
-            await CompleteRootExecution(request, nodeName: request.RootNodeId.ToString("N"), succeeded: false)
+            await CompleteRootExecution(request, nodeName: request.RootNodeId.ToString("N"), succeeded: false, orgId: null)
                 .ConfigureAwait(false);
             return;
         }
@@ -96,7 +100,9 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             OrchestrationNodeOrchestratorLog.RootTransitionStateFailed(_logger, request.ExecutionId, rootTransitionResult.CurrentMessage);
         }
 
-        await _broadcaster.BroadcastStatusChange(rootNode.Name, request.ExecutionId, "Running", orgId: null)
+        // The run's organization is that of the pipelines it runs: a node has no owner of its own (FDW-5986).
+        var orgId = await OrchestrationOwningOrg.Of(rootNode, _pipelines, _logger, request.ExecutionId, cancellationToken).ConfigureAwait(false);
+        await _broadcaster.BroadcastStatusChange(rootNode.Name, request.ExecutionId, "Running", orgId: orgId)
             .ConfigureAwait(false);
 
         // The root inherits from the server defaults, read now from their provider; a run cannot start without them.
@@ -104,7 +110,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         if (rootPolicyResult.IsFailure || rootPolicyResult.Value is not { } rootPolicy)
         {
             OrchestrationNodeOrchestratorLog.RootPolicyUnresolved(_logger, request.ExecutionId, rootPolicyResult.NoValueReason().Message);
-            await CompleteRootExecution(request, nodeName: rootNode.Name, succeeded: false).ConfigureAwait(false);
+            await CompleteRootExecution(request, nodeName: rootNode.Name, succeeded: false, orgId).ConfigureAwait(false);
             return;
         }
 
@@ -117,7 +123,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         OrchestrationNodeOrchestratorLog.NodeExecutionCompleted(
             _logger, rootNode.Name, request.ExecutionId, finalStatus);
 
-        await CompleteRootExecution(request, rootNode.Name, overallSuccess).ConfigureAwait(false);
+        await CompleteRootExecution(request, rootNode.Name, overallSuccess, orgId).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -350,7 +356,8 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     private async Task CompleteRootExecution(
         OrchestrationNodeExecutionRequest request,
         string nodeName,
-        bool succeeded)
+        bool succeeded,
+        Guid? orgId)
     {
         var rootCompleteResult = await _tracker.Complete(
             request.ExecutionId, succeeded,
@@ -362,7 +369,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         }
 
         await _broadcaster.BroadcastStatusChange(
-            nodeName, request.ExecutionId, succeeded ? "Succeeded" : "Failed", orgId: null)
+            nodeName, request.ExecutionId, succeeded ? "Succeeded" : "Failed", orgId: orgId)
             .ConfigureAwait(false);
     }
 

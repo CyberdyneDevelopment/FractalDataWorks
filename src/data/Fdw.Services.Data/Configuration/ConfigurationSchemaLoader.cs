@@ -13,7 +13,10 @@ using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Fdw.Results;
+using Fdw.Services.Data.Logging;
 
 namespace Fdw.Services.Data;
 
@@ -44,7 +47,25 @@ public static partial class ConfigurationSchemaLoader
     /// <summary>Reads the schema at <paramref name="jsonFilePath"/>.</summary>
     /// <param name="jsonFilePath">Path to the schema file; relative paths resolve against the app's base directory.</param>
     /// <returns>The declared connections, secret managers and data stores.</returns>
+    /// <exception cref="InvalidOperationException">The file cannot be read or bound, or a placeholder has no value; for the last, the message is the coded failure's.</exception>
     public static ConfigurationSchema Load(string jsonFilePath)
+    {
+        var loaded = Load(jsonFilePath, NullLogger.Instance);
+        return loaded.IsSuccess && loaded.Value is { } schema
+            ? schema
+            : throw new InvalidOperationException(string.Join(" | ", loaded.Messages.Select(message => message.Message)));
+    }
+
+    /// <summary>Reads the schema at <paramref name="jsonFilePath"/>, reporting a placeholder that has no value as a coded failure.</summary>
+    /// <param name="jsonFilePath">Path to the schema file; relative paths resolve against the app's base directory.</param>
+    /// <param name="logger">The logger.</param>
+    /// <returns>The declared connections, secret managers and data stores, or why a placeholder cannot be resolved.</returns>
+    /// <remarks>
+    /// A <c>${NAME}</c> takes its value from an environment variable or, on a host that runs on an A/B slot
+    /// (<see cref="SlotFile.EnvironmentVariableName"/> set), from the slot file's value of that name (<see cref="SlotFile"/>).
+    /// A name stated by both is refused, and so is one stated by neither; nothing stands in for a value.
+    /// </remarks>
+    public static IGenericResult<ConfigurationSchema> Load(string jsonFilePath, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(jsonFilePath))
             throw new InvalidOperationException("configurationSchema.json path must not be null or whitespace.");
@@ -63,12 +84,14 @@ public static partial class ConfigurationSchemaLoader
                 $"Failed to read configurationSchema.json from '{jsonFilePath}': {ex.Message}", ex);
         }
 
+        var resolved = ResolvePlaceholders(Encoding.UTF8.GetString(jsonBytes), jsonFilePath, logger);
+        if (resolved.IsFailure || resolved.Value is not { } resolvedJson)
+            return resolved.ToNewResult<ConfigurationSchema>();
+
         ConfigurationSchemaRoot? root;
         try
         {
-            root = JsonSerializer.Deserialize<ConfigurationSchemaRoot>(
-                ResolveEnvironmentPlaceholders(Encoding.UTF8.GetString(jsonBytes), jsonFilePath),
-                _schemaJsonOptions);
+            root = JsonSerializer.Deserialize<ConfigurationSchemaRoot>(resolvedJson, _schemaJsonOptions);
         }
         catch (JsonException ex)
         {
@@ -80,7 +103,7 @@ public static partial class ConfigurationSchemaLoader
             throw new InvalidOperationException(
                 $"configurationSchema.json at '{jsonFilePath}' is missing the 'ConfigurationSchema' root object.");
 
-        return root.ConfigurationSchema;
+        return GenericResult<ConfigurationSchema>.Success(root.ConfigurationSchema);
     }
 
     [GeneratedRegex(
@@ -89,28 +112,63 @@ public static partial class ConfigurationSchemaLoader
         matchTimeoutMilliseconds: 1000)]
     private static partial Regex EnvironmentPlaceholder();
 
-    private static string ResolveEnvironmentPlaceholders(string json, string jsonFilePath)
+    private static IGenericResult<string> ResolvePlaceholders(string json, string schemaPath, ILogger logger)
     {
+        if (SlotFile.DeclaredPath() is not { } declared)
+            return Substitute(json, schemaPath, null, logger);
+
+        var read = SlotFile.Read(declared, logger);
+        return read.IsFailure || read.Value is not { } file
+            ? read.ToNewResult<string>()
+            : Substitute(json, schemaPath, file, logger);
+    }
+
+    private static IGenericResult<string> Substitute(string json, string schemaPath, SlotFile? slot, ILogger logger)
+    {
+        var both = new List<string>();
         var missing = new List<string>();
 
-        var resolved = EnvironmentPlaceholder().Replace(json, match =>
+        var resolved = EnvironmentPlaceholder().Replace(json, match => ValueOf(match, slot, both, missing, logger));
+
+        if (both.Count > 0 && slot is not null)
+            return GenericResult<string>.Failure(SlotFileLog.PlaceholderStatedByBothSources(logger, schemaPath, slot.FilePath, Names(both)));
+
+        if (missing.Count > 0)
+            return GenericResult<string>.Failure(slot is null
+                ? SlotFileLog.PlaceholderNotStated(logger, schemaPath, Names(missing))
+                : SlotFileLog.PlaceholderNotStatedOnSlot(logger, schemaPath, slot.FilePath, Names(missing)));
+
+        return GenericResult<string>.Success(resolved);
+    }
+
+    /// <summary>The text one <c>${NAME}</c> becomes; a name with no value or two values stays as it is and is recorded for the failure.</summary>
+    private static string ValueOf(Match match, SlotFile? slot, List<string> both, List<string> missing, ILogger logger)
+    {
+        var name = match.Groups["name"].Value;
+        var fromEnvironment = Environment.GetEnvironmentVariable(name);
+        var fromSlot = slot is not null && slot.Values.TryGetValue(name, out var stated) ? stated : null;
+
+        if (string.IsNullOrEmpty(fromEnvironment))
         {
-            var value = Environment.GetEnvironmentVariable(match.Groups["name"].Value);
-            if (string.IsNullOrEmpty(value))
+            if (fromSlot is null)
             {
-                missing.Add(match.Groups["name"].Value);
+                missing.Add(name);
                 return match.Value;
             }
 
-            return JsonEncodedText.Encode(value).ToString();
-        });
+            SlotFileLog.PlaceholderResolved(logger, name, "the slot file");
+            return JsonEncodedText.Encode(fromSlot).ToString();
+        }
 
-        if (missing.Count > 0)
-            throw new InvalidOperationException(
-                $"configurationSchema.json at '{jsonFilePath}' references environment variable(s) that are not set: " +
-                $"{string.Join(", ", missing.Distinct(StringComparer.Ordinal))}. " +
-                "Set them in the host environment before starting the application.");
+        if (fromSlot is not null)
+        {
+            both.Add(name);
+            return match.Value;
+        }
 
-        return resolved;
+        SlotFileLog.PlaceholderResolved(logger, name, "the environment");
+        return JsonEncodedText.Encode(fromEnvironment).ToString();
     }
+
+    private static string Names(List<string> names) => string.Join(", ", names.Distinct(StringComparer.Ordinal));
 }

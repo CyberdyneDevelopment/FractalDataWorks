@@ -1,7 +1,8 @@
 using System.Collections.Generic;
-using Fdw.Messages;
+using Fdw.Commands.Data.Logging;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Commands.Data;
 
@@ -105,25 +106,25 @@ public class FindCommandBuilder<T>
         if (string.IsNullOrWhiteSpace(_dataStoreName))
         {
             return GenericResult<DataGatewayCall>.Failure(
-                GenericMessage.Create(MessageSeverity.Error, "DataStoreName is required for FindCommand", "FDW-FIND-001", "FindCommandBuilder"));
+                FindCommandLog.RequiredValueMissing(NullLogger<FindCommandBuilder<T>>.Instance, "DataStoreName"));
         }
 
         if (string.IsNullOrWhiteSpace(_pathName))
         {
             return GenericResult<DataGatewayCall>.Failure(
-                GenericMessage.Create(MessageSeverity.Error, "PathName is required for FindCommand", "FDW-FIND-002", "FindCommandBuilder"));
+                FindCommandLog.RequiredValueMissing(NullLogger<FindCommandBuilder<T>>.Instance, "PathName"));
         }
 
         if (string.IsNullOrWhiteSpace(_containerName))
         {
             return GenericResult<DataGatewayCall>.Failure(
-                GenericMessage.Create(MessageSeverity.Error, "ContainerName is required for FindCommand", "FDW-FIND-003", "FindCommandBuilder"));
+                FindCommandLog.RequiredValueMissing(NullLogger<FindCommandBuilder<T>>.Instance, "ContainerName"));
         }
 
         if (string.IsNullOrWhiteSpace(_searchTerm))
         {
             return GenericResult<DataGatewayCall>.Failure(
-                GenericMessage.Create(MessageSeverity.Error, "SearchTerm is required for FindCommand — call Search() before Build()", "FDW-FIND-004", "FindCommandBuilder"));
+                FindCommandLog.RequiredValueMissing(NullLogger<FindCommandBuilder<T>>.Instance, "SearchTerm"));
         }
 
         var command = new FindCommand<T>
