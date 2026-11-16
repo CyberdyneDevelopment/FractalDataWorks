@@ -24,6 +24,7 @@
     <!-- Why: the generator emits the module initializer that registers Fdw.Services.Data's [TypeOption] kinds (Simple, ...) into
          DataSetTypes for this assembly; without it DataSetTypes.ByName("Simple") is NotFound and the read gate refuses every set. -->
     <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\src\data\Fdw.Data.Options\Fdw.Data.Options.csproj" />
   </ItemGroup>
 
 </Project>

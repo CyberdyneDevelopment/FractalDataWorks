@@ -5,6 +5,10 @@ using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Abstractions.DataOptionRows;
+using Fdw.Services.Data.DataOptionRows;
+using Fdw.Services.Data.Abstractions.ColumnValues;
+using Fdw.Services.Data.ColumnValues;
 using Fdw.Services.Data.Limits;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +46,9 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
             "Main DataGateway",
             "The data gateway this framework ships, with DataStoreProvider, SchemaInformation and DataSetResolver", defaultPathName: "dg", defaultContainerName: "MainDataGatewayConfiguration")
     {
+        ColumnValuesDefaultTake = 12;
+        ColumnValuesMaximumTake = 200;
+
         // Initialize, because both providers have to be resolvable: the option is the only thing
         // that knows which implementation it is, and the domain provider dispatches by the name
         // registered here. Without it the domain record names a kind the registry never heard of.
@@ -110,6 +117,20 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
 
             builder.Services.TryAddScoped<ISchemaInformationService, SchemaInformationService>();
 
+            // FDW-5664: the option rows of a container, in the options table the server settings name, read and written through this gateway.
+            builder.Services.TryAddScoped<IDataOptionRows, DataOptionRowService>();
+            DataOptionRowsLog.Registered(loggerFactory?.CreateLogger<DataOptionRowService>() ?? NullLogger<DataOptionRowService>.Instance);
+
+            // FDW-5666: the column values search reads containers through this gateway, with the page sizes this option declares.
+            var columnValuesLog = loggerFactory?.CreateLogger<ContainerColumnValues>() ?? NullLogger<ContainerColumnValues>.Instance;
+            var columnValuesPaging = new ColumnValuesPaging(ColumnValuesDefaultTake, ColumnValuesMaximumTake);
+            if (!columnValuesPaging.IsUsable)
+                return GenericResult<IHostApplicationBuilder>.Failure(ColumnValuesLog.PagingSettingsInvalid(columnValuesLog, ColumnValuesDefaultTake, ColumnValuesMaximumTake));
+
+            builder.Services.TryAddSingleton(columnValuesPaging);
+            builder.Services.TryAddScoped<IContainerColumnValues, ContainerColumnValues>();
+            ColumnValuesLog.Registered(columnValuesLog, ColumnValuesDefaultTake, ColumnValuesMaximumTake);
+
             builder.Services.AddMemoryCache();
 
             builder.Services.TryAddSingleton<DataGatewayResultCache>();
@@ -137,4 +158,15 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
 
     }
 
+    /// <summary>
+    /// Gets or sets the number of values a column values search answers when the request states none (FDW-5666). Declared here as
+    /// this option's own value; a host may change it at registration.
+    /// </summary>
+    public int ColumnValuesDefaultTake { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most values one column values page may hold (FDW-5666); a request above it is refused, never cut. Declared
+    /// here as this option's own value; a host may change it at registration.
+    /// </summary>
+    public int ColumnValuesMaximumTake { get; set; }
 }

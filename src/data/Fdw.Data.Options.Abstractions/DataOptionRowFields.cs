@@ -6,6 +6,9 @@ namespace Fdw.Data.Options;
 /// </summary>
 public static class DataOptionRowFields
 {
+    /// <summary>The row's own identity (a UNIQUEIDENTIFIER the application mints), by which the option-row routes answer, change and remove it (FDW-5664).</summary>
+    public const string Id = "Id";
+
     /// <summary>The name of the data store that holds the column's container.</summary>
     public const string DataStore = "DataStore";
 

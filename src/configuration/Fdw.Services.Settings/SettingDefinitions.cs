@@ -404,10 +404,27 @@ public static class SettingDefinitions
     /// <summary>Whether system-update notifications are enabled.</summary>
     public const string NotifySystemUpdates = "NotifySystemUpdates";
 
+    /// <summary>
+    /// The data store that holds the one options table the option-row routes read and write (FDW-5664). DataType: String.
+    /// </summary>
+    /// <remarks>Required, with no default: while it is not set, every option-row route answers a refusal naming it.</remarks>
+    public const string DataOptionsDataStore = "DataOptionsDataStore";
+
+    /// <summary>The path, in <see cref="DataOptionsDataStore"/>, of the options table (FDW-5664). DataType: String.</summary>
+    /// <remarks>Required, with no default, like <see cref="DataOptionsDataStore"/>.</remarks>
+    public const string DataOptionsPath = "DataOptionsPath";
+
+    /// <summary>The container that is the options table (FDW-5664). DataType: String.</summary>
+    /// <remarks>Required, with no default, like <see cref="DataOptionsDataStore"/>.</remarks>
+    public const string DataOptionsContainer = "DataOptionsContainer";
+
     private static readonly Dictionary<string, SettingDefinition> KnownSettings =
         new Dictionary<string, SettingDefinition>(StringComparer.OrdinalIgnoreCase)
         {
             [MaxPaginationSize] = new("Int32", "The largest page a paginated list endpoint returns."),
+            [DataOptionsDataStore] = new("String", "The data store holding the options table the option-row routes read and write. Not set: every option-row route refuses and names this setting."),
+            [DataOptionsPath] = new("String", "The path of the options table in its data store. Not set: every option-row route refuses and names this setting."),
+            [DataOptionsContainer] = new("String", "The container that is the options table. Not set: every option-row route refuses and names this setting."),
             [DefaultPaginationSize] = new("Int32", "The page a paginated list endpoint returns when the request names no take."),
             [ApiKeyMaxPaginationSize] = new("Int32", "The largest page a caller authenticated with an API key may ask for; 0 means no limit."),
             [ApiKeyDefaultPaginationSize] = new("Int32", "The page a caller authenticated with an API key gets when the request names no take; 0 means no limit, every row is returned."),

@@ -29,19 +29,6 @@ public sealed class SqlTranslatorBaseKeyListSpillTests
         return (sql, captured);
     }
 
-    // No NOT IN operator is declared in FilterOperators; this stands in for one so the spill's keeping of the condition's own operator is tested.
-    private sealed class NotInTestOperator : FilterOperatorBase
-    {
-        public NotInTestOperator()
-            : base(name: "NotInTest", sqlOperator: "NOT IN", odataOperator: "notin", requiresValue: true)
-        {
-        }
-
-        public override string FormatODataValue(object? value) => string.Empty;
-
-        public override bool Matches(object? left, object? right) => false;
-    }
-
     private static IEnumerable<object?> Ints(int count) => Enumerable.Range(1, count).Select(i => (object?)i);
 
     [Fact]
@@ -91,9 +78,25 @@ public sealed class SqlTranslatorBaseKeyListSpillTests
     {
         using var scope = KeyListSpillScope.Begin(new TranslationSettings(5), "[t]");
 
-        var (sql, _) = Build(In("id", Ints(6), new NotInTestOperator()));
+        var (sql, _) = Build(In("id", Ints(6), new NotInOperator()));
 
         sql.ShouldContain(" NOT IN (SELECT v FROM keys_");
+    }
+
+    // FDW-5666: the declared NotIn renders as NOT IN through the same list path as In, each value its own parameter.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public void ANotInListAtTheSettingIsNotInOverItsParameters()
+    {
+        using var scope = KeyListSpillScope.Begin(new TranslationSettings(5), "[t]");
+
+        var (sql, parameters) = Build(In("city", ["Bern", "Bergen"], (FilterOperatorBase)FilterOperators.ByName("NotIn")));
+
+        sql.ShouldStartWith("\"city\" NOT IN (");
+        sql.ShouldNotContain("SELECT v FROM keys_");
+        parameters.Select(p => p.Value).ShouldBe(new object?[] { "Bern", "Bergen" });
+        scope.HasStatements.ShouldBeFalse();
     }
 
     [Fact]
