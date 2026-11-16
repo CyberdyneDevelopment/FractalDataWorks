@@ -10,7 +10,7 @@ This guide documents the inter-service communication patterns used across the Fr
 ```
                                  +------------------+
                                  |   reference-ui   |
-                                 |   (port 5007)    |
+                                 |   (port <port>)    |
                                  +--------+---------+
                                           |
                                     HTTPS (JWT)
@@ -18,7 +18,7 @@ This guide documents the inter-service communication patterns used across the Fr
                                           v
                               +-----------+-----------+
                               |      reference-api      |
-                              |      (port 5001)      |
+                              |      (port <port>)      |
                               |                       |
                               |  FastEndpoints + JWT  |
                               |  SignalR Hubs         |
@@ -32,7 +32,7 @@ This guide documents the inter-service communication patterns used across the Fr
                    v                 v          +---+
          +---------+------+  +------+--------+
          | reference-scheduler|  |   reference-etl   |
-         |  (port 5004)   |  |  (port 5002)  |
+         |  (port <port>)   |  |  (port <port>)  |
          +--------+-------+  +---------------+
                   |                   ^
              HTTP | (dispatch)        |
@@ -62,8 +62,8 @@ reference-api discovers backend service URLs through the `ServiceEndpoints` conf
 ```json
 {
   "ServiceEndpoints": {
-    "Scheduler": "http://localhost:5004",
-    "Etl": "http://localhost:5002"
+    "Scheduler": "http://<local-address>",
+    "Etl": "http://<local-address>"
   }
 }
 ```
@@ -227,7 +227,7 @@ Configuration via `WebhookOptions` in `Reference.Etl.Server/Configuration/Webhoo
 ```json
 {
   "Webhooks": {
-    "CompletionUrl": "http://localhost:5001/api/v1/etl/webhook/completion",
+    "CompletionUrl": "http://<local-address>/api/v1/etl/webhook/completion",
     "TimeoutSeconds": 30
   }
 }
@@ -302,7 +302,7 @@ Configuration via `EtlDispatchConfiguration` in `Reference.Scheduler.Server/Conf
 ```csharp
 public class EtlDispatchConfiguration
 {
-    public string BaseUrl { get; set; } = "http://localhost:5002";
+    public string BaseUrl { get; set; } = "http://<local-address>";
     public int TimeoutSeconds { get; set; } = 30;
     public int MaxRetries { get; set; } = 3;
     public int RetryDelaySeconds { get; set; } = 2;

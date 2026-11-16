@@ -110,8 +110,8 @@ In development, configure CORS to allow the reference-ui origin:
   "Cors": {
     "Enabled": true,
     "Origins": [
-      "https://localhost:5007",
-      "http://localhost:5007"
+      "https://<local-address>",
+      "http://<local-address>"
     ],
     "Methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     "Headers": ["Content-Type", "Authorization", "X-Requested-With", "X-Tenant-Id", "X-Correlation-Id"],
@@ -141,11 +141,11 @@ In production, specify exact origins. Never use wildcard `*` with `AllowCredenti
 
 ### Fallback Behavior
 
-When `Origins` is empty, `AddFrameworkCors` falls back to allowing `localhost` origins only:
+When `Origins` is empty, `AddFrameworkCors` falls back to allowing `<local-address>` origins only:
 
 ```csharp
 policy.SetIsOriginAllowed(origin =>
-    string.Equals(new Uri(origin).Host, "localhost", StringComparison.OrdinalIgnoreCase));
+    string.Equals(new Uri(origin).Host, "<local-address>", StringComparison.OrdinalIgnoreCase));
 ```
 
 This is safe for development but must be overridden in production with explicit origins.
@@ -351,7 +351,7 @@ app.UseFastEndpoints();                   // 7. Endpoint routing
 | HTTPS | .NET dev certificate | Proper TLS certificate |
 | HSTS | Disabled | Enabled (automatic in non-Development) |
 | Internal API Key | `dev-internal-api-key-change-in-production` | Cryptographically random, 32+ bytes |
-| CORS Origins | `localhost:5007` | Exact production domain |
+| CORS Origins | `<local-address>` | Exact production domain |
 | SQL Passwords | Docker compose env vars | Secret manager injection |
 | Seq Authentication | Disabled (`NOAUTHENTICATION`) | Enabled with API keys |
 | CSP | Default (includes `unsafe-inline`) | Tighten per application needs |

@@ -273,6 +273,7 @@ internal static class DataSetQueryHelper
         PathValue = source.PathValue,
         ContainerName = source.ContainerName,
         ContainerId = source.ContainerId,
+        SupportsPredicatePushdown = source.SupportsPredicatePushdown,
         Priority = source.Priority,
         SourceKind = source.SourceKind,
         SourceDataSetId = source.SourceDataSetId,

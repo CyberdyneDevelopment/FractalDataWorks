@@ -147,7 +147,7 @@ public sealed class ListConnectionsEndpoint : EndpointWithoutRequest<List<Connec
 dotnet run --project Reference.Api
 ```
 
-Open `http://localhost:5149/` for the API reference: it redirects to `/api/v1/scalar`, where you sign in, and lists the reference pages you may open. `/api/v1/reference/scalar` is the whole API, cut to what you may call (FDW-919).
+Open `http://<local-address>/` for the API reference: it redirects to `/api/v1/scalar`, where you sign in, and lists the reference pages you may open. `/api/v1/reference/scalar` is the whole API, cut to what you may call (FDW-919).
 
 ### 7. API Endpoints
 
@@ -166,17 +166,17 @@ The Reference API includes these endpoints:
 
 **List connections:**
 ```bash
-curl http://localhost:5149/api/connections
+curl http://<local-address>/api/connections
 ```
 
 **Test a connection:**
 ```bash
-curl -X POST http://localhost:5149/api/connections/ProductionDb/test
+curl -X POST http://<local-address>/api/connections/ProductionDb/test
 ```
 
 **Get available connection types:**
 ```bash
-curl http://localhost:5149/api/connection-types
+curl http://<local-address>/api/connection-types
 ```
 
 ## Next Steps

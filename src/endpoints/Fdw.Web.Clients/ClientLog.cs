@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 /// <remarks>
 /// Every message carries the ABSOLUTE request URI (base address + path) — a relative path alone
 /// hides which host/port the client actually targeted, which is exactly the detail needed when a
-/// misconfigured base address is the fault (a stale <c>localhost:5002</c> was invisible for three
+/// misconfigured base address is the fault (a stale local base address was invisible for three
 /// diagnosis cycles before this). Exception-carrying messages also inline <c>{error}</c>
 /// (<see cref="Exception.Message"/>) so the single failure line names its cause — the flattened
 /// message flows into the returned <see cref="IGenericMessage"/> and is what upstream services

@@ -233,7 +233,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         // WHERE clause
         if (filter?.Root != null)
         {
-            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v));
+            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddFilterParameter(command, n, v));
             command.CommandText += $" WHERE {whereClause}";
         }
 
@@ -341,7 +341,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         // the parent table (how the caller filters on the parent's durable Id).
         if (filter?.Root != null)
         {
-            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v), primaryTable);
+            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddFilterParameter(command, n, v), primaryTable);
             command.CommandText += $" WHERE {whereClause}";
         }
 
@@ -509,7 +509,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         // WHERE applies before grouping.
         if (filter?.Root != null)
         {
-            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v));
+            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddFilterParameter(command, n, v));
             command.CommandText += $" WHERE {whereClause}";
         }
 

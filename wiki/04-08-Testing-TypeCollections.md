@@ -122,7 +122,7 @@ public sealed class MsSqlConnectionTypeTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Connections:MsSql:0:Server"] = "localhost"
+                ["Connections:MsSql:0:Server"] = "<local-address>"
             })
             .Build();
 

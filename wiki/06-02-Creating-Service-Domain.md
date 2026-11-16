@@ -380,7 +380,7 @@ public partial class {Implementation}Configuration
         string.IsNullOrEmpty(Name) ? "{Domain}" : $"{Domain}:{Name}";
 
     // Implementation-specific properties
-    public string Server { get; set; } = "localhost";
+    public string Server { get; set; } = "<local-address>";
     public int Port { get; set; } = 1234;
     // ...
 }
@@ -550,7 +550,7 @@ public sealed partial class {Implementation}Configuration
     public override string {Domain}Type => "{Implementation}";
 
     // Implementation-specific properties
-    public string Server { get; set; } = "localhost";
+    public string Server { get; set; } = "<local-address>";
     public int Port { get; set; } = 1234;
 }
 ```
@@ -607,7 +607,7 @@ public override void Configure(
 
 This binds all MsSql connections from keys like:
 - `Connections:MsSql:0:Name` = "NflStats"
-- `Connections:MsSql:0:Server` = "localhost"
+- `Connections:MsSql:0:Server` = "<local-address>"
 - `Connections:MsSql:1:Name` = "OrdersDb"
 - `Connections:MsSql:1:Server` = "remote-server"
 
@@ -648,7 +648,7 @@ INSERT INTO cfg.{Implementation}{Domain} (
     Id, {Domain}Id, Server, Port, ...
 )
 VALUES (
-    @ChildId, @ParentId, 'localhost', 1433, ...
+    @ChildId, @ParentId, '<local-address>', 1433, ...
 );
 
 -- 3. Insert nested properties (optional key-value table)

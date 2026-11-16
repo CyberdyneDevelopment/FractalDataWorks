@@ -283,7 +283,7 @@ public class MsSqlConnectionFactory : IMsSqlConnectionFactory
     "MsSql": [
       {
         "Name": "OrdersDb",
-        "Server": "localhost",
+        "Server": "<local-address>",
         "Database": "Orders",
         "AuthenticationType": "SqlAuth",
         "Authentication": {
@@ -294,7 +294,7 @@ public class MsSqlConnectionFactory : IMsSqlConnectionFactory
       },
       {
         "Name": "ReportsDb",
-        "Server": "localhost",
+        "Server": "<local-address>",
         "Database": "Reports",
         "AuthenticationType": "WindowsAuth",
         "Authentication": {}
@@ -321,7 +321,7 @@ conn.Connection
 -- Typed body (every field the factory reads at runtime)
 conn.MsSqlConnection
   ConnectionRowId          -- FK to conn.Connection.RowId
-  Server: 'localhost'
+  Server: '<local-address>'
   Database: 'Orders'
   AuthenticationType: 'SqlAuth'   -- discriminator column
 

@@ -80,7 +80,7 @@ Configuration tables use parent-child relationships. A `Connection` table has ch
 
 ```
 Connections:MsSql:0:Name = "ProductionDb"
-Connections:MsSql:0:Server = "localhost"
+Connections:MsSql:0:Server = "<local-address>"
 Connections:MsSql:0:Database = "ConfigurationDb"
 Connections:PostgreSql:0:Name = "AnalyticsDb"
 ```

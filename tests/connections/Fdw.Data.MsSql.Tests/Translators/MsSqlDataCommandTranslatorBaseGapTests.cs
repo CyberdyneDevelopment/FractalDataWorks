@@ -7,6 +7,7 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql;
 using Fdw.Results;
+using Fdw.Services.Connections.Sql;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -384,5 +385,85 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         // Assert - null value should be passed as DBNull.Value parameter
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Parameters["@p0"].Value.ShouldBe(DBNull.Value);
+    }
+
+    private static Mock<IQueryCommand> QueryFilteredBy(object? value, IFilterOperator? op = null)
+    {
+        var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
+        queryCommand.Setup(q => q.Filter).Returns(new FilterExpression
+        {
+            Root = new FilterCondition { PropertyName = "Name", Operator = op ?? new EqualOperator(), Value = value }
+        });
+        queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
+        queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
+        queryCommand.Setup(q => q.Paging).Returns((IPagingExpression?)null);
+        return queryCommand;
+    }
+
+    // An NVARCHAR value makes SQL Server convert a VARCHAR column to compare it, which under a SQL collation rules out a seek on the
+    // column and an index for the order: the statement scans and sorts the table. An ASCII string is the same text in every code page,
+    // so it is sent as VARCHAR.
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Performance")]
+    [InlineData("RTM")]
+    [InlineData("")]
+    [InlineData("a value with spaces, digits 123 and ~punctuation~")]
+    public async Task AFilterValueOfAsciiTextIsSentAsVarChar(string text)
+    {
+        var result = await _sut.Translate(QueryFilteredBy(text).Object, CreateContainer().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var parameter = result.Value!.Parameters["@p0"];
+        parameter.SqlDbType.ShouldBe(System.Data.SqlDbType.VarChar);
+        parameter.Value.ShouldBe(text);
+    }
+
+    // A VARCHAR value is encoded in the database's code page, which may not hold the character, so this text stays NVARCHAR.
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData("Z\u00fcrich")]
+    [InlineData("\u6771\u4eac")]
+    [InlineData("na\u00efve caf\u00e9")]
+    public async Task AFilterValueWithACharacterOutsideAsciiStaysNVarChar(string text)
+    {
+        var result = await _sut.Translate(QueryFilteredBy(text).Object, CreateContainer().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var parameter = result.Value!.Parameters["@p0"];
+        parameter.SqlDbType.ShouldBe(System.Data.SqlDbType.NVarChar);
+        parameter.Value.ShouldBe(text);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Performance")]
+    public async Task EachTextValueOfAFilterListIsTypedOnItsOwn()
+    {
+        // A list is translated inside a connection's scope, which says how long a list may be before it goes to a table.
+        using var scope = KeyListSpillScope.Begin(new TranslationSettings(50), null);
+
+        var result = await _sut.Translate(
+            QueryFilteredBy(new[] { "DAM", "RTM", "Z\u00fcrich" }, new InOperator()).Object, CreateContainer().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Parameters["@p0_0"].SqlDbType.ShouldBe(System.Data.SqlDbType.VarChar);
+        result.Value!.Parameters["@p0_1"].SqlDbType.ShouldBe(System.Data.SqlDbType.VarChar);
+        result.Value!.Parameters["@p0_2"].SqlDbType.ShouldBe(System.Data.SqlDbType.NVarChar);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFilterValueThatIsNotTextBindsAsItDid()
+    {
+        var result = await _sut.Translate(QueryFilteredBy(42).Object, CreateContainer().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var parameter = result.Value!.Parameters["@p0"];
+        parameter.SqlDbType.ShouldBe(System.Data.SqlDbType.Int);
+        parameter.Value.ShouldBe(42);
     }
 }

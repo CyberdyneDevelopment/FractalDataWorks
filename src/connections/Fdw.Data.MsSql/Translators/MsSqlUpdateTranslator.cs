@@ -218,7 +218,7 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         if (filter?.Root != null)
         {
             // Use provided filter
-            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v), null, $"{prefix}where_");
+            var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddFilterParameter(command, n, v), null, $"{prefix}where_");
             command.CommandText += $" WHERE {whereClause}";
         }
         else
@@ -242,7 +242,7 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
                 throw new NullPrimaryKeyException(pkField.Name);
             }
 
-            AddParameter(command, "where_pk", pkValue);
+            AddFilterParameter(command, "where_pk", pkValue);
             command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {prefix}where_pk";
         }
 

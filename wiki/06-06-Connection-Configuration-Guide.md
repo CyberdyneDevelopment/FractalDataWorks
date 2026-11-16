@@ -279,7 +279,7 @@ WHERE c.Name = 'MyServiceDb' AND c.IsCurrent = 1 AND c.IsDeleted = 0
 |--------|---------|-------------|
 | `ConnectionId` | - | Parent `conn.Connection.Id` (logical) |
 | `ConnectionRowId` | - | Parent `conn.Connection.RowId` (FK, physical) |
-| `Server` | `'localhost'` | SQL Server host/IP |
+| `Server` | `'<local-address>'` | SQL Server host/IP |
 | `Database` | - | Database name |
 | `Port` | `1433` | TCP port |
 | `InstanceName` | NULL | Named instance |

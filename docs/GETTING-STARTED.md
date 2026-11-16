@@ -149,7 +149,7 @@ manager(s), and data store(s) needed to reach ConfigurationDb. Add this file to 
         "Name": "ConfigurationDb",
         "Implementation": "MsSql",
         "Configuration": {
-          "Server": "localhost",
+          "Server": "<local-address>",
           "Database": "ConfigurationDb",
           "Port": 1433,
           "AuthenticationType": "SqlAuth",

@@ -76,7 +76,7 @@ From [`concepts/05-configuration/src/Reference.Configuration/appsettings.json:8-
   "MsSql": [
     {
       "Name": "OrdersDb",
-      "Server": "localhost",
+      "Server": "<local-address>",
       "Database": "Orders",
       "Port": 1433,
       "Encrypt": true,

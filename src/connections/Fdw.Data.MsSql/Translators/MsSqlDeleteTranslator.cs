@@ -146,7 +146,7 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
             BuildQualifiedTableName(dbPath),
             dialect,
             soft,
-            statement => filter is null ? null : BuildWhereClause(filter, dialect, (n, v) => AddParameter(statement, n, v), "t"),
+            statement => filter is null ? null : BuildWhereClause(filter, dialect, (n, v) => AddFilterParameter(statement, n, v), "t"),
             out var problem);
         return built is null
             ? GenericResult<SqlCommand>.Failure(
@@ -171,7 +171,7 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
         var command = CreateCommand(sql);
 
         // Build WHERE clause from filter
-        var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v));
+        var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddFilterParameter(command, n, v));
         command.CommandText += $" WHERE {whereClause}";
 
         return command;

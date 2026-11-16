@@ -144,4 +144,16 @@ public sealed class DataSetRequestValuesTests
     [Fact]
     public void NoCachingBlockIsNoCaching()
         => DataSetQueryHelper.MapCaching(null, "Simple", Values()).Value.ShouldBeNull();
+
+    // The answer left the member out, so every source read back said false whatever was stored, and a caller that sent its sources
+    // back with what it had read turned pushdown off.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ASourceIsAnsweredWithThePushdownItStores(bool stored)
+    {
+        var source = new DataSetSourceConfiguration { SourceName = "Main", SourceKind = "DataStore", Priority = 0, SupportsPredicatePushdown = stored };
+
+        DataSetQueryHelper.MapToSourceDto(source).SupportsPredicatePushdown.ShouldBe(stored);
+    }
 }
