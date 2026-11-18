@@ -14,7 +14,7 @@ namespace Fdw.Orchestration.TypeCollections.BackoffStrategies;
 /// by longer waits is beneficial. Delay doubles each attempt:
 /// 1s, 2s, 4s, 8s, 16s, etc.
 /// </remarks>
-[TypeOption(typeof(BackoffStrategiesCollection), "Exponential", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(BackoffStrategiesCollection), "Exponential")]
 public sealed class ExponentialBackoffStrategy : BackoffStrategyBase
 {
     /// <summary>

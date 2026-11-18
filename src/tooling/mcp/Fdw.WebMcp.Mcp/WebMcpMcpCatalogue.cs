@@ -2,9 +2,17 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Conventions;
 using Fdw.WebMcp.Hosting;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
@@ -58,6 +66,84 @@ public sealed class WebMcpMcpCatalogue
             .Select(descriptor => Describe(_plans.GetOrAdd(descriptor.Name, _ => WebMcpToolPlan.Create(descriptor, _logger))))
             .ToList();
     }
+
+    /// <summary>The tools a caller may call, as MCP describes them.</summary>
+    /// <param name="context">The request the tool list was asked for in; its user is the caller.</param>
+    /// <param name="cancellationToken">Cancels the judgement.</param>
+    /// <returns>Each tool whose route's authorization admits the caller.</returns>
+    /// <remarks>
+    /// Each tool is judged as ASP.NET's authorization middleware judges a request to its route: an endpoint
+    /// that allows anonymous callers is offered to everyone; otherwise the endpoint's authorize data and
+    /// policies are combined, the host's fallback policy applies when the endpoint declares none, and the
+    /// policy evaluator authenticates and authorizes the caller against it. A tool is offered only when that
+    /// succeeds, so the list never shows a tool its route would refuse. A call to a withheld tool is still
+    /// refused by the route itself; this only decides what is offered.
+    /// </remarks>
+    public async Task<IList<Tool>> ToolsFor(HttpContext? context, CancellationToken cancellationToken = default)
+    {
+        if (context is null)
+        {
+            McpBridgeLog.NoCallerToJudge(_logger);
+            return [];
+        }
+
+        var policyProvider = context.RequestServices.GetRequiredService<IAuthorizationPolicyProvider>();
+        var evaluator = context.RequestServices.GetRequiredService<IPolicyEvaluator>();
+        var caller = context.User;
+        var offered = new List<Tool>();
+
+        foreach (var descriptor in _registry.Tools)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (descriptor.Endpoint is null)
+            {
+                McpBridgeLog.ToolWithoutEndpoint(_logger, descriptor.Name);
+                continue;
+            }
+
+            if (await Admits(descriptor.Endpoint, context, policyProvider, evaluator).ConfigureAwait(false))
+            {
+                offered.Add(Describe(_plans.GetOrAdd(descriptor.Name, _ => WebMcpToolPlan.Create(descriptor, _logger))));
+            }
+            else
+            {
+                McpBridgeLog.ToolWithheld(_logger, descriptor.Name, CallerName(caller));
+            }
+
+            // Why: the evaluator replaces the user for a policy that names its own schemes, and the next
+            // tool must be judged against the caller as they arrived.
+            context.User = caller;
+        }
+
+        McpBridgeLog.OfferingTools(_logger, offered.Count, _registry.Tools.Count, CallerName(caller));
+        return offered;
+    }
+
+    private static async Task<bool> Admits(Endpoint endpoint, HttpContext context, IAuthorizationPolicyProvider policyProvider, IPolicyEvaluator evaluator)
+    {
+        if (endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null)
+        {
+            return true;
+        }
+
+        var policy = await AuthorizationPolicy.CombineAsync(
+                policyProvider,
+                endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
+                endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>())
+            .ConfigureAwait(false);
+        policy ??= await policyProvider.GetFallbackPolicyAsync().ConfigureAwait(false);
+        if (policy is null)
+        {
+            return true;
+        }
+
+        var authenticated = await evaluator.AuthenticateAsync(policy, context).ConfigureAwait(false);
+        var authorized = await evaluator.AuthorizeAsync(policy, authenticated, context, context).ConfigureAwait(false);
+        return authorized.Succeeded;
+    }
+
+    private static string CallerName(ClaimsPrincipal caller)
+        => caller.Identity is { IsAuthenticated: true, Name: { Length: > 0 } name } ? name : LogPlaceholders.Anonymous;
 
     private static Tool Describe(WebMcpToolPlan plan)
     {

@@ -18,18 +18,18 @@ namespace Fdw.Services.Etl.Graphs;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Refused: a script that does not parse in its data store's language (DATA-21440), a table the store's catalogue does not hold (DATA-21441), a table
+/// Refused: a script that does not parse in its data store's language (DATA-21440), a table the store's catalog does not hold (DATA-21441), a table
 /// named with no schema that more than one schema holds (DATA-21442), and a data store that cannot be read (DATA-21443).
 /// </para>
 /// <para>
 /// Warned, and saved as before: a data store whose kind has no script reader on this host (DATA-21444), names in another database or server, which are
-/// legal references the catalogue cannot hold (DATA-21445), and a data store with no catalogued containers, whose tables cannot be checked until it is
+/// legal references the catalog cannot hold (DATA-21445), and a data store with no cataloged containers, whose tables cannot be checked until it is
 /// discovered (DATA-21449). A name with a part given at run time, and every name of a script whose data store is a parameter, are judged when the step
 /// runs, and only logged. A table the script creates itself need not exist yet. A procedure the script runs and a table-valued function it reads are
 /// neither checked nor drawn.
 /// </para>
 /// <para>
-/// Why a check apart from the shape check: what a script names is judged against the data store's catalogue, so the routes that save and validate a
+/// Why a check apart from the shape check: what a script names is judged against the data store's catalog, so the routes that save and validate a
 /// graph read the store and pass the reader in, as <see cref="DestinationGuidColumns"/> does for data set fields. Each finding is its own coded
 /// message, placed on the step's script setting.
 /// </para>
@@ -108,7 +108,11 @@ public static class GraphScriptProblems
             GraphScriptLog.ScriptNamesAtRunTime(logger, script.Component, script.DataStore, Quoted(reading.RunTimeNamed));
         }
 
-        var named = reading.Reads.Concat(reading.Writes).Where(name => !Created(reading, name)).DistinctBy(name => name.Display, StringComparer.OrdinalIgnoreCase).ToList();
+        // A table in a working area exists only while the pipeline runs, so the catalog is not asked about it (FDW-6393): it is judged by its schema name alone, as lineage does.
+        var named = reading.Reads.Concat(reading.Writes)
+            .Where(name => !Created(reading, name) && !WorkingAreas.Contains(store, name.Path))
+            .DistinctBy(name => name.Display, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         if (named.Count == 0)
         {
             return;

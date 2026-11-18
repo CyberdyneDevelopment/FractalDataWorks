@@ -5,7 +5,9 @@ using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Abstractions.DataConfigurationRules;
 using Fdw.Services.Data.Abstractions.DataOptionRows;
+using Fdw.Services.Data.DataConfigurationRules;
 using Fdw.Services.Data.DataOptionRows;
 using Fdw.Services.Data.Abstractions.ColumnValues;
 using Fdw.Services.Data.ColumnValues;
@@ -120,6 +122,11 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
             // FDW-5664: the option rows of a container, in the options table the server settings name, read and written through this gateway.
             builder.Services.TryAddScoped<IDataOptionRows, DataOptionRowService>();
             DataOptionRowsLog.Registered(loggerFactory?.CreateLogger<DataOptionRowService>() ?? NullLogger<DataOptionRowService>.Instance);
+
+            // FDW-6345: the data configuration rules and their values, in the tables the settings name, beside the option rows above.
+            builder.Services.TryAddScoped<IDataConfigurationRules, DataConfigurationRuleService>();
+            builder.Services.TryAddScoped<IDataConfigurationRuleNames, DataConfigurationRuleNames>();
+            DataOptionRulesLog.Registered(loggerFactory?.CreateLogger<DataConfigurationRuleService>() ?? NullLogger<DataConfigurationRuleService>.Instance);
 
             // FDW-5666: the column values search reads containers through this gateway, with the page sizes this option declares.
             var columnValuesLog = loggerFactory?.CreateLogger<ContainerColumnValues>() ?? NullLogger<ContainerColumnValues>.Instance;

@@ -18,6 +18,7 @@
     <!-- Source generators: [TypeCollection] and [MessageLogging] -->
     <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\foundation\messagelogging\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

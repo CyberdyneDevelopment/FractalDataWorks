@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql;
@@ -38,6 +39,19 @@ public sealed class MsSqlContainerTests
     private static MsSqlViewContainer CreateView(string name = "ActiveCustomers")
         => new(name, null, CreateParent(), CreateFields(), [], NoReferencingKeys(),
                CreatePath("dbo", name), FormatTypes.Tabular, NoMetadata());
+
+    // FDW-6585: a declared maximum length is the field's MaxLength metadata entry; a field that declares none has no metadata.
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void AFieldWithADeclaredMaxLengthStatesItAsMetadataAndOneWithoutHasNone()
+    {
+        var declared = new MsSqlDataField("Name", null, 0, false, (DataTypeOptionBase)MsSqlNativeTypes.ByName("Int"), null, null, 200, null, DatumTypes.NotYetTyped);
+        var undeclared = CreateFields().Single();
+
+        ((IField)declared).Metadata.ShouldNotBeNull()["MaxLength"].ShouldBe(200);
+        ((IField)undeclared).Metadata.ShouldBeNull();
+    }
 
     // MsSqlTableContainer Tests
 

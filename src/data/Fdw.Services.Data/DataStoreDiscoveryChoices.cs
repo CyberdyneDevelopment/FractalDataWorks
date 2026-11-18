@@ -17,7 +17,7 @@ namespace Fdw.Services.Data;
 /// </remarks>
 public static class DataStoreDiscoveryChoices
 {
-    /// <summary>Builds the options, or the failure naming the first choice the request leaves out.</summary>
+    /// <summary>Builds the options, or the failure naming every choice the request leaves out.</summary>
     /// <param name="excludedSchemas">The schemas to leave out.</param>
     /// <param name="includeOnlySchemas">The only schemas to read; null reads every schema not excluded.</param>
     /// <param name="discoverViews">Whether views are read.</param>
@@ -37,14 +37,19 @@ public static class DataStoreDiscoveryChoices
         string owner,
         ILogger logger)
     {
-        var missing = excludedSchemas is null ? "ExcludedSchemas"
-            : discoverViews is null ? "DiscoverViews"
-            : discoverIndexes is null ? "DiscoverIndexes"
-            : discoverForeignKeys is null ? "DiscoverForeignKeys"
-            : discoverDescriptions is null ? "DiscoverDescriptions"
-            : null;
-        if (missing is not null)
-            return GenericResult<DataStoreDiscoveryOptions>.Failure(SchemaDiscoveryLog.DiscoveryChoiceNotStated(logger, owner, missing));
+        var missing = new List<string>();
+        if (excludedSchemas is null)
+            missing.Add("ExcludedSchemas");
+        if (discoverViews is null)
+            missing.Add("DiscoverViews");
+        if (discoverIndexes is null)
+            missing.Add("DiscoverIndexes");
+        if (discoverForeignKeys is null)
+            missing.Add("DiscoverForeignKeys");
+        if (discoverDescriptions is null)
+            missing.Add("DiscoverDescriptions");
+        if (missing.Count > 0)
+            return GenericResult<DataStoreDiscoveryOptions>.Failure(SchemaDiscoveryLog.DiscoveryChoiceNotStated(logger, owner, string.Join(", ", missing)));
 
         return GenericResult<DataStoreDiscoveryOptions>.Success(new DataStoreDiscoveryOptions
         {

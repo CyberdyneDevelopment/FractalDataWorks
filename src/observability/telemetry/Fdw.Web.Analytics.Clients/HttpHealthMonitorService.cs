@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Abstractions.Health.Monitoring;
+using Fdw.Services.Abstractions.Health.Monitoring.Logging;
 using Fdw.Web.Analytics.Clients.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,6 +21,9 @@ namespace Fdw.Web.Analytics.Clients;
 /// </summary>
 public sealed class HttpHealthMonitorService : IHealthMonitorService
 {
+    /// <summary>The detail key that carries the HTTP status the remote monitor answered with, beside a failure's coded message.</summary>
+    public const string UpstreamStatusDetailKey = "upstreamStatus";
+
     /// <summary>Gets the service category this instance belongs to.</summary>
     public string ServiceType => "HealthMonitor";
 
@@ -70,7 +76,7 @@ public sealed class HttpHealthMonitorService : IHealthMonitorService
         var response = await _httpClient.GetAsync($"health/services/{Uri.EscapeDataString(serviceName)}", cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
-            return GenericResult<ServiceHealthSnapshot>.Failure(HealthMonitorClientLog.GetServiceHealthFailed(_logger, serviceName, (int)response.StatusCode));
+            return ServiceFailure<ServiceHealthSnapshot>(response.StatusCode, serviceName, () => HealthMonitorClientLog.GetServiceHealthFailed(_logger, serviceName, (int)response.StatusCode));
 
         var snapshot = await response.Content.ReadFromJsonAsync<ServiceHealthSnapshot>(cancellationToken).ConfigureAwait(false);
         return GenericResult<ServiceHealthSnapshot>.Success(snapshot!);
@@ -83,7 +89,7 @@ public sealed class HttpHealthMonitorService : IHealthMonitorService
         var response = await _httpClient.GetAsync($"health/services/{Uri.EscapeDataString(serviceName)}/throughput?window={windowStr}", cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
-            return GenericResult<ThroughputData>.Failure(HealthMonitorClientLog.GetThroughputFailed(_logger, serviceName, (int)response.StatusCode));
+            return ServiceFailure<ThroughputData>(response.StatusCode, serviceName, () => HealthMonitorClientLog.GetThroughputFailed(_logger, serviceName, (int)response.StatusCode));
 
         var data = await response.Content.ReadFromJsonAsync<ThroughputData>(cancellationToken).ConfigureAwait(false);
         return GenericResult<ThroughputData>.Success(data!);
@@ -96,11 +102,22 @@ public sealed class HttpHealthMonitorService : IHealthMonitorService
         var response = await _httpClient.GetAsync($"health/services/{Uri.EscapeDataString(serviceName)}/history?window={windowStr}", cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
-            return GenericResult<IReadOnlyList<HealthCheckPoint>>.Failure(HealthMonitorClientLog.GetHealthHistoryFailed(_logger, serviceName, (int)response.StatusCode));
+            return ServiceFailure<IReadOnlyList<HealthCheckPoint>>(response.StatusCode, serviceName, () => HealthMonitorClientLog.GetHealthHistoryFailed(_logger, serviceName, (int)response.StatusCode));
 
         var history = await response.Content.ReadFromJsonAsync<List<HealthCheckPoint>>(cancellationToken).ConfigureAwait(false);
         return GenericResult<IReadOnlyList<HealthCheckPoint>>.Success(history ?? []);
     }
+
+    // A remote that answers 404 for a service does not know it, which is the failure the local monitor answers for the same service
+    // (HealthMonitorLog.ServiceNotFound, event 31000), so the service routes keep answering 404 for it whichever monitor this host uses.
+    // Any other status is a failure of the call, never a not found: its own coded message names it, and the status travels as a detail
+    // as well as in the message's text (FDW-6466).
+    private IGenericResult<T> ServiceFailure<T>(HttpStatusCode status, string serviceName, Func<IGenericMessage> failedCall)
+        => status == HttpStatusCode.NotFound
+            ? GenericResult<T>.Failure(HealthMonitorLog.ServiceNotFound(_logger, serviceName))
+            : GenericResult<T>.WithDetails(
+                GenericResult<T>.Failure(failedCall()),
+                ResultDetails.Create(UpstreamStatusDetailKey, (int)status));
 
     private static string FormatWindow(TimeSpan window)
     {

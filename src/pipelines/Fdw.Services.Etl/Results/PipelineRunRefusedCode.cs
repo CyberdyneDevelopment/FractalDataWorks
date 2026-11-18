@@ -11,7 +11,8 @@ namespace Fdw.Services.Etl.Results;
 /// </summary>
 /// <remarks>
 /// 20002 (ValidationFailed): the run roles and the sources and destinations are the caller's input, so the
-/// answer is a 400 that says which role or which source and why.
+/// answer is a 400 that says which role or which source and why. Its severity is Warning (FDW-6520): a start refused for what the caller gave is
+/// the caller's mistake, so the line it writes on the host is not an Error.
 /// </remarks>
 [TypeOption(typeof(EtlResultCodes), "PipelineRunRefused", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]
@@ -20,7 +21,7 @@ public sealed class PipelineRunRefusedCode : EtlResultCodeBase
     /// <summary>Initializes a new instance of the <see cref="PipelineRunRefusedCode"/> class.</summary>
     public PipelineRunRefusedCode()
         : base(20002, "PipelineRunRefused",
-            ResultSeverities.ByName("Error"),
+            ResultSeverities.ByName("Warning"),
             "Pipeline '{PipelineName}' cannot run as {RunRoles}: {Reason}",
             isRetryable: false)
     {

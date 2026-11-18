@@ -11,4 +11,7 @@ public static class DataOptionPlaceholders
 {
     /// <summary>The name of the option a data option type answers with when it has no option collection of its own.</summary>
     public const string UnregisteredName = "Unregistered";
+
+    /// <summary>Stands in a message for the upper limit of a kind that takes a list of any length.</summary>
+    public const string AnyNumber = "any number";
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fdw.Configuration;
 using Fdw.Data.Abstractions;
 using Fdw.Data;
@@ -65,6 +66,13 @@ public sealed partial class DataStoreImplementationConfiguration : IDataStoreImp
 
     /// <summary>Gets or sets the paths (schemas) within this store, cascaded on read.</summary>
     public List<DataPathConfiguration> Paths { get; set; } = [];
+
+    /// <inheritdoc/>
+    public List<DataStoreWorkingPathConfiguration> WorkingPathRows { get; set; } = [];
+
+    /// <inheritdoc/>
+    /// <remarks>The names of <see cref="WorkingPathRows"/>; read-only, so the mapper stores no column for it.</remarks>
+    public IReadOnlyList<string> WorkingPaths => [.. WorkingPathRows.Select(row => row.Name)];
 
     /// <summary>Gets or sets whether this is the current active version of the record.</summary>
     public bool IsCurrent { get; set; } = true;

@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using FluentValidation;
 using Fdw.Validation;
 
@@ -24,5 +26,13 @@ public sealed class DataStoreConfigurationValidator : FdwConfigurationValidator<
             RuleFor(x => x.Description!)
                 .IsSafeString(1000);
         });
+
+        // The store's working areas (FDW-6394): each a valid name, and no name stated twice whatever its case.
+        RuleForEach(x => x.WorkingPathRows)
+            .SetValidator(new DataStoreWorkingPathConfigurationValidator());
+
+        RuleFor(x => x.WorkingPathRows)
+            .Must(rows => rows.Select(row => row.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() == rows.Count)
+            .WithMessage("A working area is named once; two rows state the same name");
     }
 }

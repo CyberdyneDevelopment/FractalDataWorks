@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization;
@@ -95,6 +97,27 @@ public sealed class DefaultWorkspaceServiceTypeTests
         scope.ServiceProvider.GetRequiredService<IWorkspaceConfigurationProvider>()
             .ShouldBeSameAs(scope.ServiceProvider.GetRequiredService<WorkspaceConfigurationProvider>());
         scope.ServiceProvider.GetRequiredService<IWorkspacePermissions>().ShouldBeOfType<WorkspacePermissions>();
+    }
+
+    // FDW-6346: nothing registered the access policy, so a service that took it (the data configuration rule service) failed the host build. The package registers it, scoped.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void ThePackageRegistersTheWorkspaceAccessPolicyScopedAndItBuildsWithValidationOn()
+    {
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        Doubles(builder.Services);
+        builder.Services.AddSingleton(Mock.Of<IRoleConfigurationProvider>());
+        builder.Services.AddSingleton(Mock.Of<IDataSetConfigurationProvider>());
+
+        new DefaultWorkspaceServiceType().Register(builder, NullLoggerFactory.Instance).IsSuccess.ShouldBeTrue();
+
+        var descriptor = builder.Services.Single(d => d.ServiceType == typeof(IWorkspaceAccessPolicy));
+        descriptor.Lifetime.ShouldBe(ServiceLifetime.Scoped);
+        descriptor.ImplementationType.ShouldBe(typeof(WorkspaceAccessPolicy));
+        using var provider = builder.Services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        using var scope = provider.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IWorkspaceAccessPolicy>().ShouldBeOfType<WorkspaceAccessPolicy>();
     }
 
     [Fact]

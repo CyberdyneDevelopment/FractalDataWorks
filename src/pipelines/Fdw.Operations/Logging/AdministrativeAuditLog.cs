@@ -6,7 +6,7 @@ namespace Fdw.Operations.Logging;
 
 /// <summary>
 /// MessageLogging for the record of administrative changes.
-/// EventId ranges: 12700-12705 (recorded), 22700-22706 (refused), 72700-72701 (storage).
+/// EventId ranges: 12700-12705 (recorded), 22700-22707 (refused), 72700-72701 (storage).
 /// </summary>
 [MessageLoggingTypeCode("OPERATIONS")]
 public static partial class AdministrativeAuditLog
@@ -58,6 +58,12 @@ public static partial class AdministrativeAuditLog
     /// </summary>
     [MessageLogging(EventId = 22706, Level = LogLevel.Warning, Message = "Administrative changes were not read: page {page} of {pageSize} is not a page (both start at 1)")]
     public static partial IGenericMessage PageInvalid(ILogger logger, int page, int pageSize);
+
+    /// <summary>
+    /// Logs that a change of several entries was not recorded because it named none (FDW-6372).
+    /// </summary>
+    [MessageLogging(EventId = 22707, Level = LogLevel.Warning, Message = "An administrative change was not recorded: it names no entries")]
+    public static partial IGenericMessage EntriesRequired(ILogger logger);
 
     /// <summary>
     /// Logs that storing a change failed.

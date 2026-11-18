@@ -96,6 +96,7 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
             ClassificationId = config.ClassificationId,
             WriteMode = config.WriteMode,
             Paths = (config.Paths ?? []).Select(MapPath).ToList(),
+            WorkingPaths = DataStoreWorkingPaths.Of(config),
             LastDiscoveredAt = config.LastDiscoveredAt,
             CreatedAt = config.CreatedAt,
             ModifiedAt = config.ModifyDate,

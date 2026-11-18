@@ -635,6 +635,10 @@
       <BuildType Solution="Develop|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
+    <Project Path="tests/data/Fdw.Services.Data.Scenarios.Tests/Fdw.Services.Data.Scenarios.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/data/Fdw.Services.Data.Tests/Fdw.Services.Data.Tests.csproj">
       <BuildType Solution="Develop|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />

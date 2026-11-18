@@ -43,6 +43,9 @@ public class DataStoreDetailResponse : ResourceDetail
     /// <summary>Gets or sets the paths (schemas) belonging to this data store.</summary>
     public IList<DataStorePathResponse> Paths { get; set; } = [];
 
+    /// <summary>Gets or sets the names of the store's working areas (FDW-6394); empty when it has none.</summary>
+    public IList<string> WorkingPaths { get; set; } = [];
+
     /// <summary>Gets or sets the last time the DataStore schema was discovered.</summary>
     public DateTimeOffset? LastDiscoveredAt { get; set; }
 

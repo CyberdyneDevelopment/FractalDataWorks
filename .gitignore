@@ -424,3 +424,6 @@ src/FractalDataWorks.UI/wwwroot/tailwind-safelist.html
 !/src/ui/CLAUDE.md
 !/src/workspaces/CLAUDE.md
 # END domain guides
+
+# Reqnroll generates a code-behind file for each .feature file at build time
+*.feature.cs

@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration is currently executing.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "Running", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "Running")]
 public sealed class RunningStatus : ExecutionStatusBase
 {
     /// <summary>

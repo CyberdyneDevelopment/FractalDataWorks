@@ -84,23 +84,67 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
         if (StoreTarget is not { } target)
             return GenericResult.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 
+        var row = await RowFor(entry, cancellationToken).ConfigureAwait(false);
+        if (!row.IsSuccess)
+            return (IGenericResult)row;
+
+        var inserted = await Gateway.Execute<int>(new InsertCommand<AdministrativeChange>(row.Value!), target, cancellationToken).ConfigureAwait(false);
+        if (!inserted.IsSuccess)
+            return GenericResult.Failure(AdministrativeAuditLog.StoreFailed(_logger, entry.ChangeKind, entry.ItemId, inserted.CurrentMessage));
+
+        AdministrativeAuditLog.Recorded(_logger, entry.ChangeKind, entry.ItemKind, entry.ItemId, row.Value!.Level, row.Value.ActorName);
+        return GenericResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult> RecordAll(IReadOnlyList<AdministrativeChangeEntry> entries, CancellationToken cancellationToken = default)
+    {
+        if (StoreTarget is not { } target)
+            return GenericResult.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
+        if (entries.Count == 0)
+            return GenericResult.Failure(AdministrativeAuditLog.EntriesRequired(_logger));
+
+        // Every entry is checked and turned into its row before anything is written, so one incomplete entry writes none, and the
+        // whole change goes in one insert, so the store takes all of it or none of it.
+        var rows = new List<AdministrativeChange>(entries.Count);
+        foreach (var entry in entries)
+        {
+            var row = await RowFor(entry, cancellationToken).ConfigureAwait(false);
+            if (!row.IsSuccess)
+                return (IGenericResult)row;
+            rows.Add(row.Value!);
+        }
+
+        var inserted = await Gateway.Execute<int>(new InsertCommand<AdministrativeChange>(rows), target, cancellationToken).ConfigureAwait(false);
+        if (!inserted.IsSuccess)
+            return GenericResult.Failure(AdministrativeAuditLog.StoreFailed(_logger, entries[0].ChangeKind, entries[0].ItemId, inserted.CurrentMessage));
+
+        foreach (var row in rows)
+            AdministrativeAuditLog.Recorded(_logger, row.ChangeKind, row.ItemKind, row.ItemId, row.Level, row.ActorName);
+        return GenericResult.Success();
+    }
+
+    // The checks every entry goes through, then the row under the caller's identity and tenant. Shared by Record and RecordAll so a
+    // change of several members is held to the same rules as a change of one.
+    private async Task<IGenericResult<AdministrativeChange>> RowFor(AdministrativeChangeEntry entry, CancellationToken cancellationToken)
+    {
         if (EntryProblem(entry) is { } problem)
-            return GenericResult.Failure(problem);
+            return GenericResult<AdministrativeChange>.Failure(problem);
 
         if (_authContext.Current is not { IsAuthenticated: true } caller
             || !Guid.TryParse(caller.UserId, out var actorUserId))
-            return GenericResult.Failure(AdministrativeAuditLog.ActorRequired(_logger, entry.ChangeKind));
+            return GenericResult<AdministrativeChange>.Failure(AdministrativeAuditLog.ActorRequired(_logger, entry.ChangeKind));
 
         if (caller.ActiveTenantId is not { } tenantId)
-            return GenericResult.Failure(AdministrativeAuditLog.TenantRequired(_logger, entry.ChangeKind));
+            return GenericResult<AdministrativeChange>.Failure(AdministrativeAuditLog.TenantRequired(_logger, entry.ChangeKind));
 
         // Why asked of the account and not read from the context: the token carries the user id, and the context's Username falls back to it when no name claim is
         // there, which recorded an id as the actor's name (FDW-2199). A person with no account, or no name, is a failure here, not a record with a stand-in.
         var actorName = await _userNames.Get(actorUserId, cancellationToken).ConfigureAwait(false);
         if (!actorName.IsSuccess)
-            return (IGenericResult)actorName;
+            return actorName.ToNewResult<AdministrativeChange>();
 
-        var row = new AdministrativeChange
+        return GenericResult<AdministrativeChange>.Success(new AdministrativeChange
         {
             ActorUserId = actorUserId,
             ActorName = actorName.Value!,
@@ -115,14 +159,7 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
             Reason = entry.Reason,
             // The person is the actor above; the role is the one their session acts with, read from the same context, never stated by the caller.
             ActingRole = caller.Claims.TryGetValue(ClaimDefinitions.actingRole.Name, out var acting) ? acting as string : null
-        };
-
-        var inserted = await Gateway.Execute<int>(new InsertCommand<AdministrativeChange>(row), target, cancellationToken).ConfigureAwait(false);
-        if (!inserted.IsSuccess)
-            return GenericResult.Failure(AdministrativeAuditLog.StoreFailed(_logger, entry.ChangeKind, entry.ItemId, inserted.CurrentMessage));
-
-        AdministrativeAuditLog.Recorded(_logger, entry.ChangeKind, entry.ItemKind, entry.ItemId, row.Level, row.ActorName);
-        return GenericResult.Success();
+        });
     }
 
     /// <inheritdoc />
@@ -139,6 +176,9 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
         var scope = ExecutionTenantScope.For(_authContext.Current);
         if (scope.ReachesNothing || (filter.TenantId is { } asked && !scope.Reaches(asked)))
             return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Success(EmptyPage(filter));
+
+        if (filter.NewestOfEachItem)
+            return await ReadNewestOfEachItem(filter, scope, target, cancellationToken).ConfigureAwait(false);
 
         var query = new QueryCommand<AdministrativeChange>
         {
@@ -192,6 +232,9 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
         AddEqual(conditions, "TenantId", tenant);
         AddEqual(conditions, "ActorUserId", filter.ActorUserId);
         AddEqual(conditions, "OrganizationId", filter.OrganizationId);
+        AddEqual(conditions, "ItemKind", filter.ItemKind);
+        AddEqual(conditions, "ItemId", filter.ItemId);
+        AddIn(conditions, "ItemId", filter.ItemIds);
         AddCompare(conditions, "OccurredAt", "GreaterThanOrEqual", filter.From);
         AddCompare(conditions, "OccurredAt", "LessThan", filter.To);
 
@@ -208,6 +251,81 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
         if (value is { } stated)
             conditions.Add(new FilterCondition { PropertyName = property, Operator = FilterOperators.ByName("Equal"), Value = stated });
     }
+
+    private static void AddEqual(List<FilterCondition> conditions, string property, string? value)
+    {
+        if (value is not null)
+            conditions.Add(new FilterCondition { PropertyName = property, Operator = FilterOperators.ByName("Equal"), Value = value });
+    }
+
+    private static void AddIn(List<FilterCondition> conditions, string property, IReadOnlyList<string>? values)
+    {
+        if (values is not null)
+            conditions.Add(new FilterCondition { PropertyName = property, Operator = FilterOperators.ByName("In"), Value = values });
+    }
+
+    private const string NewestColumn = "NewestAt";
+
+    // The newest change of each item named, in two set-based reads: the newest time of each item (a group by in the store), then every change of the
+    // items at those times, so a page of items is answered with two queries and never one for each item.
+    private async Task<IGenericResult<IPagedResponse<AdministrativeChangeRecord>>> ReadNewestOfEachItem(
+        AdministrativeChangeFilter filter, ExecutionTenantScope scope, DataStoreTarget target, CancellationToken cancellationToken)
+    {
+        if (filter.ItemKind is null)
+            return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Failure(AdministrativeAuditLog.FieldRequired(_logger, nameof(filter.ItemKind)));
+        if (filter.ItemIds is not { Count: > 0 })
+            return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Success(EmptyPage(filter));
+
+        var newest = new QueryCommand<Dictionary<string, object?>>
+        {
+            Filter = FilterFor(filter, scope),
+            Aggregation = new AggregationExpression
+            {
+                GroupByFields = ["ItemId"],
+                Aggregations = new Dictionary<string, string>(StringComparer.Ordinal) { [NewestColumn] = "MAX(OccurredAt)" },
+            },
+        };
+        var times = await Gateway.Execute<IEnumerable<Dictionary<string, object?>>>(newest, target, cancellationToken).ConfigureAwait(false);
+        if (!times.IsSuccess || times.Value is not { } timeRows)
+            return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Failure(AdministrativeAuditLog.ReadFailed(_logger, "the newest time of each item could not be read"));
+
+        var pairs = NewestPairs(timeRows);
+        if (pairs is null)
+            return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Failure(AdministrativeAuditLog.ReadFailed(_logger, "the newest time of an item did not read as a time"));
+        if (pairs.Nodes.Count == 0)
+            return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Success(EmptyPage(filter));
+
+        var changes = new QueryCommand<AdministrativeChange>
+        {
+            Filter = new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = [FilterFor(filter, scope)!.Root!, pairs] } },
+            Ordering = new OrderingExpression { OrderedFields = [new OrderedField { PropertyName = "OccurredAt", Direction = SortDirections.Descending }] },
+        };
+        var result = await Gateway.Execute<IEnumerable<AdministrativeChange>>(changes, target, cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess || result.Value is not { } rows)
+            return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Failure(AdministrativeAuditLog.ReadFailed(_logger, result.IsSuccess ? "the read answered no rows collection" : result.CurrentMessage));
+
+        var records = rows.Select(ToRecord).ToList();
+        return GenericResult<IPagedResponse<AdministrativeChangeRecord>>.Success(new PagedResponse<AdministrativeChangeRecord>(records, 1, Math.Max(1, filter.ItemIds.Count), records.Count));
+    }
+
+    // An item at its newest time, for each row of the group by; one of them is true for a change recorded at exactly that time. Null when a row does not
+    // say its item or its time as it should: a read that cannot be trusted is never answered as nothing.
+    private static FilterGroup? NewestPairs(IEnumerable<Dictionary<string, object?>> rows)
+    {
+        List<IFilterNode> either = [];
+        foreach (var row in rows)
+        {
+            if (!row.TryGetValue("ItemId", out var item) || item is not string itemId || !row.TryGetValue(NewestColumn, out var at) || at is not DateTimeOffset moment)
+                return null;
+
+            either.Add(new FilterGroup { Operator = LogicalOperator.And, Nodes = [Equal("ItemId", itemId), Equal("OccurredAt", moment)] });
+        }
+
+        return new FilterGroup { Operator = LogicalOperator.Or, Nodes = either };
+    }
+
+    private static FilterCondition Equal(string property, object value)
+        => new() { PropertyName = property, Operator = FilterOperators.ByName("Equal"), Value = value };
 
     private static void AddCompare(List<FilterCondition> conditions, string property, string operatorName, DateTimeOffset? value)
     {

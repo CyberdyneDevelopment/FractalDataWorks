@@ -53,9 +53,9 @@ public static partial class GraphScriptLog
         Message = "The script of component '{component}' on data store '{dataStore}' names {names} with a part given at run time; they are judged when it runs")]
     public static partial IGenericMessage ScriptNamesAtRunTime(ILogger logger, string component, string dataStore, string names);
 
-    /// <summary>Warns of a script on a data store that has no catalogued containers: its tables cannot be checked until the store is discovered.</summary>
+    /// <summary>Warns of a script on a data store that has no cataloged containers: its tables cannot be checked until the store is discovered.</summary>
     [MessageLogging(EventId = 21449, Level = LogLevel.Warning,
-        Message = "Data store '{dataStore}' has no catalogue (it has not been discovered), so the tables of the script of component '{component}' are not checked")]
+        Message = "Data store '{dataStore}' has no catalog (it has not been discovered), so the tables of the script of component '{component}' are not checked")]
     public static partial IGenericMessage ScriptStoreNotCatalogued(ILogger logger, string dataStore, string component);
 
     /// <summary>Logs a script whose data store is a parameter, so its names are judged when it runs.</summary>

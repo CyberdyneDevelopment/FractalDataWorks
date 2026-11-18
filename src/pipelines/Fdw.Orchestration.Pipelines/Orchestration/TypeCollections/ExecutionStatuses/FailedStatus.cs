@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration failed.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "Failed", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "Failed")]
 public sealed class FailedStatus : ExecutionStatusBase
 {
     /// <summary>

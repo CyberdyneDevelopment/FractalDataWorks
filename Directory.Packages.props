@@ -101,6 +101,7 @@
     <PackageVersion Include="Portable.System.DateTimeOnly" Version="9.0.2" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.15.0" />
     <PackageVersion Include="RecordParser" Version="2.3.0" />
+    <PackageVersion Include="Reqnroll.xunit.v3" Version="3.3.4" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageVersion Include="System.Collections.Immutable" Version="10.0.10" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0-rc.2.25502.107" />
@@ -119,7 +120,6 @@
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.13" />
     <PackageVersion Include="System.Threading.RateLimiting" Version="10.0.0" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.12.0" />
-
     <!-- Why pinned when nothing references it directly: Testcontainers.MsSql pulls SSH.NET 2025.1.0,
          which carries GHSA-q939-rpr3-3284 (high). Central package management lets the pin be stated
          once here; 2026.0.0 is the first version without it. Remove this when Testcontainers ships a

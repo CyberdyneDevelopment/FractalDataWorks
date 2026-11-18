@@ -7,6 +7,7 @@ using Fdw.Collections;
 using Fdw.Results;
 using Fdw.WebMcp.Hosting;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -83,11 +84,13 @@ public sealed class WebMcpMcpHosting
             // Handlers rather than pre-built tools: the registry is resolved against the route table
             // at WebMcpHosting's Initialize, which is after registration, so a tool list captured here
             // would always be empty.
-            .WithListToolsHandler((context, _) =>
-                ValueTask.FromResult(new ListToolsResult
-                {
-                    Tools = context.Services!.GetRequiredService<WebMcpMcpCatalogue>().Tools(),
-                }))
+            // The list follows the caller: each tool is offered only to a caller its route admits.
+            .WithListToolsHandler(async (context, cancellationToken) => new ListToolsResult
+            {
+                Tools = await context.Services!.GetRequiredService<WebMcpMcpCatalogue>()
+                    .ToolsFor(context.Services!.GetRequiredService<IHttpContextAccessor>().HttpContext, cancellationToken)
+                    .ConfigureAwait(false),
+            })
             .WithCallToolHandler(async (context, cancellationToken) =>
                 await context.Services!.GetRequiredService<WebMcpToolInvoker>()
                     .Invoke(context.Params!.Name, (IReadOnlyDictionary<string, JsonElement>?)context.Params.Arguments, cancellationToken)

@@ -118,9 +118,11 @@ public abstract class GetMeEndpointBase<TResponse> : EndpointWithoutRequest<TRes
         try
         {
             var result = await GetUserInfo(username, ct).ConfigureAwait(false);
+            // The lookup's own failure is the answer (FDW-6466): a user it did not find is a not found by its own code, and any other
+            // failure (a refused read, an unreachable store) says what it was.
             if (!result.IsSuccess)
             {
-                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(AuthenticationEndpointLog.GetMeNotFound(_logger)), HttpContext)).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

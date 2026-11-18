@@ -51,4 +51,9 @@ public class UpdateDataStoreRequest
     /// them, so they were dropped before reaching the provider.
     /// </remarks>
     public IList<DataPathRequest>? Paths { get; set; }
+
+    /// <summary>
+    /// Gets or sets the store's working areas (FDW-6394). Null means the caller said nothing and the store keeps its own; an empty list clears them; names replace them.
+    /// </summary>
+    public IList<string>? WorkingPaths { get; set; }
 }

@@ -60,6 +60,11 @@ public class CreateDataStoreRequest
     /// <summary>Gets or sets the schemas a discovery leaves out; an empty list leaves out none. Required when <see cref="Discover"/> is set (FDW-3823).</summary>
     public IList<string>? ExcludedSchemas { get; set; }
 
+    /// <summary>
+    /// Gets or sets the store's working areas (FDW-6394): path or schema names whose tables exist only while a pipeline runs. Lineage leaves them out. Null or empty states none.
+    /// </summary>
+    public IList<string>? WorkingPaths { get; set; }
+
     /// <summary>Gets or sets the only schemas a discovery reads; null reads every schema not left out.</summary>
     public IList<string>? IncludeOnlySchemas { get; set; }
 

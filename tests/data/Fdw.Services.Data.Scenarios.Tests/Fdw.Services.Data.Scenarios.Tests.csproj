@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Why: xunit.v3, Shouldly, coverlet.collector and Microsoft.NET.Test.Sdk are inherited from tests/Directory.Build.props.
+         Reqnroll is the only package this project adds; the scenarios call a running host over HTTP and name no FDW project. -->
+    <Content Include="reqnroll.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Reqnroll.xunit.v3" />
+  </ItemGroup>
+
+</Project>

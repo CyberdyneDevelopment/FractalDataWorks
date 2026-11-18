@@ -75,7 +75,10 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
     // (DatumTypeId) says what the column is, and the builder that reads it passes it in (FDW-988).
     IDatumType IPropertyDefinition.Role => _datumType;
     bool IPropertyDefinition.IsRequired => !IsNullable;
-    IReadOnlyDictionary<string, object>? IPropertyDefinition.Metadata => null;
+    // The declared maximum length, under the key the data domain reads (FieldToColumnAdapter.MaxLength, the data set adapter): present only when one is declared (FDW-6585).
+    IReadOnlyDictionary<string, object>? IPropertyDefinition.Metadata => MaxLength is { } maxLength
+        ? new Dictionary<string, object>(System.StringComparer.Ordinal) { ["MaxLength"] = maxLength }
+        : null;
 
     IFieldType IField.FieldType => _fieldType;
     string? IField.TypeSystemId => "MsSql";

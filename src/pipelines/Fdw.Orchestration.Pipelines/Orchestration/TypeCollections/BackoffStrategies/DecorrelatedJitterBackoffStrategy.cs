@@ -15,7 +15,7 @@ namespace Fdw.Orchestration.TypeCollections.BackoffStrategies;
 /// multiple instances, reducing the chance of simultaneous retries.
 /// Based on the AWS architecture blog recommendations for exponential backoff.
 /// </remarks>
-[TypeOption(typeof(BackoffStrategiesCollection), "DecorrelatedJitter", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(BackoffStrategiesCollection), "DecorrelatedJitter")]
 public sealed class DecorrelatedJitterBackoffStrategy : BackoffStrategyBase
 {
     /// <summary>

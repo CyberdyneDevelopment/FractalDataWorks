@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration is waiting to execute.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "Queued", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "Queued")]
 public sealed class QueuedStatus : ExecutionStatusBase
 {
     /// <summary>

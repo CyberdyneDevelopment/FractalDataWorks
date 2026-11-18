@@ -20,7 +20,7 @@ namespace Fdw.Orchestration.TypeCollections.ErrorHandlingModes;
 /// the main process to continue. Typical destinations include dead letter queues,
 /// error tables, or designated storage locations.
 /// </remarks>
-[TypeOption(typeof(ErrorHandlingModesCollection), "RedirectToDeadLetter", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ErrorHandlingModesCollection), "RedirectToDeadLetter")]
 public sealed class RedirectToDeadLetterMode : ErrorHandlingModeBase
 {
     /// <summary>

@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration exceeded its timeout.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "TimedOut", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "TimedOut")]
 public sealed class TimedOutStatus : ExecutionStatusBase
 {
     /// <summary>

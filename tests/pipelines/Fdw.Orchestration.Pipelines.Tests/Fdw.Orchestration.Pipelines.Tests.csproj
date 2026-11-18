@@ -1,5 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Why stated: the registration generator writes the TypeOption module initializer only into an executable, and the test project must be one. -->
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\pipelines\Fdw.Orchestration.Pipelines\Fdw.Orchestration.Pipelines.csproj" />
+    <!-- Why: the orchestration options join collections declared in Fdw.Orchestration.Abstractions, from another assembly. The registration generator scans the referenced assemblies and writes the TypeOption module initializer into this entry point, as a host gets it (FDW-6325). -->
+    <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 </Project>

@@ -69,7 +69,7 @@ internal static class LineageContainerEnds
         }
     }
 
-    private static void AddEnd(
+    internal static void AddEnd(
         MapState state,
         Dictionary<string, IDataStoreImplementationConfiguration> stores,
         Guid pipelineId,
@@ -81,7 +81,12 @@ internal static class LineageContainerEnds
     {
         if (!stores.TryGetValue(reference.Store, out var store)) return;
 
+        // A working area counts as nothing: the end is judged by the name it states, before the store is asked for it (FDW-6391).
+        if (WorkingAreas.Contains(store, reference.Path)) return;
+
         var found = Find(store, reference);
+        if (found is { } held && WorkingAreas.Contains(store, held.Path.Name)) return;
+
         if (found is not { } container)
         {
             state.NoteUnresolved();

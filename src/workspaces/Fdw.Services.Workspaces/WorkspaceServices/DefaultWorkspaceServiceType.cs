@@ -59,6 +59,11 @@ public sealed class DefaultWorkspaceServiceType : WorkspaceServiceTypeBase
                     sp.GetService<ILogger<WorkspacePermissions>>()));
             WorkspaceRegistrationLog.Registered(logger, nameof(IWorkspacePermissions));
 
+            // Scoped, like the permissions: it reads the ambient authentication context. Nothing registered it before (FDW-6346), so a service that took it, such as the data
+            // configuration rule service, would have failed the host build; the workspace endpoints take it too.
+            builder.Services.TryAddScoped<IWorkspaceAccessPolicy, WorkspaceAccessPolicy>();
+            WorkspaceRegistrationLog.Registered(logger, nameof(IWorkspaceAccessPolicy));
+
             // AddScoped, not TryAdd: Fdw.Services.Users registers a refusing IDefaultWorkspaceFounding for a host without this package (FDW-4178), and the last
             // registration wins, so this one replaces it whichever of the two registers first. Scoped like the permissions it uses; it reads the ambient
             // authentication context, because a new tenant's workspace is written as that tenant.

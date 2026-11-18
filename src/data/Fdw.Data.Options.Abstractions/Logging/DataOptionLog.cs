@@ -39,4 +39,34 @@ public static partial class DataOptionLog
     [MessageLogging(EventId = 31000, Level = LogLevel.Error,
         Message = "[DataOptions] '{optionType}' is not a data option type")]
     public static partial IGenericMessage OptionTypeNotFound(ILogger logger, string optionType);
+
+    /// <summary>Logs a value count a kind does not take.</summary>
+    [MessageLogging(EventId = 20001, Level = LogLevel.Warning,
+        Message = "[DataOptions] Kind {kind} on field '{field}' takes {minimum} to {maximum} values and was given {count}")]
+    public static partial IGenericMessage ValueCountOutOfRange(ILogger logger, string kind, string field, int minimum, string maximum, int count);
+
+    /// <summary>Logs a path that stops at a layer that has layers below it.</summary>
+    [MessageLogging(EventId = 20002, Level = LogLevel.Warning,
+        Message = "[DataOptions] Data option path '{path}' ends at '{name}', which has layers below it ({known}), not at a kind")]
+    public static partial IGenericMessage PathEndsBeforeKind(ILogger logger, string path, string name, string known);
+
+    /// <summary>Logs a path that goes on below a kind.</summary>
+    [MessageLogging(EventId = 20003, Level = LogLevel.Warning,
+        Message = "[DataOptions] Data option path '{path}' names '{extra}' below the kind '{kind}'")]
+    public static partial IGenericMessage PathContinuesPastKind(ILogger logger, string path, string extra, string kind);
+
+    /// <summary>Logs a path level that names no layer.</summary>
+    [MessageLogging(EventId = 30001, Level = LogLevel.Warning,
+        Message = "[DataOptions] Data option path '{path}': level {level} '{name}' was not found (known: {known})")]
+    public static partial IGenericMessage PathLevelNotFound(ILogger logger, string path, int level, string name, string known);
+
+    /// <summary>Logs a method the kind does not have.</summary>
+    [MessageLogging(EventId = 30004, Level = LogLevel.Warning,
+        Message = "[DataOptions] Data option path '{path}' names method '{method}'; the kind's method is {kindMethod}")]
+    public static partial IGenericMessage MethodNotFound(ILogger logger, string path, string method, string kindMethod);
+
+    /// <summary>Traces a kind that was applied.</summary>
+    [MessageLogging(EventId = 11002, Level = LogLevel.Trace,
+        Message = "[DataOptions] Applied kind {kind} to field '{field}' with {count} values")]
+    public static partial IGenericMessage KindApplied(ILogger logger, string kind, string field, int count);
 }

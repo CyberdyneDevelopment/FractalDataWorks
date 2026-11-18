@@ -205,7 +205,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     /// </remarks>
     protected virtual IDataField BuildField(DataContainerFieldConfiguration fieldCfg)
         => new DataField(fieldCfg.Name, fieldCfg.Description, explicitType: null, fieldCfg.Ordinal, fieldCfg.IsNullable,
-            DatumTypes.ById(fieldCfg.DatumTypeId), fieldCfg.DataType);
+            DatumTypes.ById(fieldCfg.DatumTypeId), fieldCfg.DataType, fieldCfg.MaxLength);
 
     /// <summary>
     /// Builds one container node for this transport from its configuration, with its fields, keys,

@@ -64,6 +64,14 @@ public static partial class OperationsEndpointLog
     [MessageLogging(EventId = 91004, Level = LogLevel.Error, Message = "Failed to get system health: {message}")]
     public static partial IGenericMessage GetSystemHealthFailed(ILogger logger, string message);
 
+    /// <summary>Logs that this host's HealthMonitor domain was read and holds no current row, so no monitor is selected.</summary>
+    [MessageLogging(EventId = 60001, Level = LogLevel.Error, Message = "The HealthMonitor domain holds no current row, so this host does not know which monitor to report to (none selected)", ClientMessage = "This host does not know which monitor to report to: none is selected")]
+    public static partial IGenericMessage HealthMonitorNoneSelected(ILogger logger);
+
+    /// <summary>Logs that this host's HealthMonitor domain holds more than one current row, so no single monitor is selected.</summary>
+    [MessageLogging(EventId = 60002, Level = LogLevel.Error, Message = "The HealthMonitor domain must hold exactly one current row; found {count}, so this host does not know which monitor to report to", ClientMessage = "This host does not know which monitor to report to: more than one is selected")]
+    public static partial IGenericMessage HealthMonitorSeveralSelected(ILogger logger, int count);
+
     /// <summary>Logs the start of getting service health.</summary>
     [MessageLogging(EventId = 11022, Level = LogLevel.Trace, Message = "Getting health for service '{serviceName}'")]
     public static partial IGenericMessage GettingServiceHealth(ILogger logger, string serviceName);

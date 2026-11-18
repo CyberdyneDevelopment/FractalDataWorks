@@ -98,6 +98,7 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
         }
 
         ApplyPaths(updated, request);
+        DataStoreWorkingPaths.Apply(updated, request.WorkingPaths);
 
         var saveResult = await _dataStoreProvider.UpdateStore(updated, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
@@ -106,6 +107,7 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
         }
 
         var detail = MapToDetail(updated, request);
+        detail.WorkingPaths = DataStoreWorkingPaths.Of(updated);
         detail.ConnectionName = name;
         return GenericResult<DataStoreDetailResponse>.Success(detail);
     }

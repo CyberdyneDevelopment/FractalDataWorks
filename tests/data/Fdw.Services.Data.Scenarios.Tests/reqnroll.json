@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.reqnroll.net/reqnroll-config-latest.json",
+  "language": {
+    "feature": "en-US"
+  },
+  "formatters": {
+    "message": {
+      "outputFilePath": "report/cucumber_messages.ndjson"
+    }
+  }
+}

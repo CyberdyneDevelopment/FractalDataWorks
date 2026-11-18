@@ -89,6 +89,8 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
         config.ClassificationId = request.ClassificationId;
         config.CreatedAt = DateTimeOffset.UtcNow;
 
+        DataStoreWorkingPaths.Apply(config, request.WorkingPaths);
+
         var tree = ApplyTree(config, request.Paths, storeType.Value!, connection);
         if (tree.IsFailure)
         {
@@ -119,7 +121,9 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
             DataStoreEndpointLog.CacheReloadFailed(Logger, config.Name);
         }
 
-        return GenericResult<DataStoreDetailResponse>.Success(MapToDetail(config, request));
+        var detail = MapToDetail(config, request);
+        detail.WorkingPaths = DataStoreWorkingPaths.Of(config);
+        return GenericResult<DataStoreDetailResponse>.Success(detail);
     }
 
     /// <summary>Builds a concrete data store configuration from the create request. Override for type-specific fields.</summary>

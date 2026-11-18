@@ -338,4 +338,161 @@ public sealed class AdministrativeAuditServiceTests
         result.IsSuccess.ShouldBeFalse();
         _queries.ShouldBeEmpty();
     }
+
+    // FDW-6372: a change of several members is recorded whole or not at all, in one write.
+    [Fact]
+    public async Task RecordAllWritesEveryEntryInOneInsertUnderTheCallersIdentityAndTenant()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).RecordAll([Entry(changeKind: "NameChanged"), Entry(changeKind: "PathChanged")], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var insert = _writes.OfType<InsertCommand<AdministrativeChange>>().ShouldHaveSingleItem();
+        var rows = insert.Data.ToList();
+        rows.Select(r => r.ChangeKind).ShouldBe(["NameChanged", "PathChanged"]);
+        rows.ShouldAllBe(r => r.ActorUserId == Person && r.TenantId == TenantA && r.ActorName == "Jo");
+    }
+
+    [Fact]
+    public async Task RecordAllWritesNothingWhenOneEntryIsIncomplete()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).RecordAll([Entry(), Entry(changeKind: " ")], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        _writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RecordAllFailsWholeWhenTheStoreRefusesTheOneInsert()
+    {
+        _gateway
+            .Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Callback<IDataCommand, DataStoreTarget, CancellationToken>((c, _, _) => _writes.Add(c))
+            .ReturnsAsync(GenericResult<int>.Failure(OperationsLog.OperationalConnectionNotSet(NullLogger.Instance)));
+
+        var result = await Audit(Signed(TenantA)).RecordAll([Entry(), Entry(changeKind: "PathChanged"), Entry(changeKind: "GroupChanged")], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        _writes.OfType<InsertCommand<AdministrativeChange>>().ShouldHaveSingleItem().Data.Count().ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task RecordAllRefusesAnEmptyChange()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).RecordAll([], TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        _writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ReadByItemNarrowsToThatItemWithinTheCallersTenant()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).Read(
+            new AdministrativeChangeFilter(1, 25, null, null, null, null, null) { ItemKind = "DataOptionRule", ItemId = "0193a4f1-7c2e-7b10-9a33-5f0e2b9c4d18" },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var conditions = QueryConditions();
+        conditions.Single(c => c.PropertyName == "ItemKind").Value.ShouldBe("DataOptionRule");
+        conditions.Single(c => c.PropertyName == "ItemId").Value.ShouldBe("0193a4f1-7c2e-7b10-9a33-5f0e2b9c4d18");
+        conditions.Single(c => c.PropertyName == "TenantId").Value.ShouldBe(TenantA);
+    }
+
+    private void NewestTimes(params Dictionary<string, object?>[] rows)
+    {
+        _gateway
+            .Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Callback<IDataCommand, DataStoreTarget, CancellationToken>((c, _, _) => _queries.Add(c))
+            .ReturnsAsync(GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(rows));
+    }
+
+    private static AdministrativeChangeFilter NewestOf(params string[] items)
+        => new(1, 25, null, null, null, null, null) { ItemKind = "DataConfigurationRule", ItemIds = items, NewestOfEachItem = true };
+
+    // FDW-6346: a page of items is read in one query, each item once.
+    [Fact]
+    public async Task ReadByItemIdsNarrowsToThoseItemsInOneQuery()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).Read(
+            new AdministrativeChangeFilter(1, 25, null, null, null, null, null) { ItemKind = "DataConfigurationRule", ItemIds = ["a", "b"] },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var inItems = QueryConditions().Single(c => c.PropertyName == "ItemId");
+        inItems.Operator.Name.ShouldBe("In");
+        ((IEnumerable<string>)inItems.Value!).ShouldBe(["a", "b"]);
+    }
+
+    [Fact]
+    public async Task TheNewestChangeOfEachItemIsReadWithTwoQueriesNeverOneForEachItem()
+    {
+        var first = new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero);
+        var second = first.AddMinutes(5);
+        NewestTimes(
+            new Dictionary<string, object?> { ["ItemId"] = "a", ["NewestAt"] = first },
+            new Dictionary<string, object?> { ["ItemId"] = "b", ["NewestAt"] = second });
+        Stores(
+            new AdministrativeChange { ActorUserId = Person, ActorName = "Jo", ChangeKind = "NameChanged", ItemKind = "DataConfigurationRule", ItemId = "a", Level = "Tenant", TenantId = TenantA },
+            new AdministrativeChange { ActorUserId = Person, ActorName = "Jo", ChangeKind = "NameChanged", ItemKind = "DataConfigurationRule", ItemId = "b", Level = "Tenant", TenantId = TenantA });
+
+        var result = await Audit(Signed(TenantA)).Read(NewestOf("a", "b"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.Items.Select(r => r.ItemId).ShouldBe(["a", "b"]);
+        _queries.Count.ShouldBe(2);
+        var grouped = _queries.OfType<QueryCommand<Dictionary<string, object?>>>().ShouldHaveSingleItem();
+        var aggregation = grouped.Aggregation.ShouldBeOfType<AggregationExpression>();
+        aggregation.GroupByFields.ShouldBe(["ItemId"]);
+        aggregation.Aggregations["NewestAt"].ShouldBe("MAX(OccurredAt)");
+        var either = ((FilterGroup)_queries.OfType<QueryCommand<AdministrativeChange>>().Single().Filter!.Root!).Nodes.OfType<FilterGroup>().Single(group => group.Operator == LogicalOperator.Or);
+        either.Operator.ShouldBe(LogicalOperator.Or);
+        either.Nodes.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task TheNewestChangesNeedTheKindOfItem()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).Read(
+            new AdministrativeChangeFilter(1, 25, null, null, null, null, null) { ItemIds = ["a"], NewestOfEachItem = true },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        _queries.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task TheNewestChangesOfNoItemsAreNothingAndNoQueryIsMade()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).Read(NewestOf(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Items.ShouldBeEmpty();
+        _queries.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ARowOfTheGroupByThatDoesNotReadAsAnItemAndATimeFailsTheReadAndIsNeverAnswerAsNothing()
+    {
+        NewestTimes(new Dictionary<string, object?> { ["ItemId"] = "a", ["NewestAt"] = "not a time" });
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).Read(NewestOf("a"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        _queries.OfType<QueryCommand<AdministrativeChange>>().ShouldBeEmpty();
+    }
 }

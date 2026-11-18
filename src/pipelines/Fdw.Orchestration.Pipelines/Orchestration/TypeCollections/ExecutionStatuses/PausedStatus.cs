@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration is paused and can be resumed.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "Paused", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "Paused")]
 public sealed class PausedStatus : ExecutionStatusBase
 {
     /// <summary>

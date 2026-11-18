@@ -19,7 +19,7 @@ namespace Fdw.Orchestration.TypeCollections.ErrorHandlingModes;
 /// Use this mode when individual item failures should not stop the overall process.
 /// Failed records are captured for later analysis but execution continues.
 /// </remarks>
-[TypeOption(typeof(ErrorHandlingModesCollection), "SkipAndContinue", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ErrorHandlingModesCollection), "SkipAndContinue")]
 public sealed class SkipAndContinueMode : ErrorHandlingModeBase
 {
     /// <summary>

@@ -163,7 +163,7 @@ internal sealed class ChildrenMapStream : MapStream
     // The containers of one data store that this data set's sources name, each with the edge from the data set.
     private IEnumerable<MapChild> ContainersOf(IDataStoreImplementationConfiguration store)
     {
-        var inStore = StoreContainers(store).ToList();
+        var inStore = AllContainers(store).ToList();
         foreach (var source in _dataSet!.Sources.Where(source => string.Equals(source.DataStoreName, store.Name, StringComparison.OrdinalIgnoreCase)))
         {
             // A source with no container reference is stored in the data store as a whole: nothing to draw under it.
@@ -180,13 +180,22 @@ internal sealed class ChildrenMapStream : MapStream
                 continue;
             }
 
+            // A container in a working area is a place the map does not draw, not one it failed to find (FDW-6392).
+            if (WorkingAreas.Contains(store, found.Path.Name)) continue;
+
             yield return new MapChild(
                 MapNodes.Container(found.Container, store.Id, store.Name, found.Path),
                 MapEdges.Between(MapRelations.StoredIn, _parentNodeId, MapNodeIds.Container(found.Container.Id)));
         }
     }
 
+    // The containers of a store the map draws: every one but those in a working area, which exist only while a pipeline runs (FDW-6392).
     private static IEnumerable<(DataPathConfiguration Path, DataContainerConfiguration Container)> StoreContainers(
+        IDataStoreImplementationConfiguration store)
+        => AllContainers(store).Where(found => !WorkingAreas.Contains(store, found.Path.Name));
+
+    // Every container of the store, working areas included: a data set's source is looked up here so one in a working area is told from one that is not held.
+    private static IEnumerable<(DataPathConfiguration Path, DataContainerConfiguration Container)> AllContainers(
         IDataStoreImplementationConfiguration store)
         => store.Paths.SelectMany(path => path.Containers.Select(container => (path, container)));
 

@@ -44,24 +44,36 @@ public static class GraphPayloadReader
     /// <returns>The stored configuration, or the refusal.</returns>
     public static IGenericResult<GraphPipelineConfiguration> Read(GraphPayload payload, Guid id, IReadOnlyDictionary<string, Guid> transformationIds)
     {
+        // One refusal that names every value a save requires and the request leaves out, as the check lists every problem (FDW-6521).
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(payload.Name))
+        {
+            missing.Add("name");
+        }
+
         if (payload.IsEnabled is null)
         {
-            return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state isEnabled");
+            missing.Add("isEnabled");
         }
 
         if (payload.LinkCapacity is null)
         {
-            return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state linkCapacity");
+            missing.Add("linkCapacity");
         }
 
         if (payload.MaxParallelRuns is null)
         {
-            return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state maxParallelRuns");
+            missing.Add("maxParallelRuns");
         }
 
         if (string.IsNullOrWhiteSpace(payload.OverflowBehavior))
         {
-            return GraphRefusal.Of<GraphPipelineConfiguration>("the graph does not state overflowBehavior");
+            missing.Add("overflowBehavior");
+        }
+
+        if (missing.Count > 0)
+        {
+            return GraphRefusal.Of<GraphPipelineConfiguration>($"the graph does not state {string.Join(", ", missing)}");
         }
 
         return Place(payload, id, null, transformationIds);

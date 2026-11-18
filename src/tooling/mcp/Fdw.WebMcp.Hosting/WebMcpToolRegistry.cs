@@ -98,7 +98,10 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                 selected.Value.RequestType,
                 selected.Value.ResponseType,
                 PresetFieldName: presetValue is null ? null : declaration.PresetFieldName,
-                PresetValue: presetValue));
+                PresetValue: presetValue)
+            {
+                Endpoint = selected.Value.Endpoint,
+            });
 
             WebMcpLog.ToolDiscovered(logger, declaration.Name, selected.Value.Route, selected.Value.HttpMethod);
         }
@@ -230,7 +233,8 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
         string Route,
         string HttpMethod,
         Type? RequestType,
-        Type? ResponseType);
+        Type? ResponseType,
+        Endpoint Endpoint);
 
     /// <summary>
     /// Narrows an endpoint's routes to the single one a tool should call.
@@ -296,7 +300,8 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                     route,
                     httpMethod,
                     ReadTypeProperty(definition, "ReqDtoType"),
-                    ReadTypeProperty(definition, "ResDtoType")));
+                    ReadTypeProperty(definition, "ResDtoType"),
+                    routeEndpoint));
             }
         }
 

@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration completed with non-fatal warnings.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "SucceededWithWarnings", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "SucceededWithWarnings")]
 public sealed class SucceededWithWarningsStatus : ExecutionStatusBase
 {
     /// <summary>

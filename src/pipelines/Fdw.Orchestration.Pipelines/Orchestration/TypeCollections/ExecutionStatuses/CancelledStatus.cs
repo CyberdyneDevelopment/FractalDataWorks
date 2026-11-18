@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration was cancelled by user or system.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "Cancelled", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "Cancelled")]
 public sealed class CancelledStatus : ExecutionStatusBase
 {
     /// <summary>

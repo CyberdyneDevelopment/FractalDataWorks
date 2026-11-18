@@ -13,7 +13,7 @@ namespace Fdw.Orchestration.TypeCollections.BackoffStrategies;
 /// Use this strategy when you want consistent wait times between retries.
 /// The delay is always the same regardless of attempt number.
 /// </remarks>
-[TypeOption(typeof(BackoffStrategiesCollection), "Fixed", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(BackoffStrategiesCollection), "Fixed")]
 public sealed class FixedBackoffStrategy : BackoffStrategyBase
 {
     /// <summary>

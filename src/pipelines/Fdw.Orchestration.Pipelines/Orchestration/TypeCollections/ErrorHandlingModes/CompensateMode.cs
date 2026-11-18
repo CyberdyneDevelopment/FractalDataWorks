@@ -21,7 +21,7 @@ namespace Fdw.Orchestration.TypeCollections.ErrorHandlingModes;
 /// for all completed steps/stages in reverse order.
 /// Useful for distributed transactions and multi-step operations requiring atomicity.
 /// </remarks>
-[TypeOption(typeof(ErrorHandlingModesCollection), "Compensate", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ErrorHandlingModesCollection), "Compensate")]
 public sealed class CompensateMode : ErrorHandlingModeBase
 {
     /// <summary>

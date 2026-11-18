@@ -7,7 +7,7 @@ namespace Fdw.Orchestration.TypeCollections.ExecutionStatuses;
 /// <summary>
 /// Execution status indicating the orchestration completed successfully.
 /// </summary>
-[TypeOption(typeof(ExecutionStatusesCollection), "Succeeded", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ExecutionStatusesCollection), "Succeeded")]
 public sealed class SucceededStatus : ExecutionStatusBase
 {
     /// <summary>

@@ -40,6 +40,9 @@
     <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
     <ProjectReference Include="..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\Fdw.Data.Options.Abstractions\Fdw.Data.Options.Abstractions.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\..\workspaces\Fdw.Services.Workspaces\Fdw.Services.Workspaces.csproj" />
+    <ProjectReference Include="..\..\identity\authorization\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -168,4 +168,45 @@ internal static partial class McpBridgeLog
     [MessageLogging(EventId = 70000, Level = LogLevel.Error,
         Message = "Connection to {target} failed serving MCP tool '{toolName}': {reason}")]
     public static partial IGenericMessage SelfRouteUnreachable(ILogger logger, string toolName, string target, string reason);
+
+    /// <summary>Logs how many of the catalogue's tools a caller was offered.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="offered">How many tools the caller may call.</param>
+    /// <param name="toolCount">How many tools the registry holds.</param>
+    /// <param name="caller">The caller's name, or the placeholder for an unauthenticated caller.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11008, Level = LogLevel.Debug,
+        Message = "Offering {offered} of {toolCount} WebMCP tool(s) over MCP to {caller}")]
+    public static partial IGenericMessage OfferingTools(ILogger logger, int offered, int toolCount, string caller);
+
+    /// <summary>Logs a tool withheld from a caller because its route would refuse them.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="toolName">The tool withheld.</param>
+    /// <param name="caller">The caller's name, or the placeholder for an unauthenticated caller.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 11009, Level = LogLevel.Trace,
+        Message = "MCP tool '{toolName}' withheld from {caller}: its route's authorization does not admit them")]
+    public static partial IGenericMessage ToolWithheld(ILogger logger, string toolName, string caller);
+
+    /// <summary>Logs a tool withheld from every caller because no route endpoint is known for it.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="toolName">The tool withheld.</param>
+    /// <returns>The structured message.</returns>
+    /// <remarks>
+    /// Why Information: whether a caller may use a tool is decided by its route, and without the route there is
+    /// nothing to decide from, so the tool is not offered rather than offered to everyone.
+    /// </remarks>
+    [MessageLogging(EventId = 11010, Level = LogLevel.Information,
+        Message = "MCP tool '{toolName}' withheld: no route endpoint is known for it, so who may call it cannot be judged")]
+    public static partial IGenericMessage ToolWithoutEndpoint(ILogger logger, string toolName);
+
+    /// <summary>Logs a tool list asked for outside an HTTP request, so no caller can be judged.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <returns>The structured message.</returns>
+    /// <remarks>
+    /// Why Information: the list follows the caller, and with no request there is no caller, so nothing is offered.
+    /// </remarks>
+    [MessageLogging(EventId = 11011, Level = LogLevel.Information,
+        Message = "The MCP tool list was asked for outside an HTTP request, so no caller can be judged and no tool is offered")]
+    public static partial IGenericMessage NoCallerToJudge(ILogger logger);
 }

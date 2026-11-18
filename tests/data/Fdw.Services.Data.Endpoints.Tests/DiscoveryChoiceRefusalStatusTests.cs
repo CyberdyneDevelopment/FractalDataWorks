@@ -38,4 +38,18 @@ public sealed class DiscoveryChoiceRefusalStatusTests
         statusCode.ShouldBe(400);
         problem.Extensions["code"].ShouldBe("DATA-21102");
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void TheAnswerNamesEveryChoiceTheRequestLeavesOut()
+    {
+        var options = DataStoreDiscoveryChoices.FromRequest(null, null, null, true, true, null, "OpsDb", NullLogger.Instance);
+
+        var (_, problem) = ResultHttpStatusMapper.Map(options, new DefaultHttpContext());
+
+        problem.Detail.ShouldNotBeNull().ShouldContain("ExcludedSchemas");
+        problem.Detail.ShouldContain("DiscoverViews");
+        problem.Detail.ShouldContain("DiscoverDescriptions");
+    }
 }

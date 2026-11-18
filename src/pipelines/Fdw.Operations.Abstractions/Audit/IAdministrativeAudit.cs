@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Abstractions;
@@ -23,6 +24,16 @@ public interface IAdministrativeAudit
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>Success when the change was recorded; otherwise the reason it was not.</returns>
     Task<IGenericResult> Record(AdministrativeChangeEntry entry, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records every entry of one change the caller has made, all or none, in one write (FDW-6372): a change of several members never
+    /// leaves some of them recorded. The actor and the tenant are the caller's own, from its authentication context. There is no
+    /// default body, because recording the entries one by one would leave the earlier ones written when a later one fails.
+    /// </summary>
+    /// <param name="entries">What was changed, one entry per member; at least one.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Success when every entry was recorded; otherwise the reason none was.</returns>
+    Task<IGenericResult> RecordAll(IReadOnlyList<AdministrativeChangeEntry> entries, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads recorded changes, newest first, within the caller's tenant scope.

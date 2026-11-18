@@ -126,38 +126,8 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
         return window > TimeSpan.Zero;
     }
 
-    // Why under a system elevation (FDW-1098): which monitor this host reports to, and that monitor's own row,
-    // are this host's configuration, not the caller's. The caller is usually an anonymous probe, and without the
-    // elevation both reads opened their connection as the deny principal (event 11067) on every cold read. Only
-    // the reads are elevated: the monitor's checks elevate for themselves, and nothing read here is returned.
-    private async Task<IGenericResult<IHealthMonitorService>> ReportingMonitor(CancellationToken ct)
-    {
-        using var elevation = new SystemAuthenticationContextScope(Resolve<IAuthenticationContextAccessor>());
-        return await _monitors.Get(await SelectedMonitorName(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
-    }
-
-    // Why a helper: the monitor rows are shared and the selection is this host's, so the name has
-    // to be read rather than held.
-    private async Task<string> SelectedMonitorName(CancellationToken ct)
-    {
-        // Which monitor this host reports to is the HealthMonitor domain row, the same way every
-        // other domain names its implementation.
-        var result = await _monitorConfigurations.Get(ct).ConfigureAwait(false);
-        if (result.IsFailure || result.Value is null)
-        {
-            throw new InvalidOperationException(
-                "The HealthMonitor domain could not be read. This host does not know which monitor to report to.");
-        }
-
-        // Exactly one, refusing both zero and more than one: which monitor this host reports to is
-        // the decision the row exists to record, so picking by order would make it depend on read order.
-        if (result.Value.Count != 1)
-        {
-            throw new InvalidOperationException(
-                $"The HealthMonitor domain must hold exactly one current row; found {result.Value.Count}. "
-                + "This host does not know which monitor to report to.");
-        }
-
-        return result.Value[0].Name;
-    }
+    // The monitor this host reports to, resolved by the one mechanism the four health endpoints share (FDW-6466): a failed read
+    // comes back as it failed, with its own message and code.
+    private Task<IGenericResult<IHealthMonitorService>> ReportingMonitor(CancellationToken ct)
+        => HealthMonitorSelection.Reporting(_monitors, _monitorConfigurations, Resolve<IAuthenticationContextAccessor>(), _logger, ct);
 }

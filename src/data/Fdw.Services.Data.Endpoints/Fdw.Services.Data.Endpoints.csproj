@@ -69,6 +69,7 @@
     <ProjectReference Include="..\..\tags\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
     <ProjectReference Include="..\..\pipelines\Fdw.Services.Pipelines.Endpoints\Fdw.Services.Pipelines.Endpoints.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Graphs\Fdw.Services.Data.Graphs.csproj" />
+    <ProjectReference Include="..\..\identity\multitenancy\Fdw.Services.Multitenancy\Fdw.Services.Multitenancy.csproj" />
   </ItemGroup>
 
 </Project>

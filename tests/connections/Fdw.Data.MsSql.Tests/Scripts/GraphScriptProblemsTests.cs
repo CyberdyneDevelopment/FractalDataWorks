@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -10,7 +11,7 @@ namespace Fdw.Data.MsSql.Tests.Scripts;
 
 /// <summary>
 /// FDW-5457: saving a graph judges each SQL step's script with the reader of its data store's kind. A save refuses what the check can prove wrong
-/// (the script does not parse, a table the catalogued store does not hold, a schema-less name two schemas hold, a store that cannot be read) and warns
+/// (the script does not parse, a table the cataloged store does not hold, a schema-less name two schemas hold, a store that cannot be read) and warns
 /// of what it cannot judge (no reader for the store's kind, names outside the store, a store not yet discovered). Each finding is its own coded
 /// message, placed on the step's script setting.
 /// </summary>
@@ -18,10 +19,13 @@ public sealed class GraphScriptProblemsTests
 {
     private static readonly string[] ScriptPath = ["components", "load", "settings", "script"];
 
-    private static IDataStoreImplementationConfiguration Store(string kind, params (string Path, string[] Containers)[] paths)
+    private static IDataStoreImplementationConfiguration Store(string kind, params (string Path, string[] Containers)[] paths) => Store(kind, [], paths);
+
+    private static IDataStoreImplementationConfiguration Store(string kind, string[] workingPaths, params (string Path, string[] Containers)[] paths)
     {
         var store = new Mock<IDataStoreImplementationConfiguration>();
         store.SetupGet(s => s.Implementation).Returns(kind);
+        store.SetupGet(s => s.WorkingPaths).Returns([.. workingPaths]);
         store.SetupGet(s => s.Paths).Returns(paths
             .Select(p => new DataPathConfiguration
             {
@@ -162,7 +166,7 @@ public sealed class GraphScriptProblemsTests
 
         findings.Problems.ShouldBeEmpty();
         findings.Warnings.Count.ShouldBe(1);
-        findings.Warnings[0].Reason.ShouldContain("has no catalogue");
+        findings.Warnings[0].Reason.ShouldContain("has no catalog");
     }
 
     [Fact]
@@ -211,5 +215,67 @@ public sealed class GraphScriptProblemsTests
         findings.Problems.ShouldBeEmpty();
         findings.Warnings.ShouldBeEmpty();
         reads.ShouldBe(0);
+    }
+
+    // FDW-6393: a table in a data store's working area exists only while the pipeline runs, so the save check does not look it up.
+    private static IDataStoreImplementationConfiguration Warehouse(params string[] workingPaths) =>
+        Store("MsSql", workingPaths, ("hist", ["Historical"]), ("con", ["Consolidation"]), ("tmp", ["Other"]), ("stage", ["Player"]), ("NflData", ["Player"]));
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public async Task AScriptThatNamesTablesOfAWorkingAreaTheStoreDoesNotHoldHasNoFinding()
+    {
+        var findings = await Judge(Graph("Warehouse", "INSERT INTO tmp.X (Id) SELECT Id FROM tmp.Y"), Warehouse("tmp"));
+
+        findings.Problems.ShouldBeEmpty();
+        findings.Warnings.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public async Task TheSameScriptOnAStoreThatNamesNoWorkingAreaIsRefusedAsBefore()
+    {
+        var findings = await Judge(Graph("Warehouse", "INSERT INTO tmp.X (Id) SELECT Id FROM tmp.Y"), Warehouse());
+
+        findings.Problems.Count.ShouldBe(2);
+        findings.Problems.ShouldAllBe(problem => problem.Reason.Contains("does not hold", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public async Task OnlyTheTableOutsideTheWorkingAreaIsRefused()
+    {
+        var findings = await Judge(Graph("Warehouse", "INSERT INTO con.Missing (Id) SELECT Id FROM tmp.X"), Warehouse("tmp"));
+
+        findings.Problems.Count.ShouldBe(1);
+        findings.Problems[0].Reason.ShouldContain("'con.Missing'");
+    }
+
+    [Theory]
+    [InlineData("DELETE FROM tmp.X")]
+    [InlineData("TRUNCATE TABLE tmp.X")]
+    [InlineData("SELECT Id INTO tmp.X FROM hist.Historical")]
+    [InlineData("INSERT INTO con.Consolidation (Id) SELECT Id FROM TMP.X")]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public async Task ADeleteATruncateASelectIntoOrAnyCaseOfAWorkingTableHasNoFinding(string script)
+    {
+        var findings = await Judge(Graph("Warehouse", script), Warehouse("tmp"));
+
+        findings.Problems.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public async Task ANameWithNoSchemaIsJudgedAsBeforeEvenWhenOneOfTheTwoPathsThatHoldItIsAWorkingArea()
+    {
+        var findings = await Judge(Graph("Warehouse", "SELECT Id FROM Player"), Warehouse("stage"));
+
+        findings.Problems.Count.ShouldBe(1);
+        findings.Problems[0].Reason.ShouldContain("name the schema");
     }
 }

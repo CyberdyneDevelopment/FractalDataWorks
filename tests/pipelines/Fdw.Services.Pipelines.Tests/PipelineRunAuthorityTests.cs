@@ -12,6 +12,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Etl.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Endpoints;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
@@ -708,5 +709,33 @@ public sealed class PipelineRunAuthorityTests
 
         result.IsFailure.ShouldBeTrue();
         result.Code.ShouldBeSameAs(EtlResultCodes.ByName("PipelineRunRefused"));
+    }
+
+    private sealed class CapturingLogger : ILogger
+    {
+        public List<LogLevel> Levels { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Levels.Add(logLevel);
+    }
+
+    // A run refused for what the caller gave (here no run role) is the caller's mistake, so it is a Warning and never an Error line on the host (FDW-6520).
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ARefusalForTheCallersRolesIsLoggedAtWarningNotError()
+    {
+        var log = new CapturingLogger();
+
+        var result = await Build().AuthorizeScheduled(Reach, null, log, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        log.Levels.ShouldContain(LogLevel.Warning);
+        log.Levels.ShouldNotContain(LogLevel.Error);
     }
 }

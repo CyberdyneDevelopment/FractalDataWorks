@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
@@ -23,6 +24,7 @@ public sealed class DataField : IDataField, IField
 {
     private readonly IDatumType _datumType;
     private readonly SimpleFieldType _fieldType;
+    private readonly int? _maxLength;
 
     /// <summary>Gets the field name.</summary>
     public string Name { get; }
@@ -64,7 +66,11 @@ public sealed class DataField : IDataField, IField
     // The stored datum type the builder read from the container declaration (FDW-988).
     IDatumType IPropertyDefinition.Role => _datumType;
     bool IPropertyDefinition.IsRequired => !IsNullable;
-    IReadOnlyDictionary<string, object>? IPropertyDefinition.Metadata => null;
+
+    // The declared maximum length, under the key the data domain reads (FieldToColumnAdapter.MaxLength, the data set adapter): present only when the declaration states one (FDW-6581).
+    IReadOnlyDictionary<string, object>? IPropertyDefinition.Metadata => _maxLength is { } maxLength
+        ? new Dictionary<string, object>(StringComparer.Ordinal) { ["MaxLength"] = maxLength }
+        : null;
 
     IFieldType IField.FieldType => _fieldType;
     string? IField.TypeSystemId => null;
@@ -84,7 +90,8 @@ public sealed class DataField : IDataField, IField
     /// <param name="isNullable">Whether the field is declared nullable.</param>
     /// <param name="datumType">What the field's data is: the datum type its declaration stores.</param>
     /// <param name="dataTypeName">The schema-declared type name (e.g. "int", "varchar"), carried into <see cref="IField.FieldType"/> for schema projection even though no CLR type is resolved from it.</param>
-    public DataField(string name, string? description, IDataType? explicitType, int ordinal, bool isNullable, IDatumType datumType, string? dataTypeName = null)
+    /// <param name="maxLength">The declared maximum length, if the declaration states one; it is exposed as the <c>MaxLength</c> metadata entry and is absent otherwise.</param>
+    public DataField(string name, string? description, IDataType? explicitType, int ordinal, bool isNullable, IDatumType datumType, string? dataTypeName = null, int? maxLength = null)
     {
         Name = name;
         Description = description;
@@ -92,6 +99,7 @@ public sealed class DataField : IDataField, IField
         Ordinal = ordinal;
         IsNullable = isNullable;
         _datumType = datumType;
+        _maxLength = maxLength;
         _fieldType = new SimpleFieldType { TypeName = dataTypeName ?? LogPlaceholders.NoTypeName, ClrType = typeof(object) };
     }
 }

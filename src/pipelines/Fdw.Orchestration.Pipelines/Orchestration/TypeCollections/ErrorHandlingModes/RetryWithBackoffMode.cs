@@ -20,7 +20,7 @@ namespace Fdw.Orchestration.TypeCollections.ErrorHandlingModes;
 /// The actual retry execution is handled by Polly via the resilience pipeline.
 /// This mode signals intent and provides configuration for the retry behavior.
 /// </remarks>
-[TypeOption(typeof(ErrorHandlingModesCollection), "RetryWithBackoff", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ErrorHandlingModesCollection), "RetryWithBackoff")]
 public sealed class RetryWithBackoffMode : ErrorHandlingModeBase
 {
     /// <summary>

@@ -59,4 +59,18 @@ public sealed class DataStoreDiscoveryChoicesTests
         options.IsSuccess.ShouldBeFalse();
         options.CurrentMessage.ShouldNotBeNull().ShouldContain(leftOut);
     }
+
+    [Fact]
+    public void ARequestThatLeavesOutSeveralChoicesIsRefusedNamingEveryOne()
+    {
+        var options = DataStoreDiscoveryChoices.FromRequest(null, null, null, true, null, true, "OpsDb", NullLogger.Instance);
+
+        options.IsSuccess.ShouldBeFalse();
+        var message = options.CurrentMessage.ShouldNotBeNull();
+        message.ShouldContain("ExcludedSchemas");
+        message.ShouldContain("DiscoverViews");
+        message.ShouldContain("DiscoverForeignKeys");
+        message.ShouldNotContain("DiscoverIndexes");
+        message.ShouldNotContain("DiscoverDescriptions");
+    }
 }

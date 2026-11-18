@@ -43,6 +43,16 @@ public interface IDataStoreImplementationConfiguration : IImplementationConfigur
     /// <summary>Gets or sets the paths (schemas) within this store, cascaded on read.</summary>
     List<DataPathConfiguration> Paths { get; set; }
 
+    /// <summary>Gets or sets the store's working areas, one row each, cascaded on read and written with the store (FDW-6394).</summary>
+    List<DataStoreWorkingPathConfiguration> WorkingPathRows { get; set; }
+
+    /// <summary>
+    /// Gets the names of the store's working areas (FDW-6391): the paths or schemas whose tables exist only while a pipeline runs, such as a staging schema.
+    /// Lineage treats a table in one as if the pipeline never touched it. Empty means the store has none; nothing is assumed. The names are those of
+    /// <see cref="WorkingPathRows"/>, where they are written.
+    /// </summary>
+    IReadOnlyList<string> WorkingPaths { get; }
+
 
     /// <summary>Gets or sets whether this is the current active version of the record.</summary>
     bool IsCurrent { get; set; }

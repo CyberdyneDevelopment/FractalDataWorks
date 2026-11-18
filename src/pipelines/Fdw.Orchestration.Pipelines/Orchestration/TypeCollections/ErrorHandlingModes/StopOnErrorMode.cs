@@ -19,7 +19,7 @@ namespace Fdw.Orchestration.TypeCollections.ErrorHandlingModes;
 /// Use this mode when any error should halt the entire orchestration.
 /// No retry attempts are made and the error is propagated immediately.
 /// </remarks>
-[TypeOption(typeof(ErrorHandlingModesCollection), "StopOnError", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ErrorHandlingModesCollection), "StopOnError")]
 public sealed class StopOnErrorMode : ErrorHandlingModeBase
 {
     /// <summary>

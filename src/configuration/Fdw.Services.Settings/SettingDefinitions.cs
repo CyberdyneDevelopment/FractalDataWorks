@@ -418,6 +418,25 @@ public static class SettingDefinitions
     /// <remarks>Required, with no default, like <see cref="DataOptionsDataStore"/>.</remarks>
     public const string DataOptionsContainer = "DataOptionsContainer";
 
+    /// <summary>
+    /// The data store that holds the data configuration rule tables (FDW-6345, FDW-6543). DataType: String. Not the one <see cref="DataOptionsDataStore"/> names: that is
+    /// the option row service's own table, released before the rules, so the rule service has settings of its own.
+    /// </summary>
+    /// <remarks>Required, with no default: while it is not set, every rule route answers a refusal naming it.</remarks>
+    public const string DataConfigurationRuleDataStore = "DataConfigurationRuleDataStore";
+
+    /// <summary>The path, in <see cref="DataConfigurationRuleDataStore"/>, of the data configuration rule tables (FDW-6543). DataType: String.</summary>
+    /// <remarks>Required, with no default, like <see cref="DataConfigurationRuleDataStore"/>.</remarks>
+    public const string DataConfigurationRulePath = "DataConfigurationRulePath";
+
+    /// <summary>The container that is the data configuration rule table (FDW-6543). DataType: String.</summary>
+    /// <remarks>Required, with no default, like <see cref="DataConfigurationRuleDataStore"/>.</remarks>
+    public const string DataConfigurationRuleContainer = "DataConfigurationRuleContainer";
+
+    /// <summary>The container that is the data configuration rule value table, in the data store and path of <see cref="DataConfigurationRuleContainer"/> (FDW-6543). DataType: String.</summary>
+    /// <remarks>Required, with no default, like <see cref="DataConfigurationRuleDataStore"/>.</remarks>
+    public const string DataConfigurationRuleValueContainer = "DataConfigurationRuleValueContainer";
+
     private static readonly Dictionary<string, SettingDefinition> KnownSettings =
         new Dictionary<string, SettingDefinition>(StringComparer.OrdinalIgnoreCase)
         {
@@ -425,6 +444,10 @@ public static class SettingDefinitions
             [DataOptionsDataStore] = new("String", "The data store holding the options table the option-row routes read and write. Not set: every option-row route refuses and names this setting."),
             [DataOptionsPath] = new("String", "The path of the options table in its data store. Not set: every option-row route refuses and names this setting."),
             [DataOptionsContainer] = new("String", "The container that is the options table. Not set: every option-row route refuses and names this setting."),
+            [DataConfigurationRuleDataStore] = new("String", "The data store holding the data configuration rule tables. Not set: every rule route refuses and names this setting."),
+            [DataConfigurationRulePath] = new("String", "The path of the data configuration rule tables in their data store. Not set: every rule route refuses and names this setting."),
+            [DataConfigurationRuleContainer] = new("String", "The container that is the data configuration rule table. Not set: every rule route refuses and names this setting."),
+            [DataConfigurationRuleValueContainer] = new("String", "The container that is the data configuration rule value table, in the data store and path of the rule table. Not set: every rule route refuses and names this setting."),
             [DefaultPaginationSize] = new("Int32", "The page a paginated list endpoint returns when the request names no take."),
             [ApiKeyMaxPaginationSize] = new("Int32", "The largest page a caller authenticated with an API key may ask for; 0 means no limit."),
             [ApiKeyDefaultPaginationSize] = new("Int32", "The page a caller authenticated with an API key gets when the request names no take; 0 means no limit, every row is returned."),

@@ -14,7 +14,7 @@ namespace Fdw.Orchestration.TypeCollections.BackoffStrategies;
 /// Delay increases by the initial delay amount each attempt:
 /// 1s, 2s, 3s, 4s, etc.
 /// </remarks>
-[TypeOption(typeof(BackoffStrategiesCollection), "Linear", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(BackoffStrategiesCollection), "Linear")]
 public sealed class LinearBackoffStrategy : BackoffStrategyBase
 {
     /// <summary>

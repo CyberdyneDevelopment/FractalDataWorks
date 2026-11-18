@@ -270,6 +270,9 @@ public sealed class ConfigurationCacheIsolationTests
                 [Key("Physical", "PK_DataPathSegment", "RowId", null), Key("Logical", "AK_DataPathSegment", "Id", null)]);
             var handlerOverrideContainer = Container("FileTypeHandlerOverride", [],
                 [Key("Physical", "PK_FileTypeHandlerOverride", "RowId", null), Key("Logical", "AK_FileTypeHandlerOverride", "Id", null)]);
+            // DataStoreWorkingPath is a second child of the implementation row, joined on DataStoreConfigurationRowId as data.DataStoreWorkingPath declares (FDW-6394).
+            var workingPathContainer = Container("DataStoreWorkingPath", [],
+                [Key("Physical", "PK_DataStoreWorkingPath", "RowId", null), Key("Logical", "AK_DataStoreWorkingPath", "Id", null)]);
             var pathContainer = Container("DataPath",
                 [Binding("DataPathRowId", containerContainer), Binding("DataPathRowId", policyContainer), Binding("DataPathRowId", segmentContainer), Binding("DataPathRowId", handlerOverrideContainer)],
                 [Key("Physical", "PK_DataPath", "RowId", null), Key("Logical", "AK_DataPath", "Id", null)]);
@@ -281,9 +284,9 @@ public sealed class ConfigurationCacheIsolationTests
                 storeReferencing,
                 [Key("Physical", "PK_DataStore", "RowId", null), Key("Logical", "AK_DataStore", "Id", null)]);
 
-            var implementationContainer = Container("DataStoreConfiguration", [Binding("DataStoreConfigurationRowId", pathContainer)], [Key("Physical", "PK_Impl", "RowId", null), Key("Logical", "AK_Impl", "Id", null), Key("Foreign", "FK_Impl", "DataStoreRowId", storeContainer)]);
+            var implementationContainer = Container("DataStoreConfiguration", [Binding("DataStoreConfigurationRowId", pathContainer), Binding("DataStoreConfigurationRowId", workingPathContainer)], [Key("Physical", "PK_Impl", "RowId", null), Key("Logical", "AK_Impl", "Id", null), Key("Foreign", "FK_Impl", "DataStoreRowId", storeContainer)]);
             storeReferencing.Add(Binding("DataStoreRowId", implementationContainer));
-            var containers = new List<IDataContainer> { storeContainer, implementationContainer, pathContainer, containerContainer, fieldContainer, pagingSettingContainer, keyContainer, keyFieldContainer, policyContainer, segmentContainer, handlerOverrideContainer };
+            var containers = new List<IDataContainer> { storeContainer, implementationContainer, pathContainer, containerContainer, fieldContainer, pagingSettingContainer, keyContainer, keyFieldContainer, policyContainer, segmentContainer, handlerOverrideContainer, workingPathContainer };
 
             var path = new Mock<IDataNodePath>();
             path.Setup(p => p.Name).Returns("data");
