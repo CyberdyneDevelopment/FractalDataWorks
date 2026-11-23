@@ -46,6 +46,10 @@ public sealed class ConnectionProvider
     private readonly ILogger<ConnectionProvider> _logger;
     private readonly IConnectionDisabledStates _disabledStates;
 
+    /// <summary>Gets how this provider reads the configuration it builds a service from.</summary>
+    /// <remarks>A live connection is built from the configuration (its type, its settings, its secrets) and shows no description, and nothing saves the configuration back (FDW-7351).</remarks>
+    protected override ConfigurationReadOptions ReadOptions => ConfigurationReadOptions.WithoutFilledMembers;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionProvider"/> class.
     /// </summary>

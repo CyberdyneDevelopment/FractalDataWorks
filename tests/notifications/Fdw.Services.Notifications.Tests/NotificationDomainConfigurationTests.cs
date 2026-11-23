@@ -19,7 +19,7 @@ namespace Fdw.Services.Notifications.Tests;
 /// </remarks>
 public sealed class NotificationDomainConfigurationTests
 {
-    private static readonly string[] OwnedByTheDomainRow = ["IsEnabled", "SecretManagerName", "SecretKeyName", "Description"];
+    private static readonly string[] OwnedByTheDomainRow = ["IsEnabled", "SecretManagerName", "SecretKeyName"];
 
     private static List<string> ListFieldsOf(string recordName)
     {
@@ -88,5 +88,8 @@ public sealed class NotificationDomainConfigurationTests
 
         foreach (var field in OwnedByTheDomainRow)
             carried.ShouldContain(field);
+
+        // The channel still declares the description, which the provider fills from the descriptions table (FDW-7203); the domain row does not store it.
+        carried.ShouldContain("Description");
     }
 }

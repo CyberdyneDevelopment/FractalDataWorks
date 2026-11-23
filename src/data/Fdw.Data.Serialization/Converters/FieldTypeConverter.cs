@@ -17,30 +17,10 @@ public sealed class FieldTypeConverter : JsonConverter<IFieldType>
         if (reader.TokenType != JsonTokenType.StartObject)
             throw new JsonException("Expected StartObject token");
 
-        string? typeName = null;
-        string? clrTypeName = null;
-
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject)
-                break;
-
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                var propertyName = reader.GetString();
-                reader.Read();
-
-                switch (propertyName)
-                {
-                    case "TypeName":
-                        typeName = reader.GetString();
-                        break;
-                    case "ClrType":
-                        clrTypeName = reader.GetString();
-                        break;
-                }
-            }
-        }
+        var wire = JsonSerializer.Deserialize<FieldTypeWire>(ref reader, options)
+            ?? throw new JsonException("FieldType must have TypeName and ClrType properties");
+        var typeName = wire.TypeName;
+        var clrTypeName = wire.ClrType;
 
         if (string.IsNullOrEmpty(typeName) || string.IsNullOrEmpty(clrTypeName))
             throw new JsonException("FieldType must have TypeName and ClrType properties");

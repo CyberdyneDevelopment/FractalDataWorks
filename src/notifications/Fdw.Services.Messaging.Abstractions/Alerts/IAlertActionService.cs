@@ -12,10 +12,13 @@ namespace Fdw.Services.Messaging;
 /// </summary>
 public interface IAlertActionService
 {
+    /// <summary>Gets the limits a question about alerts is held to, as this host configured them (FDW-7059).</summary>
+    AlertLimits Limits { get; }
+
     /// <summary>
     /// Says what each named alert allows the caller and what has been done to it.
     /// </summary>
-    /// <param name="alerts">The alerts asked about, at least one and at most <see cref="AlertLimits.MaxAlerts"/>.</param>
+    /// <param name="alerts">The alerts asked about, at least one and at most the <see cref="AlertLimits.MaxAlerts"/> that <see cref="Limits"/> holds.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The alerts found, and those that do not exist or that the caller may not see.</returns>
     Task<IGenericResult<AlertList>> List(IReadOnlyList<AlertKey> alerts, CancellationToken cancellationToken = default);

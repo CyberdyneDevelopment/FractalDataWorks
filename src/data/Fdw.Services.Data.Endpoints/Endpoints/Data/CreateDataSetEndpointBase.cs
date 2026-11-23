@@ -25,19 +25,22 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
     private readonly IDataSetConfigurationProvider _dataSetProvider;
     private readonly ICategoryConfigurationProvider _categories;
     private readonly IAuthenticationContextAccessor _authContext;
+    private readonly IDataStoreConfigurationProvider _dataStores;
 
     /// <summary>Initializes a new instance of the <see cref="CreateDataSetEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataSetProvider">Finds and saves the data set.</param>
     /// <param name="categories">Resolves the category the request names.</param>
     /// <param name="authContext">Identifies the caller, who owns the new data set (FDW-4346).</param>
+    /// <param name="dataStores">Reads the data stores the sources name, from which the data set's kind is worked out (FDW-6806).</param>
     protected CreateDataSetEndpointBase(
         ILogger<CreateDataSetEndpointBase> logger, IDataSetConfigurationProvider dataSetProvider, ICategoryConfigurationProvider categories,
-        IAuthenticationContextAccessor authContext) : base(logger)
+        IAuthenticationContextAccessor authContext, IDataStoreConfigurationProvider dataStores) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
         _categories = categories;
         _authContext = authContext;
+        _dataStores = dataStores;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -80,20 +83,18 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
     {
         DataSetEndpointLog.CreatingDataSet(Logger, request.Name);
 
-        if (string.IsNullOrWhiteSpace(request.Implementation)
-            || ReferenceEquals(DataSetTypes.ByName(request.Implementation), DataSetTypes.NotFound))
-        {
-            return GenericResult<DataSetDetailResponse>.Failure(
-                DataSetsResultCodes.ImplementationInvalid, Logger,
-                ImplementationInvalidCode.Describe(request.Name, request.Implementation));
-        }
+        // The kind is worked out from the sources, never stated (FDW-6806).
+        var kind = await DataSetKindDerivation.Derive(
+            request.Name, [.. request.Sources.Select(source => (source.SourceName, (string?)source.DataStoreName, source.SourceKind))], _dataStores, Logger, ct)
+            .ConfigureAwait(false);
+        if (kind.IsFailure) return kind.ToNewResult<DataSetDetailResponse>();
 
         var federationValidation = DataSetQueryHelper.ValidateFederationStrategy(
-            request.Implementation, request.FederationStrategy, request.Name, Logger);
+            kind.Value!, request.FederationStrategy, request.Name, Logger);
         if (federationValidation.IsFailure) return federationValidation.ToNewResult<DataSetDetailResponse>();
 
         var partsValidation = DataSetQueryHelper.ValidateKindParts(
-            request.Implementation, request.Joins.Count > 0, request.Aggregates.Count > 0, request.Name, Logger);
+            kind.Value!, request.Joins.Count > 0, request.Aggregates.Count > 0, request.Name, Logger);
         if (partsValidation.IsFailure) return partsValidation.ToNewResult<DataSetDetailResponse>();
 
         var aggregatesValidation = DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
@@ -130,7 +131,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
         }
 
         // A value the caller chooses is refused when left out, never assumed (FDW-3931).
-        var built = DataSetConfigurationFactory.Create(request, category.Value.Id, ownerUserId, new DataSetRequestValues(request.Name, Logger), Logger);
+        var built = DataSetConfigurationFactory.Create(request, kind.Value!, category.Value.Id, ownerUserId, new DataSetRequestValues(request.Name, Logger), Logger);
         if (built.IsFailure) return built.ToNewResult<DataSetDetailResponse>();
 
         var config = built.Value!;

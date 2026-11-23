@@ -26,6 +26,9 @@ internal sealed class NonEtlPipelineConfiguration : IPipelineImplementationConfi
 
     public string? Description { get; set; }
 
+    /// <inheritdoc />
+    public System.Collections.Generic.IReadOnlyList<Fdw.Services.Pipelines.Abstractions.IDescribedPipelineParameter> DescribedParameters => [];
+
     /// <inheritdoc/>
     public DateTimeOffset CreateDate { get; set; }
 

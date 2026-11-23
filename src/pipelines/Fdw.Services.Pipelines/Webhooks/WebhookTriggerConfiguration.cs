@@ -39,6 +39,9 @@ public sealed partial class WebhookTriggerConfiguration : IWebhookTriggerImpleme
     public bool IsEnabled { get; set; }
 
     /// <inheritdoc />
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7323), which the {t} table cannot hold, so the
+    // column is gone; the provider fills the member for every set it reads. Off the mapper, it is no column of the table.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc />

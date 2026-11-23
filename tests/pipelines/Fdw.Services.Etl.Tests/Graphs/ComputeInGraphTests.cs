@@ -94,6 +94,7 @@ public sealed class ComputeInGraphTests
             NullLogger.Instance,
             TimeSpan.Zero,
             10,
+            FlowBuildContributions.None,
             null,
             null,
             built);

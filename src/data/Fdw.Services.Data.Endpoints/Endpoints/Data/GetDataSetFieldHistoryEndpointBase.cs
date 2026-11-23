@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.DataSets;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
@@ -91,12 +93,25 @@ public abstract class GetDataSetFieldHistoryEndpointBase : Endpoint<DataSetField
             return;
         }
 
+        // The text of each version is not a column of the field's row any more (FDW-6208): it is read from the descriptions table, beside the versions of the field.
+        var described = await _dataSets.FieldDescriptionVersions(found.Field.Id, ct).ConfigureAwait(false);
+        if (described.IsFailure)
+        {
+            DataSetFieldHistoryEndpointLog.HistoryReadFailed(_logger, req.Name, req.Field);
+            await SendError(described, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var texts = DescriptionHistory.TextsOf([.. versions.Value!.Select(version => version.ModifyDate)], described.Value!);
         var dtos = new List<DataSetFieldVersionDto>(versions.Value!.Count);
         DataSetFieldConfiguration? previous = null;
+        string? previousText = null;
         foreach (var version in versions.Value)
         {
-            dtos.Add(ToDto(dtos.Count + 1, version, previous));
+            var text = texts[dtos.Count];
+            dtos.Add(ToDto(dtos.Count + 1, version, previous, text, previousText));
             previous = version;
+            previousText = text;
         }
 
         DataSetFieldHistoryEndpointLog.HistoryRead(_logger, req.Name, req.Field, dtos.Count);
@@ -105,7 +120,7 @@ public abstract class GetDataSetFieldHistoryEndpointBase : Endpoint<DataSetField
             ct).ConfigureAwait(false);
     }
 
-    private static DataSetFieldVersionDto ToDto(int number, DataSetFieldConfiguration v, DataSetFieldConfiguration? previous) => new()
+    private static DataSetFieldVersionDto ToDto(int number, DataSetFieldConfiguration v, DataSetFieldConfiguration? previous, string description, string? previousDescription) => new()
     {
         Version = number,
         IsCurrent = v.IsCurrent,
@@ -113,10 +128,10 @@ public abstract class GetDataSetFieldHistoryEndpointBase : Endpoint<DataSetField
         ChangedAt = v.ModifyDate,
         ChangedBy = v.ModifyBy,
         ChangedOnBehalfOf = v.ModifyOnBehalfOf,
-        Changes = previous is null ? [] : Changed(previous, v),
+        Changes = previous is null ? [] : Changed(previous, v, previousDescription, description),
         Name = v.Name,
         TypeName = v.TypeName,
-        Description = v.Description,
+        Description = description,
         Role = v.Role,
         IsKey = v.IsKey,
         IsNullable = v.IsNullable,
@@ -130,12 +145,12 @@ public abstract class GetDataSetFieldHistoryEndpointBase : Endpoint<DataSetField
 
     // The properties a person edits. Audit and key columns change on every version by definition,
     // so they would make every version look changed.
-    private static List<string> Changed(DataSetFieldConfiguration a, DataSetFieldConfiguration b)
+    private static List<string> Changed(DataSetFieldConfiguration a, DataSetFieldConfiguration b, string? descriptionBefore, string descriptionAfter)
     {
         var changes = new List<string>();
         if (!string.Equals(a.Name, b.Name, StringComparison.Ordinal)) changes.Add(nameof(b.Name));
         if (!string.Equals(a.TypeName, b.TypeName, StringComparison.Ordinal)) changes.Add(nameof(b.TypeName));
-        if (!string.Equals(a.Description, b.Description, StringComparison.Ordinal)) changes.Add(nameof(b.Description));
+        if (!string.Equals(descriptionBefore, descriptionAfter, StringComparison.Ordinal)) changes.Add(nameof(b.Description));
         if (!string.Equals(a.Role, b.Role, StringComparison.Ordinal)) changes.Add(nameof(b.Role));
         if (a.IsKey != b.IsKey) changes.Add(nameof(b.IsKey));
         if (a.IsNullable != b.IsNullable) changes.Add(nameof(b.IsNullable));

@@ -47,15 +47,11 @@ internal static class BuiltSetPayloads
             payload.Formula = BuiltFormulaReader.ToPayload(formula);
         }
 
-        if (string.Equals(column.Kind, "Literal", System.StringComparison.Ordinal))
+        var literalType = LiteralTypes.OfValue(column.Literal);
+        if (string.Equals(column.Kind, "Literal", System.StringComparison.Ordinal) && !ReferenceEquals(literalType, LiteralTypes.NotFound))
         {
-            (payload.LiteralType, payload.LiteralValue) = column.Literal switch
-            {
-                bool flag => ("Flag", flag ? "true" : "false"),
-                decimal number => ("Number", number.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-                string text => ("Text", text),
-                _ => (null, null),
-            };
+            payload.LiteralType = literalType.Name;
+            payload.LiteralValue = literalType.Write(column.Literal!);
         }
 
         return payload;

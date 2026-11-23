@@ -147,14 +147,10 @@ public static class PipelineRunClaims
         PipelineExecutionRequest request, PipelineUse use, LoadTargetResolver targets, ILogger logger, CancellationToken cancellationToken)
     {
         var owner = string.Concat("the claim of pipeline '", request.PipelineName, "'");
-        var resolved = use.Kind switch
-        {
-            PipelineUseKinds.Container => await targets.ForContainer(
-                owner, use.Parents.Count > 0 ? use.Parents[0] : string.Empty, use.Parents.Count > 1 ? use.Parents[1] : string.Empty, use.Name, cancellationToken)
-                .ConfigureAwait(false),
-            PipelineUseKinds.DataSet => await targets.ForDataSet(owner, use.Name, cancellationToken).ConfigureAwait(false),
-            _ => null
-        };
+        var kind = ClaimUseKinds.ByName(use.Kind);
+        var resolved = ReferenceEquals(kind, ClaimUseKinds.NotFound)
+            ? null
+            : await kind.Resolve(targets, owner, use, cancellationToken).ConfigureAwait(false);
         if (resolved is not { IsSuccess: true, Value: { } target })
         {
             return null;

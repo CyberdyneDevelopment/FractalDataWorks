@@ -59,13 +59,11 @@ public sealed class AddDurationFieldTransformer : FieldTransformationBase
 
         var duration = ResolveDuration(context.Parameters);
 
-        return Task.FromResult<IGenericResult<object?>>(input switch
-        {
-            DateTimeOffset dto => GenericResult<object?>.Success(dto.Add(duration)),
-            DateTime dt => GenericResult<object?>.Success(dt.Add(duration)),
-            _ => throw new InvalidOperationException(
+        var target = DurationTargetKinds.OfValue(input);
+        return Task.FromResult<IGenericResult<object?>>(ReferenceEquals(target, DurationTargetKinds.NotFound)
+            ? throw new InvalidOperationException(
                 $"AddDuration expects DateTime or DateTimeOffset but received '{input.GetType().Name}'.")
-        });
+            : GenericResult<object?>.Success(target.Add(input, duration)));
     }
 
 

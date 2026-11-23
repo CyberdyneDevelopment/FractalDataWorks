@@ -87,12 +87,8 @@ internal static class GlossaryTermFilter
             nodes.Add(Condition(nameof(GlossaryTermDomainConfiguration.CategoryId), "In", categories.Cast<object?>().ToList()));
         }
 
-        IFilterExpression? filter = nodes.Count switch
-        {
-            0 => null,
-            1 => new FilterExpression { Root = nodes[0] },
-            _ => new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = nodes } },
-        };
+        var root = FilterGroup.AllOf(nodes);
+        IFilterExpression? filter = root is null ? null : new FilterExpression { Root = root };
         return GenericResult<IFilterExpression?>.Success(filter);
     }
 

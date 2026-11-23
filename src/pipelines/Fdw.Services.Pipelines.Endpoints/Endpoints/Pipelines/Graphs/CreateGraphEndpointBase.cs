@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Fdw.Services.Data;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Pipelines.Runs;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -71,6 +74,12 @@ public abstract class CreateGraphEndpointBase : CrudCreateEndpointBase<GraphPayl
         if (graph.IsFailure || graph.Value is null)
         {
             return graph.ToNewResult<GraphPayload>();
+        }
+
+        var limits = GraphRunLimitJudgment.Judge(graph.Value, Resolve<IEffectiveSettingsProvider>(), RunTenant.Of(new ClaimsPrincipalAuthenticationContext(User)), Logger);
+        if (limits.IsFailure)
+        {
+            return limits.ToNewResult<GraphPayload>();
         }
 
         return await GraphSave.Save(_provider, graph.Value, _owner, request.OrgId, _dataSets, Resolve<IDataStoreConfigurationProvider>(), GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);

@@ -20,6 +20,9 @@ public sealed class DataConfigurationRuleRecord
     public string Abbreviation { get; set; } = string.Empty;
 
     /// <summary>Gets or sets what the rule is for.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table, in the language of the caller's tenant (FDW-6208), so the column is gone and no save writes it; the service writes
+    // it in the unit of the save and fills the answer from the table.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the data store the rule is about.</summary>

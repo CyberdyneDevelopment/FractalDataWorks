@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -10,6 +8,7 @@ using Fdw.Services.Calculations.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Logging;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Web.RestEndpoints.Query;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -92,24 +91,15 @@ public abstract class EvaluateTransformationEndpointBase : Endpoint<EvaluateTran
         var values = new Dictionary<string, object?>(req.Inputs.Count, StringComparer.Ordinal);
         foreach (var input in req.Inputs)
         {
-            switch (input.Value.ValueKind)
+            var kind = JsonInputKinds.ByValueKind(input.Value.ValueKind);
+            var read = ReferenceEquals(kind, JsonInputKinds.NotFound) ? null : kind.Read(input.Value);
+            if (read is null)
             {
-                case JsonValueKind.Number when input.Value.TryGetDecimal(out var number):
-                    values[input.Key] = number;
-                    break;
-                case JsonValueKind.True:
-                    values[input.Key] = true;
-                    break;
-                case JsonValueKind.False:
-                    values[input.Key] = false;
-                    break;
-                case JsonValueKind.String when DateOnly.TryParseExact(input.Value.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date):
-                    values[input.Key] = date;
-                    break;
-                default:
-                    return GenericResult<IReadOnlyDictionary<string, object?>>.Failure(
-                        FilterCalculationLog.InputWrongType(Logger, req.Name, input.Key, "Number, Flag or Date", input.Value.ValueKind.ToString()));
+                return GenericResult<IReadOnlyDictionary<string, object?>>.Failure(
+                    FilterCalculationLog.InputWrongType(Logger, req.Name, input.Key, "Number, Flag or Date", input.Value.ValueKind.ToString()));
             }
+
+            values[input.Key] = read;
         }
 
         return GenericResult<IReadOnlyDictionary<string, object?>>.Success(values);

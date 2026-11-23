@@ -130,6 +130,15 @@ public sealed class ContainerTypeBaseTests
         file.SupportsSchemaDiscovery.ShouldBeFalse();
     }
 
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void ConstructorSetsTheSupportedOperationsTheOptionStates()
+    {
+        new TestContainerType("Table").SupportedOperations.ShouldBe(new[] { "Query", "Insert", "Update", "Delete" });
+        new TestContainerType("File").SupportedOperations.ShouldBe(new[] { "Query" });
+    }
+
     [ExcludeFromCodeCoverage]
     private sealed class TestContainerType : ContainerTypeBase
     {
@@ -142,6 +151,7 @@ public sealed class ContainerTypeBaseTests
                 name == "Table" ? "Database Table" : "File System",
                 name == "Table" ? "SQL database table" : "File-based storage",
                 supportsSchemaDiscovery,
+                name == "Table" ? new[] { "Query", "Insert", "Update", "Delete" } : new[] { "Query" },
                 category)
         {
         }

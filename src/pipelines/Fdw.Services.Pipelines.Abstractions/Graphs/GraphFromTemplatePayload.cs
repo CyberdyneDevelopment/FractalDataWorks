@@ -14,6 +14,12 @@ public class GraphFromTemplatePayload
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the implementation of the new pipeline (FDW-6718). The new pipeline is of the type the template was saved as, read from the stored template, so this takes no
+    /// type of its own: leave it out. One that is stated and differs from the template's is refused.
+    /// </summary>
+    public string? Implementation { get; set; }
+
+    /// <summary>
     /// Gets or sets the organization the new pipeline belongs to (FDW-4573). Left out, the organization the caller acts in is used, and a caller who acts in none is refused. The
     /// template's own organization is never copied.
     /// </summary>

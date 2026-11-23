@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -64,11 +65,6 @@ internal static class HealthMonitorSelection
             return GenericResult<string>.Failure(result.NoValueReason());
         }
 
-        return result.Value.Count switch
-        {
-            0 => GenericResult<string>.Failure(OperationsEndpointLog.HealthMonitorNoneSelected(logger)),
-            1 => GenericResult<string>.Success(result.Value[0].Name),
-            _ => GenericResult<string>.Failure(OperationsEndpointLog.HealthMonitorSeveralSelected(logger, result.Value.Count)),
-        };
+        return MonitorSelections.Of(result.Value.Count).Answer([.. result.Value.Select(configuration => configuration.Name)], logger);
     }
 }

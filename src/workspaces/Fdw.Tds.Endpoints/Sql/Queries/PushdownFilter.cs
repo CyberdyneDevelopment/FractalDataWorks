@@ -47,19 +47,14 @@ internal static class PushdownFilter
     /// <param name="scope">The scope its values are evaluated in.</param>
     /// <returns>The filter tree, or the refusal.</returns>
     public static IGenericResult<QueryFilterNode> Translate(BooleanExpression condition, SqlTable table, string qualifier, SqlScope scope)
-        => condition switch
-        {
-            BooleanParenthesisExpression parenthesis => Translate(parenthesis.Expression, table, qualifier, scope),
-            BooleanBinaryExpression logical => Logical(logical, table, qualifier, scope),
-            BooleanComparisonExpression comparison => Comparison(comparison, table, qualifier, scope),
-            BooleanIsNullExpression isNull => IsNull(isNull, table, qualifier, scope),
-            InPredicate list => In(list, table, qualifier, scope),
-            LikePredicate like => Like(like, table, qualifier, scope),
-            BooleanTernaryExpression between => Between(between, table, qualifier, scope),
-            _ => Refused(condition, scope),
-        };
+    {
+        var handler = condition is { } known ? PushdownConditionHandlers.ByName(known.GetType().Name) : PushdownConditionHandlers.NotFound;
+        return ReferenceEquals(handler, PushdownConditionHandlers.NotFound)
+            ? Refused(condition, scope)
+            : handler.Translate(condition, table, qualifier, scope);
+    }
 
-    private static IGenericResult<QueryFilterNode> Logical(BooleanBinaryExpression logical, SqlTable table, string qualifier, SqlScope scope)
+    internal static IGenericResult<QueryFilterNode> Logical(BooleanBinaryExpression logical, SqlTable table, string qualifier, SqlScope scope)
     {
         var left = Translate(logical.FirstExpression, table, qualifier, scope);
         if (left.IsFailure)
@@ -72,7 +67,7 @@ internal static class PushdownFilter
         return Ok(new QueryFilterNode { Logic = logical.BinaryExpressionType.ToString(), Nodes = [left.Value, right.Value] });
     }
 
-    private static IGenericResult<QueryFilterNode> Comparison(BooleanComparisonExpression comparison, SqlTable table, string qualifier, SqlScope scope)
+    internal static IGenericResult<QueryFilterNode> Comparison(BooleanComparisonExpression comparison, SqlTable table, string qualifier, SqlScope scope)
     {
         if (!Comparisons.TryGetValue(comparison.ComparisonType.ToString(), out var ops))
             return Refused(comparison, scope);
@@ -93,7 +88,7 @@ internal static class PushdownFilter
         return Ok(new QueryFilterNode { Field = column.Value, Operator = columnFirst ? ops.Operator : ops.Flipped, Value = value.Value });
     }
 
-    private static IGenericResult<QueryFilterNode> IsNull(BooleanIsNullExpression isNull, SqlTable table, string qualifier, SqlScope scope)
+    internal static IGenericResult<QueryFilterNode> IsNull(BooleanIsNullExpression isNull, SqlTable table, string qualifier, SqlScope scope)
     {
         var column = Column(isNull.Expression, table, qualifier, isNull, scope);
         return column.IsFailure
@@ -101,7 +96,7 @@ internal static class PushdownFilter
             : Ok(new QueryFilterNode { Field = column.Value, Operator = isNull.IsNot ? "IsNotNull" : "IsNull" });
     }
 
-    private static IGenericResult<QueryFilterNode> In(InPredicate list, SqlTable table, string qualifier, SqlScope scope)
+    internal static IGenericResult<QueryFilterNode> In(InPredicate list, SqlTable table, string qualifier, SqlScope scope)
     {
         if (list.Subquery is not null || list.NotDefined)
             return Refused(list, scope);
@@ -124,7 +119,7 @@ internal static class PushdownFilter
     }
 
     // LIKE 'x%' starts with, '%x' ends with, '%x%' contains, 'x' equals; any other pattern stays refused.
-    private static IGenericResult<QueryFilterNode> Like(LikePredicate like, SqlTable table, string qualifier, SqlScope scope)
+    internal static IGenericResult<QueryFilterNode> Like(LikePredicate like, SqlTable table, string qualifier, SqlScope scope)
     {
         if (like.NotDefined || like.EscapeExpression is not null)
             return Refused(like, scope);
@@ -142,7 +137,7 @@ internal static class PushdownFilter
             : Refused(like, scope);
     }
 
-    private static IGenericResult<QueryFilterNode> Between(BooleanTernaryExpression between, SqlTable table, string qualifier, SqlScope scope)
+    internal static IGenericResult<QueryFilterNode> Between(BooleanTernaryExpression between, SqlTable table, string qualifier, SqlScope scope)
     {
         var column = Column(between.FirstExpression, table, qualifier, between, scope);
         var low = Value(between.SecondExpression, between, scope);

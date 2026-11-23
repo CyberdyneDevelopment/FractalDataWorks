@@ -137,6 +137,7 @@ dotnet_diagnostic.FDW016.severity = warning  # IGenericResult<T>.Value accessed 
 dotnet_diagnostic.FDW017.severity = warning  # Enum declaration should be replaced with TypeCollection
 dotnet_diagnostic.FDW022.severity = warning  # Exception swallowed - caught exception neither observed nor rethrown
 dotnet_diagnostic.FDW023.severity = suggestion  # Broad System.Exception catch with no specific catch clauses (survey)
+dotnet_diagnostic.TC014.severity = suggestion  # [TypeOption] RestrictToCurrentCompilation = true whose collection is in another assembly (survey). The options a lookup depends on were fixed in FDW-6309; the rest (SqlCommands, DataCommands, AuthenticationMethods and others) are listed on that item and are raised to warning once each is decided
 dotnet_diagnostic.CA2000.severity = none  # Dispose before losing scope - fires on ResultDetails.Create,
 # which returns IDisposable but is used as a value at ~98 sites. Whether ResultDetails should be
 # IDisposable at all is a decision about the type, not 98 local using-statements.

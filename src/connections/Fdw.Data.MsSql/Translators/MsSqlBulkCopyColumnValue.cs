@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 
 namespace Fdw.Data.MsSql;
 
@@ -46,19 +45,16 @@ internal static class MsSqlBulkCopyColumnValue
     }
 
     // The day a value stands for, or null when it is not a date: text reads month first under the invariant culture, as the Date converter's ToDb does.
-    private static DateOnly? DayOf(object value) => value switch
+    private static DateOnly? DayOf(object value)
     {
-        DateOnly day => day,
-        _ => MomentOf(value) is { } moment ? DateOnly.FromDateTime(moment) : null,
-    };
+        var reader = MsSqlBulkCopyDateReaders.ByName(value.GetType().Name);
+        return ReferenceEquals(reader, MsSqlBulkCopyDateReaders.NotFound) ? null : reader.Day(value);
+    }
 
     // The date-time a value stands for, or null when it is not a date.
-    private static DateTime? MomentOf(object value) => value switch
+    private static DateTime? MomentOf(object value)
     {
-        DateTime moment => moment,
-        DateTimeOffset moment => moment.DateTime,
-        DateOnly day => day.ToDateTime(TimeOnly.MinValue),
-        string text when DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) => parsed,
-        _ => null,
-    };
+        var reader = MsSqlBulkCopyDateReaders.ByName(value.GetType().Name);
+        return ReferenceEquals(reader, MsSqlBulkCopyDateReaders.NotFound) ? null : reader.Moment(value);
+    }
 }

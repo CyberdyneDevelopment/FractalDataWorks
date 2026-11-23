@@ -94,8 +94,22 @@ public sealed class FlowMergeJoin : IFlowComponent
     /// <inheritdoc />
     public async Task<IGenericResult> Run(IFlowPorts ports, CancellationToken cancellationToken = default)
     {
-        var left = FlowInputPump.Start(ports.Input(LeftName), cancellationToken);
-        var built = await BuildRight(ports.Input(RightName), cancellationToken).ConfigureAwait(false);
+        // The right side and what the pump takes for the left while it is built are held by the join until it ends (FDW-5231).
+        var held = FlowHeld.Of(ports);
+        try
+        {
+            return await Join(ports, held, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            held?.ReleaseAll();
+        }
+    }
+
+    private async Task<IGenericResult> Join(IFlowPorts ports, FlowHeldGauge? held, CancellationToken cancellationToken)
+    {
+        var left = FlowInputPump.Start(ports.Input(LeftName), held, cancellationToken);
+        var built = await BuildRight(ports.Input(RightName), held, cancellationToken).ConfigureAwait(false);
         if (built.IsFailure)
         {
             return built;
@@ -114,11 +128,12 @@ public sealed class FlowMergeJoin : IFlowComponent
         return tail.IsFailure ? tail : await output.Flush().ConfigureAwait(false);
     }
 
-    private async Task<IGenericResult<RightSide>> BuildRight(IFlowInput input, CancellationToken cancellationToken)
+    private async Task<IGenericResult<RightSide>> BuildRight(IFlowInput input, FlowHeldGauge? held, CancellationToken cancellationToken)
     {
         var side = new RightSide();
         while (await input.Read(cancellationToken).ConfigureAwait(false) is { } batch)
         {
+            held?.Hold(batch);
             foreach (var row in batch.Rows)
             {
                 foreach (var field in row.Keys)
@@ -141,7 +156,7 @@ public sealed class FlowMergeJoin : IFlowComponent
     private async Task<IGenericResult> Probe(
         FlowInputPump left, RightSide right, HashSet<string> leftFields, FlowBatchWriter output, CancellationToken cancellationToken)
     {
-        await foreach (var batch in left.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+        await foreach (var batch in left.ReadAll(cancellationToken).ConfigureAwait(false))
         {
             foreach (var row in batch.Rows)
             {

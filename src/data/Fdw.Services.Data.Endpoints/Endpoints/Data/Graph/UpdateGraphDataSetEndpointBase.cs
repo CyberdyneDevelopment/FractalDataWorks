@@ -98,7 +98,7 @@ public abstract class UpdateGraphDataSetEndpointBase : CrudUpdateEndpointBase<Up
         var applied = await Apply(request, graph, category.Value, GraphDataSetStamp.Saving(User), ct).ConfigureAwait(false);
         if (applied.IsFailure) return applied.ToNewResult<DataSetDetailResponse>();
 
-        // Why the same judgement as the validate route, over the data set as it would be stored: a change validate calls unsound is not saved (FDW-5442).
+        // Why the same judgment as the validate route, over the data set as it would be stored: a change validate calls unsound is not saved (FDW-5442).
         var sound = await GraphDataSetSoundness.Judge(graph, _sources, Logger, ct).ConfigureAwait(false);
         if (sound.IsFailure) return sound.ToNewResult<DataSetDetailResponse>();
 
@@ -119,6 +119,9 @@ public abstract class UpdateGraphDataSetEndpointBase : CrudUpdateEndpointBase<Up
     // The classification of the data set when the PATCH names one, and of each field out when fields are replaced, and each field's types.
     private IGenericResult CheckFields(UpdateGraphDataSetRequest request)
     {
+        var displayNameChecked = DataSetNames.Check(request.DisplayName, request.Abbreviation, request.Name, Logger);
+        if (displayNameChecked.IsFailure) return displayNameChecked;
+
         var fieldClassifications = request.FieldsOut?.Select(f => f.ClassificationId) ?? [];
         return GraphDataSetDefinitions.ValidateFields(
             request.ClassificationId is { } named ? fieldClassifications.Prepend(named) : fieldClassifications, request.FieldsOut, Logger);
@@ -133,6 +136,9 @@ public abstract class UpdateGraphDataSetEndpointBase : CrudUpdateEndpointBase<Up
 
         var parts = ApplyGraph(request, graph, values, stamp);
         if (parts.IsFailure) return parts;
+
+        var strategy = GraphDataSetDefinitions.Strategy(graph, request.FederationStrategy, Logger);
+        if (strategy.IsFailure) return strategy;
 
         if (request.IntendedSources is not null)
         {
@@ -150,6 +156,7 @@ public abstract class UpdateGraphDataSetEndpointBase : CrudUpdateEndpointBase<Up
     {
         graph.CategoryId = categoryId;
         graph.Description = request.Description ?? graph.Description;
+        DataSetNames.Set(graph, request.DisplayName, request.Abbreviation);
         graph.ClassificationId = request.ClassificationId ?? graph.ClassificationId;
         if (request.Version is not null)
         {

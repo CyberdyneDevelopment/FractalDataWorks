@@ -6,7 +6,7 @@ namespace Fdw.Services.Etl.Flow;
 
 /// <summary>
 /// MessageLogging for the Read data options step and for a list variable rendered as text (FDW-5347).
-/// EventId range: 21010-21016, and 71010 for a read that failed (the catalog's retryable IO band, as FlowScriptLog's read failure).
+/// EventId range: 21010-21020, and 71010 for a read that failed (the catalog's retryable IO band, as FlowScriptLog's read failure).
 /// </summary>
 [MessageLoggingTypeCode("FLOW")]
 public static partial class FlowDataOptionsLog
@@ -43,8 +43,28 @@ public static partial class FlowDataOptionsLog
 
     /// <summary>Logs the options a step read and the list they left.</summary>
     [MessageLogging(EventId = 21016, Level = LogLevel.Information,
-        Message = "Flow step '{step}' read {rows} option row(s) for column '{column}' of container '{container}' and kept {values} value(s) in '{variable}'")]
+        Message = "Flow step '{step}' read {rows} rule value row(s) for column '{column}' of container '{container}' and kept {values} value(s) in '{variable}'")]
     public static partial IGenericMessage Read(ILogger logger, string step, int rows, string column, string container, int values, string variable);
+
+    /// <summary>Logs a rule value row of the rule tables that is not a row this step can read (FDW-6344).</summary>
+    [MessageLogging(EventId = 21017, Level = LogLevel.Error,
+        Message = "Flow step '{step}' read rule '{rule}' from '{container}' and its row is not readable: {reason}")]
+    public static partial IGenericMessage RuleRowInvalid(ILogger logger, string step, string container, string rule, string reason);
+
+    /// <summary>Logs a rule whose stored path does not resolve to a kind of the option layer (FDW-6344).</summary>
+    [MessageLogging(EventId = 21018, Level = LogLevel.Error,
+        Message = "Flow step '{step}' read rule '{rule}' whose path '{path}' does not resolve to a kind of rule: {reason}")]
+    public static partial IGenericMessage RulePathUnresolved(ILogger logger, string step, string rule, string path, string? reason);
+
+    /// <summary>Logs a rule of a kind that is not a list of picked values, which this step cannot keep (FDW-6344).</summary>
+    [MessageLogging(EventId = 21019, Level = LogLevel.Error,
+        Message = "Flow step '{step}' read rule '{rule}' whose path '{path}' is not a kind that picks a list of values (In or NotIn), and this step keeps a list")]
+    public static partial IGenericMessage RuleKindNotAList(ILogger logger, string step, string rule, string path);
+
+    /// <summary>Logs a rule value that was read from the run's value of a parameter (FDW-6611); the value is not written.</summary>
+    [MessageLogging(EventId = 21020, Level = LogLevel.Trace,
+        Message = "Flow step '{step}' read the value of rule '{rule}' from run parameter '{parameter}'")]
+    public static partial IGenericMessage ParameterResolved(ILogger logger, string step, string rule, string parameter);
 
     /// <summary>Logs a step whose read of the stored options failed.</summary>
     [MessageLogging(EventId = 71010, Level = LogLevel.Error,

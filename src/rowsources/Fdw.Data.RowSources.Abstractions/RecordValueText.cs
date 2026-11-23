@@ -1,6 +1,4 @@
 using System;
-using System.Globalization;
-using Fdw.Data.DataContainers.Abstractions;
 
 namespace Fdw.Data.RowSources.Abstractions;
 
@@ -28,41 +26,25 @@ public static class RecordValueText
     /// <param name="columnName">The column the value came from, used to name the column in a failure.</param>
     /// <returns>The canonical text.</returns>
     /// <exception cref="NotSupportedException">The value's type has no defined serialized form.</exception>
-    public static string Format(object value, string columnName)
+    public static string Format(object value, string columnName) => KindOf(value, columnName).Text(value);
+
+    /// <summary>
+    /// Finds the kind of record value a value is.
+    /// </summary>
+    /// <param name="value">The value. Must not be null.</param>
+    /// <param name="columnName">The column the value came from, used to name the column in a failure.</param>
+    /// <returns>The kind.</returns>
+    /// <exception cref="NotSupportedException">The value's type has no defined serialized form.</exception>
+    // NO FALLBACK. Convert.ToString would return something for a type no kind holds, and that something is how
+    // "System.Byte[]" reached an export that reported success.
+    internal static IRecordValueKind KindOf(object value, string columnName)
     {
-        switch (value)
-        {
-            case string text: return text;
-            case char character: return character.ToString();
-
-            // Why lowercase rather than Boolean.ToString's "True": every other format this value
-            // round-trips through - JSON, XML schema, most CSV readers - spells it lowercase.
-            case bool flag: return flag ? "true" : "false";
-
-            case byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal:
-                return ((IFormattable)value).ToString(null, CultureInfo.InvariantCulture);
-
-            // "O" is the round-trip format: it keeps sub-second precision and the Kind/offset, both
-            // of which a general-purpose format silently discards.
-            case DateTime instant: return instant.ToString("O", CultureInfo.InvariantCulture);
-            case DateTimeOffset instant: return instant.ToString("O", CultureInfo.InvariantCulture);
-            case TimeSpan duration: return duration.ToString("c", CultureInfo.InvariantCulture);
-
-            case Guid id: return id.ToString("D", CultureInfo.InvariantCulture);
-            case byte[] bytes: return Convert.ToBase64String(bytes);
-
-            // EWKT rather than bare WKT: the SRID is part of what the value MEANS, and a coordinate
-            // pair without the reference system it was measured in is not the same value.
-            case SpatialValue spatial:
-                return string.Concat("SRID=", spatial.Srid.ToString(CultureInfo.InvariantCulture), ";", spatial.Wkt);
-
-            default:
-                // NO FALLBACK. Convert.ToString would return something here, and that something is
-                // how "System.Byte[]" reached an export that reported success.
-                throw new NotSupportedException(
-                    $"Column '{columnName}' holds a {value.GetType().FullName}, which has no defined serialized form. " +
-                    "Add it to RecordValueText.Format rather than letting it reach the output as its type name.");
-        }
+        var kind = RecordValueKinds.OfValue(value);
+        return ReferenceEquals(kind, RecordValueKinds.NotFound)
+            ? throw new NotSupportedException(
+                $"Column '{columnName}' holds a {value.GetType().FullName}, which has no defined serialized form. " +
+                "Add a RecordValueKinds option for it rather than letting it reach the output as its type name.")
+            : kind;
     }
 
     /// <summary>

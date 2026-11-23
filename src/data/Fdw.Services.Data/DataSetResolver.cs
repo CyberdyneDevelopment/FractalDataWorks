@@ -10,6 +10,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Data;
 
@@ -23,6 +24,7 @@ namespace Fdw.Services.Data;
 public sealed class DataSetResolver : IDataSetResolver
 {
     /// <summary>The most views a chain may hold, the view itself included: the same limit the variation domain refuses a deeper chain at.</summary>
+    [ConfigurationPending("FDW-7105")]
     public const int MaxChainDepth = 8;
 
     private readonly IDataSetConfigurationProvider _dataSets;

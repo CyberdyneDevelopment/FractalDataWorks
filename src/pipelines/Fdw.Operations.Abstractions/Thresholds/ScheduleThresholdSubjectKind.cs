@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Operations.Abstractions.Thresholds;
 
@@ -13,4 +14,7 @@ public sealed class ScheduleThresholdSubjectKind : ThresholdSubjectKindBase
         : base("Schedule", "A schedule", "sched", "ScheduleThreshold")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.EnforcedByDatabase("FK_ScheduleThreshold_Schedule");
 }

@@ -44,6 +44,10 @@ public sealed class MsSqlFindTranslator : MsSqlDataCommandTranslatorBase
     {
     }
 
+    /// <inheritdoc />
+    /// <remarks>Read from what this translator emits: a SELECT of the rows that match.</remarks>
+    public override IReadOnlyList<string> Operations => ["Query"];
+
     /// <summary>
     /// Base Translate - dispatches to find-specific logic or returns error for invalid command types.
     /// </summary>

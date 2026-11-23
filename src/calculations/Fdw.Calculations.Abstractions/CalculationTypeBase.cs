@@ -29,14 +29,16 @@ public abstract class CalculationTypeBase : TypeOptionBase<CalculationTypeBase>,
     /// </summary>
     /// <param name="name">The name of the calculation type.</param>
     /// <param name="category">The category (e.g., "Aggregation").</param>
+    /// <param name="description">What the calculation computes.</param>
     /// <param name="calculate">In-memory execution func: (rows, columnName, parameter) → decimal.</param>
     /// <param name="toSql">SQL expression builder: (columnName, parameter) → SQL string.</param>
     protected CalculationTypeBase(
         string name,
         string category,
+        string description,
         Func<IReadOnlyList<IDataRow>, string, double?, decimal> calculate,
         Func<string, double?, string> toSql)
-        : base(name, category)
+        : base(name, name, description, category)
     {
         _calculate = calculate;
         _toSql = toSql;

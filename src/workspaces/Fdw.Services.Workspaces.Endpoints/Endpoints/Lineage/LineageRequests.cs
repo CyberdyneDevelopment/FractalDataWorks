@@ -15,10 +15,10 @@ internal static class LineageRequests
     private const string StartsWithMatch = "startsWith";
 
     /// <summary>Checks a neighbourhood request: the node, the direction and the depth are required.</summary>
-    public static IGenericResult<LineageNeighbourhoodQuery> Neighbourhood(LineageNeighbourhoodRequest request, ILogger logger)
+    public static IGenericResult<LineageNeighbourhoodQuery> Neighbourhood(LineageNeighbourhoodRequest request, WorkspaceLimits limits, ILogger logger)
     {
         var problem = NodeProblem(request.Node, "node", allowPipeline: true);
-        if (problem is null) problem = DepthProblem(request.Depth);
+        if (problem is null) problem = DepthProblem(request.Depth, limits.LineageMaxDepth);
         if (problem is not null) return MapRequestRefusals.Invalid<LineageNeighbourhoodQuery>(logger, problem);
 
         var direction = Direction(request.Direction);
@@ -83,15 +83,15 @@ internal static class LineageRequests
     }
 
     /// <summary>Checks a search request: the text is required; the count is held to its maximum.</summary>
-    public static IGenericResult<LineageSearchQuery> Search(LineageSearchRequest request, ILogger logger)
+    public static IGenericResult<LineageSearchQuery> Search(LineageSearchRequest request, WorkspaceLimits limits, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(request.Q))
             return MapRequestRefusals.Invalid<LineageSearchQuery>(logger, "q is required: the text to find in names");
 
-        var take = LineageLimits.DefaultSearchTake;
+        var take = limits.LineageSearchDefaultTake;
         if (request.Take.HasValue) take = request.Take.Value;
-        if (take < 1 || take > LineageLimits.MaxSearchTake)
-            return MapRequestRefusals.Invalid<LineageSearchQuery>(logger, $"take {take} is outside 1 to {LineageLimits.MaxSearchTake}");
+        if (take < 1 || take > limits.LineageSearchMaxTake)
+            return MapRequestRefusals.Invalid<LineageSearchQuery>(logger, $"take {take} is outside 1 to {limits.LineageSearchMaxTake}");
 
         var skip = request.Skip.HasValue ? request.Skip.Value : 0;
         if (skip < 0)
@@ -107,16 +107,16 @@ internal static class LineageRequests
     }
 
     /// <summary>Checks a path request: both ends are required and are data sets or data stores.</summary>
-    public static IGenericResult<LineagePathQuery> Path(LineagePathRequest request, ILogger logger)
+    public static IGenericResult<LineagePathQuery> Path(LineagePathRequest request, WorkspaceLimits limits, ILogger logger)
     {
         var problem = NodeProblem(request.From, "from", allowPipeline: false);
         if (problem is null) problem = NodeProblem(request.To, "to", allowPipeline: false);
         if (problem is not null) return MapRequestRefusals.Invalid<LineagePathQuery>(logger, problem);
 
-        var maxDepth = LineageLimits.MaxPathDepth;
+        var maxDepth = limits.LineageMaxPathDepth;
         if (request.MaxDepth.HasValue) maxDepth = request.MaxDepth.Value;
-        if (maxDepth < 1 || maxDepth > LineageLimits.MaxPathDepth)
-            return MapRequestRefusals.Invalid<LineagePathQuery>(logger, $"maxDepth {maxDepth} is outside 1 to {LineageLimits.MaxPathDepth}");
+        if (maxDepth < 1 || maxDepth > limits.LineageMaxPathDepth)
+            return MapRequestRefusals.Invalid<LineagePathQuery>(logger, $"maxDepth {maxDepth} is outside 1 to {limits.LineageMaxPathDepth}");
 
         return GenericResult<LineagePathQuery>.Success(new LineagePathQuery(request.From!.Trim(), request.To!.Trim(), maxDepth));
     }
@@ -153,10 +153,10 @@ internal static class LineageRequests
         return traced ? null : $"{parameter} '{node}' is a {kind}, which the lineage does not trace";
     }
 
-    private static string? DepthProblem(int? depth)
+    private static string? DepthProblem(int? depth, int maxDepth)
     {
-        if (depth is null) return $"depth is required: a whole number from 1 to {LineageLimits.MaxDepth}";
-        return depth is >= 1 and <= LineageLimits.MaxDepth ? null : $"depth {depth} is outside 1 to {LineageLimits.MaxDepth}";
+        if (depth is null) return $"depth is required: a whole number from 1 to {maxDepth}";
+        return depth >= 1 && depth <= maxDepth ? null : $"depth {depth} is outside 1 to {maxDepth}";
     }
 
     // The word must match exactly: a miss is NotFound, which is no direction, so there is no default to fall back to.

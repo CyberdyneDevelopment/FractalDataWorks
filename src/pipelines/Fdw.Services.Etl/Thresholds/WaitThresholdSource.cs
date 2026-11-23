@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,7 @@ using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Thresholds;
 
@@ -55,7 +57,7 @@ public sealed class WaitThresholdSource : IWaitThresholdSource
 
     private async Task<IGenericResult<WaitThresholdConfiguration>> ReadAll(IServiceProvider services, CancellationToken cancellationToken)
     {
-        var gateway = services.GetRequiredService<IConfigurationGatewayProvider>().Get(EtlPipelineTypes.ConfigurationConnection);
+        var gateway = services.GetRequiredService<IConfigurationGatewayProvider>().Get(PipelineTypes.ConfigurationConnection);
         if (gateway.IsFailure || gateway.Value is null)
         {
             return gateway.ToNewResult<WaitThresholdConfiguration>();
@@ -127,7 +129,7 @@ public sealed class WaitThresholdSource : IWaitThresholdSource
     private async Task<IGenericResult<Dictionary<string, WaitThresholdLayer>>> PipelineLevels(
         IPipelineConfigurationProvider pipelines, Dictionary<string, WaitThresholdLevelRecord> stated, CancellationToken cancellationToken)
     {
-        var all = await pipelines.Get(cancellationToken).ConfigureAwait(false);
+        var all = await pipelines.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         return all.IsFailure || all.Value is null
             ? all.ToNewResult<Dictionary<string, WaitThresholdLayer>>()
             : Levels(WaitThresholdOwners.Pipeline, all.Value.Select(pipeline => pipeline.Name), stated);
@@ -166,12 +168,9 @@ public sealed class WaitThresholdSource : IWaitThresholdSource
         foreach (var row in stated.Values)
         {
             var owner = Owned(row.OwnerName);
-            var exists = row.OwnerKind switch
-            {
-                WaitThresholdOwners.Pipeline => pipelines.ContainsKey(owner),
-                WaitThresholdOwners.Schedule => schedules.ContainsKey(owner),
-                _ => true,
-            };
+            // A kind no option holds names no owner to look for, as it never did.
+            var kind = WaitThresholdOwnerKinds.ByName(row.OwnerKind);
+            var exists = ReferenceEquals(kind, WaitThresholdOwnerKinds.NotFound) || kind.OwnerExists(owner, pipelines, schedules);
             if (!exists)
             {
                 return GenericResult.Failure(WaitThresholdLog.OwnerUnknown(_logger, "level", row.OwnerKind, owner));

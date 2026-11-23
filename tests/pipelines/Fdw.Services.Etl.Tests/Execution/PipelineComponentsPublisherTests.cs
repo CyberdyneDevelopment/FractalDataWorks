@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,7 +48,7 @@ public sealed class PipelineComponentsPublisherTests
         PipelineRunScheduler scheduler, RunningFlows flows, IGenericResult<IPipelineImplementationConfiguration>? owner = null)
     {
         var pipelines = new Mock<IPipelineConfigurationProvider>();
-        pipelines.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(owner ?? Owned(Org));
+        pipelines.Setup(p => p.Get(It.IsAny<Guid>(),ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(owner ?? Owned(Org));
         var broadcaster = new Mock<IPipelineStatusBroadcaster>();
         broadcaster.Setup(b => b.BroadcastComponents(It.IsAny<PipelineComponentsUpdate>(), It.IsAny<Guid?>())).Returns(Task.CompletedTask);
         var services = new ServiceCollection();

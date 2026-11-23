@@ -8,6 +8,7 @@ using Fdw.Data.DataSets;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Abstractions.Visualization;
@@ -83,6 +84,14 @@ public sealed class DataSetProvider
         // The configuration interface resolves to the domain provider; this one is the DataSet
         // domain's platform service provider, and reads through it.
         services.TryAddSingleton<IDataSetConfigurationProvider>(sp => sp.GetRequiredService<DataSetConfigurationProvider>());
+        services.TryAddSingleton<IDataSetRecordProvider>(sp => sp.GetRequiredService<DataSetConfigurationProvider>());
+
+        // The data set domain is a cited domain: a threshold, a tag or a variation holds a data set's durable id, and the citation check asks this provider
+        // whether it exists (FDW-6221). One line per cited domain, written in this two-type form: TryAddEnumerable tells entries apart by their implementation type, so
+        // a factory descriptor must state it (IDomainConfigurationProvider, DataSetConfigurationProvider) or it throws, and a second Register adds nothing.
+        // The factory hands out the one provider instance the rest of the host reads through.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IDomainConfigurationProvider, DataSetConfigurationProvider>(sp => sp.GetRequiredService<DataSetConfigurationProvider>()));
+        services.TryAddSingleton<ICitedConfigurations, CitedConfigurations>();
 
         services.TryAddSingleton<DataSetProvider>(sp =>
             new DataSetProvider(

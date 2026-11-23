@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,7 @@ using Fdw.Services.Etl.Abstractions.Thresholds;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Thresholds;
 
@@ -47,7 +49,7 @@ public sealed class WaitThresholdStore : IWaitThresholdStore
         if (string.IsNullOrWhiteSpace(ownerKind))
             return GenericResult<WaitThresholdLevelPayload>.Failure(WaitThresholdLog.OwnerKindRequired(_logger));
 
-        var gateway = _gateways.Get(EtlPipelineTypes.ConfigurationConnection);
+        var gateway = _gateways.Get(PipelineTypes.ConfigurationConnection);
         if (gateway.IsFailure || gateway.Value is null)
         {
             return gateway.ToNewResult<WaitThresholdLevelPayload>();
@@ -82,7 +84,7 @@ public sealed class WaitThresholdStore : IWaitThresholdStore
             return judged.ToNewResult<WaitThresholdLevelPayload>();
         }
 
-        var gateway = _gateways.Get(EtlPipelineTypes.ConfigurationConnection);
+        var gateway = _gateways.Get(PipelineTypes.ConfigurationConnection);
         if (gateway.IsFailure || gateway.Value is null)
         {
             return gateway.ToNewResult<WaitThresholdLevelPayload>();
@@ -127,7 +129,7 @@ public sealed class WaitThresholdStore : IWaitThresholdStore
     {
         if (string.Equals(ownerKind, WaitThresholdOwners.Pipeline, StringComparison.Ordinal))
         {
-            var pipelines = await _pipelines.Get(cancellationToken).ConfigureAwait(false);
+            var pipelines = await _pipelines.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
             return pipelines.IsFailure || pipelines.Value is null
                 ? pipelines.ToNewResult<IReadOnlyList<string>>()
                 : GenericResult<IReadOnlyList<string>>.Success([.. pipelines.Value.Select(pipeline => pipeline.Name)]);

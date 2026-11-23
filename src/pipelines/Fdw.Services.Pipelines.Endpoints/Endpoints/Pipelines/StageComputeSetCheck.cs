@@ -79,12 +79,7 @@ internal static class StageComputeSetCheck
     private static string? SourceProblem(PipelineComputeTable table)
     {
         var named = !string.IsNullOrWhiteSpace(table.Name);
-        return table.From switch
-        {
-            "Stage" => named ? "the stage's own rows have no name" : null,
-            "DataSet" or "Output" => named ? null : "a data set or output source states its name",
-            _ => $"'{table.From}' is not Stage, DataSet or Output",
-        };
+        return ComputeTableSources.ProblemOf(table.From, named);
     }
 
     private static IEnumerable<(string Field, string Reason)> Outputs(PipelineCompute compute, BuiltTransformationConfiguration built, ILogger logger)
@@ -123,12 +118,7 @@ internal static class StageComputeSetCheck
     private static string? RouteProblem(PipelineComputeOutput output)
     {
         var named = !string.IsNullOrWhiteSpace(output.Name);
-        return output.Route switch
-        {
-            "Replace" => named ? "a Replace route has no name" : null,
-            "Named" => named ? null : "a Named route states the name it keeps the rows under",
-            _ => $"'{output.Route}' is not Replace or Named",
-        };
+        return ComputeOutputRoutes.ProblemOf(output.Route, named);
     }
 
     // What a failing row does is the author's decision: the stage states it, and none is picked here.

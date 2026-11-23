@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,7 +43,8 @@ public class CatalogUsesTests
     {
         var provider = new Mock<IPipelineConfigurationProvider>();
         IReadOnlyList<IPipelineImplementationConfiguration> all = graphs;
-        provider.Setup(p => p.Get(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        // Why the lean overload: PipelineEdges reads the pipelines WithoutFilledMembers (FDW-7323); the strict-by-default null of an unmatched setup was the r252 NullReferenceException.
+        provider.Setup(p => p.Get(It.IsAny<int>(), It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success(all));
         return provider;
     }
@@ -213,7 +215,7 @@ public class CatalogUsesTests
     public async Task AReadThatFailsFailsTheQuestionRatherThanAnsweringWithoutIt()
     {
         var pipelines = new Mock<IPipelineConfigurationProvider>();
-        pipelines.Setup(p => p.Get(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        pipelines.Setup(p => p.Get(It.IsAny<int>(), It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Failure(new GenericMessage("the store did not answer")));
 
         var found = await Uses(pipelines: pipelines).Run(CatalogKinds.DataSet, "Breweries", [], CatalogUsesDirections.UsedBy, TestContext.Current.CancellationToken);

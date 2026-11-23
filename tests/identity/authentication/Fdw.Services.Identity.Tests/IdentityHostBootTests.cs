@@ -15,6 +15,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Data;
+using Fdw.Services.Descriptions;
+using Moq;
 
 namespace Fdw.Services.Identity.Tests;
 
@@ -48,6 +50,9 @@ public sealed class IdentityHostBootTests
         // rather than mocked away, because discovering exactly this list is the point of the test.
         builder.Services.AddHttpClient();
         builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+
+        // The descriptions writer the identity provider writes each description with (FDW-6208): the Descriptions service type registers it in a real host. Strict, because no case here saves.
+        builder.Services.AddSingleton<IDescriptionWriter>(new Mock<IDescriptionWriter>(MockBehavior.Strict).Object);
 
         return builder;
     }
@@ -151,6 +156,23 @@ public sealed class IdentityHostBootTests
         host.Services.GetRequiredService<IHttpClientFactory>()
             .CreateClient(Fdw.Services.Identity.IdentityHttpClient.Name)
             .ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void AHostWithoutTheDescriptionsWriterIsRefusedAtInitializeWithTheDomainsOwnMessage()
+    {
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Services.AddHttpClient();
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
+        IdentityServiceTypes.Register(builder, NullLoggerFactory.Instance, Force);
+
+        using var host = builder.Build();
+
+        var initialized = IdentityServiceTypes.Initialize(host, NullLoggerFactory.Instance, Force);
+
+        initialized.IsFailure.ShouldBeTrue();
+        initialized.CurrentMessage.ShouldNotBeNull().ShouldContain("IDescriptionWriter");
     }
 
     [Fact]

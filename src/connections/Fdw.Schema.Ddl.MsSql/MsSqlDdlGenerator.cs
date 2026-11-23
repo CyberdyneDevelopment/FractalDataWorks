@@ -8,6 +8,7 @@ using Fdw.Configuration.Persistence.Schema;
 using Fdw.Results.Abstractions;
 using Fdw.Schema.Ddl.Commands;
 using Fdw.Schema.Ddl.Definitions;
+using Fdw.Schema.Ddl.MsSql.CommandHandlers;
 using Fdw.Schema.Ddl.Results;
 using Fdw.Schema.Indexes;
 using Fdw.Schema.Properties;
@@ -20,6 +21,8 @@ namespace Fdw.Schema.Ddl.MsSql;
 /// </summary>
 public sealed class MsSqlDdlGenerator : IDdlGenerator
 {
+    private const string Dialect = "SQL Server";
+
     /// <inheritdoc/>
     public string TargetDatabase => "MsSql";
 
@@ -155,6 +158,12 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
     }
 
     /// <inheritdoc/>
+    public IGenericResult<string> QuoteIdentifier(string identifier)
+        => WhyInvalid(identifier) is { } reason
+            ? InvalidIdentifier(identifier, reason)
+            : GenericResult<string>.Success(Quote(identifier));
+
+    /// <inheritdoc/>
     public IGenericResult<string> GenerateSql(IDdlCommand command)
     {
         // Why refused here: the constraint name is the command's to give, and the generator invents none (FDW-3580).
@@ -165,27 +174,31 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
                 ResultDetails.Create("tableName", unnamed.TableName));
         }
 
+        // A command type with no handler (AlterTable, InsertData, CreateView, DropView) is refused as every command this dialect cannot write is.
+        var handler = MsSqlDdlCommandHandlers.ByName(command.CommandType.Name);
+        if (ReferenceEquals(handler, MsSqlDdlCommandHandlers.NotFound))
+            return GenerationFailed(command, $"Command type {command.CommandType} is not supported");
+
+        // Why before any text is written (FDW-3617): a name this dialect cannot quote is refused with its own code, naming the name and
+        // why, so a caller reads what to change; it is never written into SQL, and never answered as a generic generation failure.
+        if (RefuseInvalidName(handler.NamesIn(command)) is { } invalidName)
+            return invalidName;
+
         try
         {
-            // A table can be refused (a foreign key action SQL Server cannot express), so its arm answers a result.
-            return command switch
-            {
-                CreateSchemaCommand cs => GenericResult<string>.Success(GenerateCreateSchema(cs)),
-                CreateTableCommand ct => GenerateCreateTable(ct),
-                CreateIndexCommand ci => GenericResult<string>.Success(GenerateCreateIndex(ci)),
-                DropTableCommand dt => GenericResult<string>.Success(GenerateDropTable(dt)),
-                DropIndexCommand di => GenericResult<string>.Success(GenerateDropIndex(di)),
-                DropSchemaCommand ds => GenericResult<string>.Success(GenerateDropSchema(ds)),
-                _ => throw new NotSupportedException($"Command type {command.CommandType} is not supported")
-            };
+            // A table can be refused (a foreign key action SQL Server cannot express), so its handler answers a result.
+            return handler.Generate(command);
         }
         catch (Exception ex)
         {
-            var details = ResultDetails.Create("commandType", command.CommandType.ToString(), "error", ex.Message);
-            return GenericResult<string>.Failure(
-                DdlResultCodes.ByName("CommandGenerationFailed"), details);
+            return GenerationFailed(command, ex.Message);
         }
     }
+
+    private static IGenericResult<string> GenerationFailed(IDdlCommand command, string error)
+        => GenericResult<string>.Failure(
+            DdlResultCodes.ByName("CommandGenerationFailed"),
+            ResultDetails.Create("commandType", command.CommandType.ToString(), "error", error));
 
     /// <inheritdoc/>
     public IGenericResult<string> GenerateScript(IReadOnlyList<IDdlCommand> commands)
@@ -203,7 +216,10 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
                 if (sb.Length > 0)
                     sb.AppendLine();
 
+                // Why the separator is here and not in a statement: GO is the batch separator of the tools a person runs a script with, not
+                // T-SQL, and SqlCommand refuses it; a statement is what the engine accepts, so the script adds the separator (FDW-3617).
                 sb.AppendLine(sqlResult.Value);
+                sb.AppendLine("GO");
             }
 
             return GenericResult<string>.Success(sb.ToString());
@@ -216,32 +232,104 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         }
     }
 
-    private static string GenerateCreateSchema(CreateSchemaCommand command)
+    // The refusal for the first name the command writes that the dialect cannot quote, or null when every one can be.
+    private static IGenericResult<string>? RefuseInvalidName(IEnumerable<string?> names)
+    {
+        foreach (var name in names)
+        {
+            if (WhyInvalid(name) is { } reason)
+                return InvalidIdentifier(name ?? string.Empty, reason);
+        }
+
+        return null;
+    }
+
+    // Why these two refusals: an empty or blank name is no name, and a NUL ends a name early in the engine's own parsing, so what ran
+    // would not be what was asked. Every other character, ] and ' included, is escaped and is that literal name.
+    private static string? WhyInvalid(string? identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier))
+            return "the name is empty";
+
+        return identifier.Contains('\0', StringComparison.Ordinal) ? "the name contains a NUL character" : null;
+    }
+
+    private static IGenericResult<string> InvalidIdentifier(string identifier, string reason)
+        => GenericResult<string>.Failure(
+            DdlResultCodes.ByName("IdentifierInvalid"),
+            ResultDetails.Create("identifier", identifier, "reason", reason).With("dialect", Dialect));
+
+    // One name in brackets, a closing bracket doubled: the quoting every identifier this dialect writes goes through.
+    private static string Quote(string identifier)
+        => string.Concat("[", identifier.Replace("]", "]]", StringComparison.Ordinal), "]");
+
+    // One text inside a string literal, a quote doubled; for the existence checks and the statement EXEC runs.
+    private static string Literal(string text) => text.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string Qualified(string? schemaName, string objectName)
+        => string.IsNullOrWhiteSpace(schemaName)
+            ? Quote(objectName)
+            : string.Concat(Quote(schemaName), ".", Quote(objectName));
+
+    private static string QuotedList(IEnumerable<string> names) => string.Join(", ", names.Select(Quote));
+
+    // A schema name the command leaves out (null or blank) names no schema, and is not a name to check.
+    internal static IEnumerable<string> Stated(string? schemaName)
+        => string.IsNullOrWhiteSpace(schemaName) ? [] : [schemaName];
+
+    internal static IEnumerable<string?> TableNames(CreateTableCommand table)
+    {
+        foreach (var schema in Stated(table.SchemaName))
+            yield return schema;
+
+        yield return table.TableName;
+
+        foreach (var column in table.Columns)
+            yield return column.Name;
+
+        // The key's name and columns are written only when the table has a key.
+        if (table.PrimaryKeyColumns?.Count > 0)
+        {
+            yield return table.PrimaryKeyName;
+            foreach (var column in table.PrimaryKeyColumns)
+                yield return column;
+        }
+
+        foreach (var fk in table.ForeignKeys ?? [])
+        {
+            yield return fk.Name;
+            yield return fk.ColumnName;
+            foreach (var schema in Stated(fk.ReferencedSchema))
+                yield return schema;
+
+            yield return fk.ReferencedTable;
+            yield return fk.ReferencedColumn;
+        }
+    }
+
+    internal static string GenerateCreateSchema(CreateSchemaCommand command)
     {
         var sb = new StringBuilder();
 
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{command.SchemaName}')");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = N'{Literal(command.Name)}')");
         sb.AppendLine("BEGIN");
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    EXEC('CREATE SCHEMA [{command.SchemaName}]')");
-        sb.AppendLine("END");
-        sb.Append("GO");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    EXEC(N'CREATE SCHEMA {Literal(Quote(command.Name))}')");
+        sb.Append("END");
 
         return sb.ToString();
     }
 
-    private static IGenericResult<string> GenerateCreateTable(CreateTableCommand command)
+    internal static IGenericResult<string> GenerateCreateTable(CreateTableCommand command)
     {
         var constraints = BuildConstraints(command);
         if (!constraints.IsSuccess || constraints.Value is null)
             return constraints.ToNewResult<string>();
 
         var sb = new StringBuilder();
-        var fullTableName = string.IsNullOrWhiteSpace(command.SchemaName)
-            ? command.TableName
-            : $"{command.SchemaName}.{command.TableName}";
+        var fullTableName = Qualified(command.SchemaName, command.TableName);
 
         // IF NOT EXISTS check
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'{fullTableName}') AND type = 'U')");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'{Literal(fullTableName)}') AND type = 'U')");
         sb.AppendLine("BEGIN");
         sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    CREATE TABLE {fullTableName}");
         sb.AppendLine("    (");
@@ -261,17 +349,21 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         }
 
         sb.AppendLine("    )");
-        sb.AppendLine("END");
-        sb.Append("GO");
+        sb.Append("END");
 
         return GenericResult<string>.Success(sb.ToString());
     }
 
+    // The type is written as the column states it: a discovered type, or one the caller took from SqlColumnTypes; the dialect maps
+    // it, and IDENTITY is the engine's own (seed and increment are the engine's, 1 and 1, when none is stated).
+    private static string TypeText(DdlColumnDefinition column)
+        => column.IsIdentity ? $"{column.GetFullSqlType()} IDENTITY" : column.GetFullSqlType();
+
     private static List<string> BuildColumnLines(IReadOnlyList<DdlColumnDefinition> columns)
     {
         var columnLines = new List<string>();
-        var maxNameLength = columns.Max(c => c.Name.Length);
-        var maxTypeLength = columns.Max(c => c.GetFullSqlType().Length);
+        var maxNameLength = columns.Max(c => Quote(c.Name).Length);
+        var maxTypeLength = columns.Max(c => TypeText(c).Length);
 
         // Align columns to at least 20 chars, types to 20 chars
         var nameWidth = Math.Max(20, maxNameLength + 1);
@@ -286,10 +378,10 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
             line.Append(i == 0 ? "     " : "    ,");
 
             // Column name (left-aligned)
-            line.Append(column.Name.PadRight(nameWidth));
+            line.Append(Quote(column.Name).PadRight(nameWidth));
 
             // SQL type (left-aligned)
-            line.Append(column.GetFullSqlType().PadRight(typeWidth));
+            line.Append(TypeText(column).PadRight(typeWidth));
 
             // Nullability
             line.Append(column.IsNullable ? "NULL        " : "NOT NULL    ");
@@ -312,16 +404,13 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
 
         // Primary key constraint
         if (command.PrimaryKeyColumns?.Count > 0)
-        {
-            var pkColumns = string.Join(", ", command.PrimaryKeyColumns);
-            constraints.Add($"CONSTRAINT {command.PrimaryKeyName} PRIMARY KEY ({pkColumns})");
-        }
+            constraints.Add($"CONSTRAINT {Quote(command.PrimaryKeyName!)} PRIMARY KEY ({QuotedList(command.PrimaryKeyColumns)})");
 
         // Unique constraints
         var uniqueColumns = command.Columns.Where(c => c.IsUnique).ToList();
         foreach (var column in uniqueColumns)
         {
-            constraints.Add($"CONSTRAINT UQ_{command.TableName}_{column.Name} UNIQUE ({column.Name})");
+            constraints.Add($"CONSTRAINT {Quote($"UQ_{command.TableName}_{column.Name}")} UNIQUE ({Quote(column.Name)})");
         }
 
         // Foreign key constraints
@@ -335,8 +424,8 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
                 if (!onUpdate.IsSuccess || onUpdate.Value is null) return onUpdate.ToNewResult<List<string>>();
 
                 constraints.Add(
-                    $"CONSTRAINT {fk.Name} FOREIGN KEY ({fk.ColumnName}) " +
-                    $"REFERENCES {fk.ReferencedSchema}.{fk.ReferencedTable}({fk.ReferencedColumn})" +
+                    $"CONSTRAINT {Quote(fk.Name)} FOREIGN KEY ({Quote(fk.ColumnName)}) " +
+                    $"REFERENCES {Qualified(fk.ReferencedSchema, fk.ReferencedTable)}({Quote(fk.ReferencedColumn)})" +
                     onDelete.Value + onUpdate.Value);
             }
         }
@@ -344,23 +433,20 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         return GenericResult<List<string>>.Success(constraints);
     }
 
-    private static string GenerateCreateIndex(CreateIndexCommand command)
+    // The filter predicate and a column default are expressions the definition states, written as stated: only the names are quoted.
+    internal static string GenerateCreateIndex(CreateIndexCommand command)
     {
         var sb = new StringBuilder();
-        var fullTableName = string.IsNullOrWhiteSpace(command.SchemaName)
-            ? command.TableName
-            : $"{command.SchemaName}.{command.TableName}";
+        var fullTableName = Qualified(command.SchemaName, command.TableName);
 
         var indexType = command.Definition.IsUnique ? "UNIQUE " : "";
         var clustered = command.Definition.IsClustered ? "CLUSTERED " : "NONCLUSTERED ";
-        var columns = string.Join(", ", command.Definition.Columns);
 
-        sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"CREATE {indexType}{clustered}INDEX {command.IndexName} ON {fullTableName} ({columns})");
+        sb.Append(System.Globalization.CultureInfo.InvariantCulture, $"CREATE {indexType}{clustered}INDEX {Quote(command.IndexName)} ON {fullTableName} ({QuotedList(command.Definition.Columns)})");
 
         if (command.Definition.IncludeColumns?.Count > 0)
         {
-            var includeColumns = string.Join(", ", command.Definition.IncludeColumns);
-            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $" INCLUDE ({includeColumns})");
+            sb.Append(System.Globalization.CultureInfo.InvariantCulture, $" INCLUDE ({QuotedList(command.Definition.IncludeColumns)})");
         }
 
         if (!string.IsNullOrWhiteSpace(command.Definition.FilterPredicate))
@@ -373,53 +459,43 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
             sb.Append(System.Globalization.CultureInfo.InvariantCulture, $" WITH (FILLFACTOR = {command.Definition.FillFactor.Value})");
         }
 
-        sb.AppendLine();
-        sb.Append("GO");
-
         return sb.ToString();
     }
 
-    private static string GenerateDropTable(DropTableCommand command)
+    internal static string GenerateDropTable(DropTableCommand command)
     {
         var sb = new StringBuilder();
-        var fullTableName = string.IsNullOrWhiteSpace(command.SchemaName)
-            ? command.TableName
-            : $"{command.SchemaName}.{command.TableName}";
+        var fullTableName = Qualified(command.SchemaName, command.TableName);
 
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'{fullTableName}') AND type = 'U')");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'{Literal(fullTableName)}') AND type = 'U')");
         sb.AppendLine("BEGIN");
         sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    DROP TABLE {fullTableName}");
-        sb.AppendLine("END");
-        sb.Append("GO");
+        sb.Append("END");
 
         return sb.ToString();
     }
 
-    private static string GenerateDropIndex(DropIndexCommand command)
+    internal static string GenerateDropIndex(DropIndexCommand command)
     {
         var sb = new StringBuilder();
-        var fullTableName = string.IsNullOrWhiteSpace(command.SchemaName)
-            ? command.TableName
-            : $"{command.SchemaName}.{command.TableName}";
+        var fullTableName = Qualified(command.SchemaName, command.TableName);
 
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = '{command.IndexName}' AND object_id = OBJECT_ID(N'{fullTableName}'))");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'{Literal(command.IndexName)}' AND object_id = OBJECT_ID(N'{Literal(fullTableName)}'))");
         sb.AppendLine("BEGIN");
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    DROP INDEX {command.IndexName} ON {fullTableName}");
-        sb.AppendLine("END");
-        sb.Append("GO");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    DROP INDEX {Quote(command.IndexName)} ON {fullTableName}");
+        sb.Append("END");
 
         return sb.ToString();
     }
 
-    private static string GenerateDropSchema(DropSchemaCommand command)
+    internal static string GenerateDropSchema(DropSchemaCommand command)
     {
         var sb = new StringBuilder();
 
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{command.SchemaName}')");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = N'{Literal(command.Name)}')");
         sb.AppendLine("BEGIN");
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    DROP SCHEMA [{command.SchemaName}]");
-        sb.AppendLine("END");
-        sb.Append("GO");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"    DROP SCHEMA {Quote(command.Name)}");
+        sb.Append("END");
 
         return sb.ToString();
     }
@@ -433,7 +509,7 @@ public sealed class MsSqlDdlGenerator : IDdlGenerator
         {
             return GenericResult<string>.Failure(
                 DdlResultCodes.ByName("ForeignKeyActionNotSupported"),
-                ResultDetails.Create("constraint", fk.Name, "clause", clause, "action", action.Name).With("dialect", "SQL Server"));
+                ResultDetails.Create("constraint", fk.Name, "clause", clause, "action", action.Name).With("dialect", Dialect));
         }
 
         return GenericResult<string>.Success(

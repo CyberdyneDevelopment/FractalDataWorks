@@ -20,16 +20,6 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// </remarks>
 public abstract class CreateWorkspaceNoteEndpointBase : CrudCreateEndpointBase<CreateWorkspaceNoteRequest, WorkspaceNoteResponse>
 {
-    /// <summary>The longest note body accepted, in characters.</summary>
-    /// <remarks>
-    /// Stated in the contract so a client can count against it, and enforced as a REJECTION rather
-    /// than a truncation. A silent truncation is unrecoverable: the writer sees the note posted and
-    /// does not see that the last sentence — usually the point — is gone.
-    ///
-    /// The column is varchar(MAX), so this limit is a product decision rather than a storage one.
-    /// </remarks>
-    public const int MaxBodyLength = 4000;
-
     private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly INoteConfigurationProvider _notes;
     private readonly IUserConfigurationProvider _users;
@@ -110,13 +100,16 @@ public abstract class CreateWorkspaceNoteEndpointBase : CrudCreateEndpointBase<C
                 ResultDetails.Create("name", request.Name, "reason", "the note has no body"));
         }
 
-        if (request.Body.Length > MaxBodyLength)
+        // The longest body is the host's configuration (Workspaces:Default:NoteMaxBodyLength, FDW-7104), enforced as a rejection rather than a truncation:
+        // a silent truncation is unrecoverable, as the writer sees the note posted and not that the last sentence is gone. The column is varchar(MAX).
+        var maxBodyLength = Resolve<WorkspaceLimits>().NoteMaxBodyLength;
+        if (request.Body.Length > maxBodyLength)
         {
             return GenericResult<WorkspaceNoteResponse>.Failure(
                 WorkspacesResultCodes.ByName("WorkspaceNoteInvalid"), Logger,
                 ResultDetails.Create(
                     "name", request.Name,
-                    "reason", $"the note is {request.Body.Length} characters and the limit is {MaxBodyLength}"));
+                    "reason", $"the note is {request.Body.Length} characters and the limit is {maxBodyLength}"));
         }
 
         if (string.IsNullOrWhiteSpace(request.SubjectKind))

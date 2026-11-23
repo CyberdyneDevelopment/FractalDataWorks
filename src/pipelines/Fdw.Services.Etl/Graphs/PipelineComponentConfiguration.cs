@@ -144,11 +144,14 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
     /// <summary>Gets or sets the variable an Execute SQL, Execute pipeline or Read data options component sets to its outcome.</summary>
     public string? ResultVariable { get; set; }
 
-    /// <summary>Gets or sets the data store that holds the stored options a Read data options component reads (FDW-5347).</summary>
+    /// <summary>Gets or sets the data store that holds the rule tables a Read data options component reads (FDW-5347, FDW-6344).</summary>
     public string? OptionsDataStoreName { get; set; }
 
-    /// <summary>Gets or sets the container that holds the stored options a Read data options component reads (FDW-5347).</summary>
+    /// <summary>Gets or sets the container that holds the data configuration rules a Read data options component reads (FDW-5347, FDW-6344).</summary>
     public string? OptionsContainerName { get; set; }
+
+    /// <summary>Gets or sets the container that holds the values of the rules a Read data options component reads (FDW-6344).</summary>
+    public string? OptionValuesContainerName { get; set; }
 
     /// <summary>Gets or sets whether an Execute pipeline component fails when the started pipeline does not succeed.</summary>
     public bool? FailOnChildFailure { get; set; }
@@ -216,6 +219,60 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
     /// Required with a load kind that writes existing rows by key, refused with the others.</summary>
     public string? UnmatchedKeysRule { get; set; }
 
+    /// <summary>Gets or sets a loop (DoWhile or While) takes as its test: the output of a decision inside it, written <c>component.output</c>, instead of a condition text (FDW-6134). Null when the component does not state it.</summary>
+    public string? TestOutput { get; set; }
+
+    /// <summary>Gets or sets the logic a Gate combines its lines by: And, Or, Not, Nand, Nor, Xor or Xnor (FDW-6134). Null when the component does not state it.</summary>
+    public string? GateLogic { get; set; }
+
+    /// <summary>Gets or sets whether a Switch fires its <c>otherwise</c> output for a value no outcome names; a Switch states it, so null is refused when the graph is saved (FDW-6134). Null when the component does not state it.</summary>
+    public bool? OtherwiseFires { get; set; }
+
+    /// <summary>Gets or sets the outcomes of a Switch, separated by commas; each is the name of an output (FDW-6134). Null when the component does not state it.</summary>
+    public string? Outcomes { get; set; }
+
+    /// <summary>Gets or sets the variable an Execute pipeline component reads the name of the pipeline to start from (FDW-6135). Null when the component does not state it.</summary>
+    public string? TargetVariable { get; set; }
+
+    /// <summary>Gets or sets the pipelines an Execute pipeline component may start through <c>TargetVariable</c>, separated by commas (FDW-6135). Null when the component does not state it.</summary>
+    public string? AllowedTargets { get; set; }
+
+    /// <summary>Gets or sets the outputs of the started pipeline an Execute pipeline component reads into variables, one line each as output=variable (FDW-6136). Null when the component does not state it.</summary>
+    public string? OutputMap { get; set; }
+
+    /// <summary>Gets or sets the subject a Send component sends with, which may name variables in double braces (FDW-6138). Null when the component does not state it.</summary>
+    public string? NotificationSubject { get; set; }
+
+    /// <summary>Gets or sets the type of the payload a Send component sends: Reply, Card, Summary or one a package declares (FDW-6138). Null when the component does not state it.</summary>
+    public string? NotificationPayloadType { get; set; }
+
+    /// <summary>Gets or sets the answer policy an Ask component judges its call under (FDW-6142). Null when the component does not state it.</summary>
+    public string? AskPolicy { get; set; }
+
+    /// <summary>Gets or sets the call the answer policy judges, as the policy lists it; it may name variables in double braces (FDW-6142). Null when the component does not state it.</summary>
+    public string? AskCall { get; set; }
+
+    /// <summary>Gets or sets the kind of request an Ask component keeps: Question or Choice (FDW-6142). Null when the component does not state it.</summary>
+    public string? AskKind { get; set; }
+
+    /// <summary>Gets or sets the pipeline the person's answer starts, once, as that person (FDW-6142). Null when the component does not state it.</summary>
+    public string? ContinuationPipeline { get; set; }
+
+    /// <summary>Gets or sets the continuation's parameter that receives the answer (FDW-6142). Null when the component does not state it.</summary>
+    public string? AnswerParameter { get; set; }
+
+    /// <summary>Gets or sets the title an Ask component shows the person; it may name variables in double braces (FDW-6142). Null when the component does not state it.</summary>
+    public string? AskTitle { get; set; }
+
+    /// <summary>Gets or sets the body an Ask component shows the person; it may name variables in double braces (FDW-6142). Null when the component does not state it.</summary>
+    public string? AskBody { get; set; }
+
+    /// <summary>Gets or sets the options of a choice, one on each line (FDW-6142). Null when the component does not state it.</summary>
+    public string? AskOptions { get; set; }
+
+    /// <summary>Gets or sets the variable that holds the id of the stored grant an Ask component judges a grant-or-person call against (FDW-6142). Null when the component does not state it.</summary>
+    public string? GrantVariable { get; set; }
+
     /// <summary>Gets or sets the horizontal position the console draws the component at; the engine never reads it.</summary>
     public int? LayoutX { get; set; }
 
@@ -239,6 +296,9 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
 
     /// <summary>Gets or sets the values an Execute SQL, Execute pipeline or Set variable component gives its parameters (FDW-2041, was the step's). Cascade children (<c>pipe.PipelineComponentParameter</c>).</summary>
     public IList<PipelineComponentParameterConfiguration> Parameters { get; set; } = [];
+
+    /// <summary>Gets or sets the settings the component's type declares that no column holds (FDW-6133). Cascade children (<c>pipe.PipelineComponentSetting</c>).</summary>
+    public IList<PipelineComponentSettingConfiguration> DeclaredSettings { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the stage a component of kind <c>Stage</c> applies, one at most: an existing stage kind (a Filter, Sort,

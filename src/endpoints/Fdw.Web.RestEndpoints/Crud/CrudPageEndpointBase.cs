@@ -101,6 +101,13 @@ public abstract class CrudPageEndpointBase<TItem, TSummary> : EndpointWithoutReq
     /// </remarks>
     protected IReadOnlyList<string> TaggedWith { get; set; } = [];
 
+    /// <summary>Gets the names of the members of each item this request asked to leave out; none stated when it asked for none (FDW-6124).</summary>
+    /// <remarks>
+    /// A list that can leave a member out sets this while it loads the page, from what the request asked; the page is written with it, so a client can tell a
+    /// member left out from one that has none. Null is the request that asked for nothing to be left out, and the page then says nothing.
+    /// </remarks>
+    protected IReadOnlyList<string>? LeftOut { get; set; }
+
     /// <inheritdoc/>
     public override void Configure()
     {
@@ -176,7 +183,8 @@ public abstract class CrudPageEndpointBase<TItem, TSummary> : EndpointWithoutReq
                 loaded.HasMore,
                 Summaries(loaded, failure => ended = failure, ct),
                 () => Error(ended.IsFailure ? ended : loaded.Outcome),
-                loaded.Total);
+                loaded.Total,
+                LeftOut);
 
             await Send.ResultAsync(TypedResults.Json(response)).ConfigureAwait(false);
         }

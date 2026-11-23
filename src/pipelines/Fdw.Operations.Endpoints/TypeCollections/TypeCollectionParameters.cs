@@ -84,6 +84,9 @@ internal static class TypeCollectionParameters
             listed.BindsToList = listed.Bindable && SettingBindingRules.IsListKind(SettingBindingRules.BoundKind(setting));
             listed.AcceptsParameterText = setting.TakesParameterText;
             listed.SummarisesComponent = setting.SummarisesComponent;
+            listed.DataType = setting.DataType?.Name;
+            listed.ReadsWhenStepRuns = setting.ReadsWhenStepRuns;
+            listed.ShapesGraph = setting.ShapesGraph;
             parameters.Add(listed);
         }
     }

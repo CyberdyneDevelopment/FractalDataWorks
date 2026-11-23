@@ -23,6 +23,9 @@ public sealed partial class DataSetSampleConfiguration
     public Guid DataSetId { get; set; }
 
     /// <summary>Gets or sets the optional description of what this sample is for.</summary>
+    // Why [NotStored]: the text of a sample's description is read from the descriptions table and filled in by the data set provider once for the whole read (FDW-6208);
+    // the column is gone from the table, so no read selects it and no save writes it. The member stays, so every caller of Description still gets the text.
+    [Fdw.Data.NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether this is the data set's default sample.</summary>

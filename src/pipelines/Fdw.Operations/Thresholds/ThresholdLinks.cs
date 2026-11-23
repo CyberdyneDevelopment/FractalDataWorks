@@ -10,6 +10,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Operations.Configuration;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -24,18 +25,21 @@ public sealed class ThresholdLinks : IThresholdLinks
 {
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly IThresholdConfigurationProvider _thresholds;
+    private readonly ICitedConfigurations _cited;
     private readonly string _dataStoreName;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ThresholdLinks"/> class.</summary>
     /// <param name="gateways">Supplies the gateway onto the configuration store, for the link tables.</param>
     /// <param name="thresholds">Reads a threshold by name or Id.</param>
+    /// <param name="cited">Says whether the subject a threshold is put on exists, by the domain its kind of subject cites.</param>
     /// <param name="dataStoreName">The configuration data store.</param>
     /// <param name="logger">The logger.</param>
-    public ThresholdLinks(IConfigurationGatewayProvider gateways, IThresholdConfigurationProvider thresholds, string dataStoreName, ILogger<ThresholdLinks>? logger = null)
+    public ThresholdLinks(IConfigurationGatewayProvider gateways, IThresholdConfigurationProvider thresholds, ICitedConfigurations cited, string dataStoreName, ILogger<ThresholdLinks>? logger = null)
     {
         _gateways = gateways;
         _thresholds = thresholds;
+        _cited = cited;
         _dataStoreName = dataStoreName;
         _logger = logger ?? NullLogger<ThresholdLinks>.Instance;
     }
@@ -47,6 +51,23 @@ public sealed class ThresholdLinks : IThresholdLinks
         if (target.IsFailure || target.Value is not { } found)
         {
             return target;
+        }
+
+        // The subject's key is a citation, not a foreign key, for a domain whose row's Id is unique among current rows only (FDW-6221).
+        var cited = await _cited.StateOf(found.Kind.Cites, subjectId, cancellationToken).ConfigureAwait(false);
+        if (cited.IsFailure)
+        {
+            return cited;
+        }
+
+        if (cited.Value == CitedStates.Absent)
+        {
+            return ThresholdRuleFailures.SubjectNotFound(thresholdName, subjectKind, subjectId);
+        }
+
+        if (cited.Value == CitedStates.Retired)
+        {
+            return ThresholdRuleFailures.SubjectRetired(thresholdName, subjectKind, subjectId);
         }
 
         var current = await Links(found.Kind, found.Gateway, subjectId, cancellationToken).ConfigureAwait(false);
@@ -151,7 +172,7 @@ public sealed class ThresholdLinks : IThresholdLinks
             return ThresholdRuleFailures.KindUnknown(subjectKind).ToNewResult<ThresholdLinkTarget>();
         }
 
-        var stored = await _thresholds.Get(thresholdName, cancellationToken).ConfigureAwait(false);
+        var stored = await _thresholds.Get(thresholdName, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (stored.IsFailure || stored.Value is not { } threshold)
         {
             return stored.IsFailure

@@ -18,7 +18,7 @@ public sealed class DataSetResourceKind : WorkspaceResourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="DataSetResourceKind"/> class.</summary>
     public DataSetResourceKind()
-        : base("DataSet", canBeOwned: true)
+        : base("DataSet", canBeOwned: true, releasedOnArchive: false)
     {
     }
 }

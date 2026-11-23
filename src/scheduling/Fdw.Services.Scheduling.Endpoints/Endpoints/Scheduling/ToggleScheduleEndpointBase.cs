@@ -88,7 +88,7 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
     /// <summary>Updates the enabled status on the configuration. Override to add type-specific behavior.</summary>
     protected virtual TConfig UpdateEnabledStatus(TConfig config, bool isEnabled)
     {
-        config.IsEnabled = isEnabled;
+        config.ChangeEnabled(isEnabled);
         return config;
     }
 

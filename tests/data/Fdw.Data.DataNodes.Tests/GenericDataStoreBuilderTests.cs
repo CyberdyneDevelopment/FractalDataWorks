@@ -16,7 +16,7 @@ namespace Fdw.Data.DataNodes.Tests;
 /// </summary>
 public sealed class GenericDataStoreBuilderTests
 {
-    private static DataStoreImplementationConfiguration CreateStoreConfig(string? containerFormat)
+    private static DataStoreImplementationConfiguration CreateStoreConfig(string? containerFormat, string? containerTypeId = "Endpoint")
     {
         var storeId = Guid.NewGuid();
         var pathId = Guid.NewGuid();
@@ -39,6 +39,7 @@ public sealed class GenericDataStoreBuilderTests
                             Id = containerId,
                             Name = "TestContainer",
                             Format = containerFormat,
+                            TypeId = containerTypeId,
                             Fields = [],
                         },
                     ],
@@ -121,5 +122,48 @@ public sealed class GenericDataStoreBuilderTests
 
         // Assert
         container.Format.ShouldBeSameAs(FormatTypes.NotFound);
+    }
+
+    // FDW-6387: a container type name that ContainerTypes does not hold answers the NotFound placeholder, which is never a container's type.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ABuildRefusesAContainerWhoseTypeIsNotRegisteredAndNamesBoth()
+    {
+        var builder = new GenericDataStoreBuilder(FormatTypes.ByName("Json"));
+        builder.Configure(CreateStoreConfig(containerFormat: null, containerTypeId: "NoSuchContainerType")).IsSuccess.ShouldBeTrue();
+
+        var buildResult = await builder.Build(TestContext.Current.CancellationToken);
+
+        buildResult.IsSuccess.ShouldBeFalse();
+        buildResult.CurrentMessage.ShouldNotBeNull().ShouldContain("TestContainer");
+        buildResult.CurrentMessage.ShouldContain("NoSuchContainerType");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AContainerThatStatesTheEndpointTypeIsTheEndpointOptionNotThePlaceholder()
+    {
+        var container = await BuildSingleContainer(FormatTypes.ByName("Json"), containerFormat: null);
+
+        container.ContainerType.ShouldNotBeSameAs(ContainerTypes.NotFound);
+        container.ContainerType.Name.ShouldBe("Endpoint");
+    }
+
+    // FDW-6387: a container states its type; none is assumed for it, so a missing TypeId is refused and named, not read as Endpoint.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ABuildRefusesAContainerThatStatesNoTypeAndNamesIt()
+    {
+        var builder = new GenericDataStoreBuilder(FormatTypes.ByName("Json"));
+        builder.Configure(CreateStoreConfig(containerFormat: null, containerTypeId: null)).IsSuccess.ShouldBeTrue();
+
+        var buildResult = await builder.Build(TestContext.Current.CancellationToken);
+
+        buildResult.IsSuccess.ShouldBeFalse();
+        buildResult.CurrentMessage.ShouldNotBeNull().ShouldContain("TestContainer");
+        buildResult.CurrentMessage.ShouldContain("states no container type");
     }
 }

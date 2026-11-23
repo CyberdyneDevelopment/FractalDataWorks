@@ -313,6 +313,59 @@ public static partial class DataGatewayLogger
         string errors);
 
     /// <summary>
+    /// Logs that a Compound union is refused because one of its sources carries a transformation chain (FDW-6946): the store stacks the
+    /// sources' rows in one statement, so a row no longer says which source it came from, and a source's chain cannot be run on its rows
+    /// alone. Refused, never run on every source's rows and never dropped.
+    /// </summary>
+    [MessageLogging(
+        EventId = 21206,
+        Level = LogLevel.Warning,
+        Message = "Compound union data set '{dataSetName}' is refused: its source '{sourceName}' carries a transformation chain, which a union read in one statement cannot run on that source's rows alone",
+        ClientMessage = "Data set '{dataSetName}' stacks its sources in one query, and its source '{sourceName}' carries a transformation chain, which that query cannot run on that source's rows alone")]
+    public static partial IGenericMessage CompoundUnionChainNotRun(
+        ILogger logger,
+        string dataSetName,
+        string sourceName);
+
+    /// <summary>Logs that a data set states a federation option its strategy does not have (FDW-6901): refused, never ignored.</summary>
+    [MessageLogging(
+        EventId = 21207,
+        Level = LogLevel.Warning,
+        Message = "Data set '{dataSetName}' states federation option '{option}', which strategy '{strategy}' does not have; its options are {options}",
+        ClientMessage = "Data set '{dataSetName}' states federation option '{option}', which strategy '{strategy}' does not have; its options are {options}")]
+    public static partial IGenericMessage FederationOptionUnknown(
+        ILogger logger,
+        string dataSetName,
+        string option,
+        string strategy,
+        string options);
+
+    /// <summary>Logs that a data set's federation option value does not parse as the option's type (FDW-6901): refused, never read as another value.</summary>
+    [MessageLogging(
+        EventId = 21208,
+        Level = LogLevel.Warning,
+        Message = "Data set '{dataSetName}' states '{value}' for federation option '{option}', which is not {expected}",
+        ClientMessage = "Data set '{dataSetName}' states '{value}' for federation option '{option}', which is not {expected}")]
+    public static partial IGenericMessage FederationOptionInvalid(
+        ILogger logger,
+        string dataSetName,
+        string option,
+        string value,
+        string expected);
+
+    /// <summary>Logs that a federation setting the host's configuration states cannot be used (FDW-6901): registration is refused, the value never skipped.</summary>
+    [MessageLogging(
+        EventId = 21209,
+        Level = LogLevel.Error,
+        Message = "Configuration key '{key}' states '{value}', which is not {expected}; the data services are not registered",
+        ClientMessage = "Configuration key '{key}' states '{value}', which is not {expected}")]
+    public static partial IGenericMessage FederationSettingInvalid(
+        ILogger logger,
+        string key,
+        string value,
+        string expected);
+
+    /// <summary>
     /// Logs that a read of a Compound data set names a field none of its sources owns (FDW-4991): its joined query qualifies every field
     /// with the container of the source that holds it, and one no source holds would reach no column.
     /// </summary>
@@ -456,16 +509,33 @@ public static partial class DataGatewayLogger
         double joinMs);
 
     /// <summary>
-    /// Logs a warning when a dataset has multiple sources but no joins defined.
+    /// Logs the options a Federated read resolved for its strategy (FDW-6901): whether it reads its sources in parallel, how many at once, and whether
+    /// in their Priority order. Each comes from the data set, else the FDW-level settings, else the strategy's own declared value.
     /// </summary>
     [MessageLogging(
-        EventId = 41002,
-        Level = LogLevel.Warning,
-        Message = "Dataset '{dataSetName}' has {sourceCount} sources but no joins - using Cartesian product")]
-    public static partial IGenericMessage DataSetNoJoins(
+        EventId = 11049,
+        Level = LogLevel.Trace,
+        Message = "Data set '{dataSetName}' reads under strategy '{strategy}': in parallel {readsInParallel}, at most {maxParallelReads} at once, in Priority order {ordersSources}")]
+    public static partial IGenericMessage FederationOptionsResolved(
         ILogger logger,
         string dataSetName,
-        int sourceCount);
+        string strategy,
+        bool readsInParallel,
+        int maxParallelReads,
+        bool ordersSources);
+
+    /// <summary>
+    /// Logs the rows a union data set stacked from its sources, in the data set's field order (FDW-6946).
+    /// </summary>
+    [MessageLogging(
+        EventId = 11047,
+        Level = LogLevel.Debug,
+        Message = "Data set '{dataSetName}' stacked {rowCount} rows from its {sourceCount} sources as a union")]
+    public static partial IGenericMessage UnionRowsStacked(
+        ILogger logger,
+        string dataSetName,
+        int sourceCount,
+        int rowCount);
 
     /// <summary>
     /// Logs when no DataStoreType is found for a given store type name.

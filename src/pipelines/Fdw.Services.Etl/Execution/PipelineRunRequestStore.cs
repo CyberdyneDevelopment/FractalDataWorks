@@ -17,6 +17,8 @@ using Fdw.Services.Etl.Tracking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines;
+using Fdw.Services.Pipelines.Abstractions.Runs;
 
 namespace Fdw.Services.Etl.Execution;
 
@@ -168,9 +170,20 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
                 RunRoles = old.RunRoles,
                 Parameters = old.Parameters,
                 TestRowsPerSource = old.TestRowsPerSource,
-                TimeoutSeconds = old.TimeoutSeconds
+                TimeoutSeconds = old.TimeoutSeconds,
+                // Why the person of the old request: a restart is the old request continued, so the run acts as the person it acted as; without it a restarted run would act as nobody (FDW-6137).
+                PersonId = old.PersonId,
+                // Why the first run of the chain, not the run just cut off: a run that is itself a restart carries the chain's first run, so the claims of every step are found in one place (FDW-6139).
+                ContinuesRun = old.ContinuesRun is { } first ? first : old.ExecutionId
             };
-            await OpenMetrics(open.Value.Gateway, open.Value.Store, again, tenantId, created.Value.State.Name, cancellationToken).ConfigureAwait(false);
+            // The restarted run is a run of the Queued mode (this store keeps the Queued mode's requests); its row states where it came from like any other (FDW-6519).
+            var origin = scope.ServiceProvider.GetRequiredService<IPipelineRunOrigins>().Of(old.PersonId, PipelineRunModes.ByName("Queued").Name);
+            if (origin.IsFailure || origin.Value is not { } stated)
+            {
+                return origin.ToNewResult<PipelineExecutionRequest>();
+            }
+
+            await OpenMetrics(open.Value.Gateway, open.Value.Store, again, tenantId, created.Value.State.Name, stated, cancellationToken).ConfigureAwait(false);
             return await Replace(tracker, open.Value.Gateway, open.Value.Store, new Stamp(again.ExecutionId, tenantId, host.Value), run, again, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -228,11 +241,15 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     }
 
     // The metrics row the engine updates as the run goes (the trigger writes it when it accepts a run); a failed write is logged, not fatal, as it is there.
-    private async Task OpenMetrics(IDataGateway gateway, string store, PipelineExecutionRequest request, Guid tenantId, string state, CancellationToken cancellationToken)
+    private async Task OpenMetrics(IDataGateway gateway, string store, PipelineExecutionRequest request, Guid tenantId, string state, PipelineRunOrigin origin, CancellationToken cancellationToken)
     {
         var inserted = await gateway.Execute<int>(
             Insert.Into<EtlPipelineExecutionRecord>(MetricsContainerName).DataStore(store).Path(PathName)
-                .Value(new EtlPipelineExecutionRecord { Id = request.ExecutionId, PipelineName = request.PipelineName, TenantId = tenantId, ScheduleName = request.ScheduleName, Status = state }),
+                .Value(new EtlPipelineExecutionRecord
+                {
+                    Id = request.ExecutionId, PipelineName = request.PipelineName, TenantId = tenantId, ScheduleName = request.ScheduleName, Status = state,
+                    ActingPersonId = origin.ActingPersonId, RunMode = origin.RunMode, ExecutingHost = origin.ExecutingHost, ExecutingSlot = origin.ExecutingSlot,
+                }),
             cancellationToken).ConfigureAwait(false);
         if (inserted.IsFailure)
         {
@@ -343,7 +360,7 @@ public sealed class PipelineRunRequestStore : IPipelineRunRequestStore
     // The gateway and the name of the operational store the table is in; a host that names none cannot keep or read a request.
     private IGenericResult<(IDataGateway Gateway, string Store)> Open(IServiceProvider services)
     {
-        var store = EtlPipelineTypes.OperationalConnection;
+        var store = PipelineTypes.OperationalConnection;
         return string.IsNullOrWhiteSpace(store)
             ? GenericResult<(IDataGateway Gateway, string Store)>.Failure(PipelineRunRecoveryLog.StoreNotNamed(_logger))
             : GenericResult<(IDataGateway Gateway, string Store)>.Success((services.GetRequiredService<IDataGatewayProvider>().ByName(DataGatewayNames.Main), store));

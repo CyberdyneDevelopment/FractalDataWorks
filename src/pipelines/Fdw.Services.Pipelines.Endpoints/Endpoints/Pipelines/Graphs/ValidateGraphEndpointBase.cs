@@ -63,24 +63,28 @@ public abstract class ValidateGraphEndpointBase : Endpoint<GraphPayload, GraphVa
     public override async Task HandleAsync(GraphPayload req, CancellationToken ct)
     {
         var unread = new System.Collections.Generic.List<GraphProblem>();
-        var graph = GraphPayloadReader.ReadDraft(req, Guid.Empty, unread, await GraphChainLookup.Resolve(_chains, req, ct).ConfigureAwait(false));
+        var notes = new System.Collections.Generic.List<Fdw.Messages.IGenericMessage>();
+        var graph = GraphPayloadReader.ReadDraft(req, Guid.Empty, unread, notes, await GraphChainLookup.Resolve(_chains, req, ct).ConfigureAwait(false));
         var answer = graph.IsFailure || graph.Value is null
             ? new GraphValidationPayload
             {
                 IsValid = false,
                 Problems = [new GraphProblemPayload { Path = [], Reason = PipelineProblems.ReasonOf(graph.CurrentMessage, "reading the graph") }],
             }
-            : Answer(unread, await GraphSave.Judge(graph.Value, _dataSets, Resolve<IDataStoreConfigurationProvider>(), _logger, ct).ConfigureAwait(false));
+            : Answer(unread, notes, await GraphSave.Judge(graph.Value, _dataSets, Resolve<IDataStoreConfigurationProvider>(), _logger, ct).ConfigureAwait(false));
         await Send.OkAsync(answer, ct).ConfigureAwait(false);
     }
 
     // The draft's unread parts are problems as the judged ones are; a warning (FDW-5457) is information and leaves the draft valid.
-    private static GraphValidationPayload Answer(System.Collections.Generic.List<GraphProblem> unread, GraphFindings findings) => new()
+    // A draft that states no type is valid only as far as it was judged: a coded note among the warnings says the requirements of the type were not (FDW-6718), so "valid" is not read as "a create will be accepted".
+    private static GraphValidationPayload Answer(System.Collections.Generic.List<GraphProblem> unread, System.Collections.Generic.List<Fdw.Messages.IGenericMessage> notes, GraphFindings findings) => new()
     {
         IsValid = unread.Count == 0 && findings.Problems.Count == 0,
         Problems = [.. unread.Concat(findings.Problems).Select(Payload)],
-        Warnings = [.. findings.Warnings.Select(Payload)],
+        Warnings = [.. findings.Warnings.Select(Payload), .. notes.Select(Note)],
     };
+
+    private static GraphProblemPayload Note(Fdw.Messages.IGenericMessage note) => new() { Path = ["implementation"], Reason = $"{note.Code}: {note.Message}" };
 
     private static GraphProblemPayload Payload(GraphProblem problem) => new() { Path = [.. problem.Path], Reason = problem.Reason };
 }

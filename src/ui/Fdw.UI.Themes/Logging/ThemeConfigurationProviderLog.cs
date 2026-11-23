@@ -6,7 +6,7 @@ namespace Fdw.UI.Themes.Logging;
 
 /// <summary>
 /// MessageLogging for ThemeConfigurationProvider operations.
-/// EventId range: 11000-11004, 30100-30101, 40100-40101
+/// EventId range: 11000-11004, 30100-30101, 40100-40101, 63100
 /// </summary>
 [MessageLoggingTypeCode("THEMES")]
 public static partial class ThemeConfigurationProviderLog
@@ -91,4 +91,14 @@ public static partial class ThemeConfigurationProviderLog
         Message = "Theme '{themeName}' was not removed: it is a built-in theme",
         ClientMessage = "Theme '{themeName}' is a built-in theme and cannot be removed")]
     public static partial IGenericMessage CannotRemoveBuiltInTheme(ILogger logger, string themeName);
+
+    /// <summary>Refuses to map a stored theme that states no text color on its primary or secondary color.</summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="themeName">The theme that states no value.</param>
+    /// <param name="colorName">The text color the theme leaves out.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 63100, Level = LogLevel.Error,
+        Message = "Theme '{themeName}' states no {colorName} color",
+        ClientMessage = "Theme '{themeName}' states no {colorName} color: state it on the theme")]
+    public static partial IGenericMessage ThemeStatesNoTextColor(ILogger logger, string themeName, string colorName);
 }

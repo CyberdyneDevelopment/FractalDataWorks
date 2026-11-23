@@ -61,7 +61,7 @@ public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<Lis
             {
                 TypeName = t.Name,
                 DisplayName = t.Name,
-                Description = BuildDescription(t),
+                Description = t.Description,
                 Category = "Schedule"
             });
         }
@@ -70,16 +70,4 @@ public abstract class ListScheduleTypesEndpointBase : EndpointWithoutRequest<Lis
 
         return Send.OkAsync(dtos, ct);
     }
-
-    /// <summary>
-    /// Builds a human-readable description for a schedule type. Override to provide custom descriptions.
-    /// </summary>
-    protected virtual string BuildDescription(ITriggerType triggerType) => triggerType.Name switch
-    {
-        "Cron" => "Time-based scheduling using a cron expression",
-        "Interval" => "Recurring execution at a fixed interval (seconds, minutes, hours, or days)",
-        "Once" => "Single execution at a specific date and time",
-        "Event" => "Execution triggered by a named application event",
-        _ => triggerType.Name
-    };
 }

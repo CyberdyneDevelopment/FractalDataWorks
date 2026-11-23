@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Builds the configuration of the kind a create request names: each kind of data set is its own implementation with
-/// its own configuration class and table (FDW-1031).
+/// Builds the configuration of the kind the create request's sources make (FDW-6806, <see cref="DataSetKindDerivation"/>): each kind of data
+/// set is its own implementation with its own configuration class and table (FDW-1031).
 /// </summary>
 /// <remarks>
 /// A Simple data set takes the request's aggregates, a Compound one its joins, a Federated one its joins and its
@@ -19,7 +19,8 @@ namespace Fdw.Services.Data.Endpoints;
 internal static class DataSetConfigurationFactory
 {
     /// <summary>Builds the configuration a create request describes.</summary>
-    /// <param name="request">The create request; its implementation is already known to be a data set kind.</param>
+    /// <param name="request">The create request.</param>
+    /// <param name="kind">The kind the request's sources make, worked out by <see cref="DataSetKindDerivation"/>.</param>
     /// <param name="categoryId">The identity of the category the request names; null when it names none.</param>
     /// <param name="ownerUserId">The logical id of the calling user, who owns the new data set (FDW-4346).</param>
     /// <param name="values">Refuses a value the caller must choose and leaves out (FDW-3931).</param>
@@ -29,13 +30,17 @@ internal static class DataSetConfigurationFactory
     /// request must state and leaves out (<c>ValueRequired</c>), or a refusal of its parts from <see cref="DataSetQueryHelper.ValidateSaved"/>.
     /// </returns>
     internal static IGenericResult<IDataSetImplementationConfiguration> Create(
-        CreateDataSetRequest request, Guid? categoryId, Guid ownerUserId, DataSetRequestValues values, ILogger logger)
+        CreateDataSetRequest request, string kind, Guid? categoryId, Guid ownerUserId, DataSetRequestValues values, ILogger logger)
     {
+        // The display name, before anything is built or written (FDW-6117).
+        var named = DataSetNames.Check(request.DisplayName, request.Abbreviation, request.Name, logger);
+        if (named.IsFailure) return named.ToNewResult<IDataSetImplementationConfiguration>();
+
         // A version the request leaves out is the kind's declared one (FDW-3956).
-        var version = values.DeclaredText(request.Version, request.Implementation, DataSetDeclaredDefaults.Version, "version");
+        var version = values.DeclaredText(request.Version, kind, DataSetDeclaredDefaults.Version, "version");
         if (version.IsFailure) return version.ToNewResult<IDataSetImplementationConfiguration>();
 
-        var caching = DataSetQueryHelper.MapCaching(request.Caching, request.Implementation, values);
+        var caching = DataSetQueryHelper.MapCaching(request.Caching, kind, values);
         if (caching.IsFailure) return caching.ToNewResult<IDataSetImplementationConfiguration>();
 
         // Nothing exists yet on create, so no source or field has a stored value to keep.
@@ -45,26 +50,32 @@ internal static class DataSetConfigurationFactory
         var sources = DataSetQueryHelper.MapSources(request.Sources, [], values);
         if (sources.IsFailure) return sources.ToNewResult<IDataSetImplementationConfiguration>();
 
-        var kind = DataSetTypes.ByName(request.Implementation).Name;
         IDataSetImplementationConfiguration config;
         if (string.Equals(kind, SimpleDataSetConfiguration.ImplementationName, StringComparison.Ordinal))
             config = new SimpleDataSetConfiguration { Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates) };
         else if (string.Equals(kind, CompoundDataSetConfiguration.ImplementationName, StringComparison.Ordinal))
-            config = new CompoundDataSetConfiguration { Joins = DataSetQueryHelper.MapJoins(request.Joins) };
+            config = new CompoundDataSetConfiguration
+            {
+                Joins = DataSetQueryHelper.MapJoins(request.Joins),
+                SourceCombination = request.SourceCombination,
+            };
         else if (string.Equals(kind, FederatedDataSetConfiguration.ImplementationName, StringComparison.Ordinal))
             config = new FederatedDataSetConfiguration
             {
                 Joins = DataSetQueryHelper.MapJoins(request.Joins),
                 FederationStrategy = request.FederationStrategy,
+                SourceCombination = request.SourceCombination,
+                FederationOptions = DataSetQueryHelper.MapFederationOptions(request.FederationOptions),
             };
         else
             return GenericResult<IDataSetImplementationConfiguration>.Failure(
                 DataSetsResultCodes.ImplementationInvalid, logger,
-                ImplementationInvalidCode.Describe(request.Name, request.Implementation));
+                ImplementationInvalidCode.Describe(request.Name, kind));
 
         config.Name = request.Name;
-        config.Implementation = request.Implementation;
+        config.Implementation = kind;
         config.Description = request.Description ?? string.Empty;
+        DataSetNames.Set(config, request.DisplayName, request.Abbreviation);
         config.ClassificationId = request.ClassificationId;
         config.CategoryId = categoryId;
         config.OwnerUserId = ownerUserId;

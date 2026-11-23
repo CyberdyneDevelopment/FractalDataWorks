@@ -42,13 +42,19 @@ public sealed class ConfigurationWriteScope : IAsyncDisposable
         _logger = logger;
     }
 
-    /// <summary>Opens a unit of work over the store a provider is bound to.</summary>
+    /// <summary>Opens a unit of work over a store.</summary>
+    /// <remarks>
+    /// Who may call it: a service that owns its own unit, one that writes several rows plus a record of its own in one commit (the data configuration rule service writes a rule, its
+    /// values and its audit entry together; FDW-7248) and takes the gateway and the store from its own settings. A top-level named configuration does not: it is written by its
+    /// domain provider's Save, Update and Delete, which open the unit themselves (<c>BeginWriteScope</c>) and apply version-on-write and the cache invalidation. The unit's commit
+    /// drops the gateway's cached reads of every container the unit wrote; a transaction opened on the gateway directly does not, so a read after such a write can answer from before it.
+    /// </remarks>
     /// <param name="gateway">The gateway onto <paramref name="dataStoreName"/>.</param>
-    /// <param name="dataStoreName">The configuration connection the record's rows live on.</param>
-    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="dataStoreName">The configuration connection the rows live on.</param>
+    /// <param name="logger">Logger of the caller.</param>
     /// <param name="ct">A token to cancel the operation.</param>
-    /// <returns>The open scope, or the failure that prevented it.</returns>
-    internal static async Task<IGenericResult<ConfigurationWriteScope>> Begin(
+    /// <returns>The open scope, or the failure that prevented it: a store that cannot hold a transaction refuses here, and the caller fails with it.</returns>
+    public static async Task<IGenericResult<ConfigurationWriteScope>> Begin(
         IConfigurationGateway gateway,
         string dataStoreName,
         ILogger logger,

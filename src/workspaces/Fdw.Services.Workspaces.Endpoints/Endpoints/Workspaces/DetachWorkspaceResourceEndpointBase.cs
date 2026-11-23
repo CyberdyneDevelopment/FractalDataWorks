@@ -18,8 +18,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Workspaces.Endpoints;
 
 /// <summary>Detaches a resource from a workspace — removes one node from its map.</summary>
-/// <remarks>Soft-deletes the one row by attachment id, not by re-saving the aggregate — see
-/// <see cref="AttachWorkspaceResourceEndpointBase"/> for why.</remarks>
+/// <remarks>Retires the one row by its attachment id through <see cref="IWorkspaceChildRetirement.DetachResource"/>, not by re-saving the aggregate:
+/// the resource list is upsert-only, so a save without the row kept it current (FDW-7024).</remarks>
 public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorkspaceResourceRequest>
 {
     private readonly IWorkspaceConfigurationProvider _workspaces;
@@ -92,14 +92,12 @@ public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorks
             return;
         }
 
-        // The resource is a child of the workspace aggregate: saving the workspace without it retires the
-        // version that had it, and the new version is written without it.
-        workspace.Value.Resources.Remove(found[0]);
-        var saved = await _workspaces.Update(
-            workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
-        if (saved.IsFailure)
+        // Retired by its Id through the workspace service, never by saving the workspace without it: the resource list is upsert-only and its
+        // rows hang from the workspace's durable Id, so that save kept the row current and answered 204 for nothing (FDW-7024).
+        var detached = await Resolve<IWorkspaceChildRetirement>().DetachResource(workspace.Value, found[0], ct).ConfigureAwait(false);
+        if (detached.IsFailure)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saved, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(detached, HttpContext)).ConfigureAwait(false);
             return;
         }
 

@@ -66,7 +66,8 @@ public abstract class DescribeGraphEndpointBase : Endpoint<GraphPayload, GraphDe
     public override async Task HandleAsync(GraphPayload req, CancellationToken ct)
     {
         var unread = new List<GraphProblem>();
-        var graph = GraphPayloadReader.ReadDraft(req, Guid.Empty, unread, await GraphChainLookup.Resolve(_chains, req, ct).ConfigureAwait(false));
+        var notes = new List<Fdw.Messages.IGenericMessage>();
+        var graph = GraphPayloadReader.ReadDraft(req, Guid.Empty, unread, notes, await GraphChainLookup.Resolve(_chains, req, ct).ConfigureAwait(false));
         if (graph.IsFailure || graph.Value is null)
         {
             await Send.OkAsync(
@@ -103,6 +104,7 @@ public abstract class DescribeGraphEndpointBase : Endpoint<GraphPayload, GraphDe
                     .. unread.Concat(GraphShapeValidator.Problems(graph.Value, _logger)).Concat(context.Problems)
                         .Select(problem => new GraphProblemPayload { Path = [.. problem.Path], Reason = problem.Reason }),
                 ],
+                Warnings = [.. notes.Select(note => new GraphProblemPayload { Path = ["implementation"], Reason = $"{note.Code}: {note.Message}" })],
             },
             ct).ConfigureAwait(false);
     }

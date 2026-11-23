@@ -9,6 +9,8 @@ using Fdw.Services.Authorization;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Workspaces;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -133,10 +135,14 @@ public sealed class DefaultWorkspaceServiceTypeTests
         scope.ServiceProvider.GetRequiredService<IDefaultWorkspaceFounding>().ShouldBeOfType<RefusingFounding>();
     }
 
-    // What a founding host holds besides the workspaces package: the gateway provider, the authorization providers and the ambient authentication context.
+    // What a founding host holds besides the workspaces package: the gateway provider, the authorization providers, the ambient authentication context and the
+    // descriptions writer and reader the workspace provider describes each workspace with (FDW-6208).
     private static void Doubles(IServiceCollection services)
     {
         services.AddLogging();
+        // Strict: these tests resolve the workspace provider and never describe or fill, so any call to either is a fault of the test.
+        services.AddSingleton(new Mock<IDescriptionWriter>(MockBehavior.Strict).Object);
+        services.AddSingleton(new Mock<IDescriptionReader>(MockBehavior.Strict).Object);
         services.AddSingleton(Mock.Of<IConfigurationGatewayProvider>());
         services.AddSingleton(Mock.Of<IPermissionConfigurationProvider>());
         services.AddSingleton(Mock.Of<IRolePermissionConfigurationProvider>());

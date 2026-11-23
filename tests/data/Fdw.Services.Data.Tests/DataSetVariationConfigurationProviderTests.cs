@@ -47,7 +47,8 @@ public sealed class DataSetVariationConfigurationProviderTests
         return new DataSetVariationConfigurationProvider(
             _dataSets.Object,
             new DataSetVariationListProvider(
-                NullLogger<DataSetVariationListProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataSetVariationList"),
+                NullLogger<DataSetVariationListProvider>.Instance, new Mock<IConfigurationGatewayProvider>(MockBehavior.Strict).Object, "PlatformConfiguration", "data", "DataSetVariationList",
+                new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object),
             NullLogger<DataSetVariationConfigurationProvider>.Instance);
     }
 

@@ -101,4 +101,15 @@ public static partial class SchedulerLoopLog
         Level = LogLevel.Warning,
         Message = "Scheduler pass skipped: the role of this copy (live or standby) could not be read")]
     public static partial IGenericMessage PassSkippedRoleUnknown(ILogger logger);
+
+    /// <summary>A pass could not do what it set out to, and the loop continues (FDW-7285).</summary>
+    /// <remarks>
+    /// Error: nothing was scheduled or reconciled by this pass, and no completed line follows it. The code is the cause's own (the load that failed, for one), so the
+    /// log says why and not only that. The next pass runs after the interval as it always does.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 549,
+        Level = LogLevel.Error,
+        Message = "Scheduler pass did not complete: {code}: {reason}")]
+    public static partial IGenericMessage EvaluationNotCompleted(ILogger logger, string? code, string reason);
 }

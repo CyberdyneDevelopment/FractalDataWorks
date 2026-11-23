@@ -11,6 +11,8 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -56,8 +58,19 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
         return (
             new ConnectionConfigurationProvider(
-                NullLogger<ConnectionConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "conn", "Connection"),
+                NullLogger<ConnectionConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "conn", "Connection",
+                new Mock<IDescriptionWriter>().Object, NoDescriptions()),
             gateway);
+    }
+
+    // The worker reads connection rows, not their descriptions: a reader that holds none, so the fill every read of a connection makes (FDW-6208) puts nothing on a row.
+    private static IDescriptionReader NoDescriptions()
+    {
+        var reader = new Mock<IDescriptionReader>();
+        reader
+            .Setup(r => r.Fill(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<IConnectionImplementationConfiguration>>(), It.IsAny<Func<IConnectionImplementationConfiguration, Guid>>(), It.IsAny<Action<IConnectionImplementationConfiguration, string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult.Success());
+        return reader.Object;
     }
 
     /// <summary>How many times the store was read for the connection rows.</summary>

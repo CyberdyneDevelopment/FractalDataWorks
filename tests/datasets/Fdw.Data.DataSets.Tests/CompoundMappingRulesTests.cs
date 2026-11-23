@@ -91,6 +91,7 @@ public sealed class CompoundMappingRulesTests
             Name = "Federated",
             Implementation = "Federated",
             Sources = compound.Sources,
+            SourceCombination = "Join",
             Joins = [new DataSetJoinConfiguration { LeftSourceName = "Ghost", LeftFieldName = "Code", RightSourceName = "Customers", RightFieldName = "Code", JoinType = "Inner" }],
         };
 
@@ -167,6 +168,7 @@ public sealed class CompoundMappingRulesTests
                 Source("Orders", [("Status", "status"), ("CustomerCode", "customer_code")]),
                 Source("Customers", customerMappings),
             ],
+            SourceCombination = "Join",
             Joins = [new DataSetJoinConfiguration { LeftSourceName = "Orders", LeftFieldName = leftJoinField, RightSourceName = "Customers", RightFieldName = "Code", JoinType = "Inner" }],
         };
     }

@@ -734,8 +734,8 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         var scriptResult = _sut.GenerateScript(commandsResult.Value);
         scriptResult.IsSuccess.ShouldBeTrue();
         scriptResult.Value.ShouldNotBeNull();
-        scriptResult.Value.ShouldContain("CREATE TABLE cfg.TestTable");
-        scriptResult.Value.ShouldContain("PRIMARY KEY (Id)");
+        scriptResult.Value.ShouldContain("CREATE TABLE [cfg].[TestTable]");
+        scriptResult.Value.ShouldContain("PRIMARY KEY ([Id])");
         scriptResult.Value.ShouldContain("GO");
     }
 
@@ -775,7 +775,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
         var scriptResult = _sut.GenerateScript(commandsResult.Value);
         scriptResult.IsSuccess.ShouldBeTrue();
         scriptResult.Value.ShouldNotBeNull();
-        scriptResult.Value.ShouldContain("CREATE TABLE dbo.TestTable");
-        scriptResult.Value.ShouldContain("CREATE NONCLUSTERED INDEX IX_TestTable_Name ON dbo.TestTable (Name)");
+        scriptResult.Value.ShouldContain("CREATE TABLE [dbo].[TestTable]");
+        scriptResult.Value.ShouldContain("CREATE NONCLUSTERED INDEX [IX_TestTable_Name] ON [dbo].[TestTable] ([Name])");
     }
 }

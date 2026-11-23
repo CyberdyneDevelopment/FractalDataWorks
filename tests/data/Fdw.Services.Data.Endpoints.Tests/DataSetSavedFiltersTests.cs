@@ -61,6 +61,7 @@ public sealed class DataSetSavedFiltersTests
         Implementation = "Federated",
         FederationStrategy = "Sequential",
         Sources = [new DataSetSourceConfiguration { Name = "Orders", SourceName = "Orders" }, new DataSetSourceConfiguration { Name = "Customers", SourceName = "Customers" }],
+        SourceCombination = "Join",
         Joins =
         [
             new DataSetJoinConfiguration

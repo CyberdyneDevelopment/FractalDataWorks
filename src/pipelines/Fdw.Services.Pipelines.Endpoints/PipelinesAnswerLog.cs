@@ -21,6 +21,15 @@ public static partial class PipelinesAnswerLog
     [MessageLogging(EventId = 100001, Level = LogLevel.Warning, Message = "The run queue is listed for the caller's tenant, and this request carries none.", ClientMessage = "The run queue is listed for the caller's tenant, and this request carries none.")]
     public static partial IGenericMessage ListPipelineRunQueueTheRunQueueIsListed(ILogger logger);
 
+    /// <summary>
+    /// Logs that the run queue was not listed because the setting that says whether run events reach the hub cannot be read (FDW-5242): the answer always states it,
+    /// so it is never taken as off.
+    /// </summary>
+    [MessageLogging(EventId = 60001, Level = LogLevel.Error,
+        Message = "The run queue was not listed: the setting '{setting}' that says whether run events reach the hub cannot be read",
+        ClientMessage = "The run queue cannot be listed: the setting '{setting}' is not set on this host")]
+    public static partial IGenericMessage ListPipelineRunQueueRelaySettingNotRead(ILogger logger, string setting);
+
     /// <summary>Logs that Describing a graph answered a success and no value.</summary>
     [MessageLogging(EventId = 90001, Level = LogLevel.Error, Message = "Describing a graph answered a success and no value", ClientMessage = "The graph could not be described")]
     public static partial IGenericMessage DescribeGraphDescribeReturnedNothing(ILogger logger);

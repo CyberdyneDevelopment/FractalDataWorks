@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text.Json;
 using Fdw.Services.Etl.Pipelines.Loads;
 
 namespace Fdw.Services.Etl.Execution;
@@ -63,13 +61,5 @@ public static class RunParameterEntries
         return entries.Count == 0 ? null : new Dictionary<string, object?>(StringComparer.Ordinal) { ["parameters"] = entries };
     }
 
-    private static string Text(object value) => value switch
-    {
-        string text => text,
-        bool flag => flag ? "true" : "false",
-        DateTimeOffset moment => moment.ToString("O", CultureInfo.InvariantCulture),
-        DateTime moment => moment.ToString("O", CultureInfo.InvariantCulture),
-        IFormattable number => number.ToString(null, CultureInfo.InvariantCulture),
-        _ => JsonSerializer.Serialize(value),
-    };
+    private static string Text(object value) => ParameterTextShapes.Of(value).Write(value);
 }

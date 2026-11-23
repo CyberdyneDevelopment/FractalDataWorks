@@ -142,6 +142,10 @@ public class ServiceProviderLifetimeTests
         IServiceFactory<ITestService>,
         IDomainConfigurationProvider<TestServiceConfiguration>>
     {
+        /// <summary>Gets how this provider reads the configuration it builds a service from.</summary>
+        /// <remarks>This domain has no description fill today, so its configuration is read whole (FDW-7354).</remarks>
+        protected override ConfigurationReadOptions ReadOptions => ConfigurationReadOptions.Whole;
+
         public TestServiceProvider(ILogger<TestServiceProvider> logger)
             : base(logger)
         {
@@ -186,6 +190,24 @@ public class ServiceProviderLifetimeTests
 
         public Task<IGenericResult<ConfigurationPage<TestServiceConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support paged reads.");
+
+        public Task<IGenericResult<ConfigurationPage<TestServiceConfiguration>>> Get(int skip, int take, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support paged reads.");
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support reads with read options.");
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support reads with read options.");
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support reads with read options.");
+
+        public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support reads with read options.");
+
+        public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> GetFlat(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support reads with read options.");
 
         public Task<IGenericResult<IReadOnlyList<TChild>>> Get<TChild>(string name, int levels, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support child reads.");
@@ -284,6 +306,24 @@ public class ServiceProviderLifetimeTests
 
         public Task<IGenericResult<ConfigurationPage<TestServiceConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
             => throw new NotSupportedException("Aggregate test provider does not support paged reads.");
+
+        public Task<IGenericResult<ConfigurationPage<TestServiceConfiguration>>> Get(int skip, int take, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support paged reads.");
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support reads with read options.");
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support reads with read options.");
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support reads with read options.");
+
+        public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support reads with read options.");
+
+        public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> GetFlat(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support reads with read options.");
 
         public Task<IGenericResult<IReadOnlyList<TChild>>> Get<TChild>(string name, int levels, CancellationToken ct = default)
             => throw new NotSupportedException("Aggregate test provider does not support child reads.");

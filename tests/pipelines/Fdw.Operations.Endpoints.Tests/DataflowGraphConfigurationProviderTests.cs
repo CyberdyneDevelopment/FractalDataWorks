@@ -39,11 +39,19 @@ public class DataflowGraphConfigurationProviderTests
         Mock<IConfigurationGateway> gateway,
         Mock<IDataSetConfigurationProvider> dataSets,
         Mock<IDataSetVariationConfigurationProvider> variations)
+        => MakeProvider(gateway, dataSets, variations, new Mock<Fdw.Services.Data.IDataStoreConfigurationProvider>(MockBehavior.Strict));
+
+    private static DataflowGraphConfigurationProvider MakeProvider(
+        Mock<IConfigurationGateway> gateway,
+        Mock<IDataSetConfigurationProvider> dataSets,
+        Mock<IDataSetVariationConfigurationProvider> variations,
+        Mock<Fdw.Services.Data.IDataStoreConfigurationProvider> dataStores)
         => new DataflowGraphConfigurationProvider(
             GatewayProviderFor(gateway.Object),
             dataSets.Object,
             variations.Object,
             new Mock<ICategoryConfigurationProvider>().Object,
+            dataStores.Object,
             NullLogger<DataflowGraphConfigurationProvider>.Instance);
 
     // Why the double answers for any connection: these tests exercise what the provider does with its
@@ -107,39 +115,37 @@ public class DataflowGraphConfigurationProviderTests
     // ── LoadDataStores ────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task LoadDataStores_WhenGatewayReturnsRows_ReturnsList()
+    public async Task LoadDataStores_ReadsTheStoresThroughTheDataStoreProviderSoEachCarriesItsFilledDescription()
     {
-        var gateway = new Mock<IConfigurationGateway>();
-        GatewayWriteTransaction.StubOn(gateway);
-        gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
+        // data.DataStore has no Description column (FDW-6208): the graph takes each store from the data store provider, which fills it, and never queries the
+        // table itself. The store's own record is enough to draw it, so no path or container below it is read.
+        var stores = new Mock<Fdw.Services.Data.IDataStoreConfigurationProvider>(MockBehavior.Strict);
+        stores.Setup(p => p.Get(ConfigurationLevels.RecordOnly, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<Fdw.Services.Connections.IDataStoreImplementationConfiguration>>.Success(
+                [new Fdw.Services.Connections.DataStoreImplementationConfiguration { Id = Guid.NewGuid(), Name = "OpsDb", Implementation = "MsSql", Description = "Operational runtime data" }]));
 
-        gateway.Setup(g => g.Execute<IEnumerable<DataStoreRecord>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<DataStoreRecord>>.Success([
-                new DataStoreRecord { Id = Guid.NewGuid(), Name = "PlatformConfiguration", Implementation = "MsSql" }
-            ]));
-
-        var result = await MakeProvider(gateway).LoadDataStores(TestContext.Current.CancellationToken);
+        var result = await MakeProvider(new Mock<IConfigurationGateway>(MockBehavior.Strict), new Mock<IDataSetConfigurationProvider>(MockBehavior.Strict),
+            new Mock<IDataSetVariationConfigurationProvider>(MockBehavior.Strict), stores).LoadDataStores(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value.Count.ShouldBe(1);
+        var store = result.Value.ShouldNotBeNull().ShouldHaveSingleItem();
+        store.Name.ShouldBe("OpsDb");
+        store.Description.ShouldBe("Operational runtime data");
+        stores.VerifyAll();
     }
 
     [Fact]
-    public async Task LoadDataStores_WhenGatewayFails_ReturnsFailure()
+    public async Task LoadDataStores_WhenTheDataStoreProviderFails_ReturnsItsFailure()
     {
-        var gateway = new Mock<IConfigurationGateway>();
-        GatewayWriteTransaction.StubOn(gateway);
-        gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
+        var stores = new Mock<Fdw.Services.Data.IDataStoreConfigurationProvider>(MockBehavior.Strict);
+        stores.Setup(p => p.Get(ConfigurationLevels.RecordOnly, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<Fdw.Services.Connections.IDataStoreImplementationConfiguration>>.Failure(new GenericMessage("language not stated")));
 
-        gateway.Setup(g => g.Execute<IEnumerable<DataStoreRecord>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<DataStoreRecord>>.Failure(new GenericMessage("DB error")));
+        var result = await MakeProvider(new Mock<IConfigurationGateway>(MockBehavior.Strict), new Mock<IDataSetConfigurationProvider>(MockBehavior.Strict),
+            new Mock<IDataSetVariationConfigurationProvider>(MockBehavior.Strict), stores).LoadDataStores(TestContext.Current.CancellationToken);
 
-        var result = await MakeProvider(gateway).LoadDataStores(TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("language not stated");
     }
 
     // ── LoadDataSetSources ────────────────────────────────────────────────────

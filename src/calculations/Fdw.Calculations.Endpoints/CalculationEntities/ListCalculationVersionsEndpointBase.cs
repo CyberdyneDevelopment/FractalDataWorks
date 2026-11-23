@@ -62,7 +62,7 @@ public abstract class ListCalculationVersionsEndpointBase : Endpoint<Calculation
             return;
         }
 
-        var listed = await CalculationVersionList.Run(_services, _names, req.Id, origin, ReadPolicy, Logger, ct).ConfigureAwait(false);
+        var listed = await CalculationVersionList.Run(_services, _names, req.Id, origin, ReadPolicy, Resolve<PlaceVersionLimits>().MaxVersions, Logger, ct).ConfigureAwait(false);
         if (listed.IsFailure || listed.Value is not { } response)
         {
             await Send.ResultAsync(ResultHttpStatusMapper.Answer(listed, HttpContext)).ConfigureAwait(false);

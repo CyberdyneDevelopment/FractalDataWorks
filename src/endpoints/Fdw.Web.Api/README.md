@@ -8,7 +8,7 @@ This package declares 178 model(s).
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `GetPipelineTypesEndpointBase` | class | Base endpoint for retrieving all registered ETL pipeline engine types from the EtlPipelineTypes… |
+| `GetPipelineTypesEndpointBase` | class | Base endpoint for retrieving all registered ETL pipeline engine types from the PipelineTypes… |
 
 ## Records (178)
 

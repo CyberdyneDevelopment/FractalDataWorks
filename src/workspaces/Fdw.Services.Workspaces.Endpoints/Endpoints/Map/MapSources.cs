@@ -123,7 +123,7 @@ internal sealed class MapSources
         if (pipeline is not GraphPipelineConfiguration graph || graph.Components.Count > 0)
             return GenericResult<IPipelineImplementationConfiguration>.Success(pipeline);
 
-        return await Pipelines.Get(pipeline.Id, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
+        return await Pipelines.Get(pipeline.Id, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
     }
 
     /// <summary>Takes the domain list out of a provider, or refuses when the registered provider does not list.</summary>

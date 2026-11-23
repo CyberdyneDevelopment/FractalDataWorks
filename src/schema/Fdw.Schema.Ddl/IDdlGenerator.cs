@@ -18,6 +18,13 @@ public interface IDdlGenerator
     string TargetDatabase { get; }
 
     /// <summary>
+    /// Quotes one identifier the way this engine's DDL needs it, so that a name is written as that name and never as more SQL (FDW-3617).
+    /// </summary>
+    /// <param name="identifier">The name of a schema, table, column, constraint or index.</param>
+    /// <returns>The quoted name, or the coded refusal <c>IdentifierInvalid</c> for a name the engine cannot be given (empty, or holding a NUL).</returns>
+    IGenericResult<string> QuoteIdentifier(string identifier);
+
+    /// <summary>
     /// Generates DDL commands from a schema definition.
     /// </summary>
     /// <typeparam name="TProperty">The property definition type.</typeparam>

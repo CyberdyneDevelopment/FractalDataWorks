@@ -34,7 +34,8 @@ public sealed class PostgreSqlReturnedColumnsTests
         container.Setup(c => c.Name).Returns("customers");
         container.Setup(c => c.Path).Returns(new PostgreSqlDatabasePath(null, "public", "customers"));
         container.Setup(c => c.Schema).Returns(schema.Object);
-        container.Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = "id" });
+        container.Setup(c => c.Metadata).Returns(new Dictionary<string, object>());
+        container.Setup(c => c.Keys).Returns(TestPrimaryKeys.On("id"));
         return container;
     }
 

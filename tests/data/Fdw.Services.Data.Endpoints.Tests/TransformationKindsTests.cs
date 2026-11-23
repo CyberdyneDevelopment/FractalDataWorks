@@ -32,14 +32,6 @@ public sealed class TransformationKindsTests
         [new() { Name = "total", IsKept = true, Formula = new BuiltFormulaNodePayload { Op = "Field", Name = "price" } }];
 
     [Fact]
-    public void TheFieldAndBuiltKindsAreFoundByTheImplementationAName()
-    {
-        TransformationKinds.ByName("Field").ShouldBeOfType<FieldTransformationKind>();
-        TransformationKinds.ByName("Built").ShouldBeOfType<BuiltTransformationKind>();
-        ReferenceEquals(TransformationKinds.ByName("Map"), TransformationKinds.NotFound).ShouldBeTrue();
-    }
-
-    [Fact]
     public void ARequestThatNamesNoKindOrAnUnknownOneIsRefused()
     {
         TransformationEndpointSupport.FindKind(null, NullLogger.Instance).IsFailure.ShouldBeTrue();

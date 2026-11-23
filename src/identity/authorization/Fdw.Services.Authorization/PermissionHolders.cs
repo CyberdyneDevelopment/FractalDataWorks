@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
@@ -92,7 +93,7 @@ public sealed class PermissionHolders : IPermissionHolders
     {
         using var systemScope = new SystemAuthenticationContextScope(_authContext);
 
-        var permissions = await _permissions.Get(cancellationToken).ConfigureAwait(false);
+        var permissions = await _permissions.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!permissions.IsSuccess || permissions.Value is null)
             return GenericResult<IReadOnlyList<Guid>>.Failure(PermissionHoldersLog.ReadFailed(_logger, permissionName, "the permissions", permissions.CurrentMessage));
 
@@ -144,10 +145,12 @@ public sealed class PermissionHolders : IPermissionHolders
         return GenericResult<IReadOnlyList<Guid>>.Success(people);
     }
 
+    // Every read here states WithoutFilledMembers (FDW-7341): the answer is who holds a permission, no text of a role or permission is shown, and a read that filled
+    // would ask for a description language this service has no caller to state.
     // The roles that count in the tenant: a platform role counts anywhere, a tenant's own role only in its tenant.
     private async Task<IGenericResult<HashSet<Guid>>> RolesCarrying(string permissionName, Guid tenantId, CancellationToken cancellationToken)
     {
-        var permissions = await _permissions.Get(cancellationToken).ConfigureAwait(false);
+        var permissions = await _permissions.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!permissions.IsSuccess || permissions.Value is null)
             return GenericResult<HashSet<Guid>>.Failure(PermissionHoldersLog.ReadFailed(_logger, permissionName, "the permissions", permissions.CurrentMessage));
 
@@ -155,11 +158,11 @@ public sealed class PermissionHolders : IPermissionHolders
         if (permission is null)
             return GenericResult<HashSet<Guid>>.Failure(PermissionHoldersLog.PermissionNotFound(_logger, permissionName));
 
-        var roles = await _roles.Get(cancellationToken).ConfigureAwait(false);
+        var roles = await _roles.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!roles.IsSuccess || roles.Value is null)
             return GenericResult<HashSet<Guid>>.Failure(PermissionHoldersLog.ReadFailed(_logger, permissionName, "the roles", roles.CurrentMessage));
 
-        var grants = await _rolePermissions.Get(cancellationToken).ConfigureAwait(false);
+        var grants = await _rolePermissions.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!grants.IsSuccess || grants.Value is null)
             return GenericResult<HashSet<Guid>>.Failure(PermissionHoldersLog.ReadFailed(_logger, permissionName, "what the roles carry", grants.CurrentMessage));
 

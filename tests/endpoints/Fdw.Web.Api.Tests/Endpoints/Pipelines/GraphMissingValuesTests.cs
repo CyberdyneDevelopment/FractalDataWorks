@@ -13,6 +13,7 @@ public sealed class GraphMissingValuesTests
 
     private static GraphPayload Complete() => new()
     {
+        Implementation = "Graph",
         Name = "Nightly",
         IsEnabled = true,
         LinkCapacity = 4,

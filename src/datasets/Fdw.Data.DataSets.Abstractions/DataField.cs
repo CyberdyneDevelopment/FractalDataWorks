@@ -82,11 +82,6 @@ public sealed class DataField : IDataField, IEquatable<DataField>
     public string DisplayName => Description is null ? Name : Description;
 
     /// <summary>
-    /// Gets the SQL type name equivalent for this field type.
-    /// </summary>
-    public string SqlTypeName => GetSqlTypeName(Type, MaxLength);
-
-    /// <summary>
     /// Gets a value indicating whether this field represents a numeric type.
     /// </summary>
     public bool IsNumeric => IsNumericType(Type);
@@ -155,35 +150,6 @@ public sealed class DataField : IDataField, IEquatable<DataField>
                underlyingType == typeof(float) ||
                underlyingType == typeof(double) ||
                underlyingType == typeof(decimal);
-    }
-
-    /// <summary>
-    /// Gets the SQL type name for a .NET type.
-    /// </summary>
-    /// <param name="type">The .NET type.</param>
-    /// <param name="maxLength">The maximum length for string types.</param>
-    /// <returns>The SQL type name.</returns>
-    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // CLR to SQL type mapping with comprehensive switch for primitives and common types
-    private static string GetSqlTypeName(Type type, int? maxLength)
-    {
-        var underlyingType = type.WithoutNullable();
-
-        return underlyingType.Name switch
-        {
-            nameof(String) => maxLength.HasValue ? $"NVARCHAR({maxLength})" : "NVARCHAR(MAX)",
-            nameof(Int32) => "INT",
-            nameof(Int64) => "BIGINT",
-            nameof(Int16) => "SMALLINT",
-            nameof(Byte) => "TINYINT",
-            nameof(Boolean) => "BIT",
-            nameof(DateTime) => "DATETIME2",
-            nameof(DateTimeOffset) => "DATETIMEOFFSET",
-            nameof(Decimal) => "DECIMAL(18,2)",
-            nameof(Double) => "FLOAT",
-            nameof(Single) => "REAL",
-            nameof(Guid) => "UNIQUEIDENTIFIER",
-            _ => "NVARCHAR(MAX)"
-        };
     }
 
     /// <summary>

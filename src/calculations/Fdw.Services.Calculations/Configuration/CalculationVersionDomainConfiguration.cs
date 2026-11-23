@@ -26,5 +26,8 @@ public partial class CalculationVersionDomainConfiguration : DomainConfiguration
     public Guid ScopeId { get; set; }
 
     /// <summary>Gets or sets what the calculation is, in this place's words.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-6208), which the domain table
+    // cannot hold, so the column is gone; the provider fills the member for every page it reads. Off the mapper, it is no list field either.
+    [NotStored]
     public string Description { get; set; } = string.Empty;
 }

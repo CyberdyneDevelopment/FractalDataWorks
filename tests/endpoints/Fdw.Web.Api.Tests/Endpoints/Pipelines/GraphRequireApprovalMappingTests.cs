@@ -11,6 +11,7 @@ public sealed class GraphRequireApprovalMappingTests
 {
     private static GraphPayload Payload(bool requireApprovalToRun) => new()
     {
+        Implementation = "Graph",
         Name = "Nightly",
         IsEnabled = true,
         LinkCapacity = 4,
@@ -39,7 +40,7 @@ public sealed class GraphRequireApprovalMappingTests
     [Trait("Category", "DataIntegrity")]
     public void APayloadThatOmitsTheSettingStatesFalse()
     {
-        var payload = new GraphPayload { Name = "Nightly", IsEnabled = true, LinkCapacity = 4, MaxParallelRuns = 1, OverflowBehavior = "Queue" };
+        var payload = new GraphPayload { Implementation = "Graph", Name = "Nightly", IsEnabled = true, LinkCapacity = 4, MaxParallelRuns = 1, OverflowBehavior = "Queue" };
 
         payload.RequireApprovalToRun.ShouldBeFalse();
         GraphPayloadReader.Read(payload, System.Guid.NewGuid()).Value!.RequireApprovalToRun.ShouldBeFalse();

@@ -7,12 +7,15 @@ namespace Fdw.Services.Etl.Abstractions.Tests;
 
 /// <summary>
 /// FDW-5287: the families of component kind a Graph data set refuses (<see cref="GraphRefusedComponentKinds"/>, in the data sets package, which cannot see the
-/// component catalogue) agree with the catalogue: a new destination, action or loop kind that is not listed there fails this test, so it is never stored in a graph.
+/// component catalogue) agree with the catalogue: a new destination, action, loop or control kind (a decision or a container, FDW-6134) that is not listed there fails this test, so it is never stored in a graph.
 /// </summary>
 public sealed class GraphRefusedComponentKindsTests
 {
+    // A Graph data set refuses a kind by what it does (FDW-6142): a decision or a container only steers which components run, so it is Control; the Ask is a decision too (it fires go and asked) but also keeps a
+    // request, tells a person and starts a pipeline, which is an effect, so it is refused as an Action. Its catalogue category stays "Control flow"; this is the refusal family only.
     private static string FamilyOf(IComponentType kind) =>
-        kind.HoldsComponents ? "Loop"
+        kind is (IDecisionComponentType and not AskComponentType) or ContainerComponentType ? "Control"
+        : kind.HoldsComponents ? "Loop"
         : kind.IsAction ? "Action"
         : string.Equals(kind.Category, "Destination", StringComparison.Ordinal) ? "Destination"
         : string.Empty;

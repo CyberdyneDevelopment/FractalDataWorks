@@ -130,12 +130,27 @@ public sealed class FlowStageAdapter : IFlowComponent, IFlowErrorOutputs
         return GenericResult.Success();
     }
 
+    // A stage that needs its whole input (Sort, Aggregate, Distinct, LatestBy, whole-table Compute) holds every row it gathers until it has written its result (FDW-5231).
     private async Task<IGenericResult> RunWhole(IFlowPorts ports, CancellationToken cancellationToken)
+    {
+        var held = FlowHeld.Of(ports);
+        try
+        {
+            return await Whole(ports, held, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            held?.ReleaseAll();
+        }
+    }
+
+    private async Task<IGenericResult> Whole(IFlowPorts ports, FlowHeldGauge? held, CancellationToken cancellationToken)
     {
         var input = ports.Input(InputName);
         var all = new List<IDictionary<string, object?>>();
         while (await input.Read(cancellationToken).ConfigureAwait(false) is { } batch)
         {
+            held?.Hold(batch);
             all.AddRange(batch.Rows);
         }
 

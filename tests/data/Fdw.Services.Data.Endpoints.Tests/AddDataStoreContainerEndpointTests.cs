@@ -31,7 +31,9 @@ public class AddDataStoreContainerEndpointTests
                 Mock.Of<IConfigurationGatewayProvider>(),
                 "TestStore", "dbo", "DataStore",
                 new Fdw.Services.Configuration.UnavailablePlacement(),
-                Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>()),
+                Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
+                new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object,
+                new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object),
             Mock.Of<Fdw.Services.Connections.Abstractions.IConnectionConfigurationProvider>())
         {
         }

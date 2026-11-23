@@ -38,9 +38,9 @@ public static class GraphDescriber
     /// <param name="cancellationToken">Cancels the description.</param>
     /// <returns>The nodes with their fields, a component after those that feed it and a stage after the stages before it; or the failure that stopped a deriver.</returns>
     public static async Task<IGenericResult<IReadOnlyList<GraphNodeFields>>> Describe(
-        GraphPipelineConfiguration graph, DescribeContext context, ILogger logger, CancellationToken cancellationToken = default)
+        IGraphPipelineConfiguration graph, DescribeContext context, ILogger logger, CancellationToken cancellationToken = default)
     {
-        var links = CompletionLines.Rows(graph.Links);
+        var links = CompletionLines.Rows(graph.Links, graph.Components);
         var produced = new Dictionary<(string Component, string Node), IReadOnlyList<GraphField>?>(new NodeComparer());
         var nodes = new List<GraphNodeFields>();
         var remaining = graph.Components.GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
@@ -54,7 +54,7 @@ public static class GraphDescriber
 
             foreach (var component in wave)
             {
-                var described = await DescribeComponent(component, links, produced, context, cancellationToken).ConfigureAwait(false);
+                var described = await DescribeComponent(component, links, graph.Components, produced, context, cancellationToken).ConfigureAwait(false);
                 if (described.IsFailure || described.Value is null)
                 {
                     return described.ToNewResult<IReadOnlyList<GraphNodeFields>>();
@@ -72,12 +72,13 @@ public static class GraphDescriber
     private static async Task<IGenericResult<IReadOnlyList<GraphNodeFields>>> DescribeComponent(
         PipelineComponentConfiguration component,
         IReadOnlyList<PipelineLinkConfiguration> links,
+        IEnumerable<PipelineComponentConfiguration> components,
         Dictionary<(string Component, string Node), IReadOnlyList<GraphField>?> produced,
         DescribeContext context,
         CancellationToken cancellationToken)
     {
         var nodes = new List<GraphNodeFields>();
-        var (inputNames, outputNames) = ComponentShapes.Of(component, links);
+        var (inputNames, outputNames) = ComponentShapes.Of(component, links, components);
         var inputs = new Dictionary<string, IReadOnlyList<GraphField>?>(StringComparer.OrdinalIgnoreCase);
         foreach (var input in inputNames)
         {

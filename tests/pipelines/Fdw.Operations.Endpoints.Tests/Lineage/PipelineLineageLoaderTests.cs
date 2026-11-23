@@ -45,7 +45,7 @@ public class PipelineLineageLoaderTests
         IGenericResult<IReadOnlyList<IPipelineImplementationConfiguration>> result)
     {
         var provider = new Mock<IPipelineConfigurationProvider>();
-        provider.Setup(p => p.Get(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
+        provider.Setup(p => p.Get(It.IsAny<int>(), It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>())).ReturnsAsync(result);
         return provider;
     }
 
@@ -85,7 +85,7 @@ public class PipelineLineageLoaderTests
         var provider = ProviderReturning(
             GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([listed]));
         provider
-            .Setup(p => p.Get(id, ConfigurationLevels.WholeAggregate, It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(id, ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(Whole(id)));
 
         var records = await PipelineLineageLoader.Load(provider.Object, _logger.Object, TestContext.Current.CancellationToken);
@@ -103,7 +103,7 @@ public class PipelineLineageLoaderTests
         var provider = ProviderReturning(
             GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([listed]));
         provider
-            .Setup(p => p.Get(id, ConfigurationLevels.WholeAggregate, It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(id, ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Failure(new GenericMessage("steps failed")));
 
         var read = await PipelineLineageLoader.Read(provider.Object, _logger.Object, TestContext.Current.CancellationToken);

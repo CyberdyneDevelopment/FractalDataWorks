@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.SecretManagers.Abstractions;
 
 namespace Fdw.Services.Data.Configuration;
 
@@ -23,6 +24,17 @@ public sealed class ConfigurationSchema
     /// </summary>
 #pragma warning disable MA0016 // Prefer collection abstraction — required for IOptions binding
     public IList<IConnectionImplementationConfiguration> Connections { get; set; } = new List<IConnectionImplementationConfiguration>();
+
+    /// <summary>
+    /// Gets or sets the secret managers this host declares for the connections it opens before any configuration store exists (FDW-6360).
+    /// Corresponds to the <c>ConfigurationSchema:SecretManagers</c> configuration section.
+    /// </summary>
+    /// <remarks>
+    /// Each entry names a manager (<c>Name</c>), says which kind it is (<c>Implementation</c>) and carries that kind's own body
+    /// (<c>Configuration</c>), as a connection entry does. A host that declares none is unchanged: its bootstrap connections need no secret.
+    /// A connection's <c>SecretManagerName</c> names one of these. The rest of the host keeps reading secret managers from the configuration store.
+    /// </remarks>
+    public IList<ISecretManagerImplementationConfiguration> SecretManagers { get; set; } = new List<ISecretManagerImplementationConfiguration>();
 
 
     /// <summary>

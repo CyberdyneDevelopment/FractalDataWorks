@@ -9,7 +9,8 @@ namespace Fdw.Services.Data.Search;
 
 /// <summary>
 /// Finds the fields of data sets (<c>data.DataSetField</c>) closest to a text. A field hangs from the implementation row of a Simple,
-/// Compound or Federated data set, which points at the data set's domain row, which names it.
+/// Compound or Federated data set, which points at the data set's domain row, which names it. The description of a field is kept in the descriptions table
+/// (FDW-6208), so the text a search finds in it, and the description of each hit, are read from there.
 /// </summary>
 internal sealed class DataSetFieldSearch : RankedSearchBase
 {
@@ -23,8 +24,9 @@ internal sealed class DataSetFieldSearch : RankedSearchBase
         "FederatedDataSetConfigurationRowId",
     ];
 
-    public DataSetFieldSearch(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, ILogger<DataSetFieldSearch>? logger = null)
-        : base(gateways, dataStoreName, pathName, Container, logger ?? NullLogger<DataSetFieldSearch>.Instance)
+    public DataSetFieldSearch(
+        IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, IRowDescriptions descriptions, ILogger<DataSetFieldSearch>? logger = null)
+        : base(gateways, dataStoreName, pathName, Container, logger ?? NullLogger<DataSetFieldSearch>.Instance, descriptions)
     {
     }
 
@@ -40,7 +42,7 @@ internal sealed class DataSetFieldSearch : RankedSearchBase
             if (row.Number(column) is { } owner)
             {
                 return new SearchHit(
-                    row.Text("Name") ?? string.Empty, row.Text("Description"), ranked.Key, ranked.Rank, column.Substring(0, column.Length - "RowId".Length), owner);
+                    row.Text("Name") ?? string.Empty, null, ranked.Key, ranked.Rank, column.Substring(0, column.Length - "RowId".Length), owner);
             }
         }
 

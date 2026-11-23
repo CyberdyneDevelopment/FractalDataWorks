@@ -12,6 +12,7 @@ using Fdw.Web.RestEndpoints.Crud;
 using Fdw.Web.RestEndpoints.Models;
 using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Web.RestEndpoints.Tests.Crud;
@@ -27,7 +28,13 @@ public sealed class LookupEndpointBaseTests
 {
     private static ListSearch Search(string query)
     {
-        var context = new DefaultHttpContext();
+        // The most ids one call states is the keys one statement carries (FDW-7106).
+        var gateways = new Mock<IConfigurationGatewayProvider>(MockBehavior.Strict);
+        gateways.SetupGet(g => g.KeyChunkSize).Returns(1000);
+        var context = new DefaultHttpContext
+        {
+            RequestServices = new ServiceCollection().AddSingleton(gateways.Object).BuildServiceProvider(),
+        };
         context.Request.QueryString = new QueryString(query);
         return ListSearch.Parse(context, NullLogger.Instance).Value!;
     }

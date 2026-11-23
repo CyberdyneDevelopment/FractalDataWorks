@@ -20,9 +20,10 @@ public static class ComponentShapes
     /// <summary>Lists the input and output nodes of a stored component.</summary>
     /// <param name="component">The stored component.</param>
     /// <param name="links">The graph's links, which name the nodes no setting names.</param>
+    /// <param name="components">The graph's components, which say which lines leave a decision and so carry no rows.</param>
     /// <returns>The node names in catalogue order, each once; no nodes when the component's kind is not in the catalogue.</returns>
     public static (IReadOnlyList<string> Inputs, IReadOnlyList<string> Outputs) Of(
-        PipelineComponentConfiguration component, IReadOnlyList<PipelineLinkConfiguration> links)
+        PipelineComponentConfiguration component, IReadOnlyList<PipelineLinkConfiguration> links, IEnumerable<PipelineComponentConfiguration> components)
     {
         var kind = ComponentTypes.ByName(component.ComponentType);
         if (ReferenceEquals(kind, ComponentTypes.NotFound))
@@ -30,7 +31,7 @@ public static class ComponentShapes
             return ([], []);
         }
 
-        var rows = CompletionLines.Rows(links);
+        var rows = CompletionLines.Rows(links, components);
         var fromLinks = rows.Where(link => string.Equals(link.ToComponent, component.Name, StringComparison.OrdinalIgnoreCase))
             .Select(link => link.ToInput);
         var toLinks = rows.Where(link => string.Equals(link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
@@ -41,8 +42,10 @@ public static class ComponentShapes
     /// <summary>Lists the output nodes of a stored component that carry the rows it rejects (FDW-2041), so a component built later can still be told apart in the run.</summary>
     /// <param name="component">The stored component.</param>
     /// <param name="links">The links of the level the component is in.</param>
+    /// <param name="components">The graph's components, which say which lines leave a decision and so carry no rows.</param>
     /// <returns>The names of the kind's error outputs, resolved as <see cref="Of"/> resolves its outputs.</returns>
-    public static IReadOnlyList<string> ErrorOutputsOf(PipelineComponentConfiguration component, IReadOnlyList<PipelineLinkConfiguration> links)
+    public static IReadOnlyList<string> ErrorOutputsOf(
+        PipelineComponentConfiguration component, IReadOnlyList<PipelineLinkConfiguration> links, IEnumerable<PipelineComponentConfiguration> components)
     {
         var kind = ComponentTypes.ByName(component.ComponentType);
         if (ReferenceEquals(kind, ComponentTypes.NotFound))
@@ -50,7 +53,7 @@ public static class ComponentShapes
             return [];
         }
 
-        var toLinks = CompletionLines.Rows(links).Where(link => string.Equals(link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
+        var toLinks = CompletionLines.Rows(links, components).Where(link => string.Equals(link.FromComponent, component.Name, StringComparison.OrdinalIgnoreCase))
             .Select(link => link.FromOutput);
         return Names(component, [.. kind.Outputs.Where(spec => spec.IsError)], toLinks);
     }

@@ -17,11 +17,11 @@ namespace Fdw.Services.Calculations.Abstractions.Runtime;
 public static class CalculationRuntime
 {
     private static readonly int DivisionByZeroId = CalculationTreeResultCodes.ByName("DivisionByZero").Id;
-    private static readonly int EmptyOperandId = CalculationTreeResultCodes.ByName("EmptyOperand").Id;
+    internal static readonly int EmptyOperandId = CalculationTreeResultCodes.ByName("EmptyOperand").Id;
     private static readonly int RequiredValueEmptyId = CalculationTreeResultCodes.ByName("RequiredValueEmpty").Id;
     private static readonly int FieldNotNumericId = CalculationTreeResultCodes.ByName("FieldNotNumeric").Id;
     private static readonly int FieldNotFlagId = CalculationTreeResultCodes.ByName("FieldNotFlag").Id;
-    private static readonly int FieldNotDateId = CalculationTreeResultCodes.ByName("FieldNotDate").Id;
+    internal static readonly int FieldNotDateId = CalculationTreeResultCodes.ByName("FieldNotDate").Id;
     private static readonly int ClockMissingId = CalculationTreeResultCodes.ByName("ClockMissing").Id;
     private static readonly int AmountNotWholeId = CalculationTreeResultCodes.ByName("AmountNotWhole").Id;
     private static readonly int TimeOutOfRangeId = CalculationTreeResultCodes.ByName("TimeOutOfRange").Id;
@@ -97,22 +97,10 @@ public static class CalculationRuntime
             return state.FailDateWith(FieldNotDateId, node, $"field '{field}' is not in the record");
         }
 
-        switch (raw)
-        {
-            case DateOnly date:
-                return date;
-            case DateTime moment when moment.TimeOfDay == TimeSpan.Zero:
-                return DateOnly.FromDateTime(moment);
-            case DateTime moment:
-                return state.FailDateWith(FieldNotDateId, node, $"field '{field}' holds {moment:O}, which has a time of day; a date has none");
-            case null:
-            case DBNull:
-                return state.FailDateWith(EmptyOperandId, node, $"date field '{field}' is empty");
-            case string text when string.IsNullOrWhiteSpace(text):
-                return state.FailDateWith(EmptyOperandId, node, $"date field '{field}' is empty");
-            default:
-                return state.FailDateWith(FieldNotDateId, node, $"field '{field}' holds a {raw.GetType().Name}; only a date, or a date-time with no time of day, is a date");
-        }
+        var kind = RawDateKinds.OfValue(raw);
+        return ReferenceEquals(kind, RawDateKinds.NotFound)
+            ? state.FailDateWith(FieldNotDateId, node, $"field '{field}' holds a {raw!.GetType().Name}; only a date, or a date-time with no time of day, is a date")
+            : kind.Read(raw, field, state, node);
     }
 
     /// <summary>Turns a possibly empty number into a number; an empty one fails with EmptyOperand.</summary>

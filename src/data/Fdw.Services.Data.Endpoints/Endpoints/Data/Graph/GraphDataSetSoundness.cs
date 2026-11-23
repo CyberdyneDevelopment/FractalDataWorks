@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Whether a Graph data set is sound (FDW-5442): the one judgement the validate route and the routes that save a Graph data set both make, over the
+/// Whether a Graph data set is sound (FDW-5442): the one judgment the validate route and the routes that save a Graph data set both make, over the
 /// data set as it would be stored.
 /// </summary>
 /// <remarks>

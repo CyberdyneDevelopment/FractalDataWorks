@@ -5,6 +5,7 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Logging;
+using Fdw.Services.Connections.RowQuery.FilterNodes;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.RowQuery;
@@ -54,33 +55,40 @@ public static class RecordQueryValidator
         return GenericResult.Success();
     }
 
-    private static IGenericResult ValidateFilter(IFilterNode? node, ILogger logger)
+    internal static IGenericResult ValidateFilter(IFilterNode? node, ILogger logger)
     {
-        switch (node)
+        if (node is null)
+            return GenericResult.Success();
+
+        var handler = RowQueryNodes.HandlerFor(node);
+        return ReferenceEquals(handler, RowQueryNodeHandlers.NotFound)
+            ? UnsupportedNode(node, logger)
+            : handler.ValidateOperators(node, logger);
+    }
+
+    internal static IGenericResult UnsupportedNode(IFilterNode node, ILogger logger) =>
+        GenericResult.Failure(RecordQueryLog.UnsupportedFilterNodeType(logger, node.GetType().Name));
+
+    internal static IGenericResult ValidateConditionOperator(FilterCondition condition, ILogger logger)
+    {
+        if (!string.Equals(condition.Operator.SqlOperator, "=", StringComparison.Ordinal)
+            && !string.Equals(condition.Operator.SqlOperator, "IN", StringComparison.Ordinal))
+            return GenericResult.Failure(RecordQueryLog.UnsupportedFilterOperator(logger, condition.PropertyName, condition.Operator.SqlOperator));
+        return GenericResult.Success();
+    }
+
+    internal static IGenericResult ValidateGroupOperators(FilterGroup group, ILogger logger)
+    {
+        if (group.Operator != LogicalOperator.And)
+            return GenericResult.Failure(RecordQueryLog.UnsupportedFilterOperator(logger, "(group)", group.Operator.SqlOperator));
+
+        foreach (var child in group.Nodes)
         {
-            case null:
-                return GenericResult.Success();
-
-            case FilterCondition condition:
-                if (!string.Equals(condition.Operator.SqlOperator, "=", StringComparison.Ordinal)
-                    && !string.Equals(condition.Operator.SqlOperator, "IN", StringComparison.Ordinal))
-                    return GenericResult.Failure(RecordQueryLog.UnsupportedFilterOperator(logger, condition.PropertyName, condition.Operator.SqlOperator));
-                return GenericResult.Success();
-
-            case FilterGroup group:
-                if (group.Operator != LogicalOperator.And)
-                    return GenericResult.Failure(RecordQueryLog.UnsupportedFilterOperator(logger, "(group)", group.Operator.SqlOperator));
-
-                foreach (var child in group.Nodes)
-                {
-                    var childResult = ValidateFilter(child, logger);
-                    if (!childResult.IsSuccess)
-                        return childResult;
-                }
-                return GenericResult.Success();
-
-            default:
-                return GenericResult.Failure(RecordQueryLog.UnsupportedFilterNodeType(logger, node.GetType().Name));
+            var childResult = ValidateFilter(child, logger);
+            if (!childResult.IsSuccess)
+                return childResult;
         }
+
+        return GenericResult.Success();
     }
 }

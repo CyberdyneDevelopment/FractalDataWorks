@@ -272,6 +272,40 @@ public static partial class DataStoreLoaderLog
         Message = "[DataStoreBuilder] Container '{containerName}' references parent path '{pathName}' that is not part of the store under construction")]
     public static partial IGenericMessage BuilderContainerParentPathUnknown(ILogger logger, string containerName, string pathName);
 
+    /// <summary>
+    /// Logs that the container type a container's configuration names is not registered in ContainerTypes, so the store is not built (FDW-6387).
+    /// </summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="containerName">The container whose type is not registered.</param>
+    /// <param name="containerTypeName">The container type name the configuration states.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> the refused build carries.</returns>
+    [MessageLogging(EventId = 31029, Level = LogLevel.Error,
+        Message = "[DataStoreBuilder] Container '{containerName}' names container type '{containerTypeName}', which is not registered in ContainerTypes, so the store cannot be built")]
+    public static partial IGenericMessage ContainerTypeNotRegistered(ILogger logger, string containerName, string containerTypeName);
+
+    /// <summary>
+    /// Logs that a container's configuration states no container type, so a store whose containers have only one possible type still has to say it (FDW-6387).
+    /// </summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="containerName">The container whose configuration states no type.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> the refused build carries.</returns>
+    [MessageLogging(EventId = 31042, Level = LogLevel.Error,
+        Message = "[DataStoreBuilder] Container '{containerName}' states no container type (its TypeId is empty), so the store cannot be built")]
+    public static partial IGenericMessage ContainerTypeNotStated(ILogger logger, string containerName);
+
+    /// <summary>
+    /// Logs that a container's type is not one its data store type holds, so a store of that type cannot hold it (FDW-6428).
+    /// </summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="containerName">The container whose type the store type does not hold.</param>
+    /// <param name="containerTypeName">The container type the container states.</param>
+    /// <param name="storeTypeName">The data store type of the store.</param>
+    /// <param name="held">The container types the data store type holds, as text.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> the refused write or build carries.</returns>
+    [MessageLogging(EventId = 31043, Level = LogLevel.Error,
+        Message = "[DataStoreBuilder] Container '{containerName}' is of container type '{containerTypeName}', which data store type '{storeTypeName}' does not hold (it holds: {held}), so the store cannot be built")]
+    public static partial IGenericMessage ContainerTypeNotHeldByStoreType(ILogger logger, string containerName, string containerTypeName, string storeTypeName, string held);
+
     // ---------------------------------------------------------------------
     // Builder coverage — tree-assembly entry/exit, decisions, milestone (EventId 5500-5506).
     // Allocated within the Services.Data 5500-5599 domain range (contiguous, sibling of the

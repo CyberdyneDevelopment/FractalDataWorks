@@ -27,6 +27,7 @@ public sealed class GraphDataSetRefusalsTests
     [InlineData("ExecuteSql", typeof(GraphDataSetActionRefusedCode))]
     [InlineData("ExecutePipeline", typeof(GraphDataSetActionRefusedCode))]
     [InlineData("Notify", typeof(GraphDataSetActionRefusedCode))]
+    [InlineData("Ask", typeof(GraphDataSetActionRefusedCode))]
     [InlineData("SetVariable", typeof(GraphDataSetActionRefusedCode))]
     [InlineData("ReadDataOptions", typeof(GraphDataSetActionRefusedCode))]
     [InlineData("DoWhile", typeof(GraphDataSetLoopRefusedCode))]

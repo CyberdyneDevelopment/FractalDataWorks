@@ -43,4 +43,11 @@ public interface IPipelineRunStarter
     /// <param name="cancellationToken">Cancels the wait.</param>
     /// <returns>Whether the run succeeded.</returns>
     Task<bool> Await(Guid executionId, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads the outputs a run gave back (FDW-6136), once it has ended successfully.</summary>
+    /// <param name="executionId">The identifier <see cref="Start"/> returned.</param>
+    /// <param name="tenantId">The tenant the run ran in; another tenant's outputs are never read.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The outputs the run's pipeline declares (none when it declares none), or the failure naming why they could not be read.</returns>
+    Task<IGenericResult<IReadOnlyList<PipelineOutputValue>>> Outputs(Guid executionId, Guid tenantId, CancellationToken cancellationToken = default);
 }

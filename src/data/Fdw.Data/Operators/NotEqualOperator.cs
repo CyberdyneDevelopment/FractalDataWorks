@@ -22,23 +22,7 @@ public sealed class NotEqualOperator : FilterOperatorBase
     }
 
     /// <inheritdoc/>
-    public override string FormatODataValue(object? value)
-    {
-        if (value == null)
-            return "null";
-
-        return value switch
-        {
-            string str => $"'{str.Replace("'", "''", StringComparison.Ordinal)}'",
-            int or long or short or byte => value.ToString()!,
-            decimal or double or float => value.ToString()!,
-            bool b => b.ToString().ToLowerInvariant(),
-            DateTime dt => $"datetime'{dt:yyyy-MM-ddTHH:mm:ss}'",
-            DateTimeOffset dto => $"datetimeoffset'{dto:yyyy-MM-ddTHH:mm:sszzz}'",
-            Guid guid => $"guid'{guid}'",
-            _ => $"'{value}'"
-        };
-    }
+    public override string FormatODataValue(object? value) => ODataLiteralKinds.Format(value);
 
     /// <inheritdoc />
     public override bool Matches(object? left, object? right)

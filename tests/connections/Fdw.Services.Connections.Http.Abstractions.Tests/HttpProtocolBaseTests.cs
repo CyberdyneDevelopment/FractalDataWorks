@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Connections.Http.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
+using Fdw.Services.Connections.Http.Abstractions.Results;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
@@ -110,7 +111,7 @@ public class HttpProtocolBaseTests
     [InlineData("Insert", "POST")]
     [InlineData("Update", "PUT")]
     [InlineData("Delete", "DELETE")]
-    [InlineData("Unknown", "POST")]
+    [InlineData("Upsert", "POST")]
     public void GetHttpMethodReturnsCorrectMethodForCommandType(string commandType, string expectedMethod)
     {
         // Arrange
@@ -121,6 +122,29 @@ public class HttpProtocolBaseTests
 
         // Assert
         method.Method.ShouldBe(expectedMethod);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void GetHttpMethodRefusesACommandTypeWithNoVerb()
+    {
+        _mockCommand.Setup(c => c.CommandType).Returns("Unknown");
+
+        Should.Throw<InvalidOperationException>(() => _protocol.GetHttpMethod(_mockCommand.Object, _mockContainer.Object, _context));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task TranslateRefusesACommandTypeWithNoVerbAsCommandTypeUnsupported()
+    {
+        _mockCommand.Setup(c => c.CommandType).Returns("Unknown");
+
+        var result = await _protocol.Translate(_mockCommand.Object, _mockContainer.Object, _context, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Code.ShouldBe(HttpResultCodes.ByName("CommandTypeUnsupported"));
     }
 
     [Fact]

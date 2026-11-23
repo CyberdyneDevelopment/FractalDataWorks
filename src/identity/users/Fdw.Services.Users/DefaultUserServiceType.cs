@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Fdw.Results;
+using Fdw.ServiceTypes;
 using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.Users;
@@ -32,6 +34,19 @@ namespace Fdw.Services.Users;
 [Implementation(typeof(UserServiceTypes), "Default")]
 public sealed class DefaultUserServiceType : UserServiceTypeBase
 {
+    // The users domain's caps (FDW-7103), by the key a host states them under (Users:Default): the most tenant memberships one person may hold for a read
+    // (a lookup that carries a key per membership), and the most and default page size of an account's sign-in list. A host changes one with
+    // ServiceTypeDefaults.Override before Register.
+    private static readonly IReadOnlyDictionary<string, object> Defaults = new Dictionary<string, object>(StringComparer.Ordinal)
+    {
+        ["MaxMemberships"] = 1000,
+        ["SignInPageMaxTake"] = 200,
+        ["SignInPageDefaultTake"] = 50,
+    };
+
+    /// <inheritdoc />
+    public override IReadOnlyDictionary<string, object> DeclaredDefaults => Defaults;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultUserServiceType"/> class.
     /// </summary>
@@ -44,6 +59,20 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
+            var limitsLogger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DefaultUserServiceType>();
+            var maxMemberships = DeclaredSetting.ConfiguredCount(builder, ConfigurationKey, this, "MaxMemberships", limitsLogger);
+            if (!maxMemberships.IsSuccess)
+                return maxMemberships.ToNewResult<IHostApplicationBuilder>();
+
+            var signInMaxTake = DeclaredSetting.ConfiguredCount(builder, ConfigurationKey, this, "SignInPageMaxTake", limitsLogger);
+            if (!signInMaxTake.IsSuccess)
+                return signInMaxTake.ToNewResult<IHostApplicationBuilder>();
+
+            var signInDefaultTake = DeclaredSetting.ConfiguredCount(builder, ConfigurationKey, this, "SignInPageDefaultTake", limitsLogger);
+            if (!signInDefaultTake.IsSuccess)
+                return signInDefaultTake.ToNewResult<IHostApplicationBuilder>();
+
+            builder.Services.TryAddSingleton(new UserSignInPaging(signInDefaultTake.Value, signInMaxTake.Value));
             builder.Services.AddSingleton<IUsersServiceImplementationConfigurationProvider, UsersServiceImplementationConfigurationProvider>(sp => new UsersServiceImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UsersServiceImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "UsersServiceConfiguration"));
             builder.Services.TryAddSingleton<UsersServiceConfigurationProvider>(sp =>
             {
@@ -79,7 +108,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                 return domain;
             });
             builder.Services.TryAddSingleton<IUserTenantConfigurationProvider>(sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
-            builder.Services.TryAddSingleton<IUserTenantsHeld>(sp => new UserTenantsHeld(sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "tenant", sp.GetService<ILogger<UserTenantsHeld>>()));
+            builder.Services.TryAddSingleton<IUserTenantsHeld>(sp => new UserTenantsHeld(sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "tenant", maxMemberships.Value, sp.GetService<ILogger<UserTenantsHeld>>()));
 
 
             builder.Services.AddSingleton<IUserPreferencesImplementationConfigurationProvider, UserPreferencesImplementationConfigurationProvider>(sp => new UserPreferencesImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserPreferencesImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "UserPreferencesConfiguration"));

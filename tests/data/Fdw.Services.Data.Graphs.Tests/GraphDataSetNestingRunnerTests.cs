@@ -15,7 +15,7 @@ public sealed class GraphDataSetNestingRunnerTests
     private static GraphDataSetNestingRunner Runner(NestingGateway world, int maxDepth)
     {
         var runner = new GraphDataSetNestingRunner(
-            new GraphDataSetRunner(new GraphDataSetReadOptions(1000, 30, 2), NullLogger<GraphDataSetRunner>.Instance),
+            new GraphDataSetRunner(new GraphDataSetReadOptions(1000, 30, 2), NoContributions.Scopes(), NullLogger<GraphDataSetRunner>.Instance),
             world.Sources,
             new GraphDataSetNestingOptions(maxDepth),
             NullLogger<GraphDataSetNestingRunner>.Instance);

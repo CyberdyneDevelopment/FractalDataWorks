@@ -73,7 +73,7 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
     /// Translates an IQueryCommand to a PostgreSQL SELECT statement.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static - overload resolution pattern requires instance method")]
-    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // Why: container/path validation + JOIN dispatch + projection-empty guard pushes branches over the default 15.
+    [ConventionOverride(MaxCyclomaticComplexity = 22)]  // Why: container/path validation + UNION and JOIN dispatch + projection-empty guard pushes branches over the default 15.
     public Task<IGenericResult<NpgsqlCommand>> Translate(
         IQueryCommand command,
         IStorageContainer container,
@@ -107,6 +107,13 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
             {
                 return Task.FromResult(
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("NoFieldsToProject")));
+            }
+
+            if (command.Unions is { Count: > 0 })
+            {
+                return Task.FromResult(container is IDataContainer stacked
+                    ? UnionStatement(command, stacked, dbPath.Dialect)
+                    : GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("MissingPrimaryContainer")));
             }
 
             if (command.Joins is { Count: > 0 })
@@ -167,14 +174,14 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
         {
             // PostgreSQL LIMIT/OFFSET does not require ORDER BY, but a page of rows in no stated order is not a page. The order is
             // the one the container declares for its rows, its primary key; a container that declares none is refused (FDW-3454).
-            var declaredOrder = container.GetDeclaredOrderFieldName();
-            if (declaredOrder is null)
+            var declaredOrder = container.DeclaredOrderFieldNames();
+            if (declaredOrder.Count == 0)
             {
                 return GenericResult<NpgsqlCommand>.Failure(
                     PostgreSqlTranslatorLog.PagedQueryHasNoOrder(NullLogger<PostgreSqlQueryTranslator>.Instance, container.Name));
             }
 
-            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(declaredOrder)}";
+            command.CommandText += $" ORDER BY {string.Join(", ", declaredOrder.Select(name => dialect.QuoteIdentifier(name)))}";
         }
 
         // LIMIT/OFFSET clause (paging) - PostgreSQL native syntax
@@ -322,5 +329,17 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
 
         throw new InvalidOperationException(
             $"Cannot build SELECT for container '{container.Name}': no columns available.");
+    }
+
+    // A query that stacks containers' rows: one UNION ALL statement, written by the shared builder (FDW-6946).
+    private static IGenericResult<NpgsqlCommand> UnionStatement(IQueryCommand query, IDataContainer container, ISqlDialect dialect)
+    {
+        var command = CreateCommand(string.Empty);
+        var (refusal, sql) = BuildUnionStatement(query, container, dialect, (n, v) => AddParameter(command, n, v));
+        if (refusal is not null)
+            return GenericResult<NpgsqlCommand>.Failure(refusal);
+
+        command.CommandText = sql;
+        return GenericResult<NpgsqlCommand>.Success(command);
     }
 }

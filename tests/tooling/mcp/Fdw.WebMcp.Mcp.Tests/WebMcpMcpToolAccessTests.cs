@@ -28,13 +28,13 @@ public class WebMcpMcpToolAccessTests
         => new(_ => Task.CompletedTask, new EndpointMetadataCollection(metadata), "test endpoint");
 
     private static WebMcpToolDescriptor Guarded { get; } =
-        BridgeCatalogue.CreateItem with { Endpoint = EndpointWith(new AuthorizeAttribute(Permission)) };
+        BridgeCatalog.CreateItem with { Endpoint = EndpointWith(new AuthorizeAttribute(Permission)) };
 
     private static WebMcpToolDescriptor Open { get; } =
-        BridgeCatalogue.ListItems with { Endpoint = EndpointWith(new AllowAnonymousAttribute()) };
+        BridgeCatalog.ListItems with { Endpoint = EndpointWith(new AllowAnonymousAttribute()) };
 
     private static WebMcpToolDescriptor Undeclared { get; } =
-        BridgeCatalogue.DeleteItem with { Endpoint = EndpointWith() };
+        BridgeCatalog.DeleteItem with { Endpoint = EndpointWith() };
 
     private static DefaultHttpContext Request(ClaimsPrincipal caller, Action<AuthorizationOptions>? fallback = null)
     {
@@ -55,7 +55,7 @@ public class WebMcpMcpToolAccessTests
     private static ClaimsPrincipal Unauthenticated { get; } = new(new ClaimsIdentity());
 
     private static async Task<string[]> Offered(HttpContext context, params WebMcpToolDescriptor[] tools)
-        => [.. (await new WebMcpMcpCatalogue(new BridgeCatalogue.Registry(tools), NullLogger<WebMcpMcpCatalogue>.Instance)
+        => [.. (await new WebMcpMcpCatalog(new BridgeCatalog.Registry(tools), NullLogger<WebMcpMcpCatalog>.Instance)
                 .ToolsFor(context, TestContext.Current.CancellationToken))
             .Select(tool => tool.Name)];
 
@@ -114,7 +114,7 @@ public class WebMcpMcpToolAccessTests
     public async Task AToolWithNoKnownEndpointIsOfferedToNoOne()
     {
         // Who may call it is its route's decision; with no route there is nothing to decide from.
-        (await Offered(Request(SignedIn(new Claim(PermissionClaim, Permission))), BridgeCatalogue.GetItem, Open))
+        (await Offered(Request(SignedIn(new Claim(PermissionClaim, Permission))), BridgeCatalog.GetItem, Open))
             .ShouldBe(["list_items"]);
     }
 
@@ -123,7 +123,7 @@ public class WebMcpMcpToolAccessTests
     [Trait("Category", "Security")]
     public async Task OutsideARequestNoToolIsOffered()
     {
-        (await new WebMcpMcpCatalogue(new BridgeCatalogue.Registry(Open), NullLogger<WebMcpMcpCatalogue>.Instance)
+        (await new WebMcpMcpCatalog(new BridgeCatalog.Registry(Open), NullLogger<WebMcpMcpCatalog>.Instance)
             .ToolsFor(null, TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 }

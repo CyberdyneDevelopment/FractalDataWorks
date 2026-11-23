@@ -59,18 +59,19 @@ public abstract class DataTypeBase : TypeOptionBase<DataTypeBase>, IDataType
     /// <inheritdoc />
     public IGenericResult<object> Convert(object? value)
     {
-        var read = value switch
-        {
-            null => null,
-            string text => Parse(text),
-            _ => value.GetType() == ClrType ? value : null,
-        };
-        return read is null
+        if (value is string text)
+            return Read(Parse(text), value);
+
+        return Read(value is not null && value.GetType() == ClrType ? value : null, value);
+    }
+
+    // A value read as this type, or the failure that names the type and what the value was.
+    private IGenericResult<object> Read(object? read, object? original) =>
+        read is null
             ? GenericResult<object>.Failure(
                 DataStoresResultCodes.ByName("DataValueNotConvertible"),
-                ResultDetails.Create("DataType", Name, "ValueType", value is null ? "null" : value.GetType().Name))
+                ResultDetails.Create("DataType", Name, "ValueType", original is null ? "null" : original.GetType().Name))
             : GenericResult<object>.Success(read);
-    }
 
     /// <inheritdoc />
     public virtual string Format(object value) => DataValueReader.InvariantText(value);

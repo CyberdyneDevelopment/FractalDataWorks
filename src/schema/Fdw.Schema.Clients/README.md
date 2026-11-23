@@ -11,7 +11,6 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 | Type | Kind | Purpose |
 |---|---|---|
 | `SchemaApiClient` | class | API client for schema discovery and data preview endpoints. Implements with HTTP-backed operations… |
-| `TableApiClient` | class | API client for physical database table management endpoints. |
 
 ## Installation
 

@@ -146,6 +146,10 @@ internal static class DataSetQueryHelper
         Version = config.Version,
         Implementation = config.Implementation,
         FederationStrategy = config.FederationStrategyOrNone(),
+        SourceCombination = config.SourceCombinationOrNone(),
+        FederationOptions = config is IFederatedDataSetConfiguration { } withOptions
+            ? [.. withOptions.FederationOptions.Where(o => o.IsCurrent && !o.IsDeleted).Select(o => new DataSetFederationOptionPayload { Name = o.OptionName, Value = o.OptionValue })]
+            : [],
         SourceDataSetName = config.SourceDataSetName,
         RecordTypeName = config.RecordTypeName,
         Fields = config.Fields
@@ -341,7 +345,7 @@ internal static class DataSetQueryHelper
 
     /// <summary>Maps composed field requests onto the cascade child collection.</summary>
     /// <param name="fields">The composed field requests.</param>
-    /// <param name="existing">The fields already stored under this data set, so one the request does not say the nullability of keeps its own. Empty on create.</param>
+    /// <param name="existing">The fields already stored under this data set, so one the request does not say the nullability of keeps its own, and every one keeps its Id. Empty on create.</param>
     /// <param name="values">Refuses a new field that does not state its nullability (FDW-3931).</param>
     /// <returns>The fields, or <c>ValueRequired</c> naming a new field that does not state its nullability.</returns>
     internal static IGenericResult<List<DataSetFieldConfiguration>> MapFields(
@@ -357,7 +361,7 @@ internal static class DataSetQueryHelper
         {
             var nullable = NullabilityOf(field, stored, values);
             if (nullable.IsFailure) return nullable.ToNewResult<List<DataSetFieldConfiguration>>();
-            mapped.Add(MapField(field, nullable.Value));
+            mapped.Add(MapField(field, nullable.Value, stored.TryGetValue(field.Name, out var kept) ? kept : null));
         }
 
         return GenericResult<List<DataSetFieldConfiguration>>.Success(mapped);
@@ -370,9 +374,17 @@ internal static class DataSetQueryHelper
             ? GenericResult<bool>.Success(kept.IsNullable)
             : values.Required(field.IsNullable, "field", field.Name, "isNullable");
 
-    private static DataSetFieldConfiguration MapField(CreateDataSetFieldRequest f, bool isNullable) =>
+    // A field the data set already has keeps its Id, so what cites it (a description, a binding) still does after the save; a new one is left unset and the
+    // save cascade mints it, the one place a configuration id is created. It also keeps what the request has no member for (its binding to a container
+    // field and whether the system provides it), which the update would otherwise wipe on every PATCH that sends fields (FDW-6200).
+    private static DataSetFieldConfiguration MapField(CreateDataSetFieldRequest f, bool isNullable, DataSetFieldConfiguration? stored) =>
         new()
         {
+            Id = stored is null ? default : stored.Id,
+            BoundContainerFieldId = stored?.BoundContainerFieldId,
+            BindingKind = stored?.BindingKind,
+            BindingConfidence = stored?.BindingConfidence,
+            IsSystemProvided = stored is not null && stored.IsSystemProvided,
             Name = f.Name,
             IsNullable = isNullable,
             Description = f.Description,
@@ -496,8 +508,6 @@ internal static class DataSetQueryHelper
         }).ToList();
     }
 
-    /// <summary>Maps join requests onto the cascade child collection saved to <c>data.DataSetJoin</c>.</summary>
-    /// <remarks>A join's position in the request is its <c>Ordinal</c>: joins run in the order they were authored.</remarks>
     /// <summary>Maps a request's filter conditions onto the cascade child collection saved to <c>data.DataSetFilter</c> (FDW-4997).</summary>
     /// <remarks>Mapped as stated, in the order the request lists them; <see cref="ValidateSaved"/> checks them before anything is written.</remarks>
     internal static List<DataSetFilterConditionConfiguration> MapFilters(IEnumerable<DataSetFilterConditionPayload> filters) =>
@@ -510,6 +520,14 @@ internal static class DataSetQueryHelper
             Ordinal = i
         })];
 
+    /// <summary>Maps a data set's own federation option values onto the child collection saved to <c>data.DataSetFederationOption</c> (FDW-6901).</summary>
+    /// <param name="options">The values the request states.</param>
+    /// <returns>The values, in the order the request lists them.</returns>
+    internal static List<DataSetFederationOptionConfiguration> MapFederationOptions(IEnumerable<DataSetFederationOptionPayload> options) =>
+        [.. options.Select(o => new DataSetFederationOptionConfiguration { Id = Guid.CreateVersion7(), Name = o.Name, OptionName = o.Name, OptionValue = o.Value })];
+
+    /// <summary>Maps join requests onto the cascade child collection saved to <c>data.DataSetJoin</c>.</summary>
+    /// <remarks>A join's position in the request is its <c>Ordinal</c>: joins run in the order they were authored.</remarks>
     internal static List<DataSetJoinConfiguration> MapJoins(IList<DataSetJoinPayload> joins) =>
         joins.Select((j, i) => new DataSetJoinConfiguration
         {
@@ -593,7 +611,7 @@ internal static class DataSetQueryHelper
     // ========================================================================
 
     /// <summary>
-    /// Validates that a Federated dataset carries a registered <c>FederationStrategies</c> member and
+    /// Validates that a strategy a Federated dataset states is a registered <c>FederationStrategies</c> member (one that states none reads under the configured default, FDW-6806) and
     /// that a non-Federated dataset does not carry one.
     /// </summary>
     internal static IGenericResult<bool> ValidateFederationStrategy(
@@ -603,14 +621,8 @@ internal static class DataSetQueryHelper
 
         if (isFederated)
         {
-            if (string.IsNullOrWhiteSpace(federationStrategy))
-            {
-                return GenericResult<bool>.Failure(
-                    DataSetsResultCodes.FederationStrategyRequired, logger,
-                    ResultDetails.Create("name", dataSetName));
-            }
-
-            if (ReferenceEquals(FederationStrategies.ByName(federationStrategy), FederationStrategies.NotFound))
+            // A Federated data set that states no strategy reads under the configured default (FDW-6806); one it states must be a member.
+            if (!string.IsNullOrWhiteSpace(federationStrategy) && ReferenceEquals(FederationStrategies.ByName(federationStrategy), FederationStrategies.NotFound))
             {
                 return GenericResult<bool>.Failure(
                     DataSetsResultCodes.FederationStrategyInvalid, logger,
@@ -643,6 +655,11 @@ internal static class DataSetQueryHelper
         var filters = DataSetFilters.Expression(config, logger);
         if (filters.IsFailure)
             return filters;
+
+        // A data set's own federation option values are refused at save as a read would refuse them (FDW-6901).
+        if (config is IFederatedDataSetConfiguration { FederationOptions.Count: > 0 } federated
+            && FederationResolution.Check(config.Name, [.. federated.FederationOptions], logger) is { IsFailure: true } options)
+            return options;
 
         if (config is ICompoundDataSetConfiguration compound)
             return CompoundMappingRules.Validate(compound, logger);

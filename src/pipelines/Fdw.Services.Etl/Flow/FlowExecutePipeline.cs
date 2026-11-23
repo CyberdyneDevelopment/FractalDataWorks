@@ -7,6 +7,8 @@ using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
+using Fdw.Services.Etl.Graphs.Building;
+using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Transforms;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -35,7 +37,7 @@ namespace Fdw.Services.Etl.Flow;
 /// </remarks>
 public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
 {
-    private readonly string _pipeline;
+    private readonly FlowPipelineTarget _target;
     private readonly IReadOnlyList<FlowStepParameter> _parameters;
     private readonly bool _awaitCompletion;
     private readonly string? _resultVariable;
@@ -43,6 +45,7 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
     private readonly IRunPoint? _runPoint;
     private readonly FlowNotifyRun? _run;
     private readonly Func<long>? _loaded;
+    private readonly IReadOnlyList<KeyValuePair<string, string>> _outputs;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="FlowExecutePipeline"/> class.</summary>
@@ -67,20 +70,53 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
         IRunPoint? runPoint = null,
         FlowNotifyRun? run = null,
         Func<long>? loaded = null)
+        : this(name, FlowPipelineTarget.Named(pipeline), parameters, awaitCompletion, resultVariable, failOnChildFailure, logger, runPoint, run, loaded)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="FlowExecutePipeline"/> class.</summary>
+    /// <param name="name">The step's name.</param>
+    /// <param name="target">The pipeline to start, named by its author or by a variable (FDW-6135).</param>
+    /// <param name="parameters">The values of its parameters.</param>
+    /// <param name="awaitCompletion">Whether the step waits for the started pipeline to end.</param>
+    /// <param name="resultVariable">The variable set to whether it succeeded; needs awaitCompletion.</param>
+    /// <param name="failOnChildFailure">Whether the step fails when it does not succeed; needs awaitCompletion.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="runPoint">When it starts the pipeline.</param>
+    /// <param name="run">The run's facts for a run point.</param>
+    /// <param name="loaded">The rows the run loaded, for a run point.</param>
+    /// <param name="outputs">The outputs of the started pipeline to read into variables, each an output name and the variable that keeps it (FDW-6136); none reads none. Needs awaitCompletion.</param>
+    public FlowExecutePipeline(
+        string name,
+        FlowPipelineTarget target,
+        IReadOnlyList<FlowStepParameter> parameters,
+        bool awaitCompletion,
+        string? resultVariable,
+        bool failOnChildFailure,
+        ILogger? logger = null,
+        IRunPoint? runPoint = null,
+        FlowNotifyRun? run = null,
+        Func<long>? loaded = null,
+        IReadOnlyList<KeyValuePair<string, string>>? outputs = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(pipeline);
         if (!awaitCompletion && (resultVariable is not null || failOnChildFailure))
         {
             throw new ArgumentException("A result variable or a failure on the child's failure needs the step to wait for the child.", nameof(awaitCompletion));
         }
 
         Name = name;
-        _pipeline = pipeline;
+        _target = target;
         _parameters = parameters;
         _awaitCompletion = awaitCompletion;
         _resultVariable = resultVariable;
         _failOnChildFailure = failOnChildFailure;
+        _outputs = outputs ?? [];
+        if (!awaitCompletion && _outputs.Count > 0)
+        {
+            throw new ArgumentException("Outputs are read from the pipeline the step waited for, so a step that reads them waits.", nameof(awaitCompletion));
+        }
+
         if (runPoint is not null && (run is null || loaded is null))
         {
             throw new ArgumentException("A run point needs the run and its loaded rows, so the parameters can name the run's facts.", nameof(runPoint));
@@ -115,12 +151,19 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
     {
         if (context.Starter is null)
         {
-            return GenericResult.Failure(FlowLog.ExecuteUnavailable(_logger, Name, _pipeline, "run starter"));
+            return GenericResult.Failure(FlowLog.ExecuteUnavailable(_logger, Name, _target.Label, "run starter"));
         }
 
         if (context.Identity is null)
         {
-            return GenericResult.Failure(FlowLog.ExecuteUnavailable(_logger, Name, _pipeline, "tracked execution"));
+            return GenericResult.Failure(FlowLog.ExecuteUnavailable(_logger, Name, _target.Label, "tracked execution"));
+        }
+
+        // Why resolved first (FDW-6135): a name a variable gives is judged against the list before anything else is read or started.
+        var resolved = _target.Resolve(context.Variables, Name, _logger);
+        if (resolved.IsFailure || resolved.Value is not { } pipeline)
+        {
+            return resolved;
         }
 
         if (_resultVariable is not null)
@@ -132,7 +175,16 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
             }
         }
 
-        var scope = ParameterScope(context, outcome);
+        foreach (var pair in _outputs)
+        {
+            var kept = FlowVariableTarget.Check(context.Variables, Name, pair.Value, _logger);
+            if (kept.IsFailure)
+            {
+                return kept;
+            }
+        }
+
+        var scope = ParameterScope(context, outcome, pipeline);
         if (scope.IsFailure || scope.Value is null)
         {
             return scope;
@@ -141,7 +193,7 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
         PipelineRunStart request;
         try
         {
-            request = StartRequest(context, scope.Value);
+            request = StartRequest(context, scope.Value, pipeline);
         }
         catch (InvalidOperationException ex) when (VariableListNotWritable.TryRead(ex, out var listName))
         {
@@ -155,12 +207,12 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
         }
 
         return _awaitCompletion
-            ? await Finish(context, started.Value, cancellationToken).ConfigureAwait(false)
+            ? await Finish(context, started.Value, pipeline, cancellationToken).ConfigureAwait(false)
             : GenericResult.Success();
     }
 
     // The variables the parameter values are made from: the step's own, and with a run point the run's facts as they are now (FDW-2043).
-    private IGenericResult<FlowVariables> ParameterScope(FlowStepContext context, string outcome)
+    private IGenericResult<FlowVariables> ParameterScope(FlowStepContext context, string outcome, string pipeline)
     {
         if (_run is null || _loaded is null)
         {
@@ -169,7 +221,7 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
 
         if (context.Executor is not IFlowRunCounts counts)
         {
-            return GenericResult<FlowVariables>.Failure(FlowLog.ExecuteUnavailable(_logger, Name, _pipeline, "count of the rows of the run"));
+            return GenericResult<FlowVariables>.Failure(FlowLog.ExecuteUnavailable(_logger, Name, pipeline, "count of the rows of the run"));
         }
 
         var facts = new NotifyRunFacts(
@@ -186,18 +238,20 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
 
     private static int Saturate(long value) => value > int.MaxValue ? int.MaxValue : (int)value;
 
-    private PipelineRunStart StartRequest(FlowStepContext context, FlowVariables variables) => new()
+    private PipelineRunStart StartRequest(FlowStepContext context, FlowVariables variables, string pipeline) => new()
     {
         ParentExecutionId = context.Identity!.ExecutionId,
-        PipelineName = _pipeline,
+        PipelineName = pipeline,
         TenantId = context.Identity.TenantId,
         RunRoles = context.Identity.RunRoles,
         TriggerSource = $"Step:{Name}",
         Parameters = [.. _parameters.Select(p => new KeyValuePair<string, string>(p.Name, p.Value(variables)))],
-        AwaitCompletion = _awaitCompletion
+        AwaitCompletion = _awaitCompletion,
+        PersonId = context.Identity.PersonId,
+        RequiresOffer = _target.NamedByVariable
     };
 
-    private async Task<IGenericResult> Finish(FlowStepContext context, Guid executionId, CancellationToken cancellationToken)
+    private async Task<IGenericResult> Finish(FlowStepContext context, Guid executionId, string pipeline, CancellationToken cancellationToken)
     {
         var succeeded = await context.Starter!.Await(executionId, cancellationToken).ConfigureAwait(false);
         if (_resultVariable is not null)
@@ -205,8 +259,45 @@ public sealed class FlowExecutePipeline : IFlowStep, IFlowFailureHook
             context.Variables.TrySet(_resultVariable, succeeded);
         }
 
-        return !succeeded && _failOnChildFailure
-            ? GenericResult.Failure(FlowLog.ChildPipelineFailed(_logger, Name, _pipeline))
-            : GenericResult.Success();
+        if (!succeeded)
+        {
+            return _failOnChildFailure ? GenericResult.Failure(FlowLog.ChildPipelineFailed(_logger, Name, pipeline)) : GenericResult.Success();
+        }
+
+        return _outputs.Count == 0 ? GenericResult.Success() : await ReadOutputs(context, executionId, pipeline, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The outputs of the pipeline that ended (FDW-6136): each named output must be one the run recorded, and its stated type the type its variable is declared with; the value is kept as that type, never as text.
+    private async Task<IGenericResult> ReadOutputs(FlowStepContext context, Guid executionId, string pipeline, CancellationToken cancellationToken)
+    {
+        var read = await context.Starter!.Outputs(executionId, context.Identity!.TenantId, cancellationToken).ConfigureAwait(false);
+        if (read.IsFailure || read.Value is null)
+        {
+            return read;
+        }
+
+        foreach (var pair in _outputs)
+        {
+            var found = read.Value.FirstOrDefault(output => string.Equals(output.Name, pair.Key, StringComparison.OrdinalIgnoreCase));
+            if (found is null)
+            {
+                return GenericResult.Failure(PipelineOutputLog.OutputMissing(_logger, Name, pair.Key, pipeline));
+            }
+
+            var declared = context.Variables.TypeOf(pair.Value);
+            if (!string.Equals(declared, found.DataType, StringComparison.OrdinalIgnoreCase))
+            {
+                return GenericResult.Failure(PipelineOutputLog.OutputTypeMismatch(_logger, pipeline, pair.Key, found.DataType, pair.Value, declared is null ? "not declared with a type" : declared));
+            }
+
+            if (!GraphRunOutputs.TryRead(found, out var typed))
+            {
+                return GenericResult.Failure(PipelineOutputLog.OutputInvalid(_logger, pipeline, pair.Key, found.DataType));
+            }
+
+            context.Variables.TrySet(pair.Value, typed);
+        }
+
+        return GenericResult.Success();
     }
 }

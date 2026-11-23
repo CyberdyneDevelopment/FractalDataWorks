@@ -152,24 +152,11 @@ public sealed class QueryTranslator
         if (root is not FilterGroup group || !ReferenceEquals(group.Operator, LogicalOperator.And))
             return NamesCalculated(root) ? (null, root) : (root, null);
 
-        return (AllOf(group.Nodes.Where(node => !NamesCalculated(node)).ToList()), AllOf(group.Nodes.Where(NamesCalculated).ToList()));
+        return (FilterGroup.AllOf(group.Nodes.Where(node => !NamesCalculated(node)).ToList()), FilterGroup.AllOf(group.Nodes.Where(NamesCalculated).ToList()));
     }
 
-    private static IFilterNode? AllOf(List<IFilterNode> nodes)
-        => nodes.Count switch
-        {
-            0 => null,
-            1 => nodes[0],
-            _ => new FilterGroup { Operator = LogicalOperator.And, Nodes = nodes },
-        };
-
     private bool NamesCalculated(IFilterNode node)
-        => node switch
-        {
-            FilterCondition condition => _calculatedColumns.Contains(condition.PropertyName),
-            FilterGroup group => group.Nodes.Any(NamesCalculated),
-            _ => false,
-        };
+        => FilterNodeKinds.Conditions(node).Any(condition => _calculatedColumns.Contains(condition.PropertyName));
 
     /// <summary>Builds the query a domain provider answers from its domain table.</summary>
     /// <param name="request">The request body.</param>
@@ -619,23 +606,16 @@ public sealed class QueryTranslator
 
     private IGenericResult<object?> Scalar(JsonElement element, string fieldName)
     {
-        switch (element.ValueKind)
+        var kind = JsonFilterScalarKinds.ByValueKind(element.ValueKind);
+        if (ReferenceEquals(kind, JsonFilterScalarKinds.NotFound))
         {
-            case JsonValueKind.String:
-                return GenericResult<object?>.Success(element.GetString());
-            case JsonValueKind.True:
-                return GenericResult<object?>.Success(true);
-            case JsonValueKind.False:
-                return GenericResult<object?>.Success(false);
-            case JsonValueKind.Number when element.TryGetInt64(out var whole):
-                return GenericResult<object?>.Success(whole);
-            case JsonValueKind.Number when element.TryGetDecimal(out var fractional):
-                return GenericResult<object?>.Success(fractional);
-            case JsonValueKind.Number:
-                return _refusals.Invalid<object?>($"value for '{fieldName}' is a number outside the range a filter can carry");
-            default:
-                return _refusals.Invalid<object?>($"value for '{fieldName}' must be a string, number or boolean, not {element.ValueKind}");
+            return _refusals.Invalid<object?>($"value for '{fieldName}' must be a string, number or boolean, not {element.ValueKind}");
         }
+
+        var read = kind.Read(element);
+        return read is null
+            ? _refusals.Invalid<object?>($"value for '{fieldName}' is a number outside the range a filter can carry")
+            : GenericResult<object?>.Success(read);
     }
 
     private IGenericResult<IOrderingExpression?> Ordering(IReadOnlyList<QuerySort?>? sort)

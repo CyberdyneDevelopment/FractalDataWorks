@@ -82,14 +82,15 @@ public static class InMemorySelect
         if (values.IsFailure)
             return values.ToNewResult<object?>();
 
-        return values.Value!.Count switch
-        {
-            0 => GenericResult<object?>.Success(null),
-            1 => GenericResult<object?>.Success(values.Value[0]),
-            _ => SqlRefusal.Refuse<object?>(new SqlServerMessage(512, 1, 16,
-                "Subquery returned more than 1 value. This is not permitted when the subquery follows =, !=, <, <= , >, >= or when the subquery is used as an expression.",
-                subquery.StartLine), outer.Context.Logger),
-        };
+        if (values.Value!.Count == 0)
+            return GenericResult<object?>.Success(null);
+
+        if (values.Value.Count == 1)
+            return GenericResult<object?>.Success(values.Value[0]);
+
+        return SqlRefusal.Refuse<object?>(new SqlServerMessage(512, 1, 16,
+            "Subquery returned more than 1 value. This is not permitted when the subquery follows =, !=, <, <= , >, >= or when the subquery is used as an expression.",
+            subquery.StartLine), outer.Context.Logger);
     }
 
     /// <summary>Reads a FROM clause whose sources are all in memory.</summary>
@@ -117,17 +118,19 @@ public static class InMemorySelect
         return joined;
     }
 
-    private static IGenericResult<SqlRowSet> Reference(TableReference reference, SqlScope outer) => reference switch
+    internal static IGenericResult<SqlRowSet> Reference(TableReference reference, SqlScope outer)
     {
-        NamedTableReference named => Named(named, outer),
-        QualifiedJoin join => Qualified(join, outer),
-        UnqualifiedJoin cross when cross.UnqualifiedJoinType == UnqualifiedJoinType.CrossJoin => Cross(cross, outer),
-        QueryDerivedTable derived => Derived(derived, outer),
-        JoinParenthesisTableReference parenthesis => Reference(parenthesis.Join, outer),
-        _ => SqlRefusal.Refuse<SqlRowSet>(SqlServerErrors.NotSupported(SqlText.Of(reference), reference.StartLine), outer.Context.Logger),
-    };
+        var handler = reference is { } known ? TableReferenceHandlers.ByName(known.GetType().Name) : TableReferenceHandlers.NotFound;
+        return ReferenceEquals(handler, TableReferenceHandlers.NotFound)
+            ? Unsupported(reference, outer)
+            : handler.Read(reference, outer);
+    }
 
-    private static IGenericResult<SqlRowSet> Named(NamedTableReference named, SqlScope outer)
+    // A source this endpoint does not read in memory is a statement SQL Server does not support here.
+    internal static IGenericResult<SqlRowSet> Unsupported(TableReference reference, SqlScope outer)
+        => SqlRefusal.Refuse<SqlRowSet>(SqlServerErrors.NotSupported(SqlText.Of(reference), reference.StartLine), outer.Context.Logger);
+
+    internal static IGenericResult<SqlRowSet> Named(NamedTableReference named, SqlScope outer)
     {
         var name = named.SchemaObject;
         var schema = name.SchemaIdentifier?.Value;
@@ -154,7 +157,7 @@ public static class InMemorySelect
         => SqlRefusal.Refuse<SqlRowSet>(
             SqlServerErrors.NotSupported($"{SqlText.Of(named.SchemaObject)} in a join or subquery", named.StartLine), outer.Context.Logger);
 
-    private static IGenericResult<SqlRowSet> Qualified(QualifiedJoin join, SqlScope outer)
+    internal static IGenericResult<SqlRowSet> Qualified(QualifiedJoin join, SqlScope outer)
     {
         var type = join.QualifiedJoinType;
         if (type is not (QualifiedJoinType.Inner or QualifiedJoinType.LeftOuter))
@@ -187,7 +190,7 @@ public static class InMemorySelect
         return failure is null ? GenericResult<SqlRowSet>.Success(joined) : failure.ToNewResult<SqlRowSet>();
     }
 
-    private static IGenericResult<SqlRowSet> Cross(UnqualifiedJoin cross, SqlScope outer)
+    internal static IGenericResult<SqlRowSet> Cross(UnqualifiedJoin cross, SqlScope outer)
     {
         var left = Reference(cross.FirstTableReference, outer);
         if (left.IsFailure)
@@ -197,7 +200,7 @@ public static class InMemorySelect
         return right.IsFailure ? right : GenericResult<SqlRowSet>.Success(SqlRowSet.Join(left.Value!, right.Value!, keep: null, leftOuter: false));
     }
 
-    private static IGenericResult<SqlRowSet> Derived(QueryDerivedTable derived, SqlScope outer)
+    internal static IGenericResult<SqlRowSet> Derived(QueryDerivedTable derived, SqlScope outer)
     {
         var rows = Rows(derived.QueryExpression, outer);
         if (rows.IsFailure)

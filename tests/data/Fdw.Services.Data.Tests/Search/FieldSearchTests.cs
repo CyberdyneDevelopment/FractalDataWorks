@@ -24,8 +24,16 @@ public sealed class FieldSearchTests
         "FederatedDataSetConfigurationRowId",
     ];
 
-    private static Dictionary<string, object?> DataSetField(int key, string name, string? description, string ownerColumn, int owner)
-        => Row([("RowId", key), ("Name", name), ("Description", description), .. OwnerColumns.Select(column => (column, string.Equals(column, ownerColumn, StringComparison.Ordinal) ? (object?)owner : null))]);
+    private static Dictionary<string, object?> DataSetField(int key, string name, string ownerColumn, int owner)
+        => Row([("RowId", key), ("Id", DescriptionsOfRows.IdOf(key)), ("Name", name), .. OwnerColumns.Select(column => (column, string.Equals(column, ownerColumn, StringComparison.Ordinal) ? (object?)owner : null))]);
+
+    // The descriptions table, which holds the text of the fields (FDW-6208): fields 1, 4 and 5 are described.
+    private static DescriptionsOfRows Described() => new(
+    [
+        new(DescriptionsOfRows.IdOf(1), "order amount"),
+        new(DescriptionsOfRows.IdOf(4), "customer name"),
+        new(DescriptionsOfRows.IdOf(5), "amount lost"),
+    ]);
 
     // Three data sets, one of each kind: Orders (Simple), Customers (Compound), Sales (Federated).
     private static (DataSetFieldSearch Search, InMemoryConfigurationStore Store) DataSets()
@@ -33,17 +41,17 @@ public sealed class FieldSearchTests
         var store = new InMemoryConfigurationStore()
             .Holds("DataSetField",
             [
-                DataSetField(1, "Amount", "order amount", "SimpleDataSetConfigurationRowId", 11),
-                DataSetField(2, "Amount", null, "CompoundDataSetConfigurationRowId", 21),
-                DataSetField(3, "AmountDue", null, "FederatedDataSetConfigurationRowId", 31),
-                DataSetField(4, "Name", "customer name", "CompoundDataSetConfigurationRowId", 21),
-                DataSetField(5, "Gone", "amount lost", "SimpleDataSetConfigurationRowId", 99),
+                DataSetField(1, "Amount", "SimpleDataSetConfigurationRowId", 11),
+                DataSetField(2, "Amount", "CompoundDataSetConfigurationRowId", 21),
+                DataSetField(3, "AmountDue", "FederatedDataSetConfigurationRowId", 31),
+                DataSetField(4, "Name", "CompoundDataSetConfigurationRowId", 21),
+                DataSetField(5, "Gone", "SimpleDataSetConfigurationRowId", 99),
             ])
             .Holds("SimpleDataSetConfiguration", [Row(("RowId", 11), ("DataSetRowId", 101))])
             .Holds("CompoundDataSetConfiguration", [Row(("RowId", 21), ("DataSetRowId", 102))])
             .Holds("FederatedDataSetConfiguration", [Row(("RowId", 31), ("DataSetRowId", 103))])
             .Holds("DataSet", [Row(("RowId", 101), ("Name", "Orders")), Row(("RowId", 102), ("Name", "Customers")), Row(("RowId", 103), ("Name", "Sales"))]);
-        return (new DataSetFieldSearch(store.Gateways, "PlatformConfiguration", "data"), store);
+        return (new DataSetFieldSearch(store.Gateways, "PlatformConfiguration", "data", Described()), store);
     }
 
     [Fact]
@@ -62,6 +70,42 @@ public sealed class FieldSearchTests
             (5L, 3, "SimpleDataSetConfiguration"),
         ]);
         found.Value.Matches.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task AFieldFoundOnlyByItsDescriptionRanksLastAndCarriesTheTextReadFromTheDescriptionsTable()
+    {
+        var (search, _) = DataSets();
+
+        var found = await search.Search("lost", 10, TestContext.Current.CancellationToken);
+
+        found.IsSuccess.ShouldBeTrue(found.CurrentMessage);
+        var hit = found.Value!.Hits.ShouldHaveSingleItem();
+        (hit.Key, hit.Rank, hit.Description).ShouldBe((5L, 3, "amount lost"));
+        found.Value.Matches.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task AFieldFoundByBothItsNameAndItsDescriptionIsCountedOnce()
+    {
+        var (search, _) = DataSets();
+
+        var found = await search.Search("name", 10, TestContext.Current.CancellationToken);
+
+        found.IsSuccess.ShouldBeTrue(found.CurrentMessage);
+        found.Value!.Hits.Select(hit => hit.Key).ShouldBe([4L]);
+        found.Value.Matches.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task APageOfHitsCarriesTheDescriptionOfEachFieldThatHasOne()
+    {
+        var (search, _) = DataSets();
+
+        var found = await search.Search("amount", 10, TestContext.Current.CancellationToken);
+
+        found.Value!.Hits.Select(hit => (hit.Key, hit.Description)).ToList().ShouldBe(
+            [(1L, "order amount"), (2L, null), (3L, null), (5L, "amount lost")]);
     }
 
     [Fact]
@@ -119,8 +163,8 @@ public sealed class FieldSearchTests
     [Fact]
     public async Task AFieldThatHangsFromNothingFailsTheSearchNamingIt()
     {
-        var store = new InMemoryConfigurationStore().Holds("DataSetField", [DataSetField(7, "Orphan", null, string.Empty, 0)]);
-        var search = new DataSetFieldSearch(store.Gateways, "PlatformConfiguration", "data");
+        var store = new InMemoryConfigurationStore().Holds("DataSetField", [DataSetField(7, "Orphan", string.Empty, 0)]);
+        var search = new DataSetFieldSearch(store.Gateways, "PlatformConfiguration", "data", Described());
 
         var found = await search.Search("orphan", 5, TestContext.Current.CancellationToken);
 
@@ -132,12 +176,12 @@ public sealed class FieldSearchTests
     public async Task AContainerFieldIsPlacedUnderItsStoreItsPathAndItsContainerOutermostFirst()
     {
         var store = new InMemoryConfigurationStore()
-            .Holds("DataContainerField", [Row(("RowId", 1), ("Name", "OrderId"), ("Description", null), ("DataContainerRowId", 5))])
+            .Holds("DataContainerField", [Row(("RowId", 1), ("Id", DescriptionsOfRows.IdOf(1)), ("Name", "OrderId"), ("DataContainerRowId", 5))])
             .Holds("DataContainer", [Row(("RowId", 5), ("Name", "Orders"), ("DataPathRowId", 6)), Row(("RowId", 55), ("Name", "Other"), ("DataPathRowId", 66))])
             .Holds("DataPath", [Row(("RowId", 6), ("Name", "dbo"), ("DataStoreConfigurationRowId", 7))])
             .Holds("DataStoreConfiguration", [Row(("RowId", 7), ("DataStoreRowId", 8))])
             .Holds("DataStore", [Row(("RowId", 8), ("Name", "Warehouse"))]);
-        var search = new ContainerFieldSearch(store.Gateways, "PlatformConfiguration", "data");
+        var search = new ContainerFieldSearch(store.Gateways, "PlatformConfiguration", "data", new DescriptionsOfRows([]));
 
         var found = await search.Search("orderid", 5, TestContext.Current.CancellationToken);
         var placed = await search.Place(found.Value!.Hits, TestContext.Current.CancellationToken);
@@ -151,7 +195,32 @@ public sealed class FieldSearchTests
     {
         var store = new InMemoryConfigurationStore();
 
-        new DataSetFieldSearch(store.Gateways, "PlatformConfiguration", "data").Kind.ShouldBe("DataSetField");
-        new ContainerFieldSearch(store.Gateways, "PlatformConfiguration", "data").Kind.ShouldBe("ContainerField");
+        new DataSetFieldSearch(store.Gateways, "PlatformConfiguration", "data", Described()).Kind.ShouldBe("DataSetField");
+        new ContainerFieldSearch(store.Gateways, "PlatformConfiguration", "data", new DescriptionsOfRows([])).Kind.ShouldBe("ContainerField");
+    }
+
+    [Fact]
+    public async Task AContainerFieldIsFoundByItsDescriptionFromTheDescriptionsTableAndCarriesItsText()
+    {
+        // FDW-6589: data.DataContainerField has no Description column; the search asks the descriptions table which fields a text finds and what each says.
+        var store = new InMemoryConfigurationStore()
+            .Holds("DataContainerField",
+            [
+                Row(("RowId", 1), ("Id", DescriptionsOfRows.IdOf(1)), ("Name", "OrderId"), ("DataContainerRowId", 5)),
+                Row(("RowId", 2), ("Id", DescriptionsOfRows.IdOf(2)), ("Name", "Placed"), ("DataContainerRowId", 5)),
+            ])
+            .Holds("DataContainer", [Row(("RowId", 5), ("Name", "Orders"), ("DataPathRowId", 6))])
+            .Holds("DataPath", [Row(("RowId", 6), ("Name", "dbo"), ("DataStoreConfigurationRowId", 7))])
+            .Holds("DataStoreConfiguration", [Row(("RowId", 7), ("DataStoreRowId", 8))])
+            .Holds("DataStore", [Row(("RowId", 8), ("Name", "Warehouse"))]);
+        var described = new DescriptionsOfRows([new(DescriptionsOfRows.IdOf(2), "when the order was placed")]);
+        var search = new ContainerFieldSearch(store.Gateways, "PlatformConfiguration", "data", described);
+
+        var found = await search.Search("when the order", 5, TestContext.Current.CancellationToken);
+
+        found.IsSuccess.ShouldBeTrue(found.CurrentMessage);
+        var hit = found.Value!.Hits.ShouldHaveSingleItem();
+        (hit.Key, hit.Description, hit.ParentTable).ShouldBe((2L, "when the order was placed", "DataContainer"));
+        described.Asked.ShouldBe(1);
     }
 }

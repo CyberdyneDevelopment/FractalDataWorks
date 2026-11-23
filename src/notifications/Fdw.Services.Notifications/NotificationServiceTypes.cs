@@ -16,6 +16,9 @@ using Microsoft.Extensions.Hosting;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
+using Fdw.Services.Notifications.Logging;
 using Fdw.Services.Notifications.Commands;
 using Fdw.Services.Notifications.Configuration;
 using Fdw.Services.Notifications.Services;
@@ -66,6 +69,10 @@ public partial class NotificationServiceTypes
     /// </remarks>
     static NotificationServiceTypes()
     {
+        // The notification and rule providers write each description with the descriptions writer, in the unit of the write (FDW-7203): a host that registered this collection
+        // without the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<IDescriptionWriter>(NotificationDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         var providerService = typeof(INotificationServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
@@ -79,7 +86,7 @@ public partial class NotificationServiceTypes
 
             // One singleton, reached through each interface it serves: the domain configuration contract, and the
             // page read of the domain table the list and query endpoints take (FDW-1005, FDW-4626).
-            builder.Services.AddSingleton<NotificationConfigurationProvider>(sp => new NotificationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "Notification"));
+            builder.Services.AddSingleton<NotificationConfigurationProvider>(sp => new NotificationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "Notification", sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>()));
             builder.Services.AddSingleton<INotificationConfigurationProvider>(sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<INotificationConfigurationProvider>());
@@ -91,7 +98,8 @@ public partial class NotificationServiceTypes
             {
                 var domain = new NotificationRuleConfigurationProvider(
                     sp.GetRequiredService<ILogger<NotificationRuleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "NotificationRule");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "NotificationRule",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("NotificationRule", sp.GetRequiredService<INotificationRuleImplementationConfigurationProvider>());
                 return domain;
             });
@@ -142,6 +150,7 @@ public partial class NotificationServiceTypes
             builder.Services.TryAddSingleton<INotificationLists>(sp => new NotificationLists(
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 NotificationServiceTypes.ConfigurationConnection,
+                sp.GetRequiredService<IDescriptionReader>(),
                 sp.GetService<ILogger<NotificationLists>>()));
 
             // Sends a notification through a named rule. Scoped because the rule's notification service is resolved

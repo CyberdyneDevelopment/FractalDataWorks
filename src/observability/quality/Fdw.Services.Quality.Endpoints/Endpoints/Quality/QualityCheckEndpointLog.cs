@@ -43,10 +43,15 @@ public static partial class QualityCheckEndpointLog
         Message = "Executions of '{subject}' were not read: {reason}")]
     public static partial IGenericMessage ExecutionsNotRead(ILogger logger, string subject, string? reason);
 
-    /// <summary>Logs a request for a number of executions outside the range one read answers.</summary>
+    /// <summary>Logs a request for more executions than the largest page the paging settings give the caller (FDW-7106).</summary>
     [MessageLogging(EventId = 20006, Level = LogLevel.Warning,
         Message = "Take must be given and be from 1 to {maximum}; {take} was asked for")]
     public static partial IGenericMessage TakeOutOfRange(ILogger logger, int maximum, int take);
+
+    /// <summary>Logs a request that asks for no executions, or states no take (FDW-7106).</summary>
+    [MessageLogging(EventId = 20007, Level = LogLevel.Warning,
+        Message = "Take must be given and be at least 1; {take} was asked for")]
+    public static partial IGenericMessage TakeNotPositive(ILogger logger, int take);
 
     /// <summary>Logs that a verdict was recorded.</summary>
     [MessageLogging(EventId = 11016, Level = LogLevel.Information,

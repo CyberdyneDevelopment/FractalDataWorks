@@ -62,6 +62,13 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     /// </remarks>
     public virtual bool AggregatesInStore => false;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// False here, so a planner never sends a join to a connection whose translator writes none (a file, a remote API). A connection whose
+    /// translator writes joins overrides it.
+    /// </remarks>
+    public virtual bool JoinsInStore => false;
+
     /// <summary>
     /// Tests connectivity to the underlying resource.
     /// Derived classes override this to perform actual connectivity testing.
@@ -146,7 +153,8 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
         if (string.Equals(translator.Name, "NotFound", StringComparison.Ordinal))
             return await ExecuteWithoutTranslator<T>(command, container, cancellationToken).ConfigureAwait(false);
 
-        var translationResult = await translator.Translate(command, container, cancellationToken).ConfigureAwait(false);
+        // The container's type states every operation the command performs, or the command is refused here, before anything is built or sent (FDW-6682).
+        var translationResult = await TranslatorOperations.Translate(translator, container, Logger, () => translator.Translate(command, container, cancellationToken)).ConfigureAwait(false);
         if (!translationResult.IsSuccess || translationResult.Value == null)
         {
             return translationResult.Messages.Any()
@@ -341,7 +349,7 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
             return GenericResult<global::System.Collections.Generic.IEnumerable<object>>.Failure(
                 ConnectionLogger.TranslatorNotFound(Logger, command.CommandType));
 
-        var translationResult = await translator.Translate(command, container, cancellationToken).ConfigureAwait(false);
+        var translationResult = await TranslatorOperations.Translate(translator, container, Logger, () => translator.Translate(command, container, cancellationToken)).ConfigureAwait(false);
         if (!translationResult.IsSuccess || translationResult.Value == null)
         {
             return translationResult.Messages.Any()

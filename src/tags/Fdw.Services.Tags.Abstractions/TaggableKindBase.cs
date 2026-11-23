@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Tags.Abstractions;
 
@@ -35,4 +36,8 @@ public abstract class TaggableKindBase : TypeOptionBase<TaggableKindBase>, ITagg
 
     /// <inheritdoc />
     public string WorkspaceResourceKind { get; }
+
+    /// <inheritdoc />
+    /// <remarks>Required of every option: an option that states none does not compile, so none is left unchecked by accident.</remarks>
+    public abstract Citation Cites { get; }
 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Services.Catalog.Endpoints;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Shouldly;
 using Xunit;
 using static Fdw.Services.Tests.Catalog.InMemoryTerms;
@@ -19,10 +20,20 @@ namespace Fdw.Services.Tests.Catalog;
 [Collection(nameof(ServicesTestCollection))]
 public class GlossaryTermSearchTests
 {
+    /// <summary>The configuration gateways a search is held to: the most keys one statement carries is the most matches it reads (FDW-7106).</summary>
+    /// <param name="keysPerStatement">The most keys one statement carries.</param>
+    /// <returns>A strict stand-in that answers only that number.</returns>
+    internal static IConfigurationGatewayProvider Gateways(int keysPerStatement)
+    {
+        var gateways = new Mock<IConfigurationGatewayProvider>(MockBehavior.Strict);
+        gateways.SetupGet(g => g.KeyChunkSize).Returns(keysPerStatement);
+        return gateways.Object;
+    }
+
     private static (GlossaryTermSearch Search, InMemoryTerms Terms) Over(List<Fdw.Services.Quality.Configuration.GlossaryTermDomainConfiguration> terms)
     {
         var held = new InMemoryTerms(terms);
-        return (new GlossaryTermSearch(held.Provider.Object, NullLogger.Instance), held);
+        return (new GlossaryTermSearch(held.Provider.Object, Gateways(1000), NullLogger.Instance), held);
     }
 
     private static List<Fdw.Services.Quality.Configuration.GlossaryTermDomainConfiguration> Glossary(int size)
@@ -126,6 +137,18 @@ public class GlossaryTermSearchTests
 
         found.IsFailure.ShouldBeTrue();
         terms.Queries.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task TheMostMatchesReadAreTheKeysOneStatementCarries()
+    {
+        var held = new InMemoryTerms(Glossary(10));
+        var search = new GlossaryTermSearch(held.Provider.Object, Gateways(40), NullLogger.Instance);
+
+        search.MaxWindow.ShouldBe(40);
+        (await search.Search("amount", 41, TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
+        held.Queries.ShouldBeEmpty();
+        (await search.Search("amount", 40, TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]

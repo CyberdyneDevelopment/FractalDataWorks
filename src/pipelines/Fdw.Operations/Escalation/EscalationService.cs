@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +52,7 @@ public sealed class EscalationService : IEscalationService
     {
         OperationsLog.EscalationFetchingPolicy(_logger, policyId);
 
-        var result = await _provider.Get(policyId, cancellationToken).ConfigureAwait(false);
+        var result = await _provider.Get(policyId, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
             return result.ToNewResult<IEscalationPolicy>();
         if (result.Value is null)
@@ -76,7 +77,7 @@ public sealed class EscalationService : IEscalationService
     {
         OperationsLog.EscalationListingPolicies(_logger);
 
-        var headers = await _provider.Get(cancellationToken).ConfigureAwait(false);
+        var headers = await _provider.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!headers.IsSuccess)
             return GenericResult<IReadOnlyList<IEscalationPolicy>>.Failure(
                 OperationsLog.EscalationPersistFailed(_logger, "Failed to query policies"));
@@ -84,7 +85,7 @@ public sealed class EscalationService : IEscalationService
         var policies = new List<IEscalationPolicy>();
         foreach (var header in (headers.Value ?? []).Where(c => !enabledOnly || c.IsEnabled))
         {
-            var full = await _provider.Get(header.Id, cancellationToken).ConfigureAwait(false);
+            var full = await _provider.Get(header.Id, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
             if (!full.IsSuccess)
                 return full.ToNewResult<IReadOnlyList<IEscalationPolicy>>();
             if (full.Value is not null)
@@ -111,7 +112,7 @@ public sealed class EscalationService : IEscalationService
         Func<IEscalationPolicyImplementationConfiguration, bool> predicate,
         CancellationToken cancellationToken)
     {
-        var headers = await _provider.Get(cancellationToken).ConfigureAwait(false);
+        var headers = await _provider.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!headers.IsSuccess)
             return headers.ToNewResult<IEscalationPolicy?>();
 
@@ -119,7 +120,7 @@ public sealed class EscalationService : IEscalationService
         if (header is null)
             return GenericResult<IEscalationPolicy?>.Success(null);
 
-        var full = await _provider.Get(header.Id, cancellationToken).ConfigureAwait(false);
+        var full = await _provider.Get(header.Id, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!full.IsSuccess)
             return full.ToNewResult<IEscalationPolicy?>();
 
@@ -146,7 +147,7 @@ public sealed class EscalationService : IEscalationService
 
         // Create writes the domain row and the implementation together and hands back neither: the
         // domain row's id is minted inside it. Read it back by the name it was written under.
-        var written = await _provider.Get(policy.Name, cancellationToken).ConfigureAwait(false);
+        var written = await _provider.Get(policy.Name, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!written.IsSuccess)
             return written.ToNewResult<IEscalationPolicy>();
         if (written.Value is null)
@@ -171,7 +172,7 @@ public sealed class EscalationService : IEscalationService
         if (!saveResult.IsSuccess)
             return saveResult.ToNewResult<IEscalationPolicy>();
 
-        var updated = await _provider.Get(policy.Name, cancellationToken).ConfigureAwait(false);
+        var updated = await _provider.Get(policy.Name, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!updated.IsSuccess)
             return updated.ToNewResult<IEscalationPolicy>();
         if (updated.Value is null)

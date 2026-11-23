@@ -150,13 +150,11 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
     /// </summary>
     private static XElement ResolvePayload(object payload)
     {
-        return payload switch
-        {
-            XElement xElement => xElement,
-            string xmlString => XElement.Parse(xmlString),
-            _ => throw new InvalidOperationException(
+        var kind = XPathPayloadKinds.OfValue(payload);
+        return ReferenceEquals(kind, XPathPayloadKinds.NotFound)
+            ? throw new InvalidOperationException(
                 $"XPath mapper expects XElement or string payload, got {payload.GetType().Name}")
-        };
+            : kind.Read(payload);
     }
 
     /// <summary>
@@ -198,14 +196,7 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
         if (result is IEnumerable<object> nodes)
         {
             var first = nodes.FirstOrDefault();
-            return first switch
-            {
-                XElement xElement => xElement.Value,
-                XAttribute xAttribute => xAttribute.Value,
-                XText xText => xText.Value,
-                null => null,
-                _ => first.ToString()
-            };
+            return first is null ? null : XPathNodeKinds.OfValue(first).Text(first);
         }
 
         return result?.ToString();

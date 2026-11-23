@@ -37,6 +37,12 @@ public sealed class PipelineEventClientType : ApiClientTypeBase<IPipelineEventCl
                 var logger = sp.GetService<ILogger<PipelineEventHttpClient>>() ?? NullLogger<PipelineEventHttpClient>.Instance;
                 return new PipelineEventHttpClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
+            // The same HTTP client sends a tick's events in one request (FDW-5249); a host that took the single-event client only keeps working.
+            builder.Services.AddScoped<IPipelineEventBatchClient>(sp =>
+            {
+                var logger = sp.GetService<ILogger<PipelineEventHttpClient>>() ?? NullLogger<PipelineEventHttpClient>.Instance;
+                return new PipelineEventHttpClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
+            });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
  }

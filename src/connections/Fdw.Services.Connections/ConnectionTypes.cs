@@ -11,6 +11,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Commands;
 using Fdw.Services.Connections.Logging;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -113,6 +114,10 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
         // cannot resolve a connection at all (FDW-4459). The Settings service type registers it; the requirement is checked once at Initialize, after every registration.
         Requires<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(ConnectionRegistrationLog.CrossTenantChangePolicyNotRegistered);
 
+        // The connection provider writes each connection's description with the descriptions writer, in the unit of the write (FDW-6208): a host that registered this collection
+        // without the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<Fdw.Services.Descriptions.IDescriptionWriter>(ConnectionRegistrationLog.DescriptionWriterNotRegistered);
+
         var providerService = typeof(IConnectionProvider).ToString();
 
         Registration((builder, loggerFactory) =>
@@ -142,7 +147,9 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, "conn", "Connection"));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, "conn", "Connection",
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>()));
 
             builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
 
@@ -326,6 +333,12 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                 Results.ConnectionsResultCodes.ByName("CredentialsUndetermined"),
                 ResultDetails.Create("name", configuration.Name, "reason", "its connection type is not registered"));
 
+        /// <inheritdoc />
+        protected override IGenericResult<bool> DecideReadsStoredSecret(IConnectionImplementationConfiguration configuration)
+            => GenericResult<bool>.Failure(
+                Results.ConnectionsResultCodes.ByName("CredentialsUndetermined"),
+                ResultDetails.Create("name", configuration.Name, "reason", "its connection type is not registered"));
+
         protected override IGenericResult BindCredentialReferences(
             IConnectionImplementationConfiguration configuration,
             string secretManagerName,
@@ -333,5 +346,15 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             => GenericResult.Failure(
                 Results.ConnectionsResultCodes.ByName("CredentialsUndetermined"),
                 ResultDetails.Create("name", configuration.Name, "reason", "its connection type is not registered"));
+
+        /// <inheritdoc />
+        /// <remarks>A kind nobody registered builds no provider: the same refusal the public method answers first (FDW-6360), stated here so the generator stubs nothing.</remarks>
+        protected override IGenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> BuildImplementationProvider(
+            IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration> factory,
+            ISecretManagerProvider secretManagers,
+            ILoggerFactory? loggerFactory)
+            => GenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>.Failure(
+                Results.ConnectionsResultCodes.ByName("ConnectionKindNotRegistered"),
+                ResultDetails.Create("connectionType", Name));
     }
 }

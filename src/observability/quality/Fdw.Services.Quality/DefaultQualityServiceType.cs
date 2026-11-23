@@ -6,7 +6,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Quality.Configuration;
+using Fdw.Services.Quality.Logging;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,6 +36,10 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             "Default Quality Services",
             "Default quality, catalog, and promotion services")
     {
+        // The quality rule and data set annotation providers describe each thing in the unit of its write (FDW-6208): a host without the Descriptions service type stops at
+        // Initialize with its own message, never given a provider that fails on its first save.
+        Requires<IDescriptionWriter>(QualityDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         Configuration(builder =>
         {
 
@@ -73,7 +80,8 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             {
                 var domain = new DataSetAnnotationConfigurationProvider(
                     sp.GetRequiredService<ILogger<DataSetAnnotationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "DataSetAnnotation");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "DataSetAnnotation",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("DataSetAnnotation", sp.GetRequiredService<IDataSetAnnotationImplementationConfigurationProvider>());
                 return domain;
             });
@@ -85,7 +93,8 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             {
                 var domain = new QualityRuleConfigurationProvider(
                     sp.GetRequiredService<ILogger<QualityRuleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "QualityRule");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "QualityRule",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("QualityRule", sp.GetRequiredService<IQualityRuleImplementationConfigurationProvider>());
                 return domain;
             });

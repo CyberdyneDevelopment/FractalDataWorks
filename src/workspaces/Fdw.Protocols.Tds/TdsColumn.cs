@@ -1,5 +1,6 @@
 using System;
 using Fdw.Protocols.Tds.Types;
+using Fdw.Conventions;
 
 namespace Fdw.Protocols.Tds;
 
@@ -9,6 +10,7 @@ namespace Fdw.Protocols.Tds;
 public sealed class TdsColumn
 {
     /// <summary>The longest column name TDS carries.</summary>
+    [FormatLimit("TDS carries a column name as a sysname, at most 128 characters")]
     public const int MaxNameLength = 128;
 
     /// <summary>Initializes a new instance of the <see cref="TdsColumn"/> class.</summary>

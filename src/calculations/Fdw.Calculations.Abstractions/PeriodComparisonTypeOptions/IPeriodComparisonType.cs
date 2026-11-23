@@ -10,6 +10,11 @@ namespace Fdw.Calculations.Abstractions.PeriodComparisonTypeOptions;
 public interface IPeriodComparisonType : ITypeOption<int, PeriodComparisonTypeBase>
 {
     /// <summary>
+    /// Gets what this comparison compares, in a sentence.
+    /// </summary>
+    string Description { get; }
+
+    /// <summary>
     /// Gets a value indicating whether this is a cumulative comparison (e.g., Year-to-Date).
     /// </summary>
     bool IsCumulative { get; }

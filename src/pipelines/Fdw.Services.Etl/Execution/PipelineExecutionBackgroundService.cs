@@ -48,18 +48,13 @@ namespace Fdw.Services.Etl.Execution;
 /// </remarks>
 public sealed class PipelineExecutionBackgroundService : BackgroundService
 {
-    private const string EtlContainerName = "PipelineExecution";
-    private const string EtlSchemaPath = "etl";
-    private const string CancelledCode = "Cancelled";
-    private const string CancelledReason = "Execution was cancelled";
-    private const string TimedOutCode = "TimedOut";
-    private const string ThresholdStoppedCode = "ThresholdStopped";
 
     private readonly PipelineExecutionQueue _queue;
     private readonly PipelineRunScheduler _scheduler;
     private readonly PipelineRunControl _runControl;
     private readonly IPipelineRunRequestStore _requests;
     private readonly IPipelineRunHolds _holds;
+    private readonly PipelineRequestProcessor _processor;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly PipelineStopGrace _grace;
     private readonly CancellationTokenSource _stopRuns = new();
@@ -75,6 +70,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         PipelineRunControl runControl,
         IPipelineRunRequestStore requests,
         IPipelineRunHolds holds,
+        PipelineRequestProcessor processor,
         IServiceScopeFactory scopeFactory,
         PipelineStopGrace grace,
         ILogger<PipelineExecutionBackgroundService> logger,
@@ -85,6 +81,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         _runControl = runControl;
         _requests = requests;
         _holds = holds;
+        _processor = processor;
         _scopeFactory = scopeFactory;
         _grace = grace;
         _logger = logger ?? NullLogger<PipelineExecutionBackgroundService>.Instance;
@@ -200,16 +197,16 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
+            _processor.EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
 
             var limits = PipelineRunLimits.Read(scope.ServiceProvider.GetRequiredService<IEffectiveSettingsProvider>(), request.TenantId, _logger);
             if (limits.IsFailure || limits.Value is null)
             {
-                return new RunAdmission(null, new Refusal("RunLimitRefused", string.Concat(limits.CurrentMessage)), run);
+                return new RunAdmission(null, new PipelineRunRefusal("RunLimitRefused", string.Concat(limits.CurrentMessage)), run);
             }
 
             var pipeline = await scope.ServiceProvider.GetRequiredService<IPipelineConfigurationProvider>()
-                .Get(request.PipelineId, ConfigurationLevels.WholeAggregate, stoppingToken).ConfigureAwait(false);
+                .Get(request.PipelineId, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, stoppingToken).ConfigureAwait(false);
             var claim = await PipelineRunClaims.For(
                 request,
                 pipeline.IsSuccess ? pipeline.Value : null,
@@ -220,7 +217,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
                 stoppingToken).ConfigureAwait(false);
             if (claim.IsFailure || claim.Value is null)
             {
-                return new RunAdmission(null, new Refusal("PipelineParallelismInvalid", string.Concat(claim.CurrentMessage)), run);
+                return new RunAdmission(null, new PipelineRunRefusal("PipelineParallelismInvalid", string.Concat(claim.CurrentMessage)), run);
             }
 
             var place = _scheduler.Queue(claim.Value, request.HeldUntil);
@@ -249,7 +246,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         PipelineRunSchedulerLog.RunRefused(_logger, request.PipelineName, place.RefusedLimit);
         return new RunAdmission(
             null,
-            new Refusal("RunRefused", $"Pipeline '{request.PipelineName}' already has {place.RefusedLimit} runs active, its limit, and its overflow behavior is Refuse."),
+            new PipelineRunRefusal("RunRefused", $"Pipeline '{request.PipelineName}' already has {place.RefusedLimit} runs active, its limit, and its overflow behavior is Refuse."),
             run);
     }
 
@@ -258,7 +255,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         using var run = admission.Run;
         if (admission.Place is not { } place)
         {
-            await ProcessRequest(request, admission.Refusal, run, runsToken).ConfigureAwait(false);
+            await _processor.ProcessRequest(request, admission.Refusal, run, runsToken).ConfigureAwait(false);
             return;
         }
 
@@ -283,7 +280,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         _scheduler.Hold(place);
         try
         {
-            await ProcessRequest(request, null, run, runsToken).ConfigureAwait(false);
+            await _processor.ProcessRequest(request, null, run, runsToken).ConfigureAwait(false);
         }
         finally
         {
@@ -291,9 +288,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
     }
 
-    private sealed record RunAdmission(PipelineRunPlace? Place, Refusal? Refusal, PipelineRunHandle Run);
-
-    private sealed record Refusal(string Reason, string Message);
+    private sealed record RunAdmission(PipelineRunPlace? Place, PipelineRunRefusal? Refusal, PipelineRunHandle Run);
 
     // A run cancelled before it got its place: closes it the way a cancelled run is closed.
     private async Task CancelWaiting(PipelineExecutionRequest request, CancellationToken stoppingToken)
@@ -301,617 +296,15 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
-            var orgId = await ResolveOwningOrg(scope.ServiceProvider, request, stoppingToken).ConfigureAwait(false);
-            await HandleCancellation(
+            _processor.EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
+            var orgId = await _processor.ResolveOwningOrg(scope.ServiceProvider, request, stoppingToken).ConfigureAwait(false);
+            await PipelineRequestProcessor.HandleCancellation(
                 scope.ServiceProvider.GetRequiredService<IExecutionTracker>(),
                 scope.ServiceProvider.GetRequiredService<IDataGatewayProvider>(),
                 scope.ServiceProvider.GetRequiredService<IPipelineStatusBroadcaster>(),
-                request, orgId, CancelledCode, CancelledReason, _completionSignaler, _logger).ConfigureAwait(false);
+                request, orgId, PipelineRequestProcessor.CancelledCode, PipelineRequestProcessor.CancelledReason, _completionSignaler, _logger).ConfigureAwait(false);
             _ = await _requests.Forget(request.ExecutionId, stoppingToken).ConfigureAwait(false);
         }
     }
 
-    private async Task ProcessRequest(PipelineExecutionRequest request, Refusal? refusal, PipelineRunHandle run, CancellationToken stoppingToken)
-    {
-        EtlLog.ExecutionDequeued(_logger, request.PipelineName, request.ExecutionId);
-
-        var scope = _scopeFactory.CreateAsyncScope();
-        await using (scope.ConfigureAwait(false))
-        {
-            EtlLog.ExecutionScopeCreated(_logger, request.ExecutionId);
-
-            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
-
-            var executionTracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
-            var pipelineProvider = scope.ServiceProvider
-                .GetRequiredService<IEtlPipelineProvider>();
-            var dataGateways = scope.ServiceProvider.GetRequiredService<IDataGatewayProvider>();
-            var broadcaster = scope.ServiceProvider.GetRequiredService<IPipelineStatusBroadcaster>();
-
-            var orgId = await ResolveOwningOrg(scope.ServiceProvider, request, stoppingToken).ConfigureAwait(false);
-
-            var stoppedWithHost = false;
-            try
-            {
-                await TransitionToRunning(executionTracker, dataGateways, broadcaster, request, orgId, _logger, stoppingToken).ConfigureAwait(false);
-                if (refusal is not null)
-                {
-                    await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                        request.ExecutionId, request.PipelineName, orgId,
-                        false, refusal.Reason, refusal.Message, 0, 0, 0, 0).ConfigureAwait(false);
-                    return;
-                }
-
-                // Why here and not at the top (FDW-3805): the limit counts from the moment the run starts running, and a refused run never does.
-                using var timeLimit = PipelineRunTimeLimit.Arm(run, request, _logger);
-                await RunPipeline(scope.ServiceProvider, executionTracker, pipelineProvider, dataGateways, broadcaster, request, orgId, run, stoppingToken).ConfigureAwait(false);
-            }
-            // Why a person's cancel (or a timeout) wins over the host's stop (FDW-3880): it was asked for first, so the run ends Cancelled with the records the flow closed for it, and its
-            // request is forgotten; it is not left Interrupted to be started again.
-            catch (OperationCanceledException ex) when (run.IsCancelled)
-            {
-                PipelineRunControlLog.RunCancelledObserved(_logger, ex, request.ExecutionId, request.PipelineName);
-                await HandleCancellation(
-                    executionTracker, dataGateways, broadcaster, request, orgId,
-                    CodeOfStop(run), ReasonOfStop(run, request),
-                    _completionSignaler, _logger).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                // Why not cancelled (FDW-3236): Cancelled means a person cancelled the run. A run the host's own stop cut off, after the time it was given
-                // (FDW-3786), is marked Interrupted with the records under it, and keeps its stored request, so the next start finds it and applies the
-                // retry or leave rule (FDW-3787). A crash leaves the run Running with the same request, and the next start treats it the same way.
-                stoppedWithHost = true;
-                PipelineRunRecoveryLog.RunStoppedWithHost(_logger, request.ExecutionId, request.PipelineName);
-                await InterruptRun(executionTracker, broadcaster, request, orgId).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                var unhandled = EtlLog.ExecutionExceptionInBackground(_logger, ex, request.PipelineName, request.ExecutionId);
-
-                // Why recorded too (FDW-3862): an unhandled exception is a failure of the Internal category (the logged message's own code), which a threshold counts and does not treat as transient.
-                await RecordFailureKind(executionTracker, request, GenericResult.Failure(unhandled)).ConfigureAwait(false);
-                await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                    request.ExecutionId, request.PipelineName, orgId,
-                    false, "Exception", ex.Message, 0, 0, 0, 0).ConfigureAwait(false);
-            }
-            finally
-            {
-                // Why at the end of the run and not at its start (FDW-3236): a run that ends keeps nothing, but a run that is cut off must still have its request.
-                // A request that cannot be removed is logged by the store, and is removed when the host next reads the stored requests, since its run has ended.
-                if (!stoppedWithHost)
-                {
-                    _ = await _requests.Forget(request.ExecutionId, CancellationToken.None).ConfigureAwait(false);
-
-                    // Why after the run has ended (FDW-3864): the rule counts the runs including this one. A test run writes no history of its own to count, so it is not judged.
-                    if (request.TestRowsPerSource is null)
-                    {
-                        _ = await scope.ServiceProvider.GetRequiredService<PipelineFailureReporter>().Report(request.PipelineName, request.ExecutionId, request.TenantId, CancellationToken.None).ConfigureAwait(false);
-                    }
-                }
-            }
-        }
-    }
-
-    // Why SYSTEM here: this is the run's BOOKKEEPING context -- execution records, metrics, status and
-    // the configuration reads that build the pipeline. The pipeline's own work never runs under it: it
-    // runs as its tenant run, the pipeline's tenant plus the roles the tenant recorded for it (FDW-1087),
-    // which RunPipeline establishes around Execute.
-    //
-    // Why the run's tenant rides on the system context: it never narrows what the run sees; it
-    // decides the tenant the rows the run writes default to, through every tenant column's
-    // DEFAULT. Without it a tenant's execution records and outputs would land in the default
-    // tenant, readable by every tenant. A request with no tenant is work that belongs to none, and
-    // its rows land in the default tenant -- the column default, not a choice made here.
-    internal void EstablishSystemAuthenticationContext(IServiceProvider services, PipelineExecutionRequest request)
-    {
-        var accessor = services.GetService<IAuthenticationContextAccessor>();
-        if (accessor is null || accessor.Current is not null)
-        {
-            return;
-        }
-
-        accessor.Current = request.TenantId is { } tenantId
-            ? new SystemAuthenticationContext(tenantId)
-            : new SystemAuthenticationContext();
-        EtlLog.ExecutionElevatedToSystemContext(_logger, request.ExecutionId, request.TenantId);
-    }
-
-    // The organization a run's live events are addressed by (FDW-4276). A read that fails is logged and the run's events go to no firehose group, as for a pipeline that
-    // states no organization; it is no longer the same answer silently.
-    private async Task<Guid?> ResolveOwningOrg(
-        IServiceProvider services,
-        PipelineExecutionRequest request,
-        CancellationToken ct)
-    {
-        var owner = await OwningOrg.Of(services, request.PipelineId, ct).ConfigureAwait(false);
-        if (owner.IsFailure)
-        {
-            EtlLog.OwningOrgNotRead(_logger, request.PipelineId, request.ExecutionId, owner.CurrentMessage);
-            return null;
-        }
-
-        return owner.Value;
-    }
-
-    private static async Task TransitionToRunning(
-        IExecutionTracker executionTracker,
-        IDataGatewayProvider dataGateways,
-        IPipelineStatusBroadcaster broadcaster,
-        PipelineExecutionRequest request,
-        Guid? orgId,
-        ILogger logger,
-        CancellationToken stoppingToken)
-    {
-        var toTriggered = await executionTracker.TransitionState(
-            request.ExecutionId,
-            ExecutionStateTypes.Triggered,
-            "Pipeline execution triggered",
-            actor: "EtlServer",
-            stoppingToken).ConfigureAwait(false);
-
-        if (toTriggered.IsSuccess)
-        {
-            var toInitialized = await executionTracker.TransitionState(
-                request.ExecutionId,
-                ExecutionStateTypes.Initialized,
-                "Pipeline execution initializing",
-                actor: "EtlServer",
-                stoppingToken).ConfigureAwait(false);
-
-            if (toInitialized.IsSuccess)
-            {
-                var toRunning = await executionTracker.TransitionState(
-                    request.ExecutionId,
-                    ExecutionStateTypes.Running,
-                    "Pipeline execution started",
-                    actor: "EtlServer",
-                    stoppingToken).ConfigureAwait(false);
-                if (toRunning.IsSuccess)
-                {
-                    await StampStarted(dataGateways, logger, request.ExecutionId, stoppingToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    EtlLog.StateTransitionStepFailed(logger, request.ExecutionId, "Running", toRunning.CurrentMessage);
-                }
-            }
-            else
-            {
-                EtlLog.StateTransitionStepFailed(logger, request.ExecutionId, "Initialized", toInitialized.CurrentMessage);
-            }
-        }
-        else
-        {
-            EtlLog.StateTransitionStepFailed(logger, request.ExecutionId, "Triggered", toTriggered.CurrentMessage);
-        }
-
-        await broadcaster.BroadcastStatusChange(
-            request.PipelineName, request.ExecutionId, "Running", orgId: orgId).ConfigureAwait(false);
-    }
-
-    // Why here and not at enqueue: the metrics row is written when the run is queued, and a queued run
-    // has not started. StartedAt is the moment the run reached Running; the row's CreateDate is metadata.
-    private static async Task StampStarted(
-        IDataGatewayProvider dataGateways,
-        ILogger logger,
-        Guid executionId,
-        CancellationToken stoppingToken)
-    {
-        // Reported the same way a failed update is, because the metrics row is non-fatal enrichment.
-        var etlDataStore = EtlPipelineTypes.OperationalConnection;
-        if (string.IsNullOrWhiteSpace(etlDataStore))
-        {
-            EtlLog.MetricsUpdateFailed(
-                logger,
-                executionId,
-                $"{nameof(EtlPipelineTypes)}.{nameof(EtlPipelineTypes.OperationalConnection)} is not set; the host must name the operational store.");
-            return;
-        }
-
-        var updateCommand = Update.In<ExecutionStartRecord>(EtlContainerName)
-            .DataStore(etlDataStore)
-            .Path(EtlSchemaPath)
-            .Where("Id", executionId)
-            .Value(new ExecutionStartRecord
-            {
-                Status = ExecutionStateTypes.Running.Name,
-                StartedAt = DateTimeOffset.UtcNow
-            });
-
-        var updateResult = await dataGateways.ByName(DataGatewayNames.Main).Execute<int>(updateCommand, stoppingToken).ConfigureAwait(false);
-        if (!updateResult.IsSuccess)
-        {
-            EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);
-        }
-    }
-
-    [ConventionOverride(MaxMethodLines = 95, MaxCyclomaticComplexity = 15)]  // One sequence of steps that each end the run with its reason: identity, pipeline, watermark read, execute, watermark write.
-    private async Task RunPipeline(
-        IServiceProvider services,
-        IExecutionTracker executionTracker,
-        IEtlPipelineProvider pipelineProvider,
-        IDataGatewayProvider dataGateways,
-        IPipelineStatusBroadcaster broadcaster,
-        PipelineExecutionRequest request,
-        Guid? orgId,
-        PipelineRunHandle run,
-        CancellationToken stoppingToken)
-    {
-        var runAs = await ResolveTenantRun(services, request, _logger, stoppingToken).ConfigureAwait(false);
-        if (!runAs.IsSuccess || runAs.Value is null)
-        {
-            await RecordFailureKind(executionTracker, request, runAs).ConfigureAwait(false);
-            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                request.ExecutionId, request.PipelineName, orgId,
-                false, "RunIdentityRefused", runAs.CurrentMessage, 0, 0, 0, 0).ConfigureAwait(false);
-            return;
-        }
-
-        // By id: the pipeline the trigger resolved in its caller's view. A name is unique only per tenant.
-        var pipelineResult = await pipelineProvider.Get(request.PipelineId, stoppingToken).ConfigureAwait(false);
-        if (!pipelineResult.IsSuccess || pipelineResult.Value is null)
-        {
-            var errorMsg = pipelineResult.NoValueReason().Message;
-            EtlLog.ExecutionFailedInBackground(_logger, request.PipelineName, request.ExecutionId, errorMsg);
-            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                request.ExecutionId, request.PipelineName, orgId,
-                false, "PipelineNotFound", errorMsg, 0, 0, 0, 0).ConfigureAwait(false);
-            return;
-        }
-
-        using var pipeline = pipelineResult.Value;
-
-        // Why the start instant is taken here: it is RunStarted for the run's steps and, after a successful run, the watermark the next run
-        // reads as LastSuccessfulRun, so the next run's window begins where this one's began.
-        var startedAt = DateTimeOffset.UtcNow;
-        var watermark = await ReadWatermark(dataGateways, request, stoppingToken).ConfigureAwait(false);
-        if (watermark.IsFailure)
-        {
-            await RecordFailureKind(executionTracker, request, watermark).ConfigureAwait(false);
-            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                request.ExecutionId, request.PipelineName, orgId,
-                false, "WatermarkReadFailed", watermark.CurrentMessage, 0, 0, 0, 0).ConfigureAwait(false);
-            return;
-        }
-
-        var options = OptionsOf(request, startedAt, watermark.Value?.LastSuccessfulRun) with { PauseGate = run.Gate };
-        var executeResult = await ExecuteAs(services, runAs.Value, pipeline, options, run.Token).ConfigureAwait(false);
-
-        // A run a person cancelled ends as cancelled, not as the failure its runner reports for a stopped run (FDW-2950). A run the host's own stop cut off is
-        // not a failure either: it is passed up as a stop, so it stays Running for the next start to find (FDW-3236).
-        if (executeResult.IsFailure && (run.IsCancelled || stoppingToken.IsCancellationRequested))
-        {
-            throw new OperationCanceledException(run.IsCancelled ? run.Token : stoppingToken);
-        }
-
-        if (executeResult.IsSuccess)
-        {
-            var metrics = executeResult.Value!;
-            var recorded = await RecordWatermark(dataGateways, request, watermark.Value, startedAt, stoppingToken).ConfigureAwait(false);
-            if (recorded.IsFailure)
-            {
-                await RecordFailureKind(executionTracker, request, recorded).ConfigureAwait(false);
-                await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                    request.ExecutionId, request.PipelineName, orgId,
-                    false, "WatermarkWriteFailed", recorded.CurrentMessage,
-                    metrics.RecordsExtracted, metrics.RecordsLoaded, metrics.RecordsFailed,
-                    (long)metrics.TotalDuration.TotalMilliseconds).ConfigureAwait(false);
-                return;
-            }
-
-            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                request.ExecutionId, request.PipelineName, orgId,
-                true, "Success", null,
-                metrics.RecordsExtracted,
-                metrics.RecordsLoaded,
-                metrics.RecordsFailed,
-                (long)metrics.TotalDuration.TotalMilliseconds).ConfigureAwait(false);
-        }
-        else
-        {
-            var errorMsg = executeResult.FailureReason().Message;
-            EtlLog.ExecutionFailedInBackground(_logger, request.PipelineName, request.ExecutionId, errorMsg);
-            await RecordFailureKind(executionTracker, request, executeResult).ConfigureAwait(false);
-
-            // Metrics may be partially populated even on failure; treat as 0 when absent.
-            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
-                request.ExecutionId, request.PipelineName, orgId,
-                false, "ExecutionFailed", errorMsg, 0, 0, 0, 0).ConfigureAwait(false);
-        }
-    }
-
-    // The pipeline's work acts as its tenant run; everything around it stays bookkeeping, and the
-    // bookkeeping context comes back whatever the work does.
-    private static async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteAs(
-        IServiceProvider services,
-        TenantRunAuthenticationContext runAs,
-        IEtlPipeline pipeline,
-        PipelineExecutionOptions options,
-        CancellationToken stoppingToken)
-    {
-        var accessor = services.GetRequiredService<IAuthenticationContextAccessor>();
-        var bookkeeping = accessor.Current;
-        accessor.Current = runAs;
-        try
-        {
-            // The run carries the parameters the trigger or schedule supplied and the tenant it acts for: the watermark is
-            // kept per pipeline per tenant (FDW-1109).
-            // The run is the execution it was queued under, and a pipeline it starts acts with its roles (FDW-1381).
-            return await pipeline.Execute(options, stoppingToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            accessor.Current = bookkeeping;
-        }
-    }
-
-    // The options a queued run executes with. A request that states a row cap per source is a test run: sources stop at the cap and no
-    // destination is written (FDW-1676); a request that states none is a real run.
-    internal static PipelineExecutionOptions OptionsOf(PipelineExecutionRequest request) => OptionsOf(request, null, null);
-
-    // The same, for a run the host started: it states when the run started (RunStarted) and, when the pipeline has a successful run on record,
-    // that run's start time as the LastSuccessfulRun parameter (FDW-1982). A LastSuccessfulRun the caller supplied is kept: it overrides the stored one.
-    internal static PipelineExecutionOptions OptionsOf(PipelineExecutionRequest request, DateTimeOffset? startedAt, DateTimeOffset? lastSuccessfulRun)
-    {
-        var parameters = request.Parameters;
-        if (lastSuccessfulRun is { } last && (parameters is null || !parameters.Keys.Any(key => string.Equals(key, RunFacts.LastSuccessfulRun, StringComparison.OrdinalIgnoreCase))))
-        {
-            var merged = parameters is null
-                ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, object?>(parameters, StringComparer.OrdinalIgnoreCase);
-            merged[RunFacts.LastSuccessfulRun] = last;
-            parameters = merged;
-        }
-
-        var options = PipelineExecutionOptions.Production with
-        {
-            Parameters = parameters,
-            RunStarted = startedAt,
-            TenantId = request.TenantId,
-            ExecutionId = request.ExecutionId,
-            RunRoles = request.RunRoles
-        };
-        return request.TestRowsPerSource is { } rows
-            ? options with { IsTestMode = true, MaxRowsPerSource = rows, SkipDestinationWrites = true }
-            : options;
-    }
-
-    // The pipeline's watermark row for the run's tenant, read once as the run starts. ResolveTenantRun has already refused a run with no tenant, so
-    // a request without one is refused here too and never reads a row for a made-up tenant.
-    private async Task<IGenericResult<EtlPipelineWatermarkRecord?>> ReadWatermark(
-        IDataGatewayProvider dataGateways, PipelineExecutionRequest request, CancellationToken stoppingToken)
-    {
-        if (request.TenantId is not { } tenantId)
-        {
-            return GenericResult<EtlPipelineWatermarkRecord?>.Failure(
-                EtlLog.ExecutionRefusedNoTenant(_logger, request.ExecutionId, request.PipelineName));
-        }
-
-        return await PipelineWatermarks.Read(
-            dataGateways.ByName(DataGatewayNames.Main), EtlPipelineTypes.OperationalConnection, request.PipelineId, tenantId, request.PipelineName, _logger, stoppingToken)
-            .ConfigureAwait(false);
-    }
-
-    // A real run that succeeded moves the watermark to when it started. A test run writes nothing, so it never moves it.
-    private async Task<IGenericResult> RecordWatermark(
-        IDataGatewayProvider dataGateways, PipelineExecutionRequest request, EtlPipelineWatermarkRecord? existing, DateTimeOffset startedAt,
-        CancellationToken stoppingToken)
-    {
-        if (request.TestRowsPerSource is not null)
-        {
-            return GenericResult.Success();
-        }
-
-        if (request.TenantId is not { } tenantId)
-        {
-            return GenericResult.Failure(EtlLog.ExecutionRefusedNoTenant(_logger, request.ExecutionId, request.PipelineName));
-        }
-
-        return await PipelineWatermarks.Record(
-            dataGateways.ByName(DataGatewayNames.Main), EtlPipelineTypes.OperationalConnection, existing, request.PipelineId, tenantId, startedAt, request.ExecutionId,
-            request.PipelineName, _logger, stoppingToken).ConfigureAwait(false);
-    }
-
-    // The identity a run's work acts as (FDW-1087): the pipeline's tenant and the roles that tenant recorded
-    // for the pipeline, resolved now so a role change applies to the next run. A run with no tenant, a
-    // pipeline with no roles in it, or a recorded role that no longer exists is refused -- never run as
-    // the system, never as someone else.
-    internal static async Task<IGenericResult<TenantRunAuthenticationContext>> ResolveTenantRun(
-        IServiceProvider services,
-        PipelineExecutionRequest request,
-        ILogger logger,
-        CancellationToken stoppingToken)
-    {
-        if (request.TenantId is not { } tenantId)
-        {
-            return GenericResult<TenantRunAuthenticationContext>.Failure(
-                EtlLog.ExecutionRefusedNoTenant(logger, request.ExecutionId, request.PipelineName));
-        }
-
-        // The roles are the run's own (FDW-1161): expanded now, so a role changed since the run was accepted applies to this run,
-        // and a role that no longer exists refuses it.
-        var granted = await services.GetRequiredService<IRoleGrants>()
-            .Get(request.RunRoles, stoppingToken).ConfigureAwait(false);
-        if (!granted.IsSuccess || granted.Value is null)
-        {
-            return GenericResult<TenantRunAuthenticationContext>.Failure(
-                EtlLog.ExecutionRefusedRunRoles(logger, request.ExecutionId, request.PipelineName, granted.CurrentMessage));
-        }
-
-        EtlLog.ExecutionActingAsTenantRun(logger, request.ExecutionId, request.PipelineId, tenantId,
-            string.Join(", ", request.RunRoles));
-        return GenericResult<TenantRunAuthenticationContext>.Success(new TenantRunAuthenticationContext(
-            request.PipelineId, request.PipelineName, tenantId, request.RunRoles, [.. granted.Value]));
-    }
-
-    // Why the kind of failure is recorded on the run (FDW-3862): a threshold counts the failures that are not transient, and reads them from the run, not from its text. A record that
-    // cannot be written is logged and the run ends all the same.
-    private async Task RecordFailureKind(IExecutionTracker executionTracker, PipelineExecutionRequest request, IGenericResult failure)
-    {
-        var kind = RunFailureClassification.Of(failure);
-        var recorded = await executionTracker
-            .RecordEvent(request.ExecutionId, RunFailureClassification.Event, kind.Describe(), kind.ToEventData(), cancellationToken: CancellationToken.None)
-            .ConfigureAwait(false);
-        if (recorded.IsFailure)
-        {
-            PipelineRunRecoveryLog.FailureKindNotRecorded(_logger, request.ExecutionId, recorded.CurrentMessage);
-        }
-    }
-
-    // Ends a run the host stopped: the run and every open record under it are marked Interrupted, and anyone watching it is told.
-    private async Task InterruptRun(IExecutionTracker executionTracker, IPipelineStatusBroadcaster broadcaster, PipelineExecutionRequest request, Guid? orgId)
-    {
-        const string message = "The host stopped while the run was running";
-        PipelineRunRecoveryLog.RunInterruptedByStop(_logger, request.ExecutionId, request.PipelineName, SettingDefinitions.MaxPipelineRunRestarts);
-        var closed = await new OpenRunRecords(executionTracker, _logger)
-            .Close(request.ExecutionId, ExecutionStateTypes.Interrupted, "ServerStopped", message, CancellationToken.None).ConfigureAwait(false);
-        if (closed.IsFailure)
-        {
-            PipelineRunRecoveryLog.RecordNotClosed(_logger, request.ExecutionId, closed.CurrentMessage);
-        }
-
-        await broadcaster.BroadcastStatusChange(request.PipelineName, request.ExecutionId, "Interrupted", message, orgId).ConfigureAwait(false);
-        _completionSignaler?.Signal(request.ExecutionId, false, "Interrupted");
-    }
-
-    // Why a stopped run is told apart in this order (FDW-3865): a time limit that passed is the run's own, a threshold that fired is a stated rule, and anything else is
-    // a person's cancel. A threshold stop is recorded only when nothing had ended the run before it (PipelineRunHandle.StopForThreshold).
-    private static string CodeOfStop(PipelineRunHandle run) => run.IsTimedOut ? TimedOutCode : run.IsThresholdStopped ? ThresholdStoppedCode : CancelledCode;
-
-    private static string ReasonOfStop(PipelineRunHandle run, PipelineExecutionRequest request) =>
-        run.IsTimedOut ? PipelineRunTimeLimit.Reason(request) : run.ThresholdReason is { } reason ? reason : CancelledReason;
-
-    // Ends a run that was cancelled (or timed out, FDW-3784): the run and every open record under it are closed with the state the stop names, with the code and a message
-    // that says how far it got, the run's row in the metrics table is closed the same way, and anyone watching it is told. A run that passed its time limit ends TimedOut
-    // (FDW-4278) and any other stop ends Cancelled; a timed-out run is not restarted, since its request is not kept for a run in a state that has ended. The figures are read before the closing,
-    // from the events its stages wrote when they finished; a run whose records cannot be read is closed with the reason alone and the failure is logged.
-    private static async Task HandleCancellation(
-        IExecutionTracker executionTracker,
-        IDataGatewayProvider dataGateways,
-        IPipelineStatusBroadcaster broadcaster,
-        PipelineExecutionRequest request,
-        Guid? orgId,
-        string resultCode,
-        string reason,
-        IExecutionCompletionSignaler? completionSignaler,
-        ILogger logger)
-    {
-        var tracking = await RunTrackingReader.Read(executionTracker, request.ExecutionId, CancellationToken.None).ConfigureAwait(false);
-        if (tracking.IsFailure)
-        {
-            PipelineRunRecoveryLog.CancelledRunNotRead(logger, request.ExecutionId, tracking.CurrentMessage);
-        }
-
-        // A run whose records cannot be read is closed with the reason alone (logged above); its records are read only when the read succeeded.
-        var read = tracking.IsSuccess ? tracking.Value : null;
-        var message = read is { } records ? CancelledRunMessage.Of(reason, records) : reason;
-        // Typed as the state contract: the two options are different classes, so a conditional between them has no common type.
-        IExecutionStateType endState = string.Equals(resultCode, TimedOutCode, StringComparison.Ordinal) ? ExecutionStateTypes.TimedOut : ExecutionStateTypes.Cancelled;
-        var closed = await new OpenRunRecords(executionTracker, logger)
-            .Close(request.ExecutionId, endState, resultCode, message, CancellationToken.None).ConfigureAwait(false);
-        if (closed.IsFailure)
-        {
-            EtlLog.CancellationCompleteFailed(logger, request.ExecutionId, closed.CurrentMessage);
-        }
-
-        _ = await WriteMetricsRow(dataGateways, logger, request.ExecutionId, new ExecutionUpdateRecord
-        {
-            Status = endState.Name,
-            CompletedAt = DateTimeOffset.UtcNow,
-            DurationMs = read?.RunTimeMs,
-            ErrorMessage = message,
-        }).ConfigureAwait(false);
-
-        await broadcaster.BroadcastStatusChange(request.PipelineName, request.ExecutionId, endState.Name, message, orgId).ConfigureAwait(false);
-
-        completionSignaler?.Signal(request.ExecutionId, false, resultCode);
-    }
-
-    // Writes the run's row in the metrics table. False when the host names no operational store, which is logged: there is then no row to write.
-    private static async Task<bool> WriteMetricsRow(IDataGatewayProvider dataGateways, ILogger logger, Guid executionId, ExecutionUpdateRecord updateRecord)
-    {
-        // This method reports through EtlLog, so an unset connection is reported the same way a failed update is rather than being passed on as a null store name.
-        var etlDataStore = EtlPipelineTypes.OperationalConnection;
-        if (string.IsNullOrWhiteSpace(etlDataStore))
-        {
-            EtlLog.MetricsUpdateFailed(
-                logger,
-                executionId,
-                $"{nameof(EtlPipelineTypes)}.{nameof(EtlPipelineTypes.OperationalConnection)} is not set; the host must name the operational store.");
-            return false;
-        }
-
-        var updateCommand = Update.In<ExecutionUpdateRecord>(EtlContainerName)
-            .DataStore(etlDataStore)
-            .Path(EtlSchemaPath)
-            .Where("Id", executionId)
-            .Value(updateRecord);
-
-        var updateResult = await dataGateways.ByName(DataGatewayNames.Main).Execute<int>(updateCommand, CancellationToken.None).ConfigureAwait(false);
-        if (!updateResult.IsSuccess)
-        {
-            EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);
-        }
-
-        return true;
-    }
-
-    private static async Task CompleteWithMetrics(
-        IDataGatewayProvider dataGateways,
-        IExecutionTracker executionTracker,
-        IPipelineStatusBroadcaster broadcaster,
-        IExecutionCompletionSignaler? completionSignaler,
-        ILogger logger,
-        Guid executionId,
-        string pipelineName,
-        Guid? orgId,
-        bool success,
-        string resultCode,
-        string? resultMessage,
-        long recordsExtracted,
-        long recordsLoaded,
-        long recordsFailed,
-        long durationMs)
-    {
-        var updateRecord = new ExecutionUpdateRecord
-        {
-            Status = success ? "Succeeded" : "Failed",
-            CompletedAt = DateTimeOffset.UtcNow,
-            RecordsExtracted = recordsExtracted,
-            RecordsLoaded = recordsLoaded,
-            RecordsFailed = recordsFailed,
-            DurationMs = durationMs,
-            ErrorMessage = resultMessage
-        };
-
-        if (!await WriteMetricsRow(dataGateways, logger, executionId, updateRecord).ConfigureAwait(false))
-        {
-            return;
-        }
-
-        var completeResult = await executionTracker.Complete(
-            executionId, success, resultCode, resultMessage,
-            CancellationToken.None).ConfigureAwait(false);
-        if (!completeResult.IsSuccess)
-        {
-            EtlLog.CompletionRecordFailed(logger, executionId, completeResult.CurrentMessage);
-        }
-
-        await broadcaster.BroadcastCompletion(new PipelineExecutionComplete
-        {
-            PipelineName = pipelineName,
-            ExecutionId = executionId,
-            Success = success,
-            Status = success ? "Succeeded" : "Failed",
-            RecordsExtracted = (int)recordsExtracted,
-            RecordsLoaded = (int)recordsLoaded,
-            RecordsFailed = (int)recordsFailed,
-            DurationMs = durationMs,
-            ErrorMessage = resultMessage
-        }, orgId).ConfigureAwait(false);
-
-        completionSignaler?.Signal(executionId, success, resultMessage);
-    }
 }

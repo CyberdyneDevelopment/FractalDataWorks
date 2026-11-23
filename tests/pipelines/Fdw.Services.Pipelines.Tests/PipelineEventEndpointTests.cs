@@ -214,9 +214,10 @@ public sealed class PipelineEventEndpointTests
 
     [Fact]
     [Trait("Priority", "P1")]
-    public void TheCollectionDeclaresExactlyTheEightKindsTheBroadcasterCanSend()
+    public void TheCollectionDeclaresExactlyTheNineKindsTheBroadcasterCanSend()
     {
         PipelineEventKinds.All().Select(k => k.Name).OrderBy(n => n, StringComparer.Ordinal).ShouldBe(
-            ["Completed", "ComponentsChanged", "EdgeFlow", "Paused", "Progress", "Resumed", "StatusChanged", "TaskStatus"]);
+            // Nine since FDW-6140: RunPiece carries a piece of a run to the person it is for.
+            ["Completed", "ComponentsChanged", "EdgeFlow", "Paused", "Progress", "Resumed", "RunPiece", "StatusChanged", "TaskStatus"]);
     }
 }

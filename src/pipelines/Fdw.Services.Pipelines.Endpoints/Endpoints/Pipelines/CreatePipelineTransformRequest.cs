@@ -92,13 +92,8 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
     // Why one list for three transforms: an Aggregate groups by it, and LatestBy and Distinct keep one row per its
     // values -- the key columns of each travel in the spec's GroupByFields (FDW-1109).
     // A request carries one of the three; the list is that one's, and none for a transform that carries none of them.
-    IReadOnlyList<string> ITransformOperationSpec.GroupByFields => this switch
-    {
-        { LatestBy: { } latest } => [.. latest.KeyColumns],
-        { Distinct: { } distinct } => [.. distinct.KeyColumns],
-        { Aggregation: { } aggregation } => aggregation.GroupByFields,
-        _ => [],
-    };
+    IReadOnlyList<string> ITransformOperationSpec.GroupByFields =>
+        [.. new IEnumerable<string>?[] { LatestBy?.KeyColumns, Distinct?.KeyColumns, Aggregation?.GroupByFields }.FirstOrDefault(columns => columns is not null) ?? []];
 
     IReadOnlyList<ITransformCheckSpec> ITransformCheckingSpec.Checks => Checks is null ? [] : [.. Checks.Select(check => new TransformCheckSpec(check.Name, check.Expression))];
 

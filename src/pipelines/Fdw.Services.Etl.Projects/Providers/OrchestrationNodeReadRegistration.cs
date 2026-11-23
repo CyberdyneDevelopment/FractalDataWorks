@@ -1,3 +1,5 @@
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Memberships;
@@ -29,7 +31,8 @@ public static class OrchestrationNodeReadRegistration
         {
             var domain = new OrchestrationNodeConfigurationProvider(
                 sp.GetRequiredService<ILogger<OrchestrationNodeConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "OrchestrationNode");
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "OrchestrationNode",
+                sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
             domain.Register("OrchestrationNode", sp.GetRequiredService<IOrchestrationNodeImplementationConfigurationProvider>());
             return domain;
         });

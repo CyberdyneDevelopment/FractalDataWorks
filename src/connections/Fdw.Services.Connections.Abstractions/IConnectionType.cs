@@ -2,13 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Abstractions;
 using Fdw.Configuration;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Schema.Ddl;
 using Fdw.ServiceTypes;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions.Authentication;
+using Fdw.Services.SecretManagers.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.Abstractions;
 
@@ -82,6 +86,21 @@ public interface IConnectionType : IServiceType
     IGenericResult<IDdlGenerator> DdlGenerator();
 
     /// <summary>
+    /// Builds the provider of this kind that turns a connection's configuration into a connection, from the kind's factory and the secret
+    /// managers it may read secrets from (FDW-6360).
+    /// </summary>
+    /// <param name="factory">The kind's factory, as it was resolved from the container.</param>
+    /// <param name="secretManagers">The provider the kind's provider reads a connection's secret from. At start-up this is the one built from the schema's declared managers, never the container's.</param>
+    /// <param name="loggerFactory">Where the provider's refusals are logged; nothing is logged when it is absent.</param>
+    /// <returns>The provider, or the coded failure: <c>ConnectionKindNotRegistered</c> for the empty kind the collection answers for an unknown name, <c>ConnectionFactoryOfAnotherKind</c> for a factory that is not this kind's.</returns>
+    /// <remarks>
+    /// One path for every host: the gateways a host opens before any configuration store exists and the connections it reads from that store are built by the same
+    /// provider of the same kind. No kind has a default; each states how its provider is built.
+    /// </remarks>
+    IGenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> ImplementationProvider(
+        IConnectionFactory factory, ISecretManagerProvider secretManagers, ILoggerFactory? loggerFactory);
+
+    /// <summary>
     /// Gets the names of the data store types a data store over this kind of connection may have, limited to
     /// the data store types this deployment registered. The first is the default when a create request names
     /// none. Empty when none of the kind's data store types is registered.
@@ -140,6 +159,22 @@ public interface IConnectionType : IServiceType
     /// Names only, never values: a credential is written through the connection and never read back (FDW-1086).
     /// </remarks>
     IGenericResult<ConnectionCredentialSlots> CredentialSlots(IConnectionImplementationConfiguration configuration);
+
+    /// <summary>
+    /// Says whether a connection of this kind, configured as <paramref name="configuration"/>, reads a stored secret (FDW-6387, FDW-6331).
+    /// </summary>
+    /// <param name="configuration">The connection's configuration.</param>
+    /// <returns>
+    /// <see langword="true"/> when the authentication method the connection names has a secret credential; <see langword="false"/> when
+    /// the connection names no authentication method, or one that reads none; a <c>CredentialsUndetermined</c> failure when it names a
+    /// method this kind does not know, or the configuration is of another kind.
+    /// </returns>
+    /// <remarks>
+    /// A connection that names no method reads no secret, so a start-up check that proves a secret is readable does not ask it for its
+    /// credential slots. This is the question that check asks; <see cref="CredentialSlots"/> still refuses a connection that names no
+    /// method, for the callers that save and read stored connections. No kind answers a missing method as a method named <c>None</c>.
+    /// </remarks>
+    IGenericResult<bool> ReadsStoredSecret(IConnectionImplementationConfiguration configuration);
 
     /// <summary>
     /// Points a connection's credential fields at the secrets the server stored for it.

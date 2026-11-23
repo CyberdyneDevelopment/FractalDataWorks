@@ -8,20 +8,19 @@ namespace Fdw.Data.Http.Containers;
 /// Container type for REST API endpoints.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(ContainerTypes), "Endpoint", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ContainerTypes), "Endpoint")]
 public sealed class EndpointContainerType : ContainerTypeBase
 {
     /// <summary>
-    /// Singleton instance of EndpointContainerType.
+    /// Initializes a new instance of the <see cref="EndpointContainerType"/> class.
     /// </summary>
-    public static readonly EndpointContainerType Instance = new();
-
-    private EndpointContainerType()
+    public EndpointContainerType()
         : base(
             name: "Endpoint",
             displayName: "REST Endpoint",
             description: "REST API endpoint container with HTTP method support",
-            supportsSchemaDiscovery: true)
+            supportsSchemaDiscovery: true,
+            supportedOperations: ["Query"])
     {
     }
 }

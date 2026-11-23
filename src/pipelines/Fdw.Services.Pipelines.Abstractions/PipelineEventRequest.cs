@@ -41,4 +41,7 @@ public sealed class PipelineEventRequest
 
     /// <summary>Gets or sets the edge flow update, for the EdgeFlow kind.</summary>
     public PipelineEdgeFlowUpdate? EdgeFlow { get; set; }
+
+    /// <summary>Gets or sets the piece of a run's stream, for the RunPiece kind (FDW-6140).</summary>
+    public PipelineRunPieceUpdate? RunPiece { get; set; }
 }

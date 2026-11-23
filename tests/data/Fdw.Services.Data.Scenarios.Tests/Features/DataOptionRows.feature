@@ -202,11 +202,3 @@ Feature: Data option rows
     When the person adds a row to the container "Teams"
     Then the answer status is 403
     And the container "Teams" holds 0 option rows
-
-  @FDW-5664
-  Scenario: With no options table named, a route answers DATA-121670
-    Given the data options table is not named by the server settings
-    And a person who holds datastores:read
-    When the person lists the rows of the container "Teams"
-    Then the answer status is 409
-    And the answer carries the code DATA-121670

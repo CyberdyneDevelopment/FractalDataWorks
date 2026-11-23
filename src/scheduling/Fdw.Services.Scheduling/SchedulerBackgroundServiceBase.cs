@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Hosting;
@@ -64,8 +65,11 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
     /// Evaluates whatever is due and acts on it.
     /// </summary>
     /// <param name="cancellationToken">The host's stopping token.</param>
-    /// <returns>A task that completes when this pass is done.</returns>
-    protected abstract Task Evaluate(CancellationToken cancellationToken);
+    /// <returns>
+    /// Success when the pass did what it set out to; a failure carrying the cause when it could not (a schedule load that failed, for one), which the loop logs with the cause's
+    /// code and never reports as a completed pass (FDW-7285). The loop tries again after <see cref="EvaluationInterval"/> either way.
+    /// </returns>
+    protected abstract Task<IGenericResult> Evaluate(CancellationToken cancellationToken);
 
     /// <summary>Called once before the first evaluation.</summary>
     /// <param name="interval">The interval the loop will use.</param>
@@ -160,9 +164,19 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
         // Per pass, not around the whole loop: the scope restores the previous context when
         // the pass ends, so nothing outside an evaluation -- the delay, the logging -- runs
         // elevated.
+        IGenericResult evaluated;
         using (new SystemAuthenticationContextScope(_authContextAccessor))
         {
-            await Evaluate(stoppingToken).ConfigureAwait(false);
+            evaluated = await Evaluate(stoppingToken).ConfigureAwait(false);
+        }
+
+        // Why no completed line for a failed pass (FDW-7285): the line says the pass looked at its schedules, and a pass that could not even load them looked at none; the cause's code
+        // is what says why, and the loop's delay and next pass are unchanged.
+        if (evaluated.IsFailure)
+        {
+            var reason = evaluated.FailureReason();
+            SchedulerLoopLog.EvaluationNotCompleted(_logger, reason.Code, reason.Message);
+            return;
         }
 
         var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;

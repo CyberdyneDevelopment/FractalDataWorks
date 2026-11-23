@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
@@ -123,6 +124,62 @@ public sealed class StableReadTests
         first.Ordering.ShouldBeNull();
         first.Paging.ShouldNotBeNull().Skip.ShouldBe(0);
         first.Paging!.Take.ShouldBe(DataGatewayServiceTypes.StableReadPageSize);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AQueryThatJoinsIsReadThroughTheCursorWithEveryColumnItsProjectionNames()
+    {
+        var container = Container(keys: ["Id"]);
+        var query = Joined();
+        var cursor = new RowListRecordSource(
+            new RecordSchema([Field("Id"), Field("c_Name")]), [new Dictionary<string, object?> { ["Id"] = 1, ["c_Name"] = "Ada" }]);
+        var connection = new Mock<IDataConnection>(MockBehavior.Strict);
+        connection.As<IRecordSourceConnection>()
+            .Setup(c => c.OpenRecordSource(query, container, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IRecordSource<DataRecord>>.Success(cursor));
+
+        var opened = await StableRead.OpenContainer(query, container, connection.Object, NoPages, "container 'Orders'", NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
+        opened.Value.ShouldBeSameAs(cursor);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AQueryThatStacksContainersIsReadThroughTheCursorUnnarrowed()
+    {
+        var container = Container(keys: ["Id"]);
+        var query = new QueryCommand<Dictionary<string, object?>>
+        {
+            Projection = new ProjectionExpression { Fields = [new ProjectionField { PropertyName = "OrderNo", Alias = "Id" }] },
+            Unions = [new UnionBranch { ContainerName = "Archive", Fields = [new ProjectionField { PropertyName = "ArchiveNo", Alias = "Id" }] }],
+        };
+        var cursor = new RowListRecordSource(new RecordSchema([Field("Id")]), [new Dictionary<string, object?> { ["Id"] = 1 }]);
+        var connection = new Mock<IDataConnection>(MockBehavior.Strict);
+        connection.As<IRecordSourceConnection>()
+            .Setup(c => c.OpenRecordSource(query, container, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IRecordSource<DataRecord>>.Success(cursor));
+
+        var opened = await StableRead.OpenContainer(query, container, connection.Object, NoPages, "container 'Orders'", NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        opened.IsSuccess.ShouldBeTrue(opened.CurrentMessage);
+        opened.Value.ShouldBeSameAs(cursor);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AQueryThatJoinsOnAConnectionThatCannotStreamIsRefusedNeverPaged()
+    {
+        var opened = await StableRead.OpenContainer(
+            Joined(), Container(keys: ["Id"]), new Mock<IDataConnection>(MockBehavior.Strict).Object, NoPages, "container 'Orders'", NullLogger.Instance,
+            TestContext.Current.CancellationToken);
+
+        opened.IsFailure.ShouldBeTrue();
+        opened.CurrentMessage.ShouldNotBeNull().ShouldContain("a query that joins");
     }
 
     [Fact]
@@ -345,4 +402,18 @@ public sealed class StableReadTests
     }
 
     private static IDataField Field(string name) => Mock.Of<IDataField>(field => field.Name == name);
+
+    // A pushed join (FDW-6969): Orders joined to Customers, each column qualified by its container and named by its alias.
+    private static QueryCommand<Dictionary<string, object?>> Joined() => new()
+    {
+        Joins = [new JoinExpression { TargetContainerName = "Customers", JoinType = "Inner", JoinConditions = [("CustomerId", "Id")] }],
+        Projection = new ProjectionExpression
+        {
+            Fields =
+            [
+                new ProjectionField { PropertyName = "Id", Alias = "Id", SourceContainer = "Orders" },
+                new ProjectionField { PropertyName = "Name", Alias = "c_Name", SourceContainer = "Customers" },
+            ],
+        },
+    };
 }

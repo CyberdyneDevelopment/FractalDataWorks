@@ -194,7 +194,8 @@ public sealed class DataStoreCrossTenantWriteTests
             gateways.Setup(p => p.Get(It.IsAny<string>())).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
 
             Provider = new DataStoreConfigurationProvider(
-                NullLogger<DataStoreConfigurationProvider>.Instance, gateways.Object, "ConfigurationDb", "data", "DataStore", new UnavailablePlacement(), Accessor, Policy);
+                NullLogger<DataStoreConfigurationProvider>.Instance, gateways.Object, "ConfigurationDb", "data", "DataStore", new UnavailablePlacement(), Accessor, Policy,
+                DataStoreDescriptionDoubles.Writer(), DataStoreDescriptionDoubles.Reader());
         }
 
         public DataStoreConfigurationProvider Provider { get; }

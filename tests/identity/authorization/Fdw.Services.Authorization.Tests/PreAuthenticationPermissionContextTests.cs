@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
@@ -23,7 +24,8 @@ public sealed class PreAuthenticationPermissionContextTests
         var previous = Mock.Of<IAuthenticationContext>();
         var accessor = new AuthenticationContextAccessor { Current = previous };
         var roles = new Mock<IRoleConfigurationProvider>();
-        roles.Setup(p => p.Get(It.IsAny<CancellationToken>())).Returns(async (CancellationToken _) =>
+        // RoleGrants reads the roles lean (WithoutFilledMembers, FDW-7341): no description is shown and nothing it reads is saved.
+        roles.Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>())).Returns(async (int _, ConfigurationReadOptions _, CancellationToken _) =>
         {
             await Task.Yield();
             accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();

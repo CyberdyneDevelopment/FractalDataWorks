@@ -135,12 +135,7 @@ internal static class BuiltSetResolver
         foreach (var bound in stage.ComputeTables)
         {
             var named = !string.IsNullOrWhiteSpace(bound.FromName);
-            var reason = bound.FromKind switch
-            {
-                "Stage" => named ? "the stage's own rows have no name" : null,
-                "DataSet" or "Output" => named ? null : "a data set or output source states its name",
-                _ => $"'{bound.FromKind}' is not Stage, DataSet or Output",
-            };
+            var reason = ComputeTableSources.ProblemOf(bound.FromKind, named);
             if (reason is not null)
             {
                 return GenericResult.Failure(ComputeSetLog.TableSourceInvalid(logger, stageName, bound.TableName, reason));
@@ -172,12 +167,7 @@ internal static class BuiltSetResolver
         foreach (var routed in stage.ComputeOutputs)
         {
             var named = !string.IsNullOrWhiteSpace(routed.RouteName);
-            var reason = routed.Route switch
-            {
-                "Replace" => named ? "a Replace route has no name" : null,
-                "Named" => named ? null : "a Named route states the name it keeps the rows under",
-                _ => $"'{routed.Route}' is not Replace or Named",
-            };
+            var reason = ComputeOutputRoutes.ProblemOf(routed.Route, named);
             if (reason is not null)
             {
                 return GenericResult.Failure(ComputeSetLog.RouteInvalid(logger, stageName, routed.OutputName, reason));

@@ -7,7 +7,7 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// <summary>
 /// Concrete implementation of a notification request.
 /// </summary>
-public sealed class NotificationRequest : INotificationRequest
+public class NotificationRequest : INotificationRequest
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationRequest"/> class.

@@ -63,6 +63,7 @@
     <ProjectReference Include="..\..\data\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
     <ProjectReference Include="..\..\catalog\Fdw.Services.Catalog.Clients.Models\Fdw.Services.Catalog.Clients.Models.csproj" />
     <ProjectReference Include="..\Fdw.Schema.Ddl\Fdw.Schema.Ddl.csproj" />
+    <ProjectReference Include="..\..\data\Fdw.Services.Data\Fdw.Services.Data.csproj" />
   </ItemGroup>
 
 </Project>

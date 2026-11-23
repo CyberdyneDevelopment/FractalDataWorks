@@ -65,4 +65,13 @@ public class ScheduleSummaryDto
 
     /// <summary>Gets or sets the names of the roles the schedule's runs act with (FDW-1161).</summary>
     public IList<string>? RunRoles { get; set; }
+
+    /// <summary>Gets or sets the grant the schedule's runs act under (FDW-6144); none when they act as the schedule's tenant.</summary>
+    public Guid? RunGrantId { get; set; }
+
+    /// <summary>Gets or sets when a threshold paused the schedule (FDW-6144); none for a schedule none paused. Together with <see cref="PausedReason"/> it tells a person the rule paused it, not a colleague.</summary>
+    public DateTimeOffset? PausedAt { get; set; }
+
+    /// <summary>Gets or sets why a threshold paused the schedule: the threshold, its rule and the values it matched on; none when <see cref="PausedAt"/> is none.</summary>
+    public string? PausedReason { get; set; }
 }

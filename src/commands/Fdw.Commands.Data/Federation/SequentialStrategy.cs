@@ -20,7 +20,8 @@ public sealed class SequentialStrategy : FederationStrategyBase
             name: "Sequential",
             description: "Executes source queries one at a time in order",
             isParallel: false,
-            optimizesOrder: false)
+            optimizesOrder: false,
+            maxParallelReads: 1)
     {
     }
 }

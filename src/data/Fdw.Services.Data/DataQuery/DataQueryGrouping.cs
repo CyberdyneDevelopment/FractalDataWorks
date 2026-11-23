@@ -26,15 +26,6 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 internal sealed class DataQueryGrouping
 {
-    private static readonly Dictionary<string, string> Functions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Sum"] = "SUM",
-        ["Avg"] = "AVG",
-        ["Min"] = "MIN",
-        ["Max"] = "MAX",
-        ["Count"] = "COUNT",
-    };
-
     private readonly IReadOnlyList<DataSetFieldConfiguration> _fields;
     private readonly QueryTranslator _filters;
     private readonly IQueryRefusals _refusals;
@@ -150,18 +141,19 @@ internal sealed class DataQueryGrouping
         if (!IsPlainName(aggregate.As) || !taken.Add(aggregate.As))
             return _refusals.Invalid<GroupMeasure>(
                 $"aggregate name '{aggregate.As}' must be letters, digits and underscores, not start with a digit, and differ from every group field and other aggregate");
-        if (aggregate.Function is null || !Functions.TryGetValue(aggregate.Function, out var function))
+        var function = SqlAggregates.OfQueryName(aggregate.Function);
+        if (ReferenceEquals(function, SqlAggregates.NotFound))
             return _refusals.Invalid<GroupMeasure>($"aggregate function '{aggregate.Function}' is not Sum, Avg, Min, Max or Count");
 
         if (string.IsNullOrEmpty(aggregate.Field))
-            return string.Equals(function, "COUNT", StringComparison.Ordinal)
+            return ReferenceEquals(function, SqlAggregates.Count)
                 ? GenericResult<GroupMeasure>.Success(new GroupMeasure(aggregate.As, "COUNT(*)", new DataQueryColumnDto { Name = aggregate.As, DataType = DataTypes.Int64.Name }))
                 : _refusals.Invalid<GroupMeasure>($"aggregate '{aggregate.As}' needs a field: only Count may name none");
 
         return OverField(aggregate, function);
     }
 
-    private IGenericResult<GroupMeasure> OverField(DataQueryAggregate aggregate, string function)
+    private IGenericResult<GroupMeasure> OverField(DataQueryAggregate aggregate, ISqlAggregate function)
     {
         var field = Field(aggregate.Field!, "aggregate field");
         if (field.IsFailure) return field.ToNewResult<GroupMeasure>();
@@ -171,14 +163,8 @@ internal sealed class DataQueryGrouping
         var refusal = Refusal(field.Value!, DatumTypes.ById(field.Value!.DatumTypeId).AllowsAggregate(aggregate.Function!), $"given {aggregate.Function}");
         if (refusal is not null) return _refusals.Invalid<GroupMeasure>(refusal);
 
-        var type = function switch
-        {
-            "COUNT" => DataTypes.Int64.Name,
-            "MIN" or "MAX" => field.Value.TypeName,
-            _ => DataTypes.Decimal.Name,
-        };
         return GenericResult<GroupMeasure>.Success(new GroupMeasure(
-            aggregate.As, $"{function}({field.Value.Name})", new DataQueryColumnDto { Name = aggregate.As, DataType = type }));
+            aggregate.As, $"{function.Sql}({field.Value.Name})", new DataQueryColumnDto { Name = aggregate.As, DataType = function.ResultType(field.Value.TypeName) }));
     }
 
     private IGenericResult<DataSetFieldConfiguration> Field(string? name, string what)

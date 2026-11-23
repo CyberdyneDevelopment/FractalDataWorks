@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Collections;
 using System.Linq;
@@ -32,6 +33,10 @@ public abstract class MsSqlUpsertTranslatorBase : MsSqlDataCommandTranslatorBase
     {
         _translatorName = $"MsSql{name}Translator";
     }
+
+    /// <inheritdoc />
+    /// <remarks>Read from what this translator emits: a MERGE: an INSERT of the rows that are not there and an UPDATE of those that are.</remarks>
+    public override IReadOnlyList<string> Operations => ["Insert", "Update"];
 
     /// <summary>
     /// Translates an upsert command into a single batch: stage the rows, update or close the changed rows, insert the

@@ -49,6 +49,10 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
     {
     }
 
+    /// <inheritdoc />
+    /// <remarks>Read from what this translator emits: a SELECT.</remarks>
+    public override IReadOnlyList<string> Operations => ["Query"];
+
     /// <summary>
     /// Base Translate - dispatches to typed overload or returns error for invalid command types.
     /// </summary>
@@ -155,6 +159,9 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         ISqlDialect dialect,
         List<string>? returnedFieldNames)
     {
+        if (command.Unions is { Count: > 0 })
+            return UnionStatement(command, container, dialect);
+
         SqlCommand sqlCommand;
         if (command.Aggregation is not null)
         {
@@ -246,14 +253,14 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         {
             // OFFSET/FETCH requires an ORDER BY. The order a page follows is the one the container declares for its rows, its
             // primary key; a container that declares none is refused, because a page of rows in a guessed order is not a page (FDW-3454).
-            var declaredOrder = container.GetDeclaredOrderFieldName();
-            if (declaredOrder is null)
+            var declaredOrder = container.DeclaredOrderFieldNames();
+            if (declaredOrder.Count == 0)
             {
                 return GenericResult<SqlCommand>.Failure(
                     MsSqlTranslatorLog.PagedQueryHasNoOrder(NullLogger<MsSqlQueryTranslator>.Instance, container.Name));
             }
 
-            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(declaredOrder)}";
+            command.CommandText += $" ORDER BY {string.Join(", ", declaredOrder.Select(name => dialect.QuoteIdentifier(name)))}";
         }
 
         // OFFSET/FETCH clause (paging)
@@ -595,5 +602,17 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         }
 
         return $"{func.ToUpperInvariant()}({dialect.QuoteIdentifier(inner)})";
+    }
+
+    // A query that stacks containers' rows: one UNION ALL statement, written by the shared builder (FDW-6946).
+    private static IGenericResult<SqlCommand> UnionStatement(IQueryCommand query, IDataContainer container, ISqlDialect dialect)
+    {
+        var command = CreateCommand(string.Empty);
+        var (refusal, sql) = BuildUnionStatement(query, container, dialect, (n, v) => AddFilterParameter(command, n, v));
+        if (refusal is not null)
+            return GenericResult<SqlCommand>.Failure(refusal);
+
+        command.CommandText = sql;
+        return GenericResult<SqlCommand>.Success(command);
     }
 }

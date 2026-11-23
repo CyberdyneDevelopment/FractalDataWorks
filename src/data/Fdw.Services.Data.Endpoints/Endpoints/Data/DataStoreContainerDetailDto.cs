@@ -99,4 +99,7 @@ public class DataStoreContainerDetailDto
 
     /// <summary>Gets or sets the fields within this container.</summary>
     public IList<DataStoreFieldResponse> Fields { get; set; } = [];
+
+    /// <summary>Gets or sets the workspace that owns it (FDW-6967); null when it is the data store's.</summary>
+    public DataStoreItemOwnerResponse? Owner { get; set; }
 }

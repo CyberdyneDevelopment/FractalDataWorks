@@ -59,21 +59,22 @@ public sealed class RoleGrants : IRoleGrants
 
         using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
-        var allRoles = await _roleProvider.Get(cancellationToken).ConfigureAwait(false);
+        // Each read states WithoutFilledMembers (FDW-7341): the grants are expanded to permission names, no description is shown, and nothing read is saved.
+        var allRoles = await _roleProvider.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!allRoles.IsSuccess)
             return allRoles.ToNewResult<IReadOnlyCollection<string>>();
         if (allRoles.Value is null)
             return GenericResult<IReadOnlyCollection<string>>.Failure(
                 AuthorizationLog.RoleProviderQueryFailed(_logger));
 
-        var allPermissions = await _permissionProvider.Get(cancellationToken).ConfigureAwait(false);
+        var allPermissions = await _permissionProvider.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!allPermissions.IsSuccess)
             return allPermissions.ToNewResult<IReadOnlyCollection<string>>();
         if (allPermissions.Value is null)
             return GenericResult<IReadOnlyCollection<string>>.Failure(
                 AuthorizationLog.PermissionProviderQueryFailed(_logger));
 
-        var allRolePermissions = await _rolePermissionProvider.Get(cancellationToken).ConfigureAwait(false);
+        var allRolePermissions = await _rolePermissionProvider.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!allRolePermissions.IsSuccess)
             return allRolePermissions.ToNewResult<IReadOnlyCollection<string>>();
         if (allRolePermissions.Value is null)

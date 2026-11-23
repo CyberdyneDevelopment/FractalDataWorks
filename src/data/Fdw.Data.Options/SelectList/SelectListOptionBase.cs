@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Collections;
+using Fdw.Collections.Attributes;
 using Fdw.Data.Options.Logging;
 using Fdw.Data.Options.Results;
 using Fdw.Results;
@@ -15,14 +16,20 @@ public abstract class SelectListOptionBase : TypeOptionBase<SelectListOptionBase
     /// <summary>Initializes a new instance of the <see cref="SelectListOptionBase"/> class.</summary>
     /// <param name="name">The option name, which a stored row names as its option.</param>
     /// <param name="applyOrder">Where the option comes among the options of the SelectList type; lower applies first.</param>
+    /// <param name="comparison">The name of the rule comparison the option stands for: <c>In</c> or <c>NotIn</c>.</param>
     /// <remarks>
     /// Also the constructor the generator calls to build the collection's NotFound sentinel, with a synthesized placeholder name.
     /// </remarks>
-    protected SelectListOptionBase(string name, int applyOrder)
+    protected SelectListOptionBase(string name, int applyOrder, string comparison)
         : base(name)
     {
         ApplyOrder = applyOrder;
+        Comparison = comparison;
     }
+
+    /// <inheritdoc />
+    [TypeLookup("ByComparison")]
+    public string Comparison { get; }
 
     /// <inheritdoc />
     public int ApplyOrder { get; }

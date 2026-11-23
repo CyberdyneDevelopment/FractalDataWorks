@@ -78,9 +78,10 @@ public sealed class WebMcpJsGenerator
         sb.AppendLine("  }");
         sb.AppendLine();
 
-        foreach (var tool in _registry.Tools)
+        // The plans the registry built when it resolved the tools, so the script describes what the MCP transport describes.
+        foreach (var plan in _registry.Plans)
         {
-            AppendTool(sb, tool, settings);
+            AppendTool(sb, plan, settings);
         }
 
         sb.AppendLine("})();");
@@ -90,8 +91,9 @@ public sealed class WebMcpJsGenerator
 
     // ── Per-tool JavaScript block ────────────────────────────────────────────
 
-    private void AppendTool(StringBuilder sb, WebMcpToolDescriptor tool, WebMcpHostSettings settings)
+    private void AppendTool(StringBuilder sb, WebMcpToolPlan plan, WebMcpHostSettings settings)
     {
+        var tool = plan.Tool;
         sb.AppendLine("  modelContext.registerTool({");
         sb.AppendLine(CultureInfo.InvariantCulture, $"    name: {JsonString(tool.Name)},");
         sb.AppendLine(CultureInfo.InvariantCulture, $"    description: {JsonString(tool.Description)},");
@@ -102,7 +104,6 @@ public sealed class WebMcpJsGenerator
         }
 
         // One plan per tool, shared with the MCP transport. The script renders it; it decides nothing.
-        var plan = WebMcpToolPlan.Create(tool, _logger);
         var propertyCount = AppendInputSchema(sb, plan);
         AppendExecute(sb, plan, settings);
 
@@ -137,28 +138,46 @@ public sealed class WebMcpJsGenerator
             var input = plan.Inputs[i];
             var comma = i < plan.Inputs.Count - 1 ? "," : string.Empty;
 
-            if (string.IsNullOrEmpty(input.Format))
-            {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"        {JsonKey(input.Name)}: {{ \"type\": {JsonString(input.JsonType)} }}{comma}");
-            }
-            else
-            {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"        {JsonKey(input.Name)}: {{ \"type\": {JsonString(input.JsonType)}, \"format\": {JsonString(input.Format)} }}{comma}");
-            }
+            sb.AppendLine(CultureInfo.InvariantCulture, $"        {JsonKey(input.Name)}: {Schema(input)}{comma}");
         }
 
         sb.AppendLine("      },");
 
-        // Path parameters are the one set whose requiredness is structural rather than a matter of
-        // validation policy: the URL cannot be built without them. Everything else stays optional and
-        // is the endpoint's own validation to enforce.
+        // Path parameters are required because the URL cannot be built without them, and so is a list or
+        // object member the request declares required. Every scalar of the request stays optional and is
+        // the endpoint's own validation to enforce.
         sb.AppendLine(
             CultureInfo.InvariantCulture,
-            $"      required: [{string.Join(", ", plan.PathProperties.Select(JsonString))}]");
+            $"      required: [{string.Join(", ", plan.RequiredProperties.Select(JsonString))}]");
 
         sb.AppendLine("    },");
 
         return plan.Inputs.Count;
+    }
+
+    /// <summary>A member's JSON Schema, written on one line: a scalar, or a list and the object members it holds, recursively.</summary>
+    private static string Schema(WebMcpToolInput input)
+    {
+        if (input.Items is { } items)
+        {
+            return $"{{ \"type\": \"array\", \"items\": {Schema(items)} }}";
+        }
+
+        if (input.Properties is { } members)
+        {
+            var properties = members.Count == 0
+                ? "{}"
+                : "{ " + string.Join(", ", members.Select(member => $"{JsonKey(member.Name)}: {Schema(member)}")) + " }";
+            var required = members.Where(member => member.Required).Select(member => JsonString(member.Name)).ToList();
+
+            return required.Count == 0
+                ? $"{{ \"type\": \"object\", \"properties\": {properties} }}"
+                : $"{{ \"type\": \"object\", \"properties\": {properties}, \"required\": [{string.Join(", ", required)}] }}";
+        }
+
+        return string.IsNullOrEmpty(input.Format)
+            ? $"{{ \"type\": {JsonString(input.JsonType)} }}"
+            : $"{{ \"type\": {JsonString(input.JsonType)}, \"format\": {JsonString(input.Format)} }}";
     }
 
     private static void AppendExecute(StringBuilder sb, WebMcpToolPlan plan, WebMcpHostSettings settings)

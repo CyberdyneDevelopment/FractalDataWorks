@@ -32,12 +32,16 @@ public sealed class SetTextSizeHandler : SqlStatementHandlerBase<SetTextSizeStat
         if (size.IsFailure)
             return Task.FromResult(size.ToNewResult<SqlStatementOutcome>());
 
-        context.Session.TextSize = size.Value switch
-        {
-            0 => ResetSize,
-            < 0 or > int.MaxValue => int.MaxValue,
-            _ => (int)size.Value,
-        };
+        context.Session.TextSize = Size(size.Value);
         return Ran();
+    }
+
+    // SET TEXTSIZE 0 resets the size; a negative size or one past an int is as large as an int goes.
+    private static int Size(long requested)
+    {
+        if (requested == 0)
+            return ResetSize;
+
+        return requested is < 0 or > int.MaxValue ? int.MaxValue : (int)requested;
     }
 }

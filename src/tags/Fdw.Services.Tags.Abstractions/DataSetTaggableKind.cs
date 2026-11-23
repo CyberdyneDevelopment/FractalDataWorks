@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Tags.Abstractions;
 
@@ -13,4 +14,7 @@ public sealed class DataSetTaggableKind : TaggableKindBase
         : base("DataSet", "data", "DataSetTag", "DataSetId", "DataSet")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.Of("data.DataSet");
 }

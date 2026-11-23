@@ -30,6 +30,10 @@ public partial class TagImplementationConfiguration : ITagImplementationConfigur
     public string Implementation { get; set; } = string.Empty;
 
     /// <inheritdoc/>
+    // Why [NotStored]: the text is a row of the descriptions table under the description type Tag, filled by the tag provider once for every set it reads and
+    // written in the unit of the tag's save (FDW-6208); the column is gone from tag.TagConfiguration, so no read selects it and no save writes it. The member
+    // stays, so every caller of Description still gets the text.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc/>

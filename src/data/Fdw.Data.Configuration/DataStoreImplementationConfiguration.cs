@@ -41,6 +41,7 @@ public sealed partial class DataStoreImplementationConfiguration : IDataStoreImp
     public Guid ConnectionId { get; set; }
 
     /// <inheritdoc/>
+    /// <remarks>Filled by the provider from the descriptions table and written there on a save (FDW-6208); never persisted on either data store table.</remarks>
     public string? Description { get; set; }
 
     /// <summary>

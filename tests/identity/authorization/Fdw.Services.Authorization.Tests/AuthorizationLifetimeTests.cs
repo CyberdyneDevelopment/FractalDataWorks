@@ -16,6 +16,9 @@ public sealed class AuthorizationLifetimeTests
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddSingleton(Mock.Of<IConfigurationGatewayProvider>());
+        // The role, permission and organization role providers write and read each description (FDW-6208); the Descriptions service type is not under test here.
+        builder.Services.AddSingleton(Mock.Of<Fdw.Services.Descriptions.IDescriptionWriter>());
+        builder.Services.AddSingleton(Mock.Of<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
         new DefaultAuthorizationServiceType().Register(builder, null);
         using var services = builder.Services.BuildServiceProvider(new ServiceProviderOptions
         {

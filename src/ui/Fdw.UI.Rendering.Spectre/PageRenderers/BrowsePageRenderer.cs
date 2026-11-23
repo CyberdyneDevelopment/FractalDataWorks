@@ -10,25 +10,27 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 
 /// <summary>
 /// Renders an <see cref="IBrowsePageModel"/> as a Miller-column layout and prompts
-/// for the next action. The renderer shows a window of columns (3 by default)
-/// centred on the active one; the caller re-renders after each action and is
+/// for the next action. The renderer shows a window of columns, as many as the
+/// caller states (FDW-7106), centered on the active one; the caller re-renders after each action and is
 /// responsible for populating the next column on drill.
 /// </summary>
 public static class BrowsePageRenderer
 {
-    /// <summary>Default number of columns visible at once in the layout.</summary>
-    public const int DefaultVisibleColumns = 3;
-
     /// <summary>
     /// Renders the supplied browse page and prompts for an action. Returns a
     /// <see cref="BrowsePageResult"/> describing what the user chose.
     /// </summary>
+    /// <param name="page">The page to render.</param>
+    /// <param name="context">The console and theme to render with.</param>
+    /// <param name="visibleColumns">How many columns to show at once: the caller's choice, at least one, never assumed here (FDW-7106).</param>
+    /// <returns>What the user chose.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="visibleColumns"/> is below one.</exception>
     public static BrowsePageResult Render(
         IBrowsePageModel page,
         SpectreRenderContext context,
-        int visibleColumns = DefaultVisibleColumns)
+        int visibleColumns)
     {
-        if (visibleColumns < 1) visibleColumns = 1;
+        ArgumentOutOfRangeException.ThrowIfLessThan(visibleColumns, 1);
 
         var console = context.Console;
         var theme = context.Theme;

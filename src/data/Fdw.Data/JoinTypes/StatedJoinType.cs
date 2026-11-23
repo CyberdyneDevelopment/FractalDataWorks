@@ -35,4 +35,13 @@ public static class StatedJoinType
     {
         return !ReferenceEquals(kind, JoinTypes.NotFound) && (kind.RequiresConditions || (kind.IncludesAllLeft && kind.IncludesAllRight));
     }
+
+    /// <summary>Gets whether an SQL statement can state a join of this type: one that joins two sources and has an SQL join keyword.</summary>
+    /// <param name="kind">The join type.</param>
+    /// <returns>True for Inner, Left, Right, Full and Cross; false for None and for <see cref="JoinTypes.NotFound"/>.</returns>
+    /// <remarks>
+    /// The one statement of it (FDW-6969): the SQL translators refuse a join of any other type with <c>JoinTypeNotPerformed</c>, and a planner
+    /// that pushes a join into a store asks the same question before the run.
+    /// </remarks>
+    public static bool PerformedInSql(IJoinType kind) => Joins(kind) && !string.IsNullOrEmpty(kind.SqlKeyword);
 }

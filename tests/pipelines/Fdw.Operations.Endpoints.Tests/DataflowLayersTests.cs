@@ -75,7 +75,7 @@ public class DataflowLayersTests
         params PipelineLineageRecord[] pipelines)
         => new(
             dataSets.Select(d => d.Record).ToList(),
-            [new DataStoreRecord { Id = Guid.NewGuid(), Name = "Store1", Implementation = "MsSql" }],
+            [new Fdw.Services.Connections.DataStoreImplementationConfiguration { Id = Guid.NewGuid(), Name = "Store1", Implementation = "MsSql", Description = "Orders and audit, on SQL Server" }],
             dataSets.Select(d => (IDataSetImplementationConfiguration)d.Owner).ToList(),
             pipelines,
             variations,
@@ -107,6 +107,19 @@ public class DataflowLayersTests
         graph.Nodes.ShouldAllBe(n => !n.Metadata.ContainsKey("connectionName"));
         graph.Stats.SourceCount.ShouldBe(0);
         graph.Stats.ConnectionCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void BaseLayer_DrawsADataStoreNodeWithTheDescriptionItsProviderFilled()
+    {
+        // The store comes from the data store provider, which fills its description from the descriptions table (FDW-6208); data.DataStore has no column for it.
+        var a = DataSet("A", Source("Store1", "Orders", "Conn1"));
+        var graph = DataflowBaseLayer.Build(Inputs([a], Pipeline("P", reads: "A")));
+
+        var node = graph.Nodes.Single(n => n.NodeType == "datastore");
+        node.Label.ShouldBe("Store1");
+        node.Metadata["storeType"].ShouldBe("MsSql");
+        node.Metadata["description"].ShouldBe("Orders and audit, on SQL Server");
     }
 
     [Fact]

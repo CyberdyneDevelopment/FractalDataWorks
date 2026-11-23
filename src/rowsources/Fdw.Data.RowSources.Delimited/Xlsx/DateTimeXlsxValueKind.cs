@@ -14,6 +14,9 @@ public sealed class DateTimeXlsxValueKind : XlsxValueKindBase
     }
 
     /// <inheritdoc />
+    public override bool CoversBuiltInFormat(int formatId) => formatId is 14 or 15 or 16 or 17 or 22 or (>= 27 and <= 36) or (>= 50 and <= 58);
+
+    /// <inheritdoc />
     public override object Read(string text, bool date1904)
         => XlsxSerials.Moment(XlsxSerials.Parse(text, date1904), date1904);
 }

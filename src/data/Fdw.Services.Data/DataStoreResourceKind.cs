@@ -23,7 +23,7 @@ public sealed class DataStoreResourceKind : WorkspaceResourceKindBase
     /// declared so far that sits on that side of it.
     /// </remarks>
     public DataStoreResourceKind()
-        : base("DataStore", canBeOwned: false)
+        : base("DataStore", canBeOwned: false, releasedOnArchive: false)
     {
     }
 }

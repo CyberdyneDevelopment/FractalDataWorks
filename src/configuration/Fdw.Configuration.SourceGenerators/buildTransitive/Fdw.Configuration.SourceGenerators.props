@@ -1,0 +1,4 @@
+<Project>
+  <!-- FDW-7107: a project that gets the generator through another package states the same column sizes. -->
+  <Import Project="$(MSBuildThisFileDirectory)../build/Fdw.Configuration.SourceGenerators.props" />
+</Project>

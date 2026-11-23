@@ -115,22 +115,7 @@ public abstract class GetPipelineExecutionEndpointBase : Endpoint<GetPipelineExe
     /// <summary>
     /// Maps a database record to an execution record DTO.
     /// </summary>
-    protected virtual PipelineExecutionRecord MapToExecutionRecord(PipelineExecutionDbRecord dbRecord) => new()
-    {
-        ExecutionId = dbRecord.Id,
-        PipelineName = dbRecord.PipelineName,
-        StartedAt = dbRecord.StartedAt?.UtcDateTime,
-        CompletedAt = dbRecord.CompletedAt?.UtcDateTime,
-        Status = dbRecord.Status,
-        Success = string.Equals(dbRecord.Status, "Succeeded", StringComparison.OrdinalIgnoreCase),
-        ErrorMessage = dbRecord.ErrorMessage,
-        RecordsExtracted = dbRecord.RecordsExtracted,
-        RecordsTransformed = dbRecord.RecordsTransformed,
-        RecordsLoaded = dbRecord.RecordsLoaded,
-        RecordsFailed = dbRecord.RecordsFailed,
-        TotalDurationMs = dbRecord.DurationMs,
-        ExecutedBy = dbRecord.ExecutedBy
-    };
+    protected virtual PipelineExecutionRecord MapToExecutionRecord(PipelineExecutionDbRecord dbRecord) => PipelineExecutionRecordMapping.From(dbRecord);
 
     /// <summary>Called when fetching execution record. Override for custom logging.</summary>
     protected virtual void OnFetchingExecutionRecord(Guid executionId) { }

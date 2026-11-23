@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Notifications.Configuration;
 using Fdw.Services.Notifications.Endpoints;
@@ -18,24 +20,31 @@ namespace Fdw.Services.Notifications;
 /// <summary>
 /// Reads the notification lists and their members from <c>notify.NotificationList</c> and <c>notify.NotificationListMember</c> (FDW-2931).
 /// </summary>
+/// <remarks>A list's description is not a column of <c>notify.NotificationList</c> (FDW-7203, a group of FDW-6208): it is a row of the descriptions table under the description type
+/// <c>NotificationList</c>, and the read fills it once for every list it reads. Nothing in FDW writes a list, so nothing here writes or removes one.</remarks>
 public sealed class NotificationLists : INotificationLists
 {
     private const string PathName = "notify";
     private const string ListTable = "NotificationList";
     private const string MemberTable = "NotificationListMember";
+    private const string DescriptionType = NotificationListDescriptionType.OptionName;
+    private const string DescriptionSubType = DescriptionTextSubType.OptionName;
 
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly string _dataStoreName;
+    private readonly IDescriptionReader _reader;
     private readonly ILogger<NotificationLists> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="NotificationLists"/> class.</summary>
     /// <param name="gateways">Supplies the gateway onto the configuration store.</param>
     /// <param name="dataStoreName">The connection the lists are kept on.</param>
+    /// <param name="reader">Reads the descriptions of the lists a read has just made, once for the set (FDW-7203).</param>
     /// <param name="logger">The logger.</param>
-    public NotificationLists(IConfigurationGatewayProvider gateways, string dataStoreName, ILogger<NotificationLists>? logger)
+    public NotificationLists(IConfigurationGatewayProvider gateways, string dataStoreName, IDescriptionReader reader, ILogger<NotificationLists>? logger)
     {
         _gateways = gateways;
         _dataStoreName = dataStoreName;
+        _reader = reader;
         _logger = logger ?? NullLogger<NotificationLists>.Instance;
     }
 
@@ -53,6 +62,13 @@ public sealed class NotificationLists : INotificationLists
         if (lists.IsFailure || lists.Value is not { } foundLists)
         {
             return lists.ToNewResult<IReadOnlyList<NotificationListSummaryDto>>();
+        }
+
+        var described = await _reader.Fill(DescriptionType, DescriptionSubType, foundLists, list => list.Id, (list, text) => list.Description = text, cancellationToken).ConfigureAwait(false);
+        if (described.IsFailure)
+        {
+            return GenericResult<IReadOnlyList<NotificationListSummaryDto>>.Failure(
+                NotificationListLog.ReadFailed(_logger, "The notification lists' descriptions", described.CurrentMessage));
         }
 
         var members = await Current<NotificationListMemberConfiguration>(resolved, MemberTable, cancellationToken).ConfigureAwait(false);

@@ -133,13 +133,13 @@ public sealed class ConnectionProviderDisabledTests
             ];
 
             var store = new Mock<IDomainConfigurationProvider<IConnectionImplementationConfiguration>>();
-            store.Setup(s => s.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((string name, CancellationToken _) => GenericResult<IConnectionImplementationConfiguration>.Success(
+            store.Setup(s => s.Get(It.IsAny<string>(), ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string name, int _, ConfigurationReadOptions _, CancellationToken _) => GenericResult<IConnectionImplementationConfiguration>.Success(
                     Configurations.Single(c => string.Equals(c.Name, name, StringComparison.Ordinal))));
-            store.Setup(s => s.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Guid id, CancellationToken _) => GenericResult<IConnectionImplementationConfiguration>.Success(
+            store.Setup(s => s.Get(It.IsAny<Guid>(), ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Guid id, int _, ConfigurationReadOptions _, CancellationToken _) => GenericResult<IConnectionImplementationConfiguration>.Success(
                     Configurations.Single(c => c.Id == id)));
-            store.Setup(s => s.Get(It.IsAny<CancellationToken>()))
+            store.Setup(s => s.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success(Configurations));
 
             var implementation = new Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>();

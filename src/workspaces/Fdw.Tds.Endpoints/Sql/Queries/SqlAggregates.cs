@@ -98,44 +98,45 @@ public static class SqlAggregates
         return distinct;
     }
 
-    private static object? Sum(IReadOnlyList<object> values)
+    private static object? Sum(IReadOnlyList<object> values) => Total(values, 1);
+
+    private static object? Average(IReadOnlyList<object> values) => Total(values, values.Count);
+
+    // The total of the values, divided by the divisor in the type the total has: 1 for a sum, the count for an average.
+    private static object? Total(IReadOnlyList<object> values, int divisor)
     {
         if (values.Count == 0)
             return null;
 
         if (values.Any(v => v is double or float))
-            return values.All(SqlValues.IsNumber) ? values.Sum(v => Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture)) : NotNumbers("sum");
+            return values.All(SqlValues.IsNumber) ? values.Sum(v => Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture)) / divisor : NotNumbers("sum");
 
         if (!values.All(v => v is int or long or short or byte or decimal))
             return NotNumbers("sum");
 
         var total = values.Aggregate(0m, (sum, v) => sum + Convert.ToDecimal(v, System.Globalization.CultureInfo.InvariantCulture));
-        return Typed(total, values);
-    }
-
-    private static object? Average(IReadOnlyList<object> values)
-    {
-        var sum = Sum(values);
-        return sum switch
-        {
-            null or Refused => sum,
-            double d => d / values.Count,
-            decimal m => m / values.Count,
-            long l => l / values.Count,
-            _ => Convert.ToInt32(sum, System.Globalization.CultureInfo.InvariantCulture) / values.Count,
-        };
+        var (typed, problem) = Typed(total, values, divisor);
+        return problem is null ? typed : problem;
     }
 
     // An integer total keeps the integer type: bigint when any input was, else int, which may overflow.
-    private static object Typed(decimal total, IReadOnlyList<object> values)
+    private static (object? Value, Refused? Problem) Typed(decimal total, IReadOnlyList<object> values, int divisor)
     {
         if (values.Any(v => v is decimal))
-            return total;
+            return (total / divisor, null);
 
         if (values.Any(v => v is long))
-            return total is >= long.MinValue and <= long.MaxValue ? (long)total : Overflow("bigint");
+        {
+            if (total is >= long.MinValue and <= long.MaxValue)
+                return ((long)total / divisor, null);
 
-        return total is >= int.MinValue and <= int.MaxValue ? (int)total : Overflow("int");
+            return (null, Overflow("bigint"));
+        }
+
+        if (total is >= int.MinValue and <= int.MaxValue)
+            return ((int)total / divisor, null);
+
+        return (null, Overflow("int"));
     }
 
     private static object? Extreme(IReadOnlyList<object> values, bool smallest)

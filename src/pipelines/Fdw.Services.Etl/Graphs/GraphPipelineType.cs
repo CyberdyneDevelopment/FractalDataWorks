@@ -1,191 +1,36 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Fdw.Services.Notifications.Abstractions;
-using Fdw.Operations.Abstractions.Thresholds;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Fdw.Collections;
-using Fdw.Data.Abstractions;
-using Fdw.Data.DataSets.Abstractions;
-using Fdw.Data.Transformations.Configuration;
-using Fdw.Abstractions;
-using Fdw.Operations.Abstractions.Execution;
-using Fdw.Configuration;
-using Fdw.Services.Connections.Abstractions;
-using Fdw.ServiceTypes;
-using Fdw.ServiceTypes.Logging;
-using Fdw.Services.Configuration;
-using Fdw.Services.Data.Abstractions;
-using Fdw.Services.Etl;
 using Fdw.Services.Etl.Abstractions;
-using Fdw.Services.EtlGateway;
 using Fdw.Services.Etl.Abstractions.Execution;
-using Fdw.Services.Etl.Abstractions.Flow;
-using Fdw.Services.Etl.Flow;
-using Fdw.Services.Etl.Thresholds;
-using Fdw.Services.Etl.Logging;
-using Fdw.Services.Etl.Graphs.Commands;
-using Fdw.Services.Etl.Graphs.Logging;
-using Fdw.Results;
-using Fdw.Services.Settings;
-using Fdw.Services.Pipelines.Abstractions;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Graphs;
 
 /// <summary>
-/// Service type definition for graph pipelines (FDW-1396): components wired by named input and output nodes.
+/// The graph pipeline type (FDW-1396, FDW-6244): the Pipeline domain's implementation named <c>Graph</c>, whose pipelines are graphs of components wired by
+/// named input and output nodes, run by the row-flow engine over the ETL run (<see cref="PipelineExecutionOptions"/> in,
+/// <see cref="IEtlPipelineExecutionResult"/> out) and queued for the host's executor.
 /// </summary>
 /// <remarks>
-/// A graph pipeline is stored as a <see cref="GraphPipelineConfiguration"/> over <c>pipe.GraphPipelineConfiguration</c> with its
-/// components, links and dropped outputs, and run by the row-flow engine. The type registers its factory, its provider and its
-/// configuration provider the way the other pipeline types do, and registers its provider with the pipeline domain under its own
-/// name.
+/// A graph pipeline is stored as a <see cref="GraphPipelineConfiguration"/> over <c>pipe.GraphPipelineConfiguration</c> with its components, links and dropped
+/// outputs. Everything the type registers is set by <see cref="GraphPipelineTypeBase{TIn, TOut}"/>; this option states its name, which a pipeline's domain row
+/// names as its implementation, and its run mode. The option name and this class name are what stored rows and the option's id resolve by.
 /// </remarks>
-[Implementation(typeof(EtlPipelineTypes), "Graph")]
-public sealed class GraphPipelineType : EtlPipelineTypeBase<IEtlPipeline, IGraphPipelineFactory, GraphPipelineConfiguration>
+[Implementation(typeof(PipelineTypes), OptionName)]
+public sealed class GraphPipelineType : GraphPipelineTypeBase<PipelineExecutionOptions, IEtlPipelineExecutionResult>
 {
-    /// <summary>
-    /// The key of how often, in seconds, a destination writes the rows it has committed to the run's record (FDW-4957); 0 writes after every
-    /// commit. Declared below; a host changes it with <c>ServiceTypeDefaults.Override(new GraphPipelineType(), CommittedReportSeconds, n)</c>
-    /// before Register, and the setting <c>PipelineCommittedReportSeconds</c> states it for an installation.
-    /// </summary>
-    public const string CommittedReportSeconds = "CommittedReportSeconds";
+    /// <summary>The name a pipeline's domain row gives this implementation.</summary>
+    public const string OptionName = "Graph";
 
-    /// <summary>
-    /// The key of how many unmatched keys an update or delete destination's report carries (FDW-4988); 0 carries none, only the count, because keys are values
-    /// and may be private. Declared below; a host changes it with <c>ServiceTypeDefaults.Override(new GraphPipelineType(), UnmatchedKeySample, n)</c> before
-    /// Register, and the setting <c>PipelineUnmatchedKeySample</c> states it for an installation.
-    /// </summary>
-    public const string UnmatchedKeySample = "UnmatchedKeySample";
-
-    private IReadOnlyDictionary<string, object>? _declaredDefaults;
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// A destination writes what it has committed at most every 10 seconds, besides its first commit, a target emptied and its final figure (FDW-4957); a report
-    /// of unmatched keys carries at most 10 of them (FDW-4988).
-    /// </remarks>
-    public override IReadOnlyDictionary<string, object> DeclaredDefaults
-        => _declaredDefaults ??= ServiceTypeDefaults.With(base.DeclaredDefaults, (CommittedReportSeconds, 10), (UnmatchedKeySample, 10));
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GraphPipelineType"/> class.
-    /// Instance is created by source generator in EtlPipelineTypes collection.
-    /// </summary>
-    public GraphPipelineType() : base(
-        name: "Graph",
-        sectionName: "Graph",
-        displayName: "Graph",
-        description: "Graph pipeline: components wired by named input and output nodes, run by the row-flow engine",
-        category: "ETL",
-        defaultContainerName: "GraphPipelineConfiguration")
+    /// <summary>Initializes a new instance of the <see cref="GraphPipelineType"/> class. The instance is made by the module initializer that collects
+    /// <see cref="PipelineTypes"/>.</summary>
+    public GraphPipelineType()
+        : base(
+            name: OptionName,
+            displayName: OptionName,
+            description: "Graph pipeline: components wired by named input and output nodes, run by the row-flow engine",
+            runModeName: "Queued")
     {
-        // Every run is judged against thresholds, so a host that runs pipelines without the evaluator is miswired (FDW-3865); the status of a data set is judged by the pipelines that write it
-        // and their latest runs, which this option registers a reader of (FDW-4488). A host that never attached this option is asked for neither.
-        Requires<IThresholdEvaluator>(RunThresholdLog.EvaluatorNotRegistered);
-        Requires<IDataSetWriterRuns>(GraphLog.DataSetWriterRunsNotRegistered);
-
-        Initialization((host, loggerFactory) =>
-        {
-            var services = host.Services;
-
-            // One domain, one implementation: the engine's provider registers under its own
-            // name on the Pipeline domain provider. There is no intermediate kind row to
-            // mint or resolve -- pipe.Pipeline already names the implementation.
-            services.GetRequiredService<IPipelineConfigurationProvider>()
-                .Register(Name, services.GetRequiredService<GraphPipelineConfigurationProvider>());
-
-            return GenericResult<IHost>.Success(host);
-        });
-
-        Configuration(builder =>
-        {
-
-    
-                    return GenericResult<IHostApplicationBuilder>.Success(builder);
-});
-
-        Registration((builder, loggerFactory) =>
-        {
-            if (!ServiceTypeDefaults.TryResolve(this, CommittedReportSeconds, out var declared) || declared is not int committedReportSeconds || committedReportSeconds < 0)
-                return GenericResult<IHostApplicationBuilder>.Failure(GraphLog.CommittedReportSecondsNotDeclared(
-                    (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GraphPipelineType>(), Name, CommittedReportSeconds));
-            if (!ServiceTypeDefaults.TryResolve(this, UnmatchedKeySample, out var declaredSample) || declaredSample is not int unmatchedKeySample || unmatchedKeySample < 0)
-                return GenericResult<IHostApplicationBuilder>.Failure(GraphLog.UnmatchedKeySampleNotDeclared(
-                    (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GraphPipelineType>(), Name, UnmatchedKeySample));
-
-
-
-            // Factory - DI handles all constructor dependencies
-            builder.Services.TryAdd(new ServiceDescriptor(
-                typeof(IGraphPipelineFactory),
-                sp => new GraphPipelineFactory(
-                    sp.GetRequiredService<ILogger<GraphPipelineFactory>>(),
-                    sp.GetRequiredService<ILoggerFactory>(),
-                    sp.GetRequiredService<IFlowExecutor>(),
-                    sp.GetService<IDataGatewayProvider>(),
-                    sp.GetService<IConnectionProvider>(),
-                    sp.GetService<IDataStoreProvider>(),
-                    sp.GetService<IDataSetConfigurationProvider>(),
-                    sp.GetService<IConnectionConfigurationProvider>(),
-                    () => sp.GetRequiredService<IPipelineRunStarter>(),
-                    sp.GetService<IEtlGateway>(),
-                    sp.GetService<IRuleNotifier>(),
-                    sp.GetService<ITransformationConfigurationProvider>(),
-                    sp.GetService<IEffectiveSettingsProvider>(),
-                    sp.GetService<IExecutionTracker>(),
-                    sp.GetService<RunningFlows>(),
-                    sp.GetService<IThresholdEvaluator>(),
-                    sp.GetService<TimeProvider>())
-                {
-                    CommittedReportSeconds = committedReportSeconds,
-                    UnmatchedKeySample = unmatchedKeySample,
-                },
-                ServiceLifetime.Scoped));
-            builder.Services.TryAdd(new ServiceDescriptor(
-                typeof(IGraphPipelineProvider),
-                sp => new GraphPipelineProvider(sp.GetRequiredService<IGraphPipelineFactory>()),
-                ServiceLifetime.Scoped));
-
-            // Which pipelines write each data set, read from the pipelines themselves, and the latest run of each, for the status of a data set (FDW-4488).
-            builder.Services.TryAddScoped<IDataSetWriters, DataSetWriters>();
-            builder.Services.TryAddScoped<IDataSetWriterRuns, DataSetWriterRuns>();
-
-            builder.Services.TryAddSingleton(sp => new GraphPipelineConfigurationProvider(
-                sp.GetRequiredService<ILogger<GraphPipelineConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                EtlPipelineTypes.ConfigurationConnection, PathName, Container));
-
-            EtlPipelineTypes.RegisterPipelineExecutionQueue(builder.Services);
-            EtlPipelineTypes.RegisterAdditionalServices(builder.Services);
-
-            // Decorate the domain's own AddScoped<IEtlPipelineProvider> registration -- already in
-            // builder.Services by the time this runs, since EtlPipelineTypes' own Registration body
-            // sets it up before running the option collect.
-            var existing = builder.Services.Single(d => d.ServiceType == typeof(IEtlPipelineProvider));
-            builder.Services.Remove(existing);
-            builder.Services.AddScoped<IEtlPipelineProvider>(sp =>
-            {
-                var provider = (IEtlPipelineProvider)existing.ImplementationFactory!(sp);
-
-                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IGraphPipelineProvider>());
-                if (!factoryResult.IsSuccess)
-                {
-                    ServiceTypeLog.OptionFactoryRegistrationFailed(
-                        sp.GetService<ILoggerFactory>()?.CreateLogger<GraphPipelineType>() ?? NullLogger<GraphPipelineType>.Instance,
-                        nameof(GraphPipelineType), Name, nameof(IGraphPipelineFactory), factoryResult.CurrentMessage);
-                }
-
-                return provider;
-            });
-
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
+        Registration((builder, loggerFactory) => GraphRegistration(this, builder, loggerFactory));
+        Initialization((host, loggerFactory) => GraphInitialization(this, host, loggerFactory));
     }
 }

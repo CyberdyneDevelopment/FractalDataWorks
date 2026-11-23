@@ -13,6 +13,7 @@ using Fdw.Services.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Execution;
 
@@ -162,7 +163,7 @@ public sealed class PipelineTriggerKeys : IPipelineTriggerKeys
 
     private IGenericResult<(IDataGateway Gateway, string Store)> Open(IServiceProvider services)
     {
-        var store = EtlPipelineTypes.OperationalConnection;
+        var store = PipelineTypes.OperationalConnection;
         return string.IsNullOrWhiteSpace(store)
             ? GenericResult<(IDataGateway Gateway, string Store)>.Failure(PipelineTriggerKeyLog.StoreNotNamed(_logger))
             : GenericResult<(IDataGateway Gateway, string Store)>.Success((services.GetRequiredService<IDataGatewayProvider>().ByName(DataGatewayNames.Main), store));

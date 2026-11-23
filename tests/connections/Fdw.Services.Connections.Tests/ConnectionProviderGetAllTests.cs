@@ -71,7 +71,7 @@ public sealed class ConnectionProviderGetAllTests
         }).ToList();
 
         var store = new Mock<IDomainConfigurationProvider<IConnectionImplementationConfiguration>>();
-        store.Setup(s => s.Get(It.IsAny<CancellationToken>()))
+        store.Setup(s => s.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success(configurations));
 
         var implementation = new Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>();

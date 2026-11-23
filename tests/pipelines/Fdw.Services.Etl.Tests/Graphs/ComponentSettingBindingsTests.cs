@@ -11,8 +11,6 @@ namespace Fdw.Services.Etl.Tests.Graphs;
 /// </summary>
 public sealed class ComponentSettingBindingsTests
 {
-    private static readonly string[] ListKinds = ["ColumnList", "FieldMaps", "InputMappings", "SplitOutputs", "ValueSources", "Steps", "Parameters"];
-
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
@@ -37,7 +35,7 @@ public sealed class ComponentSettingBindingsTests
                 // A tool's stage members are stored as the one stage the tool holds, not one by one.
                 .Where(setting => kind is not StageToolComponentTypeBase tool || !tool.MemberNames.Contains(setting.Name))
                 .Select(setting => (Kind: kind.Name, Setting: setting)))
-            .Where(pair => !ListKinds.Contains(pair.Setting.Kind));
+            .Where(pair => !ComponentSettingBindings.RowKinds.Contains(pair.Setting.Kind));
 
         foreach (var (kind, setting) in scalars)
         {

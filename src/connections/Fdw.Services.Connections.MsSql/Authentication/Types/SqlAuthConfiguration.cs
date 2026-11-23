@@ -78,9 +78,15 @@ public sealed class SqlAuthConfiguration : MsSqlAuthenticationConfiguration
         if (!validation.IsSuccess)
             return validation.ToNewResult<SecretRequirement>();
 
+        // A login with no password is never built (FDW-6360): this method requires a secret, so a connection that names no key is refused. Validate
+        // above refuses it first; this refusal states the same rule where the answer is given, so it does not depend on the order of the two.
         values.TryGetValue("SecretKeyName", out var secretKeyName);
         if (string.IsNullOrEmpty(secretKeyName))
-            return GenericResult<SecretRequirement>.Success(SecretRequirement.None);
+        {
+            return GenericResult<SecretRequirement>.Failure(
+                MsSqlResultCodes.ByName("AuthenticationValidationFailed"),
+                ResultDetails.Create("ValidationErrors", "SecretKeyName is required for SqlAuth"));
+        }
 
         // A declared key with no store to read it from is a configuration defect, not "no secret".
         var declared = GetValue(values, "SecretManagerName");

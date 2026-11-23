@@ -17,6 +17,7 @@ public sealed class SumCalculationType : CalculationTypeBase
     public SumCalculationType() : base(
         name: "Sum",
         category: "Aggregation",
+        description: "Calculates the total sum of all values",
         calculate: (rows, col, _) => rows.Sum(r => r.TryGetValue<decimal>(col, out var v) ? v : 0m),
         toSql: (col, _) => $"SUM({col})")
     { }

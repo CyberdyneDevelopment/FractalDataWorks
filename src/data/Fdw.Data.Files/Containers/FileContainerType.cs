@@ -8,20 +8,19 @@ namespace Fdw.Data.Files.Containers;
 /// Container type for file-based data sources.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(ContainerTypes), "File", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ContainerTypes), "File")]
 public sealed class FileContainerType : ContainerTypeBase
 {
     /// <summary>
-    /// Singleton instance of FileContainerType.
+    /// Initializes a new instance of the <see cref="FileContainerType"/> class.
     /// </summary>
-    public static readonly FileContainerType Instance = new();
-
-    private FileContainerType()
+    public FileContainerType()
         : base(
             name: "File",
             displayName: "File",
             description: "File-based data container supporting CSV, JSON, XML, Parquet, and other formats",
-            supportsSchemaDiscovery: true)
+            supportsSchemaDiscovery: true,
+            supportedOperations: ["Query"])
     {
     }
 }

@@ -56,7 +56,7 @@ public abstract class ListPeriodComparisonTypesEndpointBase : EndpointWithoutReq
             {
                 Id = t.Id,
                 Name = t.Name,
-                Description = GetPeriodComparisonDescription(t.Name)
+                Description = t.Description
             };
         }
 
@@ -64,21 +64,4 @@ public abstract class ListPeriodComparisonTypesEndpointBase : EndpointWithoutReq
 
         return Send.OkAsync(new PeriodComparisonTypesResponse { Types = dtos }, ct);
     }
-
-    /// <summary>
-    /// Gets the description for a period comparison type. Override to provide custom descriptions.
-    /// </summary>
-    protected virtual string GetPeriodComparisonDescription(string typeName) => typeName switch
-    {
-        "None" => "No period comparison",
-        "DayOverDay" => "Compares current day to previous day",
-        "WeekOverWeek" => "Compares current week to previous week",
-        "MonthOverMonth" => "Compares current month to previous month",
-        "MonthToDate" => "Compares current month-to-date to previous month-to-date",
-        "QuarterOverQuarter" => "Compares current quarter to previous quarter",
-        "QuarterToDate" => "Compares current quarter-to-date to previous quarter-to-date",
-        "YearOverYear" => "Compares current year to previous year",
-        "YearToDate" => "Compares current year-to-date to previous year-to-date",
-        _ => $"Performs {typeName} period comparison"
-    };
 }

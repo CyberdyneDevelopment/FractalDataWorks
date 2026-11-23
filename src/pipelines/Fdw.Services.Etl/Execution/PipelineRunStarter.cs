@@ -1,65 +1,68 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Commands.Data.Extensions;
 using Fdw.Operations.Abstractions.Execution;
-using Fdw.Operations.Abstractions.TypeCollections.Execution;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
-using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Etl.Execution.Claims;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
+using Fdw.Services.Pipelines.Abstractions.Runs;
 using Fdw.Services.Pipelines.Notifications;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Etl.Execution;
 
 /// <summary>
-/// Starts a pipeline run under another execution (FDW-1381): the shared start of an orchestration node's member pipelines and of
-/// a StartPipeline stage's target.
+/// Starts a pipeline run under another execution (FDW-1381): the shared start of an orchestration node's member pipelines and of an Execute pipeline
+/// component's target. It is the <see cref="IPipelineRunStarter"/> face of the pipeline layer's run contract (FDW-6131).
 /// </summary>
 /// <remarks>
 /// <para>
-/// A started run is: an execution item that is the child of the run that started it and carries its correlation, the run row
-/// that holds its start and end, and a queued request that carries the tenant, the roles and the typed parameters. The
-/// executor stamps the run row's start when the run reaches Running and its end when it ends, so a started run has the same
-/// start and end a triggered one has.
+/// A host builds it over <see cref="IPipelineRuns"/>, so a start is handed to the runner of the started pipeline's kind like every other start. Built from
+/// the queue's own services instead, it starts every run through the Queued run mode's runner (<see cref="QueuedPipelineRunner"/>), which is what a
+/// started run was before kinds existed.
 /// </para>
 /// <para>
-/// Why the start refuses instead of choosing: the tenant, the roles, the cause and the pipeline are the caller's to state. A
-/// start that leaves one out is not given the surroundings' (no ambient tenant, no empty role list).
+/// Why the start refuses instead of choosing: the tenant, the roles, the cause and the pipeline are the caller's to state. A start that leaves one out is
+/// not given the surroundings' (no ambient tenant, no empty role list).
 /// </para>
 /// </remarks>
 public sealed class PipelineRunStarter : IPipelineRunStarter
 {
-    private const string RunContainerName = "PipelineExecution";
-    private const string RunPath = "etl";
-
-    private readonly IExecutionTracker _tracker;
-    private readonly IDataGatewayProvider _dataGateways;
     private readonly IPipelineConfigurationProvider _pipelines;
-    private readonly IPipelineExecutionQueue _queue;
-    private readonly PipelineRunScheduler _scheduler;
-    private readonly IPipelineStatusBroadcaster _broadcaster;
-    private readonly IExecutionCompletionSignaler? _signaler;
+    private readonly IPipelineOffers? _offers;
+    private readonly IPipelineRunOutputs? _outputs;
+    private readonly Func<PipelineRunStart, CancellationToken, Task<IGenericResult<Guid>>> _start;
+    private readonly Func<Guid, CancellationToken, Task<IGenericResult<bool>>> _await;
     private readonly ILogger<PipelineRunStarter> _logger;
 
-    /// <summary>Initializes a new instance of the <see cref="PipelineRunStarter"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="PipelineRunStarter"/> class that starts every run through the Queued run mode.</summary>
+    /// <remarks>
+    /// Why this constructor stays: it is the direct Queued path the existing starter tests build, with no kind routing. Hosts never get it from DI:
+    /// <see cref="PipelineExecutionRegistration.RegisterPipelineExecutionQueue"/> registers the starter only through a factory over <see cref="IPipelineRuns"/>, so
+    /// every host routes a started run by its kind.
+    /// </remarks>
     /// <param name="tracker">Creates the execution item of the run.</param>
     /// <param name="dataGateways">Writes the run row.</param>
     /// <param name="pipelines">Finds the pipeline to start and the parameters it declares.</param>
     /// <param name="queue">Takes the request the executor runs.</param>
     /// <param name="scheduler">Decides how many pipelines run at once; a run that waits on a pipeline it started hands its place back.</param>
     /// <param name="broadcaster">Announces that the run was triggered.</param>
+    /// <param name="origins">Makes what the run's row states about where it came from (FDW-6519).</param>
+    /// <param name="settings">The settings the length of a chain of runs is judged against (FDW-6135).</param>
     /// <param name="signaler">Keeps a run's completion for a caller that awaits it (optional; a host that orchestrates has one).</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="offers">Reads the pipelines a tenant and a person are offered (FDW-6135); null when the host reads none, and a start that needs an offer is then refused.</param>
+    /// <param name="outputs">Reads the outputs a run gave back (FDW-6136); null when the host records none, and a step that reads outputs is then refused.</param>
     public PipelineRunStarter(
         IExecutionTracker tracker,
         IDataGatewayProvider dataGateways,
@@ -67,163 +70,96 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
         IPipelineExecutionQueue queue,
         PipelineRunScheduler scheduler,
         IPipelineStatusBroadcaster broadcaster,
+        IPipelineRunOrigins origins,
+        IEffectiveSettingsProvider settings,
         IExecutionCompletionSignaler? signaler = null,
-        ILogger<PipelineRunStarter>? logger = null)
+        ILogger<PipelineRunStarter>? logger = null,
+        IPipelineOffers? offers = null,
+        IPipelineRunOutputs? outputs = null)
     {
-        _tracker = tracker;
-        _dataGateways = dataGateways;
         _pipelines = pipelines;
-        _queue = queue;
-        _scheduler = scheduler;
-        _broadcaster = broadcaster;
-        _signaler = signaler;
+        _offers = offers;
+        _outputs = outputs;
         _logger = logger ?? NullLogger<PipelineRunStarter>.Instance;
+        var queued = new QueuedPipelineRunner(tracker, dataGateways, queue, scheduler, broadcaster, origins, settings, signaler, (ILogger)_logger);
+        _start = async (start, ct) =>
+        {
+            var found = await Find(start, ct).ConfigureAwait(false);
+            return found.IsFailure || found.Value is not { } pipeline
+                ? found.ToNewResult<Guid>()
+                : await queued.Start(StartOf(start, null), pipeline, ct).ConfigureAwait(false);
+        };
+        _await = queued.Await;
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="PipelineRunStarter"/> class over the pipeline layer's run contract.</summary>
+    /// <param name="runs">Hands each start to the runner of the started pipeline's kind.</param>
+    /// <param name="pipelines">Finds the pipeline a check names and the parameters it declares.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="offers">Reads the pipelines a tenant and a person are offered (FDW-6135); null when the host reads none, and a start that needs an offer is then refused.</param>
+    /// <param name="outputs">Reads the outputs a run gave back (FDW-6136); null when the host records none, and a step that reads outputs is then refused.</param>
+    public PipelineRunStarter(
+        IPipelineRuns runs, IPipelineConfigurationProvider pipelines, ILogger<PipelineRunStarter>? logger = null, IPipelineOffers? offers = null, IPipelineRunOutputs? outputs = null)
+    {
+        _pipelines = pipelines;
+        _offers = offers;
+        _outputs = outputs;
+        _logger = logger ?? NullLogger<PipelineRunStarter>.Instance;
+        _start = (start, ct) => runs.Start(StartOf(start, null), ct);
+        _await = runs.Await;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PipelineRunStarter"/> class over the pipeline layer's run contract, for a host that carries out runs at once (FDW-6701): a start
+    /// under an at-once run is made at once, under what is left of that run's limits.
+    /// </summary>
+    /// <param name="runs">Hands each start to the runner of the started pipeline's kind.</param>
+    /// <param name="pipelines">Finds the pipeline a check names and the parameters it declares.</param>
+    /// <param name="atOnceRuns">Holds the limits of the at-once runs this host carries out.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="offers">Reads the pipelines a tenant and a person are offered (FDW-6135); null when the host reads none, and a start that needs an offer is then refused.</param>
+    /// <param name="outputs">Reads the outputs a run gave back (FDW-6136); null when the host records none, and a step that reads outputs is then refused.</param>
+    public PipelineRunStarter(
+        IPipelineRuns runs, IPipelineConfigurationProvider pipelines, PipelineAtOnceRuns atOnceRuns, ILogger<PipelineRunStarter>? logger = null, IPipelineOffers? offers = null,
+        IPipelineRunOutputs? outputs = null)
+    {
+        _pipelines = pipelines;
+        _offers = offers;
+        _outputs = outputs;
+        _logger = logger ?? NullLogger<PipelineRunStarter>.Instance;
+        _start = (start, ct) => runs.Start(StartOf(start, atOnceRuns), ct);
+        _await = runs.Await;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<Guid>> Start(PipelineRunStart start, CancellationToken cancellationToken = default)
     {
-        var planned = await Plan(start, cancellationToken).ConfigureAwait(false);
-        if (planned.IsFailure)
-            return planned.ToNewResult<Guid>();
-
-        var opened = await Open(start, planned.Value!, cancellationToken).ConfigureAwait(false);
-        return opened.IsFailure
-            ? opened
-            : await Queue(start, planned.Value!, opened.Value, cancellationToken).ConfigureAwait(false);
-    }
-
-    // What the start needs before anything is written: the pipeline, its typed parameters, a host that can await and keep the row.
-    private async Task<IGenericResult<PlannedRun>> Plan(PipelineRunStart start, CancellationToken ct)
-    {
-        var named = await Find(start, ct).ConfigureAwait(false);
-        if (named.IsFailure)
-            return named.ToNewResult<PlannedRun>();
-
-        var pipeline = named.Value!;
-        var cycle = await CheckAncestors(start.ParentExecutionId, pipeline.Name, pipeline.Id, ct).ConfigureAwait(false);
-        if (cycle.IsFailure)
-            return cycle.ToNewResult<PlannedRun>();
-
-        // Why a refusal: a pipeline that requires approval waits for a person, and a run started from inside another run (or by project
-        // orchestration) has none to wait for. Starting it anyway would run it without the approval its author asked for (FDW-1937).
-        if (pipeline is IApprovalGatedPipelineConfiguration { RequireApprovalToRun: true })
-            return GenericResult<PlannedRun>.Failure(PipelineRunStartLog.PipelineRequiresApproval(_logger, pipeline.Name));
-
-        var declared = (pipeline as IDeclaresRunParameters)?.DeclaredRunParameters;
-        var values = PipelineRunParameterValues.Resolve(declared, start.Parameters, _logger);
-        if (values.IsFailure)
-            return values.ToNewResult<PlannedRun>();
-
-        if (start.AwaitCompletion && _signaler is null)
-            return GenericResult<PlannedRun>.Failure(PipelineRunStartLog.CompletionNotAwaitable(_logger, pipeline.Name));
-
-        var store = EtlPipelineTypes.OperationalConnection;
-        return string.IsNullOrWhiteSpace(store)
-            ? GenericResult<PlannedRun>.Failure(PipelineRunStartLog.OperationalStoreNotNamed(_logger, pipeline.Name))
-            : GenericResult<PlannedRun>.Success(new PlannedRun(pipeline, values.Value!, store, declared));
-    }
-
-    // A pipeline that starts itself, or one of the pipelines that started it, would never end: each run would start the next.
-    // The chain of execution items above the starter is read and a run of the same pipeline among them is a refusal.
-    // A run's item names its pipeline by the name or the id it was triggered by, so both are compared.
-    private async Task<IGenericResult> CheckAncestors(Guid parentExecutionId, string pipelineName, Guid pipelineId, CancellationToken ct)
-    {
-        var idText = pipelineId.ToString("D", CultureInfo.InvariantCulture);
-        Guid? current = parentExecutionId;
-        while (current is { } id)
+        // Why before the run is handed on (FDW-6135): a pipeline a variable named, which a model may have filled, is started only when it is offered to the run's tenant and person.
+        if (start.RequiresOffer)
         {
-            var read = await _tracker.GetItem(id, ct).ConfigureAwait(false);
-            if (read.IsFailure || read.Value is null)
-            {
-                return GenericResult.Failure(PipelineRunStartLog.PipelineNotStartable(
-                    _logger, pipelineName, $"the execution it would be started under could not be read: {read.CurrentMessage}"));
-            }
-
-            var ancestor = read.Value;
-            if (ancestor.Parameters.TryGetValue("PipelineName", out var ran)
-                && (string.Equals(ran as string, pipelineName, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(ran as string, idText, StringComparison.OrdinalIgnoreCase)))
-            {
-                return GenericResult.Failure(PipelineRunStartLog.PipelineIsAncestor(_logger, pipelineName, id));
-            }
-
-            current = ancestor.ParentId;
+            var offered = await Offered(start, cancellationToken).ConfigureAwait(false);
+            if (offered.IsFailure)
+                return offered.ToNewResult<Guid>();
         }
 
-        return GenericResult.Success();
+        return await _start(start, cancellationToken).ConfigureAwait(false);
     }
 
-    // The execution item (a child of the starter's, in its tenant, carrying its correlation) and the run row beside it.
-    private async Task<IGenericResult<Guid>> Open(PipelineRunStart start, PlannedRun planned, CancellationToken ct)
+    private async Task<IGenericResult> Offered(PipelineRunStart start, CancellationToken ct)
     {
-        var name = planned.Pipeline.Name;
-        var created = await _tracker.CreateItem(
-            ExecutionItemTypes.Job,
-            $"{name}_{DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture)}",
-            start.TenantId,
-            parentId: start.ParentExecutionId,
-            correlationId: start.ParentExecutionId.ToString("N"),
-            triggerSource: start.TriggerSource,
-            parameters: new Dictionary<string, object?>(StringComparer.Ordinal) { ["PipelineName"] = name },
-            cancellationToken: ct).ConfigureAwait(false);
-        if (created.IsFailure || created.Value is null)
-            return GenericResult<Guid>.Failure(PipelineRunStartLog.ExecutionNotCreated(
-                _logger, name, start.ParentExecutionId, created.CurrentMessage));
+        var label = start.PipelineName is { Length: > 0 } named ? named : start.PipelineId?.ToString("D", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (_offers is null)
+            return GenericResult.Failure(PipelineRunStartLog.PipelineOffersUnavailable(_logger, label));
 
-        var executionId = created.Value.Id;
-        var written = await WriteRunRow(planned.Store, executionId, name, start.TenantId, created.Value.State.Name, ct).ConfigureAwait(false);
-        return written.IsFailure
-            ? await Refuse(executionId, "RunRowNotWritten", written).ConfigureAwait(false)
-            : GenericResult<Guid>.Success(executionId);
-    }
+        var found = await Find(start, ct).ConfigureAwait(false);
+        if (found.IsFailure || found.Value is not { } pipeline)
+            return found;
 
-    // The run is announced and handed to the executor; a queue that is full closes the item it opened.
-    private async Task<IGenericResult<Guid>> Queue(PipelineRunStart start, PlannedRun planned, Guid executionId, CancellationToken ct)
-    {
-        var pipeline = planned.Pipeline;
-        if (start.AwaitCompletion)
-            _signaler!.Register(executionId);
+        var offered = await _offers.IsOffered(pipeline.Id, start.PersonId, [.. start.RunRoles], ct).ConfigureAwait(false);
+        if (offered.IsFailure)
+            return GenericResult.Failure(PipelineRunStartLog.PipelineOffersNotRead(_logger, pipeline.Name, offered.CurrentMessage));
 
-        await _broadcaster.BroadcastRunStatus(pipeline, executionId, "Triggered").ConfigureAwait(false);
-        await RecordGivenParameters(start, planned, executionId, ct).ConfigureAwait(false);
-
-        var enqueued = await _queue.Enqueue(
-            new PipelineExecutionRequest
-            {
-                ExecutionId = executionId,
-                PipelineId = pipeline.Id,
-                PipelineName = pipeline.Name,
-                TriggerSource = start.TriggerSource,
-                RunRoles = start.RunRoles,
-                TenantId = start.TenantId,
-                Parameters = planned.Values
-            }, ct).ConfigureAwait(false);
-        if (!enqueued.IsAccepted)
-        {
-            if (start.AwaitCompletion)
-                _signaler!.Deregister(executionId);
-            return await Refuse(
-                executionId, enqueued.Code,
-                GenericResult.Failure(PipelineRunStartLog.RunNotTaken(_logger, pipeline.Name, executionId, enqueued.Reason))).ConfigureAwait(false);
-        }
-
-        PipelineRunStartLog.RunStarted(_logger, pipeline.Name, executionId, start.ParentExecutionId, start.TriggerSource);
-        return GenericResult<Guid>.Success(executionId);
-    }
-
-    // What the started run was given, on its record, as a triggered run's is (FDW-1756, FDW-1992): each declared parameter it was given, and a parameter that
-    // took its declared default recorded as not given. Its failure is logged, not fatal: the run is already accepted and the entries only describe it.
-    private async Task RecordGivenParameters(PipelineRunStart start, PlannedRun planned, Guid executionId, CancellationToken ct)
-    {
-        var defaulted = PipelineRunParameterValues.Defaulted(planned.Declared, start.Parameters.Select(supplied => supplied.Key));
-        if (RunParameterEntries.EventData(planned.Declared, planned.Values, defaulted) is not { } data)
-            return;
-
-        var recorded = await _tracker.RecordEvent(
-            executionId, RunParameterEntries.EventType, "Parameters the run was given", data, cancellationToken: ct).ConfigureAwait(false);
-        if (recorded.IsFailure)
-            PipelineRunStartLog.RunParametersNotRecorded(_logger, planned.Pipeline.Name, executionId, recorded.CurrentMessage);
+        return offered.Value ? GenericResult.Success() : GenericResult.Failure(PipelineRunStartLog.PipelineNotOffered(_logger, pipeline.Name, start.TenantId));
     }
 
     /// <inheritdoc />
@@ -232,7 +168,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
         if (string.IsNullOrWhiteSpace(pipelineName))
             return GenericResult.Failure(PipelineRunStartLog.CheckedPipelineNameRequired(_logger));
 
-        var found = await _pipelines.Get(pipelineName, cancellationToken).ConfigureAwait(false);
+        var found = await _pipelines.Get(pipelineName, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure || found.Value is null)
             return GenericResult.Failure(PipelineRunStartLog.PipelineNotStartable(_logger, pipelineName, NotFoundReason(found)));
 
@@ -243,22 +179,42 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
     /// <inheritdoc />
     public async Task<bool> Await(Guid executionId, CancellationToken cancellationToken = default)
     {
-        if (_signaler is null)
-            return false;
+        // The run that waits hands its durable claim back while it waits, so a pipeline it started whose claim conflicts with its own can run and end (FDW-6939); it claims again before it goes on.
+        var handedBack = await PipelineRunClaimHold.YieldCurrent(cancellationToken).ConfigureAwait(false);
+        await using (handedBack.ConfigureAwait(false))
+        {
+            var awaited = await _await(executionId, cancellationToken).ConfigureAwait(false);
+            return awaited.IsSuccess && awaited.Value;
+        }
+    }
 
-        try
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<PipelineOutputValue>>> Outputs(Guid executionId, Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        return _outputs is null
+            ? GenericResult<IReadOnlyList<PipelineOutputValue>>.Failure(PipelineOutputLog.NotRead(_logger, executionId, "the host records no outputs of runs"))
+            : await _outputs.Read(executionId, tenantId, cancellationToken).ConfigureAwait(false);
+    }
+
+    // A start under another execution, as the pipeline layer states it: the run it belongs under is its parent and its correlation. A parent the host holds as an at-once run
+    // (FDW-6701) makes the start at once, under what is left of that run's limits; a parent it does not hold changes nothing.
+    private static PipelineStart StartOf(PipelineRunStart start, PipelineAtOnceRuns? atOnceRuns)
+    {
+        var parentLimits = start.ParentExecutionId is { } parent ? atOnceRuns?.LimitsOf(parent) : null;
+        return new PipelineStart
         {
-            // The run that waits hands its place back, so the pipeline it started can run; it takes the place again when that ends.
-            var handedBack = _scheduler.Yield();
-            await using (handedBack.ConfigureAwait(false))
-            {
-                return await _signaler.Await(executionId, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
-            _signaler.Deregister(executionId);
-        }
+            PipelineId = start.PipelineId,
+            PipelineName = start.PipelineName,
+            TriggerSource = start.TriggerSource,
+            TenantId = start.TenantId,
+            RunRoles = start.RunRoles,
+            Parameters = start.Parameters,
+            ParentExecutionId = start.ParentExecutionId,
+            AwaitCompletion = start.AwaitCompletion,
+            PersonId = start.PersonId,
+            RequiredRunMode = parentLimits is null ? null : PipelineRunModes.ByName("AtOnce").Name,
+            ParentLimits = parentLimits
+        };
     }
 
     // By id or by name, never both and never neither: which of them the caller named is part of what it asked for.
@@ -273,45 +229,19 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
         }
 
         var found = start.PipelineId is { } id
-            ? await _pipelines.Get(id, ct).ConfigureAwait(false)
-            : await _pipelines.Get(start.PipelineName!, ct).ConfigureAwait(false);
+            ? await _pipelines.Get(id, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false)
+            : await _pipelines.Get(start.PipelineName ?? string.Empty, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
         if (found.IsFailure || found.Value is null)
         {
-            var label = start.PipelineName is { } named ? named : start.PipelineId!.Value.ToString("D", CultureInfo.InvariantCulture);
+            var label = start.PipelineName is { } named ? named : start.PipelineId?.ToString("D", CultureInfo.InvariantCulture) ?? string.Empty;
             return GenericResult<IPipelineImplementationConfiguration>.Failure(
                 PipelineRunStartLog.PipelineNotStartable(_logger, label, NotFoundReason(found)));
         }
 
-        return GenericResult<IPipelineImplementationConfiguration>.Success(found.Value);
+        return found;
     }
 
     // The provider answers a pipeline it cannot find with no message; the refusal says what that means.
     private static string NotFoundReason(IGenericResult found) =>
         found.CurrentMessage is { Length: > 0 } message ? message : "no pipeline of that name is visible to the run";
-
-    private async Task<IGenericResult> WriteRunRow(string store, Guid executionId, string pipelineName, Guid tenantId, string state, CancellationToken ct)
-    {
-        var row = new EtlPipelineExecutionRecord { Id = executionId, PipelineName = pipelineName, TenantId = tenantId, Status = state };
-        var insert = Insert.Into<EtlPipelineExecutionRecord>(RunContainerName)
-            .DataStore(store)
-            .Path(RunPath)
-            .Value(row);
-        var written = await _dataGateways.ByName(DataGatewayNames.Main).Execute<int>(insert, ct).ConfigureAwait(false);
-        return written.IsFailure
-            ? GenericResult.Failure(PipelineRunStartLog.RunRowNotWritten(_logger, pipelineName, executionId, written.CurrentMessage))
-            : GenericResult.Success();
-    }
-
-    // The execution item exists by now, so a start that is refused afterwards closes it as failed with the reason.
-    private async Task<IGenericResult<Guid>> Refuse(Guid executionId, string code, IGenericResult refusal)
-    {
-        var closed = await _tracker.Complete(executionId, false, code, refusal.CurrentMessage, CancellationToken.None).ConfigureAwait(false);
-        if (closed.IsFailure)
-            EtlLog.CompletionRecordFailed(_logger, executionId, closed.CurrentMessage);
-
-        return refusal.ToNewResult<Guid>();
-    }
-
-    private sealed record PlannedRun(
-        IPipelineImplementationConfiguration Pipeline, IReadOnlyDictionary<string, object?> Values, string Store, IReadOnlyList<IPipelineRunParameter>? Declared);
 }

@@ -25,14 +25,16 @@ namespace Fdw.WebMcp.Mcp;
 /// <remarks>
 /// The call goes to the tool's real route, so authentication, validation, filters and error shapes
 /// are whatever that endpoint already does -- identical to a browser agent's call by construction,
-/// rather than by a second implementation that agrees for now.
+/// rather than by a second implementation that agrees for now. The one check made first is the
+/// description's own: the call's arguments are held to the tool's described request (types, required
+/// members, list items, object members) before any request is sent.
 /// </remarks>
 public sealed class WebMcpToolInvoker
 {
     /// <summary>The name of the <see cref="HttpClient"/> this invoker sends on.</summary>
     public const string ClientName = "Fdw.WebMcp.Mcp";
 
-    private readonly WebMcpMcpCatalogue _catalogue;
+    private readonly WebMcpMcpCatalog _catalog;
     private readonly IHttpClientFactory _clients;
     private readonly WebMcpHostSettingsReader _settings;
     private readonly WebMcpSelfAddressResolver _selfAddress;
@@ -40,21 +42,21 @@ public sealed class WebMcpToolInvoker
     private readonly ILogger<WebMcpToolInvoker> _logger;
 
     /// <summary>Initializes the invoker.</summary>
-    /// <param name="catalogue">The tools this host serves.</param>
+    /// <param name="catalog">The tools this host serves.</param>
     /// <param name="clients">Supplies the client tool calls are sent on, to absolute addresses under the host's own.</param>
     /// <param name="settings">The host's WebMCP settings: where its own address comes from, and the client key a tool call carries.</param>
     /// <param name="selfAddress">Gives the host's own address from the source its row names.</param>
     /// <param name="httpContext">Gives access to the calling agent's own request, to forward its identity.</param>
     /// <param name="logger">The logger.</param>
     public WebMcpToolInvoker(
-        WebMcpMcpCatalogue catalogue,
+        WebMcpMcpCatalog catalog,
         IHttpClientFactory clients,
         WebMcpHostSettingsReader settings,
         WebMcpSelfAddressResolver selfAddress,
         IHttpContextAccessor httpContext,
         ILogger<WebMcpToolInvoker>? logger = null)
     {
-        _catalogue = catalogue;
+        _catalog = catalog;
         _clients = clients;
         _settings = settings;
         _selfAddress = selfAddress;
@@ -72,7 +74,7 @@ public sealed class WebMcpToolInvoker
         IReadOnlyDictionary<string, JsonElement>? arguments,
         CancellationToken cancellationToken = default)
     {
-        var plan = _catalogue.PlanFor(toolName);
+        var plan = _catalog.PlanFor(toolName);
         if (plan is null)
         {
             return Failed(McpBridgeLog.ToolNotFound(_logger, toolName));
@@ -82,6 +84,14 @@ public sealed class WebMcpToolInvoker
         if (!built.IsSuccess || built.Value is not { } request)
         {
             return Failed(built);
+        }
+
+        // Before anything is sent: a call that does not match the description the agent was given never reaches the endpoint,
+        // and the refusal names the member (FDW-6143).
+        var matched = WebMcpArgumentValidator.Validate(plan, arguments, _logger);
+        if (matched.IsFailure)
+        {
+            return Failed(matched);
         }
 
         var settings = await _settings.Read(cancellationToken).ConfigureAwait(false);

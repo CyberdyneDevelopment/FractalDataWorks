@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Fdw.Collections;
+using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.WebMcp.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,7 +22,7 @@ namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 /// constructor arguments. None of them passes an id; <c>TypeOptionBase&lt;TBase&gt;</c> derives it
 /// from the option's fully qualified type name.
 /// </remarks>
-public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOptionBase>, IEndpointTypeOption
+public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOptionBase>, IEndpointTypeOption, IServiceRequirements
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EndpointTypeOptionBase"/> class.
@@ -75,6 +78,26 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOption
     // host's Program.cs, where the dependency is invisible to anyone reading the endpoint.
     //
     // Defaults are set in the declaration so a func is never null and the invokers never guard.
+
+    private readonly List<ServiceRequirement> _requirements = new();
+
+    /// <summary>Gets the services this endpoint needs registered (FDW-4657).</summary>
+    public IReadOnlyList<ServiceRequirement> Requirements => _requirements;
+
+    /// <summary>
+    /// Declares a service this endpoint needs registered, set from its constructor. The endpoint collection's Initialize fails, with <paramref name="message"/>, when the built host has no registration for it (FDW-4657).
+    /// </summary>
+    /// <typeparam name="TRequired">The service that must be registered.</typeparam>
+    /// <param name="message">The coded message for the service being absent: a <c>[MessageLogging]</c> method, passed as a method group or a closure over one.</param>
+    /// <remarks>
+    /// The same declaration a service type makes, with the same rule: the container is asked whether a registration exists and the service is never resolved. Why on the option: a host that
+    /// never referenced this endpoint never has the option, so it is not asked, and an option the collection does not route is not asked either. Why the collection checks and not the option:
+    /// it takes the requirements of every routed member at once, so a host missing several services learns of all of them in one boot, and a service two endpoints need is reported once.
+    /// </remarks>
+    protected void Requires<TRequired>(Func<ILogger, IGenericMessage> message)
+    {
+        _requirements.Add(new ServiceRequirement(typeof(TRequired), message));
+    }
 
     /// <summary>Gets the body run during Configure.</summary>
     protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }

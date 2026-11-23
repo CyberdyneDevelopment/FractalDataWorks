@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using Fdw.Operations.Abstractions.Escalation;
 using Fdw.Operations.Configuration;
 using Fdw.Operations.Escalation;
@@ -34,13 +35,13 @@ public sealed class EscalationServicePolicyReadTests
     {
         IReadOnlyList<IEscalationPolicyImplementationConfiguration> headers = [InForce, NotInForce];
         _provider
-            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<IEscalationPolicyImplementationConfiguration>>.Success(headers));
         foreach (var policy in new[] { InForce, NotInForce })
         {
             IEscalationPolicyImplementationConfiguration full = policy;
             _provider
-                .Setup(p => p.Get(policy.Id, It.IsAny<CancellationToken>()))
+                .Setup(p => p.Get(policy.Id, ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<IEscalationPolicyImplementationConfiguration>.Success(full));
         }
 
@@ -72,8 +73,8 @@ public sealed class EscalationServicePolicyReadTests
 
         await sut.GetEnabledPolicies(TestContext.Current.CancellationToken);
 
-        _provider.Verify(p => p.Get(NotInForce.Id, It.IsAny<CancellationToken>()), Times.Never);
-        _provider.Verify(p => p.Get(InForce.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _provider.Verify(p => p.Get(NotInForce.Id, ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Never);
+        _provider.Verify(p => p.Get(InForce.Id, ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public sealed class EscalationServicePolicyReadTests
 
         await sut.GetAllPolicies(TestContext.Current.CancellationToken);
 
-        _provider.Verify(p => p.Get(NotInForce.Id, It.IsAny<CancellationToken>()), Times.Once);
-        _provider.Verify(p => p.Get(InForce.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _provider.Verify(p => p.Get(NotInForce.Id, ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
+        _provider.Verify(p => p.Get(InForce.Id, ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

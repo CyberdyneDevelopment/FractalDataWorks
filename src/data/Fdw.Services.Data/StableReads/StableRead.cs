@@ -62,6 +62,9 @@ public static class StableRead
         if (command is not IQueryCommand query)
             return NeedsQuery(command, target, logger);
 
+        if (query is { Joins.Count: > 0 } || query.Unions is { Count: > 0 })
+            return await Combined(query, container, connection, target, logger, cancellationToken).ConfigureAwait(false);
+
         if (ReadsThroughCursor(connection) is { } cursorConnection)
         {
             StableReadLog.ReadingThroughCursor(logger, target);
@@ -74,6 +77,23 @@ public static class StableRead
         return connection is IStoreOrderedConnection storeOrdered
             ? InStoreOrder(query, container, readPage, storeOrdered.StoreOrder, target, logger)
             : Keyset(query, container, readPage, target, logger);
+    }
+
+    // A query that joins or stacks containers (FDW-6969) is read only through the connection's cursor, in the order its own ordering states.
+    // Keyset pages cut one container by its key, and a join repeats or drops a container's rows and a union adds another's, so a page could skip
+    // or repeat a row: such a read is refused, never paged. Its rows are not narrowed: the projection names every column it returns, under the
+    // names it returns them by.
+    private static async Task<IGenericResult<IRecordSource<DataRecord>>> Combined(
+        IQueryCommand query, IDataContainer container, IDataConnection connection, string target, ILogger logger, CancellationToken cancellationToken)
+    {
+        if (ReadsThroughCursor(connection) is not { } cursorConnection)
+            return Unavailable(target, "it is a query that joins or stacks containers, which is read only through a connection that streams, and this connection cannot", logger);
+
+        if (query.Projection?.Fields is not { Count: > 0 })
+            return Unavailable(target, "it is a query that joins or stacks containers and states no projection, so the columns it returns are not named", logger);
+
+        StableReadLog.ReadingThroughCursor(logger, target);
+        return await cursorConnection.OpenRecordSource(query, container, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Opens a data set's rows for reading in a stable order, through the kind that runs it.</summary>

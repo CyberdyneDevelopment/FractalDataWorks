@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Text;
 using System.Text.Json;
@@ -33,7 +34,7 @@ namespace Fdw.Data.MsSql.Translators;
 /// <see cref="SqlDbType"/>, so boxing is minimized and only occurs at the ADO.NET level.
 /// </para>
 /// </remarks>
-public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorBase<SqlCommand>
+public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorBase<SqlCommand>, IStatesOperations
 {
     /// <summary>What the database is given for a parameter whose value is null: ADO.NET's own null.</summary>
     [PlatformDefault]
@@ -47,6 +48,10 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
         : base(name, "MsSql")
     {
     }
+
+    /// <inheritdoc />
+    /// <remarks>Abstract on purpose: a translator added later cannot be left out of the operation rule, because it does not compile until it states what its command performs (FDW-6682).</remarks>
+    public abstract IReadOnlyList<string> Operations { get; }
 
     /// <summary>
     /// Creates a new <see cref="SqlCommand"/> with the supplied SQL text.

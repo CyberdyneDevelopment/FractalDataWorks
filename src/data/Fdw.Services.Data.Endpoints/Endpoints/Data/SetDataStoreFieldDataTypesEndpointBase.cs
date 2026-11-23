@@ -42,6 +42,13 @@ public abstract class SetDataStoreFieldDataTypesEndpointBase
     protected override string ResourceName => "datastores";
 
     /// <inheritdoc />
+    /// <remarks>
+    /// <see cref="IDataStoreWrites"/> decides (FDW-6968): a path or container a workspace owns at its owner's scope alone, so a member of the owner who
+    /// holds no store permission may change it; everything else by the store's rule, the <c>datastores:write</c> permission it asks as before.
+    /// </remarks>
+    protected override bool ResourceDecidesAccess => true;
+
+    /// <inheritdoc />
     protected override string Route => $"/{ResourceName}/{{Name}}/data-types";
 
     /// <summary>Returns the store as the resource identifier.</summary>
@@ -87,7 +94,7 @@ public abstract class SetDataStoreFieldDataTypesEndpointBase
         foreach (var field in fields.Value!)
             field.FrameworkDataType = request.FrameworkDataType;
 
-        var saved = await _dataStoreProvider.UpdateStore(current, ct).ConfigureAwait(false);
+        var saved = await Resolve<IDataStoreWrites>().UpdateStore(current, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (field, frameworkDataType) in previous)

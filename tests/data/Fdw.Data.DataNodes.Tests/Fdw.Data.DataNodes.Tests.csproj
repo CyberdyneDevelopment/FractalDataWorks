@@ -28,6 +28,8 @@
     <ProjectReference Include="..\..\..\src\foundation\results\Fdw.Results\Fdw.Results.csproj" />
     <ProjectReference Include="..\..\..\src\foundation\results\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\foundation\messagelogging\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\src\connections\Fdw.Data.Http\Fdw.Data.Http.csproj" />
   </ItemGroup>
 
 </Project>

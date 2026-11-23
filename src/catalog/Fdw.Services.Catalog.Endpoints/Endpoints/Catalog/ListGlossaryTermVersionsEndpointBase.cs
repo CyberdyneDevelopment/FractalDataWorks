@@ -61,7 +61,7 @@ public abstract class ListGlossaryTermVersionsEndpointBase : Endpoint<GlossaryTe
             return;
         }
 
-        var listed = await GlossaryTermVersionList.Run(_services, _names, req.Id, origin, ReadPolicy, Logger, ct).ConfigureAwait(false);
+        var listed = await GlossaryTermVersionList.Run(_services, _names, req.Id, origin, ReadPolicy, Resolve<PlaceVersionLimits>().MaxVersions, Logger, ct).ConfigureAwait(false);
         if (listed.IsFailure || listed.Value is not { } response)
         {
             await Send.ResultAsync(GlossaryCategoryLinks.Failure(listed, HttpContext)).ConfigureAwait(false);

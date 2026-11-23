@@ -26,6 +26,10 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     where TFactory : IServiceFactory<TService>
     where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
+    /// <summary>Gets how this provider reads the configuration it builds a service from.</summary>
+    /// <remarks>This domain has no description fill today, so its configuration is read whole (FDW-7354).</remarks>
+    protected override ConfigurationReadOptions ReadOptions => ConfigurationReadOptions.Whole;
+
     /// <summary>
     /// Initializes a new instance of the
     /// <see cref="DefaultServiceProvider{TService, TConfiguration, TFactory, TConfigurationProvider}"/> class.

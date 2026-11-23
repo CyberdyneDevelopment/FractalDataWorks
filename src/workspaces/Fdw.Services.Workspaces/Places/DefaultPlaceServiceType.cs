@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Results;
@@ -5,6 +7,9 @@ using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.ServiceTypes;
 
 namespace Fdw.Services.Workspaces;
 
@@ -20,6 +25,16 @@ namespace Fdw.Services.Workspaces;
 [Implementation(typeof(PlaceServiceTypes), "Default")]
 public sealed class DefaultPlaceServiceType : PlaceServiceTypeBase
 {
+    // The most versions of one definition one read across places holds (FDW-7104), by the key a host states it under (Places:Default). A definition holds
+    // at most one version per place. A host changes it with ServiceTypeDefaults.Override before Register.
+    private static readonly IReadOnlyDictionary<string, object> Defaults = new Dictionary<string, object>(StringComparer.Ordinal)
+    {
+        [nameof(PlaceVersionLimits.MaxVersions)] = 1000,
+    };
+
+    /// <inheritdoc />
+    public override IReadOnlyDictionary<string, object> DeclaredDefaults => Defaults;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultPlaceServiceType"/> class.
     /// </summary>
@@ -30,8 +45,14 @@ public sealed class DefaultPlaceServiceType : PlaceServiceTypeBase
             "Default Place Services",
             "The scope tree of tenant, organization and workspace, and the places above a place")
     {
-        Registration((builder, _) =>
+        Registration((builder, loggerFactory) =>
         {
+            var maxVersions = DeclaredSetting.ConfiguredCount(builder, ConfigurationKey, this, nameof(PlaceVersionLimits.MaxVersions),
+                (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DefaultPlaceServiceType>());
+            if (!maxVersions.IsSuccess)
+                return maxVersions.ToNewResult<IHostApplicationBuilder>();
+
+            builder.Services.TryAddSingleton(new PlaceVersionLimits(maxVersions.Value));
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IPlaceParentSource, TenantPlaceParentSource>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IPlaceParentSource, OrganizationPlaceParentSource>());
             builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IPlaceParentSource, WorkspacePlaceParentSource>());

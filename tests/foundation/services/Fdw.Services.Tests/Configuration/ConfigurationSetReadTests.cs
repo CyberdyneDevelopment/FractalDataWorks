@@ -10,6 +10,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
@@ -242,15 +243,144 @@ public sealed class ConfigurationSetReadTests
         => new(StringComparer.Ordinal) { ["RowId"] = rowId, [ownerColumn] = ownerRowId, ["Id"] = Guid.NewGuid(), ["Name"] = name };
 
     /// <summary>A domain provider over a store that holds roots, their operations and the operations' mappings, and counts what is read.</summary>
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFillingProviderIsHandedAListOnceWithTheIdentityAlreadyStamped()
+    {
+        // FDW-6208: a page of 580 data sets is one read of the descriptions, never 580, and the descriptions are keyed by the domain Id, which a record holds only
+        // after it is composed.
+        var store = new SetStore(filling: true).WithRoots(3);
+
+        var listed = await store.Filling!.Get(Levels, TestContext.Current.CancellationToken);
+
+        listed.IsSuccess.ShouldBeTrue(listed.CurrentMessage);
+        store.Filling.Filled.ShouldHaveSingleItem().ShouldBe(store.DomainIds);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFillingProviderIsHandedThePageOnceAndASingleReadAListOfOne()
+    {
+        var store = new SetStore(filling: true).WithRoots(3);
+
+        var page = await store.Filling!.Get(0, 10, Levels, TestContext.Current.CancellationToken);
+        var members = new List<ITestRootImplementationConfiguration>();
+        await foreach (var member in page.Value!.Items) members.Add(member);
+        var single = await store.Filling.Get("root1", Levels, TestContext.Current.CancellationToken);
+
+        page.IsSuccess.ShouldBeTrue(page.CurrentMessage);
+        single.IsSuccess.ShouldBeTrue(single.CurrentMessage);
+        members.Count.ShouldBe(3);
+        store.Filling.Filled.Count.ShouldBe(2);
+        store.Filling.Filled[0].ShouldBe(store.DomainIds);
+        store.Filling.Filled[1].ShouldBe([store.DomainIds[0]]);
+        single.Value!.Id.ShouldBe(store.DomainIds[0]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Performance")]
+    public async Task APageThatStatesItLeavesOutTheFillIsNotHandedToTheFillingProviderAndAPageThatStatesWholeIs()
+    {
+        // FDW-6124: a list page that does not show the text does not read it: the members come back as their own rows hold them, and the observer is not called.
+        var store = new SetStore(filling: true).WithRoots(3);
+
+        var lean = await store.Filling!.Get(0, 10, Levels, ConfigurationReadOptions.WithoutFilledMembers, TestContext.Current.CancellationToken);
+        var leanMembers = new List<ITestRootImplementationConfiguration>();
+        await foreach (var member in lean.Value!.Items.WithCancellation(TestContext.Current.CancellationToken)) leanMembers.Add(member);
+        var filledBefore = store.Filling.Filled.Count;
+
+        var whole = await store.Filling.Get(0, 10, Levels, ConfigurationReadOptions.Whole, TestContext.Current.CancellationToken);
+        var wholeMembers = new List<ITestRootImplementationConfiguration>();
+        await foreach (var member in whole.Value!.Items.WithCancellation(TestContext.Current.CancellationToken)) wholeMembers.Add(member);
+
+        lean.IsSuccess.ShouldBeTrue(lean.CurrentMessage);
+        leanMembers.Select(member => member.Id).ShouldBe(store.DomainIds);
+        lean.Value.Outcome.IsSuccess.ShouldBeTrue();
+        filledBefore.ShouldBe(0);
+        wholeMembers.Count.ShouldBe(3);
+        store.Filling.Filled.ShouldHaveSingleItem().ShouldBe(store.DomainIds);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFailingFillFailsTheReadAndAReadAsOfAPastInstantIsRefusedBeforeAnythingIsFilled()
+    {
+        var failing = new SetStore(filling: true, fillFails: true).WithRoots(1);
+        var refused = new SetStore(filling: true).WithRoots(1);
+
+        var read = await failing.Filling!.Get("root1", Levels, TestContext.Current.CancellationToken);
+        var past = await refused.Filling!.Get(refused.DomainIds[0], DateTimeOffset.UtcNow.AddDays(-1), TestContext.Current.CancellationToken);
+
+        read.IsFailure.ShouldBeTrue();
+        read.CurrentMessage.ShouldNotBeNull().ShouldContain("fill refused");
+        past.IsFailure.ShouldBeTrue();
+        past.CurrentMessage.ShouldNotBeNull().ShouldContain("past instant");
+        refused.Filling.Filled.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AChildReadHandsTheChildFillTheMembersIdAndItsChildrenOnce()
+    {
+        // FDW-6777: the field list of a data set reads its fields as a child read, which reaches no FillSet; a child's description is owned by the member it hangs
+        // from, so the fill is handed that member's Id with the children.
+        var store = new SetStore(childFilling: true).WithRoots(2);
+        store.Gateway.Add("TestOp", Row(21, "TestRootRowId", 11, "op1a"), Row(22, "TestRootRowId", 11, "op1b"), Row(23, "TestRootRowId", 12, "op2"));
+
+        var read = await store.ChildFilling.Get<TestOpConfiguration>("root1", ConfigurationLevels.RecordOnly, TestContext.Current.CancellationToken);
+
+        read.IsSuccess.ShouldBeTrue(read.CurrentMessage);
+        read.Value!.Select(op => op.Name).ShouldBe(["op1a", "op1b"]);
+        var filled = store.ChildFilling.Filled.ShouldHaveSingleItem();
+        filled.MemberId.ShouldBe(store.DomainIds[0]);
+        filled.Children.ShouldBe(["op1a", "op1b"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFailingChildFillFailsTheChildReadAndAReadOfNoChildrenIsNotFilled()
+    {
+        var failing = new SetStore(childFilling: true, fillFails: true).WithRoots(1);
+        failing.Gateway.Add("TestOp", Row(21, "TestRootRowId", 11, "op1"));
+        var empty = new SetStore(childFilling: true).WithRoots(1);
+
+        var refused = await failing.ChildFilling.Get<TestOpConfiguration>("root1", ConfigurationLevels.RecordOnly, TestContext.Current.CancellationToken);
+        var none = await empty.ChildFilling.Get<TestOpConfiguration>("root1", ConfigurationLevels.RecordOnly, TestContext.Current.CancellationToken);
+
+        refused.IsFailure.ShouldBeTrue();
+        refused.CurrentMessage.ShouldNotBeNull().ShouldContain("child fill refused");
+        none.IsSuccess.ShouldBeTrue(none.CurrentMessage);
+        none.Value.ShouldNotBeNull().ShouldBeEmpty();
+        empty.ChildFilling.Filled.ShouldBeEmpty();
+    }
+
     private sealed class SetStore
     {
-        public SetStore(int keyChunkSize = 1000)
+        public SetStore(int keyChunkSize = 1000, bool filling = false, bool fillFails = false, bool childFilling = false)
         {
             Gateway = new CountingGateway();
             var gateways = new Gateways(Gateway, keyChunkSize);
             Domain = new TestRootDomainProvider(gateways);
             Domain.Register("Default", new TestRootImplementationProvider(gateways));
+            ChildFilling = new TestChildFillingRootDomainProvider(gateways, childFilling && fillFails);
+            ChildFilling.Register("Default", new TestRootImplementationProvider(gateways));
+            if (!filling) return;
+
+            Filling = new TestFillingRootDomainProvider(gateways, fillFails);
+            Filling.Register("Default", new TestRootImplementationProvider(gateways));
         }
+
+        /// <summary>Gets the same store read through a provider that declares it fills the children of a child read (FDW-6777).</summary>
+        public TestChildFillingRootDomainProvider ChildFilling { get; }
+
+        /// <summary>Gets the same store read through a provider that declares it fills members from another domain, when asked for.</summary>
+        public TestFillingRootDomainProvider? Filling { get; }
 
         public CountingGateway Gateway { get; }
 
@@ -340,7 +470,7 @@ public sealed class ConfigurationSetReadTests
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
             if (typeof(T) == typeof(IEnumerable<DomainConfiguration>))
-                return Task.FromResult(GenericResult<T>.Success((T)(object)_domainRecords.ToList()));
+                return Task.FromResult(GenericResult<T>.Success((T)(object)(IgnoreFilters ? _domainRecords.ToList() : SelectedDomainRecords(command))));
 
             if (typeof(T) == typeof(IEnumerable<Dictionary<string, object?>>))
             {
@@ -354,6 +484,25 @@ public sealed class ConfigurationSetReadTests
                 return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(typeof(T).GetGenericArguments()[0], 0)));
 
             return Task.FromResult(GenericResult<T>.Success(default!));
+        }
+
+        // A domain record is selected when it meets every Name and Id condition the command carries, as a store compares them: a read by name or by id answers that member and
+        // not every member held. Any other condition (the version flags) is not asked, because only current rows are held.
+        private List<DomainConfiguration> SelectedDomainRecords(IDataCommand command)
+        {
+            if (command is not IQueryCommand { Filter.Root: { } root })
+                return _domainRecords.ToList();
+
+            var asked = Conditions(root).Where(c => c.PropertyName is nameof(DomainConfiguration.Name) or nameof(DomainConfiguration.Id)).ToList();
+            return _domainRecords.Where(record => asked.All(c => Meets(c, record))).ToList();
+        }
+
+        private static bool Meets(FilterCondition condition, DomainConfiguration record)
+        {
+            var held = Text(condition.PropertyName == nameof(DomainConfiguration.Id) ? record.Id : record.Name);
+            return condition.Value is IEnumerable and not string
+                ? ((IEnumerable)condition.Value).Cast<object?>().Any(wanted => string.Equals(Text(wanted), held, StringComparison.OrdinalIgnoreCase))
+                : string.Equals(Text(condition.Value), held, StringComparison.OrdinalIgnoreCase);
         }
 
         // A row is selected when every IN condition names a column it holds the value of, as a store compares them.
@@ -394,8 +543,52 @@ public sealed class ConfigurationSetReadTests
         public Task<IGenericResult> Execute(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
+        // A child read (FDW-6777): the rows of the read container that hang, down the ownership chain, from the row its owner condition names
+        // ("<container>.<column> = value", the domain row by its Id), each mapped to the row type as a store maps it. The set read never takes this path.
         public Task<IGenericResult<IEnumerable<object>>> Execute(IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken = default)
-            => Task.FromResult(GenericResult<IEnumerable<object>>.Failure(new GenericMessage("A read by row type is the per-row path; the set read does not take it")));
+        {
+            _reads[target.Container] = _reads.GetValueOrDefault(target.Container) + 1;
+            var owner = command is IQueryCommand { Filter.Root: { } root }
+                ? Conditions(root).FirstOrDefault(c => string.Equals(c.Operator.SqlOperator, "=", StringComparison.Ordinal) && c.PropertyName.Contains('.', StringComparison.Ordinal)
+                                                       && !c.PropertyName.EndsWith(".IsCurrent", StringComparison.Ordinal) && !c.PropertyName.EndsWith(".IsDeleted", StringComparison.Ordinal))
+                : null;
+            if (owner is null)
+                return Task.FromResult(GenericResult<IEnumerable<object>>.Failure(new GenericMessage("A child read names its owner with one condition on <container>.<column>")));
+
+            var dot = owner.PropertyName.IndexOf('.', StringComparison.Ordinal);
+            var level = Array.IndexOf(Chain, owner.PropertyName[..dot]);
+            if (level < 0)
+                return Task.FromResult(GenericResult<IEnumerable<object>>.Failure(new GenericMessage($"{owner.PropertyName} is not a container of the fixture's tree")));
+
+            var column = owner.PropertyName[(dot + 1)..];
+            var rowIds = (_rows.GetValueOrDefault(Chain[level]) ?? [])
+                .Where(row => row.TryGetValue(column, out var value) && string.Equals(Text(value), Text(owner.Value), StringComparison.Ordinal))
+                .Select(row => Text(row["RowId"]))
+                .ToHashSet(StringComparer.Ordinal);
+            List<Dictionary<string, object?>> rows = [];
+            for (var below = level + 1; below < Chain.Length; below++)
+            {
+                var foreignKey = string.Concat(Chain[below - 1], "RowId");
+                rows = [.. (_rows.GetValueOrDefault(Chain[below]) ?? []).Where(row => row.TryGetValue(foreignKey, out var value) && rowIds.Contains(Text(value)))];
+                if (string.Equals(Chain[below], target.Container, StringComparison.Ordinal)) break;
+                rowIds = rows.Select(row => Text(row["RowId"])).ToHashSet(StringComparer.Ordinal);
+            }
+
+            var mapper = PocoMapperCollection.ByName(rowType.Name);
+            List<object> mapped = [];
+            foreach (var row in rows)
+            {
+                var item = mapper.MapFromDictionary(new Dictionary<string, object?>(row, StringComparer.Ordinal));
+                if (item.IsFailure || item.Value is not { } value)
+                    return Task.FromResult(GenericResult<IEnumerable<object>>.Failure(new GenericMessage($"The fixture could not map a {target.Container} row to {rowType.Name}")));
+                mapped.Add(value);
+            }
+
+            return Task.FromResult(GenericResult<IEnumerable<object>>.Success(mapped));
+        }
+
+        // The ownership chain of Tree(), from the domain row down: each container's Foreign key to the one above it is "<the one above>RowId".
+        private static readonly string[] Chain = ["TestRootDomain", "TestRoot", "TestOp", "TestMap"];
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not supported in CountingGateway")));

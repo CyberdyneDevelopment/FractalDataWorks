@@ -43,6 +43,9 @@ public class DataSetSummaryResponse : ResourceSummary
     /// </summary>
     public string? Implementation { get; set; }
 
+    /// <summary>Gets or sets how the data set's sources combine, "Join" or "Union" (FDW-6946); null when it has one source or is not a Compound or Federated data set.</summary>
+    public string? SourceCombination { get; set; }
+
     /// <summary>Gets or sets what kind of variation this data set is: "Scoped" (a workspace owns it) or "DataView" (a user does); null for a data set that is not a variation.</summary>
     public string? VariationKind { get; set; }
 

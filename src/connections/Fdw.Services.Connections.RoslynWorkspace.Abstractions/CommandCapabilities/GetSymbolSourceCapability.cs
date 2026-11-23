@@ -11,7 +11,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace.Abstractions.CommandCapabilit
 /// Used by RoslynWorkspace connection types.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(CommandCapabilityTypes), "GetSymbolSource", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(CommandCapabilityTypes), "GetSymbolSource")]
 public sealed class GetSymbolSourceCapability : CommandCapabilityTypeBase
 {
     /// <summary>

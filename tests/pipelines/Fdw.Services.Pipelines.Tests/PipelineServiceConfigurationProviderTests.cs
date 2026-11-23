@@ -17,9 +17,10 @@ using Fdw.ServiceTypes;
 namespace Fdw.Services.Pipelines.Tests;
 
 /// <summary>
-/// Covers the registration of <see cref="PipelineServiceConfigurationProvider"/>: one singleton is
-/// published under the domain interfaces and the concrete alias, and registering succeeds when no
-/// operational connection is named.
+/// Covers the registration of <see cref="PipelineServiceConfigurationProvider"/>, which the Pipeline domain
+/// (<see cref="PipelineTypes"/>, FDW-6244) registers: one singleton is published under the domain interfaces
+/// and the concrete alias; and <see cref="PipelineServiceTypes"/> registers no second provider and succeeds when
+/// no operational connection is named.
 /// </summary>
 [Trait("Category", "Configuration")]
 public sealed class PipelineServiceConfigurationProviderTests
@@ -33,12 +34,14 @@ public sealed class PipelineServiceConfigurationProviderTests
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddLogging();
         builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object);
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object);
         // A test is a host: the operational connection has no default, so it has to be named here for
         // the same reason a real host has to name it.
         PipelineServiceTypes.OperationalConnection = "OpsDb";
 
         // Act
-        PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
+        PipelineTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
         // Assert
         using var provider = builder.Services.BuildServiceProvider();
@@ -50,7 +53,7 @@ public sealed class PipelineServiceConfigurationProviderTests
         var asDomain = provider.GetRequiredService<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>();
 
         asDomain.ShouldBeSameAs(concrete);
-        concrete.DataStoreName.ShouldBe(PipelineServiceTypes.ConfigurationConnection);
+        concrete.DataStoreName.ShouldBe(PipelineTypes.ConfigurationConnection);
         concrete.PathName.ShouldBe("pipe");
     }
 
@@ -65,10 +68,12 @@ public sealed class PipelineServiceConfigurationProviderTests
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddLogging();
         builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object);
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object);
         builder.Services.AddSingleton(registered);
         PipelineServiceTypes.OperationalConnection = "OpsDb";
 
-        PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
+        PipelineTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
         using var provider = builder.Services.BuildServiceProvider();
         var concrete = provider.GetRequiredService<IPipelineConfigurationProvider>().ShouldBeOfType<PipelineServiceConfigurationProvider>();
@@ -84,9 +89,11 @@ public sealed class PipelineServiceConfigurationProviderTests
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddLogging();
         builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object);
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object);
         PipelineServiceTypes.OperationalConnection = "OpsDb";
 
-        PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);
+        PipelineTypes.Register(builder, NullLoggerFactory.Instance, force: true);
 
         using var provider = builder.Services.BuildServiceProvider();
         provider.GetRequiredService<IPipelineConfigurationProvider>().ShouldBeOfType<PipelineServiceConfigurationProvider>().Placement.ShouldBeOfType<UnavailablePlacement>();
@@ -103,6 +110,8 @@ public sealed class PipelineServiceConfigurationProviderTests
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddLogging();
         builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object);
+        builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object);
         var previous = PipelineServiceTypes.OperationalConnection;
         try
         {
@@ -136,6 +145,8 @@ public sealed class PipelineServiceConfigurationProviderTests
             var builder = Host.CreateApplicationBuilder();
             builder.Services.AddLogging();
             builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+            builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object);
+            builder.Services.AddSingleton(new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object);
 
             // Act
             var result = PipelineServiceTypes.Register(builder, NullLoggerFactory.Instance, force: true);

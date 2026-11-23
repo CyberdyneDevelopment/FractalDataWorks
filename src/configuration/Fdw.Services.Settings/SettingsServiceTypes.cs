@@ -29,4 +29,11 @@ public partial class SettingsServiceTypes : ServiceTypeCollectionBase<SettingsSe
     /// </summary>
     public static string ConfigurationConnection => PlatformConnection.Name;
 
+    /// <summary>Initializes the <see cref="SettingsServiceTypes"/> class: states what a host that registers it must also have registered.</summary>
+    static SettingsServiceTypes()
+    {
+        // The server setting provider writes each setting's description with the descriptions writer, in the unit of the write (FDW-6208): a host that registered this collection
+        // without the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<Fdw.Services.Descriptions.IDescriptionWriter>(Logging.SettingsDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+    }
 }

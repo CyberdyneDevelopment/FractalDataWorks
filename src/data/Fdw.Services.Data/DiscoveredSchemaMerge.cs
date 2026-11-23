@@ -29,6 +29,14 @@ namespace Fdw.Services.Data;
 /// (FDW-988).
 /// </para>
 /// <para>
+/// A discovered container also states the keys the catalog declares on it (FDW-6309): its primary key and its foreign keys, in
+/// <see cref="IStorageContainer.Keys"/>. They are stored as <c>PrimaryKey</c> and <c>Foreign</c> keys, beside the Surrogate key above,
+/// which stays because readers look it up by name. A foreign key is stored with the key it references when the referenced container
+/// is in the store with a primary key of the columns the foreign key names, in that order; any other foreign key is stored without a
+/// referenced key, which is what a foreign key to a container outside the discovery is. A container added or refreshed gets a key it
+/// does not have; a key it has, by name and type, is never added twice, and no key is removed.
+/// </para>
+/// <para>
 /// The store is changed in place and not saved: the caller saves it, once, with whatever else the
 /// same request changed.
 /// </para>
@@ -47,6 +55,7 @@ internal static class DiscoveredSchemaMerge
         var containersAdded = 0;
         var fieldsAdded = 0;
         var fieldsUpdated = 0;
+        var changed = new List<(IStorageContainer Source, DataContainerConfiguration Container)>();
 
         foreach (var source in discovered)
         {
@@ -67,6 +76,7 @@ internal static class DiscoveredSchemaMerge
                 path.Containers.Add(container);
                 containersAdded++;
                 fieldsAdded += container.Fields.Count;
+                changed.Add((source, container));
                 continue;
             }
 
@@ -76,7 +86,10 @@ internal static class DiscoveredSchemaMerge
             existing.TypeId = source.ContainerType.Name;
             fieldsUpdated += UpdateExistingFields(existing, source);
             fieldsAdded += AddMissingFields(existing, source);
+            changed.Add((source, existing));
         }
+
+        AddDiscoveredKeys(store, changed);
 
         return new DataStoreSchemaImportResult(
             discovered.Count, discovered.Sum(c => c.Schema.Fields.Count), pathsAdded, containersAdded, fieldsAdded, fieldsUpdated);
@@ -142,6 +155,73 @@ internal static class DiscoveredSchemaMerge
                 }).ToList(),
             },
         ];
+    }
+
+    // The primary keys of every container added or refreshed first, so a foreign key added next finds the key it references.
+    private static void AddDiscoveredKeys(
+        IDataStoreImplementationConfiguration store, IReadOnlyList<(IStorageContainer Source, DataContainerConfiguration Container)> changed)
+    {
+        foreach (var (source, container) in changed)
+        {
+            foreach (var key in source.Keys.Where(key => !key.KeyType.IsReference))
+                AddKey(container, key, referenced: null);
+        }
+
+        foreach (var (source, container) in changed)
+        {
+            foreach (var key in source.Keys.Where(key => key.KeyType.IsReference))
+                AddKey(container, key, ReferencedKeyOf(store, key));
+        }
+    }
+
+    // A key the container already has, by name and type, is left as it is: a refresh never adds one twice and never replaces one.
+    private static void AddKey(DataContainerConfiguration container, IContainerKey key, DataContainerKeyConfiguration? referenced)
+    {
+        if (container.Keys.Any(have =>
+                string.Equals(have.Name, key.KeyName, StringComparison.Ordinal)
+                && string.Equals(have.TypeId, key.KeyType.Name, StringComparison.Ordinal)))
+            return;
+
+        container.Keys.Add(new DataContainerKeyConfiguration
+        {
+            Id = Guid.CreateVersion7(),
+            Name = key.KeyName,
+            TypeId = key.KeyType.Name,
+            ReferencedKeyId = referenced?.Id,
+            ReferencedContainerName = referenced is null ? null : key.ReferencedContainer!.Name,
+            ReferencedKeyName = referenced?.Name,
+            KeyFields = [.. key.KeyFields.OrderBy(keyField => keyField.Ordinal).Select((keyField, position) => new DataContainerKeyFieldConfiguration
+            {
+                Id = Guid.CreateVersion7(),
+                DataContainerFieldId = container.Fields.First(field => string.Equals(field.Name, keyField.LocalField.Name, StringComparison.OrdinalIgnoreCase)).Id,
+                Ordinal = position + 1,
+                KeyType = key.KeyType.Name,
+            })],
+        });
+    }
+
+    // The primary key of the referenced container as the store holds it, when the foreign key names exactly its columns in its order;
+    // none otherwise. A foreign key can reference any unique index, and a stored key references a key, not a column list, so a foreign key
+    // to anything but the primary key's own columns has no key to cite.
+    private static DataContainerKeyConfiguration? ReferencedKeyOf(IDataStoreImplementationConfiguration store, IContainerKey key)
+    {
+        if (key.ReferencedContainer is not { } target)
+            return null;
+
+        var container = store.Paths
+            .FirstOrDefault(path => string.Equals(path.PathValue, target.Path.PathValue, StringComparison.OrdinalIgnoreCase))
+            ?.Containers.FirstOrDefault(have => string.Equals(have.Name, target.Name, StringComparison.OrdinalIgnoreCase));
+        var primary = container?.Keys.FirstOrDefault(have => string.Equals(have.TypeId, KeyTypes.ByName("PrimaryKey").Name, StringComparison.Ordinal));
+        if (container is null || primary is null)
+            return null;
+
+        var primaryColumns = primary.KeyFields
+            .OrderBy(keyField => keyField.Ordinal)
+            .Select(keyField => container.Fields.FirstOrDefault(field => field.Id == keyField.DataContainerFieldId)?.Name)
+            .ToList();
+        var referencedColumns = key.KeyFields.OrderBy(keyField => keyField.Ordinal).Select(keyField => keyField.ReferencedField?.Name).ToList();
+
+        return primaryColumns.SequenceEqual(referencedColumns, StringComparer.OrdinalIgnoreCase) ? primary : null;
     }
 
     // A refresh re-reads the source, so a column whose type or nullability changed there changes here, and a field discovered

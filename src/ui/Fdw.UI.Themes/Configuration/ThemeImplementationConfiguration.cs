@@ -189,6 +189,9 @@ public partial class ThemeImplementationConfiguration
     /// <summary>
     /// Gets or sets the theme description.
     /// </summary>
+    // Why [NotStored]: a theme's description is a row of the descriptions table under the description type Theme, written in the unit of the theme's save (FDW-6208);
+    // the column is gone from settings.ThemeConfiguration. It is never filled on load, so it is null until a caller states one, and it has no initializer.
+    [NotStored]
     public string? Description { get; set; }
 
 }

@@ -1,4 +1,4 @@
-using System.Globalization;
+using Fdw.Services.Calculations.Abstractions.Sets;
 
 namespace Fdw.Services.Etl.Transforms;
 
@@ -16,19 +16,13 @@ public static class ComputeScalarValue
     public static bool TryParse(string text, string valueType, out object? value)
     {
         value = null;
-        switch (valueType)
+        var type = LiteralTypes.ByName(valueType);
+        if (ReferenceEquals(type, LiteralTypes.NotFound))
         {
-            case "Number" when decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var number):
-                value = number;
-                return true;
-            case "Flag" when bool.TryParse(text, out var flag):
-                value = flag;
-                return true;
-            case "Text":
-                value = text;
-                return true;
-            default:
-                return false;
+            return false;
         }
+
+        value = type.Read(text);
+        return value is not null;
     }
 }

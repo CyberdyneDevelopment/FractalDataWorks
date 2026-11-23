@@ -5,6 +5,7 @@ using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs.Logging;
+using Fdw.Services.Etl.Logging;
 
 namespace Fdw.Services.Etl.Graphs.Building;
 
@@ -31,8 +32,18 @@ public abstract class FlowStepBuilderBase : TypeOptionBase<FlowStepBuilderBase>,
     public virtual bool HasOutsideEffect => false;
 
     /// <inheritdoc />
+    public virtual IReadOnlyList<Type> Needs => [];
+
+    /// <inheritdoc />
     public IGenericResult<IFlowStep> Build(PipelineComponentConfiguration component, IReadOnlyList<IFlowStep> body, FlowBuildContext context)
     {
+        // Why before the test run's skip: a host that lacks what a component type's builder needs is miswired, and a test run is refused for it as a real run is.
+        var needs = context.NeedsMet(component, Needs);
+        if (needs.IsFailure)
+        {
+            return needs.ToNewResult<IFlowStep>();
+        }
+
         if (HasOutsideEffect && context.Test is not null)
         {
             return GenericResult<IFlowStep>.Success(new FlowSkippedStep(component.Name, component.ComponentType, context.Logger));
@@ -40,12 +51,27 @@ public abstract class FlowStepBuilderBase : TypeOptionBase<FlowStepBuilderBase>,
 
         try
         {
-            return Create(component, body, context);
+            var created = Create(component, body, context);
+            return created.IsSuccess && created.Value is { } step && HasOutsideEffect ? Claimed(component, step, context) : created;
         }
         catch (ArgumentException ex)
         {
             return GenericResult<IFlowStep>.Failure(GraphLog.StepInvalid(context.Logger, component.Name, component.ComponentType, ex.Message));
         }
+    }
+
+    // Why here, for every kind that states an outside effect (FDW-6139): one place makes each such step claim itself before it acts, so a kind added later cannot forget to. A host that registers no claim store
+    // refuses the graph at build: no claim is assumed.
+    private static IGenericResult<IFlowStep> Claimed(PipelineComponentConfiguration component, IFlowStep step, FlowBuildContext context)
+    {
+        if (context.StepClaims is not { } claims)
+        {
+            return GenericResult<IFlowStep>.Failure(PipelineStepClaimLog.CannotClaim(context.Logger, component.Name, "the host registers no store for the claims of steps"));
+        }
+
+        return GenericResult<IFlowStep>.Success(step is IFlowFailureHook hook
+            ? new FlowClaimedFailureHookStep(hook, claims, context.Logger)
+            : new FlowClaimedStep(step, claims, context.Logger));
     }
 
     /// <summary>Builds the engine's step.</summary>

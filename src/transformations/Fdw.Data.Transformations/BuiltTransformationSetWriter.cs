@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
 using Fdw.Services.Calculations.Abstractions.Sets;
@@ -151,14 +150,10 @@ public static class BuiltTransformationSetWriter
             return GenericResult<(string? Text, string? Type)>.Success((null, null));
         }
 
-        return stated switch
-        {
-            string text => GenericResult<(string? Text, string? Type)>.Success((text, "Text")),
-            bool flag => GenericResult<(string? Text, string? Type)>.Success((flag ? "true" : "false", "Flag")),
-            decimal number => GenericResult<(string? Text, string? Type)>.Success((number.ToString(CultureInfo.InvariantCulture), "Number")),
-            int whole => GenericResult<(string? Text, string? Type)>.Success((whole.ToString(CultureInfo.InvariantCulture), "Number")),
-            _ => SetFailure.Of<(string? Text, string? Type)>(
-                "SetDefinitionInvalid", set, $"column '{column.Name}' of output '{output}' states a {stated.GetType().Name}; only text, a number or a flag can be stored"),
-        };
+        var literalType = LiteralTypes.OfValue(stated);
+        return ReferenceEquals(literalType, LiteralTypes.NotFound)
+            ? SetFailure.Of<(string? Text, string? Type)>(
+                "SetDefinitionInvalid", set, $"column '{column.Name}' of output '{output}' states a {stated.GetType().Name}; only text, a number or a flag can be stored")
+            : GenericResult<(string? Text, string? Type)>.Success((literalType.Write(stated), literalType.Name));
     }
 }

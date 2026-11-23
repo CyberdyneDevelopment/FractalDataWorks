@@ -144,17 +144,11 @@ public sealed class ContainerColumnValues : IContainerColumnValues
 
     private static bool TryCount(Dictionary<string, object?> row, out long count)
     {
-        switch (Value(row, RowsColumn))
-        {
-            case int value:
-                count = value;
-                return true;
-            case long value:
-                count = value;
-                return true;
-            default:
-                count = 0;
-                return false;
-        }
+        count = 0;
+        if (RowCountKinds.Read(Value(row, RowsColumn)) is not { } read)
+            return false;
+
+        count = read;
+        return true;
     }
 }

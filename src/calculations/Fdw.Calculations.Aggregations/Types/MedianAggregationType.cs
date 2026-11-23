@@ -14,7 +14,7 @@ public sealed class MedianAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MedianAggregationType"/> class.
     /// </summary>
-    public MedianAggregationType() : base("Median", values =>
+    public MedianAggregationType() : base("Median", "Returns the median of all values", values =>
     {
         if (values.Count == 0) return 0m;
         var sorted = values.OrderBy(v => v).ToList();

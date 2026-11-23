@@ -18,6 +18,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Fdw.Results;
+using Fdw.Services.Calculations.Logging;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 
 namespace Fdw.Services.Calculations;
 
@@ -40,6 +43,10 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
             "Default Calculation Services",
             "Default calculation entity, provider, input-resolver, and cache services")
     {
+        // The calculation and version providers describe each thing in the unit of its write (FDW-6208): a host without the Descriptions service type
+        // stops at Initialize with its own message, never given a provider that fails on its first save.
+        Requires<IDescriptionWriter>(CalculationRegistrationLog.DescriptionWriterNotRegistered);
+
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
@@ -59,14 +66,15 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             builder.Services.AddDistributedMemoryCache();
 
-            builder.Services.AddSingleton<ICalculationConfigurationProvider, CalculationConfigurationProvider>(sp => new CalculationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationEntity", ConfigurationPlacementSource.From(sp)));
+            builder.Services.AddSingleton<ICalculationConfigurationProvider, CalculationConfigurationProvider>(sp => new CalculationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationEntity", ConfigurationPlacementSource.From(sp), sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>()));
 
             builder.Services.AddSingleton<ICalculationVersionImplementationConfigurationProvider, CalculationVersionImplementationConfigurationProvider>(sp => new CalculationVersionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationVersionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationVersionConfiguration"));
             builder.Services.TryAddSingleton<CalculationVersionConfigurationProvider>(sp =>
             {
                 var domain = new CalculationVersionConfigurationProvider(
                     sp.GetRequiredService<ILogger<CalculationVersionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationVersion");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationVersion",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("CalculationVersion", sp.GetRequiredService<ICalculationVersionImplementationConfigurationProvider>());
                 return domain;
             });

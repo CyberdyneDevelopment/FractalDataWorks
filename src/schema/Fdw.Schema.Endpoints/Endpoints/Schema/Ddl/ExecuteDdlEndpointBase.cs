@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Messages;
 using Fdw.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -87,6 +88,12 @@ public abstract class ExecuteDdlEndpointBase : Endpoint<ExecuteDdlRequest, Execu
             return;
         }
 
+        if (RefuseIncompleteColumn(req) is { } incomplete)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(incomplete), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         try
         {
             var result = await ExecuteDdl(req, ct).ConfigureAwait(false);
@@ -119,10 +126,25 @@ public abstract class ExecuteDdlEndpointBase : Endpoint<ExecuteDdlRequest, Execu
         }
     }
 
+    // A column states its name and its type, and a column that does not is refused by name: no type is assumed for it (FDW-3617).
+    private IGenericMessage? RefuseIncompleteColumn(ExecuteDdlRequest req)
+    {
+        foreach (var column in req.Columns)
+        {
+            if (string.IsNullOrWhiteSpace(column.Name))
+                return SchemaEndpointLog.ExecuteDdlColumnNameRequired(_logger);
+
+            if (string.IsNullOrWhiteSpace(column.SqlType))
+                return SchemaEndpointLog.ExecuteDdlColumnTypeRequired(_logger, column.Name);
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Executes the DDL operation for the specified request.
-    /// Implementers should resolve the connection, build the DDL command,
-    /// and execute it via the data gateway.
+    /// Implementers build the command with <see cref="ExecuteDdlCommands"/> and run it through
+    /// <c>ISchemaDdlService</c>, which finds the connection and its type: the endpoint holds no SQL and names no engine (FDW-3617).
     /// </summary>
     /// <param name="request">The DDL execution request.</param>
     /// <param name="ct">Cancellation token.</param>

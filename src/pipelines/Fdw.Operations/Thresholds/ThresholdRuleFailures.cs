@@ -58,6 +58,26 @@ internal static class ThresholdRuleFailures
     public static IGenericResult NotFound(string threshold) =>
         GenericResult.Failure(OperationsResultCodes.ByName("ThresholdNotFound"), ResultDetails.Create().With("Threshold", threshold));
 
+    /// <summary>A threshold attached to a subject that does not exist (FDW-6221).</summary>
+    /// <param name="threshold">The threshold.</param>
+    /// <param name="kind">The kind of subject.</param>
+    /// <param name="subject">The subject's Id.</param>
+    /// <returns>The failure.</returns>
+    public static IGenericResult SubjectNotFound(string threshold, string kind, Guid subject) =>
+        GenericResult.Failure(
+            OperationsResultCodes.ByName("ThresholdSubjectNotFound"),
+            ResultDetails.Create().With("Threshold", threshold).With("Kind", kind).With("Subject", subject.ToString("D")));
+
+    /// <summary>A threshold attached to a subject that was retired (FDW-6221).</summary>
+    /// <param name="threshold">The threshold.</param>
+    /// <param name="kind">The kind of subject.</param>
+    /// <param name="subject">The subject's Id.</param>
+    /// <returns>The failure.</returns>
+    public static IGenericResult SubjectRetired(string threshold, string kind, Guid subject) =>
+        GenericResult.Failure(
+            OperationsResultCodes.ByName("ThresholdSubjectRetired"),
+            ResultDetails.Create().With("Threshold", threshold).With("Kind", kind).With("Subject", subject.ToString("D")));
+
     /// <summary>A threshold attached to a subject that already has it.</summary>
     /// <param name="threshold">The threshold.</param>
     /// <param name="kind">The kind of subject.</param>

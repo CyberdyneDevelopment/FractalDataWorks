@@ -97,6 +97,7 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
 
             var containers = containersResult.Value;
             var graph = ConvertToSchemaGraph(req, containers);
+            AddWarnings(graph, containersResult);
 
             SchemaEndpointLog.SchemaDiscovered(_logger, req.ConnectionName, graph.Entities.Count);
             await Send.OkAsync(graph, ct).ConfigureAwait(false);
@@ -138,6 +139,7 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
         };
 
         var entityIndex = 0;
+        var included = new List<IStorageContainer>();
 
         foreach (var container in containers)
         {
@@ -151,11 +153,57 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
 
             var entity = CreateEntity(schemaName, container, entityIndex++);
             graph.Entities.Add(entity);
+            included.Add(container);
         }
 
+        AddRelationships(graph, included);
         AutoLayoutEntities(graph.Entities);
 
         return graph;
+    }
+
+    /// <summary>
+    /// Adds one relationship for each column pair of each foreign key whose container and target are both entities of the graph.
+    /// A foreign key whose target the discovery did not read, or that the schema filter left out, draws none: its columns are still
+    /// marked as foreign key columns on their entity, and the discovery's warning names the key.
+    /// </summary>
+    /// <param name="graph">The graph, whose entities are the containers shown.</param>
+    /// <param name="containers">The containers shown, in the order of the entities.</param>
+    protected virtual void AddRelationships(SchemaGraphResponse graph, IReadOnlyList<IStorageContainer> containers)
+    {
+        var shown = new HashSet<string>(graph.Entities.Select(entity => entity.FullName), StringComparer.OrdinalIgnoreCase);
+        foreach (var container in containers)
+        {
+            var source = $"{container.Path.PathValue}.{container.Name}";
+            foreach (var pair in container.ForeignKeyColumnPairs())
+            {
+                var target = $"{pair.ReferencedContainer.Path.PathValue}.{pair.ReferencedContainer.Name}";
+                if (!shown.Contains(target))
+                    continue;
+
+                graph.Relationships.Add(new SchemaGraphRelationshipDto
+                {
+                    SourceEntity = source,
+                    TargetEntity = target,
+                    SourceColumn = pair.Column,
+                    TargetColumn = pair.ReferencedColumn,
+                });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Copies the warnings the discovery returned with its success onto the graph, so a graph drawn with less than the catalog holds
+    /// says so.
+    /// </summary>
+    /// <param name="graph">The graph.</param>
+    /// <param name="discovery">The discovery's result.</param>
+    protected static void AddWarnings(SchemaGraphResponse graph, IGenericResult discovery)
+    {
+        foreach (var message in discovery.Messages)
+        {
+            graph.Warnings.Add(new SchemaGraphWarningDto { Code = message.Code ?? string.Empty, Message = message.Message });
+        }
     }
 
     /// <summary>
@@ -167,6 +215,9 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
     /// <returns>A schema graph entity DTO.</returns>
     protected virtual SchemaGraphEntityDto CreateEntity(string schemaName, IStorageContainer container, int index)
     {
+        var primaryKey = container.PrimaryKeyFieldNames();
+        var foreignKey = container.ForeignKeyFieldNames();
+
         return new SchemaGraphEntityDto
         {
             FullName = $"{schemaName}.{container.Name}",
@@ -178,7 +229,8 @@ public abstract class GetSchemaGraphEndpointBase : Endpoint<GetSchemaGraphReques
                 Name = f.Name,
                 DataType = f.FieldType.TypeName,
                 IsNullable = f.IsNullable,
-                IsForeignKey = false,
+                IsPrimaryKey = primaryKey.Contains(f.Name, StringComparer.OrdinalIgnoreCase),
+                IsForeignKey = foreignKey.Contains(f.Name, StringComparer.OrdinalIgnoreCase),
                 IsIdentity = f.IsIdentity,
                 OrdinalPosition = i
             }).ToList(),

@@ -14,10 +14,12 @@ internal sealed class LiveGraph : IFlowLiveGraph
     private readonly Lock _gate = new();
     private readonly Dictionary<string, Entry> _entries;
     private readonly Func<IReadOnlyList<FlowLinkCount>> _links;
+    private readonly Func<string, FlowHeldCount>? _held;
     private readonly Action<LiveGraph> _closed;
 
-    public LiveGraph(IReadOnlyList<FlowLiveComponent> components, Func<IReadOnlyList<FlowLinkCount>> links, Action<LiveGraph> closed)
+    public LiveGraph(IReadOnlyList<FlowLiveComponent> components, Func<IReadOnlyList<FlowLinkCount>> links, Func<string, FlowHeldCount>? held, Action<LiveGraph> closed)
     {
+        _held = held;
         _links = links;
         _closed = closed;
         _entries = components.ToDictionary(component => component.Name, component => new Entry(component), StringComparer.OrdinalIgnoreCase);
@@ -57,8 +59,20 @@ internal sealed class LiveGraph : IFlowLiveGraph
         }
 
         var links = entries.Any(entry => entry.StartedAt is not null) ? _links() : [];
-        return [.. entries.Select(entry => new FlowLiveComponentView(
-            entry.Component.Name, entry.Component.Stage, entry.StartedAt, entry.EndedAt, entry.Succeeded, RowsOf(entry, links), RowsInOf(entry, links)))];
+        return [.. entries.Select(entry => WithHeld(new FlowLiveComponentView(
+            entry.Component.Name, entry.Component.Stage, entry.StartedAt, entry.EndedAt, entry.Succeeded, RowsOf(entry, links), RowsInOf(entry, links)), entry))];
+    }
+
+    // What the component holds, once it has started and when the graph was opened with held figures (FDW-5231); none otherwise, never zero.
+    private FlowLiveComponentView WithHeld(FlowLiveComponentView view, Entry entry)
+    {
+        if (entry.StartedAt is null || _held is null)
+        {
+            return view;
+        }
+
+        var held = _held(entry.Component.Name);
+        return view with { HeldBytes = held.Bytes, HeldRows = held.Rows, PeakHeldBytes = held.PeakBytes };
     }
 
     // What every link of the graph has carried so far, read only when asked (FDW-3778); none while no component has started.

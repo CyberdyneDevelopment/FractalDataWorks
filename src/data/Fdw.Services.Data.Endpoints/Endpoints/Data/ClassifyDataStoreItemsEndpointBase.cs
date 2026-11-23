@@ -44,6 +44,13 @@ public abstract class ClassifyDataStoreItemsEndpointBase
     protected override string ResourceName => "datastores";
 
     /// <inheritdoc />
+    /// <remarks>
+    /// <see cref="IDataStoreWrites"/> decides (FDW-6968): a path or container a workspace owns at its owner's scope alone, so a member of the owner who
+    /// holds no store permission may change it; everything else by the store's rule, the <c>datastores:write</c> permission it asks as before.
+    /// </remarks>
+    protected override bool ResourceDecidesAccess => true;
+
+    /// <inheritdoc />
     protected override string Route => $"/{ResourceName}/{{Name}}/classifications";
 
     /// <summary>Returns the store as the resource identifier.</summary>
@@ -90,7 +97,7 @@ public abstract class ClassifyDataStoreItemsEndpointBase
         foreach (var item in items.Value!)
             item.SetClassificationId(request.ClassificationId);
 
-        var saved = await _dataStoreProvider.UpdateStore(current, ct).ConfigureAwait(false);
+        var saved = await Resolve<IDataStoreWrites>().UpdateStore(current, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             foreach (var (item, classificationId) in previous)

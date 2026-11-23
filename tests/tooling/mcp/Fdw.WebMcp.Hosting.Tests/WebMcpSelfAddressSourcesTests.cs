@@ -104,7 +104,7 @@ public class WebMcpSelfAddressSourcesTests
     public void TheFixedAddressIsTheRowsWhateverTheServerListensOn()
     {
         var source = WebMcpSelfAddressSources.ByName("FixedAddress");
-        var settings = new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, source, new Uri("http://10.0.0.5:8080"));
+        var settings = new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, source, new Uri("http://10.0.0.5:8080"), SchemaMaxDepth: WebMcpCompositeCatalog.MaxDepth);
 
         var result = source.Resolve(settings, Server("http://127.0.0.1:5511"), NullLogger.Instance);
 
@@ -115,7 +115,7 @@ public class WebMcpSelfAddressSourcesTests
     private static IGenericResult<Uri> Listening(IServer server)
     {
         var source = WebMcpSelfAddressSources.ByName("ListeningAddress");
-        return source.Resolve(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, source, SelfBaseAddress: null), server, NullLogger.Instance);
+        return source.Resolve(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, source, SelfBaseAddress: null, SchemaMaxDepth: WebMcpCompositeCatalog.MaxDepth), server, NullLogger.Instance);
     }
 
     private static FakeServer Server(params string[] addresses)

@@ -34,6 +34,12 @@ public sealed record FilterGroup : IFilterNode
     /// </summary>
     public required IReadOnlyList<IFilterNode> Nodes { get; init; }
 
+    /// <summary>Combines nodes that must all hold into the one node that says so.</summary>
+    /// <param name="nodes">The nodes.</param>
+    /// <returns>An AND group of the nodes when there is more than one; the one node when there is one; null when there is none.</returns>
+    public static IFilterNode? AllOf(IReadOnlyList<IFilterNode> nodes) =>
+        nodes.Count > 1 ? new FilterGroup { Operator = LogicalOperator.And, Nodes = nodes } : nodes.SingleOrDefault();
+
     /// <inheritdoc/>
     public bool Equals(FilterGroup? other) =>
         other is not null && Operator == other.Operator && Nodes.SequenceEqual(other.Nodes);

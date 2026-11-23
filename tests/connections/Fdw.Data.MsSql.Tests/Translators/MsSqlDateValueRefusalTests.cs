@@ -48,11 +48,11 @@ public sealed class MsSqlDateValueRefusalTests
         container.Setup(c => c.Name).Returns("Events");
         container.As<IStorageContainer>().Setup(c => c.Name).Returns("Events");
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(new DatabasePath(string.Empty, "dbo", "Events"));
-        container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = "Id" });
+        container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object>());
         container.Setup(c => c.Path).Returns(new DatabasePath(string.Empty, "dbo", "Events"));
         container.Setup(c => c.Schema).Returns(schema.Object);
         container.Setup(c => c.ContainerType).Returns(type.Object);
-        container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
+        container.Setup(c => c.Keys).Returns(TestPrimaryKeys.On("Id"));
         return container;
     }
 

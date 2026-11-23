@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.Results;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Flow;
+using Fdw.Services.Etl.Graphs.Logging;
 using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.EtlGateway;
@@ -45,6 +47,11 @@ public sealed class FlowBuildContext
     /// <param name="clock">The run's clock, which a stage's transform context offers a calculation that reads the time (optional; absent when the host has none).</param>
     /// <param name="commitReportInterval">How often a destination writes the rows it has committed to the run's record (FDW-4957); zero writes after every commit.</param>
     /// <param name="unmatchedKeySample">How many unmatched keys an update or delete destination's report carries (FDW-4988); zero carries only the count.</param>
+    /// <param name="contributions">
+    /// The build contributions the host registered, which a builder's needs are judged against (FDW-6132). Required (FDW-6240), so no place that builds a graph
+    /// leaves them out by omission: a graph pipeline hands over the ones the graph type registered, and a place that has none says so with
+    /// <see cref="FlowBuildContributions.None"/>, as the Graph data set runner does.
+    /// </param>
     public FlowBuildContext(
         string pipelineName,
         Guid pipelineId,
@@ -58,6 +65,7 @@ public sealed class FlowBuildContext
         ILogger logger,
         TimeSpan commitReportInterval,
         int unmatchedKeySample,
+        FlowBuildContributions contributions,
         IEtlGateway? etlGateway = null,
         IRuleNotifier? notifier = null,
         BuiltCompilation? built = null,
@@ -74,6 +82,7 @@ public sealed class FlowBuildContext
         FieldChains = fieldChains is null ? NoChains : fieldChains;
         Test = test;
         Clock = clock;
+        Contributions = contributions;
         ExecutionId = executionId;
         ConnectionProvider = connectionProvider;
         Gateway = gateway;
@@ -105,6 +114,7 @@ public sealed class FlowBuildContext
         FieldChains = shared.FieldChains;
         Test = shared.Test;
         Clock = shared.Clock;
+        Contributions = shared.Contributions;
         ExecutionId = shared.ExecutionId;
         ConnectionProvider = shared.ConnectionProvider;
         Gateway = shared.Gateway;
@@ -163,6 +173,9 @@ public sealed class FlowBuildContext
     /// <summary>Gets the run's clock; <see langword="null"/> when the host registered none.</summary>
     public TimeProvider? Clock { get; }
 
+    /// <summary>Gets the build contributions the host registered (FDW-6132).</summary>
+    public FlowBuildContributions Contributions { get; }
+
     /// <summary>Gets how often a destination writes the rows it has committed to the run's record (FDW-4957); zero writes after every commit.</summary>
     public TimeSpan CommitReportInterval { get; }
 
@@ -196,6 +209,12 @@ public sealed class FlowBuildContext
     /// <summary>Gets the logger a refusal is written to.</summary>
     public ILogger Logger { get; }
 
+    /// <summary>Gets what claims a step that acts outside the run before it acts (FDW-6139); null for a host that registers none, which then refuses to build such a step.</summary>
+    public Fdw.Services.Etl.Abstractions.Execution.IPipelineStepClaims? StepClaims { get; init; }
+
+    /// <summary>Gets what an Ask component keeps its request with and judges its call by (FDW-6142); null for a host that registers none, which then refuses to build such a step.</summary>
+    public FlowAskServices? AskServices { get; init; }
+
     /// <summary>Gets the destinations built so far, so the run can add up what they loaded.</summary>
     public IReadOnlyList<FlowLoadDestination> Destinations => _destinations;
 
@@ -224,6 +243,35 @@ public sealed class FlowBuildContext
     /// <summary>Gives how many rows the destinations built so far have loaded, across the whole run.</summary>
     /// <returns>The rows loaded.</returns>
     public long LoadedRows() => _destinations.Sum(destination => (long)destination.RowsLoaded);
+
+    /// <summary>Judges what a component's kind needs against the contributions the host registered (FDW-6132).</summary>
+    /// <param name="component">The stored component.</param>
+    /// <param name="needs">The contribution types its kind's builder needs.</param>
+    /// <returns>Success when every one is registered; otherwise a failure with one message for each that is not.</returns>
+    public IGenericResult NeedsMet(PipelineComponentConfiguration component, IReadOnlyList<Type> needs)
+    {
+        var unmet = Contributions.Unmet(needs);
+        return unmet.Count == 0
+            ? GenericResult.Success()
+            : GenericResult.Failure(unmet.Select(need => GraphLog.ComponentServiceMissing(Logger, component.Name, component.ComponentType, need.ToString())));
+    }
+
+    /// <summary>Gives a builder the contribution of a type the host registered (FDW-6132).</summary>
+    /// <typeparam name="T">The contribution type, one the builder names in its needs.</typeparam>
+    /// <param name="component">The stored component being built, named when the contribution is missing.</param>
+    /// <returns>The contribution, or the failure that names the component, its kind and the contribution.</returns>
+    public IGenericResult<T> Contribution<T>(PipelineComponentConfiguration component)
+        where T : class, IFlowBuildContribution =>
+        Contributions.Find<T>() is { } found
+            ? GenericResult<T>.Success(found)
+            : GenericResult<T>.Failure(GraphLog.ComponentServiceMissing(Logger, component.Name, component.ComponentType, typeof(T).ToString()));
+
+    /// <summary>Gives a builder the value of a setting its component type declares that no column of the component holds (FDW-6133).</summary>
+    /// <param name="component">The stored component being built.</param>
+    /// <param name="name">The setting's name, as the component type declares it.</param>
+    /// <returns>The value, read when the step runs from <see cref="ComponentSettingValue.Read"/>, or the refusal that says why there is none.</returns>
+    public IGenericResult<ComponentSettingValue> Setting(PipelineComponentConfiguration component, string name) =>
+        ComponentSettings.Declared(component, ComponentTypes.ByName(component.ComponentType), name, Logger);
 
     /// <summary>Records a destination the run will ask how many rows it loaded.</summary>
     /// <param name="destination">The destination.</param>

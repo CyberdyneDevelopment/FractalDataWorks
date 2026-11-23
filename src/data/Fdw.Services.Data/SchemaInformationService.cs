@@ -43,6 +43,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     private readonly IConnectionProvider _connectionProvider;
     private readonly ConnectionConfigurationProvider _configProvider;
     private readonly IDataStoreConfigurationProvider _dataStoreProvider;
+    private readonly IDataStoreWrites _writes;
     private readonly ILogger<SchemaInformationService> _logger;
 
     /// <summary>
@@ -50,17 +51,20 @@ public sealed class SchemaInformationService : ISchemaInformationService
     /// </summary>
     /// <param name="connectionProvider">Opens the connection discovery reads through.</param>
     /// <param name="configProvider">Reads the connection's configuration.</param>
-    /// <param name="dataStoreProvider">Reads and saves data stores.</param>
+    /// <param name="dataStoreProvider">Reads data stores and creates a new one.</param>
+    /// <param name="writes">Changes a data store that exists, each path and container it touches decided at its owner's scope or the store's (FDW-6968).</param>
     /// <param name="logger">The logger.</param>
     public SchemaInformationService(
         IConnectionProvider connectionProvider,
         ConnectionConfigurationProvider configProvider,
         IDataStoreConfigurationProvider dataStoreProvider,
+        IDataStoreWrites writes,
         ILogger<SchemaInformationService>? logger = null)
     {
         _connectionProvider = connectionProvider;
         _configProvider = configProvider;
         _dataStoreProvider = dataStoreProvider;
+        _writes = writes;
         _logger = logger ?? NullLogger<SchemaInformationService>.Instance;
     }
 
@@ -205,7 +209,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         }
 
         SchemaInformationLog.DiscoverySucceeded(_logger, connection.Name, reloaded.Value.Name);
-        return GenericResult<SchemaInformation>.Success(new SchemaInformation(reloaded.Value));
+        return DiscoveryWarnings.Carry(new SchemaInformation(reloaded.Value), merged.Messages);
     }
 
     // A store found for the connection is changed, which asks whether the caller's tenant may change it and never brings back a store deleted since it was read; a store
@@ -213,7 +217,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     private Task<IGenericResult> Persist(IDataStoreImplementationConfiguration target, bool isNew, CancellationToken cancellationToken)
         => isNew
             ? _dataStoreProvider.Create(target, target.Domain, target.Implementation, target.Name, cancellationToken)
-            : _dataStoreProvider.UpdateStore(target, cancellationToken);
+            : _writes.UpdateStore(target, cancellationToken);
 
     private void LogSaveFailure(string dataStoreName, string? upstreamError)
     {
@@ -271,7 +275,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
 
         SchemaInformationLog.SchemaMerged(
             _logger, store.Name, merged.ContainersDiscovered, merged.PathsAdded, merged.ContainersAdded, merged.FieldsAdded, merged.FieldsUpdated);
-        return GenericResult<DataStoreSchemaImportResult>.Success(merged);
+        return DiscoveryWarnings.Carry(merged, discovered.Messages);
     }
 
     // The one discovery every path runs: the connection's chosen option, checked against its kind,

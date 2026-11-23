@@ -102,7 +102,8 @@ public sealed class DataSetOwnFilterReadTests
         return new FieldMappingTransformationResolver(
             gateways.Object,
             new TransformationConfigurationProvider(
-                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation"));
+                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation",
+                TransformationDescriptionDoubles.Writer(), TransformationDescriptionDoubles.Reader()));
     }
 
     private static List<string> ConditionNames(IDataCommand sent) =>
@@ -214,6 +215,7 @@ public sealed class DataSetOwnFilterReadTests
                 Source("Orders", "Order", ("CustomerId", "cust_id"), ("Status", "status")),
                 Source("Customers", "Customer", ("CustomerId", "id"), ("CustomerName", "name")),
             ],
+            SourceCombination = "Join",
             Joins = [new DataSetJoinConfiguration { LeftSourceName = "Orders", LeftFieldName = "CustomerId", RightSourceName = "Customers", RightFieldName = "CustomerId", JoinType = "Inner", Ordinal = 1 }],
             Filters = [OpenOnly()],
         };

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Fdw.Orchestration.Abstractions.Caching;
 
@@ -9,5 +10,5 @@ namespace Fdw.Orchestration.Abstractions.Caching;
 public sealed class NeverRemoveCachePriority : CachePriorityBase
 {
     /// <summary>Initializes a new instance of <see cref="NeverRemoveCachePriority"/>.</summary>
-    public NeverRemoveCachePriority() : base("NeverRemove") { }
+    public NeverRemoveCachePriority() : base("NeverRemove", CacheItemPriority.NeverRemove) { }
 }

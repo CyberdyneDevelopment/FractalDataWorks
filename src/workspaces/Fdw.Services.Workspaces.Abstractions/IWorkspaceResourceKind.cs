@@ -17,4 +17,15 @@ public interface IWorkspaceResourceKind : ITypeOption<int, WorkspaceResourceKind
     /// choice at attach time, and attaching with the wrong relationship is a structured failure.
     /// </remarks>
     bool CanBeOwned { get; }
+
+    /// <summary>
+    /// Gets whether archiving the workspace that owns a resource of this kind releases it, so the workspace owns it no more.
+    /// </summary>
+    /// <remarks>
+    /// A data set a workspace sketched is the workspace's and stays with it when the workspace is archived. A path or a
+    /// container of a shared data store is the store's, lent to a workspace to own: a closed workspace cannot be the scope
+    /// its writes are decided at, so archiving gives it back to the store (FDW-6967). The kind states which, so the
+    /// archive asks the kind and never a list of kind names.
+    /// </remarks>
+    bool ReleasedOnArchive { get; }
 }

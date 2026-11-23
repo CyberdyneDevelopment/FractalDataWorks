@@ -178,22 +178,7 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
     /// Validates that a column/identifier name is safe against SQL injection.
     /// Only alphanumeric characters and underscores are allowed; must start with a letter or underscore.
     /// </summary>
-    protected static bool IsValidColumnName(string columnName)
-    {
-        if (string.IsNullOrWhiteSpace(columnName))
-            return false;
-
-        if (!char.IsLetter(columnName[0]) && columnName[0] != '_')
-            return false;
-
-        for (int i = 1; i < columnName.Length; i++)
-        {
-            if (!char.IsLetterOrDigit(columnName[i]) && columnName[i] != '_')
-                return false;
-        }
-
-        return true;
-    }
+    protected static bool IsValidColumnName(string columnName) => SqlWhereBuilder.IsValidColumnName(columnName);
 
     /// <summary>
     /// Builds a parameterized SQL WHERE clause from a hierarchical filter expression.
@@ -230,14 +215,8 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
         if (filter?.Root == null)
             return string.Empty;
 
-        var context = new SqlBuildContext
-        {
-            Dialect = dialect,
-            AddParam = addParam,
-            ParameterPrefix = parameterPrefix,
-            PrimaryQualifier = primaryTableQualifier
-        };
-        return BuildWhereNode(filter.Root, context);
+        var context = new SqlBuildContext(dialect, addParam, parameterPrefix, primaryTableQualifier);
+        return SqlWhereBuilder.BuildNode(filter.Root, context);
     }
 
     /// <summary>
@@ -319,7 +298,7 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
             var kind = StatedJoinType.Of(join.JoinType);
             if (ReferenceEquals(kind, JoinTypes.NotFound))
                 return QueryCommandLog.JoinTypeNotRecognised(NullLogger.Instance, containerName, join.JoinType, PerformedJoinTypeNames());
-            if (!PerformsJoin(kind))
+            if (!StatedJoinType.PerformedInSql(kind))
                 return QueryCommandLog.JoinTypeNotPerformed(NullLogger.Instance, containerName, kind.Name, PerformedJoinTypeNames());
             if (kind.RequiresConditions == (join.JoinConditions.Count == 0))
                 return QueryCommandLog.JoinConditionsDoNotFit(NullLogger.Instance, containerName, kind.Name, join.JoinConditions.Count);
@@ -328,13 +307,8 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
         return null;
     }
 
-    /// <summary>Gets whether an SQL statement can state a join of this type: one that joins two sources and has an SQL join keyword.</summary>
-    /// <param name="kind">The join type.</param>
-    /// <returns>True for Inner, Left, Right, Full and Cross; false for None and for <see cref="JoinTypes.NotFound"/>.</returns>
-    protected static bool PerformsJoin(IJoinType kind) => StatedJoinType.Joins(kind) && !string.IsNullOrEmpty(kind.SqlKeyword);
-
     // The join types an SQL statement can state, for a refusal's message.
-    private static string PerformedJoinTypeNames() => string.Join(", ", JoinTypes.All().Where(PerformsJoin).Select(kind => kind.Name));
+    private static string PerformedJoinTypeNames() => string.Join(", ", JoinTypes.All().Where(StatedJoinType.PerformedInSql).Select(kind => kind.Name));
 
     /// <summary>
     /// Writes one join of a query (FDW-5099): its option's own SQL keyword and the target, then, for a join on a condition, <c>ON</c> each
@@ -377,192 +351,8 @@ public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataComma
             return paging is null ? (false, string.Empty) : (true, string.Empty);
 
         var clauses = string.Join(", ", ordered.Select(field =>
-            $"{QualifyColumn(field.PropertyName, dialect, primaryTableQualifier)} {(field.Direction.IsAscending ? "ASC" : "DESC")}"));
+            $"{SqlWhereBuilder.QualifyColumn(field.PropertyName, dialect, primaryTableQualifier)} {(field.Direction.IsAscending ? "ASC" : "DESC")}"));
         return (false, paging is null ? $" ORDER BY {clauses}" : $" ORDER BY {clauses} {dialect.BuildPagingClause(paging)}");
-    }
-
-    // -----------------------------------------------------------------------
-    // Private helpers — WHERE-clause building internals
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// State threaded through recursive WHERE-clause building.
-    /// </summary>
-    private sealed class SqlBuildContext
-    {
-        public required ISqlDialect Dialect { get; init; }
-
-        public required Action<string, object?> AddParam { get; init; }
-
-        public required string ParameterPrefix { get; init; }
-
-        public int ParameterCounter { get; set; }
-
-        public string? PrimaryQualifier { get; init; }
-    }
-
-    private static string QualifyColumn(string propertyName, ISqlDialect dialect, string? primaryQualifier)
-    {
-        var dot = propertyName.IndexOf('.', StringComparison.Ordinal);
-        if (dot >= 0)
-        {
-            var table = propertyName.Substring(0, dot);
-            var column = propertyName.Substring(dot + 1);
-            if (!IsValidColumnName(table) || !IsValidColumnName(column))
-            {
-                throw new ArgumentException(
-                    $"Invalid qualified column name '{propertyName}'. Only alphanumeric characters and underscores allowed in each part.",
-                    nameof(propertyName));
-            }
-
-            return $"{dialect.QuoteIdentifier(table)}.{dialect.QuoteIdentifier(column)}";
-        }
-
-        if (!IsValidColumnName(propertyName))
-        {
-            throw new ArgumentException(
-                $"Invalid column name '{propertyName}'. Only alphanumeric characters and underscores allowed.",
-                nameof(propertyName));
-        }
-
-        return primaryQualifier is null
-            ? dialect.QuoteIdentifier(propertyName)
-            : $"{dialect.QuoteIdentifier(primaryQualifier)}.{dialect.QuoteIdentifier(propertyName)}";
-    }
-
-    private static string BuildWhereNode(IFilterNode node, SqlBuildContext context)
-    {
-        return node switch
-        {
-            FilterCondition condition => BuildWhereCondition(condition, context),
-            FilterGroup group => BuildWhereGroup(group, context),
-            _ => throw new InvalidOperationException($"Unknown filter node type: {node.GetType().Name}")
-        };
-    }
-
-    private static string BuildWhereCondition(FilterCondition condition, SqlBuildContext context)
-    {
-        var columnName = QualifyColumn(condition.PropertyName, context.Dialect, context.PrimaryQualifier);
-
-        if (condition.Operator.IsPatternMatch)
-            return BuildPatternCondition(columnName, condition, context);
-
-        if (condition.Operator.RequiresValue)
-        {
-            // Special handling for IN operator: expand IEnumerable into individual parameters
-            // Why byte[] is excluded: it is one binary value compared whole, not a list to expand into
-            // one parameter per byte, which produced "= (@p0_0, @p0_1, ...)" and SQL 102 (FDW-889).
-            if (condition.Value is IEnumerable enumerable and not string and not byte[])
-            {
-                var conditionIndex = context.ParameterCounter++;
-                var items = enumerable.Cast<object?>().ToList();
-
-                // A key list longer than the connection's setting is carried as one JSON parameter and joined through the dialect's own table form (FDW-4267).
-                if (TrySpillKeyList(condition, columnName, items, conditionIndex, context) is { } spilled)
-                    return spilled;
-
-                var paramNames = new List<string>();
-                var itemIndex = 0;
-                foreach (var item in items)
-                {
-                    // SQL param name (in SQL text): "@p0_0", "@where_p0_0", etc.
-                    var sqlParamName = $"{context.ParameterPrefix}p{conditionIndex}_{itemIndex++}";
-                    paramNames.Add(sqlParamName);
-                    // AddParam key = SQL name without the leading "@" (or dialect prefix char)
-                    context.AddParam(sqlParamName.Substring(1), item);
-                }
-
-                if (paramNames.Count == 0)
-                {
-                    // Empty IN list — produce a condition that always evaluates to false
-                    return $"{columnName} {condition.Operator.SqlOperator} (SELECT NULL WHERE {context.Dialect.AlwaysFalsePredicate})";
-                }
-
-                return $"{columnName} {condition.Operator.SqlOperator} ({string.Join(", ", paramNames)})";
-            }
-
-            // SQL param name (in SQL text)
-            var singleSqlParamName = $"{context.ParameterPrefix}p{context.ParameterCounter}";
-            // AddParam key = SQL name without the leading "@"
-            var singleParamKey = singleSqlParamName.Substring(1);
-            context.ParameterCounter++;
-
-            // ZERO SQL INJECTION: Value goes into parameter, NOT concatenated into SQL.
-            context.AddParam(singleParamKey, condition.Value);
-            return $"{columnName} {condition.Operator.SqlOperator} {singleSqlParamName}";
-        }
-
-        return $"{columnName} {condition.Operator.SqlOperator}";
-    }
-
-    // A key list with more values than the connection's setting goes to a table: one JSON parameter carries it, the dialect's form reads it back as a subquery, and
-    // the condition keeps its operator (IN or NOT IN). Not spilled, so the values stay parameters: a list at or below the setting, a column of a joined table (its
-    // table is not known here), a dialect with no form, and a list that holds a null (IN and NOT IN read a null as no match, which a table of values would not).
-    // The setting comes from the translation's scope, which the connection always opens (FDW-4267); outside one the scope stops the translation.
-    private static string? TrySpillKeyList(FilterCondition condition, string columnName, List<object?> items, int conditionIndex, SqlBuildContext context)
-    {
-        var scope = KeyListSpillScope.Required;
-        if (scope.SourceTable is null || items.Count <= scope.Settings.MaxParametersBeforeTempTable)
-            return null;
-
-        if (condition.PropertyName.Contains('.', StringComparison.Ordinal) || items.Contains(null) || context.Dialect is not IKeyListSpillDialect spillDialect)
-            return null;
-
-        var jsonParameter = $"{context.ParameterPrefix}kl{conditionIndex}";
-        context.AddParam(jsonParameter.Substring(1), spillDialect.KeyListJson(condition.PropertyName, items));
-        var form = spillDialect.KeyListSpill(Guid.NewGuid().ToString("N"), scope.SourceTable, condition.PropertyName, jsonParameter);
-        scope.Add(form);
-        return $"{columnName} {condition.Operator.SqlOperator} ({form.Subquery})";
-    }
-
-    // A pattern operator (Contains, StartsWith, EndsWith): the operator says where anything may sit around
-    // the value, the dialect says which of its operators matches ignoring case and how that reads the text,
-    // and the pattern -- the escaped text with the wildcards -- is the parameter's value. The statement
-    // carries an ESCAPE clause every time, so the text is read the same way on every engine.
-    private static string BuildPatternCondition(string columnName, FilterCondition condition, SqlBuildContext context)
-    {
-        var op = condition.Operator;
-        var parameterName = $"{context.ParameterPrefix}p{context.ParameterCounter}";
-        context.ParameterCounter++;
-
-        // A caller's number or boolean is matched as its text; a list is not a pattern and is refused
-        // rather than joined into one.
-        object? pattern = condition.Value switch
-        {
-            null => null,
-            string text => LikePattern.Build(text, context.Dialect, op.MatchesAnythingBefore, op.MatchesAnythingAfter),
-            IEnumerable => throw new ArgumentException(
-                $"Operator '{op.Name}' on '{condition.PropertyName}' takes one value, not a list.",
-                nameof(condition)),
-            var other => LikePattern.Build(
-                Convert.ToString(other, CultureInfo.InvariantCulture)!, // never null: `other` is not
-                context.Dialect,
-                op.MatchesAnythingBefore,
-                op.MatchesAnythingAfter),
-        };
-
-        context.AddParam(parameterName.Substring(1), pattern);
-        return $"{columnName} {context.Dialect.PatternMatchOperator} {parameterName} {LikePattern.EscapeClause(context.Dialect)}";
-    }
-
-    private static string BuildWhereGroup(FilterGroup group, SqlBuildContext context)
-    {
-        var clauses = new List<string>();
-        foreach (var childNode in group.Nodes)
-        {
-            var clause = BuildWhereNode(childNode, context);
-            if (!string.IsNullOrEmpty(clause))
-                clauses.Add(clause);
-        }
-
-        if (clauses.Count == 0)
-            return string.Empty;
-
-        if (clauses.Count == 1)
-            return clauses[0]; // Single condition doesn't need parentheses
-
-        var logicalOp = group.Operator == LogicalOperator.Or ? " OR " : " AND ";
-        return $"({string.Join(logicalOp, clauses)})"; // Always wrap groups in parentheses for precedence
     }
 
     /// <inheritdoc />

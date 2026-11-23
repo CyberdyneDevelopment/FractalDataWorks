@@ -7,6 +7,7 @@ using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Fdw.Configuration.SourceGenerators;
+using Fdw.Configuration.SourceGenerators.Models;
 
 namespace Fdw.Configuration.SourceGenerators.Tests;
 
@@ -53,8 +54,23 @@ internal static class CompilationHelper
                 nullableContextOptions: NullableContextOptions.Enable));
     }
 
+    // The column sizes FDW's build states through the generator package's props (FDW-7107), as a build hands them to the generator.
+    public static readonly IReadOnlyDictionary<string, string> StatedColumnSizes = new Dictionary<string, string>
+    {
+        [ColumnSizes.StringMaxLengthProperty] = "500",
+        [ColumnSizes.DecimalPrecisionProperty] = "18",
+        [ColumnSizes.DecimalScaleProperty] = "2",
+    };
+
     public static (Compilation OutputCompilation, ImmutableArray<Diagnostic> Diagnostics) RunGenerator(
         string source,
+        MetadataReference[]? additionalReferences = null,
+        string assemblyName = "TestAssembly")
+        => RunGenerator(source, StatedColumnSizes, additionalReferences, assemblyName);
+
+    public static (Compilation OutputCompilation, ImmutableArray<Diagnostic> Diagnostics) RunGenerator(
+        string source,
+        IReadOnlyDictionary<string, string> buildProperties,
         MetadataReference[]? additionalReferences = null,
         string assemblyName = "TestAssembly")
     {
@@ -62,7 +78,8 @@ internal static class CompilationHelper
         var generator = new ConfigurationSourceGenerator();
         var driver = CSharpGeneratorDriver.Create(
             generators: new[] { generator.AsSourceGenerator() },
-            parseOptions: ParseOptions);
+            parseOptions: ParseOptions,
+            optionsProvider: new BuildPropertyOptionsProvider(new BuildPropertyOptions(buildProperties)));
         driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
 
         return (outputCompilation, diagnostics);

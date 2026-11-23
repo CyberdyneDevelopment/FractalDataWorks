@@ -15,4 +15,7 @@ public interface ISelectListOption : ITypeOption<int, SelectListOptionBase>, IDa
     /// <summary>Gets the option's name, which a stored row names as its option.</summary>
     /// <remarks>Declared again so that <c>Name</c> is one member here: both <see cref="ITypeOption{TKey, TValue}"/> and <see cref="IDataOption"/> have it, and the generated collection reads it.</remarks>
     new string Name { get; }
+
+    /// <summary>Gets the name of the rule comparison this option stands for: <c>In</c> for the option that includes a value, <c>NotIn</c> for the one that excludes it.</summary>
+    string Comparison { get; }
 }

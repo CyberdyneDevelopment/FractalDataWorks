@@ -61,6 +61,41 @@ public static partial class SlotFileLog
         Message = "configurationSchema.json at '{schemaPath}' references environment variable(s) that are not set: {names}. Set them in the host environment before starting the application")]
     public static partial IGenericMessage PlaceholderNotStated(ILogger logger, string schemaPath, string names);
 
+    /// <summary>A row's text states a placeholder that the environment and the slot file both state (FDW-5847).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="owner">What states the text.</param>
+    /// <param name="filePath">The path APP_SLOT_FILE names.</param>
+    /// <param name="keys">The keys stated both ways.</param>
+    [MessageLogging(EventId = 61159, Level = LogLevel.Error,
+        Message = "{owner} states placeholder(s) {keys} that are stated both by an environment variable and by the slot file '{filePath}'. A value has one source: remove one of the two")]
+    public static partial IGenericMessage RowPlaceholderStatedByBothSources(ILogger logger, string owner, string filePath, string keys);
+
+    /// <summary>A row's text states a placeholder that neither the environment nor the slot file states (FDW-5847).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="owner">What states the text.</param>
+    /// <param name="filePath">The path APP_SLOT_FILE names.</param>
+    /// <param name="keys">The keys neither source states.</param>
+    [MessageLogging(EventId = 61160, Level = LogLevel.Error,
+        Message = "{owner} states placeholder(s) {keys}, which neither an environment variable nor the slot file '{filePath}' states. Write each as its path in the slot file with '__' between keys (hostnames__live__0), or set the environment variable")]
+    public static partial IGenericMessage RowPlaceholderNotStatedOnSlot(ILogger logger, string owner, string filePath, string keys);
+
+    /// <summary>A row's text states a placeholder on a host that is not on a slot and has no such environment variable (FDW-5847).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="owner">What states the text.</param>
+    /// <param name="keys">The keys with no environment variable.</param>
+    [MessageLogging(EventId = 61161, Level = LogLevel.Error,
+        Message = "{owner} states placeholder(s) {keys}, and this host is not on a slot (APP_SLOT_FILE is not set) and has no environment variable of that spelling. Set the variable, or write the value itself in the row")]
+    public static partial IGenericMessage RowPlaceholderNotStated(ILogger logger, string owner, string keys);
+
+    /// <summary>A row's text states placeholders, and the slot file that would fill them cannot be read (FDW-5847).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="owner">What states the text.</param>
+    /// <param name="filePath">The path APP_SLOT_FILE names.</param>
+    /// <param name="keys">The keys left unfilled.</param>
+    [MessageLogging(EventId = 61162, Level = LogLevel.Error,
+        Message = "{owner} states placeholder(s) {keys}, which cannot be filled: the slot file '{filePath}' cannot be read (the message before this one says why). The row is refused rather than read with the placeholder left in its text")]
+    public static partial IGenericMessage RowSlotFileUnavailable(ILogger logger, string owner, string filePath, string keys);
+
     /// <summary>The slot file was read.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="filePath">The path APP_SLOT_FILE names.</param>

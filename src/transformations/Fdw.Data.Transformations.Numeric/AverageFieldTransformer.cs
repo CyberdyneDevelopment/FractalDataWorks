@@ -61,26 +61,10 @@ public sealed class AverageFieldTransformer : FieldTransformationBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        var value1 = ConvertToDecimal(input);
-        var value2 = ConvertToDecimal(field2Raw);
+        var value1 = NumericInputKinds.ToDecimal(input, "Average");
+        var value2 = NumericInputKinds.ToDecimal(field2Raw, "Average");
         var average = (value1 + value2) / 2m;
 
         return Task.FromResult(GenericResult<object?>.Success(average));
-    }
-
-    private static decimal ConvertToDecimal(object input)
-    {
-        return input switch
-        {
-            decimal d => d,
-            double d => Convert.ToDecimal(d),
-            float f => Convert.ToDecimal(f),
-            int i => Convert.ToDecimal(i),
-            long l => Convert.ToDecimal(l),
-            short s => Convert.ToDecimal(s),
-            byte b => Convert.ToDecimal(b),
-            _ => throw new InvalidOperationException(
-                $"Average does not support input type '{input.GetType().Name}'. Input must be numeric.")
-        };
     }
 }

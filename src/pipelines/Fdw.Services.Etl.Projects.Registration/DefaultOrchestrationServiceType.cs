@@ -94,7 +94,7 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
             services.TryAddSingleton<OrchestrationNodeExecutionQueue>();
             services.TryAddSingleton<ProjectExecutionQueue>();
 
-            Fdw.Services.Etl.EtlPipelineTypes.RegisterPipelineExecutionQueue(services);
+            Fdw.Services.Etl.PipelineExecutionRegistration.RegisterPipelineExecutionQueue(services);
 
             services.TryAddSingleton<IExecutionCompletionSignaler, ExecutionCompletionSignaler>();
             services.TryAddScoped<IOrchestrationNodeOrchestrator, OrchestrationNodeOrchestrator>();

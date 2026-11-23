@@ -61,6 +61,12 @@ public sealed class SerializedContainer<TProperties> : IStorageContainer
     IContainerType IStorageContainer.ContainerType => throw new NotSupportedException("SerializedContainer does not have a resolved ContainerType. Use ContainerTypeName instead.");
     IFormatType IStorageContainer.Format => throw new NotSupportedException("SerializedContainer does not have a resolved FormatType. Use FormatTypeName instead.");
     IPath IStorageContainer.Path => throw new NotSupportedException("SerializedContainer does not have a resolved Path. Use PathTypeName and PathValue instead.");
+
+    /// <summary>
+    /// A serialization container carries no keys: the wire form has no place for them. It refuses rather than answer an empty
+    /// list that would read as a container with no keys (FDW-6309).
+    /// </summary>
+    IReadOnlyList<IContainerKey> IStorageContainer.Keys => throw new NotSupportedException("SerializedContainer does not carry keys. A container that declares keys is not written through it.");
 }
 
 /// <summary>
@@ -112,6 +118,12 @@ public sealed class SerializedContainer : IStorageContainer
     IContainerType IStorageContainer.ContainerType => throw new NotSupportedException("SerializedContainer does not have a resolved ContainerType. Use ContainerTypeName instead.");
     IFormatType IStorageContainer.Format => throw new NotSupportedException("SerializedContainer does not have a resolved FormatType. Use FormatTypeName instead.");
     IPath IStorageContainer.Path => throw new NotSupportedException("SerializedContainer does not have a resolved Path. Use PathTypeName and PathValue instead.");
+
+    /// <summary>
+    /// A serialization container carries no keys: the wire form has no place for them. It refuses rather than answer an empty
+    /// list that would read as a container with no keys (FDW-6309).
+    /// </summary>
+    IReadOnlyList<IContainerKey> IStorageContainer.Keys => throw new NotSupportedException("SerializedContainer does not carry keys. A container that declares keys is not written through it.");
 
     /// <summary>
     /// Creates a generic serialized container from this container with the specified properties.

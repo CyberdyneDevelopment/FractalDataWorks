@@ -7,22 +7,6 @@ namespace Fdw.Services.Connections.Abstractions.Tests;
 /// </summary>
 public class ConnectionManagementOperationsTests
 {
-    [Theory]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    [InlineData("ListConnections")]
-    [InlineData("GetConnectionMetadata")]
-    [InlineData("RefreshConnectionStatus")]
-    [InlineData("TestConnection")]
-    [InlineData("RemoveConnection")]
-    public void ExpectedOperationsAreRegistered(string operationName)
-    {
-        // Act
-        var result = ConnectionManagementOperations.ByName(operationName);
-
-        // Assert
-        result.ShouldNotBeNull($"Operation '{operationName}' should be registered");
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

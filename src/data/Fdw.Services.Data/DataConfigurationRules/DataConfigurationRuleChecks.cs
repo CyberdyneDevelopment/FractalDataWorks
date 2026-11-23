@@ -110,20 +110,9 @@ internal static class DataConfigurationRuleChecks
     private static IGenericMessage Mapped(ILogger logger, IGenericResult<IRuleKind> failed, IReadOnlyList<string> path, string text, string method)
     {
         var details = failed.Details!;
-        switch (failed.Code?.Name)
-        {
-            case "DataOptionPathLevelNotFound":
-                var level = details.GetValue<int>("Level");
-                return level == 1
-                    ? DataOptionRulesLog.PathRootNotFound(logger, details.GetValue<string>("Name")!, nameof(Fdw.Data.Options.DataConfigurationRules))
-                    : DataOptionRulesLog.PathSegmentNotFound(logger, level, details.GetValue<string>("Name")!, details.GetValue<string>("Known")!);
-            case "DataOptionPathEndsBeforeKind":
-                return DataOptionRulesLog.PathIncomplete(logger, text, details.GetValue<string>("Name")!, details.GetValue<string>("Known")!);
-            case "DataOptionPathContinuesPastKind":
-                var extra = details.GetValue<string>("Extra")!;
-                return DataOptionRulesLog.PathSegmentNotFound(logger, path.ToList().IndexOf(extra) + 1, extra, string.Empty);
-            default:
-                return DataOptionRulesLog.MethodNotFound(logger, text, method, details.GetValue<string>("KindMethod")!);
-        }
+        var problem = failed.Code?.Name is { } codeName ? DataOptionPathProblems.ByName(codeName) : DataOptionPathProblems.NotFound;
+        return ReferenceEquals(problem, DataOptionPathProblems.NotFound)
+            ? DataOptionRulesLog.MethodNotFound(logger, text, method, details.GetValue<string>("KindMethod")!)
+            : problem.Message(logger, details, path, text);
     }
 }

@@ -46,6 +46,10 @@ public partial class WorkspaceImplementationConfiguration
     public string? DisplayName { get; set; }
 
     /// <summary>Gets or sets the optional description.</summary>
+    // Why [NotStored]: the text is a row of the descriptions table under the description type Workspace, filled by the workspace provider once for every set
+    // it reads and written in the unit of the workspace's save (FDW-6208); the column is gone from workspace.WorkspaceConfiguration, so no read selects it and
+    // no save writes it. The member stays, so every caller of Description still gets the text.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>

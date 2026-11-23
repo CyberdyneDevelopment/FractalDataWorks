@@ -335,6 +335,55 @@ public sealed class RecursiveCascadeSaveTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
+    public async Task AMoveToAnotherImplementationThatFailsAfterTheOldRowsAreRetiredRollsTheWholeUnitBack()
+    {
+        // FDW-6806: a record naming another implementation than the stored one moves the member. The old implementation's rows and the domain
+        // row are retired, the domain row is written again naming the new implementation, and then the new implementation's row is refused.
+        var stored = new DomainConfiguration { Id = Guid.CreateVersion7(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var gateway = new RecordingGateway { StoredRow = stored, RefuseImplementation = true };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+        domain.Register("Moved", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration { Id = stored.Id }, "TestRoot", "Moved", "Root", TestContext.Current.CancellationToken);
+
+        // Every retire and the new domain row ran inside the unit before the refusal, and the unit was abandoned, so the stored member, its
+        // domain row naming "Default" and the old implementation's rows, is what the store still holds.
+        result.IsSuccess.ShouldBeFalse();
+        gateway.Retires.Count.ShouldBe(2, "the old implementation's rows, then the domain row");
+        gateway.Retires[1].KeyValues.ShouldHaveSingleItem().ShouldBe(stored.Id);
+        var rewritten = gateway.SavedConfigs.OfType<DomainConfiguration>().ShouldHaveSingleItem();
+        rewritten.Id.ShouldBe(stored.Id);
+        rewritten.Implementation.ShouldBe("Moved");
+        gateway.Transaction.RolledBack.ShouldBeTrue();
+        gateway.Transaction.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AMoveToAnotherImplementationKeepsTheIdAndCommitsOnce()
+    {
+        var stored = new DomainConfiguration { Id = Guid.CreateVersion7(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var gateway = new RecordingGateway { StoredRow = stored };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+        domain.Register("Moved", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration { Id = stored.Id }, "TestRoot", "Moved", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        gateway.Retires.Count.ShouldBe(2);
+        gateway.SavedConfigs.OfType<DomainConfiguration>().ShouldHaveSingleItem().Implementation.ShouldBe("Moved");
+        gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem().Id.ShouldBe(stored.Id, "the member keeps its Id across the move");
+        gateway.Transaction.Committed.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
     public async Task APlacedProviderPlacesAMintedMemberInTheUnitThatMadeIt()
     {
         var gateway = new RecordingGateway();
@@ -353,6 +402,46 @@ public sealed class RecursiveCascadeSaveTests
         request.Name.ShouldBe("Root");
         request.Id.ShouldBe(made.Id);
         gateway.Transaction.Committed.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task APreparerIsAskedBeforeTheUnitOpensAndIsGivenTheRecordTheObserverGets()
+    {
+        var events = new List<string>();
+        var gateway = new RecordingGateway { Events = events };
+        var domain = new TestPreparedRootDomainProvider(GatewayProviderFor(gateway), events, fails: false);
+        domain.Register("Default", ImplementationProvider(gateway));
+        var record = new TestRootConfiguration();
+
+        var result = await domain.Save(record, "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // FDW-7256: what the write needs from another store is read before the unit holds a lock, never inside it.
+        result.IsSuccess.ShouldBeTrue();
+        events.ShouldBe(["prepare", "begin", "written"]);
+        domain.Prepared.ShouldHaveSingleItem().ShouldBeSameAs(record);
+        domain.Observed.ShouldHaveSingleItem().ShouldBeSameAs(record);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFailedPreparationFailsTheSaveBeforeAnyUnitIsOpened()
+    {
+        var events = new List<string>();
+        var gateway = new RecordingGateway { Events = events };
+        var domain = new TestPreparedRootDomainProvider(GatewayProviderFor(gateway), events, fails: true);
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("preparation refused");
+        events.ShouldBe(["prepare"]);
+        gateway.SavedConfigs.ShouldBeEmpty();
+        gateway.Transaction.Committed.ShouldBeFalse();
+        gateway.Transaction.RolledBack.ShouldBeFalse();
     }
 
     [Fact]
@@ -391,6 +480,62 @@ public sealed class RecursiveCascadeSaveTests
         // A member that already has an owner of its own (a variation a workspace owns) is made as before.
         result.IsSuccess.ShouldBeTrue();
         placement.Placed.ShouldBeEmpty();
+        gateway.Transaction.Committed.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AnObservingProviderWritesMoreInTheUnitOfEveryWriteOfAMember()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestObservedRootDomainProvider(GatewayProviderFor(gateway), fails: false);
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // FDW-6121: told of the record as written, with the Id it was saved under, before the unit commits.
+        result.IsSuccess.ShouldBeTrue();
+        var made = gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem();
+        var observed = domain.Observed.ShouldHaveSingleItem();
+        observed.Id.ShouldBe(made.Id);
+        domain.UnitSeenOpen.ShouldBeTrue();
+        gateway.Transaction.Committed.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFailingObserverFailsTheWriteAndRollsTheUnitBack()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestObservedRootDomainProvider(GatewayProviderFor(gateway), fails: true);
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // A member whose copy could not be written is not written: the unit holding its rows is abandoned with it.
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("observer refused");
+        gateway.Transaction.RolledBack.ShouldBeTrue();
+        gateway.Transaction.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AProviderThatDoesNotDeclareAnObserverWritesNothingMore()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
         gateway.Transaction.Committed.ShouldBeTrue();
     }
 
@@ -569,6 +714,62 @@ public sealed class RecursiveCascadeSaveTests
         }
     }
 
+    /// <summary>The domain provider declared filling (FDW-6208): it is handed the members of every read, once for the set, to fill from another domain.</summary>
+    public sealed class TestFillingRootDomainProvider
+        : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>,
+          IConfigurationReadObserver<ITestRootImplementationConfiguration>
+    {
+        private readonly bool _fails;
+
+        public TestFillingRootDomainProvider(IConfigurationGatewayProvider gatewayProvider, bool fails = false)
+            : base(
+                NullLogger<DomainConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRootDomain")
+        {
+            _fails = fails;
+        }
+
+        /// <summary>Gets the sets it was handed: one entry for each call, with the Ids the records held when it was called.</summary>
+        public List<List<Guid>> Filled { get; } = [];
+
+        public Task<IGenericResult> Read(IReadOnlyList<ITestRootImplementationConfiguration> records, DateTimeOffset? asOf, CancellationToken cancellationToken = default)
+        {
+            Filled.Add([.. records.Select(record => record.Id)]);
+            return Task.FromResult(_fails ? GenericResult.Failure(new GenericMessage("fill refused")) : GenericResult.Success());
+        }
+    }
+
+    /// <summary>The domain provider declared filling the children of a child read (FDW-6777): it is handed the member's Id and the children read, once for the read.</summary>
+    public sealed class TestChildFillingRootDomainProvider
+        : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>,
+          IConfigurationChildReadObserver<ITestRootImplementationConfiguration>
+    {
+        private readonly bool _fails;
+
+        public TestChildFillingRootDomainProvider(IConfigurationGatewayProvider gatewayProvider, bool fails = false)
+            : base(
+                NullLogger<DomainConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRootDomain")
+        {
+            _fails = fails;
+        }
+
+        /// <summary>Gets each call it was handed: the member's Id and the names of the children, in the order read.</summary>
+        public List<(Guid MemberId, List<string> Children)> Filled { get; } = [];
+
+        public Task<IGenericResult> ReadChildren<TChild>(Guid memberId, IReadOnlyList<TChild> children, CancellationToken cancellationToken = default)
+        {
+            Filled.Add((memberId, [.. children.Select(child => child is TestOpConfiguration op ? op.Name : "?")]));
+            return Task.FromResult(_fails ? GenericResult.Failure(new GenericMessage("child fill refused")) : GenericResult.Success());
+        }
+    }
+
     /// <summary>The domain provider declared placed (FDW-3692): what it makes is handed to the placement it was given.</summary>
     public sealed class TestPlacedRootDomainProvider
         : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>,
@@ -596,6 +797,76 @@ public sealed class RecursiveCascadeSaveTests
         public string PlacementKind => "TestKind";
 
         public bool Needs(ITestRootImplementationConfiguration record) => _needs(record);
+    }
+
+    /// <summary>The domain provider declared observing (FDW-6121): it is told of every member it writes, in the unit that wrote it.</summary>
+    public sealed class TestObservedRootDomainProvider
+        : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>,
+          IConfigurationWriteObserver<ITestRootImplementationConfiguration>
+    {
+        private readonly bool _fails;
+
+        public TestObservedRootDomainProvider(IConfigurationGatewayProvider gatewayProvider, bool fails)
+            : base(
+                NullLogger<DomainConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRootDomain")
+        {
+            _fails = fails;
+        }
+
+        public List<ITestRootImplementationConfiguration> Observed { get; } = [];
+
+        public bool UnitSeenOpen { get; private set; }
+
+        public Task<IGenericResult> Written(ITestRootImplementationConfiguration record, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
+        {
+            Observed.Add(record);
+            UnitSeenOpen = unit is not null;
+            return Task.FromResult(_fails ? GenericResult.Failure(new GenericMessage("observer refused")) : GenericResult.Success());
+        }
+    }
+
+    /// <summary>The domain provider that declares it needs something before its unit opens (FDW-7256): it notes <c>prepare</c> and <c>written</c> so a test can order them against the unit.</summary>
+    public sealed class TestPreparedRootDomainProvider
+        : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>,
+          IConfigurationWritePreparer<ITestRootImplementationConfiguration>,
+          IConfigurationWriteObserver<ITestRootImplementationConfiguration>
+    {
+        private readonly List<string> _events;
+        private readonly bool _fails;
+
+        public TestPreparedRootDomainProvider(IConfigurationGatewayProvider gatewayProvider, List<string> events, bool fails)
+            : base(
+                NullLogger<DomainConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRootDomain")
+        {
+            _events = events;
+            _fails = fails;
+        }
+
+        public List<ITestRootImplementationConfiguration> Prepared { get; } = [];
+
+        public List<ITestRootImplementationConfiguration> Observed { get; } = [];
+
+        public Task<IGenericResult> Prepare(ITestRootImplementationConfiguration record, CancellationToken cancellationToken = default)
+        {
+            _events.Add("prepare");
+            Prepared.Add(record);
+            return Task.FromResult(_fails ? GenericResult.Failure(new GenericMessage("preparation refused")) : GenericResult.Success());
+        }
+
+        public Task<IGenericResult> Written(ITestRootImplementationConfiguration record, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
+        {
+            _events.Add("written");
+            Observed.Add(record);
+            return Task.FromResult<IGenericResult>(GenericResult.Success());
+        }
     }
 
     /// <summary>A placement that records what it was asked to place, and refuses when told to.</summary>
@@ -649,6 +920,12 @@ public sealed class RecursiveCascadeSaveTests
         /// <summary>Answer the unmapped implementation's write as replacing a prior version, so its retire runs (FDW-3587).</summary>
         public bool ReplacesUnmappedVersion { get; init; }
 
+        /// <summary>A member the store already holds, under its domain row with RowId 1000; null when the store holds none.</summary>
+        public DomainConfiguration? StoredRow { get; init; }
+
+        /// <summary>Every retire command the provider issued, in call order.</summary>
+        public List<ConfigurationRetireCommand> Retires { get; } = [];
+
         // The domain container owns the implementation container through the Foreign key the
         // implementation declares against the domain's Physical key, as the DDL would.
         public IReadOnlyList<IDataStore> DataStores { get; } = [TestRootStore()];
@@ -669,14 +946,20 @@ public sealed class RecursiveCascadeSaveTests
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            // A read asks for a sequence — the record is new, so nothing comes back.
+            // A read asks for a sequence: the stored member's domain row, as a record or as its column values, or nothing when the record is new.
             if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(IEnumerable<>))
-                return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(typeof(T).GetGenericArguments()[0], 0)));
+                return Task.FromResult(GenericResult<T>.Success((T)Stored(typeof(T).GetGenericArguments()[0])));
 
             if (command is ConfigurationRetireCommand retire)
             {
+                Retires.Add(retire);
                 if (retire.KeyValues.Count > 0 && retire.KeyValues[0] is Guid id)
+                {
                     Deleted.Add(id);
+                    if (StoredRow is not null && id == StoredRow.Id)
+                        return Task.FromResult(GenericResult<T>.Success((T)(object)new ConfigurationWriteResult([StoredKeys()], null)));
+                }
+
                 return Retired<T>();
             }
 
@@ -692,6 +975,18 @@ public sealed class RecursiveCascadeSaveTests
 
             return Wrote<T>((command as IConfigurationSaveCommand)?.InputData);
         }
+
+        // The stored member's rows for a read of that row type; an empty sequence for any other read, or when the store holds no member.
+        private object Stored(Type element)
+        {
+            if (StoredRow is not null && element == typeof(DomainConfiguration))
+                return new List<DomainConfiguration> { StoredRow };
+            if (StoredRow is not null && element == typeof(Dictionary<string, object?>))
+                return new List<Dictionary<string, object?>> { StoredKeys() };
+            return Array.CreateInstance(element, 0);
+        }
+
+        private Dictionary<string, object?> StoredKeys() => new(StringComparer.Ordinal) { ["RowId"] = 1000, ["Id"] = StoredRow!.Id };
 
         // A write answers with the key values of the row it wrote, as the database's OUTPUT does.
         private int _rowId;
@@ -797,8 +1092,14 @@ public sealed class RecursiveCascadeSaveTests
         public Task<IGenericResult<Fdw.Data.RowSources.Abstractions.IRecordSource<Fdw.Data.RowSources.Abstractions.DataRecord>>> OpenRecordSource(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => throw new System.NotImplementedException();
 
+        /// <summary>When set, every unit this gateway opens is noted here as <c>begin</c>, so a test can order it against what a provider does around it.</summary>
+        public List<string>? Events { get; init; }
+
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
-            => Task.FromResult(GenericResult<IDataGatewayTransaction>.Success(Transaction));
+        {
+            Events?.Add("begin");
+            return Task.FromResult(GenericResult<IDataGatewayTransaction>.Success(Transaction));
+        }
 
         public Task<IGenericResult<T>> Execute<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("Vectorized commands not supported in RecordingGateway test double")));

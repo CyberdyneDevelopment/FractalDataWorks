@@ -102,7 +102,8 @@ public sealed class SimpleDataSetStreamTests
         var resolver = new FieldMappingTransformationResolver(
             gateways.Object,
             new TransformationConfigurationProvider(
-                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation"));
+                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation",
+                TransformationDescriptionDoubles.Writer(), TransformationDescriptionDoubles.Reader()));
 
         var config = new SimpleDataSetConfiguration
         {

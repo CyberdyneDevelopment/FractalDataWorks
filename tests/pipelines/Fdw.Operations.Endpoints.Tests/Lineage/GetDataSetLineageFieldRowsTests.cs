@@ -39,8 +39,8 @@ public class GetDataSetLineageFieldRowsTests
     {
         var gateways = new Mock<IConfigurationGatewayProvider>();
         return new TestableEndpoint(
-            new DataSetConfigurationProvider(NullLogger<DataSetConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement()),
-            new PipelineServiceConfigurationProvider(NullLogger<PipelineServiceConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "pipe", "Pipeline", new Fdw.Services.Configuration.UnavailablePlacement()),
+            new DataSetConfigurationProvider(NullLogger<DataSetConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement(), new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object, new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict).Object),
+            new PipelineServiceConfigurationProvider(NullLogger<PipelineServiceConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "pipe", "Pipeline", new Fdw.Services.Configuration.UnavailablePlacement(), PipelineDescriptionDoubles.Writer(), PipelineDescriptionDoubles.Reader()),
             new Mock<ICalculationConfigurationProvider>().Object,
             NullLogger<GetDataSetLineageEndpointBase>.Instance);
     }

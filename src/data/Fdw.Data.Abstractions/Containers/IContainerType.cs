@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Fdw.Collections;
 
 namespace Fdw.Data.Abstractions;
@@ -29,4 +30,10 @@ public interface IContainerType : ITypeOption<int>
     /// Gets whether this container type supports schema discovery.
     /// </summary>
     bool SupportsSchemaDiscovery { get; }
+
+    /// <summary>
+    /// Gets the operations a container of this type supports: <c>Query</c>, <c>Insert</c>, <c>Update</c>, <c>Delete</c>. The type states
+    /// them; no code decides them from the type's name (FDW-6309).
+    /// </summary>
+    IReadOnlyList<string> SupportedOperations { get; }
 }

@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.Results;
+using Fdw.Services.Workspaces.Results;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Workspaces.Endpoints;
 
@@ -13,7 +16,7 @@ internal static class LineageProjection
     private const string PathKey = "pathName";
 
     /// <summary>Builds the graph from the map's nodes and edges; the workspace is the scope the map was read for, when it was scoped.</summary>
-    public static LineageGraph Of(List<MapNodeDto> nodes, List<MapEdgeDto> edges, string? workspace)
+    public static IGenericResult<LineageGraph> Of(List<MapNodeDto> nodes, List<MapEdgeDto> edges, string? workspace, ILogger logger)
     {
         var traced = nodes.Where(node => node.Kind is MapKinds.DataSet or MapKinds.DataStore or MapKinds.Container or MapKinds.Pipeline).ToList();
         var graphNodes = traced.Select(node => new LineageNode(node.Id, node.Kind, node.Label, workspace, PlacementOf(node), StoreOf(node))).ToList();
@@ -21,7 +24,10 @@ internal static class LineageProjection
             .Where(node => string.Equals(node.Kind, MapKinds.Pipeline, StringComparison.Ordinal))
             .Select(node => new LineagePipeline(node.Id, node.Label, EnabledOf(node), node.CanEdit))
             .ToList();
-        return new LineageGraph(graphNodes, pipelines, Flows(edges));
+        var flows = Flows(edges, logger);
+        return flows.IsFailure
+            ? flows.ToNewResult<LineageGraph>()
+            : GenericResult<LineageGraph>.Success(new LineageGraph(graphNodes, pipelines, flows.Value!));
     }
 
     // A data set sits in its category; a container sits in its data store and path. The path is its name within the store, which is how a pipeline names it.
@@ -51,70 +57,22 @@ internal static class LineageProjection
         return value is bool enabled ? enabled : null;
     }
 
-    // Data moves with the edge for a derived data set or a store, but against the map's own arrows: the map draws "derived
-    // from" and "stored in" toward the origin, lineage runs from the origin.
-    private static List<LineageFlow> Flows(List<MapEdgeDto> edges)
+    // Each edge gives the lineage what its relation contributes; an edge the map did not build a relation for is refused.
+    private static IGenericResult<List<LineageFlow>> Flows(List<MapEdgeDto> edges, ILogger logger)
     {
-        var flows = new List<LineageFlow>();
-        var reads = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        var writes = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var collector = new LineageFlowCollector();
         foreach (var edge in edges)
         {
-            switch (edge.RelationType)
+            var relation = MapRelationOptions.ByName(edge.RelationType);
+            if (ReferenceEquals(relation, MapRelationOptions.NotFound))
             {
-                case MapRelations.ConsumedBy:
-                    Add(reads, edge.Target, edge.Source);
-                    break;
-                case MapRelations.Produces:
-                    Add(writes, edge.Source, edge.Target);
-                    break;
-                case MapRelations.DerivedFrom:
-                    flows.Add(new LineageFlow(edge.Target, edge.Source, LineageRelations.DerivedFrom, null, IntendedOf(edge), GraphOf(edge)));
-                    break;
-                case MapRelations.StoredIn:
-                    flows.Add(new LineageFlow(edge.Target, edge.Source, LineageRelations.StoredIn, null, IntendedOf(edge), GraphOf(edge)));
-                    break;
+                return GenericResult<List<LineageFlow>>.Failure(
+                    WorkspacesResultCodes.ByName("MapRelationUnknown"), logger, ResultDetails.Create("relation", edge.RelationType));
             }
+
+            relation.Contribute(edge, collector);
         }
 
-        flows.AddRange(Through(reads, writes));
-        return flows;
-    }
-
-    // An edge a Graph data set draws says so in its metadata (FDW-5456).
-    private static bool GraphOf(MapEdgeDto edge)
-        => edge.Metadata.TryGetValue(MapEdges.GraphKey, out var value) && value is true;
-
-    // An edge a Graph data set draws for a source it only intends to read says so in its metadata (FDW-5296).
-    private static bool IntendedOf(MapEdgeDto edge)
-        => edge.Metadata.TryGetValue(MapEdges.IntendedKey, out var value) && value is true;
-
-    // A pipeline that reads several inputs and writes several outputs gives a step for each input and output pair.
-    private static List<LineageFlow> Through(Dictionary<string, List<string>> reads, Dictionary<string, List<string>> writes)
-    {
-        var flows = new List<LineageFlow>();
-        foreach (var (pipelineId, inputs) in reads)
-        {
-            if (!writes.TryGetValue(pipelineId, out var outputs)) continue;
-
-            foreach (var input in inputs)
-            {
-                foreach (var output in outputs)
-                    flows.Add(new LineageFlow(input, output, LineageRelations.Pipeline, pipelineId));
-            }
-        }
-
-        return flows;
-    }
-
-    private static void Add(Dictionary<string, List<string>> index, string key, string value)
-    {
-        if (!index.TryGetValue(key, out var values))
-        {
-            values = [];
-            index[key] = values;
-        }
-
-        values.Add(value);
+        return GenericResult<List<LineageFlow>>.Success(collector.Flows());
     }
 }

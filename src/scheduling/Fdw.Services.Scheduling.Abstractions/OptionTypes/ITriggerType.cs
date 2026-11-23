@@ -9,6 +9,11 @@ namespace Fdw.Services.Scheduling.Abstractions.OptionTypes;
 public interface ITriggerType
 {
     /// <summary>
+    /// Gets what this trigger type does, in one sentence a person reads when choosing a schedule type.
+    /// </summary>
+    string Description { get; }
+
+    /// <summary>
     /// Gets a value indicating whether this trigger type requires schedule persistence.
     /// </summary>
     /// <value>

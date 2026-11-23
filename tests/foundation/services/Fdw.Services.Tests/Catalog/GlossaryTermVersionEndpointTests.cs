@@ -1,3 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
+using Fdw.ServiceTypes;
+using Fdw.Services.Workspaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +32,10 @@ namespace Fdw.Services.Tests.Catalog;
 [Collection(nameof(ServicesTestCollection))]
 public class GlossaryTermVersionEndpointTests
 {
+    // The most versions one read holds, as the place option's registration registers it (FDW-7104); the endpoint reads it from the services.
+    private static readonly Action<DefaultHttpContext> WithVersionLimits =
+        ctx => ctx.AddTestServices(services => services.AddSingleton(new PlaceVersionLimits(DeclaredSetting.Count(new DefaultPlaceServiceType(), nameof(PlaceVersionLimits.MaxVersions), null).Value)));
+
     private static readonly Guid Tenant = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
     private static readonly Guid OtherTenant = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000002");
     private static readonly Guid Finance = Guid.Parse("44444444-0000-0000-0000-000000000001");
@@ -181,7 +189,7 @@ public class GlossaryTermVersionEndpointTests
     public async Task AVersionAtTheCallersOrganizationAppliesAndTheTermItselfIsTheTenantsVersionBehindIt()
     {
         var setup = Create(versions: [Version("Organization", Finance, "Finance definition")], organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId }, CancellationToken.None);
 
@@ -202,7 +210,7 @@ public class GlossaryTermVersionEndpointTests
     public async Task WithNoVersionAtTheCallersPlaceTheTermItselfApplies()
     {
         var setup = Create(organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId }, CancellationToken.None);
 
@@ -217,7 +225,7 @@ public class GlossaryTermVersionEndpointTests
     public async Task AVersionHeldAtAnotherOrganizationIsNotListed()
     {
         var setup = Create(versions: [Version("Organization", Legal, "Legal definition")], organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId }, CancellationToken.None);
 
@@ -232,7 +240,7 @@ public class GlossaryTermVersionEndpointTests
         var setup = Create(
             versions: [Version("Workspace", Workspace, "Workspace definition"), Version("Organization", Finance, "Finance definition")],
             organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId, WorkspaceId = Workspace }, CancellationToken.None);
 
@@ -253,7 +261,7 @@ public class GlossaryTermVersionEndpointTests
         var setup = Create(
             versions: [Version("Workspace", Workspace, "Workspace definition"), Version("Organization", Finance, "Finance definition")],
             may: scope => scope.OrganizationId is null);
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId, WorkspaceId = Workspace }, CancellationToken.None);
 
@@ -270,7 +278,7 @@ public class GlossaryTermVersionEndpointTests
         var setup = Create();
         setup.Ancestry.Setup(a => a.Get(PlaceKinds.Workspace, Workspace, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<PlaceStep>>.Success([new PlaceStep(PlaceKinds.Workspace, Workspace, 0), new PlaceStep(PlaceKinds.Tenant, OtherTenant, 1)]));
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId, WorkspaceId = Workspace }, CancellationToken.None);
 
@@ -283,7 +291,7 @@ public class GlossaryTermVersionEndpointTests
     public async Task ATermThatDoesNotExistIsAnswered404()
     {
         var setup = Create(termExists: false, organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId }, CancellationToken.None);
 
@@ -296,7 +304,7 @@ public class GlossaryTermVersionEndpointTests
     public async Task ACallerWhoIsNotSignedInListsNothing()
     {
         var setup = Create(signedIn: false);
-        var endpoint = Factory.Create<ListVersions>(setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Terms.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new GlossaryTermVersionsRequest { Id = TermId }, CancellationToken.None);
 

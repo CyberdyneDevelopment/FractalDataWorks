@@ -20,6 +20,9 @@ namespace Fdw.Data.MsSql;
 /// </remarks>
 public sealed class MsSqlTableContainer : DataContainer
 {
+    // The Table option states the operations this container supports; the container does not choose them (FDW-6309).
+    private static readonly TableContainerType ContainerOption = new();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlTableContainer"/> class.
     /// </summary>
@@ -51,10 +54,10 @@ public sealed class MsSqlTableContainer : DataContainer
             fields,
             keys,
             referencingKeys,
-            new TableContainerType(),
+            ContainerOption,
             format,
             physicalPath,
-            ["Query", "Insert", "Update", "Delete"],
+            [.. ContainerOption.SupportedOperations],
             metadata,
             logger)
     {

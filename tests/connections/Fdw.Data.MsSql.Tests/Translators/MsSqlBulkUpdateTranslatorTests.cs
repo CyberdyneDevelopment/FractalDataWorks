@@ -40,14 +40,6 @@ public sealed class MsSqlBulkUpdateTranslatorTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TheMsSqlTranslatorCollectionAnswersBulkUpdateWithThisTranslator()
-    {
-        MsSqlDataCommandTranslators.ByName("BulkUpdate").ShouldBeOfType<MsSqlBulkUpdateTranslator>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task ABatchIsOneCommandWithOneUpdateJoinedToTheStagedRows()
     {

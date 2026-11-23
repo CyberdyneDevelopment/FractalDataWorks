@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -89,7 +90,7 @@ public sealed class ThresholdSource : IThresholdSource
 
     private async Task<IGenericResult<IThresholdDefinition>> Definition(ThresholdLinkConfiguration link, ThresholdSubject subject, CancellationToken cancellationToken)
     {
-        var stored = await _thresholds.Get(link.ThresholdId, cancellationToken).ConfigureAwait(false);
+        var stored = await _thresholds.Get(link.ThresholdId, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (stored.IsFailure)
         {
             return stored.ToNewResult<IThresholdDefinition>();

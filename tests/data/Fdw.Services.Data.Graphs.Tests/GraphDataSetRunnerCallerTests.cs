@@ -25,7 +25,7 @@ namespace Fdw.Services.Data.Graphs.Tests;
 public sealed class GraphDataSetRunnerCallerTests
 {
     private static GraphDataSetRunner Runner() =>
-        new(new GraphDataSetReadOptions(1000, 30, 2), NullLogger<GraphDataSetRunner>.Instance);
+        new(new GraphDataSetReadOptions(1000, 30, 2), NoContributions.Scopes(), NullLogger<GraphDataSetRunner>.Instance);
 
     private static GraphDataSetConfiguration OneSource()
     {

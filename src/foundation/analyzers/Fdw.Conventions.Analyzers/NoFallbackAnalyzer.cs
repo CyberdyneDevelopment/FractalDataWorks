@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Fdw.Conventions.Analyzers.Helpers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
@@ -88,7 +89,7 @@ public sealed class NoFallbackAnalyzer : DiagnosticAnalyzer
         {
             // Why compiler extensions are out of scope (FDW-3580): FDW055 guards values a running system reads. A source generator,
             // analyzer or code fix runs inside the compiler; its choices are conventions of the code it emits, reviewed as code.
-            if (IsCompilerExtension(start.Compilation))
+            if (CompilerExtensions.IsCompilerExtension(start.Compilation))
                 return;
 
             var known = new KnownSymbols(start.Compilation);
@@ -128,19 +129,6 @@ public sealed class NoFallbackAnalyzer : DiagnosticAnalyzer
 
         Evaluate(context, known, assignment.Target, assignment.Value);
     }
-
-    private static readonly ImmutableArray<string> CompilerExtensionAttributes =
-        ["Microsoft.CodeAnalysis.GeneratorAttribute", "Microsoft.CodeAnalysis.Diagnostics.DiagnosticAnalyzerAttribute", "Microsoft.CodeAnalysis.CodeFixes.ExportCodeFixProviderAttribute"];
-
-    /// <summary>Whether the compilation is a compiler extension: it references Roslyn and declares a generator, analyzer or code fix.</summary>
-    private static bool IsCompilerExtension(Compilation compilation) =>
-        compilation.ReferencedAssemblyNames.Any(reference => string.Equals(reference.Name, "Microsoft.CodeAnalysis", StringComparison.Ordinal)) &&
-        DeclaresExtension(compilation.Assembly.GlobalNamespace);
-
-    private static bool DeclaresExtension(INamespaceSymbol ns) =>
-        ns.GetTypeMembers().Any(type => type.GetAttributes().Any(a =>
-            a.AttributeClass is { } attribute && CompilerExtensionAttributes.Contains(attribute.ToDisplayString(), StringComparer.Ordinal))) ||
-        ns.GetNamespaceMembers().Any(DeclaresExtension);
 
     /// <summary>Reports a valid-value initializer on a property of a configuration whose values a row states.</summary>
     private static void AnalyzePropertyInitializer(OperationAnalysisContext context, KnownSymbols known)

@@ -34,14 +34,17 @@ namespace Fdw.Services.Catalog.Endpoints;
 internal sealed class GlossaryTermSearch : IRankedSearch
 {
     private readonly IGlossaryTermConfigurationProvider _terms;
+    private readonly IConfigurationGatewayProvider _gateways;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="GlossaryTermSearch"/> class.</summary>
     /// <param name="terms">Supplies the glossary terms.</param>
+    /// <param name="gateways">The configuration gateways, whose most keys in one statement is the most matches this search reads (FDW-7106).</param>
     /// <param name="logger">The logger.</param>
-    internal GlossaryTermSearch(IGlossaryTermConfigurationProvider terms, ILogger? logger)
+    internal GlossaryTermSearch(IGlossaryTermConfigurationProvider terms, IConfigurationGatewayProvider gateways, ILogger? logger)
     {
         _terms = terms;
+        _gateways = gateways;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -49,7 +52,7 @@ internal sealed class GlossaryTermSearch : IRankedSearch
     public string Kind => CatalogKinds.GlossaryTerm;
 
     /// <inheritdoc />
-    public int MaxWindow => CatalogSearchLimits.MaxWindow;
+    public int MaxWindow => _gateways.KeyChunkSize;
 
     /// <inheritdoc />
     public async Task<IGenericResult<SearchPage>> Search(string text, int window, CancellationToken cancellationToken = default)

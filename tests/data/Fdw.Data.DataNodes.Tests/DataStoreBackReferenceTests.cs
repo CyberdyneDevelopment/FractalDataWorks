@@ -43,6 +43,7 @@ public sealed class DataStoreBackReferenceTests
                     [
                         new DataContainerConfiguration
                         {
+                            TypeId = "Endpoint",
                             Id = Guid.NewGuid(),
                             Name = "Connection",
                             Fields = [],
@@ -57,6 +58,7 @@ public sealed class DataStoreBackReferenceTests
                     [
                         new DataContainerConfiguration
                         {
+                            TypeId = "Endpoint",
                             Id = Guid.NewGuid(),
                             Name = "DataStore",
                             Fields = [],

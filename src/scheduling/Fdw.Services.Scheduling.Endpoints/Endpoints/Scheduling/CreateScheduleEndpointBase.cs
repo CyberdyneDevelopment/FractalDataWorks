@@ -1,4 +1,6 @@
 using Fdw.Services.Etl.Execution;
+using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Scheduling.Endpoints.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -29,21 +31,25 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
 {
     private readonly ScheduleConfigurationProvider _provider;
     private readonly RunRoleAuthority _runRoles;
+    private readonly ScheduleRunAsGrants _runAs;
     private readonly Lazy<IEffectiveSettingsProvider> _settings;
 
     /// <summary>Initializes a new instance of the <see cref="CreateScheduleEndpointBase{TConfig}"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="provider">The schedule configuration provider.</param>
     /// <param name="grants">The role grants the run roles are checked against.</param>
+    /// <param name="runGrants">Issues the grant a person states to have the schedule's runs act as them (FDW-6144).</param>
     /// <param name="settings">The settings that hold the defaults of what a create request leaves out (FDW-3580).</param>
     protected CreateScheduleEndpointBase(
         ILogger<CreateScheduleEndpointBase<TConfig>> logger,
         ScheduleConfigurationProvider provider,
         IRoleGrants grants,
+        IRunGrants runGrants,
         Lazy<IEffectiveSettingsProvider> settings) : base(logger)
     {
         _provider = provider;
         _runRoles = new RunRoleAuthority(grants);
+        _runAs = new ScheduleRunAsGrants(runGrants, grants);
         _settings = settings;
     }
 
@@ -78,21 +84,50 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
             return roles.ToNewResult<ScheduleDetailDto>();
         }
 
+        // A person who states that the runs act as them gives the grant they act under (FDW-6144); the grant is the person's, so the schedule stores only its id.
+        var grant = await IssueRunAs(request, caller, roles.Value!, ct).ConfigureAwait(false);
+        if (grant.IsFailure)
+        {
+            return grant.ToNewResult<ScheduleDetailDto>();
+        }
+
         var scheduleId = Guid.CreateVersion7();
         var config = CreateConfiguration(request, scheduleId, roles.Value!);
+        config.RunGrantId = grant.Value?.Id;
         var defaults = ApplyDefaults(config, request, caller.ActiveTenantId);
         if (defaults.IsFailure)
         {
+            await _runAs.Revoke(config.RunGrantId, ct).ConfigureAwait(false);
             return defaults.ToNewResult<ScheduleDetailDto>();
         }
 
         var saveResult = await _provider.Save(config, "Schedule", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
+            await _runAs.Revoke(config.RunGrantId, ct).ConfigureAwait(false);
             return saveResult.ToNewResult<ScheduleDetailDto>();
         }
 
         return GenericResult<ScheduleDetailDto>.Success(MapToDetail(config, request, scheduleId));
+    }
+
+    // The grant the request states, or none when it states none. A new schedule has no grant to remove.
+    private async Task<IGenericResult<RunGrant?>> IssueRunAs(CreateScheduleRequest request, IAuthenticationContext caller, IReadOnlyList<string> roles, CancellationToken ct)
+    {
+        if (request.RunAs is not { } runAs)
+        {
+            return GenericResult<RunGrant?>.Success(null);
+        }
+
+        if (runAs.Remove)
+        {
+            return GenericResult<RunGrant?>.Failure(ScheduleEndpointLog.RunAsNothingToRemove(Logger, request.Name));
+        }
+
+        var issued = await _runAs.Issue(caller, request.Name, runAs, roles, Logger, ct).ConfigureAwait(false);
+        return issued.IsFailure || issued.Value is not { } grant
+            ? issued.ToNewResult<RunGrant?>()
+            : GenericResult<RunGrant?>.Success(grant);
     }
 
     // What a create request leaves out takes the caller's tenant's setting (FDW-3580): whether the schedule runs, and how often and how long

@@ -12,7 +12,12 @@ public abstract class WorkspaceStatusBase : TypeOptionBase<WorkspaceStatusBase>,
 {
     /// <summary>Initializes a new instance of the <see cref="WorkspaceStatusBase"/> class.</summary>
     /// <param name="name">The option name, which is the value persisted.</param>
-    protected WorkspaceStatusBase(string name) : base(name)
+    /// <param name="isClosed">Whether a workspace in this status is closed and gives back what it owns of a kind released on archive.</param>
+    protected WorkspaceStatusBase(string name, bool isClosed) : base(name)
     {
+        IsClosed = isClosed;
     }
+
+    /// <inheritdoc />
+    public bool IsClosed { get; }
 }

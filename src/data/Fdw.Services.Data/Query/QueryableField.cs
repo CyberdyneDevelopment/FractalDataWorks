@@ -36,4 +36,27 @@ public sealed record QueryableField(
     bool IsCalculated = false,
     bool IsFilterable = true,
     IReadOnlyList<string>? FilterOperators = null,
-    string? NoOperatorsReason = null);
+    string? NoOperatorsReason = null)
+{
+    /// <summary>
+    /// Reads a filled field's value off the record a page holds; <see langword="null"/> for a field the store holds in <see cref="Column"/>.
+    /// </summary>
+    /// <remarks>
+    /// A filled field is one the provider puts on the record after the rows are read, from another domain's rows (a description kept in the descriptions
+    /// table in the caller's language, FDW-6208). The record's mapper does not reach it, the list's table holds no column of it, and a view cannot join it.
+    /// </remarks>
+    public Func<object, object?>? Read { get; init; }
+
+    /// <summary>Gets whether the field is filled after the read rather than held in a column (FDW-6273).</summary>
+    public bool IsFilled => Read is not null;
+
+    /// <summary>Declares a field the provider fills after the read: asked for, it is read off the record with <paramref name="read"/>; it cannot be filtered or sorted on.</summary>
+    /// <typeparam name="TRecord">The record a page of the resource holds.</typeparam>
+    /// <param name="name">The name a request uses; matched ignoring case.</param>
+    /// <param name="member">The record's member the provider fills, named for a refusal and a reader; no column is reached by it.</param>
+    /// <param name="valueType">The type the field's values have.</param>
+    /// <param name="read">Reads the filled value off the record.</param>
+    /// <returns>The declaration.</returns>
+    public static QueryableField Filled<TRecord>(string name, string member, Type valueType, Func<TRecord, object?> read)
+        => new(name, member, valueType, IsFilterable: false) { Read = record => read((TRecord)record) };
+}

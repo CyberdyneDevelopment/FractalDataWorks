@@ -80,8 +80,11 @@ public sealed class FlowMappedComponent : IFlowComponent, IFlowErrorOutputs
     public Task<IGenericResult> Run(IFlowPorts ports, CancellationToken cancellationToken = default) =>
         _inner.Run(new MappedPorts(ports, _mappings, Name, _logger), cancellationToken);
 
-    private sealed class MappedPorts(IFlowPorts ports, IReadOnlyDictionary<string, IReadOnlyList<FlowFieldMap>> mappings, string component, ILogger logger) : IFlowPorts
+    private sealed class MappedPorts(IFlowPorts ports, IReadOnlyDictionary<string, IReadOnlyList<FlowFieldMap>> mappings, string component, ILogger logger) : IFlowPorts, IFlowHeldPorts
     {
+        // The mapped component holds on the gauge of the ports it wraps (FDW-5231).
+        public FlowHeldGauge? Held => FlowHeld.Of(ports);
+
         public IFlowInput Input(string name) =>
             mappings.TryGetValue(name, out var maps) ? new MappedInput(ports.Input(name), maps, component, logger) : ports.Input(name);
 

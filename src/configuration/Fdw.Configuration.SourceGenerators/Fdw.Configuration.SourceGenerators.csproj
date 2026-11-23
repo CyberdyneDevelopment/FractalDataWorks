@@ -33,6 +33,10 @@
   <ItemGroup>
     <!-- Pack the generator into the analyzer directory -->
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+
+    <!-- FDW-7107: the column sizes a consumer's build states for a field that states none -->
+    <None Include="build\**\*" Pack="true" PackagePath="build\" />
+    <None Include="buildTransitive\**\*" Pack="true" PackagePath="buildTransitive\" />
   </ItemGroup>
 
   <ItemGroup>

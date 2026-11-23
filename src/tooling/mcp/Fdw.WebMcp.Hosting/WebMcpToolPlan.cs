@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Fdw.Results;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.WebMcp.Hosting;
@@ -17,6 +18,7 @@ namespace Fdw.WebMcp.Hosting;
 /// <param name="QueryProperties">Inputs sent as the query string. Empty for a tool that carries a body.</param>
 /// <param name="HasBody">Whether the call carries a JSON body.</param>
 /// <param name="RecoveryProperty">The one parameter a failed call can recover by listing, or <see langword="null"/> when the tool offers no recovery.</param>
+/// <param name="RequiredProperties">The inputs a call must carry: the path properties, then the list or object members the request declares <c>required</c>. A scalar of the request is never in it, because requiring one would refuse a call that works today.</param>
 /// <remarks>
 /// <para>
 /// This is why two transports can serve one catalogue without drifting. The rules live here, once:
@@ -37,20 +39,29 @@ public sealed record WebMcpToolPlan(
     IReadOnlyList<WebMcpRoutePart> RouteParts,
     IReadOnlyList<string> QueryProperties,
     bool HasBody,
-    string? RecoveryProperty)
+    string? RecoveryProperty,
+    IReadOnlyList<string> RequiredProperties)
 {
     /// <summary>Derives the plan for one tool.</summary>
     /// <param name="tool">The tool.</param>
+    /// <param name="maxDepth">How many lists and objects the request may nest: the setting <c>WebMcpToolSchemaMaxDepth</c>. Must be positive; nothing stands in for a setting that is not set.</param>
     /// <param name="logger">Receives one entry per request property mapped or skipped.</param>
-    /// <returns>The plan.</returns>
+    /// <returns>The plan, or the refusal of a request that nests deeper than <paramref name="maxDepth"/> or reaches itself.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxDepth"/> is not positive.</exception>
     /// <exception cref="InvalidOperationException">
     /// A route parameter binds to no request property, or a preset field is declared without its
     /// value. <see cref="WebMcpToolRegistry"/> refuses both before a tool is ever served, so either
     /// reaching here means a descriptor was built by hand wrongly. Guessing a binding would hand the
     /// agent a tool whose URL cannot be built, which fails as a 404 it cannot interpret.
     /// </exception>
-    public static WebMcpToolPlan Create(WebMcpToolDescriptor tool, ILogger logger)
+    public static IGenericResult<WebMcpToolPlan> Create(WebMcpToolDescriptor tool, int maxDepth, ILogger logger)
     {
+        if (maxDepth <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxDepth), maxDepth, "The depth a tool's request may nest is a positive number the setting WebMcpToolSchemaMaxDepth states; zero is not 'no limit'.");
+        }
+
         if (tool.PresetFieldName is not null && tool.PresetValue is null)
         {
             throw new InvalidOperationException(
@@ -61,27 +72,33 @@ public sealed record WebMcpToolPlan(
         var parameters = WebMcpRouteTemplate.ParameterNames(tool.Route);
         var pathProperties = parameters.Select(parameter => BoundProperty(tool, parameter)).ToList();
 
+        var hasBody = NeedsRequestBody(tool.HttpMethod);
+
         // Every request property JSON Schema can describe, computed once. The inputs and the query
         // string are both cut from this one list, so a property cannot be offered to the agent and
         // then left out of the call it makes.
         var described = tool.RequestType is null
-            ? []
-            : Describe(tool.RequestType, tool.Name, logger);
+            ? GenericResult<IReadOnlyList<WebMcpToolInput>>.Success([])
+            : WebMcpRequestDescriber.Describe(tool.RequestType, tool.Name, maxDepth, hasBody, logger);
+        if (described.IsFailure || described.Value is not { } members)
+        {
+            return described.ToNewResult<WebMcpToolPlan>();
+        }
 
-        var hasBody = NeedsRequestBody(tool.HttpMethod);
+        // The preset field is never asked of the agent: the tool's own declaration fixes it, the
+        // same treatment a path parameter gets.
+        var inputs = tool.PresetFieldName is null
+            ? members
+            : [.. members.Where(input => !string.Equals(input.Name, tool.PresetFieldName, StringComparison.OrdinalIgnoreCase))];
 
-        return new WebMcpToolPlan(
+        return GenericResult<WebMcpToolPlan>.Success(new WebMcpToolPlan(
             tool,
-            // The preset field is never asked of the agent: the tool's own declaration fixes it, the
-            // same treatment a path parameter gets.
-            tool.PresetFieldName is null
-                ? described
-                : described.Where(input => !string.Equals(input.Name, tool.PresetFieldName, StringComparison.OrdinalIgnoreCase)).ToList(),
+            inputs,
             pathProperties,
             SplitRoute(tool.Route, parameters, pathProperties),
             hasBody || tool.RequestType is null
                 ? []
-                : described
+                : members
                     .Select(input => input.Name)
                     .Where(name => !pathProperties.Contains(name, StringComparer.OrdinalIgnoreCase))
                     .ToList(),
@@ -89,7 +106,8 @@ public sealed record WebMcpToolPlan(
             // A tool with more than one parameter offers no recovery: which collection a second
             // parameter selects from is not derivable from the route, and naming the wrong one is
             // worse than naming none.
-            tool.ParentListRoute is not null && pathProperties.Count == 1 ? pathProperties[0] : null);
+            tool.ParentListRoute is not null && pathProperties.Count == 1 ? pathProperties[0] : null,
+            [.. pathProperties.Concat(inputs.Where(input => input.Required).Select(input => input.Name)).Distinct(StringComparer.Ordinal)]));
     }
 
     /// <summary>Whether a verb carries a JSON body.</summary>
@@ -147,36 +165,10 @@ public sealed record WebMcpToolPlan(
         return parts;
     }
 
-    private static List<WebMcpToolInput> Describe(Type requestType, string toolName, ILogger logger)
-    {
-        var inputs = new List<WebMcpToolInput>();
-
-        foreach (var property in requestType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            if (!property.CanWrite)
-            {
-                continue;
-            }
-
-            var (jsonType, format) = JsonSchemaOf(property.PropertyType);
-            if (jsonType.Length == 0)
-            {
-                WebMcpLog.SchemaPropertySkipped(
-                    logger,
-                    toolName,
-                    property.Name,
-                    property.PropertyType.ToString());
-                continue;
-            }
-
-            WebMcpLog.SchemaPropertyMapped(logger, toolName, property.Name, jsonType, format);
-            inputs.Add(new WebMcpToolInput(property.Name, jsonType, format));
-        }
-
-        return inputs;
-    }
-
-    private static (string JsonType, string Format) JsonSchemaOf(Type clrType)
+    /// <summary>The JSON Schema type and format of a scalar CLR type, or an empty type when it is not one.</summary>
+    /// <param name="clrType">The property's type.</param>
+    /// <returns>The type and format; empty for a list, an object or anything else with no scalar schema.</returns>
+    internal static (string JsonType, string Format) JsonSchemaOf(Type clrType)
     {
         var underlying = Nullable.GetUnderlyingType(clrType);
         if (underlying is not null)
@@ -198,8 +190,8 @@ public sealed record WebMcpToolPlan(
         if (clrType == typeof(DateOnly)) return ("string", "date");
         if (clrType == typeof(TimeOnly)) return ("string", "time");
 
-        // Arrays, collections and nested objects have no primitive schema. Skipped and logged,
-        // never guessed at.
+        // Lists and objects have no scalar schema: the describer walks them. Anything it cannot is
+        // skipped and logged, never guessed at.
         return (string.Empty, string.Empty);
     }
 }

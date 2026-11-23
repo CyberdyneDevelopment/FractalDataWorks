@@ -126,7 +126,7 @@ public abstract class DiscoverDataStoreEndpointBase : Endpoint<DiscoverDataStore
         }
 
         // Saved even when nothing was added: the discovery itself is recorded (LastDiscoveredAt).
-        var saved = await _dataStores.UpdateStore(found, ct).ConfigureAwait(false);
+        var saved = await Resolve<IDataStoreWrites>().UpdateStore(found, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<DiscoveryResultPayload>();

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text.Json;
 
 namespace Fdw.Services.Etl.Tracking;
 
@@ -15,49 +13,25 @@ internal static class EventValues
     /// <param name="data">The event's data.</param>
     /// <param name="key">The value's name.</param>
     /// <returns>The number, or null.</returns>
-    public static long? Number(IReadOnlyDictionary<string, object?>? data, string key) => Value(data, key) switch
-    {
-        long number => number,
-        int number => number,
-        JsonElement { ValueKind: JsonValueKind.Number } element when element.TryGetInt64(out var number) => number,
-        string text when long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) => number,
-        _ => null,
-    };
+    public static long? Number(IReadOnlyDictionary<string, object?>? data, string key) => EventValueShapes.Of(Value(data, key)) is { } shape ? shape.Number(Value(data, key)!) : null;
 
     /// <summary>Reads a true or false.</summary>
     /// <param name="data">The event's data.</param>
     /// <param name="key">The value's name.</param>
     /// <returns>The flag, or null.</returns>
-    public static bool? Flag(IReadOnlyDictionary<string, object?>? data, string key) => Value(data, key) switch
-    {
-        bool flag => flag,
-        JsonElement { ValueKind: JsonValueKind.True } => true,
-        JsonElement { ValueKind: JsonValueKind.False } => false,
-        _ => null,
-    };
+    public static bool? Flag(IReadOnlyDictionary<string, object?>? data, string key) => EventValueShapes.Of(Value(data, key)) is { } shape ? shape.Flag(Value(data, key)!) : null;
 
     /// <summary>Reads a time written round-trip.</summary>
     /// <param name="data">The event's data.</param>
     /// <param name="key">The value's name.</param>
     /// <returns>The time, or null.</returns>
-    public static DateTimeOffset? Time(IReadOnlyDictionary<string, object?>? data, string key) => Value(data, key) switch
-    {
-        DateTimeOffset time => time,
-        string text when DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var time) => time,
-        JsonElement { ValueKind: JsonValueKind.String } element when DateTimeOffset.TryParse(element.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var time) => time,
-        _ => null,
-    };
+    public static DateTimeOffset? Time(IReadOnlyDictionary<string, object?>? data, string key) => EventValueShapes.Of(Value(data, key)) is { } shape ? shape.Time(Value(data, key)!) : null;
 
     /// <summary>Reads a text.</summary>
     /// <param name="data">The event's data.</param>
     /// <param name="key">The value's name.</param>
     /// <returns>The text, or null.</returns>
-    public static string? Text(IReadOnlyDictionary<string, object?>? data, string key) => Value(data, key) switch
-    {
-        string text => text,
-        JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
-        _ => null,
-    };
+    public static string? Text(IReadOnlyDictionary<string, object?>? data, string key) => EventValueShapes.Of(Value(data, key)) is { } shape ? shape.Text(Value(data, key)!) : null;
 
     private static object? Value(IReadOnlyDictionary<string, object?>? data, string key) => data is not null && data.TryGetValue(key, out var value) ? value : null;
 }

@@ -20,6 +20,12 @@ public sealed class GraphDataSetGraphPayload
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>Gets or sets the display name the data set is stored with, null when none is stored: the value of the display name the create and update bodies take (FDW-6241).</summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>Gets or sets the abbreviation the data set is stored with, null when none is stored (FDW-6241).</summary>
+    public string? Abbreviation { get; set; }
+
     /// <summary>Gets or sets how sensitive the data set is (FDW-5451): the member <c>POST /datasets/graph</c> takes.</summary>
     public int ClassificationId { get; set; }
 
@@ -43,6 +49,9 @@ public sealed class GraphDataSetGraphPayload
 
     /// <summary>Gets or sets the name of the output node of <see cref="FieldsOutComponent"/> that carries the fields out; null while abstract, and when <see cref="Restriction"/> is stated.</summary>
     public string? FieldsOutOutput { get; set; }
+
+    /// <summary>Gets or sets the federation strategy the data set's reads across data stores run under (FDW-6970); null when it states none.</summary>
+    public string? FederationStrategy { get; set; }
 
     /// <summary>Gets or sets the components of the graph; null when <see cref="Restriction"/> is stated, empty while the data set is abstract.</summary>
     public IList<GraphComponentPayload>? Components { get; set; }

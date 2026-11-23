@@ -72,16 +72,6 @@ public sealed class SchemaApiClient : ApiClientBase, ISchemaProvider
     public Task<IGenericResult<DataPreviewResponsePayload>> PreviewData(SchemaPreviewRequest request, CancellationToken ct = default)
         => Post<SchemaPreviewRequest, DataPreviewResponsePayload>("schema/preview", request, ct);
 
-    /// <inheritdoc />
-    public Task<IGenericResult<ExecuteDdlResponse>> ExecuteDdl(string ddl, CancellationToken ct = default)
-    {
-        var connectionName = GetRequiredConnection();
-        return Post<ExecuteDdlRequestPayload, ExecuteDdlResponse>(
-            $"connections/{Uri.EscapeDataString(connectionName)}/execute-ddl",
-            new ExecuteDdlRequestPayload { ConnectionName = connectionName, Ddl = ddl },
-            ct);
-    }
-
     /// <summary>
     /// Saves (replaces) field mappings for a DataSet source.
     /// </summary>

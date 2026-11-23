@@ -101,12 +101,12 @@ public static partial class TenantTypesLog
 
     /// <summary>
     /// Returned by <see cref="Fdw.Services.Multitenancy.Abstractions.NullTenantProvider"/> when
-    /// tenant lookup is attempted but this host runs the SingleTenant multitenancy option.
+    /// tenant lookup is attempted. Nothing that ships registers that provider (FDW-6528).
     /// </summary>
     [MessageLogging(
         EventId = 60001,
         Level = LogLevel.Debug,
-        Message = "Tenant lookup not available — this host runs the SingleTenant multitenancy option",
-        ClientMessage = "Tenant lookup not available — this host runs the SingleTenant multitenancy option")]
+        Message = "Tenant lookup not available — this host registers the null tenant provider, which answers no lookup",
+        ClientMessage = "Tenant lookup not available — this host registers the null tenant provider, which answers no lookup")]
     public static partial IGenericMessage TenantLookupUnavailable(ILogger logger);
 }

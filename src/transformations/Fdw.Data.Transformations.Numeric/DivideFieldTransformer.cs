@@ -65,25 +65,7 @@ public sealed class DivideFieldTransformer : FieldTransformationBase
             return Task.FromResult(GenericResult<object?>.Failure(FieldTransformerLog.DivisionByZero(Logger, "Divide")));
         }
 
-        var value = ConvertToDecimal(input);
+        var value = NumericInputKinds.ToDecimal(input, "Divide");
         return Task.FromResult(GenericResult<object?>.Success(value / divisor));
-    }
-
-
-
-    private static decimal ConvertToDecimal(object input)
-    {
-        return input switch
-        {
-            decimal d => d,
-            double d => Convert.ToDecimal(d),
-            float f => Convert.ToDecimal(f),
-            int i => Convert.ToDecimal(i),
-            long l => Convert.ToDecimal(l),
-            short s => Convert.ToDecimal(s),
-            byte b => Convert.ToDecimal(b),
-            _ => throw new InvalidOperationException(
-                $"Divide does not support input type '{input.GetType().Name}'. Input must be numeric.")
-        };
     }
 }

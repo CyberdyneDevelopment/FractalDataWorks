@@ -67,7 +67,7 @@ public sealed class GraphDataSetSoundnessTests
 
     private static StubGraphDataSetSources Sources() => new StubGraphDataSetSources().WithDataSet("NflTeams");
 
-    // What saving does with a body: the steps it runs over the request, then the judgement of the data set they built (CreateGraphDataSetEndpointBase.Create).
+    // What saving does with a body: the steps it runs over the request, then the judgment of the data set they built (CreateGraphDataSetEndpointBase.Create).
     private static async Task<bool> SaveAccepts(CreateGraphDataSetRequest request)
     {
         var graph = new GraphDataSetConfiguration { Name = request.Name, Implementation = GraphDataSetConfiguration.ImplementationName };

@@ -146,6 +146,26 @@ public static partial class DefaultConfigurationProviderLog
         ClientMessage = "{typeName} '{name}' holds a tree, and a tree cannot be read as of a past instant; read the current one")]
     public static partial IGenericMessage TreeAsOfNotSupported(ILogger logger, string typeName, string name);
 
+    /// <summary>Refuses a read as of a past instant of a record whose members are filled from another domain, which has no as-of read.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The record type.</param>
+    /// <param name="name">The record asked for.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 21081, Level = LogLevel.Warning,
+        Message = "{typeName} '{name}' is filled from another domain and was asked for as of a past instant; that domain has no as-of read",
+        ClientMessage = "{typeName} '{name}' holds text that is read from another table, and it cannot be read as of a past instant; read the current one")]
+    public static partial IGenericMessage ReadObserverAsOfNotSupported(ILogger logger, string typeName, string name);
+
+    /// <summary>Logs that a record read without the members another domain supplies was handed to a save, which refuses it.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The record type.</param>
+    /// <param name="name">The record's name.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 21082, Level = LogLevel.Warning,
+        Message = "{typeName} '{name}' was read without the members another domain supplies and is not saved: its empty member would remove their stored text; read the record whole before saving it",
+        ClientMessage = "{typeName} '{name}' was read without the text kept in another table, so saving it would remove that text; read the record whole before saving it")]
+    public static partial IGenericMessage RecordReadWithoutFillNotSaved(ILogger logger, string typeName, string name);
+
     /// <summary>Logs that the read of every member of a domain, made to hang a tree, returned no result.</summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The implementation contract this provider composes.</param>
@@ -1137,4 +1157,12 @@ public static partial class DefaultConfigurationProviderLog
     [MessageLogging(EventId = 11954, Level = LogLevel.Debug,
         Message = "Retired {count} row(s) of '{container}' under {owner} that the saved list no longer carries")]
     public static partial IGenericMessage AbsentChildrenRetired(ILogger logger, string container, string owner, int count);
+
+    /// <summary>A page read stated that it leaves out what the provider fills from other domains, so the fill was not made (FDW-6124).</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="typeName">The implementation record read.</param>
+    /// <param name="count">How many members of the page were left as their own rows hold them.</param>
+    [MessageLogging(EventId = 11955, Level = LogLevel.Debug,
+        Message = "The read of {count} {typeName} member(s) stated it leaves out what is filled from other domains; they hold only their own rows")]
+    public static partial IGenericMessage FillLeftOut(ILogger logger, string typeName, int count);
 }

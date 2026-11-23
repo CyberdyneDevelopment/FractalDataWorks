@@ -10,6 +10,9 @@ using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Fdw.Services.Data;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Pipelines.Runs;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -70,10 +73,24 @@ public abstract class UpdateGraphEndpointBase : CrudUpdateEndpointBase<GraphPayl
             return GenericResult<GraphPayload>.Failure(ServicesResultCodes.ByName("ConfigurationNotFound"));
         }
 
+        // A pipeline's type does not change in an update: the request leaves it out (the stored one is kept) or states the stored one (FDW-6718).
+        var type = GraphUpdateType.Choose(request.Implementation, original.Value.Implementation, Logger);
+        if (type.IsFailure || type.Value is null)
+        {
+            return type.ToNewResult<GraphPayload>();
+        }
+
+        request.Implementation = type.Value;
         var graph = GraphPayloadReader.Read(request, original.Value.Id, await GraphChainLookup.Resolve(_chains, request, ct).ConfigureAwait(false));
         if (graph.IsFailure || graph.Value is null)
         {
             return graph.ToNewResult<GraphPayload>();
+        }
+
+        var limits = GraphRunLimitJudgment.Judge(graph.Value, Resolve<IEffectiveSettingsProvider>(), RunTenant.Of(new ClaimsPrincipalAuthenticationContext(User)), Logger);
+        if (limits.IsFailure)
+        {
+            return limits.ToNewResult<GraphPayload>();
         }
 
         // Why the stored organization is carried over (FDW-4362): the payload never states which organization owns the pipeline (a caller cannot assign one), and the graph is

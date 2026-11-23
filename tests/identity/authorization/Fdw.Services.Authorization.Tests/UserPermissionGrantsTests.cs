@@ -1,3 +1,4 @@
+using Fdw.ServiceTypes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,8 +28,12 @@ public sealed class UserPermissionGrantsTests
             ("UserId", user), ("AssignmentTenantId", Tenant), ("ExpiresAt", expires), ("RoleId", role), ("RoleName", roleName),
             ("IsTenantScoped", tenantScoped), ("RoleTenantId", Tenant), ("PermissionName", permission));
 
+    // The reader as a host that changes nothing gets it: the authorization option's declared MaxGrantRows (FDW-7103).
     private static UserPermissionGrants Reader(InMemoryConfigurationStore store)
-        => new(store.Gateways, "PlatformConfiguration", "authz", NullLogger<UserPermissionGrants>.Instance);
+        => Reader(store, DeclaredSetting.Count(new DefaultAuthorizationServiceType(), "MaxGrantRows", null).Value);
+
+    private static UserPermissionGrants Reader(InMemoryConfigurationStore store, int maxRows)
+        => new(store.Gateways, "PlatformConfiguration", "authz", maxRows, NullLogger<UserPermissionGrants>.Instance);
 
     [Fact]
     public async Task APersonsGrantsAreTheRowsThatNameThemWithTheirRoleAssignmentAndPermission()
@@ -113,13 +118,31 @@ public sealed class UserPermissionGrantsTests
     [Fact]
     public async Task APersonWhoseRolesGrantMoreRowsThanOneReadCarriesFailsTheReadInsteadOfCuttingTheirPermissionsShort()
     {
-        var many = Enumerable.Range(0, UserPermissionGrants.MaxRows + 1).Select(key => Row(Person.ToString("D"), Admin, "Admin", "p" + key)).ToList();
+        var many = Enumerable.Range(0, 6).Select(key => Row(Person.ToString("D"), Admin, "Admin", "p" + key)).ToList();
         var store = new InMemoryConfigurationStore().Holds("UserPermissionGrant", many);
 
-        var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
+        var held = await Reader(store, 5).Get(Person, TestContext.Current.CancellationToken);
 
         held.IsFailure.ShouldBeTrue();
+        held.CurrentMessage!.ShouldContain("5");
     }
+
+    [Fact]
+    public async Task AHostThatConfiguresMoreGrantRowsReadsThemAll()
+    {
+        // FDW-7103: the most rows is configuration, so a host that configures more than a person holds reads every one.
+        var many = Enumerable.Range(0, 6).Select(key => Row(Person.ToString("D"), Admin, "Admin", "p" + key)).ToList();
+        var store = new InMemoryConfigurationStore().Holds("UserPermissionGrant", many);
+
+        var held = await Reader(store, 10).Get(Person, TestContext.Current.CancellationToken);
+
+        held.IsSuccess.ShouldBeTrue(held.CurrentMessage);
+        held.Value!.Count.ShouldBe(6);
+    }
+
+    [Fact]
+    public void TheDeclaredGrantRowCapIsTwentyThousand()
+        => new DefaultAuthorizationServiceType().DeclaredDefaults["MaxGrantRows"].ShouldBe(20000);
 
     [Fact]
     public async Task ARowWithoutARoleFailsTheReadInsteadOfBeingSkipped()

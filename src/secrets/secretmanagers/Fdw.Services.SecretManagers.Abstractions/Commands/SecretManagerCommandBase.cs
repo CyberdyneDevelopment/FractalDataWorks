@@ -213,15 +213,8 @@ public abstract class SecretManagerCommandBase : ISecretManagerCommand
     /// <returns><c>true</c> if a secret key is required; otherwise, <c>false</c>.</returns>
     protected virtual bool RequiresSecretKey()
     {
-        return CommandType switch
-        {
-            "GetSecret" => true,
-            "SetSecret" => true,
-            "DeleteSecret" => true,
-            "GetSecretVersions" => true,
-            "ListSecrets" => false,
-            _ => true
-        };
+        // Every command type names a secret unless its own class overrides this (ListSecretsManagerCommand does).
+        return true;
     }
 
     /// <summary>

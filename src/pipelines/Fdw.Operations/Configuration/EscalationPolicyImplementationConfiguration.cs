@@ -80,6 +80,9 @@ public sealed partial class EscalationPolicyImplementationConfiguration
     /// Useful for documentation and operator understanding.
     /// Should explain when this policy applies and why.
     /// </remarks>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7205), which the implementation table cannot hold, so the
+    // column is gone; the provider fills the member for every set it reads. Off the mapper, it is no column of the table.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>

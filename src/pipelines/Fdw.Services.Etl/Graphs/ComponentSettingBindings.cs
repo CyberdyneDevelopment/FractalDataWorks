@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Graphs.Tools;
 
 namespace Fdw.Services.Etl.Graphs;
 
@@ -59,6 +62,7 @@ public static class ComponentSettingBindings
         new("resultVariable", "Text", c => c.ResultVariable, (c, v) => c.ResultVariable = (string?)v),
         new("optionsDataStore", "Text", c => c.OptionsDataStoreName, (c, v) => c.OptionsDataStoreName = (string?)v),
         new("optionsContainer", "Text", c => c.OptionsContainerName, (c, v) => c.OptionsContainerName = (string?)v),
+        new("optionValuesContainer", "Text", c => c.OptionValuesContainerName, (c, v) => c.OptionValuesContainerName = (string?)v),
         new("failOnChildFailure", "Boolean", c => c.FailOnChildFailure, (c, v) => c.FailOnChildFailure = (bool?)v),
         new("effectiveFromColumn", "Text", c => c.EffectiveFromColumn, (c, v) => c.EffectiveFromColumn = (string?)v),
         new("effectiveToColumn", "Text", c => c.EffectiveToColumn, (c, v) => c.EffectiveToColumn = (string?)v),
@@ -75,7 +79,43 @@ public static class ComponentSettingBindings
         new("stageKeyColumn", "Text", c => c.StageKeyColumn, (c, v) => c.StageKeyColumn = (string?)v),
         new("sweepRejectedRowsRule", "Text", c => c.SweepRejectedRowsRule, (c, v) => c.SweepRejectedRowsRule = (string?)v),
         new("unmatchedKeysRule", "Text", c => c.UnmatchedKeysRule, (c, v) => c.UnmatchedKeysRule = (string?)v),
+        new("testOutput", "Text", c => c.TestOutput, (c, v) => c.TestOutput = (string?)v),
+        new("logic", "Text", c => c.GateLogic, (c, v) => c.GateLogic = (string?)v),
+        new("otherwise", "Boolean", c => c.OtherwiseFires, (c, v) => c.OtherwiseFires = (bool?)v),
+        new("outcomes", "Text", c => c.Outcomes, (c, v) => c.Outcomes = (string?)v),
+        new("targetVariable", "Text", c => c.TargetVariable, (c, v) => c.TargetVariable = (string?)v),
+        new("targets", "Text", c => c.AllowedTargets, (c, v) => c.AllowedTargets = (string?)v),
+        new("outputs", "Text", c => c.OutputMap, (c, v) => c.OutputMap = (string?)v),
+        new("subject", "Text", c => c.NotificationSubject, (c, v) => c.NotificationSubject = (string?)v),
+        new("payloadType", "Text", c => c.NotificationPayloadType, (c, v) => c.NotificationPayloadType = (string?)v),
+        new("policy", "Text", c => c.AskPolicy, (c, v) => c.AskPolicy = (string?)v),
+        new("call", "Text", c => c.AskCall, (c, v) => c.AskCall = (string?)v),
+        new("kind", "Text", c => c.AskKind, (c, v) => c.AskKind = (string?)v),
+        new("continuation", "Text", c => c.ContinuationPipeline, (c, v) => c.ContinuationPipeline = (string?)v),
+        new("answerParameter", "Text", c => c.AnswerParameter, (c, v) => c.AnswerParameter = (string?)v),
+        new("title", "Text", c => c.AskTitle, (c, v) => c.AskTitle = (string?)v),
+        new("body", "Text", c => c.AskBody, (c, v) => c.AskBody = (string?)v),
+        new("options", "Text", c => c.AskOptions, (c, v) => c.AskOptions = (string?)v),
+        new("grantVariable", "Text", c => c.GrantVariable, (c, v) => c.GrantVariable = (string?)v),
     ];
+
+    /// <summary>
+    /// Gets the sorts of setting kept as rows of a child table of the component, told apart by the setting's name on the row: column lists, field maps,
+    /// an input's mappings, a split's outputs, a destination's value sources, steps and an action's parameters.
+    /// </summary>
+    public static IReadOnlyList<string> RowKinds { get; } = ["ColumnList", "FieldMaps", ComponentTypeBase.MappingsKind, "SplitOutputs", "ValueSources", "Steps", "Parameters"];
+
+    /// <summary>
+    /// Says whether a setting of a component type is a declared setting (FDW-6133): one no column binds, no child rows hold and, on a tool, no stage holds. A component type from
+    /// another package states such settings; each is kept as a row of <c>pipe.PipelineComponentSetting</c> and must state its <see cref="StageMember.DataType"/>.
+    /// </summary>
+    /// <param name="kind">The component type that lists the setting.</param>
+    /// <param name="setting">The setting.</param>
+    /// <returns>True when the setting is held nowhere else on the component; false for every setting of FDW's own component types.</returns>
+    public static bool IsDeclared(IFlowComponentShape kind, StageMember setting) =>
+        Find(setting.Name) is null
+        && !RowKinds.Contains(setting.Kind, StringComparer.Ordinal)
+        && !(kind is StageToolComponentTypeBase tool && tool.MemberNames.Contains(setting.Name, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>Gets every scalar setting.</summary>
     public static IReadOnlyList<ScalarSetting> Scalars => All;

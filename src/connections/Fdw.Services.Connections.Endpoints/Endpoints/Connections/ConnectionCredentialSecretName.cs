@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using Fdw.Results;
 using Fdw.Services.Connections.Results;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Connections.Endpoints;
 
@@ -26,6 +27,7 @@ namespace Fdw.Services.Connections.Endpoints;
 public static class ConnectionCredentialSecretName
 {
     /// <summary>The longest secret name every secret manager accepts, in characters.</summary>
+    [FormatLimit("The shortest secret name limit among the secret managers FDW writes to: Azure Key Vault takes 127 characters")]
     public const int MaxLength = 127;
 
     private const string Prefix = "Connection";

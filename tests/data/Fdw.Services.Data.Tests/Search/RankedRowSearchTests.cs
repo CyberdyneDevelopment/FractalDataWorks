@@ -77,6 +77,43 @@ public sealed class RankedRowSearchTests
         found.Value!.Rows.Select(row => row.Key).ToList().ShouldBe(Expected(rows, text, window));
     }
 
+    // FDW-6208: the description is kept in the descriptions table, so the rows carry an Id and no description, and the text of a row is found there by that Id.
+    [Theory]
+    [InlineData("amount", 1, 7)]
+    [InlineData("amount", 4, 7)]
+    [InlineData("amount", 10, 3)]
+    [InlineData("amount", 200, 50)]
+    [InlineData("item 3", 7, 5)]
+    [InlineData("zzz", 5, 5)]
+    public async Task TheClosestRowsAndTheirCountAreTheSameWhenTheDescriptionIsKeptOutsideTheTableAndReadInChunks(string text, int window, int chunk)
+    {
+        var rows = Table(300);
+        var described = new DescriptionsOfRows(rows
+            .Where(row => row["Description"] is not null)
+            .Select(row => new KeyValuePair<Guid, string>(DescriptionsOfRows.IdOf(Convert.ToInt32(row["RowId"], CultureInfo.InvariantCulture)), (string)row["Description"]!)));
+        var bare = rows.Select(row => Row(("RowId", row["RowId"]), ("Id", DescriptionsOfRows.IdOf(Convert.ToInt32(row["RowId"], CultureInfo.InvariantCulture))), ("Name", row["Name"]))).ToList();
+        var store = new InMemoryConfigurationStore().Holds(Container, bare);
+        var search = new RankedRowSearch(
+            new ConfigurationRowReader(store.Gateways, "PlatformConfiguration", "data", Container), "Name", null, "RowId", null, described, "Id", chunk);
+
+        var found = await search.Search(text, window, TestContext.Current.CancellationToken);
+
+        found.IsSuccess.ShouldBeTrue(found.CurrentMessage);
+        found.Value!.Rows.Select(row => row.Key).ToList().ShouldBe(Expected(rows, text, window));
+        found.Value.Matches.ShouldBe(rows.Count(row => SearchRank.Of((string)row["Name"]!, (string?)row["Description"], text) != SearchRank.NoMatch));
+    }
+
+    [Fact]
+    public void ASearchIsGivenTheColumnOfTheDescriptionOrWhereItIsKeptNeitherNorBothIsRefused()
+    {
+        var store = new InMemoryConfigurationStore();
+        var reader = new ConfigurationRowReader(store.Gateways, "PlatformConfiguration", "data", Container);
+
+        Should.Throw<ArgumentException>(() => new RankedRowSearch(reader, "Name", null, "RowId"));
+        Should.Throw<ArgumentException>(() => new RankedRowSearch(reader, "Name", "Description", "RowId", null, new DescriptionsOfRows([]), "Id", 5));
+        Should.Throw<ArgumentOutOfRangeException>(() => new RankedRowSearch(reader, "Name", null, "RowId", null, new DescriptionsOfRows([]), "Id", 0));
+    }
+
     [Fact]
     public async Task TheRanksAreTheRulesRanks()
     {

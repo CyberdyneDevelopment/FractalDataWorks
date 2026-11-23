@@ -20,27 +20,27 @@ namespace Fdw.Services.Users;
 /// id, and each is kept only if its domain row is still the current one and not deleted (FDW-2676).
 /// </summary>
 /// <remarks>
-/// The person's id is a uniqueidentifier column, so it is asked for as the Guid it is. A person who holds more than <see cref="MaxMemberships"/>
-/// memberships fails the read, as the lookup of their domain rows carries a key for each.
+/// The person's id is a uniqueidentifier column, so it is asked for as the Guid it is. A person who holds more memberships than the configured
+/// most (FDW-7103: the users option's declared <c>MaxMemberships</c>) fails the read, as the lookup of their domain rows carries a key for each.
 /// </remarks>
 public sealed class UserTenantsHeld : IUserTenantsHeld
 {
-    /// <summary>The most memberships one person may hold for a read to answer.</summary>
-    public const int MaxMemberships = 1000;
-
     private static readonly string[] ByRowId = ["RowId"];
 
     private readonly ConfigurationRowReader _memberships;
     private readonly ConfigurationRowReader _domains;
     private readonly ILogger<UserTenantsHeld> _logger;
+    private readonly int _maxMemberships;
 
     /// <summary>Initializes a new instance of the <see cref="UserTenantsHeld"/> class.</summary>
     /// <param name="gateways">Reaches the configuration store.</param>
     /// <param name="dataStoreName">The data store the tables are in.</param>
     /// <param name="pathName">The path of the user tenant tables.</param>
+    /// <param name="maxMemberships">The most memberships one person may hold for a read to answer, as the users option's registration resolved it.</param>
     /// <param name="logger">The logger.</param>
-    public UserTenantsHeld(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, ILogger<UserTenantsHeld>? logger)
+    public UserTenantsHeld(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, int maxMemberships, ILogger<UserTenantsHeld>? logger)
     {
+        _maxMemberships = maxMemberships;
         _logger = logger ?? NullLogger<UserTenantsHeld>.Instance;
         _memberships = new ConfigurationRowReader(gateways, dataStoreName, pathName, "UserTenantsConfiguration", _logger);
         _domains = new ConfigurationRowReader(gateways, dataStoreName, pathName, "UserTenants", _logger);
@@ -49,15 +49,15 @@ public sealed class UserTenantsHeld : IUserTenantsHeld
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<HeldTenant>>> Get(Guid userId, CancellationToken cancellationToken = default)
     {
-        var asked = await _memberships.Page(Condition("UserId", "Equal", userId), ByRowId, 0, MaxMemberships + 1, true, cancellationToken).ConfigureAwait(false);
+        var asked = await _memberships.Page(Condition("UserId", "Equal", userId), ByRowId, 0, _maxMemberships + 1, true, cancellationToken).ConfigureAwait(false);
         if (asked.IsFailure)
         {
             return asked.ToNewResult<IReadOnlyList<HeldTenant>>();
         }
 
-        if (asked.Value!.Count > MaxMemberships)
+        if (asked.Value!.Count > _maxMemberships)
         {
-            return GenericResult<IReadOnlyList<HeldTenant>>.Failure(UserTenantsHeldLog.TooManyMemberships(_logger, userId.ToString("D"), MaxMemberships));
+            return GenericResult<IReadOnlyList<HeldTenant>>.Failure(UserTenantsHeldLog.TooManyMemberships(_logger, userId.ToString("D"), _maxMemberships));
         }
 
         if (asked.Value.Count == 0)

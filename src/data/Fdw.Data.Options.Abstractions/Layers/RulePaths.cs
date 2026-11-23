@@ -14,6 +14,32 @@ namespace Fdw.Data.Options;
 /// </summary>
 public static class RulePaths
 {
+    /// <summary>The text that joins the names of a stored path, as in <c>DataConfigurationRules:Comparison:In.To</c>.</summary>
+    public const string PathSeparator = ":";
+
+    /// <summary>The character that ends a stored path and starts its method.</summary>
+    public const char MethodSeparator = '.';
+
+    /// <summary>Splits the one text a rule stores for its path, such as <c>DataConfigurationRules:Comparison:In.To</c>, into the path's names and the method.</summary>
+    /// <param name="stored">The stored text.</param>
+    /// <param name="path">The path's names, when the text splits.</param>
+    /// <param name="method">The method after the last period, when the text splits.</param>
+    /// <returns><see langword="true"/> when the text has a path and a method; <see langword="false"/> when it has no period, or nothing before or after it.</returns>
+    public static bool TrySplit(string stored, out IReadOnlyList<string> path, out string method)
+    {
+        var split = stored.LastIndexOf(MethodSeparator);
+        if (split <= 0 || split == stored.Length - 1)
+        {
+            path = [];
+            method = string.Empty;
+            return false;
+        }
+
+        path = stored.Substring(0, split).Split(PathSeparator[0]);
+        method = stored.Substring(split + 1);
+        return true;
+    }
+
     /// <summary>Resolves <paramref name="path"/> and <paramref name="method"/> to the kind they name.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="path">The path's names, from the DataConfigurationRules root down to the kind.</param>

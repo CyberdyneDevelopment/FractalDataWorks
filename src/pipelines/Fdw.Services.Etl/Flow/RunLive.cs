@@ -9,7 +9,7 @@ namespace Fdw.Services.Etl.Flow;
 /// <summary>
 /// The graphs one pipeline run is running now (FDW-3382): usually one, more while a loop runs its body or runs bodies side by side. Disposing it ends the run's place in the live view.
 /// </summary>
-public sealed class RunLive : IFlowLiveRun, IDisposable
+public sealed class RunLive : IFlowLiveHeldRun, IDisposable
 {
     private readonly Lock _gate = new();
     private readonly List<LiveGraph> _graphs = [];
@@ -21,9 +21,14 @@ public sealed class RunLive : IFlowLiveRun, IDisposable
     }
 
     /// <inheritdoc />
-    public IFlowLiveGraph Open(IReadOnlyList<FlowLiveComponent> components, Func<IReadOnlyList<FlowLinkCount>> links)
+    public IFlowLiveGraph Open(IReadOnlyList<FlowLiveComponent> components, Func<IReadOnlyList<FlowLinkCount>> links) => Opened(new LiveGraph(components, links, null, Remove));
+
+    /// <inheritdoc />
+    public IFlowLiveGraph Open(IReadOnlyList<FlowLiveComponent> components, Func<IReadOnlyList<FlowLinkCount>> links, Func<string, FlowHeldCount> held) =>
+        Opened(new LiveGraph(components, links, held, Remove));
+
+    private LiveGraph Opened(LiveGraph graph)
     {
-        var graph = new LiveGraph(components, links, Remove);
         lock (_gate)
         {
             _graphs.Add(graph);

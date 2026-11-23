@@ -83,7 +83,7 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
             return;
         }
 
-        // Found in the workspace's composed members: the row hangs from the workspace by RowId.
+        // Found in the workspace's composed members.
         var found = workspace.Value.Members.Where(x => x.Id == req.MemberId).ToList();
         if (found.Count == 0)
         {
@@ -103,14 +103,12 @@ public abstract class RemoveWorkspaceMemberEndpointBase : Endpoint<RemoveWorkspa
             return;
         }
 
-        // The member is a child of the workspace aggregate: saving the workspace without it retires the
-        // version that had it, and the new version is written without it.
-        workspace.Value.Members.Remove(found[0]);
-        var saved = await _workspaces.Update(
-            workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
-        if (saved.IsFailure)
+        // Retired by its Id through the workspace service, never by saving the workspace without it: the members list is upsert-only and its
+        // rows hang from the workspace's durable Id, so that save kept the row current and answered 204 for nothing (FDW-7093).
+        var removed = await Resolve<IWorkspaceChildRetirement>().RemoveMember(workspace.Value, found[0], ct).ConfigureAwait(false);
+        if (removed.IsFailure)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saved, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(removed, HttpContext)).ConfigureAwait(false);
             return;
         }
 

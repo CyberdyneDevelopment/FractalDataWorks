@@ -51,7 +51,10 @@ public static class ScheduleDtoMapper
         CreatedOnBehalfOf = config.CreateOnBehalfOf,
         ModifiedOnBehalfOf = config.ModifyOnBehalfOf,
         Parameters = ScheduleParameterMapper.ToValues(config.Parameters),
-        RunRoles = [.. config.RunRoleNames]
+        RunRoles = [.. config.RunRoleNames],
+        RunGrantId = config.RunGrantId,
+        PausedAt = config.PausedAt,
+        PausedReason = config.PausedReason
     };
 
     /// <summary>Maps a stored schedule to a list row.</summary>
@@ -77,6 +80,9 @@ public static class ScheduleDtoMapper
         CreatedOnBehalfOf = config.CreateOnBehalfOf,
         ModifiedOnBehalfOf = config.ModifyOnBehalfOf,
         Parameters = ScheduleParameterMapper.ToValues(config.Parameters),
-        RunRoles = [.. config.RunRoleNames]
+        RunRoles = [.. config.RunRoleNames],
+        RunGrantId = config.RunGrantId,
+        PausedAt = config.PausedAt,
+        PausedReason = config.PausedReason
     };
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Collections;
 using System.Linq;
@@ -33,6 +34,10 @@ public sealed class MsSqlBulkUpdateTranslator : MsSqlDataCommandTranslatorBase, 
         : base("BulkUpdate")
     {
     }
+
+    /// <inheritdoc />
+    /// <remarks>Read from what this translator emits: an UPDATE joined to the staged rows.</remarks>
+    public override IReadOnlyList<string> Operations => ["Update"];
 
     /// <inheritdoc/>
     public override Task<IGenericResult<SqlCommand>> Translate(

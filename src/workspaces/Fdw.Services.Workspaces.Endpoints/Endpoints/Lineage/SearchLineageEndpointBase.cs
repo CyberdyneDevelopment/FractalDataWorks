@@ -34,7 +34,7 @@ public abstract class SearchLineageEndpointBase : LineageEndpointBase<LineageSea
         "/lineage/search",
         "Search lineage nodes by name",
         "Returns the data sets, data stores and pipelines whose names contain the text (or start with it, with match=startsWith), " +
-        "ignoring case, the closest names first, at most 100 (20 when take is omitted). kinds names the kinds to search and defaults " +
+        "ignoring case, the closest names first, at most the configured most (Workspaces:Default:LineageSearchMaxTake, 100 by default; LineageSearchDefaultTake, 20, when take is omitted). kinds names the kinds to search and defaults " +
         "to DataSet, DataStore and Pipeline. skip pages through the matches. Names are found in the domain tables, so a search never " +
         "reads the whole map. With paged=true the answer is the paged envelope and every hit carries the path that leads to it: the " +
         "workspace the search was scoped to, when it was scoped, then the hit. Hidden objects are absent.");
@@ -56,7 +56,7 @@ public abstract class SearchLineageEndpointBase : LineageEndpointBase<LineageSea
 
     private async Task<IGenericResult<LineageSearchPage>> Find(LineageSearchRequest request, CancellationToken ct)
     {
-        var query = LineageRequests.Search(request, LineageLogger);
+        var query = LineageRequests.Search(request, Resolve<WorkspaceLimits>(), LineageLogger);
         if (query.IsFailure) return query.ToNewResult<LineageSearchPage>();
 
         var page = await Reader.Search(request.Workspace, query.Value!, ct).ConfigureAwait(false);

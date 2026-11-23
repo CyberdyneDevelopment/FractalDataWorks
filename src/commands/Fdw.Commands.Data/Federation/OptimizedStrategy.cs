@@ -20,7 +20,8 @@ public sealed class OptimizedStrategy : FederationStrategyBase
             name: "Optimized",
             description: "Analyzes query characteristics and chooses optimal execution approach",
             isParallel: true,
-            optimizesOrder: true)
+            optimizesOrder: true,
+            maxParallelReads: 4)
     {
     }
 }

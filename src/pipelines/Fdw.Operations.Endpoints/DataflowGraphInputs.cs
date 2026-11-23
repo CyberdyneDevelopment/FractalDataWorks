@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Connections;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -20,7 +21,7 @@ internal sealed class DataflowGraphInputs
     /// <summary>Initializes the inputs and works out which data sets the pipelines reach.</summary>
     public DataflowGraphInputs(
         IReadOnlyList<DataSetRecord> dataSets,
-        IReadOnlyList<DataStoreRecord> dataStores,
+        IReadOnlyList<IDataStoreImplementationConfiguration> dataStores,
         IReadOnlyList<IDataSetImplementationConfiguration> owners,
         IReadOnlyList<PipelineLineageRecord> pipelines,
         IReadOnlyList<DataSetVariationDomainConfiguration> variations,
@@ -39,8 +40,8 @@ internal sealed class DataflowGraphInputs
         Variations = variations.Where(v => reachableIds.Contains(v.BaseDataSetId) && !reachableIds.Contains(v.Id)).ToList();
     }
 
-    /// <summary>Every datastore.</summary>
-    public IReadOnlyList<DataStoreRecord> DataStores { get; }
+    /// <summary>Every datastore, as the data store domain composed and described it.</summary>
+    public IReadOnlyList<IDataStoreImplementationConfiguration> DataStores { get; }
 
     /// <summary>The pipelines the graph is rooted at.</summary>
     public IReadOnlyList<PipelineLineageRecord> Pipelines { get; }
@@ -62,7 +63,7 @@ internal sealed class DataflowGraphInputs
         => ReachableOwners.FirstOrDefault(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The datastore of the name, or null when none is configured under it.</summary>
-    public DataStoreRecord? StoreNamed(string name)
+    public IDataStoreImplementationConfiguration? StoreNamed(string name)
         => DataStores.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Whether a pipeline of the name exists.</summary>

@@ -48,7 +48,15 @@ internal static class GraphDataSetPipelineComponents
             Fields = [.. source.Fields.Select(ComponentField)],
             Columns = [.. source.Columns.Select(ComponentColumn)],
             SplitOutputs = [.. source.SplitOutputs.Select(SplitOutput)],
+            DeclaredSettings = [.. source.DeclaredSettings.Select(DeclaredSetting)],
             Stages = [.. source.Stages.Select(Stage)],
+        };
+
+    private static PipelineComponentSettingConfiguration DeclaredSetting(GraphDataSetComponentSettingConfiguration source) => new()
+        {
+            Id = source.Id,
+            SettingName = source.SettingName,
+            ValueText = source.ValueText,
         };
 
     private static PipelineComponentFieldConfiguration ComponentField(GraphDataSetComponentFieldConfiguration source) => new()

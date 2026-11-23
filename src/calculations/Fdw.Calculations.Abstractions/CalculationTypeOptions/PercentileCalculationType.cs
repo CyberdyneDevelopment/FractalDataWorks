@@ -28,6 +28,7 @@ public sealed class PercentileCalculationType : CalculationTypeBase
     public PercentileCalculationType() : base(
         name: "Percentile",
         category: "Aggregation",
+        description: "Returns the value at the requested percentile of all values",
         calculate: (rows, col, parameter) =>
         {
             var values = new List<decimal>();

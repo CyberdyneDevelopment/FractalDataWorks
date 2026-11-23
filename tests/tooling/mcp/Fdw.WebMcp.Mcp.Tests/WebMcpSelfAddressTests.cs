@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.WebMcp.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -95,7 +96,7 @@ public class WebMcpSelfAddressTests
     {
         var resolver = new WebMcpSelfAddressResolver(new Mock<IServer>().Object);
 
-        var result = resolver.Resolve(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, SelfAddressSource: null, SelfBaseAddress: null));
+        var result = resolver.Resolve(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, SelfAddressSource: null, SelfBaseAddress: null, SchemaMaxDepth: BridgeCatalog.MaxDepth));
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("Required configuration 'SelfAddressSource' is missing");
@@ -104,7 +105,7 @@ public class WebMcpSelfAddressTests
     private static async Task<CallToolResult> Invoke(WebApplication app, CancellationToken cancellationToken)
     {
         var result = await app.Services.GetRequiredService<WebMcpToolInvoker>()
-            .Invoke(BridgeCatalogue.ListItems.Name, arguments: null, cancellationToken);
+            .Invoke(BridgeCatalog.ListItems.Name, arguments: null, cancellationToken);
         result.IsError.ShouldNotBe(true, Text(result));
         return result;
     }
@@ -132,13 +133,17 @@ public class WebMcpSelfAddressTests
         builder.WebHost.UseUrls(urls);
         builder.Services.AddSingleton(configurations.Object);
         builder.Services.AddSingleton(new Mock<ISecretManagerProvider>().Object);
+        var depth = BridgeCatalog.MaxDepth;
+        var settings = new Mock<IEffectiveSettingsProvider>();
+        settings.Setup(s => s.TryGetEffectiveValue(SettingDefinitions.WebMcpToolSchemaMaxDepth, out depth, null, null)).Returns(true);
+        builder.Services.AddSingleton(settings.Object);
         // Registered before WebMcpHosting, whose registry is added only when none is.
-        builder.Services.AddSingleton<IWebMcpToolRegistry>(new BridgeCatalogue.Registry(BridgeCatalogue.ListItems));
+        builder.Services.AddSingleton<IWebMcpToolRegistry>(new BridgeCatalog.Registry(BridgeCatalog.ListItems));
         WebMcpHosting.Register(builder).IsSuccess.ShouldBeTrue();
         WebMcpMcpHosting.Register(builder).IsSuccess.ShouldBeTrue();
 
         var app = builder.Build();
-        app.MapGet(BridgeCatalogue.ListItems.Route, () => name);
+        app.MapGet(BridgeCatalog.ListItems.Route, () => name);
         return app;
     }
 }

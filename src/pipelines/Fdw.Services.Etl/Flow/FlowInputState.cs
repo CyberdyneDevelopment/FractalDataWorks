@@ -10,6 +10,8 @@ namespace Fdw.Services.Etl.Flow;
 internal sealed class FlowInputState
 {
     private int _unfinished;
+    private long _queuedBytes;
+    private long _queuedBatches;
 
     /// <summary>Initializes a new instance of the <see cref="FlowInputState"/> class.</summary>
     /// <param name="name">The input node's name.</param>
@@ -43,6 +45,28 @@ internal sealed class FlowInputState
 
     /// <summary>Gets the end the links write.</summary>
     public ChannelWriter<FlowBatch> Writer { get; }
+
+    /// <summary>Gets the estimated value bytes written to this input and not yet read (FDW-5230).</summary>
+    public long QueuedBytes => Interlocked.Read(ref _queuedBytes);
+
+    /// <summary>Gets the batches written to this input and not yet read (FDW-5230).</summary>
+    public long QueuedBatches => Interlocked.Read(ref _queuedBatches);
+
+    /// <summary>Counts a batch as waiting in this input: called as it is handed to the channel.</summary>
+    /// <param name="bytes">The batch's stamped size.</param>
+    public void Queue(long bytes)
+    {
+        Interlocked.Add(ref _queuedBytes, bytes);
+        Interlocked.Increment(ref _queuedBatches);
+    }
+
+    /// <summary>Counts a batch as no longer waiting: called when the reader takes it, or when a write that was counted did not happen.</summary>
+    /// <param name="bytes">The batch's stamped size.</param>
+    public void Dequeue(long bytes)
+    {
+        Interlocked.Add(ref _queuedBytes, -bytes);
+        Interlocked.Decrement(ref _queuedBatches);
+    }
 
     /// <summary>Records that one link into this input will send nothing more; the channel completes with the last.</summary>
     public void LinkFinished()

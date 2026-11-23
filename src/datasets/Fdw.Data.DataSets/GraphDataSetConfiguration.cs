@@ -52,6 +52,9 @@ public sealed partial class GraphDataSetConfiguration : IGraphDataSetConfigurati
     public string? SourceDataSetName { get; set; }
 
     /// <summary>Gets or sets the description.</summary>
+    // Why [NotStored]: the text of a description is read from the descriptions table and filled in by the data set provider once for the whole read (FDW-6208); the column
+    // is gone from the table, so no read selects it and no save writes it. The member stays, so every caller of Description still gets the text.
+    [Fdw.Data.NotStored]
     public string Description { get; set; } = string.Empty;
 
     /// <summary>Gets or sets how sensitive this data set's data is: the <c>ClassificationId</c> of a <c>DataClassifications</c> level.</summary>
@@ -75,6 +78,12 @@ public sealed partial class GraphDataSetConfiguration : IGraphDataSetConfigurati
     /// <summary>Gets or sets the name of the output node of <see cref="FieldsOutComponent"/> that carries the fields out; null while the data set is abstract.</summary>
     public string? FieldsOutOutput { get; set; }
 
+    /// <summary>
+    /// Gets or sets the federation strategy the data set's reads across data stores run under (FDW-6970); null when it states none, and the FDW-level
+    /// default applies.
+    /// </summary>
+    public string? FederationStrategy { get; set; }
+
     /// <summary>Gets or sets the fields out as they are stored.</summary>
     public IList<GraphDataSetFieldConfiguration> GraphFields { get; set; } = new List<GraphDataSetFieldConfiguration>();
 
@@ -86,6 +95,12 @@ public sealed partial class GraphDataSetConfiguration : IGraphDataSetConfigurati
 
     /// <summary>Gets or sets the intended sources, one row per intent in <c>data.GraphDataSetIntent</c> (FDW-5294); empty once the data set is bound.</summary>
     public IList<GraphDataSetIntentConfiguration> Intents { get; set; } = new List<GraphDataSetIntentConfiguration>();
+
+    /// <summary>
+    /// Gets or sets the data set's own values of its federation strategy's options, which win over the FDW-level settings for the reads that feed a
+    /// join across stores (FDW-6901, FDW-6970). Saved to <c>data.DataSetFederationOption</c> through its GraphDataSetConfigurationRowId.
+    /// </summary>
+    public IList<DataSetFederationOptionConfiguration> FederationOptions { get; set; } = new List<DataSetFederationOptionConfiguration>();
 
     /// <summary>Gets or sets the fields out as the shared field type; a read returns a copy of <see cref="GraphFields"/>.</summary>
     /// <remarks>

@@ -36,6 +36,7 @@ internal static class GraphDataSetGraphPayloads
         var payload = Header(graph, header, true);
         payload.FieldsOutComponent = graph.FieldsOutComponent;
         payload.FieldsOutOutput = graph.FieldsOutOutput;
+        payload.FederationStrategy = graph.FederationStrategy;
         payload.Components = [.. body.Components];
         payload.Links = [.. body.Links];
         payload.IntendedSources = [.. graph.Intents.OrderBy(intent => intent.Ordinal).Select(IntendedSource)];
@@ -58,6 +59,8 @@ internal static class GraphDataSetGraphPayloads
     {
         Name = graph.Name,
         Description = graph.Description,
+        DisplayName = graph.DisplayName,
+        Abbreviation = graph.Abbreviation,
         ClassificationId = header.ClassificationId,
         Category = header.Category,
         Version = header.Version,

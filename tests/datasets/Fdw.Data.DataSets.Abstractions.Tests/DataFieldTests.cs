@@ -170,31 +170,6 @@ public class DataFieldTests
         field.IsString.ShouldBeFalse();
     }
 
-    [Theory]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    [InlineData(typeof(string), null, "NVARCHAR(MAX)")]
-    [InlineData(typeof(string), 50, "NVARCHAR(50)")]
-    [InlineData(typeof(int), null, "INT")]
-    [InlineData(typeof(long), null, "BIGINT")]
-    [InlineData(typeof(short), null, "SMALLINT")]
-    [InlineData(typeof(byte), null, "TINYINT")]
-    [InlineData(typeof(bool), null, "BIT")]
-    [InlineData(typeof(DateTime), null, "DATETIME2")]
-    [InlineData(typeof(DateTimeOffset), null, "DATETIMEOFFSET")]
-    [InlineData(typeof(decimal), null, "DECIMAL(18,2)")]
-    [InlineData(typeof(double), null, "FLOAT")]
-    [InlineData(typeof(float), null, "REAL")]
-    [InlineData(typeof(Guid), null, "UNIQUEIDENTIFIER")]
-    public void SqlTypeNameReturnCorrectSqlType(Type type, int? maxLength, string expectedSqlType)
-    {
-        // Arrange
-        var field = new DataField("Field1", type, maxLength: maxLength);
-
-        // Act & Assert
-        field.SqlTypeName.ShouldBe(expectedSqlType);
-    }
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
@@ -478,18 +453,6 @@ public class DataFieldTests
 
         // Assert
         result.ShouldNotContain("[Key]");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void SqlTypeNameReturnsNVarcharMaxForUnknownTypes()
-    {
-        // Arrange - Use a custom type not in the mapping
-        var field = new DataField("Field1", typeof(DataFieldTests));
-
-        // Act & Assert
-        field.SqlTypeName.ShouldBe("NVARCHAR(MAX)");
     }
 
     [Fact]

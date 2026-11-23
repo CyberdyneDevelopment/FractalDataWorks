@@ -15,6 +15,12 @@ public interface IGraphDataSetConfiguration : IDataSetImplementationConfiguratio
     /// <summary>Gets or sets the name of the output node of <see cref="FieldsOutComponent"/> that carries the fields out; null while the data set is abstract.</summary>
     string? FieldsOutOutput { get; set; }
 
+    /// <summary>Gets or sets the federation strategy the data set's reads across data stores run under (FDW-6970); null when it states none.</summary>
+    string? FederationStrategy { get; set; }
+
+    /// <summary>Gets or sets the data set's own values of its strategy's options (FDW-6901), the most specific level of their precedence.</summary>
+    IList<DataSetFederationOptionConfiguration> FederationOptions { get; set; }
+
     /// <summary>Gets or sets the fields out as they are stored, one row per field in <c>data.GraphDataSetField</c>.</summary>
     IList<GraphDataSetFieldConfiguration> GraphFields { get; set; }
 

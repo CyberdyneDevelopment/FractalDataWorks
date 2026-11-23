@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Operations.Configuration;
+using Fdw.Operations.Thresholds;
 using Fdw.Results;
 
 namespace Fdw.Operations.Endpoints.Thresholds;
@@ -203,13 +203,7 @@ public static class ThresholdMapper
     }
 
     // A stored value as the JSON scalar of its data type; text when it does not read as that type, so the stored value is shown as it is.
-    private static JsonValue? ScalarNode(string dataType, string? text) => text is null ? null : dataType switch
-    {
-        "Int64" when long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var whole) => JsonValue.Create(whole),
-        "Double" when double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) => JsonValue.Create(number),
-        "Boolean" when bool.TryParse(text, out var flag) => JsonValue.Create(flag),
-        _ => JsonValue.Create(text),
-    };
+    private static JsonValue? ScalarNode(string dataType, string? text) => text is null ? null : ThresholdDataTypes.ByName(dataType).Scalar(text);
 
     private static IGenericResult<ThresholdRuleConfiguration> Rule(string threshold, IThreshold type, ThresholdRulePayload payload, int ordinal)
     {

@@ -1,4 +1,5 @@
 using System;
+using Fdw.Conventions;
 
 namespace Fdw.Protocols.Tds.Types;
 
@@ -8,6 +9,7 @@ namespace Fdw.Protocols.Tds.Types;
 public sealed class TdsColumnType
 {
     /// <summary>The <see cref="Length"/> of a (max) type.</summary>
+    [FormatLimit("TDS writes -1 as the length of a (max) type: a marker the protocol defines, not a limit")]
     public const int Max = -1;
 
     /// <summary>Initializes a new instance of the <see cref="TdsColumnType"/> class.</summary>

@@ -10,7 +10,9 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Services.Scheduling.Abstractions.OptionTypes;
+using Fdw.Operations.Abstractions.Thresholds;
 using Fdw.Services.Scheduling.Commands;
+using Fdw.Services.Scheduling.Logging;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -77,6 +79,13 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
     {
         var providerService = typeof(ISchedulerServiceProvider).ToString();
 
+        // The failed fires of a schedule are judged by thresholds (FDW-6144), so a host that schedules runs without the evaluator is miswired and does not start.
+        Requires<IThresholdEvaluator>(ScheduleFailureLog.EvaluatorNotRegistered);
+
+        // The schedule provider writes each schedule's description with the descriptions writer, in the unit of the write (FDW-6208): a host that registered this collection
+        // without the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<Fdw.Services.Descriptions.IDescriptionWriter>(ScheduleDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         // Why every trigger kind registers the SAME provider: the kinds share one sched.ScheduleConfiguration row and the domain row's Implementation names which kind it is, so
         // dispatch lands on the one provider whatever the kind. Without these the domain read finds its row and then has nothing to hand it to. Done after Build, so a kind
         // that cannot be registered stops the host with a failed result and is not dropped (FDW-3966).
@@ -114,16 +123,23 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ScheduleImplementationConfigurationProvider>(sp =>
                 new ScheduleImplementationConfigurationProvider(
                     sp.GetRequiredService<ILogger<ScheduleImplementationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "ScheduleConfiguration"));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "ScheduleConfiguration",
+                    sp.GetRequiredService<IScheduleFailureReporter>(), sp.GetRequiredService<TimeProvider>()));
 
-            // The fields a fire writes back to its schedule live on this container, so the recorder is the provider that owns it (FDW-4598).
+            // The fields a fire writes back to its schedule live on this container, so the recorder is the provider that owns it (FDW-4598). The same provider pauses the schedule a threshold's rule
+            // fired on (FDW-6144), because the pause writes columns of the same row.
             builder.Services.TryAddSingleton<IScheduleRunRecorder>(sp => sp.GetRequiredService<ScheduleImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<ISchedulePauser>(sp => sp.GetRequiredService<ScheduleImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton(TimeProvider.System);
+            builder.Services.TryAddSingleton<IScheduleFailureReporter, ScheduleFailureReporter>();
 
             builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
             {
                 var domain = new ScheduleConfigurationProvider(
                     sp.GetRequiredService<ILogger<ScheduleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "Schedule");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "Schedule",
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
 
                 return domain;
             });

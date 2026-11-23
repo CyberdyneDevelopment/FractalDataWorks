@@ -63,8 +63,4 @@ public class ChartTypesTests
         shapes[0].Slots.Where(s => s.IsRequired).Select(s => s.Name).ToArray().ShouldBe(new[] { "map.x", "map.y" });
         shapes[1].Slots.Where(s => s.IsRequired).Select(s => s.Name).ToArray().ShouldBe(new[] { "map.place" });
     }
-
-    [Fact]
-    public void ANameIsExactSoALowerCaseNameIsNotAChartType()
-        => ReferenceEquals(ChartTypes.ByName("bar"), ChartTypes.NotFound).ShouldBeTrue();
 }

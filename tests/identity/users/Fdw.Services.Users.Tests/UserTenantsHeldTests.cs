@@ -1,3 +1,4 @@
+using Fdw.ServiceTypes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +30,12 @@ public sealed class UserTenantsHeldTests
     private static Dictionary<string, object?> Domain(int key, bool current = true)
         => InMemoryConfigurationStore.Row(("RowId", key + 1000), ("Id", DomainId(key)), ("IsCurrent", current));
 
-    private static UserTenantsHeld Reader(InMemoryConfigurationStore store) => new(store.Gateways, "PlatformConfiguration", "tenant", NullLogger<UserTenantsHeld>.Instance);
+    // The reader as a host that changes nothing gets it: the users option's declared MaxMemberships (FDW-7103).
+    private static UserTenantsHeld Reader(InMemoryConfigurationStore store)
+        => Reader(store, DeclaredSetting.Count(new DefaultUserServiceType(), "MaxMemberships", null).Value);
+
+    private static UserTenantsHeld Reader(InMemoryConfigurationStore store, int maxMemberships)
+        => new(store.Gateways, "PlatformConfiguration", "tenant", maxMemberships, NullLogger<UserTenantsHeld>.Instance);
 
     [Fact]
     public async Task APersonsTenantsAreTheMembershipsThatNameThem()
@@ -113,13 +119,23 @@ public sealed class UserTenantsHeldTests
     [Fact]
     public async Task APersonWithMoreMembershipsThanOneReadCarriesFailsTheReadInsteadOfCuttingTheirTenantsShort()
     {
-        var many = Enumerable.Range(1, UserTenantsHeld.MaxMemberships + 1).Select(key => Membership(key, key, Person, Guid.NewGuid())).ToList();
+        var many = Enumerable.Range(1, 6).Select(key => Membership(key, key, Person, Guid.NewGuid())).ToList();
         var store = new InMemoryConfigurationStore().Holds("UserTenantsConfiguration", many).Holds("UserTenants", []);
 
-        var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
+        var held = await Reader(store, 5).Get(Person, TestContext.Current.CancellationToken);
 
         held.IsFailure.ShouldBeTrue();
+        held.CurrentMessage!.ShouldContain("5");
         store.Queries.ToArray().ShouldBe(new[] { "UserTenantsConfiguration" });
+    }
+
+    [Fact]
+    public void TheDeclaredUsersCapsAreAThousandMembershipsAndSignInPagesOfFiftyUpToTwoHundred()
+    {
+        var declared = new DefaultUserServiceType().DeclaredDefaults;
+        declared["MaxMemberships"].ShouldBe(1000);
+        declared["SignInPageDefaultTake"].ShouldBe(50);
+        declared["SignInPageMaxTake"].ShouldBe(200);
     }
 
     [Fact]

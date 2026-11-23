@@ -78,6 +78,9 @@ public abstract class CreateGraphDataSetEndpointBase : CrudCreateEndpointBase<Cr
         var checkedFields = GraphDataSetDefinitions.ValidateFields(request.FieldsOut.Select(f => f.ClassificationId).Prepend(request.ClassificationId), request.FieldsOut, Logger);
         if (checkedFields.IsFailure) return checkedFields.ToNewResult<DataSetDetailResponse>();
 
+        var displayNameChecked = DataSetNames.Check(request.DisplayName, request.Abbreviation, request.Name, Logger);
+        if (displayNameChecked.IsFailure) return displayNameChecked.ToNewResult<DataSetDetailResponse>();
+
         var category = await DataSetCategoryLinks.Requested(_categories, request.Category, Logger, ct).ConfigureAwait(false);
         if (category.IsFailure) return category.ToNewResult<DataSetDetailResponse>();
 
@@ -94,7 +97,7 @@ public abstract class CreateGraphDataSetEndpointBase : CrudCreateEndpointBase<Cr
 
         var config = built.Value!;
 
-        // Why the same judgement as the validate route: a body validate calls unsound is not saved (FDW-5442).
+        // Why the same judgment as the validate route: a body validate calls unsound is not saved (FDW-5442).
         var sound = await GraphDataSetSoundness.Judge(config, _sources, Logger, ct).ConfigureAwait(false);
         if (sound.IsFailure) return sound.ToNewResult<DataSetDetailResponse>();
         var saved = await _dataSetProvider.Save(config, "DataSet", config.Implementation, config.Name, ct).ConfigureAwait(false);
@@ -131,6 +134,7 @@ public abstract class CreateGraphDataSetEndpointBase : CrudCreateEndpointBase<Cr
             RecordTypeName = request.RecordTypeName,
             Caching = caching.Value,
         };
+        DataSetNames.Set(graph, request.DisplayName, request.Abbreviation);
 
         var stated = GraphDataSetDefinitions.Apply(graph, request, values, GraphDataSetStamp.Saving(ownerUserId), Logger);
         if (stated.IsFailure) return stated.ToNewResult<GraphDataSetConfiguration>();

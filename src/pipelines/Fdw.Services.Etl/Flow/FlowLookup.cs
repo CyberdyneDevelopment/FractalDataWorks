@@ -100,8 +100,22 @@ public sealed class FlowLookup : IFlowComponent
     /// <inheritdoc />
     public async Task<IGenericResult> Run(IFlowPorts ports, CancellationToken cancellationToken = default)
     {
-        var main = FlowInputPump.Start(ports.Input(InputName), cancellationToken);
-        var table = await BuildReference(ports.Input(ReferenceName), cancellationToken).ConfigureAwait(false);
+        // The reference table and what the pump takes for the main input while it is built are held by the lookup until it ends (FDW-5231).
+        var held = FlowHeld.Of(ports);
+        try
+        {
+            return await Look(ports, held, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            held?.ReleaseAll();
+        }
+    }
+
+    private async Task<IGenericResult> Look(IFlowPorts ports, FlowHeldGauge? held, CancellationToken cancellationToken)
+    {
+        var main = FlowInputPump.Start(ports.Input(InputName), held, cancellationToken);
+        var table = await BuildReference(ports.Input(ReferenceName), held, cancellationToken).ConfigureAwait(false);
         if (table.IsFailure)
         {
             return table;
@@ -127,11 +141,12 @@ public sealed class FlowLookup : IFlowComponent
     }
 
     private async Task<IGenericResult<Dictionary<object?[], IDictionary<string, object?>>>> BuildReference(
-        IFlowInput input, CancellationToken cancellationToken)
+        IFlowInput input, FlowHeldGauge? held, CancellationToken cancellationToken)
     {
         var table = new Dictionary<object?[], IDictionary<string, object?>>(new KeyValuesComparer());
         while (await input.Read(cancellationToken).ConfigureAwait(false) is { } batch)
         {
+            held?.Hold(batch);
             foreach (var row in batch.Rows)
             {
                 if (!RecordKeyReader.TryRead(row, _referenceKeys, out var key, out var missing))
@@ -163,7 +178,7 @@ public sealed class FlowLookup : IFlowComponent
         FlowBatchWriter? unmatched,
         CancellationToken cancellationToken)
     {
-        await foreach (var batch in main.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+        await foreach (var batch in main.ReadAll(cancellationToken).ConfigureAwait(false))
         {
             foreach (var row in batch.Rows)
             {

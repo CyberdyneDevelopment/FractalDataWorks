@@ -565,4 +565,85 @@ namespace Test
         parentDdl.ShouldContain("Name = \"Name\"");
         childDdl.ShouldContain("Name = \"Name\"");
     }
+    private const string UnsizedSource = @"
+namespace Test
+{
+    [ManagedConfiguration]
+    public partial class PriceConfiguration
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+    }
+}";
+
+    // FDW-7107: a field that states no size takes the size the build states, so the number in the DDL is the build's.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "SourceGen")]
+    public void AFieldThatStatesNoSizeTakesTheBuildsSize()
+    {
+        var sizes = new System.Collections.Generic.Dictionary<string, string>
+        {
+            [Fdw.Configuration.SourceGenerators.Models.ColumnSizes.StringMaxLengthProperty] = "321",
+            [Fdw.Configuration.SourceGenerators.Models.ColumnSizes.DecimalPrecisionProperty] = "12",
+            [Fdw.Configuration.SourceGenerators.Models.ColumnSizes.DecimalScaleProperty] = "3",
+        };
+
+        var (compilation, diagnostics) = CompilationHelper.RunGenerator(UnsizedSource, sizes);
+
+        diagnostics.ShouldNotContain(d => d.Id == "CFG004");
+        var ddl = CompilationHelper.GetGeneratedOutput(compilation, "PriceConfiguration.Ddl.g.cs");
+        ddl.ShouldNotBeNull();
+        ddl.ShouldContain("MaxLength = 321");
+        ddl.ShouldContain("Precision = 12");
+        ddl.ShouldContain("Scale = 3");
+    }
+
+    // FDW-7107: with no size from the field or the build, each unsized field is CFG004 and the configuration gets no DDL.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "SourceGen")]
+    public void AFieldWithNoSizeInABuildThatStatesNoneIsReportedAndGetsNoDdl()
+    {
+        var (compilation, diagnostics) = CompilationHelper.RunGenerator(
+            UnsizedSource, new System.Collections.Generic.Dictionary<string, string>());
+
+        var unsized = diagnostics.Where(d => d.Id == "CFG004").Select(d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).ToList();
+        unsized.Count.ShouldBe(3);
+        unsized.ShouldContain(m => m.Contains("'PriceConfiguration.Label' states no length", System.StringComparison.Ordinal)
+            && m.Contains("FDW_DdlStringMaxLength", System.StringComparison.Ordinal));
+        unsized.ShouldContain(m => m.Contains("'PriceConfiguration.Amount' states no precision", System.StringComparison.Ordinal));
+        unsized.ShouldContain(m => m.Contains("'PriceConfiguration.Amount' states no scale", System.StringComparison.Ordinal));
+        CompilationHelper.GetGeneratedOutput(compilation, "PriceConfiguration.Ddl.g.cs").ShouldBeNull();
+    }
+
+    // FDW-7107: a field that states its own size needs nothing from the build.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "SourceGen")]
+    public void AFieldThatStatesItsSizeNeedsNoBuildSize()
+    {
+        const string source = @"
+namespace Test
+{
+    public sealed class MaxLengthAttribute : System.Attribute
+    {
+        public MaxLengthAttribute(int length) { }
+    }
+
+    [ManagedConfiguration]
+    public partial class CodeConfiguration
+    {
+        public string Name { get; set; } = string.Empty;
+        [MaxLength(40)]
+        public string Code { get; set; } = string.Empty;
+    }
+}";
+
+        var (compilation, diagnostics) = CompilationHelper.RunGenerator(source, new System.Collections.Generic.Dictionary<string, string>());
+
+        diagnostics.ShouldNotContain(d => d.Id == "CFG004");
+        CompilationHelper.GetGeneratedOutput(compilation, "CodeConfiguration.Ddl.g.cs")!.ShouldContain("MaxLength = 40");
+    }
 }

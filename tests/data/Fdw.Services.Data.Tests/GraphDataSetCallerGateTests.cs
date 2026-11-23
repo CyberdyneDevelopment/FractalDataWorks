@@ -67,7 +67,8 @@ public sealed class GraphDataSetCallerGateTests
             new FieldMappingTransformationResolver(
                 gateways.Object,
                 new TransformationConfigurationProvider(
-                    NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation")),
+                    NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation",
+                TransformationDescriptionDoubles.Writer(), TransformationDescriptionDoubles.Reader())),
             dataStoreProvider: new Mock<IDataStoreProvider>().Object,
             graphRunner: runner);
     }

@@ -98,6 +98,22 @@ public abstract class QueryDataSetDataEndpointBase : DataQueryEndpointBase<DataQ
             : NotFound<QueryFilterNode?>(req.DataSetName);
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// The name the caller asked for, which the resolver gave back as the name of what was resolved: a data set's own, or a variation's own (FDW-5446). The
+    /// data set that is read is the variation's root, and its name is not told to a person who holds only the variation. The name was resolved a moment ago
+    /// for this same request, so this repeats what the first found, from the providers' cache.
+    /// </remarks>
+    protected override async Task<IGenericResult<string>> AnswerName(DataQueryRequest req, IDataSetImplementationConfiguration dataSet, CancellationToken ct)
+    {
+        var resolved = await _resolver.Resolve(req.DataSetName, ct).ConfigureAwait(false);
+        if (resolved.IsFailure) return resolved.ToNewResult<string>();
+
+        return resolved.Value is { } named
+            ? GenericResult<string>.Success(named.Name)
+            : NotFound<string>(req.DataSetName);
+    }
+
     private IGenericResult<T> NotFound<T>(string dataSetName)
         => GenericResult<T>.Failure(DataServiceResultCodes.ByName("DataSetNotFound"), Logger, ResultDetails.Create("DataSetName", dataSetName));
 }

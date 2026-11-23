@@ -34,13 +34,11 @@ public sealed class PostgreSqlQueryTranslatorTests
         container.Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
-        if (declaredKey is not null)
-            container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = declaredKey });
 
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
-        container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
+        container.Setup(c => c.Keys).Returns(declaredKey is null ? new List<IContainerKey>() : TestPrimaryKeys.On(declaredKey));
 
         return container;
     }

@@ -88,6 +88,9 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
 
             var dialect = dbPath.Dialect;
 
+            if (command.Unions is { Count: > 0 })
+                return Task.FromResult(UnionStatement(command, dataContainer, dialect));
+
             if (command.Joins is { Count: > 0 })
             {
                 return Task.FromResult(BuildJoinedSelectStatement(container, dbPath, dialect, command, returnedFieldNames));
@@ -140,14 +143,14 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
         }
         else if (paging != null)
         {
-            var declaredOrder = container.GetDeclaredOrderFieldName();
-            if (declaredOrder is null)
+            var declaredOrder = container.DeclaredOrderFieldNames();
+            if (declaredOrder.Count == 0)
             {
                 return GenericResult<SqliteCommand>.Failure(
                     SqliteConnectionLog.PagedQueryHasNoOrder(NullLogger<SqliteQueryTranslator>.Instance, container.Name));
             }
 
-            command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(declaredOrder)}";
+            command.CommandText += $" ORDER BY {string.Join(", ", declaredOrder.Select(name => dialect.QuoteIdentifier(name)))}";
         }
 
         if (paging != null)
@@ -268,5 +271,17 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
             return $"SELECT {string.Join(", ", returnedFieldNames.Select(Col))}";
 
         throw new InvalidOperationException($"Cannot build SELECT for container '{container.Name}': no columns available.");
+    }
+
+    // A query that stacks containers' rows: one UNION ALL statement, written by the shared builder (FDW-6946).
+    private static IGenericResult<SqliteCommand> UnionStatement(IQueryCommand query, IDataContainer container, ISqlDialect dialect)
+    {
+        var command = CreateCommand(string.Empty);
+        var (refusal, sql) = BuildUnionStatement(query, container, dialect, (n, v) => AddParameter(command, n, v));
+        if (refusal is not null)
+            return GenericResult<SqliteCommand>.Failure(refusal);
+
+        command.CommandText = sql;
+        return GenericResult<SqliteCommand>.Success(command);
     }
 }

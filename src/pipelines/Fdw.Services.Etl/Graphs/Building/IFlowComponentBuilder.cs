@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Flow;
@@ -10,6 +12,12 @@ namespace Fdw.Services.Etl.Graphs.Building;
 /// </summary>
 public interface IFlowComponentBuilder : ITypeOption<int, IFlowComponentBuilder>
 {
+    /// <summary>
+    /// Gets the build contributions this kind's builder needs from the host (FDW-6132), by contribution type. A builder from another package names the
+    /// <c>IFlowBuildContribution</c> types its package registers and reads each from the build context; FDW's own builders need none.
+    /// </summary>
+    IReadOnlyList<Type> Needs { get; }
+
     /// <summary>Builds the flow component of a stored component whose settings have been checked against its kind.</summary>
     /// <param name="component">The stored component.</param>
     /// <param name="context">What the run builds with.</param>

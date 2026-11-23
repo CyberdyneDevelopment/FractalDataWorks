@@ -14,6 +14,6 @@ public sealed class SumAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SumAggregationType"/> class.
     /// </summary>
-    public SumAggregationType() : base("Sum", values => values.Sum())
+    public SumAggregationType() : base("Sum", "Calculates the total sum of all values", values => values.Sum())
     { }
 }

@@ -24,6 +24,25 @@ public class GraphPayload
     /// <summary>Gets or sets what the pipeline is for.</summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the pipeline's implementation, its type (<c>Graph</c>, <c>Interactive</c>, any pipeline type that saves a graph; FDW-6718). A create states it, and nothing stands in
+    /// when it is left out. An update may leave it out (the stored type is kept) and is refused when it states another. A read shows it. A draft may leave it out, and its answer then says
+    /// the requirements of the type were not judged.
+    /// </summary>
+    public string? Implementation { get; set; }
+
+    /// <summary>Gets or sets the template of the key a run claims (FDW-6141); a type may allow it and no type requires it. Stored; not applied until the claim of FDW-6629.</summary>
+    public string? ClaimKeyTemplate { get; set; }
+
+    /// <summary>Gets or sets the name of the rule that says what a run found half-done after a restart does (FDW-6141); the Interactive type requires it.</summary>
+    public string? HalfDoneRule { get; set; }
+
+    /// <summary>Gets or sets the most seconds a run may take (FDW-6141); the Interactive type requires it, and it may not exceed the ceiling the settings state.</summary>
+    public int? MaxRunSeconds { get; set; }
+
+    /// <summary>Gets or sets the most steps a run may take (FDW-6141); the Interactive type requires it, and it may not exceed the ceiling the settings state.</summary>
+    public int? MaxSteps { get; set; }
+
     /// <summary>Gets or sets whether the pipeline is enabled; a save states it.</summary>
     public bool? IsEnabled { get; set; }
 
@@ -68,6 +87,9 @@ public class GraphPayload
 
     /// <summary>Gets or sets the variables the graph declares, in scope in every component.</summary>
     public IList<GraphVariablePayload> Variables { get; set; } = [];
+
+    /// <summary>Gets or sets the outputs the graph gives back to the pipeline that starts it (FDW-6136).</summary>
+    public IList<GraphOutputPayload> Outputs { get; set; } = [];
 
     /// <summary>Gets or sets the parameters the graph declares at design time (FDW-1549).</summary>
     public IList<GraphParameterPayload> Parameters { get; set; } = [];

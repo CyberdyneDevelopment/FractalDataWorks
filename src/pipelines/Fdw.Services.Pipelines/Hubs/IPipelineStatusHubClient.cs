@@ -24,6 +24,11 @@ public interface IPipelineStatusHubClient
     Task OnExecutionCompleted(PipelineExecutionComplete complete);
 
     /// <summary>
+    /// Called with each piece of a run as it is written (FDW-6140): sent to the group of the person the run is for and to nobody else. The piece carries its sequence in the stored stream.
+    /// </summary>
+    Task OnRunPiece(PipelineRunPieceUpdate piece);
+
+    /// <summary>
     /// Called when a task node's status or counters change during a test or live execution.
     /// Broadcast at most once per <c>BroadcastHz</c> interval; final broadcast always sent.
     /// </summary>

@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Tags.Abstractions;
 
@@ -19,4 +20,7 @@ public interface ITaggableKind : ITypeOption<int, TaggableKindBase>
     /// workspace can be checked against the thing's place. An empty string means the kind is tenant-wide and takes tenant tags only.
     /// </summary>
     string WorkspaceResourceKind { get; }
+
+    /// <summary>Gets what a link's thing id cites: the domain a link to this option asks whether the thing exists in, or why nothing is asked (FDW-6221).</summary>
+    Citation Cites { get; }
 }

@@ -15,24 +15,13 @@ public static class SqlTypeMapper
     public const string DefaultStringType = "varchar";
 
     /// <summary>
-    /// Default max length for string columns without explicit MaxLength.
-    /// </summary>
-    public const int DefaultStringMaxLength = 500;
-
-    /// <summary>
-    /// Default precision for decimal columns.
-    /// </summary>
-    public const int DefaultDecimalPrecision = 18;
-
-    /// <summary>
-    /// Default scale for decimal columns.
-    /// </summary>
-    public const int DefaultDecimalScale = 2;
-
-    /// <summary>
     /// Maps a property model to a SQL column definition.
     /// </summary>
-    public static SqlColumnDefinition MapToColumn(PropertyModel property)
+    /// <param name="property">The field.</param>
+    /// <param name="sizes">The sizes the build states for a field that states none of its own (FDW-7107); a size neither states is
+    /// recorded in <see cref="SqlColumnDefinition.SizesNotStated"/>, never guessed.</param>
+    /// <returns>The column.</returns>
+    public static SqlColumnDefinition MapToColumn(PropertyModel property, ColumnSizes sizes)
     {
         var column = new SqlColumnDefinition
         {
@@ -66,9 +55,21 @@ public static class SqlTypeMapper
         }
 
         // Map based on C# type
-        MapCSharpType(column, property);
+        MapCSharpType(column, property, sizes);
 
         return column;
+    }
+
+    // The size the field states, else the one the build states; when neither does, the build property it needed is recorded on the column.
+    private static int? Stated(SqlColumnDefinition column, int? fromField, int? fromBuild, string buildProperty)
+    {
+        if (fromField is { } field)
+            return field;
+
+        if (fromBuild is null)
+            column.SizesNotStated.Add(buildProperty);
+
+        return fromBuild;
     }
 
     private static void ApplyDbTypeOverride(SqlColumnDefinition column, DbTypeOverride dbType)
@@ -85,7 +86,7 @@ public static class SqlTypeMapper
             column.Scale = dbType.Scale.Value;
     }
 
-    private static void MapCSharpType(SqlColumnDefinition column, PropertyModel property)
+    private static void MapCSharpType(SqlColumnDefinition column, PropertyModel property, ColumnSizes sizes)
     {
         // Normalize type name (remove nullable wrapper, namespace)
         var typeName = NormalizeTypeName(property.PropertyType);
@@ -96,7 +97,7 @@ public static class SqlTypeMapper
             case "string":
             case "String":
                 column.SqlType = DefaultStringType;
-                column.MaxLength = property.MaxLength ?? DefaultStringMaxLength;
+                column.MaxLength = Stated(column, property.MaxLength, sizes.StringMaxLength, ColumnSizes.StringMaxLengthProperty);
                 break;
 
             // Boolean
@@ -158,8 +159,8 @@ public static class SqlTypeMapper
             case "decimal":
             case "Decimal":
                 column.SqlType = "decimal";
-                column.Precision = property.Precision ?? DefaultDecimalPrecision;
-                column.Scale = property.Scale ?? DefaultDecimalScale;
+                column.Precision = Stated(column, property.Precision, sizes.DecimalPrecision, ColumnSizes.DecimalPrecisionProperty);
+                column.Scale = Stated(column, property.Scale, sizes.DecimalScale, ColumnSizes.DecimalScaleProperty);
                 break;
 
             // Date/Time types

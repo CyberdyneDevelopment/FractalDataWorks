@@ -26,18 +26,19 @@ internal static class UiFeedbackChecks
     /// </summary>
     /// <param name="logger">The logger the refusal is written to.</param>
     /// <param name="request">What the tester sent.</param>
+    /// <param name="limits">The limits this host configured.</param>
     /// <returns>The refusal naming the first field that is wrong, or <see langword="null"/> when every field is acceptable.</returns>
-    public static IGenericMessage? Problem(ILogger logger, CreateUiFeedbackRequest request)
+    public static IGenericMessage? Problem(ILogger logger, CreateUiFeedbackRequest request, UiFeedbackLimits limits)
     {
         return Text(logger, "screen", request.Screen, MaxScreenLength)
             ?? Text(logger, "route", request.Route, MaxRouteLength)
             ?? AreaProblem(logger, request.Area)
             ?? ViewportProblem(logger, request.Viewport)
             ?? ThemeProblem(logger, request.Theme)
-            ?? AnchorsProblem(logger, request.AnchorsJson)
+            ?? AnchorsProblem(logger, request.AnchorsJson, limits)
             ?? UrgencyProblem(logger, request.Urgency)
             ?? TagsProblem(logger, request.Tags)
-            ?? BodyProblem(logger, request.Body);
+            ?? BodyProblem(logger, request.Body, limits);
     }
 
     /// <summary>
@@ -45,9 +46,10 @@ internal static class UiFeedbackChecks
     /// </summary>
     /// <param name="logger">The logger the refusal is written to.</param>
     /// <param name="body">The note.</param>
+    /// <param name="limits">The limits this host configured.</param>
     /// <returns>The refusal, or <see langword="null"/> when the note is acceptable.</returns>
-    public static IGenericMessage? BodyProblem(ILogger logger, string? body)
-        => Text(logger, "body", body, UiFeedbackLimits.MaxBodyLength);
+    public static IGenericMessage? BodyProblem(ILogger logger, string? body, UiFeedbackLimits limits)
+        => Text(logger, "body", body, limits.MaxBodyLength);
 
     /// <summary>
     /// Checks the name of a state a list is narrowed by.
@@ -158,7 +160,7 @@ internal static class UiFeedbackChecks
     }
 
     // A comment names at least one component, each a JSON object, within the limits; the entries are kept as they are and never looked inside (FDW-2343).
-    private static IGenericMessage? AnchorsProblem(ILogger logger, IReadOnlyList<string>? anchors)
+    private static IGenericMessage? AnchorsProblem(ILogger logger, IReadOnlyList<string>? anchors, UiFeedbackLimits limits)
     {
         if (anchors is null)
             return MessagingLog.UiFeedbackFieldMissing(logger, "anchors");
@@ -166,12 +168,12 @@ internal static class UiFeedbackChecks
         if (anchors.Count == 0)
             return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", "must name at least one component");
 
-        if (anchors.Count > UiFeedbackLimits.MaxAnchors)
-            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"may name at most {UiFeedbackLimits.MaxAnchors} components");
+        if (anchors.Count > limits.MaxAnchors)
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"may name at most {limits.MaxAnchors} components");
 
         for (var i = 0; i < anchors.Count; i++)
         {
-            var problem = AnchorProblem(logger, anchors[i], i);
+            var problem = AnchorProblem(logger, anchors[i], i, limits.MaxAnchorLength);
             if (problem is not null)
                 return problem;
         }
@@ -179,13 +181,13 @@ internal static class UiFeedbackChecks
         return null;
     }
 
-    private static IGenericMessage? AnchorProblem(ILogger logger, string? anchorJson, int position)
+    private static IGenericMessage? AnchorProblem(ILogger logger, string? anchorJson, int position, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(anchorJson))
             return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is empty");
 
-        if (anchorJson.Length > UiFeedbackLimits.MaxAnchorLength)
-            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is longer than {UiFeedbackLimits.MaxAnchorLength} characters");
+        if (anchorJson.Length > maxLength)
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is longer than {maxLength} characters");
 
         try
         {

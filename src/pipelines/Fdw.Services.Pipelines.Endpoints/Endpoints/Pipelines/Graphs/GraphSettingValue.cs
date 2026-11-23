@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Fdw.Services.Etl.Graphs;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -14,14 +15,7 @@ internal static class GraphSettingValue
     /// <param name="kind">What the setting holds: <c>Text</c>, <c>Number</c> or <c>Boolean</c>.</param>
     /// <param name="value">The JSON the request states.</param>
     /// <returns>The typed value, or null when the JSON is not that kind of value.</returns>
-    internal static object? Read(string kind, JsonElement value) =>
-        kind switch
-        {
-            "Text" => value.ValueKind == JsonValueKind.String ? value.GetString() : null,
-            "Number" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number : null,
-            "Boolean" => value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : null,
-            _ => null,
-        };
+    internal static object? Read(string kind, JsonElement value) => GraphSettingKinds.ByName(kind).ReadJson(value);
 
     /// <summary>
     /// Reads a setting that takes its value from a run parameter (FDW-1722): an object that names the parameter, <c>{ "parameter": "Name" }</c>,
@@ -38,6 +32,15 @@ internal static class GraphSettingValue
             ? text
             : null;
 
+    /// <summary>
+    /// Reads the value of a declared setting as the invariant text it is stored as (FDW-6133): a string as it is, a number as JSON writes it, and true or
+    /// false. The text is read as the setting's data type when the graph is judged.
+    /// </summary>
+    /// <param name="value">The JSON the request states.</param>
+    /// <returns>The text, or null when the JSON is not a single value.</returns>
+    internal static string? InvariantText(JsonElement value) =>
+        ReferenceEquals(JsonScalarTexts.ByValueKind(value.ValueKind), JsonScalarTexts.NotFound) ? null : JsonScalarTexts.ByValueKind(value.ValueKind).InvariantText(value);
+
     /// <summary>Writes a setting that takes its value from a run parameter, as <see cref="ParameterOf"/> reads it.</summary>
     /// <param name="parameter">The parameter's name.</param>
     /// <returns>The object to state where a value would be.</returns>
@@ -46,11 +49,5 @@ internal static class GraphSettingValue
     /// <summary>Says what a kind of value is, for a refusal that names what the setting must be.</summary>
     /// <param name="kind">The kind.</param>
     /// <returns>The kind in words.</returns>
-    internal static string Article(string kind) => kind switch
-    {
-        "Text" => "text",
-        "Number" => "a whole number",
-        "Boolean" => "true or false",
-        _ => kind,
-    };
+    internal static string Article(string kind) => GraphSettingKinds.ByName(kind).Words is { Length: > 0 } words ? words : kind;
 }

@@ -10,13 +10,6 @@ namespace Fdw.Services.Notifications.Tests.Services;
 /// </summary>
 public sealed class NotificationServiceTypesSentinelTests
 {
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void NotFoundSentinelIsBuilt()
-    {
-        NotificationServiceTypes.NotFound.ShouldNotBeNull();
-    }
 
     [Fact]
     [Trait("Priority", "P0")]

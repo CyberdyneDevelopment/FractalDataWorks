@@ -26,6 +26,11 @@ public static class GraphPayloadWriter
             Name = graph.Name,
             OrgId = graph.OrgId,
             Description = graph.Description,
+            Implementation = graph.Implementation,
+            ClaimKeyTemplate = graph.ClaimKeyTemplate,
+            HalfDoneRule = graph.HalfDoneRule,
+            MaxRunSeconds = graph.MaxRunSeconds,
+            MaxSteps = graph.MaxSteps,
             IsEnabled = graph.IsEnabled,
             LinkCapacity = graph.LinkCapacity,
             RequireApprovalToRun = graph.RequireApprovalToRun,
@@ -41,6 +46,7 @@ public static class GraphPayloadWriter
             {
                 Name = variable.Name, DataType = variable.DataType, Value = variable.ValueText,
             })],
+            Outputs = [.. graph.Outputs.Select(output => new GraphOutputPayload { Name = output.Name, VariableName = output.VariableName, DataType = output.DataType })],
             Parameters = [.. graph.Parameters.Select(parameter => new GraphParameterPayload
             {
                 Name = parameter.Name, DataType = parameter.ParameterType, IsRequired = parameter.IsRequired, IsReadOnly = parameter.IsReadOnly,
@@ -100,6 +106,12 @@ public static class GraphPayloadWriter
         {
             settings["parameters"] = component.Parameters
                 .Select(parameter => new GraphComponentParameterPayload { Name = parameter.ParameterName, Value = parameter.ValueText }).ToList();
+        }
+
+        // A declared setting is written as the text it is stored as (FDW-6133); reading it back stores the same row.
+        foreach (var declared in component.DeclaredSettings)
+        {
+            settings[declared.SettingName] = declared.ValueText;
         }
 
         if (component.Stages.Count > 0 && ComponentTypes.ByName(component.ComponentType) is StageToolComponentTypeBase tool)

@@ -76,7 +76,7 @@ public abstract class PreviewCalculationEndpointBase : Endpoint<PreviewCalculati
                 CalculationType = req.CalculationType,
                 SampleData = sampleValues,
                 Result = result,
-                Description = GetCalculationDescription(req.CalculationType)
+                Description = calculationType.Description
             }, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -98,17 +98,4 @@ public abstract class PreviewCalculationEndpointBase : Endpoint<PreviewCalculati
         }
         return values;
     }
-
-    /// <summary>
-    /// Gets the description for a calculation type. Override to provide custom descriptions.
-    /// </summary>
-    protected virtual string GetCalculationDescription(string typeName) => typeName switch
-    {
-        "Sum" => "Calculates the total sum of all values",
-        "Average" => "Calculates the arithmetic mean of all values",
-        "Count" => "Returns the number of values",
-        "Min" => "Returns the minimum value",
-        "Max" => "Returns the maximum value",
-        _ => $"Performs {typeName} calculation"
-    };
 }

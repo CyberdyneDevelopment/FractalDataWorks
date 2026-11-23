@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fdw.Collections;
 using Fdw.Results;
@@ -10,6 +11,12 @@ namespace Fdw.Services.Etl.Graphs.Building;
 /// </summary>
 public interface IFlowStepBuilder : ITypeOption<int, IFlowStepBuilder>
 {
+    /// <summary>
+    /// Gets the build contributions this kind's builder needs from the host (FDW-6132), by contribution type. A builder from another package names the
+    /// <c>IFlowBuildContribution</c> types its package registers and reads each from the build context; FDW's own builders need none.
+    /// </summary>
+    IReadOnlyList<Type> Needs { get; }
+
     /// <summary>Builds the engine's step.</summary>
     /// <param name="component">The stored action or loop, already checked against its kind.</param>
     /// <param name="body">The built steps of a loop's body, in order; empty for a kind that holds no steps.</param>

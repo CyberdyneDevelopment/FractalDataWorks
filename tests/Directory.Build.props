@@ -1,4 +1,7 @@
 <Project>
+  <!-- FDW-7107: the configuration generator's column sizes. This file, not public/Directory.Build.props, is the nearest props of every test project, so it imports them too -->
+  <Import Project="$(MSBuildThisFileDirectory)../src/configuration/Fdw.Configuration.SourceGenerators/build/Fdw.Configuration.SourceGenerators.props" />
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

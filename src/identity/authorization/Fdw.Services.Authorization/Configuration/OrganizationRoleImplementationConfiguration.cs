@@ -45,6 +45,9 @@ public partial class OrganizationRoleImplementationConfiguration : IOrganization
     public string RoleName { get; set; } = string.Empty;
 
     /// <inheritdoc />
+    // Why [NotStored]: the text is a row of the descriptions table under the description type OrganizationRole, filled by the organization role provider once for every set it reads and
+    // written in the unit of the role's save (FDW-6208); the column is gone from tenant.OrganizationRoleConfiguration, so no read selects it and no save writes it.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc />

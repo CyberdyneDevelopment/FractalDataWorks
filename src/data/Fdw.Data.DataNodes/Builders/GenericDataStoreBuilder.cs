@@ -40,6 +40,34 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
         _defaultResponseFormat = defaultResponseFormat;
     }
 
+    /// <summary>
+    /// Refuses a store whose configuration names a container type that ContainerTypes does not hold (FDW-6387): the lookup answers the
+    /// NotFound placeholder then, and a container is never built with it as its type.
+    /// </summary>
+    /// <param name="config">The store configuration.</param>
+    /// <returns>Success, or a failure naming the first container whose type is not registered.</returns>
+    protected override IGenericResult ValidateConfiguration(IDataStoreImplementationConfiguration config)
+    {
+        foreach (var path in config.Paths)
+        {
+            foreach (var container in path.Containers)
+            {
+                // The type a container states is the rule's (FDW-6428, FDW-6387): stated and registered. This builder is transport-agnostic, so which types a store holds is
+                // not asked here; the data store types' own builders and the store's save ask it with the store type.
+                var stated = DataContainerTypeRule.Stated(container, Logger);
+                if (stated.IsFailure)
+                    return stated;
+            }
+        }
+
+        return GenericResult.Success();
+    }
+
+    // ValidateConfiguration has refused a container with no TypeId, so the type is the one the configuration states. This builder is
+    // transport-agnostic and serves every connection type's options, so it holds no own-option rule.
+    private static IContainerType ContainerTypeOf(DataContainerConfiguration containerCfg)
+        => ContainerTypes.ByName(containerCfg.TypeId!);
+
     /// <summary>Builds a generic <see cref="DataContainer"/> addressed by its owning path's request path.</summary>
     /// <param name="containerCfg">The container configuration row.</param>
     /// <param name="parent">The container's parent path node.</param>
@@ -54,9 +82,7 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys)
     {
-        var containerType = string.IsNullOrEmpty(containerCfg.TypeId)
-            ? ContainerTypes.ByName("Endpoint")
-            : ContainerTypes.ByName(containerCfg.TypeId);
+        var containerType = ContainerTypeOf(containerCfg);
 
         DataStoreLoaderLog.ContainerSubtypeChosen(Logger, containerCfg.Name, containerType.Name);
         DataStoreLoaderLog.ContainerFieldsBuilt(Logger, containerCfg.Name, fields.Count);
@@ -73,7 +99,7 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
             containerType,
             format,
             new GenericContainerPath(parent.Name),
-            ["Query"],
+            [.. containerType.SupportedOperations],
             ContainerComposition.BuildMetadata(containerCfg, format),
             Logger);
     }

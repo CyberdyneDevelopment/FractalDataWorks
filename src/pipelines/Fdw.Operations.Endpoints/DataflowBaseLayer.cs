@@ -1,4 +1,5 @@
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Connections;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -99,7 +100,7 @@ internal static class DataflowBaseLayer
             AddContainer(draft, owner, store, source);
     }
 
-    private static void AddStoredIn(DataflowGraphDraft draft, IDataSetImplementationConfiguration owner, DataStoreRecord? store)
+    private static void AddStoredIn(DataflowGraphDraft draft, IDataSetImplementationConfiguration owner, IDataStoreImplementationConfiguration? store)
     {
         if (store is null)
             return;
@@ -116,7 +117,7 @@ internal static class DataflowBaseLayer
     private static void AddContainer(
         DataflowGraphDraft draft,
         IDataSetImplementationConfiguration owner,
-        DataStoreRecord? store,
+        IDataStoreImplementationConfiguration? store,
         DataSetSourceConfiguration source)
     {
         var containerId = DataflowNodeIds.Container(source.DataStoreName, source.ContainerName);

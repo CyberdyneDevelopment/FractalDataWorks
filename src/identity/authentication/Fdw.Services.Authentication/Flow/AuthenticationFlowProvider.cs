@@ -12,6 +12,7 @@ using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Conventions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Data.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -254,6 +255,14 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
             return new CachedFlow(null, valid.FailureReason().Message);
         }
 
+        // The column may state slot-file placeholders (https://${console_hostnames__live__0}/auth/callback): the host fills them from its
+        // own slot file (FDW-5847), so a copy on a slot accepts the origins of its own slot and the rows need no second list.
+        var returnUrls = ReturnUrlList(row);
+        if (returnUrls.Reason is { } refused)
+        {
+            return new CachedFlow(null, refused);
+        }
+
         var flow = new AuthenticationFlow
         {
             Name = row.Name,
@@ -265,15 +274,33 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
             SecretManagerName = row.SecretManagerName,
             SecretKeyName = row.SecretKeyName,
             // Whitespace-separated in the column; a NULL column means the flow returns no browser.
-            ReturnUrls = row.ReturnUrls is null
-                ? null
-                : [.. row.ReturnUrls.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)],
+            ReturnUrls = returnUrls.Urls,
             CodeLifetime = codeLifetime,
             SessionServiceName = deliversSession ? row.SessionServiceName : null,
         };
 
         FlowProviderLog.FlowAssembled(_logger, row.Name, ordered.Count);
         return new CachedFlow(flow, null);
+    }
+
+    /// <summary>A flow's return URLs as the row states them, with any slot-file placeholder filled.</summary>
+    /// <param name="row">The flow's row.</param>
+    /// <returns>The URLs (<see langword="null"/> when the row states none, a flow that returns no browser), or why a placeholder cannot be filled.</returns>
+    /// <remarks>The column is whitespace-separated; a placeholder is filled before the text is split.</remarks>
+    private (IReadOnlyList<string>? Urls, string? Reason) ReturnUrlList(IAuthenticationFlowImplementationConfiguration row)
+    {
+        if (row.ReturnUrls is not { } stated)
+        {
+            return (null, null);
+        }
+
+        var resolved = SlotPlaceholders.Resolve(stated, $"Authentication flow '{row.Name}' ReturnUrls", _logger);
+        if (resolved.IsFailure)
+        {
+            return (null, resolved.FailureReason().Message);
+        }
+
+        return (resolved.Value?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries), null);
     }
 
     /// <summary>

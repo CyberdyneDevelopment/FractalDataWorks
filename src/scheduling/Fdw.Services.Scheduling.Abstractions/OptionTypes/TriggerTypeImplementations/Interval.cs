@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using Fdw.Collections.Attributes;
 using Fdw.Conventions;
 using Fdw.Results;
@@ -92,7 +91,7 @@ public sealed class Interval : TriggerTypeBase
     /// Interval triggers require schedule persistence to track next execution times and
     /// do not execute immediately - they wait for their calculated schedule time.
     /// </remarks>
-    public Interval(ILogger<Interval>? logger = null) : base("Interval", requiresSchedule: true, isImmediate: false)
+    public Interval(ILogger<Interval>? logger = null) : base("Interval", requiresSchedule: true, isImmediate: false, description: "Recurring execution at a fixed interval (seconds, minutes, hours, or days)")
     {
         _logger = logger ?? NullLogger<Interval>.Instance;
     }
@@ -422,66 +421,10 @@ public sealed class Interval : TriggerTypeBase
     /// <summary>
     /// Attempts to convert an object to an integer.
     /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <param name="result">The converted integer value.</param>
-    /// <returns><c>true</c> if conversion succeeded; otherwise, <c>false</c>.</returns>
-    [ConventionOverride(MaxCyclomaticComplexity = 15)]  // Type conversion logic — multiple numeric type conversions
-    private static bool TryConvertToInt(object? value, out int result)
-    {
-        result = 0;
-
-        return value switch
-        {
-            int intValue => TryAssignInt(intValue, out result),
-            long longValue when longValue >= int.MinValue && longValue <= int.MaxValue => TryAssignInt((int)longValue, out result),
-            decimal decimalValue when decimalValue == Math.Truncate(decimalValue) && decimalValue >= int.MinValue && decimalValue <= int.MaxValue => TryAssignInt((int)decimalValue, out result),
-            double doubleValue when doubleValue == Math.Truncate(doubleValue) && doubleValue >= int.MinValue && doubleValue <= int.MaxValue => TryAssignInt((int)doubleValue, out result),
-            float floatValue when floatValue == Math.Truncate(floatValue) && floatValue >= int.MinValue && floatValue <= int.MaxValue => TryAssignInt((int)floatValue, out result),
-            string stringValue => int.TryParse(stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out result),
-            _ => false
-        };
-    }
-
-    /// <summary>
-    /// Helper method to assign an integer value to the result parameter.
-    /// </summary>
-    /// <param name="value">The value to assign.</param>
-    /// <param name="result">The result parameter to assign to.</param>
-    /// <returns>Always returns <c>true</c>.</returns>
-    private static bool TryAssignInt(int value, out int result)
-    {
-        result = value;
-        return true;
-    }
+    private static bool TryConvertToInt(object? value, out int result) => TriggerValueShapes.ReadInt(value, out result);
 
     /// <summary>
     /// Attempts to convert an object to a DateTime.
     /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <param name="result">The converted DateTime value.</param>
-    /// <returns><c>true</c> if conversion succeeded; otherwise, <c>false</c>.</returns>
-    private static bool TryConvertToDateTime(object? value, out DateTime result)
-    {
-        result = default;
-
-        return value switch
-        {
-            DateTime dateTimeValue => TryAssignDateTime(dateTimeValue, out result),
-            DateTimeOffset dateTimeOffsetValue => TryAssignDateTime(dateTimeOffsetValue.DateTime, out result),
-            string stringValue => DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out result),
-            _ => false
-        };
-    }
-
-    /// <summary>
-    /// Helper method to assign a DateTime value to the result parameter.
-    /// </summary>
-    /// <param name="value">The value to assign.</param>
-    /// <param name="result">The result parameter to assign to.</param>
-    /// <returns>Always returns <c>true</c>.</returns>
-    private static bool TryAssignDateTime(DateTime value, out DateTime result)
-    {
-        result = value;
-        return true;
-    }
+    private static bool TryConvertToDateTime(object? value, out DateTime result) => TriggerValueShapes.ReadDateTime(value, out result);
 }

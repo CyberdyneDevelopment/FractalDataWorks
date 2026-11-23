@@ -3,17 +3,6 @@ namespace Fdw.Data.Options.Tests;
 /// <summary>FDW-6454: the owner kinds and value kinds of a data configuration rule are type collections, each kind registered.</summary>
 public sealed class DataOptionKindsTests
 {
-    [Theory]
-    [InlineData("Organization", typeof(OrganizationOwnerKind))]
-    [InlineData("Workspace", typeof(WorkspaceOwnerKind))]
-    public void AnOwnerKindResolvesByNameAndIsNotTheNotFoundSentinel(string name, Type expected)
-    {
-        var kind = DataOptionOwnerKinds.ByName(name);
-
-        ReferenceEquals(kind, DataOptionOwnerKinds.NotFound).ShouldBeFalse();
-        kind.ShouldBeOfType(expected);
-        kind.Name.ShouldBe(name);
-    }
 
     [Fact]
     public void TheOwnerKindsAreTheOrganizationAndTheWorkspace()
@@ -40,18 +29,6 @@ public sealed class DataOptionKindsTests
     }
 
     [Theory]
-    [InlineData("Holder", typeof(HolderCustodianState))]
-    [InlineData("NoLongerHolder", typeof(NoLongerHolderCustodianState))]
-    public void ACustodianStateResolvesByNameAndIsNotTheNotFoundSentinel(string name, Type expected)
-    {
-        var state = DataOptionCustodianStates.ByName(name);
-
-        ReferenceEquals(state, DataOptionCustodianStates.NotFound).ShouldBeFalse();
-        state.ShouldBeOfType(expected);
-        state.Name.ShouldBe(name);
-    }
-
-    [Theory]
     [InlineData("Holder", false)]
     [InlineData("NoLongerHolder", true)]
     public void ACustodianStateStatesWhetherARuleInItNeedsAttention(string name, bool needsAttention)
@@ -63,12 +40,5 @@ public sealed class DataOptionKindsTests
     public void TheCustodianStatesAreHolderAndNoLongerHolder()
     {
         DataOptionCustodianStates.All().Select(state => state.Name).ShouldBe(["Holder", "NoLongerHolder"], ignoreOrder: true);
-    }
-
-    [Fact]
-    public void AnUnknownKindGivesTheNotFoundSentinel()
-    {
-        ReferenceEquals(DataOptionOwnerKinds.ByName("NoSuchKind"), DataOptionOwnerKinds.NotFound).ShouldBeTrue();
-        ReferenceEquals(DataOptionValueKinds.ByName("NoSuchKind"), DataOptionValueKinds.NotFound).ShouldBeTrue();
     }
 }

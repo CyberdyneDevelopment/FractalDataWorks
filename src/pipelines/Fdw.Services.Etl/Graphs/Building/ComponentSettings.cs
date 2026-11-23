@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.Data.Abstractions;
+using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Graphs.Logging;
 using Fdw.Services.Etl.Graphs.Tools;
@@ -30,6 +33,7 @@ public static class ComponentSettings
         names.UnionWith(component.SettingBindings.Select(binding => binding.SettingName));
         names.UnionWith(component.Fields.Select(field => field.SettingName));
         names.UnionWith(component.Columns.Select(column => column.SettingName));
+        names.UnionWith(component.DeclaredSettings.Select(setting => setting.SettingName));
         if (component.SplitOutputs.Count > 0)
         {
             names.Add("outputs");
@@ -62,11 +66,20 @@ public static class ComponentSettings
     public static IReadOnlyList<GraphProblem> Problems(PipelineComponentConfiguration component)
     {
         var kind = ComponentTypes.ByName(component.ComponentType);
-        if (ReferenceEquals(kind, ComponentTypes.NotFound))
-        {
-            return [new GraphProblem(["components", component.Name], $"component '{component.Name}' is of kind '{component.ComponentType}', which is not a component kind")];
-        }
+        return ReferenceEquals(kind, ComponentTypes.NotFound)
+            ? [new GraphProblem(["components", component.Name], $"component '{component.Name}' is of component type '{component.ComponentType}', which is not a component type")]
+            : Problems(component, kind);
+    }
 
+    /// <summary>Lists every way a component's settings disagree with a component type (FDW-6133: the component type is given, so one from another package is judged the same way).</summary>
+    /// <param name="component">The stored component.</param>
+    /// <param name="kind">The component type it is judged against.</param>
+    /// <returns>
+    /// The problems: each required setting left out, each setting the component type does not take, and each declared setting stored wrongly (kept where the component type
+    /// does not keep it, of a data type that does not exist, read from a variable it may not be, or a value that is not its data type).
+    /// </returns>
+    public static IReadOnlyList<GraphProblem> Problems(PipelineComponentConfiguration component, IComponentType kind)
+    {
         var stated = Stated(component);
         var problems = new List<GraphProblem>();
         foreach (var setting in kind.Settings.Where(s => s.IsRequired && !stated.Contains(s.Name, StringComparer.OrdinalIgnoreCase)))
@@ -83,7 +96,68 @@ public static class ComponentSettings
                 $"component '{component.Name}' of kind '{kind.Name}' states the setting '{name}', which the kind does not take"));
         }
 
+        problems.AddRange(DeclaredSettingProblems.Of(component, kind));
+        problems.AddRange(OwnTextSettingProblems.Of(component, kind));
         return problems;
+    }
+
+    /// <summary>
+    /// Gives a builder the value of a setting its component type declares that no column holds (FDW-6133), the counterpart of reading a column with
+    /// <see cref="ScalarSetting"/>.
+    /// </summary>
+    /// <param name="component">The stored component.</param>
+    /// <param name="kind">The component's type.</param>
+    /// <param name="name">The setting's name, as the component type declares it.</param>
+    /// <param name="logger">The logger a refusal is written to.</param>
+    /// <returns>
+    /// The value, or the refusal that says why there is none: ComponentSettingUndeclared, ComponentSettingHeldOnComponent, ComponentSettingDataTypeMissing,
+    /// ComponentSettingNotStated or ComponentSettingValueUnreadable.
+    /// </returns>
+    public static IGenericResult<ComponentSettingValue> Declared(PipelineComponentConfiguration component, IComponentType kind, string name, ILogger logger)
+    {
+        var setting = kind.Settings.FirstOrDefault(member => string.Equals(member.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (setting is null)
+        {
+            return GenericResult<ComponentSettingValue>.Failure(GraphLog.ComponentSettingUndeclared(logger, component.Name, kind.Name, name));
+        }
+
+        if (!ComponentSettingBindings.IsDeclared(kind, setting))
+        {
+            return GenericResult<ComponentSettingValue>.Failure(GraphLog.ComponentSettingHeldOnComponent(logger, component.Name, kind.Name, setting.Name));
+        }
+
+        if (setting.DataType is not { } type)
+        {
+            return GenericResult<ComponentSettingValue>.Failure(GraphLog.ComponentSettingDataTypeMissing(logger, component.Name, kind.Name, setting.Name));
+        }
+
+        var stored = component.DeclaredSettings.FirstOrDefault(row => string.Equals(row.SettingName, setting.Name, StringComparison.OrdinalIgnoreCase));
+        return stored is null
+            ? GenericResult<ComponentSettingValue>.Failure(GraphLog.ComponentSettingNotStated(logger, component.Name, kind.Name, setting.Name))
+            : DeclaredValue(component, kind, setting, type, stored.ValueText, logger);
+    }
+
+    /// <summary>Lists every declared setting of the given component types that states no data type (FDW-6133), checked when the host starts.</summary>
+    /// <param name="kinds">The component types.</param>
+    /// <param name="logger">The logger each one is written to.</param>
+    /// <returns>One ComponentSettingDataTypeNotDeclared for each component type and setting; empty when every declared setting states its type.</returns>
+    public static IReadOnlyList<IGenericMessage> DataTypesNotDeclared(IEnumerable<IComponentType> kinds, ILogger logger) =>
+        [.. kinds.SelectMany(kind => kind.Settings
+            .Where(setting => setting.DataType is null && ComponentSettingBindings.IsDeclared(kind, setting))
+            .Select(setting => GraphLog.ComponentSettingDataTypeNotDeclared(logger, kind.Name, setting.Name)))];
+
+    private static IGenericResult<ComponentSettingValue> DeclaredValue(
+        PipelineComponentConfiguration component, IComponentType kind, StageMember setting, IDataType type, string text, ILogger logger)
+    {
+        if (setting.ReadsWhenStepRuns && VariableText.Names(text).Count > 0)
+        {
+            return GenericResult<ComponentSettingValue>.Success(new ComponentSettingValue(component.Name, setting.Name, type, text));
+        }
+
+        var read = type.Convert(text);
+        return read.IsSuccess && read.Value is { } value
+            ? GenericResult<ComponentSettingValue>.Success(new ComponentSettingValue(setting.Name, value))
+            : GenericResult<ComponentSettingValue>.Failure(GraphLog.ComponentSettingValueUnreadable(logger, component.Name, kind.Name, setting.Name, text, type.Name));
     }
 
     /// <summary>Checks a component's settings against its kind.</summary>

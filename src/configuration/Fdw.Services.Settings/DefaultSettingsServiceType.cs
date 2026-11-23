@@ -7,6 +7,8 @@ using Fdw.Configuration;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Settings.Commands;
 using Fdw.Services.Settings.Configuration;
 using Microsoft.Extensions.Configuration;
@@ -104,7 +106,8 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             {
                 var domain = new ServerSettingConfigurationProvider(
                     sp.GetRequiredService<ILogger<ServerSettingConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "ServerSetting");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "ServerSetting",
+                    sp.GetRequiredService<Lazy<IDescriptionWriter>>());
                 domain.Register("ServerSetting", sp.GetRequiredService<IServerSettingImplementationConfigurationProvider>());
                 return domain;
             });
@@ -118,12 +121,16 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             // Lazy for the factories that read a setting while they build a connection or secret manager (FDW-3284): the settings are read through
             // connections, so a factory that took the provider itself would wait on the connection it is building.
             builder.Services.TryAddSingleton(sp => new Lazy<IEffectiveSettingsProvider>(() => sp.GetRequiredService<IEffectiveSettingsProvider>()));
+            // The same for the description writer the server setting provider writes each setting's text with (FDW-6208): the description service reads the description language
+            // through the effective settings, which read through that provider.
+            builder.Services.TryAddSingleton(sp => new Lazy<IDescriptionWriter>(() => sp.GetRequiredService<IDescriptionWriter>()));
             // Scoped: it finds an organization's tenant through the organization scope, which also checks the caller's right at the organization (FDW-1579, FDW-2840).
             builder.Services.TryAddScoped<IInheritedSettings>(sp => new InheritedSettings(
                 sp.GetRequiredService<IServerSettingConfigurationProvider>(),
                 sp.GetRequiredService<ITenantSettingConfigurationProvider>(),
                 sp.GetRequiredService<IOrganizationSettingConfigurationProvider>(),
                 sp.GetRequiredService<Fdw.Services.Authorization.Abstractions.IOrganizationScope>(),
+                sp.GetRequiredService<IDescriptionReader>(),
                 sp.GetService<ILogger<InheritedSettings>>()));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

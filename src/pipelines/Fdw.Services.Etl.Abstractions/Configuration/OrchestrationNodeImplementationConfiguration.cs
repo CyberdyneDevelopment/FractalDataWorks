@@ -59,6 +59,9 @@ public sealed partial class OrchestrationNodeImplementationConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the optional description of this node.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7323), which the {t} table cannot hold, so the
+    // column is gone; the provider fills the member for every set it reads. Off the mapper, it is no column of the table.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the ordinal position among siblings (ascending execution order).</summary>

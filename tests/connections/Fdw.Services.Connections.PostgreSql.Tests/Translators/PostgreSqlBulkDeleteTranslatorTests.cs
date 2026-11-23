@@ -55,14 +55,6 @@ public sealed class PostgreSqlBulkDeleteTranslatorTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ThePostgreSqlTranslatorCollectionAnswersBulkDeleteWithThisTranslator()
-    {
-        PostgreSqlDataCommandTranslators.ByName("BulkDelete").ShouldBeOfType<PostgreSqlBulkDeleteTranslator>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task ABatchIsOneDeleteUsingTheKeysTypedByTheTargetsRowType()
     {

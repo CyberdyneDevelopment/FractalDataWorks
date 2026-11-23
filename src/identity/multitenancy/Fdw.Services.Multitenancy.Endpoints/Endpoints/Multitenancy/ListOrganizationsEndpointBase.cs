@@ -1,13 +1,7 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Claims.Abstractions;
-using Fdw.Data;
-using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
-using Fdw.Services.Authentication.Abstractions.Results;
-using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Configuration;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -22,8 +16,8 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 /// </summary>
 /// <remarks>
 /// The page is one read of the organization domain table. ConfigurationDb has no row-level policy on the
-/// tenant schema, so the endpoint scopes the read to the caller's tenant itself, filtering on the
-/// <c>tenantId</c> claim of the token. A token with no tenant is refused with its own failure rather than
+/// tenant schema, so the endpoint scopes the read to the caller's tenant itself, through
+/// <see cref="TenantOrganizations"/>, which filters on the <c>tenantId</c> claim of the token. A token with no tenant is refused with its own failure rather than
 /// answered with an empty page: "your tenant has no organizations" and "you have no tenant" are
 /// different facts.
 /// </remarks>
@@ -46,29 +40,13 @@ public abstract class ListOrganizationsEndpointBase : CrudPageEndpointBase<Organ
     protected override async Task<IGenericResult<ConfigurationPage<OrganizationDomainConfiguration>>> LoadPage(
         PaginatedListRequest paging, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst(ClaimDefinitions.tenantId.Name)?.Value, out var tenantId))
-        {
-            return GenericResult.Failure(
-                    AuthenticationResultCodes.ByName("CallerHasNoTenant"), Logger,
-                    ResultDetails.Create("operation", "list organizations"))
-                .ToNewResult<ConfigurationPage<OrganizationDomainConfiguration>>();
-        }
+        var tenant = TenantOrganizations.CallerTenant(User, Logger, "list organizations");
+        if (!tenant.IsSuccess)
+            return tenant.ToNewResult<ConfigurationPage<OrganizationDomainConfiguration>>();
 
-        OrganizationEndpointLog.ListingOrganizations(Logger, tenantId.ToString());
+        OrganizationEndpointLog.ListingOrganizations(Logger, tenant.Value.ToString());
 
-        return await _organizations.Get(
-            new DomainQuery(
-                new FilterExpression
-                {
-                    Root = new FilterCondition
-                    {
-                        PropertyName = nameof(OrganizationDomainConfiguration.TenantId),
-                        Operator = FilterOperators.ByName("Equal"),
-                        Value = tenantId,
-                    },
-                },
-                null, paging.Skip, paging.Take, false),
-            ct).ConfigureAwait(false);
+        return await _organizations.Get(TenantOrganizations.Query(tenant.Value, paging.Skip, paging.Take), ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

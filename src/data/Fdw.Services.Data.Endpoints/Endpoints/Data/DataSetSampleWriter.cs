@@ -27,7 +27,7 @@ namespace Fdw.Services.Data.Endpoints;
 internal static class DataSetSampleWriter
 {
     public static async Task<IGenericResult<DataSetSampleResponse>> Upsert(
-        IDataGateway gateway, string dataStoreName, string pathName,
+        IDataGateway gateway, string dataStoreName, string pathName, DataSetConfigurationProvider dataSets,
         Guid dataSetImplementationId, IReadOnlyDictionary<string, Guid> fieldIdsByName,
         DataSetSampleRequest request, ILogger logger, CancellationToken ct)
     {
@@ -35,7 +35,7 @@ internal static class DataSetSampleWriter
         var sampleTarget = new DataStoreTarget(dataStoreName, pathName, "DataSetSample");
 
         var retired = await RetireCurrent(gateway, sampleTarget, dataSetImplementationId, request.SampleName, now, ct).ConfigureAwait(false);
-        if (retired.IsFailure) return retired.ToNewResult<DataSetSampleResponse>();
+        if (retired.IsFailure || retired.Value is not { } previous) return retired.ToNewResult<DataSetSampleResponse>();
 
         var sample = new DataSetSampleConfiguration
         {
@@ -67,6 +67,11 @@ internal static class DataSetSampleWriter
             if (written.IsFailure) return written.ToNewResult<DataSetSampleResponse>();
             rows.Add(written.Value!);
         }
+
+        // The sample's description is kept in the descriptions table (FDW-6208), not on the sample's row: it replaces the one of the sample this one replaced.
+        var described = await dataSets.DescribeSample(
+            dataSetImplementationId, request.Name, sample.Id, sample.Name, request.Description, previous.Id, ct).ConfigureAwait(false);
+        if (described.IsFailure) return described.ToNewResult<DataSetSampleResponse>();
 
         return GenericResult<DataSetSampleResponse>.Success(new DataSetSampleResponse
         {
@@ -122,7 +127,10 @@ internal static class DataSetSampleWriter
         return GenericResult<Dictionary<string, string?>>.Success(written);
     }
 
-    private static async Task<IGenericResult> RetireCurrent(
+    // The sample this one replaces: the Id of the current sample of the same name, or none when it is new.
+    private sealed record RetiredSample(Guid? Id);
+
+    private static async Task<IGenericResult<RetiredSample>> RetireCurrent(
         IDataGateway gateway, DataStoreTarget sampleTarget, Guid dataSetImplementationId, string sampleName, DateTimeOffset now, CancellationToken ct)
     {
         var existingCommand = new QueryCommand<DataSetSampleConfiguration>
@@ -144,10 +152,10 @@ internal static class DataSetSampleWriter
         };
 
         var existing = await gateway.Execute<IEnumerable<DataSetSampleConfiguration>>(existingCommand, sampleTarget, ct).ConfigureAwait(false);
-        if (existing.IsFailure) return existing;
+        if (existing.IsFailure) return existing.ToNewResult<RetiredSample>();
 
         var current = existing.Value?.FirstOrDefault();
-        if (current is null) return GenericResult.Success();
+        if (current is null) return GenericResult<RetiredSample>.Success(new RetiredSample(null));
 
         current.IsCurrent = false;
         current.ModifyDate = now;
@@ -161,7 +169,7 @@ internal static class DataSetSampleWriter
         };
 
         var retired = await gateway.Execute<int>(updateCommand, sampleTarget, ct).ConfigureAwait(false);
-        return retired.IsFailure ? retired : GenericResult.Success();
+        return retired.IsFailure ? retired.ToNewResult<RetiredSample>() : GenericResult<RetiredSample>.Success(new RetiredSample(current.Id));
     }
 
     /// <summary>Clears IsDefault on every other current sample for this data set, so at most one

@@ -72,9 +72,7 @@ public sealed class FlowExecutor : IFlowExecutor
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Why the graph is opened here: the live view lists a graph's components from the moment it is wired, so a component that waits for its stage is seen waiting.
-        using var live = options.Live?.Open(
-            [.. graph.Components.Select(component => new FlowLiveComponent(component.Name, graph.RankOf(component.Name), component.Outputs.Count > 0))],
-            () => [.. run.Links.Select(link => link.Count)]);
+        using var live = OpenLive(options.Live, graph, run);
 
         // Why a completion source per component: a component in a later stage waits on the completion of each earlier one, which is
         // set when the component has run and closed its outputs, however it ended.
@@ -91,6 +89,21 @@ public sealed class FlowExecutor : IFlowExecutor
             .ConfigureAwait(false);
 
         return Outcome(run, stopwatch.Elapsed, components, cancellationToken);
+    }
+
+    // Opens the graph in the live view, with what each component holds when the view reads that (FDW-5231); null when no view follows the run.
+    private static IFlowLiveGraph? OpenLive(IFlowLiveRun? live, FlowGraph graph, FlowRun run)
+    {
+        if (live is null)
+        {
+            return null;
+        }
+
+        IReadOnlyList<FlowLiveComponent> components =
+            [.. graph.Components.Select(component => new FlowLiveComponent(component.Name, graph.RankOf(component.Name), component.Outputs.Count > 0))];
+        return live is IFlowLiveHeldRun held
+            ? held.Open(components, () => [.. run.Links.Select(link => link.Count)], run.HeldOf)
+            : live.Open(components, () => [.. run.Links.Select(link => link.Count)]);
     }
 
     // Why the report is built before the outcome is decided: a failed or cancelled run still moved rows and measured its components, and

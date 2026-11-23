@@ -119,6 +119,9 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
 
             builder.Services.TryAddScoped<ISchemaInformationService, SchemaInformationService>();
 
+            // FDW-3617: DDL run on a connection by its name, through the connection type's own capability.
+            builder.Services.TryAddScoped<ISchemaDdlService, SchemaDdlService>();
+
             // FDW-5664: the option rows of a container, in the options table the server settings name, read and written through this gateway.
             builder.Services.TryAddScoped<IDataOptionRows, DataOptionRowService>();
             DataOptionRowsLog.Registered(loggerFactory?.CreateLogger<DataOptionRowService>() ?? NullLogger<DataOptionRowService>.Instance);
@@ -127,6 +130,15 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
             builder.Services.TryAddScoped<IDataConfigurationRules, DataConfigurationRuleService>();
             builder.Services.TryAddScoped<IDataConfigurationRuleNames, DataConfigurationRuleNames>();
             DataOptionRulesLog.Registered(loggerFactory?.CreateLogger<DataConfigurationRuleService>() ?? NullLogger<DataConfigurationRuleService>.Instance);
+
+            // FDW-6967: the owner of a path or a container of a shared store, and whose scope decides a write of one. Scoped: it reads the caller.
+            builder.Services.TryAddScoped<IDataStoreItemOwnership, DataStoreItemOwnership>();
+            // FDW-6968: the one way to change or delete a data store that exists, each path and container decided at its owner's scope or the store's.
+            builder.Services.TryAddScoped<IDataStoreWrites>(sp => new DataStoreWrites(
+                sp.GetRequiredService<DataStoreConfigurationProvider>(),
+                sp.GetRequiredService<IDataStoreItemOwnership>(),
+                sp.GetService<ILogger<DataStoreWrites>>()));
+            DataStoreItemOwnershipLog.Registered(loggerFactory?.CreateLogger<DataStoreItemOwnership>() ?? NullLogger<DataStoreItemOwnership>.Instance);
 
             // FDW-5666: the column values search reads containers through this gateway, with the page sizes this option declares.
             var columnValuesLog = loggerFactory?.CreateLogger<ContainerColumnValues>() ?? NullLogger<ContainerColumnValues>.Instance;

@@ -83,6 +83,10 @@ public sealed class RoutingPipelineStatusBroadcaster : IPipelineStatusBroadcaste
         => Route(sink => sink.BroadcastComponents(update, orgId));
 
     /// <inheritdoc />
+    public Task BroadcastRunPiece(PipelineRunPieceUpdate piece)
+        => Route(sink => sink.BroadcastRunPiece(piece));
+
+    /// <inheritdoc />
     public Task BroadcastExecutionPaused(Guid executionId)
         => Route(sink => sink.BroadcastExecutionPaused(executionId));
 

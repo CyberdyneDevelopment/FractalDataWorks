@@ -16,6 +16,7 @@ public sealed class CountCalculationType : CalculationTypeBase
     public CountCalculationType() : base(
         name: "Count",
         category: "Aggregation",
+        description: "Returns the number of values",
         calculate: (rows, col, param) =>
         {
             var count = 0;

@@ -36,6 +36,7 @@ public sealed class ContainerKeyFieldResolutionTests
                     [
                         new DataContainerConfiguration
                         {
+                            TypeId = "Endpoint",
                             Id = Guid.NewGuid(),
                             Name = "Team",
                             Fields =
@@ -69,7 +70,7 @@ public sealed class ContainerKeyFieldResolutionTests
 
         container.Keys.Single().KeyFields.Single().LocalField.Name.ShouldBe("Code");
         container.GetPrimaryKeyFieldName().ShouldBe("Code");
-        container.GetDeclaredOrderFieldName().ShouldBe("Code");
+        container.DeclaredOrderFieldNames().ShouldBe(new[] { "Code" });
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public sealed class ContainerKeyFieldResolutionTests
         var container = await Build(new DataContainerKeyFieldConfiguration { Name = "Code", Ordinal = 0 });
 
         container.Keys.Single().KeyFields.Single().LocalField.Name.ShouldBe("Code");
-        container.GetDeclaredOrderFieldName().ShouldBe("Code");
+        container.DeclaredOrderFieldNames().ShouldBe(new[] { "Code" });
     }
 
     [Fact]
@@ -93,6 +94,6 @@ public sealed class ContainerKeyFieldResolutionTests
         var container = await Build(new DataContainerKeyFieldConfiguration { Id = Guid.NewGuid(), DataContainerFieldId = Guid.NewGuid(), Name = "Code", Ordinal = 0 });
 
         container.Keys.Single().KeyFields.ShouldBeEmpty();
-        container.GetDeclaredOrderFieldName().ShouldBeNull();
+        container.DeclaredOrderFieldNames().ShouldBeEmpty();
     }
 }

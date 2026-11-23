@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Tags.Abstractions;
 
@@ -13,4 +14,7 @@ public sealed class ConnectionTaggableKind : TaggableKindBase
         : base("Connection", "conn", "ConnectionTag", "ConnectionId", string.Empty)
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.EnforcedByDatabase("FK_ConnectionTag_Connection");
 }

@@ -19,7 +19,20 @@ public sealed class DoWhileFlowStepBuilder : FlowStepBuilderBase
     /// <inheritdoc />
     public override IGenericResult<IFlowStep> Create(PipelineComponentConfiguration component, IReadOnlyList<IFlowStep> body, FlowBuildContext context)
     {
-        if (component.ConditionExpression is not { } expression || component.MaxIterations is not { } maximum)
+        if (component.MaxIterations is not { } maximum)
+        {
+            return Missing(component, context);
+        }
+
+        // Why judged over the round (FDW-6134): a decision inside the body wrote what it fired in the scope of the round that just ran.
+        if (DecisionTests.TestOutputOf(component) is { } testOutput)
+        {
+            return FlowFired.Parse(testOutput) is { } signal
+                ? GenericResult<IFlowStep>.Success(new FlowDoWhile(component.Name, variables => FlowFired.Has(variables, signal), true, maximum, body, context.Logger))
+                : GenericResult<IFlowStep>.Failure(GraphLog.StepInvalid(context.Logger, component.Name, component.ComponentType, $"the test '{testOutput}' is not a decision output inside the loop"));
+        }
+
+        if (component.ConditionExpression is not { } expression)
         {
             return Missing(component, context);
         }

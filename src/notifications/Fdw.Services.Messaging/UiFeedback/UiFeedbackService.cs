@@ -54,6 +54,8 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
     /// <param name="userNames">Reads the caller's user name from their account, for the rows that record who acted (FDW-2199).</param>
     /// <param name="holders">Says who holds the permission to read comments, the people a new comment is told to.</param>
     /// <param name="messages">Tells each of them, and marks an alert read when it is acknowledged.</param>
+    /// <param name="limits">The limits a comment is held to, as the messaging option's registration built them from the declared defaults and the host's
+    /// configuration (FDW-7058).</param>
     /// <param name="settings">The host's settings, which say who answers the questions left on each screen
     /// (<see cref="SettingDefinitions.UiFeedbackQuestionAnswerers"/>); <see langword="null"/> in a host that registers none.</param>
     public UiFeedbackService(
@@ -64,6 +66,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         IUserNames userNames,
         IPermissionHolders holders,
         IMessageService messages,
+        UiFeedbackLimits limits,
         Lazy<IEffectiveSettingsProvider>? settings = null)
     {
         _logger = logger ?? NullLogger<UiFeedbackService>.Instance;
@@ -74,7 +77,11 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         _userNames = userNames;
         _holders = holders;
         _messages = messages;
+        Limits = limits;
     }
+
+    /// <inheritdoc />
+    public UiFeedbackLimits Limits { get; }
 
     /// <inheritdoc />
     public async Task<IGenericResult<UiFeedbackPayload>> Create(CreateUiFeedbackRequest request, CancellationToken cancellationToken = default)
@@ -87,7 +94,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             if (!caller.IsSuccess)
                 return caller.ToNewResult<UiFeedbackPayload>();
 
-            if (UiFeedbackChecks.Problem(_logger, request) is { } problem)
+            if (UiFeedbackChecks.Problem(_logger, request, Limits) is { } problem)
                 return GenericResult<UiFeedbackPayload>.Failure(problem);
 
             // Why the route asks only for a signed-in person: anyone may ask a question, so the right to leave any other comment is asked here, where the
@@ -97,7 +104,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             if (!caller.Value.Writes && !(question && tags.All(tag => UiFeedbackTags.ByName(tag).AsksForAnAnswer)))
                 return GenericResult<UiFeedbackPayload>.Failure(MessagingLog.UiFeedbackOnlyQuestions(_logger, caller.Value.UserId.ToString("D"), WritePermission));
 
-            var picture = request.Screenshot is null ? null : UiFeedbackPictures.Decode(_logger, request.Screenshot);
+            var picture = request.Screenshot is null ? null : UiFeedbackPictures.Decode(_logger, request.Screenshot, Limits.MaxPictureBytes);
             if (picture is { IsSuccess: false })
                 return picture.ToNewResult<UiFeedbackPayload>();
 
@@ -239,7 +246,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             if (!caller.IsSuccess)
                 return caller.ToNewResult<UiFeedbackPayload>();
 
-            if (UiFeedbackChecks.BodyProblem(_logger, body) is { } problem)
+            if (UiFeedbackChecks.BodyProblem(_logger, body, Limits) is { } problem)
                 return GenericResult<UiFeedbackPayload>.Failure(problem);
 
             var row = await Own(caller.Value, id, "edit", cancellationToken).ConfigureAwait(false);
@@ -320,7 +327,7 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
             }
 
             // Why the text is checked after the note is found: a person who may not see the note learns nothing from the refusal, not even that it has a rule for text.
-            if (UiFeedbackChecks.BodyProblem(_logger, body) is { } problem)
+            if (UiFeedbackChecks.BodyProblem(_logger, body, Limits) is { } problem)
                 return GenericResult<UiFeedbackCommentPayload>.Failure(problem);
 
             var author = await _userNames.Get(caller.Value.UserId, cancellationToken).ConfigureAwait(false);
@@ -993,8 +1000,8 @@ public sealed class UiFeedbackService : IUiFeedbackService, IAlertSource
         if (skip < 0)
             return MessagingLog.UiFeedbackFieldInvalid(_logger, "skip", "must not be negative");
 
-        return take is < 1 or > UiFeedbackLimits.MaxPageSize
-            ? MessagingLog.UiFeedbackFieldInvalid(_logger, "take", $"must be from 1 to {UiFeedbackLimits.MaxPageSize}")
+        return take < 1 || take > Limits.MaxPageSize
+            ? MessagingLog.UiFeedbackFieldInvalid(_logger, "take", $"must be from 1 to {Limits.MaxPageSize}")
             : null;
     }
 

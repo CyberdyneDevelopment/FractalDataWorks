@@ -58,24 +58,11 @@ public sealed class TimezoneFieldTransformer : FieldTransformationBase
 
     private static DateTimeOffset ConvertToTimeZone(object input, TimeZoneInfo timeZone)
     {
-        return input switch
-        {
-            DateTimeOffset dto => TimeZoneInfo.ConvertTime(dto, timeZone),
-            DateTime dt => ConvertDateTime(dt, timeZone),
-            string s when DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
-                => TimeZoneInfo.ConvertTime(parsed, timeZone),
-            _ => throw new InvalidOperationException(
+        var source = TimeZoneSourceKinds.OfValue(input);
+        return ReferenceEquals(source, TimeZoneSourceKinds.NotFound)
+            ? throw new InvalidOperationException(
                 $"Cannot apply timezone to input of type '{input.GetType().Name}'. Expected DateTime, DateTimeOffset, or parseable string.")
-        };
-    }
-
-    private static DateTimeOffset ConvertDateTime(DateTime input, TimeZoneInfo timeZone)
-    {
-        var utcDt = input.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(input, DateTimeKind.Utc)
-            : input.ToUniversalTime();
-        var converted = TimeZoneInfo.ConvertTimeFromUtc(utcDt, timeZone);
-        return new DateTimeOffset(converted, timeZone.GetUtcOffset(converted));
+            : source.InZone(input, timeZone);
     }
 
     private static TimeZoneInfo ResolveTimeZone(IReadOnlyDictionary<string, string> parameters)

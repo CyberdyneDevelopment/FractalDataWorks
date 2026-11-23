@@ -108,7 +108,9 @@ internal static class DataSetExecutionHelpers
 
     /// <summary>
     /// Gives records read from a source the data set's logical names (FDW-3629): the schema is rebuilt once with each mapped field under its
-    /// logical name, and the records are pointed at it. Unmapped fields keep their names, as <see cref="ApplyFieldRename{T}"/> does.
+    /// logical name, and the records are pointed at it. Unmapped fields keep their names, as <see cref="ApplyFieldRename{T}"/> does, except one
+    /// whose name is a logical field the mapping gives to another column: it is left out, so it never stands in for that field when the mapped
+    /// column is missing (a join or a union then refuses the field, never reads the wrong column; FDW-6946).
     /// </summary>
     /// <param name="ctx">The execution context, for its logger.</param>
     /// <param name="schema">The schema the source's records carry, in the store's names.</param>
@@ -126,17 +128,26 @@ internal static class DataSetExecutionHelpers
         var physicalToLogical = PhysicalToLogical(fieldMappings);
         DataGatewayLogger.ApplyingFieldRename(ctx.Logger, physicalToLogical.Count, sourceName);
 
+        var mappedLogical = new HashSet<string>(fieldMappings.Keys, StringComparer.OrdinalIgnoreCase);
         var fields = new List<Fdw.Data.Abstractions.IDataField>(schema.FieldCount);
-        foreach (var field in schema.Fields)
+        var kept = new List<int>(schema.FieldCount);
+        for (var ordinal = 0; ordinal < schema.FieldCount; ordinal++)
         {
-            fields.Add(physicalToLogical.TryGetValue(field.Name, out var logical) ? new RenamedDataField(field, logical) : field);
+            var field = schema.Fields[ordinal];
+            if (physicalToLogical.TryGetValue(field.Name, out var logical))
+                fields.Add(new RenamedDataField(field, logical));
+            else if (!mappedLogical.Contains(field.Name))
+                fields.Add(field);
+            else
+                continue;
+            kept.Add(ordinal);
         }
 
         var logicalSchema = new RecordSchema(fields);
         var renamed = new List<DataRecord>(records.Count);
         foreach (var record in records)
         {
-            renamed.Add(new DataRecord(logicalSchema, record.Values.ToArray()));
+            renamed.Add(new DataRecord(logicalSchema, [.. kept.Select(ordinal => record.Values[ordinal])]));
         }
 
         return (logicalSchema, renamed);

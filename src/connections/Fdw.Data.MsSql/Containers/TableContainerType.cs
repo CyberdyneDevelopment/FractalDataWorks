@@ -8,7 +8,7 @@ namespace Fdw.Data.MsSql;
 /// Container type for SQL Server tables.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(ContainerTypes), "Table", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ContainerTypes), "Table")]
 public sealed class TableContainerType : ContainerTypeBase
 {
     /// <summary>
@@ -19,7 +19,8 @@ public sealed class TableContainerType : ContainerTypeBase
             name: "Table",
             displayName: "SQL Table",
             description: "SQL Server table container with full schema discovery support",
-            supportsSchemaDiscovery: true)
+            supportsSchemaDiscovery: true,
+            supportedOperations: ["Query", "Insert", "Update", "Delete"])
     {
     }
 }

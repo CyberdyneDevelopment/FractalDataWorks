@@ -22,7 +22,13 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// </summary>
 public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest, CatalogSearchResponse>
 {
-    private readonly CatalogSearch _search;
+    private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly IDataStoreProvider _dataStores;
+    private readonly IPipelineConfigurationProvider _pipelines;
+    private readonly ICalculationConfigurationProvider _calculations;
+    private readonly ITransformationConfigurationProvider _transformations;
+    private readonly IGlossaryTermConfigurationProvider _terms;
+    private readonly IReadOnlyList<IRankedSearch> _fieldSearches;
 
     /// <summary>Initializes a new instance of the <see cref="SearchCatalogEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
@@ -44,8 +50,13 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
         IEnumerable<IRankedSearch> fieldSearches)
     {
         Logger = logger;
-        _search = new CatalogSearch(
-            dataSets, dataStores, pipelines, calculations, transformations, [.. fieldSearches, new GlossaryTermSearch(terms, logger)], logger);
+        _dataSets = dataSets;
+        _dataStores = dataStores;
+        _pipelines = pipelines;
+        _calculations = calculations;
+        _transformations = transformations;
+        _terms = terms;
+        _fieldSearches = [.. fieldSearches];
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -70,7 +81,8 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
                 "pipelines and glossary terms whose name or description contains q (ignoring case), the closest names first. entityTypes " +
                 "narrows the kinds (repeat it per kind); left out, every kind is searched, and q left out lists everything. skip and take page " +
                 "the matches (take is the DefaultPaginationSize setting when left out and at most MaxPaginationSize" +
-                ", and skip plus take at most " + CatalogSearchLimits.MaxWindow + "). Each entry carries its kind, name, description and where it sits. A thing the caller may not see is absent. total counts " +
+                ", and skip plus take at most the KeyChunkSize the configuration gateway is registered with, 1000 unless the host " +
+                "changes it, because each source reads skip plus take of its closest matches and places them with one In filter). Each entry carries its kind, name, description and where it sits. A thing the caller may not see is absent. total counts " +
                 "every match before paging.";
         });
     }
@@ -102,14 +114,18 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
         var skip = page.Skip;
         var take = page.Take;
 
-        // Why: the page is chosen from the closest matches each source returns, and a source reads no more than the window.
-        if ((long)skip + take > CatalogSearchLimits.MaxWindow)
+        // Why: the page is chosen from the closest matches each source returns, and a source reads no more than the keys one statement
+        // carries, which is the host's configuration (FDW-7106).
+        var gateways = Resolve<IConfigurationGatewayProvider>();
+        if ((long)skip + take > gateways.KeyChunkSize)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.SearchCatalogWindowTooLarge(Logger, CatalogSearchLimits.MaxWindow)), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(CatalogAnswerLog.SearchCatalogWindowTooLarge(Logger, gateways.KeyChunkSize)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
-        var found = await _search.Run(kinds, (req.Query ?? string.Empty).Trim(), skip, take, ct).ConfigureAwait(false);
+        var found = await new CatalogSearch(
+            _dataSets, _dataStores, _pipelines, _calculations, _transformations,
+            [.. _fieldSearches, new GlossaryTermSearch(_terms, gateways, Logger)], Logger).Run(kinds, (req.Query ?? string.Empty).Trim(), skip, take, ct).ConfigureAwait(false);
         if (found.IsFailure)
         {
             await Send.ResultAsync(ResultHttpStatusMapper.Answer(found, HttpContext)).ConfigureAwait(false);

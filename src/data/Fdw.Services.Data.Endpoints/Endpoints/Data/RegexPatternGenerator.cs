@@ -13,8 +13,6 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 internal static class RegexPatternGenerator
 {
-    private const int MaxUnboundedRepeat = 8;
-
     /// <summary>Generates one string honouring as much of <paramref name="pattern"/> as this generator supports.</summary>
     [SuppressMessage("Security", "SCS0005:Weak random number generator", Justification = "Generates sample/preview data, not security-sensitive")]
     public static string Generate(string pattern, Random random)
@@ -48,13 +46,8 @@ internal static class RegexPatternGenerator
         if (c == '\\' && index + 1 < pattern.Length)
         {
             var escaped = pattern[index + 1];
-            return (escaped switch
-            {
-                'd' => r => (char)('0' + r.Next(10)),
-                'w' => r => RandomFrom(r, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"),
-                's' => _ => ' ',
-                _ => _ => escaped,
-            }, 2);
+            var escapeClass = RegexEscapeClasses.BySymbol(escaped);
+            return (ReferenceEquals(escapeClass, RegexEscapeClasses.NotFound) ? (Func<Random, char>)(_ => escaped) : escapeClass.Pick, 2);
         }
 
         if (c == '[')
@@ -75,31 +68,13 @@ internal static class RegexPatternGenerator
         return (_ => c, 1);
     }
 
-    /// <summary>Reads a trailing quantifier (*, +, ?, {n}, {n,m}), defaulting to exactly one.</summary>
+    /// <summary>Reads a trailing quantifier (*, +, ?, {n}, {n,m}); where none follows the atom, it repeats exactly once.</summary>
     private static (int Min, int Max, int Consumed) ReadQuantifier(string pattern, int index)
     {
         if (index >= pattern.Length) return (1, 1, 0);
 
-        switch (pattern[index])
-        {
-            case '*': return (0, MaxUnboundedRepeat, 1);
-            case '+': return (1, MaxUnboundedRepeat, 1);
-            case '?': return (0, 1, 1);
-            case '{':
-                var close = pattern.IndexOf('}', index + 1);
-                if (close > index)
-                {
-                    var body = pattern[(index + 1)..close];
-                    var parts = body.Split(',');
-                    var min = int.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
-                    var max = parts.Length > 1 && parts[1].Length > 0
-                        ? int.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture)
-                        : (parts.Length > 1 ? min + MaxUnboundedRepeat : min);
-                    return (min, max, close - index + 1);
-                }
-                return (1, 1, 0);
-            default: return (1, 1, 0);
-        }
+        var quantifier = RegexQuantifiers.BySymbol(pattern[index]);
+        return ReferenceEquals(quantifier, RegexQuantifiers.NotFound) ? (1, 1, 0) : quantifier.Read(pattern, index);
     }
 
     [SuppressMessage("Security", "SCS0005:Weak random number generator", Justification = "Generates sample/preview data, not security-sensitive")]

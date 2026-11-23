@@ -13,6 +13,7 @@ using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Descriptions.Abstractions;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -23,6 +24,7 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRequest, SecretManagerDetailResponse>
 {
     private readonly ISecretManagerConfigurationProvider _configProvider;
+    private readonly IDescriptionReader _descriptions;
     private readonly ILogger<GetSecretManagerEndpointBase> _logger;
 
     /// <summary>
@@ -30,9 +32,11 @@ public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRe
     /// </summary>
     protected GetSecretManagerEndpointBase(
         ISecretManagerConfigurationProvider configProvider,
+        IDescriptionReader descriptions,
         ILogger<GetSecretManagerEndpointBase> logger)
     {
         _configProvider = configProvider;
+        _descriptions = descriptions;
         _logger = logger ?? NullLogger<GetSecretManagerEndpointBase>.Instance;
     }
 
@@ -87,6 +91,14 @@ public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRe
         if (shown.IsFailure)
         {
             await Send.ResultAsync(ResultHttpStatusMapper.Answer(shown, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        // The secret manager domain never fills a record on load (FDW-6208): a description the settings show is read here, once for this answer, and a failed read fails the route.
+        var described = await SecretManagerDescriptions.Fill(shown.Value!, config, _descriptions, ct).ConfigureAwait(false);
+        if (described.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(described, HttpContext)).ConfigureAwait(false);
             return;
         }
 

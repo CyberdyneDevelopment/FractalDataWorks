@@ -27,4 +27,22 @@ public class PipelineRunComponentResponse
 
     /// <summary>Gets or sets the rows that arrived at the component, whether or not it passes any on; null until it starts (FDW-3778).</summary>
     public long? RowsIn { get; set; }
+
+    /// <summary>
+    /// Gets or sets the estimated value bytes the component holds in memory now (a sort, aggregate, lookup reference or whole load while it builds), or <see langword="null"/>
+    /// until it starts (FDW-5231, FDW-5232). Estimated from the values' types, not process memory.
+    /// </summary>
+    public long? HeldBytes { get; set; }
+
+    /// <summary>Gets or sets the rows the component holds in memory now, or <see langword="null"/> until it starts (FDW-5232).</summary>
+    public long? HeldRows { get; set; }
+
+    /// <summary>Gets or sets the most estimated value bytes the component has held at once in this run, or <see langword="null"/> until it starts (FDW-5232).</summary>
+    public long? PeakHeldBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long, in milliseconds, the component has waited writing because a component it feeds was full, summed over its outgoing links, or
+    /// <see langword="null"/> until it starts (FDW-5232).
+    /// </summary>
+    public long? BlockedMs { get; set; }
 }

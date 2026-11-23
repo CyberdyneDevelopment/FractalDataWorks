@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 using Xunit;
@@ -19,6 +20,9 @@ public class WebMcpJsGeneratorTests
     private sealed class Registry(params WebMcpToolDescriptor[] tools) : IWebMcpToolRegistry
     {
         public IReadOnlyList<WebMcpToolDescriptor> Tools { get; } = tools;
+
+        public IReadOnlyList<WebMcpToolPlan> Plans { get; } =
+            [.. tools.Select(tool => WebMcpToolPlan.Create(tool, WebMcpCompositeCatalog.MaxDepth, NullLogger.Instance).Value.ShouldNotBeNull())];
     }
 
     private sealed class NameRequest
@@ -35,7 +39,7 @@ public class WebMcpJsGeneratorTests
 
     private static string Generate(params WebMcpToolDescriptor[] tools)
         => new WebMcpJsGenerator(new Registry(tools), NullLogger<WebMcpJsGenerator>.Instance)
-            .Generate(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, SelfAddressSource: null, SelfBaseAddress: null));
+            .Generate(new WebMcpHostSettings("X-Webmcp-Key", ClientApiKey: null, SelfAddressSource: null, SelfBaseAddress: null, SchemaMaxDepth: WebMcpCompositeCatalog.MaxDepth));
 
     [Fact]
     [Trait("Priority", "P1")]

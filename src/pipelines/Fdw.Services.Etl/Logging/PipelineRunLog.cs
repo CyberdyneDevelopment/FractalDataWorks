@@ -303,4 +303,48 @@ public static partial class PipelineRunLog
     [MessageLogging(EventId = 20241, Level = LogLevel.Information,
         Message = "Pipeline '{pipelineName}' rejected no records, so its reject steps were not run")]
     public static partial IGenericMessage RejectStepsSkippedNoRejections(ILogger logger, string pipelineName);
+
+    /// <summary>
+    /// Logs a pipeline whose stored limit is above the ceiling in force now, so its run is refused and never started with a lowered limit (FDW-6141). The number is in the
+    /// Validation category (2): the limit is what the caller (or the saved pipeline) stated, so the request is what is wrong and it answers HTTP 400 (FDW-7013 moved it from 60841, whose Configuration category answered 500).
+    /// </summary>
+    [MessageLogging(EventId = 20841, Level = LogLevel.Error,
+        Message = "Pipeline '{pipelineName}' states {limit} {value}, which is above the ceiling in force now, {ceiling}; the run is refused and is not started with a lower limit")]
+    public static partial IGenericMessage LimitAboveCeiling(ILogger logger, string pipelineName, string limit, int value, int ceiling);
+
+    /// <summary>
+    /// Logs an Interactive pipeline that states no time limit or no step limit, so its run is refused before anything is opened (FDW-6141). The number is in the
+    /// Validation category (2): the row lacks what its type requires, so the request is what is wrong and it answers HTTP 400 (FDW-7013 moved it from 60843; 20843 was taken).
+    /// </summary>
+    [MessageLogging(EventId = 20845, Level = LogLevel.Error,
+        Message = "Pipeline '{pipelineName}' is run at once and states no {limit}; the run is refused and nothing is assumed for it")]
+    public static partial IGenericMessage AtOnceLimitNotStated(ILogger logger, string pipelineName, string limit);
+
+    /// <summary>
+    /// Logs a ceiling on an at-once run's limits that is not set to a positive number, so the run is refused and none is assumed (FDW-6141). The number is in the
+    /// Validation category (2), as the ceiling it is judged against is a value the caller's limits are checked by (FDW-7013 moved it from 60844).
+    /// </summary>
+    [MessageLogging(EventId = 20844, Level = LogLevel.Error,
+        Message = "The setting {setting} is not set to a positive number, so the limits of an at-once run cannot be judged and the run is refused; no ceiling is assumed")]
+    public static partial IGenericMessage AtOnceCeilingNotSet(ILogger logger, string setting);
+
+    /// <summary>
+    /// Logs a pipeline started under an at-once run that has no time or no steps left (FDW-6701), so it is refused before anything is opened and no limit is assumed for it. The number
+    /// is in the Configuration category (6): the parent's own limits are what is used up, and a retry under the same parent changes nothing.
+    /// </summary>
+    [MessageLogging(EventId = 60853, Level = LogLevel.Error,
+        Message = "Pipeline '{pipelineName}' is started under an at-once run that has no {limit} left; it is not started and no limit is assumed for it")]
+    public static partial IGenericMessage AtOnceParentLimitsUsedUp(ILogger logger, string pipelineName, string limit);
+
+    /// <summary>Logs an exception that left the code that runs an at-once run, which has already closed its record as failed when it could (FDW-6141).</summary>
+    [MessageLogging(EventId = 90843, Level = LogLevel.Error, Message = "The code that runs an at-once run ended with an exception")]
+    public static partial IGenericMessage AtOnceRunEndedWithException(ILogger logger, Exception exception);
+
+    /// <summary>
+    /// Logs the step a run was about to take when its step limit had none left, so the step is not started and the run ends (FDW-6141). The number is in the Configuration
+    /// category (6): the limit is a fact the pipeline states, and no retry of the same run changes it.
+    /// </summary>
+    [MessageLogging(EventId = 60845, Level = LogLevel.Error,
+        Message = "Pipeline '{pipelineName}' has taken every step its step limit allows, so step '{stepName}' is not started and the run ends")]
+    public static partial IGenericMessage StepLimitReached(ILogger logger, string pipelineName, string stepName);
 }

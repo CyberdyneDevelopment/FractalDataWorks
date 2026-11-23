@@ -5,7 +5,7 @@ FDW reference applications live in their own repositories — they are not part 
 | Repo | Purpose |
 |------|---------|
 | `reference-api` | REST API server (FastEndpoints + JWT + FDW hosting) |
-| `reference-etl` | ETL pipeline server (`EtlPipelineTypes` + background executor) |
+| `reference-etl` | ETL pipeline server (`PipelineTypes` with `GraphPipelineType` + background executor) |
 | `reference-scheduler` | Schedule evaluation server (`SchedulerTypes` + `IPipelineJobClient`) |
 | `reference-react-ui` | Web console (React + TypeScript); calls `reference-api` over HTTP |
 

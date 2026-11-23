@@ -23,7 +23,7 @@ namespace Fdw.Services.Data.Caching;
 /// </remarks>
 internal static class CacheKeyText
 {
-    private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+    internal static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
     // The Metadata keys that steer the cache rather than the read: they never change what a query answers. The command's
     // Metadata is case-insensitive, so the match is too.
@@ -52,6 +52,7 @@ internal static class CacheKeyText
         Projection(text, query.Projection);
         Aggregation(text, query.Aggregation);
         Joins(text, query.Joins);
+        Unions(text, query.Unions);
         Flags(text, query);
         Metadata(text, query.Metadata);
         return text.ToString();
@@ -160,6 +161,22 @@ internal static class CacheKeyText
         }
     }
 
+    // The containers a union stacks, each with its columns in order (FDW-6946): another branch, or the same columns in another order, is
+    // another answer.
+    private static void Unions(StringBuilder text, IReadOnlyList<IUnionBranch>? unions)
+    {
+        text.Append(";unions=");
+        foreach (var branch in unions ?? [])
+        {
+            Text(text, "u", branch.ContainerName);
+            foreach (var field in branch.Fields)
+            {
+                Text(text, "p", field.PropertyName);
+                NullableText(text, "a", field.Alias);
+            }
+        }
+    }
+
     private static void Flags(StringBuilder text, IQueryCommand query)
         => text.Append(";flags=")
             .Append(query.ReadsForWrite ? 'W' : 'w')
@@ -179,119 +196,13 @@ internal static class CacheKeyText
         }
     }
 
-    private static void Node(StringBuilder text, IFilterNode node)
-    {
-        switch (node)
-        {
-            case IFilterCondition condition:
-                text.Append("c(");
-                Text(text, "p", condition.PropertyName);
-                Text(text, "o", condition.Operator.Name);
-                Value(text, condition.Value);
-                text.Append(')');
-                return;
-            case FilterGroup group:
-                text.Append("g(");
-                Text(text, "l", group.Operator.Name);
-                foreach (var child in group.Nodes)
-                    Node(text, child);
-                text.Append(')');
-                return;
-            default:
-                throw new InvalidOperationException(
-                    $"A filter node of type '{node.GetType().FullName}' is neither a condition nor a group, so a query holding it has no cache key.");
-        }
-    }
+    private static void Node(StringBuilder text, IFilterNode node) => CacheKeyNodeKinds.Append(text, node);
 
     // A value carries its type, so 1 and "1" (or an int and a long 1) never share text, and an exact form: the round-trip
     // format where the default one drops precision (DateTime, TimeOnly, double).
-    private static void Value(StringBuilder text, object? value)
-    {
-        switch (value)
-        {
-            case null:
-                text.Append('n');
-                return;
-            case string s:
-                Text(text, "s", s);
-                return;
-            case bool b:
-                text.Append(b ? "b1" : "b0");
-                return;
-            case char ch:
-                Text(text, "ch", ch.ToString(Invariant));
-                return;
-            case System.Text.Json.JsonElement json:
-                // A value read from a request body: its raw text is exact.
-                Text(text, "json", json.ValueKind.ToString());
-                Text(text, "v", json.GetRawText());
-                return;
-        }
+    internal static void Value(StringBuilder text, object? value) => CacheKeyValueKinds.Append(text, value);
 
-        if (TimeValue(text, value) || NumberValue(text, value))
-            return;
-
-        if (value is not IEnumerable items)
-        {
-            throw new InvalidOperationException(
-                $"A value of type '{value.GetType().FullName}' has no exact text form, so a query holding it has no cache key.");
-        }
-
-        text.Append('[');
-        foreach (var item in items)
-            Value(text, item);
-        text.Append(']');
-    }
-
-    // Writes a date or time in its round-trip form; answers whether the value was one.
-    private static bool TimeValue(StringBuilder text, object value)
-    {
-        switch (value)
-        {
-            case DateTime dateTime:
-                Text(text, "dt", dateTime.ToString("O", Invariant));
-                return true;
-            case DateTimeOffset dateTimeOffset:
-                Text(text, "dto", dateTimeOffset.ToString("O", Invariant));
-                return true;
-            case DateOnly dateOnly:
-                Text(text, "date", dateOnly.ToString("O", Invariant));
-                return true;
-            case TimeOnly timeOnly:
-                Text(text, "time", timeOnly.ToString("O", Invariant));
-                return true;
-            case TimeSpan timeSpan:
-                Text(text, "span", timeSpan.ToString("c", Invariant));
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    // Writes a number, an enum or a Guid exactly; answers whether the value was one.
-    private static bool NumberValue(StringBuilder text, object value)
-    {
-        switch (value)
-        {
-            case double d:
-                Text(text, "r8", d.ToString("R", Invariant));
-                return true;
-            case float f:
-                Text(text, "r4", f.ToString("R", Invariant));
-                return true;
-            case Enum e:
-                Text(text, "enum", e.GetType().FullName!);
-                Text(text, "v", e.ToString("D"));
-                return true;
-            case sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128 or decimal or Guid:
-                Text(text, value.GetType().Name, ((IFormattable)value).ToString(null, Invariant));
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static void Text(StringBuilder text, string tag, string value)
+    internal static void Text(StringBuilder text, string tag, string value)
         => text.Append(tag).Append(value.Length.ToString(Invariant)).Append(':').Append(value);
 
     private static void NullableText(StringBuilder text, string tag, string? value)

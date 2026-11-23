@@ -46,12 +46,9 @@ public static class WorkspacePermissionsOrUndo
         }
 
         var id = workspaceId.ToString("D", CultureInfo.InvariantCulture);
-        var left = (retired.IsSuccess, deleted.IsSuccess) switch
-        {
-            (false, false) => $"the workspace and its permissions workspaces/{id}:*",
-            (false, true) => $"its permissions workspaces/{id}:*",
-            _ => "the workspace",
-        };
+        var left = retired.IsSuccess
+            ? "the workspace"
+            : deleted.IsSuccess ? $"its permissions workspaces/{id}:*" : $"the workspace and its permissions workspaces/{id}:*";
         return GenericResult.Failure(
             WorkspacesResultCodes.ByName("WorkspaceCompensationFailed"), logger,
             ResultDetails.Create("name", workspaceName, "step", "creating its permissions", "undo", left));

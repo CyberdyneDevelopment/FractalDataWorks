@@ -254,6 +254,14 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
             .Build().Command;
     }
 
+    /// <summary>Builds a query for every version of a configuration record by its durable id: current, retired and deleted alike.</summary>
+    /// <param name="dataStoreName">The data store to read from.</param>
+    /// <param name="pathName">The path within the data store.</param>
+    /// <param name="id">The configuration's durable id.</param>
+    /// <remarks>Used only to tell a member that was retired from one that was never there (FDW-6221); every read of a member's content filters on the version.</remarks>
+    public virtual IDataCommand ListVersions(string dataStoreName, string pathName, Guid id)
+        => new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName).Where(IdColumn, id).Build().Command;
+
     /// <summary>Builds a query for all current, non-deleted configuration records.</summary>
     /// <param name="dataStoreName">The data store to read from.</param>
     /// <param name="pathName">The path within the data store.</param>

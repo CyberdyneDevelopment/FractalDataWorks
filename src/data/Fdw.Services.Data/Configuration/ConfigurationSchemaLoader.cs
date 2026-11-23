@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -21,13 +20,8 @@ using Fdw.Services.Data.Logging;
 namespace Fdw.Services.Data;
 
 /// <summary>
-/// Registration helpers for <see cref="IConfigurationGateway"/>. These extension methods are the
-/// explicit exception to the no-extension-methods rule: the host must supply the concrete
-/// <see cref="IConnectionFactory"/> implementation (and optionally an <see cref="ISecretManager"/>)
-/// at registration time, which the ServiceTypeCollection 3-phase cannot do cleanly.
-/// </summary>
-/// <summary>
-/// Loads <c>configurationSchema.json</c>, resolving environment placeholders.
+/// Loads <c>configurationSchema.json</c>, resolving environment placeholders: the connections, the secret managers
+/// those connections name for their secrets, the data stores and the roles (FDW-6360).
 /// </summary>
 /// <remarks>
 /// Public because a host that builds its own gateway - a test fixture, or an app that does not run
@@ -41,6 +35,7 @@ public static partial class ConfigurationSchemaLoader
         Converters =
         {
             new ConnectionConfigurationJsonConverter(),
+            new SecretManagerConfigurationJsonConverter(),
         },
     };
 
@@ -78,10 +73,9 @@ public static partial class ConfigurationSchemaLoader
         {
             jsonBytes = File.ReadAllBytes(jsonFilePath);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
         {
-            throw new InvalidOperationException(
-                $"Failed to read configurationSchema.json from '{jsonFilePath}': {ex.Message}", ex);
+            return GenericResult<ConfigurationSchema>.Failure(ConfigurationGatewayProviderLog.SchemaFileUnreadable(logger, jsonFilePath, ex.Message));
         }
 
         var resolved = ResolvePlaceholders(Encoding.UTF8.GetString(jsonBytes), jsonFilePath, logger);
@@ -93,24 +87,31 @@ public static partial class ConfigurationSchemaLoader
         {
             root = JsonSerializer.Deserialize<ConfigurationSchemaRoot>(resolvedJson, _schemaJsonOptions);
         }
+        catch (SchemaRefusalException coded)
+        {
+            // A converter's coded refusal is the failure; one made without a way to say it is the file that did not bind, with its text.
+            return GenericResult<ConfigurationSchema>.Failure(
+                coded.Refusal is { } refusal
+                    ? refusal(logger)
+                    : ConfigurationGatewayProviderLog.SchemaNotBound(logger, jsonFilePath, coded.Message));
+        }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException(
-                $"Failed to deserialize configurationSchema.json from '{jsonFilePath}': {ex.Message}", ex);
+            // Any other binder error is the one message that says the file did not bind, with the binder's own text.
+            return GenericResult<ConfigurationSchema>.Failure(ConfigurationGatewayProviderLog.SchemaNotBound(logger, jsonFilePath, ex.Message));
         }
 
         if (root?.ConfigurationSchema is null)
-            throw new InvalidOperationException(
-                $"configurationSchema.json at '{jsonFilePath}' is missing the 'ConfigurationSchema' root object.");
+            return GenericResult<ConfigurationSchema>.Failure(ConfigurationGatewayProviderLog.SchemaRootMissing(logger, jsonFilePath));
 
-        return GenericResult<ConfigurationSchema>.Success(root.ConfigurationSchema);
+        // The binder drops a key no class binds without a word; a second pass over the same document says each one (FDW-6584).
+        using var document = JsonDocument.Parse(resolvedJson);
+        var unbound = ConfigurationSchemaUnboundKeys.Judge(document.RootElement, jsonFilePath, _schemaJsonOptions, logger);
+
+        return unbound.Count > 0
+            ? GenericResult<ConfigurationSchema>.Failure(unbound)
+            : GenericResult<ConfigurationSchema>.Success(root.ConfigurationSchema);
     }
-
-    [GeneratedRegex(
-        @"\$\{(?<name>[A-Za-z_][A-Za-z0-9_]*)\}",
-        RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture,
-        matchTimeoutMilliseconds: 1000)]
-    private static partial Regex EnvironmentPlaceholder();
 
     private static IGenericResult<string> ResolvePlaceholders(string json, string schemaPath, ILogger logger)
     {
@@ -128,47 +129,16 @@ public static partial class ConfigurationSchemaLoader
         var both = new List<string>();
         var missing = new List<string>();
 
-        var resolved = EnvironmentPlaceholder().Replace(json, match => ValueOf(match, slot, both, missing, logger));
+        var resolved = SlotPlaceholders.Substitute(json, slot, static value => JsonEncodedText.Encode(value).ToString(), logger, both, missing);
 
         if (both.Count > 0 && slot is not null)
-            return GenericResult<string>.Failure(SlotFileLog.PlaceholderStatedByBothSources(logger, schemaPath, slot.FilePath, Names(both)));
+            return GenericResult<string>.Failure(SlotFileLog.PlaceholderStatedByBothSources(logger, schemaPath, slot.FilePath, SlotPlaceholders.Names(both)));
 
         if (missing.Count > 0)
             return GenericResult<string>.Failure(slot is null
-                ? SlotFileLog.PlaceholderNotStated(logger, schemaPath, Names(missing))
-                : SlotFileLog.PlaceholderNotStatedOnSlot(logger, schemaPath, slot.FilePath, Names(missing)));
+                ? SlotFileLog.PlaceholderNotStated(logger, schemaPath, SlotPlaceholders.Names(missing))
+                : SlotFileLog.PlaceholderNotStatedOnSlot(logger, schemaPath, slot.FilePath, SlotPlaceholders.Names(missing)));
 
         return GenericResult<string>.Success(resolved);
     }
-
-    /// <summary>The text one <c>${NAME}</c> becomes; a name with no value or two values stays as it is and is recorded for the failure.</summary>
-    private static string ValueOf(Match match, SlotFile? slot, List<string> both, List<string> missing, ILogger logger)
-    {
-        var name = match.Groups["name"].Value;
-        var fromEnvironment = Environment.GetEnvironmentVariable(name);
-        var fromSlot = slot is not null && slot.Values.TryGetValue(name, out var stated) ? stated : null;
-
-        if (string.IsNullOrEmpty(fromEnvironment))
-        {
-            if (fromSlot is null)
-            {
-                missing.Add(name);
-                return match.Value;
-            }
-
-            SlotFileLog.PlaceholderResolved(logger, name, "the slot file");
-            return JsonEncodedText.Encode(fromSlot).ToString();
-        }
-
-        if (fromSlot is not null)
-        {
-            both.Add(name);
-            return match.Value;
-        }
-
-        SlotFileLog.PlaceholderResolved(logger, name, "the environment");
-        return JsonEncodedText.Encode(fromEnvironment).ToString();
-    }
-
-    private static string Names(List<string> names) => string.Join(", ", names.Distinct(StringComparer.Ordinal));
 }

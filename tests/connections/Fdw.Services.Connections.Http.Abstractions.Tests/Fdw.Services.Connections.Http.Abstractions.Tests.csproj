@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\connections\Fdw.Services.Connections.Http.Abstractions\Fdw.Services.Connections.Http.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\rowsources\Fdw.Data.RowSources.Json\Fdw.Data.RowSources.Json.csproj" />
+    <ProjectReference Include="..\..\..\src\commands\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <!-- Only include Fdw.Services.Connections.Http.Abstractions in coverage -->

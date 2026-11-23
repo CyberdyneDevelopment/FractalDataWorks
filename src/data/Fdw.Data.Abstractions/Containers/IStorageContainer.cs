@@ -76,4 +76,19 @@ public interface IStorageContainer
     /// Gets metadata about this container.
     /// </summary>
     IReadOnlyDictionary<string, object> Metadata { get; }
+
+    /// <summary>
+    /// Gets the keys this container declares: its primary key, its foreign keys and any other key.
+    /// </summary>
+    /// <remarks>
+    /// Never <see langword="null"/>. A container that declares no key answers an empty list, and an empty list means the
+    /// container declares none: a container that cannot say (a serialization container) refuses instead of answering empty.
+    /// <para>
+    /// Why here and not only on <see cref="IDataContainer"/> (FDW-6309): schema discovery returns storage containers, and a
+    /// reader of a discovered container (the schema graph, DDL generation, the merge into a data store) read its keys from
+    /// somewhere else and lost them. The one member means every reader asks the same place, and a key is never dropped by a
+    /// layer that holds the container.
+    /// </para>
+    /// </remarks>
+    IReadOnlyList<IContainerKey> Keys { get; }
 }

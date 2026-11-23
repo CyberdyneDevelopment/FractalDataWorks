@@ -42,6 +42,7 @@ public sealed class AlertActionService : IAlertActionService
     /// <param name="userNames">Reads the caller's user name from their account, for the rows that record who acted.</param>
     /// <param name="clock">The clock a time is judged and set on.</param>
     /// <param name="sources">Every kind of alert; each kind is named once.</param>
+    /// <param name="limits">The limits a question about alerts is held to, as the messaging option's registration built them (FDW-7059).</param>
     public AlertActionService(
         ILogger<AlertActionService> logger,
         IDataGatewayProvider dataGateways,
@@ -49,7 +50,8 @@ public sealed class AlertActionService : IAlertActionService
         IAuthenticationContextAccessor authContext,
         IUserNames userNames,
         TimeProvider clock,
-        IEnumerable<IAlertSource> sources)
+        IEnumerable<IAlertSource> sources,
+        AlertLimits limits)
     {
         _logger = logger ?? NullLogger<AlertActionService>.Instance;
         _store = new AlertStore(_logger, dataGateways, messaging);
@@ -58,7 +60,11 @@ public sealed class AlertActionService : IAlertActionService
         _userNames = userNames;
         _clock = clock;
         _sources = sources.ToDictionary(source => source.Kind, StringComparer.OrdinalIgnoreCase);
+        Limits = limits;
     }
+
+    /// <inheritdoc />
+    public AlertLimits Limits { get; }
 
     /// <inheritdoc />
     public async Task<IGenericResult<AlertList>> List(IReadOnlyList<AlertKey> alerts, CancellationToken cancellationToken = default)
@@ -74,8 +80,8 @@ public sealed class AlertActionService : IAlertActionService
             if (alerts.Count == 0)
                 return GenericResult<AlertList>.Failure(MessagingLog.AlertAskedWrong(_logger, "alert", "must name at least one alert"));
 
-            if (alerts.Count > AlertLimits.MaxAlerts)
-                return GenericResult<AlertList>.Failure(MessagingLog.AlertAskedWrong(_logger, "alert", $"may name at most {AlertLimits.MaxAlerts} alerts"));
+            if (alerts.Count > Limits.MaxAlerts)
+                return GenericResult<AlertList>.Failure(MessagingLog.AlertAskedWrong(_logger, "alert", $"may name at most {Limits.MaxAlerts} alerts"));
 
             var unknown = alerts.Select(alert => alert.Kind).FirstOrDefault(kind => !_sources.ContainsKey(kind));
             if (unknown is not null)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Connections;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -53,7 +54,7 @@ internal static class DataflowNodes
     };
 
     /// <summary>A datastore node.</summary>
-    public static DataflowNodeDto DataStore(DataStoreRecord store) => new()
+    public static DataflowNodeDto DataStore(IDataStoreImplementationConfiguration store) => new()
     {
         Id = DataflowNodeIds.DataStore(store.Id),
         Label = store.Name,

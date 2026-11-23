@@ -15,9 +15,10 @@ public abstract class PeriodComparisonTypeBase : TypeOptionBase<PeriodComparison
     /// Initializes a new instance of the <see cref="PeriodComparisonTypeBase"/> class.
     /// </summary>
     /// <param name="name">The name of this period comparison type.</param>
+    /// <param name="description">What this comparison compares.</param>
     /// <param name="isCumulative">Whether this is a cumulative comparison.</param>
-    protected PeriodComparisonTypeBase(string name, bool isCumulative)
-        : base(name)
+    protected PeriodComparisonTypeBase(string name, string description, bool isCumulative)
+        : base(name, name, description, null)
     {
         IsCumulative = isCumulative;
     }

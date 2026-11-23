@@ -219,6 +219,10 @@ public sealed class GraphDataSetFedFieldsTests
         provider
             .Setup(p => p.Get("NflTeams", ConfigurationLevels.Children, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDataSetImplementationConfiguration>.Success(stored));
+        // Why a second setup: the describer reads whole (GraphDataSetFields.Read) and the check reads without the filled members (GraphDataSetSources.Fields, FDW-7340).
+        provider
+            .Setup(p => p.Get("NflTeams", ConfigurationLevels.Children, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IDataSetImplementationConfiguration>.Success(stored));
 
         var describe = await GraphDataSetFields.Read(provider.Object, "NflTeams", TestContext.Current.CancellationToken);
         var check = await new GraphDataSetSources(provider.Object, new Mock<IDataStoreConfigurationProvider>().Object).Fields(["NflTeams"], TestContext.Current.CancellationToken);
@@ -227,5 +231,8 @@ public sealed class GraphDataSetFedFieldsTests
         check.IsSuccess.ShouldBeTrue(check.CurrentMessage);
         check.Value!["NflTeams"].Select(field => (field.Name, field.TypeName)).ShouldBe(describe.Value!.Select(field => (field.Name, field.Type)).ToList());
         string.Join(",", check.Value["NflTeams"].Select(field => field.Name)).ShouldBe("Id,Name");
+        // Why the reads are counted: each route read the row through its own overload (the describe whole, the check without the filled members) and neither fell to the other's.
+        provider.Verify(p => p.Get("NflTeams", ConfigurationLevels.Children, It.IsAny<CancellationToken>()), Times.Once);
+        provider.Verify(p => p.Get("NflTeams", ConfigurationLevels.Children, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

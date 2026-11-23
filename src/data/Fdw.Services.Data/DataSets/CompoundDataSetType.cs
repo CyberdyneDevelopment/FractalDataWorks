@@ -91,6 +91,10 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (primaryContainerName == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceNoContainer(ctx.Logger, primarySource.SourceName, ctx.Config.Name));
 
+        // A stated union stacks the sources' rows in one UNION ALL statement (FDW-6946); CompoundMappingRules checked every source maps every field.
+        if (SourceCombinationRules.IsUnion(compound))
+            return await ExecuteUnion<T>(ctx, command, sources, primarySource, primaryContainerName, ct).ConfigureAwait(false);
+
         var (owners, ownersError) = FieldOwners<T>(ctx, sources);
         if (ownersError is not null) return ownersError;
 
@@ -113,6 +117,66 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         };
         return await ExecuteCompoundQuery(ctx, sourceQuery, primarySource, primaryContainerName, ct).ConfigureAwait(false);
     }
+
+    // A union read (FDW-6946): the primary source's columns over its own container, each other source's as a UNION ALL branch, every branch
+    // giving the data set's fields in field order under their own names; the filter, order and page apply to the stacked rows by those names.
+    private static async Task<IGenericResult<T>> ExecuteUnion<T>(
+        DataSetExecutionContext ctx,
+        IDataCommand command,
+        IList<DataSetSourceConfiguration> sources,
+        DataSetSourceConfiguration primarySource,
+        string primaryContainerName,
+        CancellationToken ct)
+    {
+        // The store returns the stacked rows with nothing that says which source each came from, so a chain attached to one source's
+        // mappings cannot be run on its rows alone: refused, never run on every source's rows (FDW-877, FDW-6946).
+        foreach (var source in sources)
+        {
+            var chains = await ctx.FieldTransformations.ForSource(source, ct).ConfigureAwait(false);
+            if (chains.IsFailure)
+                return chains.ToNewResult<T>();
+            if (chains.Value!.Count > 0)
+                return GenericResult<T>.Failure(DataGatewayLogger.CompoundUnionChainNotRun(ctx.Logger, ctx.Config.Name, source.SourceName));
+        }
+
+        var fields = ctx.Config.Fields.Where(f => f.IsCurrent && !f.IsDeleted && !f.IsCalculated).OrderBy(f => f.Ordinal).Select(f => f.Name).ToList();
+        var branches = new List<IUnionBranch>(sources.Count - 1);
+        foreach (var source in sources.Where(source => !ReferenceEquals(source, primarySource)))
+        {
+            if (DataSetExecutionHelpers.GetContainerName(source) is not { } container)
+                return GenericResult<T>.Failure(DataGatewayLogger.SourceNoContainer(ctx.Logger, source.SourceName, ctx.Config.Name));
+            branches.Add(new UnionBranch { ContainerName = container, Fields = UnionColumns(source, fields) });
+        }
+
+        var ordering = DataSetKeyOrder.For(ctx.Config, command, ctx.Logger);
+        if (ordering.IsFailure)
+            return ordering.ToNewResult<T>();
+
+        var readFilter = DataSetReadFilter.For(ctx, command);
+        if (readFilter.IsFailure)
+            return readFilter.ToNewResult<T>();
+
+        var named = fields.ToDictionary(name => name, name => name, StringComparer.OrdinalIgnoreCase);
+        var unowned = UnownedField(readFilter.Value?.Root, named);
+        if (unowned is null && ordering.Value is { } stated)
+            unowned = stated.OrderedFields.Select(field => field.PropertyName).FirstOrDefault(name => !named.ContainsKey(name));
+        if (unowned is not null)
+            return GenericResult<T>.Failure(DataGatewayLogger.CompoundFieldNotOwned(ctx.Logger, ctx.Config.Name, unowned));
+
+        var unionQuery = new QueryCommand<T>
+        {
+            Projection = new ProjectionExpression { Fields = UnionColumns(primarySource, fields) },
+            Unions = branches,
+            Filter = readFilter.Value,
+            Ordering = ordering.Value,
+            Paging = (command as IQueryCommand)?.Paging,
+        };
+        return await ExecuteCompoundQuery(ctx, unionQuery, primarySource, primaryContainerName, ct).ConfigureAwait(false);
+    }
+
+    // A source's columns for a union branch: the column it maps each field to, under the field's own name, in field order.
+    private static List<ProjectionField> UnionColumns(DataSetSourceConfiguration source, List<string> fields) =>
+        [.. fields.Select(field => new ProjectionField { PropertyName = source.FieldMappings[field], Alias = field })];
 
     // The container and physical column of the source that holds a field, as the joined query names it.
     private sealed record FieldOwner(string Field, string SourceName, string Container, string Physical)
@@ -268,12 +332,8 @@ public sealed class CompoundDataSetType : DataSetTypeBase
     }
 
     // The first field a filter names that no source holds, or null when every one is held.
-    private static string? UnownedField(IFilterNode? node, IReadOnlyDictionary<string, string> qualified) => node switch
-    {
-        IFilterCondition condition => qualified.ContainsKey(condition.PropertyName) ? null : condition.PropertyName,
-        FilterGroup group => group.Nodes.Select(child => UnownedField(child, qualified)).FirstOrDefault(name => name is not null),
-        _ => null,
-    };
+    private static string? UnownedField(IFilterNode? node, Dictionary<string, string> qualified) =>
+        node is null ? null : FilterNodeKinds.Conditions(node).Select(condition => condition.PropertyName).FirstOrDefault(name => !qualified.ContainsKey(name));
 
     private static async Task<IGenericResult<T>> ExecuteCompoundQuery<T>(
         DataSetExecutionContext ctx,

@@ -6,6 +6,7 @@ using Fdw.Services.Workspaces.Endpoints;
 using Shouldly;
 using Xunit;
 using static Fdw.Services.Tests.Workspaces.Lineage.LineageTestGraphs;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Tests.Workspaces.Lineage;
 
@@ -18,7 +19,7 @@ public class LineageGroupsGraphReadsTests
     private const int PipelinesPerLine = 10;
     private static readonly Dictionary<Guid, IReadOnlyList<string>> NoTags = [];
 
-    private static MapNodeDto Categorised(int n, string name, string? category)
+    private static MapNodeDto Categorized(int n, string name, string? category)
     {
         var node = NewDataSet(n, name);
         node.Category = category;
@@ -33,7 +34,7 @@ public class LineageGroupsGraphReadsTests
         return edge;
     }
 
-    private static LineageGraph Graph(List<MapNodeDto> nodes, List<MapEdgeDto> edges) => LineageProjection.Of(nodes, edges, null);
+    private static LineageGraph Graph(List<MapNodeDto> nodes, List<MapEdgeDto> edges) => LineageProjection.Of(nodes, edges, null, NullLogger.Instance).Value!;
 
     private static LineageGroupsQuery ByCategory(string? path) => new(LineageGroups.ByCategory, path, null, NoTags, false, NoTags, PipelinesPerLine);
 
@@ -44,7 +45,7 @@ public class LineageGroupsGraphReadsTests
     public void AGraphDataSetsReadsDrawLinesFromWhatItReadsToItAndAnIntendedOneSaysSo()
     {
         var graph = Graph(
-            [Categorised(1, "Weather", Nfl), Categorised(2, "Sales", Finance), NewStore(1, "feed")],
+            [Categorized(1, "Weather", Nfl), Categorized(2, "Sales", Finance), NewStore(1, "feed")],
             [OfAGraph(DerivedFrom(DataSetId(1), DataSetId(2))), OfAGraph(StoredIn(DataSetId(1), StoreId(1)), intended: true)]);
 
         var answer = LineageGroups.Of(graph, ByCategory(null));
@@ -65,7 +66,7 @@ public class LineageGroupsGraphReadsTests
     [Fact]
     public void AGroupMadeOnlyForADataStoreHasNoMembers()
     {
-        var graph = Graph([Categorised(1, "Weather", Nfl), NewStore(1, "feed")], [OfAGraph(StoredIn(DataSetId(1), StoreId(1)))]);
+        var graph = Graph([Categorized(1, "Weather", Nfl), NewStore(1, "feed")], [OfAGraph(StoredIn(DataSetId(1), StoreId(1)))]);
 
         var store = LineageGroups.Of(graph, ByCategory(null)).Groups.Single(group => group.Id == "StorePath:feed");
 
@@ -77,7 +78,7 @@ public class LineageGroupsGraphReadsTests
     public void ADerivedEdgeOfAnyOtherKindOfDataSetDrawsNoLineAndAddsNoGroup()
     {
         var graph = Graph(
-            [Categorised(1, "Joined", Nfl), Categorised(2, "Sales", Finance), NewStore(1, "feed")],
+            [Categorized(1, "Joined", Nfl), Categorized(2, "Sales", Finance), NewStore(1, "feed")],
             [DerivedFrom(DataSetId(1), DataSetId(2)), StoredIn(DataSetId(1), StoreId(1))]);
 
         var answer = LineageGroups.Of(graph, ByCategory(null));
@@ -90,7 +91,7 @@ public class LineageGroupsGraphReadsTests
     public void ALineACommonPipelineAndAReadShareCarriesBoth()
     {
         var graph = Graph(
-            [Categorised(1, "Landing", Finance), Categorised(2, "Stats", Nfl), NewPipeline(1, "Load")],
+            [Categorized(1, "Landing", Finance), Categorized(2, "Stats", Nfl), NewPipeline(1, "Load")],
             [Reads(DataSetId(1), PipelineId(1)), Writes(PipelineId(1), DataSetId(2)), OfAGraph(DerivedFrom(DataSetId(2), DataSetId(1)))]);
 
         var line = LineageGroups.Of(graph, ByCategory(null)).Lines.ShouldHaveSingleItem();
@@ -103,7 +104,7 @@ public class LineageGroupsGraphReadsTests
     [Fact]
     public void AReadAlongASingleGroupDrawsNoLine()
     {
-        var graph = Graph([Categorised(1, "A", Nfl), Categorised(2, "B", Nfl)], [OfAGraph(DerivedFrom(DataSetId(1), DataSetId(2)))]);
+        var graph = Graph([Categorized(1, "A", Nfl), Categorized(2, "B", Nfl)], [OfAGraph(DerivedFrom(DataSetId(1), DataSetId(2)))]);
 
         LineageGroups.Of(graph, ByCategory(null)).Lines.ShouldBeEmpty();
     }
@@ -111,7 +112,7 @@ public class LineageGroupsGraphReadsTests
     [Fact]
     public void ACategoryLimitLeavesTheDataStoreGroupAndItsLineOut()
     {
-        var graph = Graph([Categorised(1, "Weather", Nfl), NewStore(1, "feed")], [OfAGraph(StoredIn(DataSetId(1), StoreId(1)))]);
+        var graph = Graph([Categorized(1, "Weather", Nfl), NewStore(1, "feed")], [OfAGraph(StoredIn(DataSetId(1), StoreId(1)))]);
 
         var answer = LineageGroups.Of(graph, ByCategory(Nfl));
 

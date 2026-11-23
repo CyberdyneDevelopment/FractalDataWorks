@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 
 namespace Fdw.Data.Abstractions.Rows;
 
@@ -32,23 +29,13 @@ public static class RowValues
     {
         value = null;
         declaredType = null;
-        switch (row)
-        {
-            case null:
-                return false;
-            case IDictionary<string, object?> dictionary:
-                return TryFind(dictionary.Keys, key => dictionary[key], column, out value);
-            case IReadOnlyDictionary<string, object?> readOnly:
-                return TryFind(readOnly.Keys, key => readOnly[key], column, out value);
-        }
-
-        var property = row.GetType().GetProperty(column, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-        if (property is null)
+        if (row is null)
             return false;
 
-        value = property.GetValue(row);
-        declaredType = property.PropertyType;
-        return true;
+        var reading = RowKinds.OfRow(row).Read(row, column);
+        value = reading.Value;
+        declaredType = reading.DeclaredType;
+        return reading.Found;
     }
 
     /// <summary>
@@ -65,43 +52,15 @@ public static class RowValues
     /// <remarks>Why here: each kind of row says what it declares, so the translators read one binding type instead of choosing between two.</remarks>
     public static bool TryReadForBinding(object? row, string column, Type columnType, out object? value, out Type? bindingType)
     {
-        bindingType = null;
-        switch (row)
-        {
-            case null:
-                value = null;
-                return false;
-            case IDictionary<string, object?> dictionary:
-                return Bound(TryFind(dictionary.Keys, key => dictionary[key], column, out value), value, columnType, out bindingType);
-            case IReadOnlyDictionary<string, object?> readOnly:
-                return Bound(TryFind(readOnly.Keys, key => readOnly[key], column, out value), value, columnType, out bindingType);
-        }
-
-        if (!TryRead(row, column, out value, out var declared))
-            return false;
-
-        bindingType = declared;
-        return true;
-    }
-
-    // A dictionary row's binding type: the column's for a null it holds, none for a value or an absent column.
-    private static bool Bound(bool found, object? value, Type columnType, out Type? bindingType)
-    {
-        bindingType = found && value is null ? columnType : null;
-        return found;
-    }
-
-    // The exact key first, which is the common case and one lookup; otherwise the key that differs only by case.
-    private static bool TryFind(IEnumerable<string> keys, Func<string, object?> read, string column, out object? value)
-    {
         value = null;
-        var key = keys.FirstOrDefault(k => string.Equals(k, column, StringComparison.Ordinal));
-        if (key is null)
-            key = keys.FirstOrDefault(k => string.Equals(k, column, StringComparison.OrdinalIgnoreCase));
-        if (key is null)
+        bindingType = null;
+        if (row is null)
             return false;
 
-        value = read(key);
-        return true;
+        var kind = RowKinds.OfRow(row);
+        var reading = kind.Read(row, column);
+        value = reading.Value;
+        bindingType = kind.BindingType(reading, columnType);
+        return reading.Found;
     }
 }

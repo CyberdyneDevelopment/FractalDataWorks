@@ -79,6 +79,26 @@ public sealed class FederatedDataSetTypeTests
 
     private static DataSetExecutionContext Context(
         IReadOnlyList<DataSetSourceConfiguration> sources, DataSetJoinConfiguration join, Records orders, Records customers)
+        => Context(sources, orders, customers, "Join", [join], []);
+
+    private static DataSetExecutionContext Context(
+        IReadOnlyList<DataSetSourceConfiguration> sources,
+        Records orders,
+        Records customers,
+        string? combination,
+        IList<DataSetJoinConfiguration> joins,
+        IList<DataSetFieldConfiguration> fields)
+        => Context(sources, orders, customers, combination, joins, fields, "Sequential", null);
+
+    private static DataSetExecutionContext Context(
+        IReadOnlyList<DataSetSourceConfiguration> sources,
+        Records orders,
+        Records customers,
+        string? combination,
+        IList<DataSetJoinConfiguration> joins,
+        IList<DataSetFieldConfiguration> fields,
+        string? strategy,
+        FederationSettings? federation)
     {
         var stores = new Mock<IDataStoreProvider>();
         Store(stores, "Order", OrdersConnection);
@@ -98,15 +118,18 @@ public sealed class FederatedDataSetTypeTests
         var resolver = new FieldMappingTransformationResolver(
             gateways.Object,
             new TransformationConfigurationProvider(
-                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation"));
+                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation",
+                TransformationDescriptionDoubles.Writer(), TransformationDescriptionDoubles.Reader()));
 
         var config = new FederatedDataSetConfiguration
         {
             Name = "CustomerOrders",
             Implementation = "Federated",
-            FederationStrategy = "Sequential",
+            FederationStrategy = strategy,
+            Fields = fields,
             Sources = [.. sources],
-            Joins = [join],
+            SourceCombination = combination,
+            Joins = joins,
         };
 
         return new DataSetExecutionContext(
@@ -115,7 +138,8 @@ public sealed class FederatedDataSetTypeTests
             stores.Object,
             new PredicatePushdownAnalyzer(NullLogger<PredicatePushdownAnalyzer>.Instance),
             resolver,
-            NullLogger.Instance);
+            NullLogger.Instance,
+            federation: federation);
     }
 
     private static void Store(Mock<IDataStoreProvider> stores, string container, Guid connectionId)
@@ -152,6 +176,87 @@ public sealed class FederatedDataSetTypeTests
 
     private static Task<IGenericResult<IEnumerable<DataRecord>>> Run(DataSetExecutionContext context) =>
         new FederatedDataSetType().Execute<IEnumerable<DataRecord>>(context, new QueryCommand<DataRecord>(), TestContext.Current.CancellationToken);
+
+    // Two sources that each map both fields of the data set, under their own column names, for a union (FDW-6946).
+    private static IReadOnlyList<DataSetSourceConfiguration> UnionSources() =>
+    [
+        Source("Orders", "Order", ("CustomerId", "cust_id"), ("Name", "label")),
+        Source("Customers", "Customer", ("CustomerId", "id"), ("Name", "name")),
+    ];
+
+    private static List<DataSetFieldConfiguration> UnionFields() =>
+        [new DataSetFieldConfiguration { Name = "Name", Ordinal = 0 }, new DataSetFieldConfiguration { Name = "CustomerId", Ordinal = 1 }];
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW6946")]
+    public async Task AUnionStacksEverySourcesRowsInTheDataSetsFieldOrder()
+    {
+        var result = await Run(Context(
+            UnionSources(), new Records(Schema("cust_id", "label"), [[7, "first"], [8, "second"]]), Customers(), "Union", [], UnionFields()));
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var rows = result.Value.ShouldNotBeNull().ToList();
+        rows.Count.ShouldBe(3, "every row of every source is kept");
+        rows.ShouldAllBe(row => string.Equals(row.Schema.GetFieldName(0), "Name", StringComparison.Ordinal) && string.Equals(row.Schema.GetFieldName(1), "CustomerId", StringComparison.Ordinal));
+        rows.Select(row => row["Name"]).ShouldBe(["first", "second", "Acme"]);
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW6946")]
+    public async Task SeveralSourcesThatStateNeitherAJoinNorAUnionAreRefusedNotStacked()
+    {
+        var result = await Run(Context(UnionSources(), Orders(), Customers(), null, [], UnionFields()));
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code!.Code.ShouldBe("DATASETS-20033");
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW6946")]
+    public async Task AUnionSourceWhoseRowsDoNotCarryAFieldIsRefusedNamingIt()
+    {
+        var unmapped = new[] { Source("Orders", "Order", ("CustomerId", "cust_id"), ("Name", "label")), Source("Customers", "Customer", ("CustomerId", "id"), ("Name", "missing")) };
+
+        var result = await Run(Context(unmapped, new Records(Schema("cust_id", "label"), [[7, "first"]]), Customers(), "Union", [], UnionFields()));
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code!.Code.ShouldBe("DATASETS-20036");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Customers");
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW6806")]
+    public async Task ADataSetThatStatesNoStrategyReadsUnderTheConfiguredDefault()
+    {
+        var result = await Run(Context(MappedSources(), Orders(), Customers(), "Join", [Join("Inner")], [], null, Settings("Parallel", new FederationStrategySettings(null, 2, null))));
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldNotBeNull().ShouldHaveSingleItem()["CustomerName"].ShouldBe("Acme");
+    }
+
+    private static FederationSettings Settings(string strategy, FederationStrategySettings options) =>
+        new(strategy, new Dictionary<string, FederationStrategySettings>(StringComparer.OrdinalIgnoreCase) { [strategy] = options });
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW6901")]
+    public async Task TheFdwLevelSettingWinsOverTheStrategysDeclaredValue()
+    {
+        // Sequential declares reading in turn; the FDW-level setting makes it read in parallel, two at once, and the rows are the same.
+        var result = await Run(Context(MappedSources(), Orders(), Customers(), "Join", [Join("Inner")], [], "Sequential", Settings("Sequential", new FederationStrategySettings(true, 2, true))));
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldNotBeNull().ShouldHaveSingleItem()["CustomerName"].ShouldBe("Acme");
+    }
+
+    [Fact]
+    [Trait("Category", "DataSets.FDW6806")]
+    public async Task ADataSetThatStatesNoStrategyWithNoSettingsRegisteredIsRefused()
+    {
+        var result = await Run(Context(MappedSources(), Orders(), Customers(), "Join", [Join("Inner")], [], null, null));
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("no FederationSettings");
+    }
 
     [Fact]
     [Trait("Category", "DataSets.FDW3629")]
@@ -289,7 +394,7 @@ public sealed class FederatedDataSetTypeTests
             Source("Customers", "Customer", ("CustomerId", "id"), ("CustomerName", "name")),
         };
         sources.ForEach(source => source.SupportsPredicatePushdown = true);
-        var dataSet = new FederatedDataSetConfiguration { Name = "CustomerOrders", Implementation = "Federated", Sources = sources, Joins = [Join("Left")] };
+        var dataSet = new FederatedDataSetConfiguration { Name = "CustomerOrders", Implementation = "Federated", Sources = sources, SourceCombination = "Join", Joins = [Join("Left")] };
         var mappings = sources.ToDictionary(s => s.SourceName, s => s.FieldMappings, StringComparer.OrdinalIgnoreCase);
         var filter = new FilterExpression
         {

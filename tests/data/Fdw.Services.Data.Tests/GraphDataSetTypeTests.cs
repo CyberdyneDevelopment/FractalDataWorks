@@ -35,7 +35,8 @@ public sealed class GraphDataSetTypeTests
             new FieldMappingTransformationResolver(
                 gateways.Object,
                 new TransformationConfigurationProvider(
-                    NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation")),
+                    NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation",
+                TransformationDescriptionDoubles.Writer(), TransformationDescriptionDoubles.Reader())),
             NullLogger.Instance,
             gateway,
             runner);

@@ -18,8 +18,13 @@ namespace Fdw.WebMcp.Hosting;
 /// The address the row states for the host's own routes, read only by the <c>FixedAddress</c> source;
 /// <see langword="null"/> for every other source and when the host does not serve MCP.
 /// </param>
+/// <param name="SchemaMaxDepth">
+/// How many lists and objects a tool's request may nest, from the setting <c>WebMcpToolSchemaMaxDepth</c>: a positive number the
+/// platform states, never assumed.
+/// </param>
 public sealed record WebMcpHostSettings(
     string ApiKeyHeader,
     string? ClientApiKey,
     WebMcpSelfAddressSourceBase? SelfAddressSource,
-    Uri? SelfBaseAddress);
+    Uri? SelfBaseAddress,
+    int SchemaMaxDepth);

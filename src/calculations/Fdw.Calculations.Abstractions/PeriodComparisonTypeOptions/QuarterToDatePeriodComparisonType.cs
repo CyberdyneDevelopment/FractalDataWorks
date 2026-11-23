@@ -15,7 +15,7 @@ public sealed class QuarterToDatePeriodComparisonType : PeriodComparisonTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="QuarterToDatePeriodComparisonType"/> class.
     /// </summary>
-    public QuarterToDatePeriodComparisonType() : base("QuarterToDate", isCumulative: true) { }
+    public QuarterToDatePeriodComparisonType() : base("QuarterToDate", "Compares current quarter-to-date to previous quarter-to-date", isCumulative: true) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => null;

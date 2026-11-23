@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Fdw.Services.Connections.Clients.Models;
 using Microsoft.Extensions.Logging;
 
@@ -475,5 +476,82 @@ public sealed class ConnectionApiClientTests
 
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldNotBeEmpty();
+    }
+
+    // --- GenerateDdl / ExecuteDdl (FDW-3617): each posts what its route reads ---
+
+    private static JsonElement Property(JsonElement body, string name)
+        => body.EnumerateObject().Single(property => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase)).Value;
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task GenerateDdlPostsTheDiscoveryChoicesTheRouteRequires()
+    {
+        string? body = null;
+        var handler = new MockHttpMessageHandler(async (request, ct) =>
+        {
+            body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new GenerateDdlResponse()) };
+        });
+        var sut = CreateClient(handler);
+
+        await sut.GenerateDdl(
+            "MyConn",
+            new GenerateDdlRequestPayload
+            {
+                SchemaFilter = "dbo",
+                ExcludedSchemas = ["sys"],
+                DiscoverViews = true,
+                DiscoverIndexes = false,
+                DiscoverForeignKeys = true,
+                DiscoverDescriptions = false,
+            },
+            TestContext.Current.CancellationToken);
+
+        handler.LastRequest!.RequestUri!.PathAndQuery.ShouldBe("/connections/MyConn/generate-ddl");
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
+        var json = JsonDocument.Parse(body!).RootElement;
+        Property(json, "SchemaFilter").GetString().ShouldBe("dbo");
+        Property(json, "ExcludedSchemas").EnumerateArray().Select(item => item.GetString()).ShouldBe(["sys"]);
+        Property(json, "DiscoverViews").GetBoolean().ShouldBeTrue();
+        Property(json, "DiscoverIndexes").GetBoolean().ShouldBeFalse();
+        Property(json, "DiscoverForeignKeys").GetBoolean().ShouldBeTrue();
+        Property(json, "DiscoverDescriptions").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ExecuteDdlPostsTheTableAndColumnsTheRouteReads()
+    {
+        string? body = null;
+        var handler = new MockHttpMessageHandler(async (request, ct) =>
+        {
+            body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new ExecuteDdlConnectionResponse()) };
+        });
+        var sut = CreateClient(handler);
+
+        await sut.ExecuteDdl(
+            "MyConn",
+            new ExecuteDdlConnectionRequest
+            {
+                SchemaName = "dbo",
+                TableName = "Teams",
+                Columns = [new DdlColumnRequest { Name = "Id", SqlType = "INT", IsRequired = true, IsPrimaryKey = true, IsIdentity = true }],
+            },
+            TestContext.Current.CancellationToken);
+
+        handler.LastRequest!.RequestUri!.PathAndQuery.ShouldBe("/connections/MyConn/execute-ddl");
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
+        var json = JsonDocument.Parse(body!).RootElement;
+        Property(json, "SchemaName").GetString().ShouldBe("dbo");
+        Property(json, "TableName").GetString().ShouldBe("Teams");
+        var column = Property(json, "Columns").EnumerateArray().Single();
+        Property(column, "Name").GetString().ShouldBe("Id");
+        Property(column, "SqlType").GetString().ShouldBe("INT");
+        Property(column, "IsPrimaryKey").GetBoolean().ShouldBeTrue();
+        Property(column, "IsIdentity").GetBoolean().ShouldBeTrue();
     }
 }

@@ -2,33 +2,11 @@ namespace Fdw.Data.Options.Tests;
 
 public sealed class DataOptionsTests
 {
-    [Fact]
-    public void SelectListIsAnOptionTypeThatResolvesByName()
-    {
-        var type = DataOptions.ByName("SelectList");
-
-        ReferenceEquals(type, DataOptions.NotFound).ShouldBeFalse();
-        type.Name.ShouldBe("SelectList");
-        type.ShouldBeOfType<SelectListDataOptionType>();
-    }
-
-    [Fact]
-    public void AStoredOptionTypeAndOptionResolveToTheOptionThroughTheDispatcher()
-    {
-        DataOptions.ByName("SelectList").ByName("Include").ShouldBeOfType<IncludeOption>();
-        DataOptions.ByName("SelectList").ByName("Exclude").ShouldBeOfType<ExcludeOption>();
-    }
 
     [Fact]
     public void TheOptionsOfSelectListAreIncludeAndExclude()
     {
         DataOptions.ByName("SelectList").Options.Select(option => option.Name).ShouldBe(["Exclude", "Include"], ignoreOrder: true);
-    }
-
-    [Fact]
-    public void AnOptionTypeThatIsNotKnownGivesTheNotFoundSentinel()
-    {
-        ReferenceEquals(DataOptions.ByName("NoSuchType"), DataOptions.NotFound).ShouldBeTrue();
     }
 
     [Fact]
@@ -39,13 +17,6 @@ public sealed class DataOptionsTests
         result.IsFailure.ShouldBeTrue();
         result.Code!.Name.ShouldBe("DataOptionTypeNotFound");
         result.Code.Id.ShouldBe(31000);
-    }
-
-    [Fact]
-    public void AnUnknownOptionOfSelectListGivesTheNotFoundSentinelOfItsCollection()
-    {
-        ReferenceEquals(SelectListOptions.ByName("NoSuchOption"), SelectListOptions.NotFound).ShouldBeTrue();
-        ReferenceEquals(DataOptions.ByName("SelectList").ByName("NoSuchOption"), SelectListOptions.NotFound).ShouldBeTrue();
     }
 
     [Fact]

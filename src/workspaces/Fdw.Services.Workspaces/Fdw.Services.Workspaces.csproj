@@ -34,6 +34,8 @@
     <ProjectReference Include="..\..\identity\multitenancy\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
     <ProjectReference Include="..\..\data\Fdw.Data\Fdw.Data.csproj" />
     <ProjectReference Include="..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
+    <ProjectReference Include="..\..\data\Fdw.Services.Descriptions\Fdw.Services.Descriptions.csproj" />
+    <ProjectReference Include="..\..\data\Fdw.Services.Descriptions.Abstractions\Fdw.Services.Descriptions.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

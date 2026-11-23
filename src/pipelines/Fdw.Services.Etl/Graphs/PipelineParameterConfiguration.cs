@@ -4,6 +4,7 @@ using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Etl.Pipelines.Loads;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Etl.Graphs;
 
@@ -21,7 +22,7 @@ namespace Fdw.Services.Etl.Graphs;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline")]
-public sealed partial class PipelineParameterConfiguration : IGenericConfiguration, IPipelineRunParameter
+public sealed partial class PipelineParameterConfiguration : IGenericConfiguration, IPipelineRunParameter, IDescribedPipelineParameter
 {
     /// <summary>Gets or sets the row's id.</summary>
     public Guid Id { get; set; } = Guid.CreateVersion7();
@@ -58,5 +59,8 @@ public sealed partial class PipelineParameterConfiguration : IGenericConfigurati
     public string? DefaultText { get; set; }
 
     /// <summary>Gets or sets what the parameter is for, shown to whoever starts or schedules the run.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7323), which the {t} table cannot hold, so the
+    // column is gone; the provider fills the member for every set it reads. Off the mapper, it is no column of the table.
+    [NotStored]
     public string? Description { get; set; }
 }

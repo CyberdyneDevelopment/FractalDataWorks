@@ -38,7 +38,8 @@ public class CalculationConfigurationProviderTests
         var domain = new CalculationConfigurationProvider(
             NullLogger<CalculationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
-            "PlatformConfiguration", "calc", "CalculationEntity", new Fdw.Services.Configuration.UnavailablePlacement());
+            "PlatformConfiguration", "calc", "CalculationEntity", new Fdw.Services.Configuration.UnavailablePlacement(),
+            TestSupport.DescriptionDoubles.Writer(), TestSupport.DescriptionDoubles.Reader());
 
         // Registered exactly as DefaultCalculationServiceType registers it.
         domain.Register("Windowed", new WindowedCalculationConfigurationProvider(

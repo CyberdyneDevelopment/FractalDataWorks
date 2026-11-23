@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Data.Logging;
 using Fdw.Conventions;
 
 namespace Fdw.Services.Data.Configuration;
@@ -60,10 +61,11 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<IConnec
         var connectionType = ConnectionTypes.ByName(implementation);
         if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
         {
-            throw new JsonException(
+            throw new SchemaRefusalException(
                 $"Connection '{name}' names implementation '{implementation}', "
                 + "which is not registered in ConnectionTypes. Reference the package that provides that "
-                + "[Implementation] so its module initializer registers it before configuration is loaded.");
+                + "[Implementation] so its module initializer registers it before configuration is loaded.",
+                log => ConfigurationGatewayProviderLog.ConnectionKindNotRegistered(log, name, implementation));
         }
 
         var settingsType = connectionType.ConfigurationType;

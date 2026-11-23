@@ -10,6 +10,7 @@ using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Execution;
 using Fdw.Services.Settings;
 using Microsoft.Extensions.DependencyInjection;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Tests.Execution;
 
@@ -24,7 +25,7 @@ public sealed class PipelineTriggerKeysTests : IDisposable
     private static readonly DateTimeOffset Now = new(2026, 11, 6, 12, 0, 0, TimeSpan.Zero);
     private const string Key = "7a1f0a52-0000-0000-0000-000000000001:2026-11-06T11:59:00.0000000+00:00";
 
-    private readonly string? _before = EtlPipelineTypes.OperationalConnection;
+    private readonly string? _before = PipelineTypes.OperationalConnection;
     private readonly Mock<IDataGateway> _gateway = new();
     private readonly Mock<IEffectiveSettingsProvider> _settings = new();
     private readonly List<IDataCommand> _calls = [];
@@ -37,7 +38,7 @@ public sealed class PipelineTriggerKeysTests : IDisposable
 
     public PipelineTriggerKeysTests()
     {
-        EtlPipelineTypes.OperationalConnection = "Ops";
+        PipelineTypes.OperationalConnection = "Ops";
         _settings.Setup(s => s.GetEffectiveValue<int>(SettingDefinitions.PipelineTriggerKeyRetentionSeconds, null, null)).Returns(3600);
         var gateways = new Mock<IDataGatewayProvider>();
         gateways.Setup(provider => provider.ByName("Main")).Returns(_gateway.Object);
@@ -50,7 +51,7 @@ public sealed class PipelineTriggerKeysTests : IDisposable
             .ReturnsAsync(GenericResult<int>.Success(1));
     }
 
-    public void Dispose() => EtlPipelineTypes.OperationalConnection = _before;
+    public void Dispose() => PipelineTypes.OperationalConnection = _before;
 
     private void InsertRefusedAndRowIs(params EtlPipelineTriggerKeyRecord[] rows)
     {
@@ -142,7 +143,7 @@ public sealed class PipelineTriggerKeysTests : IDisposable
     [Trait("Category", "Etl")]
     public async Task WithNoOperationalConnectionNoKeyIsClaimed()
     {
-        EtlPipelineTypes.OperationalConnection = null;
+        PipelineTypes.OperationalConnection = null;
 
         var claim = await _keys.Claim(Tenant, Key, Now.AddMinutes(-1), TestContext.Current.CancellationToken);
 

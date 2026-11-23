@@ -101,6 +101,11 @@ internal sealed class FlowRun
     /// <returns>Its input and output nodes in this run.</returns>
     public FlowPorts PortsOf(string component) => _ports[component];
 
+    /// <summary>Reads what a component holds in memory now and the most it has held in this run (FDW-5231).</summary>
+    /// <param name="component">The component's name.</param>
+    /// <returns>Its held figures.</returns>
+    public FlowHeldCount HeldOf(string component) => _ports[component].Held.Count;
+
     /// <summary>Records a failure; the first one recorded is the run's.</summary>
     /// <param name="component">The component that failed.</param>
     /// <param name="failure">The failure.</param>

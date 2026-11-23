@@ -25,14 +25,7 @@ public sealed class ContainsOperator : FilterOperatorBase
     }
 
     /// <inheritdoc/>
-    public override string FormatODataValue(object? value)
-    {
-        return value switch
-        {
-            string str => $"'{str.Replace("'", "''", StringComparison.Ordinal)}'",
-            _ => $"'{value}'"
-        };
-    }
+    public override string FormatODataValue(object? value) => ODataLiteralKinds.Text.Literal(value?.ToString() ?? string.Empty);
 
     /// <inheritdoc />
     public override bool Matches(object? left, object? right)

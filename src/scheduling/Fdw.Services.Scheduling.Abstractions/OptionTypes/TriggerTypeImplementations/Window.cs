@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using Cronos;
 using Fdw.Collections.Attributes;
 using Fdw.Conventions;
@@ -97,7 +96,7 @@ public sealed class Window : TriggerTypeBase
     /// Window triggers require schedule persistence to track window state and
     /// do not execute immediately — they wait for the next window open time.
     /// </remarks>
-    public Window(ILogger<Window>? logger = null) : base("Window", requiresSchedule: true, isImmediate: false)
+    public Window(ILogger<Window>? logger = null) : base("Window", requiresSchedule: true, isImmediate: false, description: "Retries inside a recurring time window until a run succeeds or the window closes")
     {
         _logger = logger ?? NullLogger<Window>.Instance;
     }
@@ -426,30 +425,5 @@ public sealed class Window : TriggerTypeBase
     /// <summary>
     /// Attempts to convert an object to an integer.
     /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <param name="result">The converted integer value.</param>
-    /// <returns><c>true</c> if conversion succeeded; otherwise, <c>false</c>.</returns>
-    private static bool TryConvertToInt(object? value, out int result)
-    {
-        result = 0;
-
-        return value switch
-        {
-            int intValue => TryAssignInt(intValue, out result),
-            long longValue when longValue >= int.MinValue && longValue <= int.MaxValue => TryAssignInt((int)longValue, out result),
-            decimal decimalValue when decimalValue == Math.Truncate(decimalValue) && decimalValue >= int.MinValue && decimalValue <= int.MaxValue => TryAssignInt((int)decimalValue, out result),
-            double doubleValue when doubleValue == Math.Truncate(doubleValue) && doubleValue >= int.MinValue && doubleValue <= int.MaxValue => TryAssignInt((int)doubleValue, out result),
-            string stringValue => int.TryParse(stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out result),
-            _ => false
-        };
-    }
-
-    /// <summary>
-    /// Helper method to assign an integer value to the result parameter.
-    /// </summary>
-    private static bool TryAssignInt(int value, out int result)
-    {
-        result = value;
-        return true;
-    }
+    private static bool TryConvertToInt(object? value, out int result) => TriggerValueShapes.ReadWindowInt(value, out result);
 }

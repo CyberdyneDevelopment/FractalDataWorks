@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Tags.Abstractions;
 
@@ -13,4 +14,7 @@ public sealed class DataStoreTaggableKind : TaggableKindBase
         : base("DataStore", "data", "DataStoreTag", "DataStoreId", "DataStore")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.Uncited("no check yet: the data store has no foreign key to its Id and its provider is not registered as a cited domain; FDW-6184");
 }

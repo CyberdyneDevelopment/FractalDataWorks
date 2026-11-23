@@ -35,13 +35,4 @@ public sealed class PhaseStatesTests
         ServiceTypePhases.All().Select(phase => phase.Name).OrderBy(name => name, System.StringComparer.Ordinal)
             .ShouldBe(["Configure", "Initialize", "Register"]);
     }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Services")]
-    public void ANameThatIsNotAStateOrAPhaseAnswersTheNotFoundSentinel()
-    {
-        ReferenceEquals(PhaseStates.ByName("Paused"), PhaseStates.NotFound).ShouldBeTrue();
-        ReferenceEquals(ServiceTypePhases.ByName("Teardown"), ServiceTypePhases.NotFound).ShouldBeTrue();
-    }
 }

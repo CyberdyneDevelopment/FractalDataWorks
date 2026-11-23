@@ -39,6 +39,9 @@ public partial class PermissionDomainConfiguration : DomainConfiguration
     public string? DisplayName { get; set; }
 
     /// <summary>Gets or sets the description.</summary>
+    // Why [NotStored]: the text is a row of the descriptions table under the description type Permission, filled by the permission provider once for every set it reads and for every page of
+    // domain records it reads, and written in the unit of the permission's save (FDW-6208); the column is gone from authz.Permission, so no read selects it, no save writes it and it is no list field.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the category the permission is grouped under.</summary>

@@ -134,4 +134,11 @@ public static partial class DataSetEndpointLog
     [MessageLogging(EventId = 41001, Level = LogLevel.Warning, Message = "Rejected modification of system data set '{dataSetName}' — system configurations are read-only")]
     public static partial IGenericMessage SystemDataSetReadOnly(ILogger logger, string dataSetName);
 
+    /// <summary>Logs that the host serves a data set endpoint that reads each data set's status but nothing registered the reader of the writing pipelines' runs.</summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 60345, Level = LogLevel.Critical,
+        Message = "A data set endpoint that shows each data set's status is registered but nothing registered IDataSetWriterRuns, which the status reads the latest run of each writing pipeline from; register the Graph pipeline type (Fdw.Services.Etl, GraphPipelineType) or leave the endpoint out; the host does not start",
+        ClientMessage = "The data set status needs the pipelines to be registered, and they are not")]
+    public static partial IGenericMessage DataSetWriterRunsNotRegistered(ILogger logger);
 }

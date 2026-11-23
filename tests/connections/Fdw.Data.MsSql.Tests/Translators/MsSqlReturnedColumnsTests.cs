@@ -37,7 +37,8 @@ public sealed class MsSqlReturnedColumnsTests
         container.Setup(c => c.Name).Returns("Customers");
         container.Setup(c => c.Path).Returns(new DatabasePath("", "dbo", "Customers"));
         container.Setup(c => c.Schema).Returns(schema.Object);
-        container.Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = "RowId" });
+        container.Setup(c => c.Metadata).Returns(new Dictionary<string, object>());
+        container.Setup(c => c.Keys).Returns(TestPrimaryKeys.On("RowId"));
         return container;
     }
 

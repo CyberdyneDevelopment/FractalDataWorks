@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -73,7 +74,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// <inheritdoc/>
     public async Task Execute(OrchestrationNodeExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        var configResult = await _nodeProvider.Get(request.RootNodeId, cancellationToken)
+        var configResult = await _nodeProvider.Get(request.RootNodeId, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken)
             .ConfigureAwait(false);
 
         if (!configResult.IsSuccess || configResult.Value is null)

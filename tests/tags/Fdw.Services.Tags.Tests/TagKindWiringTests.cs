@@ -33,6 +33,15 @@ public sealed class TagKindWiringTests
     }
 
     [Fact]
+    [Trait("Priority", "P0")]
+    public void EveryTaggableKindStatesWhatItCitesAndOnlyTheDataSetIsCheckedHere()
+    {
+        TaggableKinds.All().ShouldAllBe(kind => kind.Cites != null);
+        TaggableKinds.All().Where(kind => kind.Cites.Container is not null).Select(kind => kind.Name).ToArray().ShouldBe(["DataSet"]);
+        TaggableKinds.ByName("DataSet").Cites.Container.ShouldBe("data.DataSet");
+    }
+
+    [Fact]
     [Trait("Priority", "P1")]
     public void TheShippedKindsAreTheSixTheLinkTablesCover()
     {

@@ -34,14 +34,7 @@ public sealed class NotInOperator : FilterOperatorBase
 
         if (value is IEnumerable enumerable and not string)
         {
-            var values = enumerable.Cast<object>()
-                .Select(v => v switch
-                {
-                    string str => $"'{str.Replace("'", "''", StringComparison.Ordinal)}'",
-                    int or long or short or byte => v.ToString(),
-                    decimal or double or float => v.ToString(),
-                    _ => $"'{v}'"
-                });
+            var values = enumerable.Cast<object>().Select(ODataLiteralKinds.Format);
 
             return $"({string.Join(",", values)})";
         }

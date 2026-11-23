@@ -39,6 +39,13 @@ public abstract class SetDataStoreContainerPagingEndpointBase : CrudUpdateEndpoi
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datastores";
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// <see cref="IDataStoreWrites"/> decides (FDW-6968): a path or container a workspace owns at its owner's scope alone, so a member of the owner who
+    /// holds no store permission may change it; everything else by the store's rule, the <c>datastores:write</c> permission it asks as before.
+    /// </remarks>
+    protected override bool ResourceDecidesAccess => true;
+
     /// <summary>Gets the nested-resource route.</summary>
     protected override string Route => "/datastores/{Name}/containers/{ContainerId}/paging";
 
@@ -101,7 +108,7 @@ public abstract class SetDataStoreContainerPagingEndpointBase : CrudUpdateEndpoi
             return refusal.ToNewResult<DataStoreContainerPagingDto>();
 
         ContainerPagingBuilder.Apply(location.Container, style, settings);
-        var saved = await _dataStoreProvider.UpdateStore(location.Store, ct).ConfigureAwait(false);
+        var saved = await Resolve<IDataStoreWrites>().UpdateStore(location.Store, ct).ConfigureAwait(false);
         return saved.IsFailure
             ? saved.ToNewResult<DataStoreContainerPagingDto>()
             : await ContainerPagingBuilder.Report(_dataStoreProvider, _connectionProvider, location, Logger, ct).ConfigureAwait(false);

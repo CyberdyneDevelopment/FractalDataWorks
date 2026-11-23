@@ -147,6 +147,10 @@
     <Project Path="src/ai/agents/Fdw.Services.Agents.Abstractions/Fdw.Services.Agents.Abstractions.csproj" />
     <Project Path="src/ai/agents/Fdw.Services.Agents/Fdw.Services.Agents.csproj" />
   </Folder>
+  <Folder Name="/src/ai/languagemodels/">
+    <Project Path="src/ai/languagemodels/Fdw.Services.LanguageModels.Abstractions/Fdw.Services.LanguageModels.Abstractions.csproj" />
+    <Project Path="src/ai/languagemodels/Fdw.Services.LanguageModels/Fdw.Services.LanguageModels.csproj" />
+  </Folder>
   <Folder Name="/src/calculations/">
     <Project Path="src/calculations/Fdw.Calculations.Abstractions/Fdw.Calculations.Abstractions.csproj" />
     <Project Path="src/calculations/Fdw.Calculations.Aggregations/Fdw.Calculations.Aggregations.csproj" />
@@ -229,6 +233,8 @@
     <Project Path="src/data/Fdw.Services.Data.Graphs/Fdw.Services.Data.Graphs.csproj" />
     <Project Path="src/data/Fdw.Services.Data.SignalR/Fdw.Services.Data.SignalR.csproj" />
     <Project Path="src/data/Fdw.Services.Data/Fdw.Services.Data.csproj" />
+    <Project Path="src/data/Fdw.Services.Descriptions.Abstractions/Fdw.Services.Descriptions.Abstractions.csproj" />
+    <Project Path="src/data/Fdw.Services.Descriptions/Fdw.Services.Descriptions.csproj" />
     <Project Path="src/data/Fdw.Services.Execution.Abstractions/Fdw.Services.Execution.Abstractions.csproj" />
   </Folder>
   <Folder Name="/src/datasets/">
@@ -549,6 +555,12 @@
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
   </Folder>
+  <Folder Name="/tests/ai/languagemodels/">
+    <Project Path="tests/ai/languagemodels/Fdw.Services.LanguageModels.Tests/Fdw.Services.LanguageModels.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+  </Folder>
   <Folder Name="/tests/calculations/">
     <Project Path="tests/calculations/Fdw.Services.Calculations.Tests/Fdw.Services.Calculations.Tests.csproj">
       <BuildType Solution="Develop|*" Project="Debug" />
@@ -640,6 +652,10 @@
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/data/Fdw.Services.Data.Tests/Fdw.Services.Data.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/data/Fdw.Services.Descriptions.Tests/Fdw.Services.Descriptions.Tests.csproj">
       <BuildType Solution="Develop|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
@@ -826,6 +842,10 @@
       <BuildType Solution="Develop|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
+    <Project Path="tests/pipelines/Fdw.Services.Etl.TestDouble/Fdw.Services.Etl.TestDouble.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/pipelines/Fdw.Services.Etl.Tests/Fdw.Services.Etl.Tests.csproj">
       <BuildType Solution="Develop|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
@@ -842,6 +862,10 @@
     <Project Path="tests/pipelines/Fdw.Services.EtlMappers.Tests/Fdw.Services.EtlMappers.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Services.Pipelines.Abstractions.Tests/Fdw.Services.Pipelines.Abstractions.Tests.csproj" />
     <Project Path="tests/pipelines/Fdw.Services.Pipelines.Clients.Tests/Fdw.Services.Pipelines.Clients.Tests.csproj" />
+    <Project Path="tests/pipelines/Fdw.Services.Pipelines.TestDouble/Fdw.Services.Pipelines.TestDouble.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/pipelines/Fdw.Services.Pipelines.Tests/Fdw.Services.Pipelines.Tests.csproj">
       <BuildType Solution="Develop|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
@@ -865,6 +889,10 @@
     <Project Path="tests/schema/Fdw.Schema.Abstractions.Tests/Fdw.Schema.Abstractions.Tests.csproj" />
     <Project Path="tests/schema/Fdw.Schema.Clients.Tests/Fdw.Schema.Clients.Tests.csproj" />
     <Project Path="tests/schema/Fdw.Schema.Ddl.Tests/Fdw.Schema.Ddl.Tests.csproj" />
+    <Project Path="tests/schema/Fdw.Schema.Endpoints.Tests/Fdw.Schema.Endpoints.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/schema/Fdw.Schema.Tests/Fdw.Schema.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/secrets/" />
@@ -948,6 +976,10 @@
     <Project Path="tests/ui/Fdw.UI.Components.TUI.Tests/Fdw.UI.Components.TUI.Tests.csproj" />
     <Project Path="tests/ui/Fdw.UI.Tests/Fdw.UI.Tests.csproj" />
     <Project Path="tests/ui/Fdw.UI.Themes.Clients.Tests/Fdw.UI.Themes.Clients.Tests.csproj" />
+    <Project Path="tests/ui/Fdw.UI.Themes.Tests/Fdw.UI.Themes.Tests.csproj">
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/tests/workspaces/">
     <Project Path="tests/workspaces/Fdw.Protocols.Tds.Tests/Fdw.Protocols.Tds.Tests.csproj">

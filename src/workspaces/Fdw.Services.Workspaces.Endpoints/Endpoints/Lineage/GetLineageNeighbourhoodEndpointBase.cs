@@ -34,7 +34,7 @@ public abstract class GetLineageNeighbourhoodEndpointBase : LineageEndpointBase<
         "Walks from one data set, data store or pipeline toward what feeds it (up), what it feeds (down) or both, to a depth of 1 to 5, " +
         "and returns only that neighbourhood, never the whole graph. A step through a pipeline joins the data set the pipeline reads to the " +
         "one it writes and names the pipeline in its via; a pipeline that reads several inputs and writes several outputs gives a step for " +
-        "each pair. The answer holds at most 500 nodes and says when it was cut short. Data stores are left out unless kinds names DataStore. " +
+        "each pair. The answer holds at most the configured number of nodes (Workspaces:Default:LineageMaxNodes, 500 by default) and says when it was cut short. Data stores are left out unless kinds names DataStore. " +
         "Connection is named by the console but not offered yet, and is reported in unavailableKinds. Hidden objects are absent, as on the map.");
 
     public override async Task HandleAsync(LineageNeighbourhoodRequest req, CancellationToken ct)
@@ -42,7 +42,8 @@ public abstract class GetLineageNeighbourhoodEndpointBase : LineageEndpointBase<
 
     private async Task<IGenericResult<LineageNeighbourhoodResponse>> Walk(LineageNeighbourhoodRequest request, CancellationToken ct)
     {
-        var query = LineageRequests.Neighbourhood(request, LineageLogger);
+        var limits = Resolve<WorkspaceLimits>();
+        var query = LineageRequests.Neighbourhood(request, limits, LineageLogger);
         if (query.IsFailure) return query.ToNewResult<LineageNeighbourhoodResponse>();
 
         var graph = await Reader.Read(request.Workspace, User, readCategories: false, ct).ConfigureAwait(false);
@@ -51,16 +52,16 @@ public abstract class GetLineageNeighbourhoodEndpointBase : LineageEndpointBase<
         var focus = graph.Value!.Node(query.Value!.Node);
         return focus is null
             ? MapRequestRefusals.NodeNotFound<LineageNeighbourhoodResponse>(LineageLogger, query.Value!.Node)
-            : Answer(graph.Value!, focus, query.Value!);
+            : Answer(graph.Value!, focus, query.Value!, limits.LineageMaxNodes);
     }
 
-    private IGenericResult<LineageNeighbourhoodResponse> Answer(LineageGraph graph, LineageNode focus, LineageNeighbourhoodQuery query)
+    private IGenericResult<LineageNeighbourhoodResponse> Answer(LineageGraph graph, LineageNode focus, LineageNeighbourhoodQuery query, int maxNodes)
     {
-        var walk = graph.Neighbourhood(focus.Id, query.Direction, query.Depth, query.Kinds);
+        var walk = graph.Neighbourhood(focus.Id, query.Direction, query.Depth, query.Kinds, maxNodes);
         var vias = LineageResponses.Vias(graph, walk.Flows, query.Kinds.Pipelines);
 
         WorkspaceLineageLog.NeighbourhoodWalked(
             LineageLogger, focus.Id, query.Direction.Wire, query.Depth, walk.Nodes.Count, walk.Flows.Count, walk.Truncated);
-        return GenericResult<LineageNeighbourhoodResponse>.Success(LineageResponses.Neighbourhood(focus, walk, query.Kinds, vias));
+        return GenericResult<LineageNeighbourhoodResponse>.Success(LineageResponses.Neighbourhood(focus, walk, query.Kinds, vias, maxNodes));
     }
 }

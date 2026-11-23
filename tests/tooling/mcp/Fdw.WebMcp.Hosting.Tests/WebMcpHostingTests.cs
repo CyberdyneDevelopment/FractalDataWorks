@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.Settings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -58,6 +59,21 @@ public class WebMcpHostingTests
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull().ShouldContain(nameof(IWebMcpConfigurationProvider));
+        Routes(app).ShouldNotContain(WebMcpHosting.ScriptPath);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void AHostWithoutTheSettingsProviderIsRefusedNamingIt()
+    {
+        // The depth a tool may nest is a setting; with no provider to state it, nothing is assumed.
+        using var app = Composed(withConfiguration: true, withSettings: false);
+
+        var result = WebMcpHosting.Initialize(app);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(nameof(IEffectiveSettingsProvider));
         Routes(app).ShouldNotContain(WebMcpHosting.ScriptPath);
     }
 
@@ -126,8 +142,8 @@ public class WebMcpHostingTests
             .Select(static endpoint => "/" + endpoint.RoutePattern.RawText!.TrimStart('/'))
             .ToArray();
 
-    /// <summary>A web host with the registrant registered, and a WebMcp row when asked for one.</summary>
-    private static WebApplication Composed(bool withConfiguration)
+    /// <summary>A web host with the registrant registered, a WebMcp row when asked for one, and a settings provider stating the depth when asked for one.</summary>
+    private static WebApplication Composed(bool withConfiguration, bool withSettings = true)
     {
         var builder = WebApplication.CreateBuilder();
         if (withConfiguration)
@@ -139,6 +155,14 @@ public class WebMcpHostingTests
         }
 
         builder.Services.AddSingleton(new Mock<ISecretManagerProvider>().Object);
+        if (withSettings)
+        {
+            var depth = WebMcpCompositeCatalog.MaxDepth;
+            var settings = new Mock<IEffectiveSettingsProvider>();
+            settings.Setup(s => s.TryGetEffectiveValue(SettingDefinitions.WebMcpToolSchemaMaxDepth, out depth, null, null)).Returns(true);
+            builder.Services.AddSingleton(settings.Object);
+        }
+
         WebMcpHosting.Register(builder).IsSuccess.ShouldBeTrue();
         return builder.Build();
     }

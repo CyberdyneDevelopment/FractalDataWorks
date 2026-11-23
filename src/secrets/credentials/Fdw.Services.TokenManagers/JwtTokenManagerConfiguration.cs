@@ -34,7 +34,10 @@ public sealed partial class JwtTokenManagerConfiguration : ITokenManagerImplemen
     /// <summary>Gets or sets the key the signing material is stored under.</summary>
     public string? SecretKeyName { get; set; }
 
-    /// <summary>Gets or sets the human-readable description.</summary>
+    /// <inheritdoc/>
+    // Why [NotStored]: a token manager's description is a row of the descriptions table under the description type TokenManager, written in the unit of the manager's save
+    // (FDW-6208); the column is gone from auth.JwtTokenManagerConfiguration. It is never filled on load, so it is null until a caller states one, and it has no initializer.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>

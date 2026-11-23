@@ -33,6 +33,10 @@ public sealed class SyntheticSecretManagerType
     /// <summary>The discriminator this option registers under.</summary>
     public const string OptionName = "Synthetic";
 
+    /// <inheritdoc/>
+    /// <remarks>It reads environment variables and nothing else, so its declaration is all it needs.</remarks>
+    public override bool BuildableFromDeclarationAlone => true;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SyntheticSecretManagerType"/> class.
     /// </summary>

@@ -15,7 +15,7 @@ public sealed class DataViewResourceKind : WorkspaceResourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="DataViewResourceKind"/> class.</summary>
     public DataViewResourceKind()
-        : base("DataView", canBeOwned: true)
+        : base("DataView", canBeOwned: true, releasedOnArchive: false)
     {
     }
 }

@@ -1,3 +1,4 @@
+using Fdw.Services.Users.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,13 +55,17 @@ public class UserSignInsEndpointTests
         })];
 
     private static Action<DefaultHttpContext> Caller(string subject, bool platformAdmin)
+        => Caller(subject, platformAdmin, new UserSignInPaging(50, 200));
+
+    // The page sizes a host registered (FDW-7103): the users option resolves them at Register and the endpoint reads them from the services.
+    private static Action<DefaultHttpContext> Caller(string subject, bool platformAdmin, UserSignInPaging paging)
         => ctx =>
         {
             ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", subject)], "test"));
             var roles = new Mock<ISystemRoleConfiguration>();
             roles.Setup(r => r.IsPlatformAdmin(It.IsAny<ClaimsPrincipal>())).Returns(platformAdmin);
             roles.SetupGet(r => r.AdminRoleName).Returns("Admin");
-            ctx.AddTestServices(s => s.AddSingleton(roles.Object));
+            ctx.AddTestServices(s => s.AddSingleton(roles.Object).AddSingleton(paging));
         };
 
     private static Mock<ISignInLog> Log(IGenericResult<IReadOnlyList<SignInRecord>> answer)
@@ -164,6 +169,34 @@ public class UserSignInsEndpointTests
 
         endpoint.HttpContext.Response.StatusCode.ShouldBe(400);
         log.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    public async Task ARequestThatStatesNoTakeGetsTheConfiguredDefault()
+    {
+        var log = Log(GenericResult<IReadOnlyList<SignInRecord>>.Success(Records(3)));
+        var endpoint = Factory.Create<ListSignIns>(Caller(Guid.NewGuid().ToString(), true, new UserSignInPaging(7, 20)), Store().Provider, log.Object);
+
+        await endpoint.HandleAsync(new ListUserSignInsRequest { IdOrName = Person.ToString(), Skip = 0 }, CancellationToken.None);
+
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(200);
+        endpoint.Response.Take.ShouldBe(7);
+        log.Verify(l => l.SignIns(Person, 0, 8, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [InlineData(20, 200)]
+    [InlineData(21, 400)]
+    public async Task TheMostATakeMayBeIsTheConfiguredOne(int take, int status)
+    {
+        var log = Log(GenericResult<IReadOnlyList<SignInRecord>>.Success(Records(3)));
+        var endpoint = Factory.Create<ListSignIns>(Caller(Guid.NewGuid().ToString(), true, new UserSignInPaging(7, 20)), Store().Provider, log.Object);
+
+        await endpoint.HandleAsync(new ListUserSignInsRequest { IdOrName = Person.ToString(), Skip = 0, Take = take }, CancellationToken.None);
+
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(status);
     }
 
     [Fact]

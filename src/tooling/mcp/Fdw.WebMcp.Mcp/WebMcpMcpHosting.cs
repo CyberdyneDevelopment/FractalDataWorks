@@ -73,7 +73,7 @@ public sealed class WebMcpMcpHosting
         }
 
         var services = builder.Services;
-        services.TryAddSingleton<WebMcpMcpCatalogue>();
+        services.TryAddSingleton<WebMcpMcpCatalog>();
         services.TryAddSingleton<WebMcpToolInvoker>();
         services.TryAddSingleton<WebMcpSelfAddressResolver>();
         // Needed to forward the calling agent's identity to the tool's own route.
@@ -87,7 +87,7 @@ public sealed class WebMcpMcpHosting
             // The list follows the caller: each tool is offered only to a caller its route admits.
             .WithListToolsHandler(async (context, cancellationToken) => new ListToolsResult
             {
-                Tools = await context.Services!.GetRequiredService<WebMcpMcpCatalogue>()
+                Tools = await context.Services!.GetRequiredService<WebMcpMcpCatalog>()
                     .ToolsFor(context.Services!.GetRequiredService<IHttpContextAccessor>().HttpContext, cancellationToken)
                     .ConfigureAwait(false),
             })

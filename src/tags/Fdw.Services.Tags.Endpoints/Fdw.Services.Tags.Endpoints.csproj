@@ -16,4 +16,8 @@
     <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fdw.Services.Tags.Tests" />
+  </ItemGroup>
+
 </Project>

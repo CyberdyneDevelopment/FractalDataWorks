@@ -11,6 +11,7 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.DataSets.Results;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
@@ -21,6 +22,7 @@ using Fdw.Services.Data.Results;
 using Fdw.Web.RestEndpoints.Query;
 using IDataField = Fdw.Data.DataSets.Abstractions.IDataField;
 using System.Collections.Immutable;
+using Fdw.ServiceTypes;
 
 namespace Fdw.Services.Data;
 
@@ -46,11 +48,19 @@ namespace Fdw.Services.Data;
 [TypeOption(typeof(DataSetTypes), "Federated")]
 public sealed class FederatedDataSetType : DataSetTypeBase
 {
+    // The federation strategy a Federated or Graph data set that states none reads under (FDW-6806, FDW-6901): declared here, on the kind a
+    // data set selects; a host changes it with ServiceTypeDefaults.Override before it registers, and its configuration wins over both.
+    private readonly IReadOnlyDictionary<string, object> _defaults;
+
+    /// <inheritdoc />
+    public override IReadOnlyDictionary<string, object> DeclaredDefaults => _defaults;
+
     /// <summary>Initializes a new instance of the <see cref="FederatedDataSetType"/> class.</summary>
     public FederatedDataSetType()
         : base("Federated", "Multi-store dataset joined in memory per the federation strategy",
             typeof(object), Array.Empty<IDataField>(), category: "DataSetStrategy")
     {
+        _defaults = ServiceTypeDefaults.With(base.DeclaredDefaults, (DataSetDeclaredDefaults.FederationDefaultStrategy, "Optimized"));
     }
 
     /// <inheritdoc />
@@ -72,12 +82,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             return DataSetExecutionHelpers.KindMismatch<T>(ctx, "Federated");
 
         IReadOnlyList<DataSetSourceConfiguration> sources =
-            ctx.Config.Sources switch
-            {
-                IReadOnlyList<DataSetSourceConfiguration> list => list,
-                { } other => other.ToList(),
-                _ => [],
-            };
+            ctx.Config.Sources is IReadOnlyList<DataSetSourceConfiguration> list ? list : [.. ctx.Config.Sources ?? []];
         if (sources.Count == 0)
             return GenericResult<T>.Failure(DataGatewayLogger.DataSetNoSources(ctx.Logger, ctx.Config.Name));
 
@@ -87,25 +92,21 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (joinSources.IsFailure)
             return joinSources.ToNewResult<T>();
 
-        if (string.IsNullOrWhiteSpace(federated.FederationStrategy))
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.FederationStrategyMissing(ctx.Logger, ctx.Config.Name, "no FederationStrategy is configured"));
-
-        var strategy = FederationStrategies.ByName(federated.FederationStrategy);
-        if (ReferenceEquals(strategy, FederationStrategies.NotFound))
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.FederationStrategyMissing(ctx.Logger, ctx.Config.Name, $"'{federated.FederationStrategy}' is not a registered FederationStrategies member"));
+        // The strategy and its options (FDW-6806, FDW-6901): the data set's own, else the FDW-level settings, else what the strategy declares.
+        var options = FederationResolution.Resolve(ctx.Federation, ctx.Config.Name, federated.FederationStrategy, [.. federated.FederationOptions], ctx.Logger);
+        if (options.IsFailure)
+            return options.ToNewResult<T>();
 
         DataGatewayLogger.ExecutingMultiSourceDataSet(ctx.Logger, ctx.Config.Name, sources.Count);
-        return await ExecuteDistributed<T>(ctx, command, sources, federated.Joins, strategy.IsParallel, ct).ConfigureAwait(false);
+        return await ExecuteDistributed<T>(ctx, command, sources, federated, options.Value!, ct).ConfigureAwait(false);
     }
 
     private static async Task<IGenericResult<T>> ExecuteDistributed<T>(
         DataSetExecutionContext ctx,
         IDataCommand command,
         IReadOnlyList<DataSetSourceConfiguration> sources,
-        IList<DataSetJoinConfiguration> joins,
-        bool isParallel,
+        IFederatedDataSetConfiguration federated,
+        ResolvedFederation options,
         CancellationToken ct)
     {
         DataGatewayLogger.ExecutingDistributedDataSetInternal(ctx.Logger, ctx.Config.Name, sources.Count);
@@ -136,11 +137,16 @@ public sealed class FederatedDataSetType : DataSetTypeBase
                 : ImmutableDictionary<string, IFilterExpression>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase);
             DataGatewayLogger.FilterDecomposed(ctx.Logger, sourceFilters.Count);
 
-            var pulled = await PullAllSources(ctx, sources, sourceFilters, fieldMappings, isParallel, ct).ConfigureAwait(false);
+            var pulled = await PullAllSources(ctx, sources, sourceFilters, fieldMappings, options, ct).ConfigureAwait(false);
             if (!pulled.IsSuccess || pulled.Value is null)
                 return pulled.ToNewResult<T>();
 
-            var joined = JoinRecords(ctx, pulled.Value, sources, joins);
+            // A union stacks the sources' rows; a join joins them; one source is its own rows. JoinedDataSetRules refused, before any pull, a
+            // data set of several sources that states neither, and a statement its joins contradict (FDW-6946).
+            if (SourceCombinationRules.IsUnion(federated))
+                return await ReadUnion<T>(ctx, pulled.Value, sources, inputFilter, ct).ConfigureAwait(false);
+
+            var joined = JoinRecords(ctx, pulled.Value, sources, federated.Joins);
             if (!joined.IsSuccess || joined.Value is null)
                 return joined.ToNewResult<T>();
 
@@ -182,12 +188,8 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         return FilterFieldNames(node).FirstOrDefault(name => !carried.Contains(name));
     }
 
-    private static IEnumerable<string> FilterFieldNames(IFilterNode node) => node switch
-    {
-        IFilterCondition condition => [condition.PropertyName],
-        FilterGroup group => group.Nodes.SelectMany(FilterFieldNames),
-        _ => [],
-    };
+    private static IEnumerable<string> FilterFieldNames(IFilterNode node) =>
+        FilterNodeKinds.Conditions(node).Select(condition => condition.PropertyName);
 
     private static Dictionary<string, IReadOnlyDictionary<string, string>> PreResolveFieldMappings(
         IReadOnlyList<DataSetSourceConfiguration> sources)
@@ -206,22 +208,38 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         IReadOnlyList<DataSetSourceConfiguration> sources,
         IReadOnlyDictionary<string, IFilterExpression> sourceFilters,
         Dictionary<string, IReadOnlyDictionary<string, string>> fieldMappings,
-        bool isParallel,
+        ResolvedFederation options,
         CancellationToken ct)
     {
         async Task<(string SourceName, IGenericResult<MaterializedSource> Result)> RunOne(DataSetSourceConfiguration s)
             => (s.SourceName, await PullSource(ctx, s, sourceFilters, fieldMappings, ct).ConfigureAwait(false));
 
+        // In the Priority order each source states when the options say so (ties keep their declared order), else in declared order (FDW-6901).
+        IReadOnlyList<DataSetSourceConfiguration> reads = options.OrdersSources ? [.. sources.OrderBy(s => s.Priority)] : sources;
         (string SourceName, IGenericResult<MaterializedSource> Result)[] results;
 
-        if (isParallel)
+        if (options.ReadsInParallel)
         {
-            results = await Task.WhenAll(sources.Select(RunOne)).ConfigureAwait(false);
+            using var limit = new SemaphoreSlim(options.MaxParallelReads);
+            async Task<(string SourceName, IGenericResult<MaterializedSource> Result)> RunLimited(DataSetSourceConfiguration s)
+            {
+                await limit.WaitAsync(ct).ConfigureAwait(false);
+                try
+                {
+                    return await RunOne(s).ConfigureAwait(false);
+                }
+                finally
+                {
+                    limit.Release();
+                }
+            }
+
+            results = await Task.WhenAll(reads.Select(RunLimited)).ConfigureAwait(false);
         }
         else
         {
-            var sequential = new List<(string, IGenericResult<MaterializedSource>)>(sources.Count);
-            foreach (var s in sources)
+            var sequential = new List<(string, IGenericResult<MaterializedSource>)>(reads.Count);
+            foreach (var s in reads)
                 sequential.Add(await RunOne(s).ConfigureAwait(false));
             results = sequential.ToArray();
         }
@@ -335,14 +353,9 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         IReadOnlyList<DataSetSourceConfiguration> sources,
         IList<DataSetJoinConfiguration> joins)
     {
+        // No joins is a data set of one source, whose rows are the data set's: SourceCombinationRules refused several sources that state no join.
         if (joins.Count == 0)
-        {
-            DataGatewayLogger.DataSetNoJoins(ctx.Logger, ctx.Config.Name, sources.Count);
-            var all = new List<DataRecord>();
-            foreach (var source in sourceData.Values)
-                all.AddRange(source.Records);
-            return GenericResult<List<DataRecord>>.Success(all);
-        }
+            return GenericResult<List<DataRecord>>.Success([.. sources.SelectMany(source => sourceData[source.SourceName].Records)]);
 
         List<DataRecord>? accumulated = null;
         RecordSchema? accumulatedSchema = null;
@@ -397,6 +410,102 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         }
 
         return GenericResult<List<DataRecord>>.Success(accumulated ?? []);
+    }
+
+    // A union read (FDW-6946): each source's rows cut by the whole read filter and run through that source's own chains (FDW-877), never another
+    // source's, then stacked in the data set's field order.
+    private static async Task<IGenericResult<T>> ReadUnion<T>(
+        DataSetExecutionContext ctx,
+        Dictionary<string, MaterializedSource> pulled,
+        IReadOnlyList<DataSetSourceConfiguration> sources,
+        IFilterExpression? inputFilter,
+        CancellationToken ct)
+    {
+        var transformed = new Dictionary<string, MaterializedSource>(StringComparer.OrdinalIgnoreCase);
+        foreach (var source in sources)
+        {
+            var chains = await ctx.FieldTransformations.ForSource(source, ct).ConfigureAwait(false);
+            if (chains.IsFailure)
+                return chains.ToNewResult<T>();
+
+            var read = pulled[source.SourceName];
+            var applied = await DataSetExecutionHelpers.ApplyFieldTransformations(ctx, KeptRows(read.Records, inputFilter), chains.Value!, ctx.Config.Name, ct)
+                .ConfigureAwait(false);
+            if (applied.IsFailure)
+                return applied.ToNewResult<T>();
+            transformed[source.SourceName] = new MaterializedSource(applied.Value!, read.Schema);
+        }
+
+        var stacked = UnionRecords(ctx, transformed, sources);
+        if (stacked.IsFailure)
+            return stacked.ToNewResult<T>();
+
+        DataGatewayLogger.FederatedExecutionCompleted(ctx.Logger, ctx.Config.Name, stacked.Value!.Count, 0, 0, 0);
+        return ConvertRecordsToType<T>(ctx, stacked.Value!);
+    }
+
+    // The rows of a union (FDW-6946): every source's rows, every one kept, each laid out in the data set's field order, never a source's. Every
+    // source maps every field (SourceCombinationRules, at save and before the pull); a field a source's rows do not carry is refused here too,
+    // never read as null, and a field two sources state different types for is refused, never converted. A source that states no type for a
+    // field is not compared: nothing is assumed about it.
+    private static IGenericResult<List<DataRecord>> UnionRecords(
+        DataSetExecutionContext ctx, Dictionary<string, MaterializedSource> sourceData, IReadOnlyList<DataSetSourceConfiguration> sources)
+    {
+        var fields = ctx.Config.Fields.Where(f => f.IsCurrent && !f.IsDeleted && !f.IsCalculated).OrderBy(f => f.Ordinal).Select(f => f.Name).ToList();
+        var schema = new RecordSchema([.. fields.Select((name, ordinal) => new RecordField(name, ordinal))]);
+        var typed = new Dictionary<string, (string Source, string Type)>(StringComparer.OrdinalIgnoreCase);
+        var rows = new List<DataRecord>();
+        foreach (var source in sources)
+        {
+            var read = sourceData[source.SourceName];
+            var ordinals = new int[fields.Count];
+            for (var index = 0; index < fields.Count; index++)
+            {
+                ordinals[index] = read.Schema.GetFieldOrdinal(fields[index]);
+                if (ordinals[index] < 0)
+                    return GenericResult<List<DataRecord>>.Failure(
+                        DataSetsResultCodes.ByName("UnionFieldNotMapped"), ctx.Logger,
+                        ResultDetails.Create("name", ctx.Config.Name, "source", source.SourceName, "field", fields[index]));
+
+                if (UnionTypeMismatch(ctx, typed, source.SourceName, fields[index], read.Schema.Fields[ordinals[index]]) is { } mismatch)
+                    return mismatch;
+            }
+
+            foreach (var record in read.Records)
+            {
+                var values = new object?[fields.Count];
+                for (var index = 0; index < fields.Count; index++)
+                    values[index] = record.Values[ordinals[index]];
+                rows.Add(new DataRecord(schema, values));
+            }
+        }
+
+        DataGatewayLogger.UnionRowsStacked(ctx.Logger, ctx.Config.Name, sources.Count, rows.Count);
+        return GenericResult<List<DataRecord>>.Success(rows);
+    }
+
+    // The refusal of a field whose type this source states differently from an earlier source, or null; the first source to state a type is kept.
+    private static IGenericResult<List<DataRecord>>? UnionTypeMismatch(
+        DataSetExecutionContext ctx,
+        Dictionary<string, (string Source, string Type)> typed,
+        string sourceName,
+        string field,
+        Fdw.Data.Abstractions.IDataField column)
+    {
+        if (column.ExplicitType is not { } type)
+            return null;
+        if (!typed.TryGetValue(field, out var first))
+        {
+            typed[field] = (sourceName, type.Name);
+            return null;
+        }
+
+        return string.Equals(first.Type, type.Name, StringComparison.Ordinal)
+            ? null
+            : GenericResult<List<DataRecord>>.Failure(
+                DataSetsResultCodes.ByName("UnionFieldTypeMismatch"), ctx.Logger,
+                ResultDetails.Create("name", ctx.Config.Name, "field", field, "type", first.Type)
+                    .With("firstSource", first.Source).With("otherType", type.Name).With("source", sourceName));
     }
 
     // Where a join reads its keys and lays out a combined row: the key field on each side, the left key's place and the left's width in the

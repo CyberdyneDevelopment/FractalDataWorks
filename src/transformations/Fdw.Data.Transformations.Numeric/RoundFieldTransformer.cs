@@ -84,25 +84,7 @@ public sealed class RoundFieldTransformer : FieldTransformationBase
                 $"Unknown rounding mode '{modeName}'. Use RoundingTypes.All() for available options.");
         }
 
-        var value = ConvertToDecimal(input);
+        var value = NumericInputKinds.ToDecimal(input, "Round");
         return Task.FromResult(GenericResult<object?>.Success(mode.Round(value, precision)));
-    }
-
-
-
-    private static decimal ConvertToDecimal(object input)
-    {
-        return input switch
-        {
-            decimal d => d,
-            double d => Convert.ToDecimal(d),
-            float f => Convert.ToDecimal(f),
-            int i => Convert.ToDecimal(i),
-            long l => Convert.ToDecimal(l),
-            short s => Convert.ToDecimal(s),
-            byte b => Convert.ToDecimal(b),
-            _ => throw new InvalidOperationException(
-                $"Round does not support input type '{input.GetType().Name}'. Input must be numeric.")
-        };
     }
 }

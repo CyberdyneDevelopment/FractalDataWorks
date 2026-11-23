@@ -20,7 +20,8 @@ public sealed class ParallelStrategy : FederationStrategyBase
             name: "Parallel",
             description: "Executes all source queries concurrently for maximum performance",
             isParallel: true,
-            optimizesOrder: false)
+            optimizesOrder: false,
+            maxParallelReads: 4)
     {
     }
 }

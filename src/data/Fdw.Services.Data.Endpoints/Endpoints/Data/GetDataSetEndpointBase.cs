@@ -17,13 +17,21 @@ public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRe
 {
     private readonly IDataSetResolver _resolver;
     private readonly ICategoryConfigurationProvider _categories;
+    private readonly IVariationChainAccess? _chainAccess;
 
     /// <summary>Initializes a new instance of the <see cref="GetDataSetEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="resolver">Resolves the name to a data set or a variation of one.</param>
+    /// <param name="categories">Reads the category tree the data set sits in.</param>
+    /// <param name="chainAccess">
+    /// Decides whether the caller owns a variation (FDW-5446). A route built without one shows nobody the chain of a variation: its parent, the id of its root and its filters are left out.
+    /// </param>
     protected GetDataSetEndpointBase(
-        ILogger<GetDataSetEndpointBase> logger, IDataSetResolver resolver, ICategoryConfigurationProvider categories) : base(logger)
+        ILogger<GetDataSetEndpointBase> logger, IDataSetResolver resolver, ICategoryConfigurationProvider categories, IVariationChainAccess? chainAccess = null) : base(logger)
     {
         _resolver = resolver;
         _categories = categories;
+        _chainAccess = chainAccess;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -60,8 +68,31 @@ public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRe
         if (tree.IsFailure || tree.Value is null) return tree.ToNewResult<DataSetDetailResponse?>();
 
         var described = DataSetCategoryLinks.Describe(DataSetQueryHelper.MapToDetail(result.Value), tree.Value, result.Value.DataSet.CategoryId, Logger);
-        return described.IsFailure
-            ? described.ToNewResult<DataSetDetailResponse?>()
+        if (described.IsFailure) return described.ToNewResult<DataSetDetailResponse?>();
+
+        var shown = await ShowChainToOwner(_chainAccess, result.Value, described.Value!, ct).ConfigureAwait(false);
+        return shown.IsFailure
+            ? shown.ToNewResult<DataSetDetailResponse?>()
             : GenericResult<DataSetDetailResponse?>.Success(described.Value);
+    }
+
+    // A person who holds only a variation is told its name, kind and fields and nothing of what it varies (FDW-5446): the owner keeps the chain, everyone else loses it.
+    internal static async Task<IGenericResult> ShowChainToOwner(
+        IVariationChainAccess? chainAccess, ResolvedDataSet resolved, DataSetDetailResponse detail, CancellationToken ct)
+    {
+        if (resolved.Variation is not { } view) return GenericResult.Success();
+
+        var owns = chainAccess is null ? GenericResult<bool>.Success(false) : await chainAccess.MayShowChain(view, ct).ConfigureAwait(false);
+        if (owns.IsFailure) return owns;
+
+        if (!owns.Value)
+        {
+            detail.ParentName = null;
+            detail.BaseDataSetId = null;
+            detail.ParentVariationId = null;
+            detail.VariationFilters = null;
+        }
+
+        return GenericResult.Success();
     }
 }

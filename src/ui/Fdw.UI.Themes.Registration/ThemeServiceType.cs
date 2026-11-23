@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
 using Fdw.Services.Settings;
 using Fdw.UI.Themes;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,7 +48,8 @@ public sealed class ThemeServiceType : SettingsServiceTypeBase
                 var domain = new ThemeConfigurationProvider(
                     sp.GetRequiredService<ILogger<ThemeConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    SettingsServiceTypes.ConfigurationConnection, "settings", "Theme");
+                    SettingsServiceTypes.ConfigurationConnection, "settings", "Theme",
+                    sp.GetRequiredService<IDescriptionWriter>());
                 domain.Register("Theme", sp.GetRequiredService<IThemeImplementationConfigurationProvider>());
                 return domain;
             });

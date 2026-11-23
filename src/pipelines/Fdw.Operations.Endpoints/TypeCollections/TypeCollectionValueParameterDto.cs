@@ -45,4 +45,22 @@ public sealed class TypeCollectionValueParameterDto
     /// pipeline is run, the first line of a script. False for every other kind of parameter.
     /// </summary>
     public bool SummarisesComponent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the <c>DataTypes</c> option a component setting's value is read as, for a setting the component type declares that no column of the
+    /// component holds (FDW-6133); null for every other parameter. A client draws the input for that type and states the value as invariant text.
+    /// </summary>
+    public string? DataType { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a component setting's value is read when the component's step runs (FDW-1958, FDW-6133): its text may
+    /// name variables as <c>{{Name}}</c>. False for every other parameter.
+    /// </summary>
+    public bool ReadsWhenStepRuns { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether links, other components or kept rows refer to what a component setting names (FDW-1768), so the graph is
+    /// checked on it before any run and a run cannot choose it. False for every other parameter.
+    /// </summary>
+    public bool ShapesGraph { get; set; }
 }

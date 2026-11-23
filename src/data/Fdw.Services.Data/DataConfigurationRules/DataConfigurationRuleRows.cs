@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Fdw.Data.Options;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions.DataConfigurationRules;
 using Fdw.Services.Data.Logging;
+using Fdw.Services.Descriptions.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.DataConfigurationRules;
@@ -13,17 +15,17 @@ namespace Fdw.Services.Data.DataConfigurationRules;
 internal static class DataConfigurationRuleRows
 {
     /// <summary>The root every stored path starts with, as the option layer names it.</summary>
-    internal const string PathSeparator = ":";
+    internal const string PathSeparator = RulePaths.PathSeparator;
 
     /// <summary>The character that ends the path and starts the method.</summary>
-    internal const char MethodSeparator = '.';
+    internal const char MethodSeparator = RulePaths.MethodSeparator;
 
     /// <summary>Joins the path's names and the method into the text the table stores, such as <c>DataConfigurationRules:Comparison:In.To</c>.</summary>
     internal static string Joined(IReadOnlyList<string> path, string method) =>
         string.Join(PathSeparator, path) + MethodSeparator + method;
 
     /// <summary>Reads a stored value row.</summary>
-    internal static IGenericResult<DataConfigurationRuleValue> ToValue(IReadOnlyDictionary<string, object?> row, string container, ILogger logger)
+    internal static IGenericResult<DataConfigurationRuleValue> ToValue(IReadOnlyDictionary<string, object?> row, string container, ILogger logger, IReadOnlyDictionary<Guid, DescriptionEntry> descriptions)
     {
         if (!ReadGuid(row, "Id", out var id))
             return Unreadable<DataConfigurationRuleValue>("Id", container, logger);
@@ -40,7 +42,7 @@ internal static class DataConfigurationRuleRows
             Parameter = row.TryGetValue("Parameter", out var parameter) ? parameter as string : null,
             Name = row.TryGetValue("Name", out var name) ? name as string : null,
             Abbreviation = row.TryGetValue("Abbreviation", out var abbreviation) ? abbreviation as string : null,
-            Description = row.TryGetValue("Description", out var description) ? description as string : null,
+            Description = descriptions.TryGetValue(id, out var described) ? described.Text : null,
             Ordinal = ordinal,
         });
     }
@@ -48,7 +50,7 @@ internal static class DataConfigurationRuleRows
     /// <summary>Reads a stored rule row with the values it was given.</summary>
     internal static IGenericResult<DataConfigurationRule> ToRule(
         IReadOnlyDictionary<string, object?> row, IReadOnlyList<DataConfigurationRuleValue> values, string container, ILogger logger,
-        Func<Guid, string?, bool> mayChange, Func<Guid, Guid?> changedBy, Func<Guid, string> custodianState)
+        Func<Guid, string?, bool> mayChange, Func<Guid, Guid?> changedBy, Func<Guid, string> custodianState, string? description)
     {
         if (!ReadGuid(row, "Id", out var id))
             return Unreadable<DataConfigurationRule>("Id", container, logger);
@@ -75,8 +77,7 @@ internal static class DataConfigurationRuleRows
 
         var requiredPermission = row.TryGetValue("RequiredPermission", out var permission) ? permission as string : null;
         var stored = texts["Path"];
-        var split = stored.LastIndexOf(MethodSeparator);
-        if (split <= 0 || split == stored.Length - 1)
+        if (!RulePaths.TrySplit(stored, out var storedPath, out var storedMethod))
             return Unreadable<DataConfigurationRule>("Path", container, logger);
 
         return GenericResult<DataConfigurationRule>.Success(new DataConfigurationRule
@@ -84,11 +85,11 @@ internal static class DataConfigurationRuleRows
             Id = id,
             Name = texts["Name"],
             Abbreviation = texts["Abbreviation"],
-            Description = row.TryGetValue("Description", out var description) ? description as string : null,
+            Description = description,
             Target = new DataConfigurationRuleContainer { DataStore = texts["DataStore"], DataPath = texts["DataPath"], Container = texts["Container"] },
             Column = texts["Column"],
-            Path = stored[..split].Split(PathSeparator[0]),
-            Method = stored[(split + 1)..],
+            Path = storedPath,
+            Method = storedMethod,
             Values = [.. values.OrderBy(value => value.Ordinal)],
             OwnerKind = texts["OwnerKind"],
             OwnerId = ownerId,
@@ -133,13 +134,11 @@ internal static class DataConfigurationRuleRows
     private static bool ReadGuid(IReadOnlyDictionary<string, object?> row, string field, out Guid id)
     {
         id = default;
-        return row.TryGetValue(field, out var value)
-            && value switch
-            {
-                Guid stated => (id = stated) != default,
-                string text => System.Guid.TryParse(text, out id),
-                _ => false,
-            };
+        if (!row.TryGetValue(field, out var value) || StoredIdKinds.Read(value) is not { } read)
+            return false;
+
+        id = read;
+        return true;
     }
 
     private static bool ReadNumber(IReadOnlyDictionary<string, object?> row, string field, out int number)
@@ -179,19 +178,10 @@ internal static class DataConfigurationRuleRows
     private static bool ReadMoment(IReadOnlyDictionary<string, object?> row, string field, out DateTimeOffset moment)
     {
         moment = default;
-        if (!row.TryGetValue(field, out var value))
+        if (!row.TryGetValue(field, out var value) || StoredMomentKinds.Read(value) is not { } read)
             return false;
 
-        switch (value)
-        {
-            case DateTimeOffset offset:
-                moment = offset;
-                return true;
-            case DateTime time:
-                moment = new DateTimeOffset(time);
-                return true;
-            default:
-                return false;
-        }
+        moment = read;
+        return true;
     }
 }

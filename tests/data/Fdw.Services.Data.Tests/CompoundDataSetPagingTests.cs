@@ -371,7 +371,8 @@ public sealed class CompoundDataSetPagingTests
         var resolver = new FieldMappingTransformationResolver(
             gateways.Object,
             new TransformationConfigurationProvider(
-                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation"));
+                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation",
+                TransformationDescriptionDoubles.Writer(), TransformationDescriptionDoubles.Reader()));
 
         var config = new CompoundDataSetConfiguration
         {
@@ -382,6 +383,7 @@ public sealed class CompoundDataSetPagingTests
                 Source("Orders", "Order", 1, ("OrderId", "order_id"), ("Status", "status"), ("CustomerCode", "customer_code")),
                 Source("Customers", "Customer", 2, ("CustomerName", "name"), ("Code", "code")),
             ],
+            SourceCombination = "Join",
             Joins = [new DataSetJoinConfiguration { LeftSourceName = "Orders", LeftFieldName = leftJoinField, RightSourceName = "Customers", RightFieldName = "Code", JoinType = joinType, Ordinal = 1 }],
             Fields = fields,
             Filters = [.. filters ?? []],

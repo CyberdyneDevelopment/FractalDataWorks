@@ -57,6 +57,7 @@ public sealed class UpdateScheduleChangesTests
     [InlineData("IsEnabled", """{ "isEnabled": false }""")]
     [InlineData("Parameters", """{ "parameters": [ { "name": "Region", "value": "West" } ] }""")]
     [InlineData("RunRoles", """{ "runRoles": ["Admin"] }""")]
+    [InlineData("RunAs", """{ "runAs": { "permissions": ["pipelines:execute"], "expiresAt": "2027-01-01T00:00:00Z" } }""")]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
     public void EveryMemberOnTheListChangesTheSavedScheduleOnItsOwn(string member, string json)

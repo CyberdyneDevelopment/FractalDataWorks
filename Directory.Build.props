@@ -68,6 +68,9 @@
     
   </PropertyGroup>
 
+  <!-- FDW-7107: the configuration generator's column sizes; the package props a consumer gets, imported here because FDW references the generator as a project -->
+  <Import Project="$(MSBuildThisFileDirectory)src/configuration/Fdw.Configuration.SourceGenerators/build/Fdw.Configuration.SourceGenerators.props" />
+
   <!-- Conventions Analyzer Configuration -->
   <PropertyGroup>
     <FDW_MaxMethodLines>60</FDW_MaxMethodLines>
@@ -182,7 +185,7 @@
        revision away. A release sets both per assembly: FileVersion from the package's x.y.z, AssemblyVersion never below the floor
        the baseline release recorded (a dll that is not rebuilt asks for its dependencies at the version it was built against). -->
   <PropertyGroup>
-    <VersionPrefix>1.5.13</VersionPrefix>
+    <VersionPrefix>1.6.0</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>

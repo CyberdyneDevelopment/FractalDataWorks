@@ -104,11 +104,20 @@ public class GetDataSetLineageDownstreamConsumersTests
                     pipelines.Where(p => ids.Contains(p.Id)).ToDictionary(p => p.Id, p => (IPipelineImplementationConfiguration)p)));
 
         var provider = new PipelineServiceConfigurationProvider(
-            NullLogger<PipelineServiceConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "pipe", "Pipeline", new Fdw.Services.Configuration.UnavailablePlacement());
+            NullLogger<PipelineServiceConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "pipe", "Pipeline", new Fdw.Services.Configuration.UnavailablePlacement(),
+            PipelineDescriptionDoubles.Writer(), PipelineDescriptionDoubles.Reader());
         provider.Register("Graph", implementations.Object);
 
+        // A data set read fills its descriptions from the descriptions table (FDW-6208); this store holds none.
+        var descriptions = new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict);
+        var none = GenericResult<IReadOnlyDictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>>.Success(
+            new Dictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>());
+        descriptions.Setup(d => d.ReadMany(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>())).ReturnsAsync(none);
+        descriptions.Setup(d => d.ReadOwnedBy(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>())).ReturnsAsync(none);
+
         var dataSets = new DataSetConfigurationProvider(
-            NullLogger<DataSetConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement());
+            NullLogger<DataSetConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement(),
+            new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict).Object, descriptions.Object);
 
         // Calculation consumers are read through the composed calculations; this store holds none.
         var calculations = new Mock<ICalculationConfigurationProvider>();

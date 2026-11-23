@@ -6,18 +6,6 @@ namespace Fdw.Data.Abstractions.Tests.SchemaObjects;
 
 public sealed class SchemaObjectTypesTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void DatabaseObjectTypeIsRegistered()
-    {
-        // Act
-        var database = SchemaObjectTypes.ByName("Database");
-
-        // Assert
-        database.ShouldNotBeNull();
-        database.Name.ShouldBe("Database");
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

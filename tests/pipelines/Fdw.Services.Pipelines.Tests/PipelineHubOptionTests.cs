@@ -51,4 +51,23 @@ public sealed class PipelineHubOptionTests
         hub!.ImplementationType.ShouldBe(typeof(PipelineStatusBroadcaster));
         hub.Lifetime.ShouldBe(ServiceLifetime.Scoped);
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "CoreFramework")]
+    public void RegisterServicesRegistersTheRelayTuningTheBufferAndTheFlusherOncePerHost()
+    {
+        var services = new ServiceCollection();
+
+        new PipelineHubOption().RegisterServices(services, loggerFactory: null);
+
+        foreach (var type in new[] { typeof(PipelineEventRelayTuning), typeof(PipelineEventRelayBuffer) })
+        {
+            var descriptor = services.Single(d => d.ServiceType == type);
+            descriptor.Lifetime.ShouldBe(ServiceLifetime.Singleton);
+        }
+
+        services.Count(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
+            && d.ImplementationType == typeof(PipelineEventRelayFlusher)).ShouldBe(1);
+    }
 }

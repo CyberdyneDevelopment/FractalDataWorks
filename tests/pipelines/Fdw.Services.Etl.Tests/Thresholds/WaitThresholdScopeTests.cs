@@ -9,6 +9,7 @@ using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Thresholds;
 using Microsoft.Extensions.DependencyInjection;
 using static Fdw.Services.Etl.Tests.Thresholds.WaitThresholdKit;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Tests.Thresholds;
 
@@ -25,9 +26,9 @@ public sealed class WaitThresholdScopeTests : IDisposable
     private static readonly Guid Caller = Guid.Parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
     private static readonly Guid PipelineId = Guid.Parse("22222222-2222-4222-8222-222222222222");
 
-    private readonly string? _before = EtlPipelineTypes.OperationalConnection;
+    private readonly string? _before = PipelineTypes.OperationalConnection;
 
-    public void Dispose() => EtlPipelineTypes.OperationalConnection = _before;
+    public void Dispose() => PipelineTypes.OperationalConnection = _before;
 
     // Records the tenant the ambient accessor holds at the moment each call is made, and which instance made it.
     private sealed class Probe(IAuthenticationContextAccessor accessor) : IThresholdSource, IThresholdEvaluator
@@ -136,13 +137,13 @@ public sealed class WaitThresholdScopeTests : IDisposable
     [Trait("Category", "Etl")]
     public void TheMonitorResolvesInAContainerThatRefusesASingletonThatHoldsAScopedService()
     {
-        EtlPipelineTypes.OperationalConnection = null;
+        PipelineTypes.OperationalConnection = null;
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
         services.AddScoped<IThresholdSource>(sp => new Probe(sp.GetRequiredService<IAuthenticationContextAccessor>()));
         services.AddScoped<IThresholdEvaluator>(sp => new Probe(sp.GetRequiredService<IAuthenticationContextAccessor>()));
-        EtlPipelineTypes.RegisterPipelineExecutionQueue(services);
+        PipelineExecutionRegistration.RegisterPipelineExecutionQueue(services);
 
         // ValidateScopes makes the container refuse a singleton that takes a scoped service; the monitor takes the gate and the reporter, so it is captive through them
         // unless they take the scope factory.

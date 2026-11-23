@@ -22,7 +22,7 @@ internal static class PipelineEdges
         IPipelineConfigurationProvider provider, ITransformationConfigurationProvider transformations, CancellationToken cancellationToken)
     {
         // Why whole: what a pipeline uses lives in its steps and their components, which a read of the record alone does not hold.
-        var read = await provider.Get(ConfigurationLevels.WholeAggregate, cancellationToken).ConfigureAwait(false);
+        var read = await provider.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (read.IsFailure)
         {
             return read.ToNewResult<List<CatalogEdge>>();

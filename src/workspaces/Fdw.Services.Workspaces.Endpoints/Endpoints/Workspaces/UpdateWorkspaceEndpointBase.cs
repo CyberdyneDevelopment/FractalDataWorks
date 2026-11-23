@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions.Results;
 using Fdw.Data.Abstractions;
@@ -148,10 +150,39 @@ public abstract class UpdateWorkspaceEndpointBase : CrudUpdateEndpointBase<Updat
 
         if (saved.IsFailure) return saved.ToNewResult<WorkspaceDetailResponse>();
 
+        var released = await ReleaseIfClosed(config, ct).ConfigureAwait(false);
+        if (released.IsFailure) return released.ToNewResult<WorkspaceDetailResponse>();
+
+        var gaveBack = released.Value!;
         var ownership = await WorkspaceOwnershipReader.Read(Resolve<IOrganizationProvider>(), config, Logger, ct).ConfigureAwait(false);
-        return ownership.IsFailure
-            ? ownership.ToNewResult<WorkspaceDetailResponse>()
-            : GenericResult<WorkspaceDetailResponse>.Success(WorkspaceResponseMapper.ToDetail(config, ownership.Value!));
+        if (ownership.IsFailure) return ownership.ToNewResult<WorkspaceDetailResponse>();
+
+        var detail = WorkspaceResponseMapper.ToDetail(config, ownership.Value!);
+        detail.Released = [.. gaveBack.Select(resource => new WorkspaceResourceDto
+        {
+            Id = resource.Id,
+            ResourceType = resource.ResourceType,
+            ResourceId = resource.ResourceId,
+            Relationship = resource.Relationship,
+        })];
+        return GenericResult<WorkspaceDetailResponse>.Success(detail);
+    }
+
+    // A closed workspace cannot be the scope writes are decided at, so it gives back what it owns of a kind released on archive (FDW-6967), and the rows
+    // given back leave the workspace as read. Asked on every save that leaves it closed, not only the one that closes it, so a release that failed is done
+    // by saving it again. An open workspace gives back nothing.
+    private async Task<IGenericResult<IReadOnlyList<WorkspaceResourceConfiguration>>> ReleaseIfClosed(IWorkspaceImplementationConfiguration config, CancellationToken ct)
+    {
+        if (!WorkspaceStatuses.ByName(config.Status).IsClosed)
+            return GenericResult<IReadOnlyList<WorkspaceResourceConfiguration>>.Success([]);
+
+        var released = await Resolve<IWorkspaceResourceOwners>().ReleaseOnArchive(config, ct).ConfigureAwait(false);
+        if (released.IsFailure) return released;
+
+        foreach (var resource in released.Value!)
+            config.Resources.Remove(resource);
+
+        return released;
     }
 
     // The organization a workspace is moved to must be one of its own tenant; leaving it out, or naming the one it is in, asks nothing (FDW-2338).

@@ -1,4 +1,5 @@
 using Fdw.Services.Etl.Execution;
+using Fdw.Services.Etl.Abstractions.Execution;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -23,15 +24,18 @@ public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBa
 {
     private readonly ScheduleConfigurationProvider _provider;
     private readonly RunRoleAuthority _runRoles;
+    private readonly ScheduleRunAsGrants _runAs;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateScheduleEndpointBase{TConfig}"/> class.</summary>
     protected UpdateScheduleEndpointBase(
         ILogger<UpdateScheduleEndpointBase<TConfig>> logger,
         ScheduleConfigurationProvider provider,
-        IRoleGrants grants) : base(logger)
+        IRoleGrants grants,
+        IRunGrants runGrants) : base(logger)
     {
         _provider = provider;
         _runRoles = new RunRoleAuthority(grants);
+        _runAs = new ScheduleRunAsGrants(runGrants, grants);
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -95,15 +99,60 @@ public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBa
             roles = authorized.Value;
         }
 
+        var previousGrant = originalResult.Value.RunGrantId;
         var updatedConfig = MergeUpdate(request, (TConfig)originalResult.Value, roles);
+
+        // The grant a request states replaces the schedule's grant, and a request that removes it ends it (FDW-6144); the previous grant is revoked once the schedule no longer stores it.
+        var runAs = await ChangeRunAs(request, updatedConfig, ct).ConfigureAwait(false);
+        if (runAs.IsFailure)
+        {
+            return runAs.ToNewResult<ScheduleDetailDto>();
+        }
 
         var saveResult = await _provider.Update(updatedConfig, "Schedule", updatedConfig.Implementation, updatedConfig.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
+            await _runAs.Revoke(updatedConfig.RunGrantId != previousGrant ? updatedConfig.RunGrantId : null, ct).ConfigureAwait(false);
             return saveResult.ToNewResult<ScheduleDetailDto>();
         }
 
+        await _runAs.Revoke(updatedConfig.RunGrantId != previousGrant ? previousGrant : null, ct).ConfigureAwait(false);
+
         return GenericResult<ScheduleDetailDto>.Success(MapUpdatedToDetail(updatedConfig, updatedConfig));
+    }
+
+    // Changes the grant the schedule stores as the request states: a new grant for the caller replaces it, a removal clears it, and no RunAs leaves it standing.
+    private async Task<IGenericResult> ChangeRunAs(UpdateScheduleRequest request, TConfig config, CancellationToken ct)
+    {
+        if (request.RunAs is not { } runAs)
+        {
+            return GenericResult.Success();
+        }
+
+        if (runAs.Remove)
+        {
+            if (runAs.Permissions is not null || runAs.ExpiresAt is not null)
+            {
+                return GenericResult.Failure(ScheduleEndpointLog.RunAsRemoveAndStated(Logger, request.Name));
+            }
+
+            if (config.RunGrantId is null)
+            {
+                return GenericResult.Failure(ScheduleEndpointLog.RunAsNothingToRemove(Logger, request.Name));
+            }
+
+            config.RunGrantId = null;
+            return GenericResult.Success();
+        }
+
+        var issued = await _runAs.Issue(new ClaimsPrincipalAuthenticationContext(User), request.Name, runAs, config.RunRoleNames, Logger, ct).ConfigureAwait(false);
+        if (issued.IsFailure || issued.Value is not { } grant)
+        {
+            return issued;
+        }
+
+        config.RunGrantId = grant.Id;
+        return GenericResult.Success();
     }
 
     /// <summary>Maps an existing configuration to a detail DTO for the find phase. Override for type-specific fields.</summary>

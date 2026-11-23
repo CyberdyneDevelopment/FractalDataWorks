@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Services.Connections.RowQuery.DateValues;
+using Fdw.Services.Connections.RowQuery.FilterNodes;
 
 namespace Fdw.Services.Connections.RowQuery;
 
@@ -86,21 +88,14 @@ public static class RecordRowMatcher
         IFilterNode? node,
         string? primaryContainerName)
     {
-        switch (node)
-        {
-            case null:
-                return true;
+        if (node is null)
+            return true;
 
-            case FilterCondition condition:
-                return EvaluateCondition(childRow, joinedRows, condition, primaryContainerName);
-
-            case FilterGroup group:
-                return EvaluateGroup(childRow, joinedRows, group, primaryContainerName);
-
-            default:
-                throw new InvalidOperationException(
-                    $"Unsupported filter node type '{node.GetType().Name}' reached the matcher — RecordQueryValidator should have rejected it first.");
-        }
+        var handler = RowQueryNodes.HandlerFor(node);
+        return ReferenceEquals(handler, RowQueryNodeHandlers.NotFound)
+            ? throw new InvalidOperationException(
+                $"Unsupported filter node type '{node.GetType().Name}' reached the matcher — RecordQueryValidator should have rejected it first.")
+            : handler.Matches(node, childRow, joinedRows, primaryContainerName);
     }
 
     private static Dictionary<string, IReadOnlyDictionary<string, object?>> JoinedRowsOf(
@@ -112,7 +107,7 @@ public static class RecordRowMatcher
         return joined;
     }
 
-    private static bool EvaluateGroup(
+    internal static bool EvaluateGroup(
         IReadOnlyDictionary<string, object?> childRow,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> joinedRows,
         FilterGroup group,
@@ -136,7 +131,7 @@ public static class RecordRowMatcher
         return true;
     }
 
-    private static bool EvaluateCondition(
+    internal static bool EvaluateCondition(
         IReadOnlyDictionary<string, object?> childRow,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> joinedRows,
         FilterCondition condition,
@@ -284,12 +279,13 @@ public static class RecordRowMatcher
         _ => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
     };
 
-    private static DateTimeOffset ToDateTimeOffset(object value) => value switch
+    private static DateTimeOffset ToDateTimeOffset(object value)
     {
-        DateTimeOffset dateTimeOffset => dateTimeOffset,
-        DateTime dateTime => new DateTimeOffset(dateTime),
-        _ => throw new InvalidOperationException($"Unsupported date/time value type '{value.GetType().Name}'."),
-    };
+        var reader = DateValueReaders.ByName(value.GetType().Name);
+        return ReferenceEquals(reader, DateValueReaders.NotFound)
+            ? throw new InvalidOperationException($"Unsupported date/time value type '{value.GetType().Name}'.")
+            : reader.Read(value);
+    }
 
     private static bool IsNumeric(object value) =>
         value is long or int or short or decimal or double or float;

@@ -37,6 +37,9 @@ public partial class DataSetVariationDomainConfiguration : DomainConfiguration
     public string? DisplayName { get; set; }
 
     /// <summary>Gets or sets the variation's description.</summary>
+    // Why [NotStored]: the description is the one of the data set, kept in the descriptions table in the language of the caller's tenant, so the view cannot carry it; the list
+    // provider fills it once for the page (FDW-6208). The member stays, so every caller of the list still gets the text.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the logical id of the workspace that owns a Scoped variation; null for a data view.</summary>

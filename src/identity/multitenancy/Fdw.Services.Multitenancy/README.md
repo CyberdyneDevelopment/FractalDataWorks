@@ -14,7 +14,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `SingleTenantMultitenancyType` | class | Multitenancy option for hosts that run a single tenant — the explicit "no real tenant store" choice.… |
+| `SingleTenantMultitenancyType` | class | Multitenancy option for hosts that resolve no tenant from a request (the ETL host, the scheduler): answers tenant and organization facts from the configuration database (FDW-6528). |
 
 Shipped options are reference implementations, not canon — a consumer adds a kind by declaring its own option against this collection, in its own assembly.
 

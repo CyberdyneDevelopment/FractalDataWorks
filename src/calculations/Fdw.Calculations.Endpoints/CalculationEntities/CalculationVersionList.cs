@@ -16,7 +16,7 @@ namespace Fdw.Calculations.Endpoints.CalculationEntities;
 internal static class CalculationVersionList
 {
     internal static async Task<IGenericResult<CalculationVersionsResponse>> Run(
-        CalculationVersionServices services, IPlaceNames names, Guid calculationId, CallerPlace origin, string readRight, ILogger logger, CancellationToken cancellationToken)
+        CalculationVersionServices services, IPlaceNames names, Guid calculationId, CallerPlace origin, string readRight, int maxVersions, ILogger logger, CancellationToken cancellationToken)
     {
         var calculation = await services.Calculations.Get(calculationId, cancellationToken).ConfigureAwait(false);
         if (calculation.IsFailure)
@@ -40,6 +40,7 @@ internal static class CalculationVersionList
             row => row.Description,
             origin,
             readRight,
+            maxVersions,
             logger,
             cancellationToken).ConfigureAwait(false);
         if (versions.IsFailure || versions.Value is not { } found)

@@ -13,6 +13,8 @@ using DataSetSourceConfiguration = Fdw.Data.DataSets.Abstractions.DataSetSourceC
 using IDataSetImplementationConfiguration = Fdw.Data.DataSets.Abstractions.IDataSetImplementationConfiguration;
 using IDataSetBuilder = Fdw.Data.DataSets.Abstractions.IDataSetBuilder;
 using DataSetImplementationConfigurationExtensions = Fdw.Data.DataSets.Abstractions.DataSetImplementationConfigurationExtensions;
+using IJoinedDataSetConfiguration = Fdw.Data.DataSets.Abstractions.IJoinedDataSetConfiguration;
+using SourceCombinationRules = Fdw.Data.DataSets.Abstractions.SourceCombinationRules;
 
 namespace Fdw.Services.Data;
 
@@ -61,8 +63,10 @@ public sealed class DataSetBuilder : IDataSetBuilder
                 DataSetBuilderLog.ConfigurationNameRequired(_logger));
         }
 
-        // Resolve the composition strategy from the TypeCollection.
+        // The composition the data set states (FDW-6946); refused when it states none for several sources or one its joins contradict.
         var composition = ResolveComposition(config);
+        if (composition.IsFailure)
+            return composition.ToNewResult<IDataSet>();
 
         IReadOnlyList<DataSetSourceConfiguration> sourceConfigs =
             config.Sources is IReadOnlyList<DataSetSourceConfiguration> ro ? ro
@@ -117,7 +121,7 @@ public sealed class DataSetBuilder : IDataSetBuilder
         var dataSet = new DataSet(
             config.Name,
             config.Description,
-            composition,
+            composition.Value!,
             sources,
             joins,
             fields,
@@ -128,17 +132,21 @@ public sealed class DataSetBuilder : IDataSetBuilder
     }
 
     /// <summary>
-    /// Determines the composition strategy from the configuration.
+    /// The composition a data set states (FDW-6946): a Compound or Federated data set with several sources states Join or Union, checked by
+    /// <see cref="SourceCombinationRules"/>; a data set of one source, or of a kind that reads one, is Singular. Nothing is worked out from
+    /// whether the data set has joins.
     /// </summary>
-    private static IDataSetCompositionType ResolveComposition(IDataSetImplementationConfiguration config)
+    private IGenericResult<IDataSetCompositionType> ResolveComposition(IDataSetImplementationConfiguration config)
     {
-        var sourceCount = config.Sources.Count;
-        if (sourceCount <= 1 || DataSetImplementationConfigurationExtensions.JoinsOrNone(config).Count == 0)
-        {
-            if (sourceCount > 1)
-                return DataSetCompositionTypes.ByName("Union");
-            return DataSetCompositionTypes.ByName("Singular");
-        }
-        return DataSetCompositionTypes.ByName("Join");
+        if (config is not IJoinedDataSetConfiguration joined)
+            return GenericResult<IDataSetCompositionType>.Success(DataSetCompositionTypes.ByName("Singular"));
+
+        var checkedCombination = SourceCombinationRules.Validate(joined, _logger);
+        if (checkedCombination.IsFailure)
+            return checkedCombination.ToNewResult<IDataSetCompositionType>();
+
+        return GenericResult<IDataSetCompositionType>.Success(string.IsNullOrWhiteSpace(joined.SourceCombination)
+            ? DataSetCompositionTypes.ByName("Singular")
+            : SourceCombinationRules.Stated(joined));
     }
 }

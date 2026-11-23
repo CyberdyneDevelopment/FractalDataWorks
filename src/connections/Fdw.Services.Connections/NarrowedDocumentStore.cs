@@ -9,6 +9,7 @@ using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Logging;
+using Fdw.Services.Connections.NarrowedDocuments;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -68,91 +69,30 @@ public sealed class NarrowedDocumentStore : IDocumentStore
         }
 
         var result = await _connection.Execute(inner, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess && result.Value is { } value ? Narrow(value, result) : result;
+        return result.IsSuccess && result.Value is { } value ? Narrow(command, (object)value, result) : result;
     }
 
     private IGenericMessage Refused(IDocumentCommand command) => DocumentStoreLog.CommandNotNarrowable(_logger, command.GetType().Name, _folder.Root.Value);
 
     // The command with its paths placed under the folder; a type this store does not know is refused.
-    private IGenericResult<IDocumentCommand> Rewrite(IDocumentCommand command) => command switch
+    private IGenericResult<IDocumentCommand> Rewrite(IDocumentCommand command)
     {
-        UploadCommand c => Below(c.Path, path => new UploadCommand(path, c.Content, c.ContentType, c.CreateOnly, c.Metadata)),
-        DownloadCommand c => Below(c.Path, path => new DownloadCommand(path, c.Range)),
-        DeleteCommand c => Below(c.Path, path => new DeleteCommand(path)),
-        GetInfoCommand c => Below(c.Path, path => new GetInfoCommand(path)),
-        ListCommand c => Below(c.Folder, path => new ListCommand(path, c.Recursive, c.PageSize, c.Continuation)),
-        CreateReadLinkCommand c => Below(c.Path, path => new CreateReadLinkCommand(path, c.Lifetime)),
-        CopyCommand c => BelowBoth(c.Source, c.Destination, (source, destination) => new CopyCommand(source, destination, c.CreateOnly)),
-        MoveCommand c => BelowBoth(c.Source, c.Destination, (source, destination) => new MoveCommand(source, destination, c.CreateOnly)),
-        _ => GenericResult<IDocumentCommand>.Failure(Refused(command)),
-    };
-
-    private IGenericResult<IDocumentCommand> Below(DocumentPath path, Func<DocumentPath, IDocumentCommand> build)
-    {
-        var resolved = _folder.Resolve(path);
-        return resolved.IsFailure ? resolved.ToNewResult<IDocumentCommand>() : GenericResult<IDocumentCommand>.Success(build(resolved.Value));
-    }
-
-    private IGenericResult<IDocumentCommand> BelowBoth(DocumentPath first, DocumentPath second, Func<DocumentPath, DocumentPath, IDocumentCommand> build)
-    {
-        var one = _folder.Resolve(first);
-        var other = _folder.Resolve(second);
-        if (one.IsFailure)
-        {
-            return one.ToNewResult<IDocumentCommand>();
-        }
-
-        return other.IsFailure ? other.ToNewResult<IDocumentCommand>() : GenericResult<IDocumentCommand>.Success(build(one.Value, other.Value));
+        var handler = NarrowingCommandHandlers.ByName(command.CommandType);
+        return ReferenceEquals(handler, NarrowingCommandHandlers.NotFound)
+            ? GenericResult<IDocumentCommand>.Failure(Refused(command))
+            : handler.Rewrite(command, _folder, () => Refused(command));
     }
 
     // The result with its paths made relative to the folder again; results that carry no path are returned as they are.
-    private IGenericResult<T> Narrow<T>(T value, IGenericResult<T> original) => value switch
+    private IGenericResult<T> Narrow<T>(IDocumentCommand command, object value, IGenericResult<T> original)
     {
-        DocumentInfo info => Typed<T, DocumentInfo>(RelativeInfo(info)),
-        DocumentPage page => Typed<T, DocumentPage>(RelativePage(page)),
-        DocumentContent content => Typed<T, DocumentContent>(RelativeContent(content)),
-        _ => original,
-    };
-
-    private IGenericResult<DocumentInfo> RelativeInfo(DocumentInfo info)
-    {
-        var relative = _folder.Relative(info.Path);
-        return relative.IsFailure
-            ? relative.ToNewResult<DocumentInfo>()
-            : GenericResult<DocumentInfo>.Success(new DocumentInfo(
-                relative.Value, info.Length, info.ContentType, info.LastModified, info.ContentHash, info.Version, info.Metadata));
-    }
-
-    private IGenericResult<DocumentPage> RelativePage(DocumentPage page)
-    {
-        var items = new List<DocumentInfo>(page.Items.Count);
-        foreach (var item in page.Items)
+        var handler = NarrowedResultHandlers.ByName(value.GetType().Name);
+        if (ReferenceEquals(handler, NarrowedResultHandlers.NotFound))
         {
-            var relative = RelativeInfo(item);
-            if (relative.IsFailure || relative.Value is null)
-            {
-                return relative.ToNewResult<DocumentPage>();
-            }
-
-            items.Add(relative.Value);
+            return original;
         }
 
-        return GenericResult<DocumentPage>.Success(new DocumentPage(items, page.Continuation));
+        var narrowed = handler.Narrow(value, _folder, () => Refused(command));
+        return narrowed.IsSuccess && narrowed.Value is T narrowedValue ? GenericResult<T>.Success(narrowedValue) : narrowed.ToNewResult<T>();
     }
-
-    private IGenericResult<DocumentContent> RelativeContent(DocumentContent content)
-    {
-        var relative = RelativeInfo(content.Info);
-        if (relative.IsFailure || relative.Value is null)
-        {
-            content.Dispose();
-            return relative.ToNewResult<DocumentContent>();
-        }
-
-        return GenericResult<DocumentContent>.Success(new DocumentContent(relative.Value, content.Content));
-    }
-
-    // The narrowed value is of T by construction: the switch above matched the value of T to a concrete type, and a narrowed result is of that type.
-    private static IGenericResult<T> Typed<T, TNarrowed>(IGenericResult<TNarrowed> narrowed)
-        => narrowed.IsSuccess && narrowed.Value is T value ? GenericResult<T>.Success(value) : narrowed.ToNewResult<T>();
 }

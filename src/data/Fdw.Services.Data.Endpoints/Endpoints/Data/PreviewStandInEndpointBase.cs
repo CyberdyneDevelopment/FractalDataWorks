@@ -88,7 +88,9 @@ public abstract class PreviewStandInEndpointBase : Endpoint<PreviewStandInReques
         }
 
         var values = StandInValueGenerator.Generate(req, count, candidates);
-        await Send.OkAsync(new PreviewStandInResponse { Strategy = req.Strategy, Values = values }, ct).ConfigureAwait(false);
+        if (values.IsFailure) { await SendError(values, ct).ConfigureAwait(false); return; }
+
+        await Send.OkAsync(new PreviewStandInResponse { Strategy = req.Strategy, Values = values.Value! }, ct).ConfigureAwait(false);
     }
 
     private async Task SendError(IGenericResult result, CancellationToken ct)

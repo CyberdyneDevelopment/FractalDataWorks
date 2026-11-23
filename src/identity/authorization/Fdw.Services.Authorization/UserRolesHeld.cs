@@ -21,28 +21,28 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 /// <remarks>
 /// The id is asked for in both spellings of a Guid, since the text may have been written in either, and each row is then compared as the Guid it is
-/// (FDW-532). A person who holds more than <see cref="MaxAssignments"/> assignments fails the read, as the lookup of their domain rows carries a key
+/// (FDW-532). A person who holds more assignments than the configured most (FDW-7103: the option's declared <c>MaxRoleAssignments</c>) fails the read, as the lookup of their domain rows carries a key
 /// for each.
 /// </remarks>
 public sealed class UserRolesHeld : IUserRolesHeld
 {
-    /// <summary>The most assignments one person may hold for a read to answer.</summary>
-    public const int MaxAssignments = 1000;
-
     private static readonly string[] ByRowId = ["RowId"];
 
     private readonly ConfigurationRowReader _assignments;
     private readonly ConfigurationRowReader _domains;
     private readonly ConfigurationRowReader _roles;
     private readonly ILogger<UserRolesHeld> _logger;
+    private readonly int _maxAssignments;
 
     /// <summary>Initializes a new instance of the <see cref="UserRolesHeld"/> class.</summary>
     /// <param name="gateways">Reaches the configuration store.</param>
     /// <param name="dataStoreName">The data store the tables are in.</param>
     /// <param name="pathName">The path of the authorization tables.</param>
+    /// <param name="maxAssignments">The most assignments one person may hold for a read to answer, as the authorization option's registration resolved it.</param>
     /// <param name="logger">The logger.</param>
-    public UserRolesHeld(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, ILogger<UserRolesHeld>? logger)
+    public UserRolesHeld(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, int maxAssignments, ILogger<UserRolesHeld>? logger)
     {
+        _maxAssignments = maxAssignments;
         _logger = logger ?? NullLogger<UserRolesHeld>.Instance;
         _assignments = new ConfigurationRowReader(gateways, dataStoreName, pathName, "UserRoleConfiguration", _logger);
         _domains = new ConfigurationRowReader(gateways, dataStoreName, pathName, "UserRole", _logger);
@@ -53,16 +53,16 @@ public sealed class UserRolesHeld : IUserRolesHeld
     public async Task<IGenericResult<IReadOnlyList<HeldRole>>> Get(Guid userId, CancellationToken cancellationToken = default)
     {
         var asked = await _assignments.Page(
-            In("UserId", [userId.ToString("D").ToLowerInvariant(), userId.ToString("D").ToUpperInvariant()]), ByRowId, 0, MaxAssignments + 1, true, cancellationToken)
+            In("UserId", [userId.ToString("D").ToLowerInvariant(), userId.ToString("D").ToUpperInvariant()]), ByRowId, 0, _maxAssignments + 1, true, cancellationToken)
             .ConfigureAwait(false);
         if (asked.IsFailure)
         {
             return asked.ToNewResult<IReadOnlyList<HeldRole>>();
         }
 
-        if (asked.Value!.Count > MaxAssignments)
+        if (asked.Value!.Count > _maxAssignments)
         {
-            return GenericResult<IReadOnlyList<HeldRole>>.Failure(UserRolesHeldLog.TooManyAssignments(_logger, userId.ToString("D"), MaxAssignments));
+            return GenericResult<IReadOnlyList<HeldRole>>.Failure(UserRolesHeldLog.TooManyAssignments(_logger, userId.ToString("D"), _maxAssignments));
         }
 
         try

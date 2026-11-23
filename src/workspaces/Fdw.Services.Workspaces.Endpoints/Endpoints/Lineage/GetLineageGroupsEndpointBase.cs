@@ -45,7 +45,7 @@ public abstract class GetLineageGroupsEndpointBase : LineageEndpointBase<Lineage
     public override void Configure() => ConfigureLineage(
         "/lineage/groups",
         "Get the groups of data sets and the lines between them",
-        "groupBy is required: category groups the data sets by category (the ones under none are Uncategorised), tag puts each data set in the group " +
+        "groupBy is required: category groups the data sets by category (the ones under none are Uncategorized), tag puts each data set in the group " +
         "of every tag it carries (the ones with none are Untagged), so the groups of a data set with several tags overlap. The containers pipelines read or " +
         "write directly are grouped by data store and path. A line goes from one group to another wherever a pipeline reads from the first and writes to the " +
         "second; it says how many pipelines run along it and names up to the LineageLinePipelines setting of them. A pipeline whose ends sit in one group draws no line, and ends that " +

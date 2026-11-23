@@ -52,6 +52,10 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
     {
     }
 
+    /// <inheritdoc />
+    /// <remarks>Read from what this translator emits: a DELETE (or the UPDATE that flags a soft delete, which a delete states as Delete).</remarks>
+    public override IReadOnlyList<string> Operations => ["Delete"];
+
     /// <summary>
     /// Base Translate - dispatches to typed overload or returns error for invalid command types.
     /// </summary>

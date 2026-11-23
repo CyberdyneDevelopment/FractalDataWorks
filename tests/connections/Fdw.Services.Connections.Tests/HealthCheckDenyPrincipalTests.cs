@@ -72,7 +72,7 @@ public sealed class HealthCheckDenyPrincipalTests
         // Every read and the probe open a connection, as they do against ConfigurationDb and the probed database.
         var configurations = new Mock<IConnectionConfigurationProvider>();
         configurations
-            .Setup(p => p.Get(ConfigurationLevels.RecordOnly, It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.RecordOnly, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .Callback(() => Open(accessor, "ConfigurationDb", logger, chosen))
             .ReturnsAsync(GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success(new[] { opsDb.Object }));
 

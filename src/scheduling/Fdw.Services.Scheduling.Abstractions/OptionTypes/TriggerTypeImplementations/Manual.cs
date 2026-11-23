@@ -91,7 +91,7 @@ public sealed class Manual : TriggerTypeBase
     /// Manual triggers do not require schedule persistence since they don't auto-schedule,
     /// and they execute immediately when triggered (they are immediate execution triggers).
     /// </remarks>
-    public Manual(ILogger<Manual>? logger = null) : base("Manual", requiresSchedule: false, isImmediate: true)
+    public Manual(ILogger<Manual>? logger = null) : base("Manual", requiresSchedule: false, isImmediate: true, description: "Execution started on request by a person or a call, never by a clock")
     {
         _logger = logger ?? NullLogger<Manual>.Instance;
     }
@@ -232,33 +232,5 @@ public sealed class Manual : TriggerTypeBase
     /// <summary>
     /// Attempts to convert an object to a boolean.
     /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <param name="result">The converted boolean value.</param>
-    /// <returns><c>true</c> if conversion succeeded; otherwise, <c>false</c>.</returns>
-    private static bool TryConvertToBool(object? value, out bool result)
-    {
-        result = false;
-
-        return value switch
-        {
-            bool boolValue => TryAssignBool(boolValue, out result),
-            string stringValue when string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase) => TryAssignBool(true, out result),
-            string stringValue when string.Equals(stringValue, "false", StringComparison.OrdinalIgnoreCase) => TryAssignBool(false, out result),
-            int intValue when intValue == 0 => TryAssignBool(false, out result),
-            int intValue when intValue == 1 => TryAssignBool(true, out result),
-            _ => false
-        };
-    }
-
-    /// <summary>
-    /// Helper method to assign a boolean value to the result parameter.
-    /// </summary>
-    /// <param name="value">The value to assign.</param>
-    /// <param name="result">The result parameter to assign to.</param>
-    /// <returns>Always returns <c>true</c>.</returns>
-    private static bool TryAssignBool(bool value, out bool result)
-    {
-        result = value;
-        return true;
-    }
+    private static bool TryConvertToBool(object? value, out bool result) => TriggerValueShapes.ReadBool(value, out result);
 }

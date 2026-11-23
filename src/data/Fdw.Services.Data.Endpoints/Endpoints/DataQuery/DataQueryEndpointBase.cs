@@ -138,6 +138,18 @@ public abstract class DataQueryEndpointBase<TRequest, TResponse> : Endpoint<TReq
     protected virtual Task<IGenericResult<QueryFilterNode?>> ScopeFilter(TRequest req, CancellationToken ct)
         => Task.FromResult(GenericResult<QueryFilterNode?>.Success(null));
 
+    /// <summary>
+    /// The name the answer carries as <c>dataSetName</c>: the name the caller reached the rows by (FDW-5446). A variation is read by running its root, so the
+    /// data set resolved is the root and its own name would tell a person who holds only the variation what it varies. A route that reaches a data set by a
+    /// name that is not the data set's own returns that name; one that does not gives the data set's own name.
+    /// </summary>
+    /// <param name="req">The request.</param>
+    /// <param name="dataSet">The data set the request's name resolved to, which is what is read.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The name to answer under, or the refusal the caller is answered with.</returns>
+    protected virtual Task<IGenericResult<string>> AnswerName(TRequest req, IDataSetImplementationConfiguration dataSet, CancellationToken ct)
+        => Task.FromResult(GenericResult<string>.Success(dataSet.Name));
+
     /// <summary>Starts the response with whatever the route adds to a page.</summary>
     /// <param name="req">The request.</param>
     /// <returns>A response the page is written into.</returns>
@@ -166,9 +178,12 @@ public abstract class DataQueryEndpointBase<TRequest, TResponse> : Endpoint<TReq
         var page = await _query.Run(dataSet, req, paging.Take, rowCap, token => ScopeFilter(req, token), ct).ConfigureAwait(false);
         if (page.IsFailure) return page.ToNewResult<TResponse>();
 
+        var answerName = await AnswerName(req, dataSet, ct).ConfigureAwait(false);
+        if (answerName.IsFailure) return answerName.ToNewResult<TResponse>();
+
         var read = page.Value!;
         var response = NewResponse(req);
-        response.DataSetName = read.DataSetName;
+        response.DataSetName = answerName.Value!;
         response.Columns = read.Columns;
         response.Rows = read.Rows;
         response.Skip = req.Skip;
@@ -199,6 +214,15 @@ public abstract class DataQueryEndpointBase<TRequest, TResponse> : Endpoint<TReq
             await SendFailure(opened).ConfigureAwait(false);
             return;
         }
+
+        var answerName = await AnswerName(req, dataSet, ct).ConfigureAwait(false);
+        if (answerName.IsFailure)
+        {
+            await SendFailure(answerName).ConfigureAwait(false);
+            return;
+        }
+
+        opened.Value!.AnswerAs(answerName.Value!);
 
         try
         {

@@ -34,4 +34,10 @@ public sealed class RuleNotification
 
     /// <summary>Gets the correlation id the channel carries; null when the notification has none.</summary>
     public string? CorrelationId { get; init; }
+
+    /// <summary>
+    /// Gets the payload the notification carries besides its words (FDW-6138), or <see langword="null"/> for a notification of words only. A service that handles the payload's type receives it;
+    /// every other service is sent the words.
+    /// </summary>
+    public NotificationPayload? Payload { get; init; }
 }

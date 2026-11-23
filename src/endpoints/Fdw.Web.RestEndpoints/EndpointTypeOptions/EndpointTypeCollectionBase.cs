@@ -444,6 +444,14 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
             return GenericResult<IHost>.Success(host);
         }
 
+        // The routed members' declared requirements, checked together before anything runs (FDW-4657): one failed result names every missing service, each once, so a host fixes them all in
+        // one boot. A member the collection does not route (SkipRegistration) is not asked, and the member's own Initialize is not where this is done, so a replaced body is still covered.
+        var required = ServiceRequirements.Check(host, loggerFactory, Selected(Members).OfType<IServiceRequirements>().SelectMany(member => member.Requirements), GetType().Name);
+        if (required.IsFailure)
+        {
+            return required;
+        }
+
         _initialize = PhaseStates.Ran;
 
         if (InitializationMethod is not null)

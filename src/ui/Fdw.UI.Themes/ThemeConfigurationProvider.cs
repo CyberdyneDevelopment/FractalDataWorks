@@ -1,9 +1,12 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.UI.Themes.Commands;
 using Fdw.UI.Themes.Configuration;
 using Fdw.UI.Themes.Logging;
@@ -15,9 +18,15 @@ namespace Fdw.UI.Themes;
 /// <summary>Supplies the Theme configuration.</summary>
 public sealed class ThemeConfigurationProvider
     : DomainConfigurationProviderBase<IThemeImplementationConfiguration>,
-      IThemeConfigurationProvider
+      IThemeConfigurationProvider,
+      IConfigurationWriteObserver<IThemeImplementationConfiguration>,
+      IReferencedConfigurationProvider<IThemeImplementationConfiguration>
 {
+    private const string DescriptionType = ThemeDescriptionType.OptionName;
+    private const string DescriptionSubType = DescriptionTextSubType.OptionName;
+
     private readonly ILogger<ThemeConfigurationProvider> _logger;
+    private readonly IDescriptionWriter _writer;
 
     /// <summary>Initializes a new instance of the <see cref="ThemeConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>
@@ -25,16 +34,33 @@ public sealed class ThemeConfigurationProvider
     /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
     /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
     /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
+    /// <param name="writer">Writes each theme's description in the unit of the theme's save (FDW-6208).</param>
     public ThemeConfigurationProvider(
         ILogger<ThemeConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName,
-        string containerName)
+        string containerName,
+        IDescriptionWriter writer)
         : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
         _logger = logger ?? NullLogger<ThemeConfigurationProvider>.Instance;
+        _writer = writer;
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A theme's <c>Description</c> is not a column of <c>settings.ThemeConfiguration</c> (FDW-6208): it is a row of the descriptions table under the description type
+    /// <c>Theme</c>. A theme is never filled on load, so a theme loaded and saved again (the default theme moving, an update of the colors) carries a null text and keeps
+    /// the stored one; a text the save states is written and a stated blank removes it.
+    /// </remarks>
+    public Task<IGenericResult> Written(IThemeImplementationConfiguration record, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
+        => _writer.DescribeWhenStated(DescriptionType, DescriptionSubType, record.Id, record.Name, record.Description, unit, cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>A theme's descriptions name it, so they go with it, in every language, before it is retired.</remarks>
+    public Task<IGenericResult> RemoveReferences(Guid memberId, ConfigurationWriteScope unit, CancellationToken cancellationToken = default)
+        => _writer.DeleteAbout(DescriptionType, memberId, unit, cancellationToken);
 
     /// <summary>Reads the theme marked as the default.</summary>
     /// <param name="ct">A token to cancel the operation.</param>

@@ -26,6 +26,8 @@ public sealed class DataSetSummaryPayload
     public string? CategoryPath { get; set; }
     /// <summary>Gets or sets the service option type.</summary>
     public string Implementation { get; set; } = "Standard";
+    /// <summary>Gets or sets how the data set's sources combine, "Join" or "Union" (FDW-6946).</summary>
+    public string? SourceCombination { get; set; }
     /// <summary>Gets or sets the creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; }
     /// <summary>Gets or sets the last modification timestamp.</summary>

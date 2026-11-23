@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Data.PostgreSql.Logging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.PostgreSql;
 
@@ -21,7 +23,7 @@ namespace Fdw.Data.PostgreSql;
 public sealed class PostgreSqlTableContainer : DataContainer
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="PostgreSqlTableContainer"/> class.
+    /// Builds a PostgreSQL table container whose container type is the PostgreSqlTable option registered in <see cref="ContainerTypes"/>.
     /// </summary>
     /// <param name="name">The table name.</param>
     /// <param name="description">Optional human-readable description.</param>
@@ -33,13 +35,38 @@ public sealed class PostgreSqlTableContainer : DataContainer
     /// <param name="format">The serialization format.</param>
     /// <param name="metadata">Container metadata.</param>
     /// <param name="logger">Logger for navigation diagnostics. Defaults to a null logger.</param>
-    public PostgreSqlTableContainer(
+    /// <returns>
+    /// The container, or a failure when ContainerTypes holds no PostgreSqlTable option: a container is never built with the NotFound
+    /// placeholder as its type (FDW-6387).
+    /// </returns>
+    public static IGenericResult<PostgreSqlTableContainer> Create(
         string name,
         string? description,
         IDataNodePath parent,
         IReadOnlyList<IPostgreSqlDataField> fields,
         IReadOnlyList<IContainerKey> keys,
         IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys,
+        PostgreSqlDatabasePath physicalPath,
+        IFormatType format,
+        IReadOnlyDictionary<string, object> metadata,
+        ILogger<PostgreSqlTableContainer>? logger = null)
+    {
+        var containerType = ContainerTypes.ByName("PostgreSqlTable");
+        return ReferenceEquals(containerType, ContainerTypes.NotFound)
+            ? GenericResult<PostgreSqlTableContainer>.Failure(
+                PostgreSqlContainerLog.TableContainerTypeNotRegistered(logger ?? NullLogger<PostgreSqlTableContainer>.Instance, name))
+            : GenericResult<PostgreSqlTableContainer>.Success(new PostgreSqlTableContainer(
+                name, description, parent, fields, keys, referencingKeys, containerType, physicalPath, format, metadata, logger));
+    }
+
+    private PostgreSqlTableContainer(
+        string name,
+        string? description,
+        IDataNodePath parent,
+        IReadOnlyList<IPostgreSqlDataField> fields,
+        IReadOnlyList<IContainerKey> keys,
+        IGenericResult<IReadOnlyList<ReferencingKeyBinding>> referencingKeys,
+        IContainerType containerType,
         PostgreSqlDatabasePath physicalPath,
         IFormatType format,
         IReadOnlyDictionary<string, object> metadata,
@@ -51,10 +78,10 @@ public sealed class PostgreSqlTableContainer : DataContainer
             fields,
             keys,
             referencingKeys,
-            ContainerTypes.ByName("PostgreSqlTable"),
+            containerType,
             format,
             physicalPath,
-            ["Query", "Insert", "Update", "Delete"],
+            [.. containerType.SupportedOperations],
             metadata,
             logger)
     {

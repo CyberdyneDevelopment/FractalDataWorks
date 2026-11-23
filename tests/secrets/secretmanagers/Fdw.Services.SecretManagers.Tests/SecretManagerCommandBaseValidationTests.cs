@@ -335,13 +335,13 @@ public sealed class SecretManagerCommandBaseValidationTests
     }
 
     // -------------------------------------------------------
-    // RequiresSecretKey default switch case (line 206)
+    // RequiresSecretKey base default (true)
     // Uses a command that does NOT override RequiresSecretKey
     // -------------------------------------------------------
 
     /// <summary>
     /// Subclass that does NOT override RequiresSecretKey, so the base class
-    /// switch expression is exercised (including the default => true branch).
+    /// default (a secret key is required) is exercised.
     /// </summary>
     private sealed class DefaultRequiresKeyCommand : SecretManagerCommandBase
     {
@@ -371,7 +371,7 @@ public sealed class SecretManagerCommandBaseValidationTests
     [Trait("Category", "Security")]
     public void RequiresSecretKeyDefaultCaseReturnsTrueForUnknownCommandType()
     {
-        // Arrange - "UnknownOp" is not in the base switch, so it hits default => true
+        // Arrange - the base requires a secret key for any command type that does not override it
         // Without a secret key, validation should fail
         var cmd = new DefaultRequiresKeyCommand("UnknownOp", "vault", null);
 
@@ -387,7 +387,7 @@ public sealed class SecretManagerCommandBaseValidationTests
     [Trait("Category", "Security")]
     public void RequiresSecretKeyReturnsTrueForGetSecret()
     {
-        // Arrange - "GetSecret" returns true in the switch
+        // Arrange - the base requires a secret key
         var cmd = new DefaultRequiresKeyCommand("GetSecret", "vault", null);
 
         // Act
@@ -402,8 +402,8 @@ public sealed class SecretManagerCommandBaseValidationTests
     [Trait("Category", "Security")]
     public void RequiresSecretKeyReturnsFalseForListSecrets()
     {
-        // Arrange - "ListSecrets" returns false in the switch
-        var cmd = new DefaultRequiresKeyCommand("ListSecrets", "vault", null);
+        // Arrange - ListSecretsManagerCommand overrides RequiresSecretKey to false
+        var cmd = ListSecretsManagerCommand.All("vault");
 
         // Act
         var result = cmd.Validate();
@@ -417,7 +417,7 @@ public sealed class SecretManagerCommandBaseValidationTests
     [Trait("Category", "Security")]
     public void RequiresSecretKeyReturnsTrueForGetSecretVersions()
     {
-        // Arrange - "GetSecretVersions" returns true in the switch
+        // Arrange - the base requires a secret key
         var cmd = new DefaultRequiresKeyCommand("GetSecretVersions", "vault", null);
 
         // Act
@@ -432,7 +432,7 @@ public sealed class SecretManagerCommandBaseValidationTests
     [Trait("Category", "Security")]
     public void RequiresSecretKeyDefaultCaseSucceedsWithKey()
     {
-        // Arrange - "CustomOp" hits default => true, but we provide a key
+        // Arrange - the base requires a secret key, and one is provided
         var cmd = new DefaultRequiresKeyCommand("CustomOp", "vault", "my-key");
 
         // Act

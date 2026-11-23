@@ -49,16 +49,6 @@ public static class RowSize
     /// <summary>Estimates the size of one value.</summary>
     /// <param name="value">The value; null counts nothing.</param>
     /// <returns>The estimated bytes.</returns>
-    public static long Of(object? value) => value switch
-    {
-        null => 0,
-        string text => 2L * text.Length,
-        bool or byte or sbyte => 1,
-        short or ushort or char => 2,
-        int or uint or float => 4,
-        long or ulong or double or DateTime or TimeSpan => 8,
-        decimal or Guid or DateTimeOffset => 16,
-        byte[] bytes => bytes.Length,
-        _ => OtherValue,
-    };
+    public static long Of(object? value) =>
+        value is null ? 0 : RowValueShapes.ByClrType(value.GetType()) is var shape && !ReferenceEquals(shape, RowValueShapes.NotFound) ? shape.SizeOf(value) : OtherValue;
 }

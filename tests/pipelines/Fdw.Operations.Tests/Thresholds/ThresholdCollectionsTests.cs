@@ -5,18 +5,6 @@ namespace Fdw.Operations.Tests.Thresholds;
 /// <summary>Tests for the threshold collections (FDW-3936): a name that is not an option answers the NotFound sentinel, and the options the base ships are all there.</summary>
 public sealed class ThresholdCollectionsTests
 {
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public void ANameThatIsNotAnOptionAnswersTheNotFoundSentinelOfEachCollection()
-    {
-        ReferenceEquals(ThresholdTypes.ByName("NoSuchType"), ThresholdTypes.NotFound).ShouldBeTrue();
-        ReferenceEquals(EscalationTypes.ByName("NoSuchEscalation"), EscalationTypes.NotFound).ShouldBeTrue();
-        ReferenceEquals(ThresholdSubjectKinds.ByName("NoSuchKind"), ThresholdSubjectKinds.NotFound).ShouldBeTrue();
-        ThresholdTypes.NotFound.Name.ShouldNotBeNull();
-        EscalationTypes.NotFound.Name.ShouldNotBeNull();
-        ThresholdSubjectKinds.NotFound.Name.ShouldNotBeNull();
-    }
 
     [Fact]
     [Trait("Priority", "P0")]

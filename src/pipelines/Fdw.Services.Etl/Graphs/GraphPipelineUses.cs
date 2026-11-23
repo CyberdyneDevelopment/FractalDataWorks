@@ -108,6 +108,21 @@ public static class GraphPipelineUses
             Add(uses, new PipelineUse(PipelineUseRelations.Calls, Pipeline, action.TargetPipeline, []));
         }
 
+        // The pipeline an Ask component's answer starts (FDW-6142) is a pipeline it calls: the person's answer runs it.
+        if (DecisionTests.StatedText(action, AskComponentType.ContinuationSetting) is { } continuation)
+        {
+            Add(uses, new PipelineUse(PipelineUseRelations.Calls, Pipeline, continuation, []));
+        }
+
+        // The pipelines a component may start through a variable (FDW-6135) are the pipelines it calls, as far as the graph can say.
+        if (DecisionTests.StatedText(action, ExecutePipelineComponentType.TargetsSetting) is { } targets)
+        {
+            foreach (var target in ExecutePipelineComponentType.TargetsOf(targets))
+            {
+                Add(uses, new PipelineUse(PipelineUseRelations.Calls, Pipeline, target, []));
+            }
+        }
+
         // Why a read of the options' store and not a use of the store the options are about (FDW-5347): a Read data options step selects from
         // the store that holds the stored options, as a SQL source selects from its store, and touches nothing on the store the options are about.
         if (string.Equals(action.ComponentType, "ReadDataOptions", StringComparison.OrdinalIgnoreCase))

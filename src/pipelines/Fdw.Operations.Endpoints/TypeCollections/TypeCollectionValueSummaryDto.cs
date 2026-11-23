@@ -90,6 +90,13 @@ public sealed class TypeCollectionValueSummaryDto
     public bool? HoldsComponents { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a component kind is a decision (FDW-6134): it moves no rows and fires outputs, and a line that leaves one of its outputs means "run the component at its end
+    /// when this output fired". A condition and a gate fire <c>true</c> and <c>false</c>; a switch fires the outcomes it states and, when it says so, <c>otherwise</c>; an Ask fires <c>go</c> and <c>asked</c> (FDW-6142). Null for an
+    /// option that is not a component kind.
+    /// </summary>
+    public bool? IsDecision { get; set; }
+
+    /// <summary>
     /// Gets or sets the text a client puts between the stated settings that summarise a component kind (RUI-547), in the order the kind lists them;
     /// null for a kind that has fewer than two such settings and for an option that is not a component kind.
     /// </summary>

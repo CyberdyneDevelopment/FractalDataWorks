@@ -13,6 +13,18 @@ namespace Fdw.Services.Abstractions;
 /// </summary>
 public interface IDomainConfigurationProvider
 {
+    /// <summary>Gets the container this provider reads its domain rows from, <c>path.table</c> (for the data set domain, <c>data.DataSet</c>): the key a citation of this domain names.</summary>
+    string Container { get; }
+
+    /// <summary>Says where the member with a durable id stands in this domain, from its domain row alone.</summary>
+    /// <param name="id">The member's durable id.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>
+    /// Success with <see cref="CurrentCitedState"/> when a current member has the id; <see cref="RetiredCitedState"/> when only a version that is not current
+    /// does; <see cref="AbsentCitedState"/> when no version does. A failure when a read failed.
+    /// </returns>
+    Task<IGenericResult<ICitedState>> StateOf(Guid id, CancellationToken cancellationToken = default);
+
     /// <summary>Gets a configured member's implementation configuration by name.</summary>
     /// <param name="name">The member's name.</param>
     /// <param name="ct">A token to cancel the operation.</param>
@@ -180,6 +192,84 @@ public interface IDomainConfigurationProvider<TImplementationConfiguration>
     /// to compose ends the page's enumeration and is reported through <see cref="ConfigurationPage{T}.Outcome"/>.
     /// </returns>
     Task<IGenericResult<ConfigurationPage<TImplementationConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default);
+
+    /// <summary>Gets one page of this domain's members as <see cref="Get(int, int, int, CancellationToken)"/> does, with what the caller states about the read (FDW-6124).</summary>
+    /// <param name="skip">How many members precede the page.</param>
+    /// <param name="take">How many members the page holds at most.</param>
+    /// <param name="levels">How many levels of child collections to read under each member.</param>
+    /// <param name="options">What the read does beyond its rows: <see cref="ConfigurationReadOptions.Whole"/> fills the members another domain supplies, <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> leaves them as their own rows hold them.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The page, or a structured failure when the page's rows could not be chosen.</returns>
+    Task<IGenericResult<ConfigurationPage<TImplementationConfiguration>>> Get(int skip, int take, int levels, ConfigurationReadOptions options, CancellationToken ct = default);
+
+    /// <summary>Gets a configured member by name, composed to a depth, with what the caller states about the read (FDW-7326).</summary>
+    /// <param name="name">The member's name.</param>
+    /// <param name="levels">How many levels of child collections to read; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="options">What the read does beyond its rows: <see cref="ConfigurationReadOptions.Whole"/> fills the members another domain supplies, <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> leaves them as their own rows hold them and runs no fill observer.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The result of the read, or a structured failure.</returns>
+    /// <remarks>
+    /// What the caller states is what is read: a read that states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> runs no fill of any kind, so a member another domain supplies
+    /// (a description kept in the descriptions table) comes back empty, and empty there means not read, not has none. A record read this way is for reading: saving it, with
+    /// <c>Save</c> or <c>Update</c>, is refused with a message that says to read the record whole first, because its empty member would otherwise remove the stored text. A reader
+    /// that never shows the text and never saves what it read states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/>; the overload without options reads whole.
+    /// </remarks>
+    Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ConfigurationReadOptions options, CancellationToken ct = default);
+
+    /// <summary>Gets a configured member by name, composed to a depth and narrowed, with what the caller states about the read (FDW-7326).</summary>
+    /// <param name="name">The member's name.</param>
+    /// <param name="levels">How many levels of child collections to read; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="narrowing">Which rows of one kind of child collection to read.</param>
+    /// <param name="options">What the read does beyond its rows: <see cref="ConfigurationReadOptions.Whole"/> fills the members another domain supplies, <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> leaves them as their own rows hold them and runs no fill observer.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The result of the read, or a structured failure.</returns>
+    /// <remarks>
+    /// What the caller states is what is read: a read that states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> runs no fill of any kind, so a member another domain supplies
+    /// (a description kept in the descriptions table) comes back empty, and empty there means not read, not has none. A record read this way is for reading: saving it, with
+    /// <c>Save</c> or <c>Update</c>, is refused with a message that says to read the record whole first, because its empty member would otherwise remove the stored text. A reader
+    /// that never shows the text and never saves what it read states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/>; the overload without options reads whole.
+    /// </remarks>
+    Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, ConfigurationReadOptions options, CancellationToken ct = default);
+
+    /// <summary>Gets a configured member by the domain row's durable id, composed to a depth, with what the caller states about the read (FDW-7326).</summary>
+    /// <param name="id">The member's durable id.</param>
+    /// <param name="levels">How many levels of child collections to read; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="options">What the read does beyond its rows: <see cref="ConfigurationReadOptions.Whole"/> fills the members another domain supplies, <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> leaves them as their own rows hold them and runs no fill observer.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The result of the read, or a structured failure.</returns>
+    /// <remarks>
+    /// What the caller states is what is read: a read that states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> runs no fill of any kind, so a member another domain supplies
+    /// (a description kept in the descriptions table) comes back empty, and empty there means not read, not has none. A record read this way is for reading: saving it, with
+    /// <c>Save</c> or <c>Update</c>, is refused with a message that says to read the record whole first, because its empty member would otherwise remove the stored text. A reader
+    /// that never shows the text and never saves what it read states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/>; the overload without options reads whole.
+    /// </remarks>
+    Task<IGenericResult<TImplementationConfiguration>> Get(Guid id, int levels, ConfigurationReadOptions options, CancellationToken ct = default);
+
+    /// <summary>Gets every configured member of this domain, composed to a depth, with what the caller states about the read (FDW-7326).</summary>
+    /// <param name="levels">How many levels of child collections to read under each member; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="options">What the read does beyond its rows: <see cref="ConfigurationReadOptions.Whole"/> fills the members another domain supplies, <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> leaves them as their own rows hold them and runs no fill observer.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The result of the read, or a structured failure.</returns>
+    /// <remarks>
+    /// What the caller states is what is read: a read that states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> runs no fill of any kind, so a member another domain supplies
+    /// (a description kept in the descriptions table) comes back empty, and empty there means not read, not has none. A record read this way is for reading: saving it, with
+    /// <c>Save</c> or <c>Update</c>, is refused with a message that says to read the record whole first, because its empty member would otherwise remove the stored text. A reader
+    /// that never shows the text and never saves what it read states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/>; the overload without options reads whole.
+    /// </remarks>
+    Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> Get(int levels, ConfigurationReadOptions options, CancellationToken ct = default);
+
+    /// <summary>Gets every configured member of this domain flat, not hung into trees, with what the caller states about the read (FDW-7326).</summary>
+    /// <param name="levels">How many levels of child collections to read under each member; see <see cref="ConfigurationLevels"/>.</param>
+    /// <param name="options">What the read does beyond its rows: <see cref="ConfigurationReadOptions.Whole"/> fills the members another domain supplies, <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> leaves them as their own rows hold them and runs no fill observer.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The result of the read, or a structured failure.</returns>
+    /// <remarks>
+    /// What the caller states is what is read: a read that states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> runs no fill of any kind, so a member another domain supplies
+    /// (a description kept in the descriptions table) comes back empty, and empty there means not read, not has none. A record read this way is for reading: saving it, with
+    /// <c>Save</c> or <c>Update</c>, is refused with a message that says to read the record whole first, because its empty member would otherwise remove the stored text. A reader
+    /// that never shows the text and never saves what it read states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/>; the overload without options reads whole.
+    /// </remarks>
+    Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> GetFlat(int levels, ConfigurationReadOptions options, CancellationToken ct = default);
 
     /// <summary>Gets one child collection of a member, without reading the rest of it.</summary>
     /// <typeparam name="TChild">The type of the collection's items, as the member's implementation declares it.</typeparam>

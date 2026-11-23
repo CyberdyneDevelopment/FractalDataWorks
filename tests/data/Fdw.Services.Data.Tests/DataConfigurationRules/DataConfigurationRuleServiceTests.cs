@@ -11,10 +11,13 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
+using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Abstractions.DataConfigurationRules;
 using Fdw.Services.Data.DataConfigurationRules;
 using Fdw.Services.Data.Logging;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Settings;
 using Fdw.Services.Workspaces;
@@ -337,6 +340,37 @@ public sealed class DataConfigurationRuleServiceTests
         removed.Value!.Removed.ShouldBeTrue();
     }
 
+    // FDW-7248: the service reads the rule again right after every write. A read kept from before the write must not answer that second read, so the write drops the
+    // cached reads of the tables it wrote once it has committed.
+    [Fact]
+    public async Task ARemoveAnswersTheRemovedRuleAndNotTheReadKeptFromBeforeTheWrite()
+    {
+        var store = new CachingStore(new Dictionary<string, List<Dictionary<string, object?>>>(StringComparer.Ordinal)
+        {
+            ["DataConfigurationRule"] = [Stored()],
+            ["DataConfigurationRuleValue"] = [StoredValue(1, "East")],
+        });
+        var fixture = new Fixture(store: store);
+
+        var removed = await fixture.Service.Remove(Key(), TestContext.Current.CancellationToken);
+
+        removed.IsSuccess.ShouldBeTrue(removed.CurrentMessage);
+        removed.Value!.Removed.ShouldBeTrue();
+        fixture.Invalidated.Select(table => table.Container).ShouldBe(["DataConfigurationRule"]);
+    }
+
+    [Fact]
+    public async Task AnAddDropsTheCachedReadsOfTheRuleTableAndTheValueTableAfterTheCommitAndAFailedWriteDropsNone()
+    {
+        var added = new Fixture(reads: [[], [], [Stored()], [StoredValue(1, "East"), StoredValue(2, "West")]]);
+        (await added.Service.Add(New(), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        added.Invalidated.Select(table => table.Container).Distinct().ShouldBe(["DataConfigurationRule", "DataConfigurationRuleValue"], ignoreOrder: true);
+
+        var failed = new Fixture(reads: [[], []], writes: [true, false]);
+        (await failed.Service.Add(New(), TestContext.Current.CancellationToken)).IsFailure.ShouldBeTrue();
+        failed.Invalidated.ShouldBeEmpty();
+    }
+
     // The contract's list carries a total, and a total worked out from "is there a next page" would be a value that was never read: the service counts.
     [Fact]
     public async Task AListCutsTheRequestedPageFromTheMatchingRulesAndCountsAllOfThem()
@@ -612,11 +646,13 @@ public sealed class DataConfigurationRuleServiceTests
 
     private static List<string?> Codes(IGenericResult result) => [.. result.Messages.Select(message => message.Code)];
 
-    private static NewDataConfigurationRule New(string? name = "East teams", string[]? path = null, string? permission = null, string ownerKind = "Workspace") => new()
+    private static NewDataConfigurationRule New(
+        string? name = "East teams", string[]? path = null, string? permission = null, string ownerKind = "Workspace", string? description = null, string? valueDescription = null) => new()
     {
         Target = Target,
         Name = name,
         Abbreviation = "ET",
+        Description = description,
         Column = "Division",
         Path = path ?? InPath,
         Method = "To",
@@ -627,7 +663,7 @@ public sealed class DataConfigurationRuleServiceTests
         Active = true,
         Values =
         [
-            new NewDataConfigurationRuleValue { Kind = "Literal", Value = "East", Ordinal = 1 },
+            new NewDataConfigurationRuleValue { Kind = "Literal", Value = "East", Ordinal = 1, Description = valueDescription },
             new NewDataConfigurationRuleValue { Kind = "Literal", Value = "West", Ordinal = 2 },
         ],
     };
@@ -680,8 +716,148 @@ public sealed class DataConfigurationRuleServiceTests
         }
     }
 
+    // The gateway's read cache as the real one behaves (FDW-7248): a read is kept per container until something drops it, and a write inside a transaction changes
+    // the stored rows but drops nothing by itself.
+    private sealed class CachingStore(IReadOnlyDictionary<string, List<Dictionary<string, object?>>> rows)
+    {
+        private readonly Dictionary<string, List<Dictionary<string, object?>>> _kept = new(StringComparer.Ordinal);
+
+        public List<Dictionary<string, object?>> Read(DataStoreTarget table)
+        {
+            if (!_kept.TryGetValue(table.Container, out var kept))
+            {
+                kept = [.. rows[table.Container].Select(row => new Dictionary<string, object?>(row, StringComparer.Ordinal))];
+                _kept[table.Container] = kept;
+            }
+
+            return kept;
+        }
+
+        public void Apply(IDataCommand command, DataStoreTarget table)
+        {
+            if (command is not ConfigurationRetireCommand)
+                return;
+
+            foreach (var row in rows[table.Container])
+                row["IsDeleted"] = true;
+        }
+
+        public void Invalidate(DataStoreTarget table) => _kept.Remove(table.Container);
+    }
+
     // Strict stand-ins that answer: the gateway answers the queued reads, the transaction answers each write from the queue, and the order of
     // write, record, commit and rollback is kept as events.
+    // FDW-6208: a rule's description, and each value's, is a row of the descriptions table and not a column of either rule table. The service writes it in the unit of the write
+    // (the same unit as the rule's rows, before the audit record, so the three commit or roll back together) and fills the answer from the table.
+    [Fact]
+    public async Task AnAddDescribesTheRuleAndEachValueInTheUnitAfterTheirRowsAndBeforeTheAuditRecord()
+    {
+        var fixture = new Fixture(reads: [[], [], [Stored()], [StoredValue(1, "East"), StoredValue(2, "West")]], traceDescriptions: true);
+
+        var added = await fixture.Service.Add(New(description: "East division teams", valueDescription: "The eastern division"), TestContext.Current.CancellationToken);
+
+        added.IsSuccess.ShouldBeTrue(added.CurrentMessage);
+        fixture.Events.ShouldBe(["write", "describe", "write", "describe", "write", "describe", "record", "commit"]);
+        fixture.Described.Count.ShouldBe(3);
+        fixture.Described[0].ShouldEndWith("East teams = East division teams");
+        fixture.Described[1].ShouldEndWith("= The eastern division");
+        fixture.Described[1].ShouldContain("owner ");
+        // The second value states no text, so what it had is removed: nothing is invented and nothing is left behind.
+        fixture.Described[2].ShouldEndWith("removed");
+        // No write names a Description: the records no longer store it.
+        typeof(DataConfigurationRuleRecord).GetProperty("Description").ShouldNotBeNull().GetCustomAttributes(typeof(Fdw.Data.NotStoredAttribute), false).ShouldNotBeEmpty();
+        typeof(DataConfigurationRuleValueRecord).GetProperty("Description").ShouldNotBeNull().GetCustomAttributes(typeof(Fdw.Data.NotStoredAttribute), false).ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task ADescriptionTheDescriptionsTableRefusesRollsTheWholeAddBackAndRecordsNothing()
+    {
+        var fixture = new Fixture(reads: [[], []], descriptionWriteFails: true);
+
+        var added = await fixture.Service.Add(New(description: "East division teams"), TestContext.Current.CancellationToken);
+
+        added.IsFailure.ShouldBeTrue();
+        added.Messages.Select(message => message.Message).ShouldContain(message => message.Contains("description refused", StringComparison.Ordinal));
+        fixture.Events.ShouldContain("rollback");
+        fixture.Events.ShouldNotContain("commit");
+        fixture.Recorded.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task AChangeOfTheDescriptionDescribesTheRuleUnderItsNameInTheUnitOfTheChange()
+    {
+        var fixture = new Fixture(reads: [[Stored()], [], [Stored()], []]);
+
+        var changed = await fixture.Service.Change(new DataConfigurationRuleChange { Key = Key(), Description = "East division teams" }, TestContext.Current.CancellationToken);
+
+        changed.IsSuccess.ShouldBeTrue(changed.CurrentMessage);
+        fixture.Described.ShouldBe([$"rule {RuleId:D} East teams = East division teams"]);
+    }
+
+    [Fact]
+    public async Task ASwitchChangesNoTextSoItWritesNoDescription()
+    {
+        var fixture = new Fixture(reads: [[Stored()], [], [Stored()], []]);
+
+        var switched = await fixture.Service.Switch(Key(), false, TestContext.Current.CancellationToken);
+
+        switched.IsSuccess.ShouldBeTrue(switched.CurrentMessage);
+        fixture.Described.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task AddedValuesAreDescribedWithTheRuleAsTheirOwner()
+    {
+        var fixture = new Fixture(reads: [[Stored()], [], [Stored()], [StoredValue(1, "North")]]);
+        var north = new NewDataConfigurationRuleValue { Kind = "Literal", Value = "North", Ordinal = 1, Description = "The northern division" };
+
+        var added = await fixture.Service.AddValues(Key(), [north], TestContext.Current.CancellationToken);
+
+        added.IsSuccess.ShouldBeTrue(added.CurrentMessage);
+        fixture.Described.ShouldHaveSingleItem().ShouldEndWith($"North owner {RuleId:D} = The northern division");
+    }
+
+    [Fact]
+    public async Task AChangedValueIsDescribedAgainByItsOwnId()
+    {
+        var value = StoredValue(1, "East");
+        var valueId = (Guid)value["Id"]!;
+        var fixture = new Fixture(reads: [[Stored()], [value], [Stored()], [value]]);
+
+        var changed = await fixture.Service.ChangeValue(new DataConfigurationRuleValueChange { Key = Key(), ValueId = valueId, Description = "The eastern side" }, TestContext.Current.CancellationToken);
+
+        changed.IsSuccess.ShouldBeTrue(changed.CurrentMessage);
+        fixture.Described.ShouldHaveSingleItem().ShouldBe($"value {valueId:D} East owner {RuleId:D} = The eastern side");
+    }
+
+    [Fact]
+    public async Task ARuleAndItsValuesAnswerTheTextsTheDescriptionsTableHolds()
+    {
+        var value = StoredValue(1, "East");
+        var valueId = (Guid)value["Id"]!;
+        var fixture = new Fixture(
+            reads: [[Stored()], [value]], holders: [Custodian],
+            ruleTexts: new Dictionary<Guid, string> { [RuleId] = "East division teams" }, valueTexts: new Dictionary<Guid, string> { [valueId] = "The eastern division" });
+
+        var rule = await fixture.Service.Get(Key(), TestContext.Current.CancellationToken);
+
+        rule.IsSuccess.ShouldBeTrue(rule.CurrentMessage);
+        rule.Value!.Description.ShouldBe("East division teams");
+        rule.Value.Values.ShouldHaveSingleItem().Description.ShouldBe("The eastern division");
+    }
+
+    [Fact]
+    public async Task ARuleNobodyDescribedAnswersNoDescription()
+    {
+        var fixture = new Fixture(reads: [[Stored()], [StoredValue(1, "East")]], holders: [Custodian]);
+
+        var rule = await fixture.Service.Get(Key(), TestContext.Current.CancellationToken);
+
+        rule.IsSuccess.ShouldBeTrue(rule.CurrentMessage);
+        rule.Value!.Description.ShouldBeNull();
+        rule.Value.Values.ShouldHaveSingleItem().Description.ShouldBeNull();
+    }
+
     private sealed class Fixture
     {
         private readonly Queue<IReadOnlyList<Dictionary<string, object?>>> _reads;
@@ -704,7 +880,12 @@ public sealed class DataConfigurationRuleServiceTests
             string workspaceAccess = "view",
             IReadOnlyList<AdministrativeChangeRecord>? history = null,
             IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>>? declared = null,
-            bool storeUnreachable = false)
+            bool storeUnreachable = false,
+            CachingStore? store = null,
+            IReadOnlyDictionary<Guid, string>? ruleTexts = null,
+            IReadOnlyDictionary<Guid, string>? valueTexts = null,
+            bool descriptionWriteFails = false,
+            bool traceDescriptions = false)
         {
             _reads = new Queue<IReadOnlyList<Dictionary<string, object?>>>(reads ?? []);
             _writes = new Queue<bool>(writes ?? []);
@@ -712,10 +893,11 @@ public sealed class DataConfigurationRuleServiceTests
             var transaction = new Mock<IDataGatewayTransaction>(MockBehavior.Strict);
             transaction
                 .Setup(t => t.Execute<ConfigurationWriteResult>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-                .Callback<IDataCommand, DataStoreTarget, CancellationToken>((command, _, _) =>
+                .Callback<IDataCommand, DataStoreTarget, CancellationToken>((command, table, _) =>
                 {
                     Writes.Add(command);
                     Events.Add("write");
+                    store?.Apply(command, table);
                 })
                 .ReturnsAsync(() => _writes.Count == 0 || _writes.Dequeue()
                     ? GenericResult<ConfigurationWriteResult>.Success(new ConfigurationWriteResult([], new Dictionary<string, object?>()))
@@ -727,7 +909,15 @@ public sealed class DataConfigurationRuleServiceTests
             var gateway = new Mock<IConfigurationGateway>(MockBehavior.Strict);
             gateway
                 .Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(_reads.Dequeue()));
+                .ReturnsAsync((IDataCommand _, DataStoreTarget table, CancellationToken _) => GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(
+                    store is null ? _reads.Dequeue() : store.Read(table)));
+            gateway
+                .Setup(g => g.InvalidateCachedResults(It.IsAny<DataStoreTarget>()))
+                .Callback<DataStoreTarget>(table =>
+                {
+                    Invalidated.Add(table);
+                    store?.Invalidate(table);
+                });
             gateway
                 .Setup(g => g.BeginTransaction(Store, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => transactional
@@ -811,9 +1001,51 @@ public sealed class DataConfigurationRuleServiceTests
                     return GenericResult<IDataContainer>.Success(rowContainer.Object);
                 });
 
+            // The descriptions writer and reader (FDW-6208), strict: they state their answers. A write is noted in Described (and, when a test traces it, in Events, so its place
+            // among the unit's writes shows); a read answers the texts the test holds, by the Id of the rule or of the value.
+            var describeResult = descriptionWriteFails
+                ? GenericResult.Failure(new Fdw.Messages.GenericMessage("description refused"))
+                : GenericResult.Success();
+            void Noted(string note)
+            {
+                Described.Add(note);
+                if (traceDescriptions)
+                    Events.Add("describe");
+            }
+
+            var writer = new Mock<IDescriptionWriter>(MockBehavior.Strict);
+            writer.Setup(w => w.Language()).Returns(GenericResult<string>.Success("en-US"));
+            writer
+                .Setup(w => w.Describe("DataConfigurationRule", "Text", It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+                .Callback<string, string, Guid, string, string?, ConfigurationWriteScope, CancellationToken>((_, _, id, name, text, _, _) => Noted($"rule {id:D} {name} = {text}"))
+                .ReturnsAsync(describeResult);
+            writer
+                .Setup(w => w.Save(It.Is<DescriptionKey>(k => k.Type == "DataConfigurationRuleValue"), It.IsAny<string>(), It.IsAny<DescriptionOwner?>(), It.IsAny<string>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+                .Callback<DescriptionKey, string, DescriptionOwner?, string, ConfigurationWriteScope, CancellationToken>((key, name, owner, text, _, _) => Noted($"value {key.ThingId:D} {name} owner {owner?.Id:D} = {text}"))
+                .ReturnsAsync(describeResult);
+            writer
+                .Setup(w => w.Delete(It.Is<DescriptionKey>(k => k.Type == "DataConfigurationRuleValue"), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+                .Callback<DescriptionKey, ConfigurationWriteScope, CancellationToken>((key, _, _) => Noted($"value {key.ThingId:D} removed"))
+                .ReturnsAsync(describeResult);
+            var reader = new Mock<IDescriptionReader>(MockBehavior.Strict);
+            reader
+                .Setup(r => r.ReadMany("DataConfigurationRule", "Text", It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string type, string sub, IReadOnlyCollection<Guid> ids, CancellationToken _) => GenericResult<IReadOnlyDictionary<Guid, DescriptionEntry>>.Success(
+                    ids.Where(id => ruleTexts?.ContainsKey(id) == true)
+                        .ToDictionary(id => id, id => new DescriptionEntry(new DescriptionKey(type, sub, id, "en-US"), "rule", null, ruleTexts![id]))));
+            reader
+                .Setup(r => r.ReadOwnedBy("DataConfigurationRuleValue", "Text", It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string type, string sub, IReadOnlyCollection<Guid> owners, CancellationToken _) => GenericResult<IReadOnlyDictionary<Guid, DescriptionEntry>>.Success(
+                    (valueTexts ?? new Dictionary<Guid, string>()).ToDictionary(
+                        held => held.Key, held => new DescriptionEntry(new DescriptionKey(type, sub, held.Key, "en-US"), "value", new DescriptionOwner(owners.First(), "rule"), held.Value))));
+
             Service = new DataConfigurationRuleService(
-                NullLogger<DataConfigurationRuleService>.Instance, gateways.Object, new Settings((IReadOnlyDictionary<string, string>)(settings ?? Defaults())), tenant.Object, audit.Object, auth.Object, permissionHolders.Object, workspaces.Object, access.Object, stores.Object);
+                NullLogger<DataConfigurationRuleService>.Instance, gateways.Object, new Settings((IReadOnlyDictionary<string, string>)(settings ?? Defaults())), tenant.Object, audit.Object, auth.Object, permissionHolders.Object, workspaces.Object, access.Object, stores.Object,
+                writer.Object, reader.Object);
         }
+
+        // The descriptions the service wrote, one note each, in the order it wrote them.
+        public List<string> Described { get; } = [];
 
         public DataConfigurationRuleService Service { get; }
 
@@ -822,6 +1054,9 @@ public sealed class DataConfigurationRuleServiceTests
         public List<IDataCommand> Writes { get; } = [];
 
         public List<string> Events { get; } = [];
+
+        // The targets whose cached reads were dropped (the scope's commit does it after a commit; a raw transaction does not).
+        public List<DataStoreTarget> Invalidated { get; } = [];
 
         public List<AdministrativeChangeFilter> AuditReads { get; } = [];
 

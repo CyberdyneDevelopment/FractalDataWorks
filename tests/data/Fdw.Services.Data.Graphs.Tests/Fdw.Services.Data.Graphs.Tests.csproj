@@ -16,6 +16,7 @@
   <ItemGroup>
     <!-- Why: xunit.v3, Shouldly, Moq, coverlet.collector, and Microsoft.NET.Test.Sdk are
          inherited from tests/Directory.Build.props — not repeated here. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
@@ -23,6 +24,7 @@
     <ProjectReference Include="..\..\..\src\data\Fdw.Services.Data.Graphs\Fdw.Services.Data.Graphs.csproj" />
     <!-- Why: the generator emits the module initializer that registers the [TypeOption] kinds and result codes of the referenced assemblies. -->
     <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Services.Etl.TestDouble\Fdw.Services.Etl.TestDouble.csproj" />
   </ItemGroup>
 
 </Project>

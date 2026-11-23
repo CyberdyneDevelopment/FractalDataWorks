@@ -5,6 +5,7 @@ using Fdw.Results;
 using Fdw.Tds.Endpoints.Hosting;
 using Fdw.Tds.Endpoints.Sql.Catalog;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Tds.Endpoints.Sql;
 
@@ -15,6 +16,7 @@ namespace Fdw.Tds.Endpoints.Sql;
 public sealed class SqlExecutionContext
 {
     /// <summary>The deepest procedures and dynamic SQL nest, SQL Server's own limit; one level more is error 217.</summary>
+    [FormatLimit("SQL Server nests procedures and dynamic SQL at most 32 levels (error 217), and the emulated server keeps that limit")]
     public const int MaximumNestLevel = 32;
 
     private readonly CatalogCache _catalog;

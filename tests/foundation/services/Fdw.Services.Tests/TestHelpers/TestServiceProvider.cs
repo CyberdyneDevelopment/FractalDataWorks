@@ -16,6 +16,10 @@ public sealed class TestServiceProvider
           IServiceFactory<IGenericService>,
           IDomainConfigurationProvider<TestConfiguration>>
 {
+    /// <summary>Gets how this provider reads the configuration it builds a service from.</summary>
+    /// <remarks>This domain has no description fill today, so its configuration is read whole (FDW-7354).</remarks>
+    protected override ConfigurationReadOptions ReadOptions => ConfigurationReadOptions.Whole;
+
     /// <summary>Initializes a new instance of the <see cref="TestServiceProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>
     public TestServiceProvider(

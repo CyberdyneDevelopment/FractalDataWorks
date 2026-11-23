@@ -77,8 +77,13 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
                 DataStoreEndpointLog.ConnectionNameUnresolved(Logger, configResult.Value.ConnectionId, configResult.Value.Name));
         }
 
+        var owners = await Resolve<IDataStoreItemOwnership>().Owners(configResult.Value.Id, ct).ConfigureAwait(false);
+        if (owners.IsFailure)
+            return owners.ToNewResult<DataStoreDetailResponse?>();
+
         var detail = MapToDetail(configResult.Value);
         detail.ConnectionName = connectionNames.Value!.Of(configResult.Value.ConnectionId, configResult.Value.Name);
+        DataStoreItemOwnerReads.ShowAll(detail.Paths, configResult.Value.Paths ?? [], owners.Value!);
         return GenericResult<DataStoreDetailResponse?>.Success(detail);
     }
 

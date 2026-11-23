@@ -57,59 +57,10 @@ internal static class RecordValues
             return false;
         }
 
-        return value switch
-        {
-            bool flag => flag,
-            string text => bool.TryParse(text, out var parsed) && parsed,
-            _ => value is not null
-        };
+        return value is not null && RecordValueShapes.Of(value).IsTrue(value);
     }
 
-    // A DateTime that states no kind is read as UTC, the same rule the DateTimeOffset parameter type applies to a text
-    // without an offset.
-    private static bool TryGetMoment(object value, out DateTimeOffset moment)
-    {
-        switch (value)
-        {
-            case DateTimeOffset offset:
-                moment = offset;
-                return true;
-            case DateTime time:
-                moment = new DateTimeOffset(time.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(time, DateTimeKind.Utc) : time);
-                return true;
-            default:
-                moment = default;
-                return false;
-        }
-    }
+    private static bool TryGetMoment(object value, out DateTimeOffset moment) => RecordValueShapes.Of(value).TryMoment(value, out moment);
 
-    private static bool TryGetDecimal(object value, out decimal number)
-    {
-        switch (value)
-        {
-            case decimal exact:
-                number = exact;
-                return true;
-            case double floating:
-                number = (decimal)floating;
-                return true;
-            case float single:
-                number = (decimal)single;
-                return true;
-            case int whole:
-                number = whole;
-                return true;
-            case long wide:
-                number = wide;
-                return true;
-            case short narrow:
-                number = narrow;
-                return true;
-            case byte small:
-                number = small;
-                return true;
-            default:
-                return decimal.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out number);
-        }
-    }
+    private static bool TryGetDecimal(object value, out decimal number) => RecordValueShapes.Of(value).TryDecimal(value, out number);
 }

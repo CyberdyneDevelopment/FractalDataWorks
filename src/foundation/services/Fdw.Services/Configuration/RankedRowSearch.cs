@@ -30,6 +30,11 @@ namespace Fdw.Services.Configuration;
 /// holds at least a window of rows of its own class, because at most that many rows of the closer classes can be in it.
 /// </para>
 /// <para>
+/// When the description is not a column of the container's table but is kept in the descriptions table (FDW-6208), <see cref="IRowDescriptions"/> names the
+/// rows a text finds there, and they are read by Id in chunks of the gateway's key chunk size: the windows of the chunks are ranked together, which holds the
+/// closest rows because each chunk's window holds the closest of its own, and the count adds the rows each chunk finds that the name does not.
+/// </para>
+/// <para>
 /// A row the database finds that the rank rule does not (the database compares accents or width differently) ranks 3: it matched, and
 /// nothing about it is closer. The count is the database's.
 /// </para>
@@ -38,21 +43,42 @@ public sealed class RankedRowSearch
 {
     private readonly ConfigurationRowReader _reader;
     private readonly string _nameColumn;
-    private readonly string _descriptionColumn;
+    private readonly string? _descriptionColumn;
+    private readonly IRowDescriptions? _descriptions;
+    private readonly string _idColumn;
+    private readonly int _chunkSize;
     private readonly string _keyColumn;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="RankedRowSearch"/> class.</summary>
     /// <param name="reader">Reads the container's rows.</param>
     /// <param name="nameColumn">The column holding the name.</param>
-    /// <param name="descriptionColumn">The column holding the description.</param>
+    /// <param name="descriptionColumn">The column holding the description; none when the description is kept elsewhere and <paramref name="descriptions"/> is given.</param>
     /// <param name="keyColumn">The column holding the row's own key, which settles the order of rows with the same name.</param>
     /// <param name="logger">The logger a search is traced through.</param>
-    public RankedRowSearch(ConfigurationRowReader reader, string nameColumn, string descriptionColumn, string keyColumn, ILogger? logger = null)
+    /// <param name="descriptions">Where the description is kept when the container's table has no column for it.</param>
+    /// <param name="idColumn">The column holding the logical Id, which names a row to <paramref name="descriptions"/>.</param>
+    /// <param name="chunkSize">How many Ids one read names; the gateway's key chunk size.</param>
+    public RankedRowSearch(
+        ConfigurationRowReader reader, string nameColumn, string? descriptionColumn, string keyColumn, ILogger? logger = null,
+        IRowDescriptions? descriptions = null, string idColumn = "Id", int chunkSize = 0)
     {
+        if ((descriptionColumn is null) == (descriptions is null))
+        {
+            throw new ArgumentException("A search is given the column of the description or where it is kept, one of the two", nameof(descriptions));
+        }
+
+        if (descriptions is not null && chunkSize < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(chunkSize), chunkSize, "A search that reads descriptions by Id names them in chunks of at least one");
+        }
+
         _reader = reader;
         _nameColumn = nameColumn;
         _descriptionColumn = descriptionColumn;
+        _descriptions = descriptions;
+        _idColumn = idColumn;
+        _chunkSize = chunkSize;
         _keyColumn = keyColumn;
         _logger = logger ?? NullLogger.Instance;
     }
@@ -108,20 +134,66 @@ public sealed class RankedRowSearch
 
         Add(found, starting.Value!, text);
 
+        var described = new List<Guid[]>();
+        if (_descriptions is not null)
+        {
+            var named = await _descriptions.RowsDescribedBy(text, cancellationToken).ConfigureAwait(false);
+            if (named.IsFailure)
+            {
+                return named.ToNewResult<int>();
+            }
+
+            described.AddRange(named.Value!.Chunk(_chunkSize));
+        }
+
         // A full window of rows that start with the text holds the closest rows; only a short one leaves room for the wider classes.
         if (starting.Value!.Count < window)
         {
-            var wider = await ReadWider(text, order, window, found, cancellationToken).ConfigureAwait(false);
+            var wider = await ReadWider(text, order, window, found, described, cancellationToken).ConfigureAwait(false);
             if (wider.IsFailure)
             {
                 return wider.ToNewResult<int>();
             }
         }
 
-        return await _reader.Count(Either(text), cancellationToken).ConfigureAwait(false);
+        return _descriptions is null
+            ? await _reader.Count(Either(text), cancellationToken).ConfigureAwait(false)
+            : await CountDescribed(text, described, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<IGenericResult> ReadWider(string text, string[] order, int window, Dictionary<long, RankedRow> found, CancellationToken cancellationToken)
+    // The rows whose name contains the text, and each chunk's rows the description finds that the name does not: the rows both find are counted once.
+    private async Task<IGenericResult<int>> CountDescribed(string text, List<Guid[]> described, CancellationToken cancellationToken)
+    {
+        var total = await _reader.Count(Condition(_nameColumn, "Contains", text), cancellationToken).ConfigureAwait(false);
+        if (total.IsFailure)
+        {
+            return total;
+        }
+
+        var matches = total.Value;
+        foreach (var chunk in described)
+        {
+            var all = await _reader.Count(IdsIn(chunk), cancellationToken).ConfigureAwait(false);
+            if (all.IsFailure)
+            {
+                return all;
+            }
+
+            var both = await _reader.Count(new FilterGroup { Operator = LogicalOperator.And, Nodes = [IdsIn(chunk), Condition(_nameColumn, "Contains", text)] }, cancellationToken)
+                .ConfigureAwait(false);
+            if (both.IsFailure)
+            {
+                return both;
+            }
+
+            matches += all.Value - both.Value;
+        }
+
+        return GenericResult<int>.Success(matches);
+    }
+
+    private async Task<IGenericResult> ReadWider(
+        string text, string[] order, int window, Dictionary<long, RankedRow> found, List<Guid[]> described, CancellationToken cancellationToken)
     {
         var inName = await _reader.Page(Condition(_nameColumn, "Contains", text), order, 0, 2 * window, true, cancellationToken).ConfigureAwait(false);
         if (inName.IsFailure)
@@ -131,13 +203,29 @@ public sealed class RankedRowSearch
 
         Add(found, inName.Value!, text);
 
-        var inDescription = await _reader.Page(Condition(_descriptionColumn, "Contains", text), order, 0, 2 * window, true, cancellationToken).ConfigureAwait(false);
-        if (inDescription.IsFailure)
+        if (_descriptionColumn is not null)
         {
-            return inDescription;
+            var inDescription = await _reader.Page(Condition(_descriptionColumn, "Contains", text), order, 0, 2 * window, true, cancellationToken).ConfigureAwait(false);
+            if (inDescription.IsFailure)
+            {
+                return inDescription;
+            }
+
+            Add(found, inDescription.Value!, text);
+            return GenericResult.Success();
         }
 
-        Add(found, inDescription.Value!, text);
+        foreach (var chunk in described)
+        {
+            var inChunk = await _reader.Page(IdsIn(chunk), order, 0, 2 * window, true, cancellationToken).ConfigureAwait(false);
+            if (inChunk.IsFailure)
+            {
+                return inChunk;
+            }
+
+            Add(found, inChunk.Value!, text);
+        }
+
         return GenericResult.Success();
     }
 
@@ -147,7 +235,8 @@ public sealed class RankedRowSearch
         foreach (var row in rows)
         {
             var key = row.Number(_keyColumn) ?? throw new InvalidOperationException($"A row of {_reader.ContainerName} has no value in its key column '{_keyColumn}'");
-            var rank = SearchRank.Of(row.Text(_nameColumn) ?? string.Empty, row.Text(_descriptionColumn), text);
+            // A row found by its description alone has no description here: it matched, and ranks 3 like any row nothing about is closer.
+            var rank = SearchRank.Of(row.Text(_nameColumn) ?? string.Empty, _descriptionColumn is null ? null : row.Text(_descriptionColumn), text);
             found[key] = new RankedRow(row, rank == SearchRank.NoMatch ? 3 : rank, key);
         }
     }
@@ -155,10 +244,13 @@ public sealed class RankedRowSearch
     private static FilterCondition Condition(string column, string operatorName, string text)
         => new() { PropertyName = column, Operator = FilterOperators.ByName(operatorName), Value = text };
 
-    // Name contains the text, or description does: the rows the text finds, whatever their rank.
+    private FilterCondition IdsIn(Guid[] ids)
+        => new() { PropertyName = _idColumn, Operator = FilterOperators.ByName("In"), Value = ids.Cast<object?>().ToList() };
+
+    // Name contains the text, or description does: the rows the text finds, whatever their rank. Only for a description held in a column.
     private FilterGroup Either(string text) => new()
     {
         Operator = LogicalOperator.Or,
-        Nodes = [Condition(_nameColumn, "Contains", text), Condition(_descriptionColumn, "Contains", text)],
+        Nodes = [Condition(_nameColumn, "Contains", text), Condition(_descriptionColumn!, "Contains", text)],
     };
 }

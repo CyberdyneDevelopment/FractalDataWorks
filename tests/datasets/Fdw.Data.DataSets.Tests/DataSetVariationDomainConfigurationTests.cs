@@ -17,7 +17,7 @@ namespace Fdw.Data.DataSets.Tests;
 public class DataSetVariationDomainConfigurationTests
 {
     private static readonly string[] ListFields =
-        ["VariationName", "VariationKind", "DisplayName", "Description", "OwnerWorkspaceId", "OwnerUserId", "BaseDataSetId", "ParentVariationId", "StoredFilters", "ClassificationId", "CreatedAt"];
+        ["VariationName", "VariationKind", "DisplayName", "OwnerWorkspaceId", "OwnerUserId", "BaseDataSetId", "ParentVariationId", "StoredFilters", "ClassificationId", "CreatedAt"];
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -28,6 +28,18 @@ public class DataSetVariationDomainConfigurationTests
         var plain = PocoMapperCollection.ByName(nameof(DomainConfiguration));
 
         record.GetPropertyNames().Except(plain.GetPropertyNames()).ShouldBe(ListFields, ignoreOrder: true);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Configuration")]
+    public void TheListRecordKeepsADescriptionMemberThatIsNotStoredBecauseTheListProviderFillsIt()
+    {
+        // FDW-6208: the description of a variation is the one of its data set, in the language of the caller's tenant; the view cannot carry it, so it is not a stored list field.
+        var record = PocoMapperCollection.ByName(nameof(DataSetVariationDomainConfiguration));
+
+        record.GetPropertyNames().ShouldNotContain("Description");
+        new DataSetVariationDomainConfiguration { Description = "Orders by month" }.Description.ShouldBe("Orders by month");
     }
 
     [Fact]
@@ -108,7 +120,6 @@ public class DataSetVariationDomainConfigurationTests
         {
             VariationName = "students",
             DisplayName = "Students",
-            Description = "A workspace's view",
             OwnerWorkspaceId = owner,
             BaseDataSetId = main,
             ParentVariationId = parent,
@@ -127,7 +138,6 @@ public class DataSetVariationDomainConfigurationTests
 
         implementation.VariationName.ShouldBe("students");
         implementation.DisplayName.ShouldBe("Students");
-        implementation.Description.ShouldBe("A workspace's view");
         implementation.OwnerWorkspaceId.ShouldBe(owner);
         implementation.BaseDataSetId.ShouldBe(main);
         implementation.ParentVariationId.ShouldBe(parent);

@@ -9,13 +9,16 @@ public sealed class DdlColumnRequest
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the SQL data type name.</summary>
-    public string SqlType { get; set; } = "NVARCHAR";
+    public string SqlType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the max length for string/binary types.</summary>
     public int? MaxLength { get; set; }
 
     /// <summary>Gets or sets whether the column is required (NOT NULL).</summary>
     public bool IsRequired { get; set; }
+
+    /// <summary>Gets or sets whether the column is part of the primary key; a key column is NOT NULL whatever <see cref="IsRequired"/> says.</summary>
+    public bool IsPrimaryKey { get; set; }
 
     /// <summary>Gets or sets whether the column is an identity column.</summary>
     public bool IsIdentity { get; set; }

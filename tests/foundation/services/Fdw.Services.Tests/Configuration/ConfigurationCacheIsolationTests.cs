@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
@@ -23,7 +24,9 @@ using Fdw.Data.Abstractions.Mappers.PocoMappers;
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
-/// Verifies repeated domain reads cannot replace the cached implementation identity used by child joins.
+/// Verifies repeated domain reads cannot replace the cached implementation identity used by child joins, and the one rule behind it (FDW-7326): a row the gateway
+/// cached is never changed by a read. That holds for implementation records, for the sets read of a page and for the domain rows of a domain page, whose read observers
+/// write the description onto the rows they are given. It also verifies that a record read without the members another domain supplies is for reading and is never saved.
 /// </summary>
 [Collection(nameof(ServicesTestCollection))]
 public sealed class ConfigurationCacheIsolationTests
@@ -62,7 +65,8 @@ public sealed class ConfigurationCacheIsolationTests
             "ConfigurationDb", "data", "DataStoreConfiguration");
 
         // Act -- an implementation provider reads by the owning domain row's durable id, not by name.
-        var domain = new DataStoreConfigurationProvider(NullLogger<DataStoreConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStore", new UnavailablePlacement(), Moq.Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Moq.Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>());
+        var domain = new DataStoreConfigurationProvider(NullLogger<DataStoreConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStore", new UnavailablePlacement(), Moq.Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Moq.Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
+            new Moq.Mock<Fdw.Services.Descriptions.IDescriptionWriter>(Moq.MockBehavior.Strict).Object, NoDescriptions());
         domain.Register("MsSql", provider);
         var implementationId = store.Id;
         var first = await domain.Get("AuthDb", TestContext.Current.CancellationToken);
@@ -86,6 +90,302 @@ public sealed class ConfigurationCacheIsolationTests
         gateway.RowReads.ShouldContain("DataPath");
         gateway.RowReads.ShouldContain("DataContainer");
         gateway.RowReads.Count(read => read == "DataPath").ShouldBe(2);
+    }
+
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task TheDomainPageFillsACopyOfTheRowTheGatewayCachedAndNeverTheRowItself()
+    {
+        // Arrange -- the gateway hands the same domain row to every caller of the page, as its cache does.
+        var cached = new global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration { Id = Guid.NewGuid(), Name = "AuthDb", Implementation = "MsSql" };
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, cached);
+
+        // Act
+        var page = await domain.Get(new DomainQuery(null, null, 0, 10, false), TestContext.Current.CancellationToken);
+
+        // Assert -- the page shows the text, the cached row never does.
+        page.IsSuccess.ShouldBeTrue(page.CurrentMessage?.ToString());
+        var shown = await Rows(page.Value!);
+        shown.ShouldHaveSingleItem().Description.ShouldBe("the stored text");
+        shown[0].ShouldNotBeSameAs(cached);
+        shown[0].Id.ShouldBe(cached.Id);
+        shown[0].Name.ShouldBe("AuthDb");
+        cached.Description.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task ATextRemovedAfterADomainPageReadIsNotShownByTheNextPageRead()
+    {
+        // Arrange -- a text removed by a write that does not go through the domain's own save (a seed or a migration against a live database) leaves the cached row
+        // as it was; a page that filled the cached row itself would show the old text for as long as the entry lives. No route does this today: the test guards the path.
+        var cached = new global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration { Id = Guid.NewGuid(), Name = "AuthDb", Implementation = "MsSql" };
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, cached);
+        var first = await Rows((await domain.Get(new DomainQuery(null, null, 0, 10, false), TestContext.Current.CancellationToken)).Value!);
+        first.ShouldHaveSingleItem().Description.ShouldBe("the stored text");
+
+        // Act
+        descriptions.Text = null;
+        var second = await Rows((await domain.Get(new DomainQuery(null, null, 0, 10, false), TestContext.Current.CancellationToken)).Value!);
+
+        // Assert
+        second.ShouldHaveSingleItem().Description.ShouldBeNull();
+        second[0].ShouldNotBeSameAs(first[0]);
+        first[0].Description.ShouldBe("the stored text");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task AWholeReadAndALeanReadOfOneMemberDoNotShareTheTextInEitherOrder(bool wholeFirst)
+    {
+        // Arrange
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, null);
+
+        // Act
+        var first = await domain.Get("AuthDb", ConfigurationLevels.WholeAggregate, wholeFirst ? ConfigurationReadOptions.Whole : ConfigurationReadOptions.WithoutFilledMembers, TestContext.Current.CancellationToken);
+        var second = await domain.Get("AuthDb", ConfigurationLevels.WholeAggregate, wholeFirst ? ConfigurationReadOptions.WithoutFilledMembers : ConfigurationReadOptions.Whole, TestContext.Current.CancellationToken);
+
+        // Assert -- each read is what it stated, whatever the other did before it.
+        first.IsSuccess.ShouldBeTrue(first.CurrentMessage?.ToString());
+        second.IsSuccess.ShouldBeTrue(second.CurrentMessage?.ToString());
+        (wholeFirst ? first : second).Value!.Description.ShouldBe("the stored text");
+        (wholeFirst ? second : first).Value!.Description.ShouldBeNull();
+        descriptions.Fills.ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task ATextRemovedAfterAWholeReadIsNotShownByTheNextWholeRead()
+    {
+        // Arrange
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, null);
+        (await domain.Get("AuthDb", TestContext.Current.CancellationToken)).Value!.Description.ShouldBe("the stored text");
+
+        // Act
+        descriptions.Text = null;
+        var next = await domain.Get("AuthDb", TestContext.Current.CancellationToken);
+
+        // Assert
+        next.Value!.Description.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task ALeanReadRunsNoFillObserverForAnyRead()
+    {
+        // Arrange
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, null);
+        var lean = ConfigurationReadOptions.WithoutFilledMembers;
+        var token = TestContext.Current.CancellationToken;
+
+        // Act -- every read that can state it: one by name, by id, the whole list and the flat list.
+        var byName = await domain.Get("AuthDb", ConfigurationLevels.WholeAggregate, lean, token);
+        var byId = await domain.Get(byName.Value!.Id, ConfigurationLevels.WholeAggregate, lean, token);
+        var all = await domain.Get(ConfigurationLevels.WholeAggregate, lean, token);
+        var flat = await domain.GetFlat(ConfigurationLevels.WholeAggregate, lean, token);
+
+        // Assert
+        byName.Value!.Description.ShouldBeNull();
+        byId.Value!.Description.ShouldBeNull();
+        all.Value!.ShouldAllBe(member => member.Description == null);
+        flat.Value!.ShouldAllBe(member => member.Description == null);
+        descriptions.Fills.ShouldBe(0);
+    }
+
+    [Theory]
+    [InlineData("Update")]
+    [InlineData("Save")]
+    [InlineData("UpdateInUnit")]
+    [InlineData("SaveInUnit")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task ARecordReadWithoutTheFilledMembersIsRefusedByEverySaveAndTheStoredTextIsKept(string write)
+    {
+        // Arrange -- a lean read leaves the description empty, and the write observer would take the empty member for "cleared" and remove the stored text.
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, null);
+        var lean = await domain.Get("AuthDb", ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, TestContext.Current.CancellationToken);
+        var record = lean.Value!;
+
+        // Act -- the unit overloads refuse before they touch the unit, so none is opened here.
+        var refused = write switch
+        {
+            "Update" => await domain.Update(record, "DataStore", "MsSql", "AuthDb", TestContext.Current.CancellationToken),
+            "Save" => await domain.Save(record, "DataStore", "MsSql", "AuthDb", TestContext.Current.CancellationToken),
+            "UpdateInUnit" => await domain.Update(record, "DataStore", "MsSql", "AuthDb", null!, TestContext.Current.CancellationToken),
+            _ => await domain.Save(record, "DataStore", "MsSql", "AuthDb", null!, TestContext.Current.CancellationToken),
+        };
+
+        // Assert -- refused with the message that says what to do, before any write: the strict writer would throw at the first call, and nothing was opened.
+        refused.IsFailure.ShouldBeTrue();
+        refused.Messages[^1].Code.ShouldEndWith("-21082");
+        refused.CurrentMessage!.ToString().ShouldContain("read the record whole before saving it");
+        descriptions.Writes.ShouldBe(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task ARowOfALeanPageIsRefusedByUpdateAndTheStoredTextIsKept()
+    {
+        // Arrange -- the page read of FDW-6124 states WithoutFilledMembers; the members it hands out are for reading.
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, null);
+        var page = await domain.Get(0, 10, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, TestContext.Current.CancellationToken);
+        page.IsSuccess.ShouldBeTrue(page.CurrentMessage?.ToString());
+        var members = new List<IDataStoreImplementationConfiguration>();
+        await foreach (var member in page.Value!.Items) members.Add(member);
+        members.ShouldHaveSingleItem().Description.ShouldBeNull();
+
+        // Act
+        var refused = await domain.Update(members[0], "DataStore", "MsSql", "AuthDb", TestContext.Current.CancellationToken);
+
+        // Assert
+        refused.IsFailure.ShouldBeTrue();
+        refused.Messages[^1].Code.ShouldEndWith("-21082");
+        descriptions.Writes.ShouldBe(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Cascade")]
+    public async Task ARecordReadWholeIsNotRefusedAsLeanAndKeepsItsText()
+    {
+        // Arrange -- the lean record of one read does not mark the whole record of another: the registry is per instance, so the save goes on past the refusal.
+        var descriptions = new HeldDescriptions { Text = "the stored text" };
+        var (domain, _) = DataStoreWith(descriptions, null);
+        var lean = await domain.Get("AuthDb", ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, TestContext.Current.CancellationToken);
+        var whole = await domain.Get("AuthDb", TestContext.Current.CancellationToken);
+        whole.Value!.Description.ShouldBe("the stored text");
+        whole.Value.ShouldNotBeSameAs(lean.Value);
+
+        // Act -- this gateway opens no unit of work, which is the first thing a save that was not refused asks for, so it ends in that failure or in a thrown one.
+        IGenericResult? answer = null;
+        try
+        {
+            answer = await domain.Update(whole.Value, "DataStore", "MsSql", "AuthDb", TestContext.Current.CancellationToken);
+        }
+        catch (NotSupportedException)
+        {
+            // The double has no unit of work: the save got past the refusal to the place that asks for one.
+        }
+
+        // Assert
+        (answer is null || answer.Messages.All(message => !(message.Code ?? string.Empty).EndsWith("-21082", StringComparison.Ordinal))).ShouldBeTrue();
+    }
+
+    // The data stores domain over a gateway that holds one store with a path and a container, as the first test builds it; the descriptions are the ones the test holds.
+    private static (DataStoreConfigurationProvider Domain, ComposingReadGateway Gateway) DataStoreWith(
+        HeldDescriptions descriptions, global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration? sharedDomainRow)
+    {
+        PocoMapperCollection.RegisterMember(new DataStoreImplementationConfigurationPocoMapper());
+        PocoMapperCollection.RegisterMember(new global::Fdw.Services.Data.Configuration.DataStoreDomainConfigurationPocoMapper());
+        PocoMapperCollection.RegisterMember(new DataPathConfigurationPocoMapper());
+        PocoMapperCollection.RegisterMember(new DataContainerConfigurationPocoMapper());
+        var store = new DataStoreImplementationConfiguration { Id = Guid.NewGuid(), Name = "AuthDb" };
+        var gateway = new ComposingReadGateway(store, cacheRows: true) { SharedDomainRow = sharedDomainRow };
+        gateway.SeedRows("DataStore", Row(1, ("Id", store.Id), ("Name", "AuthDb")));
+        gateway.SeedRows("DataStoreConfiguration", Row(11, ("DataStoreRowId", 1), ("Id", Guid.NewGuid()), ("Name", "AuthDb")));
+        gateway.SeedRows("DataPath", Row(21, ("DataStoreConfigurationRowId", 11), ("Id", Guid.NewGuid()), ("Name", "auth")));
+        gateway.SeedRows("DataContainer", Row(31, ("DataPathRowId", 21), ("Id", Guid.NewGuid()), ("Name", "RevokedAccessToken")));
+
+        var implementation = new DataStoreImplementationConfigurationProvider(
+            NullLogger<DataStoreImplementationConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStoreConfiguration");
+        var domain = new DataStoreConfigurationProvider(NullLogger<DataStoreConfigurationProvider>.Instance, GatewayProviderFor(gateway), "ConfigurationDb", "data", "DataStore", new UnavailablePlacement(),
+            Moq.Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Moq.Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
+            descriptions.Writer, descriptions.Reader);
+        domain.Register("MsSql", implementation);
+        return (domain, gateway);
+    }
+
+    private static async Task<List<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration>> Rows(
+        ConfigurationPage<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration> page)
+    {
+        var rows = new List<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration>();
+        await foreach (var row in page.Items) rows.Add(row);
+        return rows;
+    }
+
+    // The descriptions a test holds for the data stores: the text the reader fills (none when it is null) and how often each side was asked. The writer is strict, so a write
+    // through it, which would remove or replace a stored text, is a thrown failure as well as a count.
+    private sealed class HeldDescriptions
+    {
+        private readonly Moq.Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader> _reader = new(Moq.MockBehavior.Strict);
+        private readonly Moq.Mock<Fdw.Services.Descriptions.IDescriptionWriter> _writer = new(Moq.MockBehavior.Strict);
+
+        public HeldDescriptions()
+        {
+            _reader
+                .Setup(r => r.Fill("DataStore", "Text", Moq.It.IsAny<IReadOnlyList<IDataStoreImplementationConfiguration>>(),
+                    Moq.It.IsAny<Func<IDataStoreImplementationConfiguration, Guid>>(), Moq.It.IsAny<Action<IDataStoreImplementationConfiguration, string>>(), Moq.It.IsAny<CancellationToken>()))
+                .Callback<string, string, IReadOnlyList<IDataStoreImplementationConfiguration>, Func<IDataStoreImplementationConfiguration, Guid>, Action<IDataStoreImplementationConfiguration, string>, CancellationToken>(
+                    (_, _, things, _, fill, _) =>
+                    {
+                        Fills++;
+                        if (Text is { } text)
+                            foreach (var thing in things) fill(thing, text);
+                    })
+                .Returns(Task.FromResult<IGenericResult>(GenericResult.Success()));
+            _reader
+                .Setup(r => r.Fill("DataStore", "Text", Moq.It.IsAny<IReadOnlyList<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration>>(),
+                    Moq.It.IsAny<Func<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration, Guid>>(),
+                    Moq.It.IsAny<Action<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration, string>>(), Moq.It.IsAny<CancellationToken>()))
+                .Callback<string, string, IReadOnlyList<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration>,
+                    Func<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration, Guid>, Action<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration, string>, CancellationToken>(
+                    (_, _, things, _, fill, _) =>
+                    {
+                        if (Text is { } text)
+                            foreach (var thing in things) fill(thing, text);
+                    })
+                .Returns(Task.FromResult<IGenericResult>(GenericResult.Success()));
+            // The store read has a path and a container: their descriptions are read for the set too, and none is held.
+            _reader
+                .Setup(r => r.ReadOwnedBy(Moq.It.IsAny<string>(), "Text", Moq.It.IsAny<IReadOnlyCollection<Guid>>(), Moq.It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult<IGenericResult<IReadOnlyDictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>>>(
+                    GenericResult<IReadOnlyDictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>>.Success(new Dictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>())));
+        }
+
+        /// <summary>Gets or sets the text the reader fills onto every thing it is given, or none.</summary>
+        public string? Text { get; set; }
+
+        /// <summary>Gets how many times the reader filled the implementation records of a read.</summary>
+        public int Fills { get; private set; }
+
+        /// <summary>Gets how many writes went to the writer; it is strict, so the first one throws.</summary>
+        public int Writes => _writer.Invocations.Count;
+
+        public Fdw.Services.Descriptions.Abstractions.IDescriptionReader Reader => _reader.Object;
+
+        public Fdw.Services.Descriptions.IDescriptionWriter Writer => _writer.Object;
+    }
+
+    // The data store provider fills each store's description on a read (FDW-6208); this test is about the cache, so the reader states its answer: no text held.
+    private static Fdw.Services.Descriptions.Abstractions.IDescriptionReader NoDescriptions()
+    {
+        var reader = new Moq.Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(Moq.MockBehavior.Strict);
+        reader
+            .Setup(r => r.Fill("DataStore", "Text", Moq.It.IsAny<IReadOnlyList<IDataStoreImplementationConfiguration>>(),
+                Moq.It.IsAny<Func<IDataStoreImplementationConfiguration, Guid>>(), Moq.It.IsAny<Action<IDataStoreImplementationConfiguration, string>>(), Moq.It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult<IGenericResult>(GenericResult.Success()));
+        // The store read here has a path and a container: their descriptions are read for the set too (FDW-6589), and none is held.
+        reader
+            .Setup(r => r.ReadOwnedBy(Moq.It.IsAny<string>(), "Text", Moq.It.IsAny<IReadOnlyCollection<Guid>>(), Moq.It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult<IGenericResult<IReadOnlyDictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>>>(
+                GenericResult<IReadOnlyDictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>>.Success(new Dictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>())));
+        return reader.Object;
     }
 
     private static Dictionary<string, object?> Row(int rowId, params (string Column, object? Value)[] columns)
@@ -129,6 +429,9 @@ public sealed class ConfigurationCacheIsolationTests
 
         public List<Type> ChildReads { get; } = [];
 
+        /// <summary>The domain row every read of the data stores domain answers with, the same object each time, when one is set.</summary>
+        public global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration? SharedDomainRow { get; init; }
+
         /// <summary>The containers read as rows, one entry per statement, in order.</summary>
         public List<string> RowReads { get; } = [];
 
@@ -154,6 +457,10 @@ public sealed class ConfigurationCacheIsolationTests
 
             // The data stores domain reads its rows as its own record, which carries the fields its list shows
             // (FDW-1003); a double that answered only the plain domain record would answer this read with no row.
+            // With a shared row the same object is handed back on every read, as the gateway's cache does.
+            if (typeof(T) == typeof(IEnumerable<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration>) && SharedDomainRow is not null)
+                return Task.FromResult(GenericResult<T>.Success((T)(object)new[] { SharedDomainRow }));
+
             if (typeof(T) == typeof(IEnumerable<global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)new[] { new global::Fdw.Services.Data.Configuration.DataStoreDomainConfiguration { Id = _originalId, Name = "AuthDb", Implementation = "MsSql" } }));
 

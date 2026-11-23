@@ -98,6 +98,9 @@ public sealed class AegisTestFixture : IAsyncLifetime
         AegisHostRegistration.Configure(builder, loggerFactory: null);
         AegisHostRegistration.Register(builder, schema, loggerFactory: null);
         builder.Services.AddSingleton(SecretManagerSource());
+        // Why registered and strict: SecretManagerTypes requires the descriptions writer at Initialize (SECRETMGR-60391); a real host gets it from the Descriptions service type, which
+        // AegisHostRegistration.RegisterConfigurationSource registers. This fixture builds its own configuration source and never saves a secret manager, so a call to the writer is a defect (FDW-6208).
+        builder.Services.AddSingleton<Fdw.Services.Descriptions.IDescriptionWriter>(new Moq.Mock<Fdw.Services.Descriptions.IDescriptionWriter>(Moq.MockBehavior.Strict).Object);
 
         Host = builder.Build();
 

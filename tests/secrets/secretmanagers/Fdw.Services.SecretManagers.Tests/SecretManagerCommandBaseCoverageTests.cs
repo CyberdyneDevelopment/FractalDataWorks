@@ -83,16 +83,15 @@ public sealed class SecretManagerCommandBaseCoverageTests
     }
 
     // -------------------------------------------------------
-    // SecretManagerCommandBase.RequiresSecretKey - default branch
+    // SecretManagerCommandBase.RequiresSecretKey - base default
     // -------------------------------------------------------
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void GetCertificateCommandRequiresSecretKeyViaDefaultSwitch()
+    public void GetCertificateCommandRequiresSecretKeyViaBaseDefault()
     {
-        // Arrange - GetCertificate is NOT in the explicit switch cases of RequiresSecretKey
-        // so it hits the default => true branch
+        // Arrange - GetCertificate does not override RequiresSecretKey, so the base default (true) applies
         var cmd = GetCertificateManagerCommand.Latest("vault", "cert");
 
         // Act - Validate exercises RequiresSecretKey internally

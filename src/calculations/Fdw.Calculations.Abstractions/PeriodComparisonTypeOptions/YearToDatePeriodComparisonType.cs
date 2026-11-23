@@ -15,7 +15,7 @@ public sealed class YearToDatePeriodComparisonType : PeriodComparisonTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="YearToDatePeriodComparisonType"/> class.
     /// </summary>
-    public YearToDatePeriodComparisonType() : base("YearToDate", isCumulative: true) { }
+    public YearToDatePeriodComparisonType() : base("YearToDate", "Compares current year-to-date to previous year-to-date", isCumulative: true) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => null;

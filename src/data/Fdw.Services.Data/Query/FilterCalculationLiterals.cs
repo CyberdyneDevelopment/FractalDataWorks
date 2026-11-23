@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
@@ -13,22 +12,6 @@ namespace Fdw.Web.RestEndpoints.Query;
 /// </summary>
 internal static class FilterCalculationLiterals
 {
-    // The types of field a calculation's result may be compared with, by the type the calculation yields. One entry per type, so a
-    // new kind of result is one entry and no method grows with it.
-    private static readonly Dictionary<Type, HashSet<Type>> Accepted = new()
-    {
-        [typeof(decimal)] = [typeof(byte), typeof(short), typeof(int), typeof(long), typeof(decimal), typeof(double), typeof(float)],
-        [typeof(DateTimeOffset)] = [typeof(DateTime), typeof(DateTimeOffset)],
-        [typeof(DateOnly)] = [typeof(DateOnly), typeof(DateTime)],
-    };
-
-    private static readonly Dictionary<Type, string> Words = new()
-    {
-        [typeof(decimal)] = "a number",
-        [typeof(DateTimeOffset)] = "a date-time",
-        [typeof(DateOnly)] = "a date",
-    };
-
     /// <summary>Reads the value a filter supplies for a calculation's input.</summary>
     /// <param name="value">The value as the filter states it.</param>
     /// <param name="input">The input's name, for a refusal.</param>
@@ -37,19 +20,11 @@ internal static class FilterCalculationLiterals
     /// <returns>A decimal for a number, a bool for a flag, a DateOnly for a text of the form yyyy-MM-dd, or the refusal.</returns>
     public static IGenericResult<object?> Input(JsonElement value, string input, string calculation, IQueryRefusals refusals)
     {
-        switch (value.ValueKind)
-        {
-            case JsonValueKind.Number when value.TryGetDecimal(out var number):
-                return GenericResult<object?>.Success(number);
-            case JsonValueKind.True:
-                return GenericResult<object?>.Success(true);
-            case JsonValueKind.False:
-                return GenericResult<object?>.Success(false);
-            case JsonValueKind.String when DateOnly.TryParseExact(value.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date):
-                return GenericResult<object?>.Success(date);
-            default:
-                return refusals.Invalid<object?>($"input '{input}' of calculation '{calculation}' must be a number, true or false, or a date written yyyy-MM-dd");
-        }
+        var kind = JsonInputKinds.ByValueKind(value.ValueKind);
+        var read = ReferenceEquals(kind, JsonInputKinds.NotFound) ? null : kind.Read(value);
+        return read is null
+            ? refusals.Invalid<object?>($"input '{input}' of calculation '{calculation}' must be a number, true or false, or a date written yyyy-MM-dd")
+            : GenericResult<object?>.Success(read);
     }
 
     /// <summary>Checks a calculation's result against the type of the field it is compared with.</summary>
@@ -65,24 +40,26 @@ internal static class FilterCalculationLiterals
             return refusals.Invalid<bool>($"'{field.Name}' declares no type, so the result of calculation '{calculation}' cannot be checked against it");
         }
 
-        if (!Accepted.TryGetValue(value.ValueType, out var fits))
+        var kind = FilterCalculationResultKinds.ByValueType(value.ValueType);
+        if (ReferenceEquals(kind, FilterCalculationResultKinds.NotFound))
         {
             return refusals.Invalid<bool>($"calculation '{calculation}' yields a {value.ValueType.Name}, which a filter cannot compare");
         }
 
-        return fits.Contains(fieldType)
+        return kind.FieldTypes.Contains(fieldType)
             ? GenericResult.Success()
-            : refusals.Invalid<bool>($"calculation '{calculation}' yields {Words[value.ValueType]}, and '{field.Name}' holds a {fieldType.Name}");
+            : refusals.Invalid<bool>($"calculation '{calculation}' yields {kind.Word}, and '{field.Name}' holds a {fieldType.Name}");
     }
 
     /// <summary>Writes a calculation's result as the literal a filter holds.</summary>
     /// <param name="value">What the calculation yielded, already checked against the field.</param>
     /// <returns>A JSON string in ISO 8601 for a date-time, yyyy-MM-dd for a date, a JSON number for a number.</returns>
+    /// <exception cref="InvalidOperationException">The result is of a type no kind holds; <see cref="Check"/> refuses that first.</exception>
     public static JsonElement Literal(FilterCalculationValue value)
-        => value.Value switch
-        {
-            DateTimeOffset moment => JsonSerializer.SerializeToElement(moment.ToString("O", CultureInfo.InvariantCulture)),
-            DateOnly date => JsonSerializer.SerializeToElement(date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            _ => JsonSerializer.SerializeToElement((decimal)value.Value),
-        };
+    {
+        var kind = FilterCalculationResultKinds.ByValueType(value.ValueType);
+        return ReferenceEquals(kind, FilterCalculationResultKinds.NotFound)
+            ? throw new InvalidOperationException($"A calculation result of type '{value.ValueType.Name}' has no filter literal; the check refuses it before one is written.")
+            : kind.Literal(value.Value);
+    }
 }

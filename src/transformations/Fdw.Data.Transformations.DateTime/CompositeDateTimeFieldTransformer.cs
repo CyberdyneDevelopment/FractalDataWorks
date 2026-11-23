@@ -193,22 +193,9 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformationBase
 
     private static bool TryParseInt(object value, out int result)
     {
-        switch (value)
-        {
-            case int i:
-                result = i;
-                return true;
-
-            case long l:
-                result = (int)l;
-                return true;
-
-            case string s:
-                return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
-
-            default:
-                result = 0;
-                return false;
-        }
+        var whole = WholeNumberInputKinds.Read(value);
+        var fits = whole is >= int.MinValue and <= int.MaxValue;
+        result = fits ? (int)whole!.Value : 0;
+        return fits;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
@@ -44,6 +45,10 @@ public sealed class MsSqlNearestTranslator : MsSqlVectorizedDataCommandTranslato
         : base("Nearest")
     {
     }
+
+    /// <inheritdoc />
+    /// <remarks>Read from what it emits: a SELECT ordered by VECTOR_DISTANCE.</remarks>
+    public override IReadOnlyList<string> Operations => ["Query"];
 
     /// <inheritdoc/>
     public override Task<IGenericResult<SqlCommand>> Translate(

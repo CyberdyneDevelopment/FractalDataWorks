@@ -1,5 +1,8 @@
-using System;
+using Fdw.Results;
 using Fdw.UI.Themes.Clients.Models;
+using Fdw.UI.Themes.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.UI.Themes.Configuration;
 
@@ -13,9 +16,29 @@ public static class ThemeConfigurationMapper
     /// Converts a database-backed <see cref="ThemeImplementationConfiguration"/> to a
     /// <see cref="ThemeConfiguration"/> DTO for API transport.
     /// </summary>
-    public static ThemeConfiguration ToDto(this IThemeImplementationConfiguration managed)
+    /// <param name="managed">The stored theme.</param>
+    /// <param name="logger">The logger that records a refusal.</param>
+    /// <returns>
+    /// The DTO; a failure naming the theme and the text color when the theme states no <c>TextOnPrimary</c> or
+    /// <c>TextOnSecondary</c> (<c>THEMES-63100</c>). A theme row's text colors are stated, never supplied here (FDW-6479).
+    /// </returns>
+    public static IGenericResult<ThemeConfiguration> ToDto(this IThemeImplementationConfiguration managed, ILogger logger)
     {
-        return new ThemeConfiguration
+        var log = logger ?? NullLogger.Instance;
+
+        if (managed.TextOnPrimary is not { } textOnPrimary)
+        {
+            return GenericResult<ThemeConfiguration>.Failure(
+                ThemeConfigurationProviderLog.ThemeStatesNoTextColor(log, managed.Name, nameof(managed.TextOnPrimary)));
+        }
+
+        if (managed.TextOnSecondary is not { } textOnSecondary)
+        {
+            return GenericResult<ThemeConfiguration>.Failure(
+                ThemeConfigurationProviderLog.ThemeStatesNoTextColor(log, managed.Name, nameof(managed.TextOnSecondary)));
+        }
+
+        return GenericResult<ThemeConfiguration>.Success(new ThemeConfiguration
         {
             Id = managed.Id,
             TenantId = managed.TenantId,
@@ -34,8 +57,8 @@ public static class ThemeConfigurationMapper
             TextPrimary = managed.TextPrimary,
             TextSecondary = managed.TextSecondary,
             TextDisabled = managed.TextDisabled ?? string.Empty,
-            TextOnPrimary = managed.TextOnPrimary ?? throw new InvalidOperationException($"Theme '{managed.Name}' states no TextOnPrimary colour."),
-            TextOnSecondary = managed.TextOnSecondary ?? throw new InvalidOperationException($"Theme '{managed.Name}' states no TextOnSecondary colour."),
+            TextOnPrimary = textOnPrimary,
+            TextOnSecondary = textOnSecondary,
             FontFamily = managed.FontFamily,
             FontFamilyMono = managed.FontFamilyMono,
             FontSizeBase = managed.FontSizeBase,
@@ -47,7 +70,7 @@ public static class ThemeConfigurationMapper
             AppName = managed.AppName,
             FaviconUrl = managed.FaviconUrl,
             CreatedAt = managed.CreateDate
-        };
+        });
     }
 
     /// <summary>

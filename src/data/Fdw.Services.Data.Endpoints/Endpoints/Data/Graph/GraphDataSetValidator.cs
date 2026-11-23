@@ -26,7 +26,8 @@ namespace Fdw.Services.Data.Endpoints;
 /// over the draft read by the graph pipeline's own reader. A draft with no components is abstract and is not judged for a shape.
 /// </para>
 /// <para>
-/// It judges no name, so one route serves a new data set and an edit of a saved one; an edit is checked by sending the whole draft.
+/// It judges no name, so one route serves a new data set and an edit of a saved one; an edit is checked by sending the whole draft. The display name and the abbreviation
+/// are judged as saving judges them (FDW-6118), each at its own path.
 /// </para>
 /// </remarks>
 internal static class GraphDataSetValidator
@@ -89,13 +90,26 @@ internal static class GraphDataSetValidator
         }));
     }
 
-    // The data set's own classification, judged as saving judges it.
+    // The data set's own classification, display name and abbreviation, judged as saving judges them: the display name and the abbreviation by the one check every
+    // route that takes them runs (DataSetNames.Check), each alone so a draft with both too long lists both (FDW-6118).
     private static IEnumerable<GraphDataSetProblem> Header(CreateGraphDataSetRequest request, ILogger logger)
     {
         var classified = DataClassificationValidator.Validate([request.ClassificationId], logger);
         if (classified.IsFailure)
         {
             yield return GraphDataSetProblems.Of(classified, "classificationId");
+        }
+
+        var displayName = DataSetNames.Check(request.DisplayName, null, request.Name, logger);
+        if (displayName.IsFailure)
+        {
+            yield return GraphDataSetProblems.Of(displayName, "displayName");
+        }
+
+        var abbreviation = DataSetNames.Check(null, request.Abbreviation, request.Name, logger);
+        if (abbreviation.IsFailure)
+        {
+            yield return GraphDataSetProblems.Of(abbreviation, "abbreviation");
         }
     }
 

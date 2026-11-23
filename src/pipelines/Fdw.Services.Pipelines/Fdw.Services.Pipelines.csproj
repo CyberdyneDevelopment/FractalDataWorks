@@ -39,6 +39,7 @@
     <ProjectReference Include="..\..\hosts\Fdw.Services.Hosts\Fdw.Services.Hosts.csproj" />
     <ProjectReference Include="..\..\hosts\Fdw.Services.Hosts.Abstractions\Fdw.Services.Hosts.Abstractions.csproj" />
     <ProjectReference Include="..\..\configuration\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+    <ProjectReference Include="..\..\data\Fdw.Services.Descriptions.Abstractions\Fdw.Services.Descriptions.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

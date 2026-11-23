@@ -9,9 +9,9 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Pipelines.Clients;
 
 /// <summary>
-/// HTTP client that hands pipeline events to the host that serves the hub (FDW-3773).
+/// HTTP client that hands pipeline events to the host that serves the hub, one at a time (FDW-3773) or a tick's worth in one request (FDW-5249).
 /// </summary>
-public class PipelineEventHttpClient : ApiClientBase, IPipelineEventClient
+public class PipelineEventHttpClient : ApiClientBase, IPipelineEventClient, IPipelineEventBatchClient
 {
     /// <summary>Initializes a new instance of the <see cref="PipelineEventHttpClient"/> class.</summary>
     public PipelineEventHttpClient(HttpClient httpClient, ILogger<PipelineEventHttpClient> logger)
@@ -24,5 +24,12 @@ public class PipelineEventHttpClient : ApiClientBase, IPipelineEventClient
         PipelineEventRequest request, CancellationToken cancellationToken = default)
     {
         return Post<PipelineEventRequest, PipelineEventResponse>("pipelines/events", request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult<PipelineEventBatchResponse>> RelayBatch(
+        PipelineEventBatchRequest request, CancellationToken cancellationToken = default)
+    {
+        return Post<PipelineEventBatchRequest, PipelineEventBatchResponse>("pipelines/events/batch", request, cancellationToken);
     }
 }

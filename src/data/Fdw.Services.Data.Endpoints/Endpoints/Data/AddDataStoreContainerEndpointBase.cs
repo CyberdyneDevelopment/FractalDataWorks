@@ -38,6 +38,13 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datastores";
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// <see cref="IDataStoreWrites"/> decides (FDW-6968): a path or container a workspace owns at its owner's scope alone, so a member of the owner who
+    /// holds no store permission may change it; everything else by the store's rule, the <c>datastores:write</c> permission it asks as before.
+    /// </remarks>
+    protected override bool ResourceDecidesAccess => true;
+
     /// <summary>Gets the nested-resource route.</summary>
     protected override string Route => "/datastores/{Name}/containers";
 
@@ -94,7 +101,7 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
 
         path.Containers.Add(container);
 
-        var addResult = await _dataStoreProvider
+        var addResult = await Resolve<IDataStoreWrites>()
             .UpdateStore(store, ct)
             .ConfigureAwait(false);
         if (addResult.IsFailure)

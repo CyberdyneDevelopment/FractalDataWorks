@@ -7,6 +7,7 @@ using Fdw.Services.Workspaces.Endpoints;
 using Shouldly;
 using Xunit;
 using static Fdw.Services.Tests.Workspaces.Lineage.LineageTestGraphs;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Tests.Workspaces.Lineage;
 
@@ -18,7 +19,7 @@ public class LineageGroupsTests
     private static readonly string Nfl = "Sports" + CategoryTree.PathSeparator + "NFL";
     private static readonly string Finance = "Finance";
 
-    private static MapNodeDto Categorised(int n, string name, string? category)
+    private static MapNodeDto Categorized(int n, string name, string? category)
     {
         var node = NewDataSet(n, name);
         node.Category = category;
@@ -40,7 +41,7 @@ public class LineageGroupsTests
 
     private static string ContainerId(int n) => MapNodeIds.Container(Guid.Parse($"00000000-0000-0000-0003-{n:D12}"));
 
-    private static LineageGraph Graph(List<MapNodeDto> nodes, List<MapEdgeDto> edges) => LineageProjection.Of(nodes, edges, null);
+    private static LineageGraph Graph(List<MapNodeDto> nodes, List<MapEdgeDto> edges) => LineageProjection.Of(nodes, edges, null, NullLogger.Instance).Value!;
 
     private const int PipelinesPerLine = 10;
 
@@ -59,14 +60,14 @@ public class LineageGroupsTests
         => tagged.ToDictionary(t => Guid.Parse($"00000000-0000-0000-{series:D4}-{t.Id:D12}"), t => (IReadOnlyList<string>)t.Tags);
 
     [Fact]
-    public void DataSetsAreGroupedByCategoryWithTheParentFromThePathAndTheUncategorisedGroupAlone()
+    public void DataSetsAreGroupedByCategoryWithTheParentFromThePathAndTheUncategorizedGroupAlone()
     {
-        var graph = Graph([Categorised(1, "Games", Nfl), Categorised(2, "Teams", Nfl), Categorised(3, "Ledger", Finance), Categorised(4, "Loose", null)], []);
+        var graph = Graph([Categorized(1, "Games", Nfl), Categorized(2, "Teams", Nfl), Categorized(3, "Ledger", Finance), Categorized(4, "Loose", null)], []);
 
         var answer = LineageGroups.Of(graph, ByCategory(null));
 
         answer.Groups.Select(group => group.Id).ShouldBe(
-            ["Category:Finance", "Category:Sports", "Category:Sports / NFL", "Uncategorised"], ignoreOrder: true);
+            ["Category:Finance", "Category:Sports", "Category:Sports / NFL", "Uncategorized"], ignoreOrder: true);
         var nfl = answer.Groups.Single(group => group.Id == "Category:Sports / NFL");
         nfl.Name.ShouldBe("NFL");
         nfl.Kind.ShouldBe(LineageGroups.CategoryKind);
@@ -74,14 +75,18 @@ public class LineageGroupsTests
         nfl.Members.ShouldBe(2);
         answer.Groups.Single(group => group.Id == "Category:Sports").Members.ShouldBe(0);
         answer.Groups.Single(group => group.Id == "Category:Sports").Parent.ShouldBeNull();
-        answer.Groups.Single(group => group.Id == LineageGroups.Uncategorised).Members.ShouldBe(1);
+        answer.Groups.Single(group => group.Id == LineageGroups.Uncategorized).Members.ShouldBe(1);
+        // FDW-6333: the group is answered in American spelling, its id, kind and name alike; a caller that compared "Uncategorised" no longer matches.
+        var uncategorized = answer.Groups.Single(group => group.Id == "Uncategorized");
+        uncategorized.Kind.ShouldBe("Uncategorized");
+        uncategorized.Name.ShouldBe("Uncategorized");
     }
 
     [Fact]
     public void APipelineBetweenTwoGroupsMakesALineAndOneWithinAGroupMakesNone()
     {
         var graph = Graph(
-            [Categorised(1, "Games", Nfl), Categorised(2, "Teams", Nfl), Categorised(3, "Ledger", Finance), NewPipeline(1, "Within"), NewPipeline(2, "Across")],
+            [Categorized(1, "Games", Nfl), Categorized(2, "Teams", Nfl), Categorized(3, "Ledger", Finance), NewPipeline(1, "Within"), NewPipeline(2, "Across")],
             [Reads(DataSetId(1), PipelineId(1)), Writes(PipelineId(1), DataSetId(2)), Reads(DataSetId(2), PipelineId(2)), Writes(PipelineId(2), DataSetId(3))]);
 
         var answer = LineageGroups.Of(graph, ByCategory(null));
@@ -97,7 +102,7 @@ public class LineageGroupsTests
     [Fact]
     public void APipelineWithSeveralStepsAcrossOnePairCountsOnceAndALineNamesAtMostTen()
     {
-        var nodes = new List<MapNodeDto> { Categorised(1, "From", Sports), Categorised(2, "To", Finance), Categorised(3, "To2", Finance) };
+        var nodes = new List<MapNodeDto> { Categorized(1, "From", Sports), Categorized(2, "To", Finance), Categorized(3, "To2", Finance) };
         var edges = new List<MapEdgeDto>();
         for (var i = 1; i <= 12; i++)
         {
@@ -119,7 +124,7 @@ public class LineageGroupsTests
     public void ALineRunsOneWayAndTheOtherDirectionIsALineOfItsOwn()
     {
         var graph = Graph(
-            [Categorised(1, "A", Sports), Categorised(2, "B", Finance), NewPipeline(1, "Out"), NewPipeline(2, "Back")],
+            [Categorized(1, "A", Sports), Categorized(2, "B", Finance), NewPipeline(1, "Out"), NewPipeline(2, "Back")],
             [Reads(DataSetId(1), PipelineId(1)), Writes(PipelineId(1), DataSetId(2)), Reads(DataSetId(2), PipelineId(2)), Writes(PipelineId(2), DataSetId(1))]);
 
         var lines = LineageGroups.Of(graph, ByCategory(null)).Lines;
@@ -131,7 +136,7 @@ public class LineageGroupsTests
     public void ContainersAPipelineReadsAreGroupedByDataStoreAndPathAndDrawALineToADataSet()
     {
         var graph = Graph(
-            [NewContainer(1, "Raw", "Lake", "landing"), NewContainer(2, "Raw2", "Lake", "landing"), Categorised(1, "Games", Nfl), NewPipeline(1, "Load")],
+            [NewContainer(1, "Raw", "Lake", "landing"), NewContainer(2, "Raw2", "Lake", "landing"), Categorized(1, "Games", Nfl), NewPipeline(1, "Load")],
             [MapEdges.Between(MapRelations.ConsumedBy, ContainerId(1), PipelineId(1)), Writes(PipelineId(1), DataSetId(1))]);
 
         var answer = LineageGroups.Of(graph, ByCategory(null));
@@ -147,7 +152,7 @@ public class LineageGroupsTests
     public void ACategoryLimitsTheAnswerToThatCategoryAndTheOnesUnderItAndTheLinesBetweenThem()
     {
         var graph = Graph(
-            [Categorised(1, "Games", Nfl), Categorised(2, "Teams", Sports), Categorised(3, "Ledger", Finance), Categorised(4, "Loose", null),
+            [Categorized(1, "Games", Nfl), Categorized(2, "Teams", Sports), Categorized(3, "Ledger", Finance), Categorized(4, "Loose", null),
              NewPipeline(1, "InSports"), NewPipeline(2, "Out")],
             [Reads(DataSetId(1), PipelineId(1)), Writes(PipelineId(1), DataSetId(2)), Reads(DataSetId(2), PipelineId(2)), Writes(PipelineId(2), DataSetId(3))]);
 
@@ -175,7 +180,7 @@ public class LineageGroupsTests
         var nodes = new List<MapNodeDto>();
         var edges = new List<MapEdgeDto>();
         for (var d = 1; d <= 3000; d++)
-            nodes.Add(Categorised(d, $"Set{d}", $"Area{d % 40}{CategoryTree.PathSeparator}Part{d % 7}"));
+            nodes.Add(Categorized(d, $"Set{d}", $"Area{d % 40}{CategoryTree.PathSeparator}Part{d % 7}"));
 
         for (var p = 1; p <= 500; p++)
         {
@@ -307,7 +312,7 @@ public class LineageGroupsTests
     [Fact]
     public void ALineNamesAsManyPipelinesAsTheSettingGivesAndStillCountsAllOfThem()
     {
-        var nodes = new List<MapNodeDto> { Categorised(1, "From", Sports), Categorised(2, "To", Finance) };
+        var nodes = new List<MapNodeDto> { Categorized(1, "From", Sports), Categorized(2, "To", Finance) };
         var edges = new List<MapEdgeDto>();
         for (var i = 1; i <= 5; i++)
         {

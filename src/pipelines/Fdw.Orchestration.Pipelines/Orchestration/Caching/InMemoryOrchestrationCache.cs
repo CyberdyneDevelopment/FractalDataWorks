@@ -135,14 +135,14 @@ public sealed class InMemoryOrchestrationCache : IOrchestrationCache
             memoryCacheOptions.SlidingExpiration = options.SlidingExpiration.Value;
         }
 
-        memoryCacheOptions.Priority = options.Priority.Name switch
+        // Why refuse: the NotFound placeholder states no memory priority (it would read as Low), and an entry that names a
+        // priority no collection holds is a caller error this method has no result to report.
+        if (ReferenceEquals(options.Priority, CachePriorities.NotFound))
         {
-            "Low" => CacheItemPriority.Low,
-            "Normal" => CacheItemPriority.Normal,
-            "High" => CacheItemPriority.High,
-            "NeverRemove" => CacheItemPriority.NeverRemove,
-            _ => CacheItemPriority.Normal
-        };
+            throw new ArgumentException("The cache entry names a priority that CachePriorities does not hold.", nameof(options));
+        }
+
+        memoryCacheOptions.Priority = options.Priority.MemoryPriority;
 
         return memoryCacheOptions;
     }

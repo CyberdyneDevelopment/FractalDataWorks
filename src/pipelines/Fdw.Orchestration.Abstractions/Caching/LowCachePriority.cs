@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Fdw.Orchestration.Abstractions.Caching;
 
@@ -9,5 +10,5 @@ namespace Fdw.Orchestration.Abstractions.Caching;
 public sealed class LowCachePriority : CachePriorityBase
 {
     /// <summary>Initializes a new instance of <see cref="LowCachePriority"/>.</summary>
-    public LowCachePriority() : base("Low") { }
+    public LowCachePriority() : base("Low", CacheItemPriority.Low) { }
 }

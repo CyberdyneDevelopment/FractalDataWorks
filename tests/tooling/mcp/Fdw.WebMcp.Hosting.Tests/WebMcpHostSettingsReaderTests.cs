@@ -6,6 +6,7 @@ using Fdw.Results;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
@@ -21,6 +22,13 @@ public class WebMcpHostSettingsReaderTests
 {
     private readonly Mock<IWebMcpConfigurationProvider> _configurations = new();
     private readonly Mock<ISecretManagerProvider> _secretManagers = new();
+    private readonly Mock<IEffectiveSettingsProvider> _settings = new();
+
+    public WebMcpHostSettingsReaderTests()
+    {
+        var depth = WebMcpCompositeCatalog.MaxDepth;
+        _settings.Setup(s => s.TryGetEffectiveValue(SettingDefinitions.WebMcpToolSchemaMaxDepth, out depth, null, null)).Returns(true);
+    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -99,7 +107,7 @@ public class WebMcpHostSettingsReaderTests
     {
         _configurations.Setup(p => p.Get(WebMcpHosting.ConfigurationName, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IWebMcpImplementationConfiguration>.Failure(new GenericMessage("no row")));
-        var reader = new WebMcpHostSettingsReader(_configurations.Object, _secretManagers.Object, NullLogger<WebMcpHostSettingsReader>.Instance);
+        var reader = new WebMcpHostSettingsReader(_configurations.Object, _secretManagers.Object, _settings.Object, NullLogger<WebMcpHostSettingsReader>.Instance);
 
         var result = await reader.Read(TestContext.Current.CancellationToken);
 
@@ -198,10 +206,51 @@ public class WebMcpHostSettingsReaderTests
         result.CurrentMessage.ShouldNotBeNull().ShouldContain("which does not read SelfBaseAddress");
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task TheSchemaDepthIsTheStatedSetting()
+    {
+        var result = await Reader(new WebMcpRow()).Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value.ShouldNotBeNull().SchemaMaxDepth.ShouldBe(WebMcpCompositeCatalog.MaxDepth);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ADepthThatIsNotSetIsRefusedNamingTheSettingNotReadAsNoLimit()
+    {
+        var absent = 0;
+        _settings.Setup(s => s.TryGetEffectiveValue(SettingDefinitions.WebMcpToolSchemaMaxDepth, out absent, null, null)).Returns(false);
+
+        var result = await Reader(new WebMcpRow()).Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldNotBeNull().ShouldEndWith("-61017");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("WebMcpToolSchemaMaxDepth");
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    [InlineData(0)]
+    [InlineData(-3)]
+    public async Task ADepthThatIsNotPositiveIsRefused(int stated)
+    {
+        _settings.Setup(s => s.TryGetEffectiveValue(SettingDefinitions.WebMcpToolSchemaMaxDepth, out stated, null, null)).Returns(true);
+
+        var result = await Reader(new WebMcpRow()).Read(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldNotBeNull().ShouldEndWith("-61017");
+    }
+
     private WebMcpHostSettingsReader Reader(WebMcpRow row)
     {
         _configurations.Setup(p => p.Get(WebMcpHosting.ConfigurationName, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IWebMcpImplementationConfiguration>.Success(row));
-        return new WebMcpHostSettingsReader(_configurations.Object, _secretManagers.Object, NullLogger<WebMcpHostSettingsReader>.Instance);
+        return new WebMcpHostSettingsReader(_configurations.Object, _secretManagers.Object, _settings.Object, NullLogger<WebMcpHostSettingsReader>.Instance);
     }
 }

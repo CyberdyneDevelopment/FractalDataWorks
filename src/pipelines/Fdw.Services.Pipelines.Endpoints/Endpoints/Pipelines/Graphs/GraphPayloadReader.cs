@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Fdw.Conventions;
+using Fdw.Messages;
 using Fdw.Results;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Etl.Abstractions;
@@ -27,9 +28,6 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </remarks>
 public static class GraphPayloadReader
 {
-    /// <summary>The implementation name a graph pipeline is stored under.</summary>
-    public const string Implementation = "Graph";
-
     /// <summary>Reads a graph that is to be saved, whose field mappings name no transformation.</summary>
     /// <param name="payload">What the API states.</param>
     /// <param name="id">The pipeline's durable id.</param>
@@ -76,7 +74,59 @@ public static class GraphPayloadReader
             return GraphRefusal.Of<GraphPipelineConfiguration>($"the graph does not state {string.Join(", ", missing)}");
         }
 
-        return Place(payload, id, null, transformationIds);
+        var placed = Place(payload, id, null, transformationIds);
+        if (placed.IsFailure || placed.Value is null)
+        {
+            return placed;
+        }
+
+        // The type a save states, and the values that type requires, judged by the one method the draft and the update use too (FDW-6718).
+        var judged = GraphPipelineTypeJudgment.Judge(placed.Value, NullLogger.Instance);
+        return judged.Count == 0
+            ? placed
+            : GenericResult.Failure(judged).ToNewResult<GraphPipelineConfiguration>();
+    }
+
+    /// <summary>
+    /// Reads a graph that is only being checked and judges the type it states as a save does (FDW-6718). A draft may leave the type out: then it is read as it was, and
+    /// <paramref name="notes"/> receives a coded note that the requirements of the type were not judged, so an answer of "valid" cannot hide it.
+    /// </summary>
+    /// <param name="payload">What the API states.</param>
+    /// <param name="id">The pipeline's durable id.</param>
+    /// <param name="problems">Receives each thing the draft states that could not be read, and each thing wrong with the type it states.</param>
+    /// <param name="notes">Receives the note that no type was stated, when none was.</param>
+    /// <returns>The stored configuration, or the refusal when nothing of the draft can be placed.</returns>
+    public static IGenericResult<GraphPipelineConfiguration> ReadDraft(GraphPayload payload, Guid id, List<GraphProblem> problems, List<IGenericMessage> notes) =>
+        ReadDraft(payload, id, problems, notes, StageChains.None.Ids);
+
+    /// <summary>Reads a graph that is only being checked, resolving the transformations its field mappings name, and judges the type it states.</summary>
+    /// <param name="payload">What the API states.</param>
+    /// <param name="id">The pipeline's durable id.</param>
+    /// <param name="problems">Receives each thing the draft states that could not be read, and each thing wrong with the type it states.</param>
+    /// <param name="notes">Receives the note that no type was stated, when none was.</param>
+    /// <param name="transformationIds">The id of each transformation the field mappings of its tools name, by name (see <see cref="GraphChainLookup"/>).</param>
+    /// <returns>The stored configuration, or the refusal when nothing of the draft can be placed.</returns>
+    public static IGenericResult<GraphPipelineConfiguration> ReadDraft(
+        GraphPayload payload, Guid id, List<GraphProblem> problems, List<IGenericMessage> notes, IReadOnlyDictionary<string, Guid> transformationIds)
+    {
+        var read = Place(payload, id, problems, transformationIds);
+        if (read.IsFailure || read.Value is null)
+        {
+            return read;
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.Implementation))
+        {
+            notes.Add(GraphImplementationLog.TypeRequirementsNotJudged(NullLogger.Instance));
+            return read;
+        }
+
+        foreach (var message in GraphPipelineTypeJudgment.Judge(read.Value, NullLogger.Instance))
+        {
+            problems.Add(new GraphProblem(["implementation"], message.Message));
+        }
+
+        return read;
     }
 
     /// <summary>
@@ -127,7 +177,11 @@ public static class GraphPayloadReader
         {
             Id = id,
             Name = named ? payload.Name : string.Empty,
-            Implementation = Implementation,
+            Implementation = payload.Implementation ?? string.Empty,
+            ClaimKeyTemplate = payload.ClaimKeyTemplate,
+            HalfDoneRule = payload.HalfDoneRule,
+            MaxRunSeconds = payload.MaxRunSeconds,
+            MaxSteps = payload.MaxSteps,
             IsEnabled = payload.IsEnabled == true,
             Description = payload.Description,
             LinkCapacity = payload.LinkCapacity is { } capacity ? capacity : 0,
@@ -145,6 +199,11 @@ public static class GraphPayloadReader
         foreach (var variable in payload.Variables)
         {
             graph.Variables.Add(new PipelineVariableConfiguration { Name = variable.Name, DataType = variable.DataType, ValueText = variable.Value });
+        }
+
+        foreach (var output in payload.Outputs)
+        {
+            graph.Outputs.Add(new PipelineOutputConfiguration { Name = output.Name, VariableName = output.VariableName, DataType = output.DataType });
         }
 
         foreach (var parameter in payload.Parameters)
@@ -233,12 +292,7 @@ public static class GraphPayloadReader
         List<GraphProblem>? problems,
         IReadOnlyDictionary<string, Guid> transformationIds)
     {
-        var value = stated.Value switch
-        {
-            JsonElement element => element,
-            null => default,
-            _ => JsonSerializer.SerializeToElement(stated.Value, JsonOptions),
-        };
+        var value = SettingValueShapes.Of(stated.Value).ToElement(stated.Value, JsonOptions);
         var setting = kind.Settings.FirstOrDefault(s => string.Equals(s.Name, stated.Name, StringComparison.OrdinalIgnoreCase));
         if (setting is null)
         {
@@ -260,7 +314,7 @@ public static class GraphPayloadReader
             return GenericResult.Success();
         }
 
-        var read = absent ? GenericResult.Success() : ReadSetting(component, setting, value, transformationIds);
+        var read = absent ? GenericResult.Success() : ReadSetting(kind, component, setting, value, transformationIds);
         return read.IsSuccess
             ? read
             : Noted(
@@ -351,17 +405,19 @@ public static class GraphPayloadReader
     private static string[] ToolPath(string component, Dictionary<string, JsonElement> members) =>
         members.Count == 1 ? ["components", component, "settings", members.Keys.First()] : ["components", component, "settings"];
 
+    // Why a declared setting is read before the list settings: a setting a component type from another package declares holds one value, which no column holds (FDW-6133).
     private static IGenericResult ReadSetting(
+        IComponentType kind, PipelineComponentConfiguration component, StageMember setting, JsonElement value, IReadOnlyDictionary<string, Guid> transformationIds) =>
+        ComponentSettingBindings.IsDeclared(kind, setting)
+            ? ReadDeclared(component, setting.Name, value)
+            : ReadByKind(component, setting, value, transformationIds);
+
+    // A kind of setting that has a reader of its own is read by it; any other kind holds a single value.
+    private static IGenericResult ReadByKind(
         PipelineComponentConfiguration component, StageMember setting, JsonElement value, IReadOnlyDictionary<string, Guid> transformationIds) =>
-        setting.Kind switch
-        {
-            "ColumnList" => ReadColumns(component, setting.Name, value),
-            "FieldMaps" or ComponentTypeBase.MappingsKind => GraphFieldMapReader.Read(component, setting, value, transformationIds),
-            "SplitOutputs" => ReadSplitOutputs(component, setting.Name, value),
-            "ValueSources" => ReadValueSources(component, setting.Name, value),
-            "Parameters" => ReadParameters(component, setting.Name, value),
-            _ => ReadScalar(component, setting.Name, value),
-        };
+        ReferenceEquals(SettingReaders.ByKind(setting.Kind), SettingReaders.NotFound)
+            ? ReadScalar(component, setting.Name, value)
+            : SettingReaders.ByKind(setting.Kind).Read(component, setting, value, transformationIds);
 
     private static IGenericResult ReadScalar(PipelineComponentConfiguration component, string name, JsonElement value)
     {
@@ -387,8 +443,21 @@ public static class GraphPayloadReader
         return GenericResult.Success();
     }
 
+    // A declared setting (FDW-6133): its value as invariant text. What the text must read as, and whether it may name variables as {{Name}}, is judged against
+    // the component type with the rest of the graph.
+    private static IGenericResult ReadDeclared(PipelineComponentConfiguration component, string name, JsonElement value)
+    {
+        if (GraphSettingValue.InvariantText(value) is not { } text)
+        {
+            return Refused(component, name, "must be a single value; a setting read when the step runs may name variables in its text as {{Name}}");
+        }
+
+        component.DeclaredSettings.Add(new PipelineComponentSettingConfiguration { SettingName = name, ValueText = text });
+        return GenericResult.Success();
+    }
+
     // The values an Execute pipeline, Execute SQL or Set variable component gives its parameters: a list of a name and a value as text.
-    private static IGenericResult ReadParameters(PipelineComponentConfiguration component, string name, JsonElement value)
+    internal static IGenericResult ReadParameters(PipelineComponentConfiguration component, string name, JsonElement value)
     {
         var parameters = value.ValueKind == JsonValueKind.Array
             ? JsonSerializer.Deserialize<List<GraphComponentParameterPayload>>(value.GetRawText(), JsonOptions)
@@ -406,7 +475,7 @@ public static class GraphPayloadReader
         return GenericResult.Success();
     }
 
-    private static IGenericResult ReadColumns(PipelineComponentConfiguration component, string name, JsonElement value)
+    internal static IGenericResult ReadColumns(PipelineComponentConfiguration component, string name, JsonElement value)
     {
         if (GraphSettingValue.ParameterOf(value) is { } parameter)
         {
@@ -436,7 +505,7 @@ public static class GraphPayloadReader
         return GenericResult.Success();
     }
 
-    private static IGenericResult ReadSplitOutputs(PipelineComponentConfiguration component, string name, JsonElement value)
+    internal static IGenericResult ReadSplitOutputs(PipelineComponentConfiguration component, string name, JsonElement value)
     {
         if (value.ValueKind != JsonValueKind.Array)
         {
@@ -462,7 +531,7 @@ public static class GraphPayloadReader
 
     // The value sources are stated as the load step states them (a target column and its source), so a destination takes what the load
     // step took. A column with no source is refused here, naming the column.
-    private static IGenericResult ReadValueSources(PipelineComponentConfiguration component, string name, JsonElement value)
+    internal static IGenericResult ReadValueSources(PipelineComponentConfiguration component, string name, JsonElement value)
     {
         const string shape = "must be a list of target columns, each with the source of its value";
         if (value.ValueKind != JsonValueKind.Array)

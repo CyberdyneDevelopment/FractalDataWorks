@@ -20,6 +20,12 @@ public class CreateGraphDataSetRequest
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>Gets or sets the display name a person reads the data set by; left out or empty, the data set has none (FDW-6118).</summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>Gets or sets the abbreviation a person may read the data set by, at most 20 characters; left out or empty, the data set has none (FDW-6129).</summary>
+    public string? Abbreviation { get; set; }
+
     /// <summary>Gets or sets how sensitive the data set is.</summary>
     public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
@@ -40,6 +46,12 @@ public class CreateGraphDataSetRequest
 
     /// <summary>Gets or sets the name of the output node of <see cref="FieldsOutComponent"/> that carries the fields out.</summary>
     public string? FieldsOutOutput { get; set; }
+
+    /// <summary>
+    /// Gets or sets the federation strategy the data set's reads across data stores run under (FDW-6970): a registered <c>FederationStrategies</c>
+    /// member; empty states none, so the FDW-level default applies; left out states none.
+    /// </summary>
+    public string? FederationStrategy { get; set; }
 
     /// <summary>Gets or sets the components of the graph.</summary>
     public IList<GraphComponentPayload> Components { get; set; } = [];

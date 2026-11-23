@@ -58,7 +58,7 @@ public sealed class NotificationServiceProviderGetAllTests
         }).ToList();
 
         var store = new Mock<IDomainConfigurationProvider<INotificationImplementationConfiguration>>();
-        store.Setup(s => s.Get(It.IsAny<CancellationToken>()))
+        store.Setup(s => s.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<INotificationImplementationConfiguration>>.Success(configurations));
 
         var implementation = new Mock<IImplementationServiceProvider<IPlatformNotification, INotificationImplementationConfiguration>>();

@@ -35,6 +35,9 @@ public class CreateDataSetVariationRequest
     /// <summary>Gets or sets the variation's display name, when it has one.</summary>
     public string? DisplayName { get; set; }
 
+    /// <summary>Gets or sets the abbreviation a person may read the variation by, at most 20 characters; left out, the variation has none (FDW-6129).</summary>
+    public string? Abbreviation { get; set; }
+
     /// <summary>
     /// Gets or sets the variation's own data classification: a <c>ClassificationId</c> of <c>DataClassifications</c>.
     /// <c>NotYetClassified</c> until someone picks one (FDW-1027).

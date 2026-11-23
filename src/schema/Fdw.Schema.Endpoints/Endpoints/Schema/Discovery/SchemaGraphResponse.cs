@@ -18,4 +18,7 @@ public class SchemaGraphResponse
 
     /// <summary>Gets or sets the relationships between entities.</summary>
     public IList<SchemaGraphRelationshipDto> Relationships { get; set; } = [];
+
+    /// <summary>Gets or sets the warnings the discovery returned with its success; empty when it returned none.</summary>
+    public IList<SchemaGraphWarningDto> Warnings { get; set; } = [];
 }

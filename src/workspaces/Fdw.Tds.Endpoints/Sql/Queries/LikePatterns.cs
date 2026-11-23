@@ -18,14 +18,9 @@ internal static class LikePatterns
         var trailing = pattern.Length > 1 && pattern.EndsWith('%');
         literal = pattern[(leading ? 1 : 0)..(pattern.Length - (trailing ? 1 : 0))];
 
-        filterOperator = (leading, trailing) switch
-        {
-            (true, true) => "Contains",
-            (true, false) => "EndsWith",
-            (false, true) => "StartsWith",
-            _ => "Equal",
-        };
+        var shape = LikeWildcardShapes.Of(leading, trailing);
+        filterOperator = shape.FilterOperator;
 
-        return literal.Length > 0 && literal.IndexOfAny(['%', '_', '[']) < 0;
+        return !ReferenceEquals(shape, LikeWildcardShapes.NotFound) && literal.Length > 0 && literal.IndexOfAny(['%', '_', '[']) < 0;
     }
 }

@@ -1,3 +1,4 @@
+using Fdw.ServiceTypes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,7 +38,12 @@ public sealed class UserRolesHeldTests
 
     private static IEnumerable<Dictionary<string, object?>> BothRoles => [Role(1, Admin), Role(2, Viewer)];
 
-    private static UserRolesHeld Reader(InMemoryConfigurationStore store) => new(store.Gateways, "PlatformConfiguration", "authz", NullLogger<UserRolesHeld>.Instance);
+    // The reader as a host that changes nothing gets it: the authorization option's declared MaxRoleAssignments (FDW-7103).
+    private static UserRolesHeld Reader(InMemoryConfigurationStore store)
+        => Reader(store, DeclaredSetting.Count(new DefaultAuthorizationServiceType(), "MaxRoleAssignments", null).Value);
+
+    private static UserRolesHeld Reader(InMemoryConfigurationStore store, int maxAssignments)
+        => new(store.Gateways, "PlatformConfiguration", "authz", maxAssignments, NullLogger<UserRolesHeld>.Instance);
 
     [Fact]
     public async Task APersonsRolesAreTheAssignmentsThatNameThemWithTheirRoleTenantAndExpiry()
@@ -145,14 +151,19 @@ public sealed class UserRolesHeldTests
     [Fact]
     public async Task APersonWithMoreAssignmentsThanOneReadCarriesFailsTheReadInsteadOfCuttingTheirRolesShort()
     {
-        var many = Enumerable.Range(1, UserRolesHeld.MaxAssignments + 1).Select(key => Assignment(key, key, Person.ToString("D"), Admin)).ToList();
+        var many = Enumerable.Range(1, 6).Select(key => Assignment(key, key, Person.ToString("D"), Admin)).ToList();
         var store = new InMemoryConfigurationStore().Holds("UserRoleConfiguration", many).Holds("UserRole", []);
 
-        var held = await Reader(store).Get(Person, TestContext.Current.CancellationToken);
+        var held = await Reader(store, 5).Get(Person, TestContext.Current.CancellationToken);
 
         held.IsFailure.ShouldBeTrue();
+        held.CurrentMessage!.ShouldContain("5");
         store.Queries.ToArray().ShouldBe(new[] { "UserRoleConfiguration" });
     }
+
+    [Fact]
+    public void TheDeclaredRoleAssignmentCapIsAThousand()
+        => new DefaultAuthorizationServiceType().DeclaredDefaults["MaxRoleAssignments"].ShouldBe(1000);
 
     [Fact]
     public async Task AnAssignmentWithoutARoleFailsTheReadInsteadOfBeingSkipped()

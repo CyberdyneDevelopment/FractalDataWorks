@@ -35,6 +35,9 @@ public sealed partial class FieldTransformationConfiguration : IFieldTransformat
     public string Implementation { get; set; } = string.Empty;
 
     /// <inheritdoc/>
+    // Why [NotStored]: the text of a transformation's description is read from the descriptions table and filled in by the transformation provider once for the whole read (FDW-6208);
+    // the column is gone from the table, so no read selects it and no save writes it. The member stays, so every caller of Description still gets the text.
+    [Fdw.Data.NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc/>

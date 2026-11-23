@@ -107,6 +107,14 @@ public sealed class ContainerConverter : JsonConverter<IStorageContainer>
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, IStorageContainer value, JsonSerializerOptions options)
     {
+        // The wire form has no place for keys. A container that declares any is refused, naming it, rather than written
+        // without them and read back as a container with no keys (FDW-6309).
+        if (value.Keys.Count > 0)
+        {
+            throw new JsonException(
+                $"Container '{value.Name}' declares key '{value.Keys[0].KeyName}'{(value.Keys.Count > 1 ? $" and {value.Keys.Count - 1} more" : string.Empty)}, and the container JSON form carries no keys.");
+        }
+
         writer.WriteStartObject();
 
         writer.WriteString("Name", value.Name);

@@ -62,7 +62,7 @@ namespace Fdw.Services.Data;
 /// cursor. A limit that cannot be resolved refuses the call rather than lifting the limits (FDW-949).
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public sealed partial class DataGatewayService : IDataGateway
+public sealed partial class DataGatewayService : IDataGateway, IPushdownPlanningGateway
 {
     private readonly ILogger<DataGatewayService> _logger;
     private readonly IDataConnectionProvider _connectionProvider;
@@ -78,6 +78,7 @@ public sealed partial class DataGatewayService : IDataGateway
     private readonly IConnectionConfigurationProvider? _connectionConfigProvider;
     private readonly FieldMappingTransformationResolver _fieldTransformations;
     private readonly IGraphDataSetRunner? _graphRunner;
+    private readonly FederationSettings? _federation;
     private readonly DataGatewayResultCache? _cache;
     private readonly MainDataGatewayConfiguration? _options;
 
@@ -119,6 +120,7 @@ public sealed partial class DataGatewayService : IDataGateway
     /// (<see cref="IDataStore.DeclaredByHost"/>). Without it such a request fails loud; a non-system request over one
     /// is refused either way (FDW-1068).
     /// </param>
+    /// <param name="federation">The FDW-level federation settings a Federated data set that states no strategy reads under (FDW-6806).</param>
     /// <param name="graphRunner">
     /// What runs the graph of a Graph data set when one is read (FDW-5291). Without it a read of a Graph data set fails loud with
     /// <c>GraphDataSetRunnerMissing</c>; every other kind of data set is read as before.
@@ -138,8 +140,10 @@ public sealed partial class DataGatewayService : IDataGateway
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
         IConnectionConfigurationProvider? connectionConfigProvider = null,
         IConfigurationGatewayProvider? configurationGateways = null,
-        IGraphDataSetRunner? graphRunner = null)
+        IGraphDataSetRunner? graphRunner = null,
+        FederationSettings? federation = null)
     {
+        _federation = federation;
         var factory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = factory.CreateLogger<DataGatewayService>();
 
@@ -415,7 +419,7 @@ public sealed partial class DataGatewayService : IDataGateway
     {
         // The store's row alone: ConnectionId is a field of it. Reading it whole composed every path,
         // container, field and key under it, a query per collection per row, on every command (FDW-970).
-        var storeResult = await _dataStoreConfigProvider.Get(dataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+        var storeResult = await _dataStoreConfigProvider.Get(dataStore, ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
             return GenericResult<(Guid, IDataConnection)>.Failure(
@@ -476,7 +480,7 @@ public sealed partial class DataGatewayService : IDataGateway
 
         // Both rows alone: the partition needs the store's ConnectionId and the connection's
         // Implementation, and this runs before every cached command's cache is even checked (FDW-970).
-        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
             return GenericResult<IConnectionType>.Failure(
@@ -485,7 +489,7 @@ public sealed partial class DataGatewayService : IDataGateway
         }
 
         var connectionResult = await _connectionConfigProvider
-            .Get(storeResult.Value.ConnectionId, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+            .Get(storeResult.Value.ConnectionId, ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
         {
             return GenericResult<IConnectionType>.Failure(
@@ -511,6 +515,32 @@ public sealed partial class DataGatewayService : IDataGateway
 
         return GenericResult<IConnectionType>.Success(
             ConnectionTypes.ByName(connectionResult.Value.Implementation));
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The container and its connection are resolved as for any command; a store the host declares is read through the configuration gateway,
+    /// so it is not offered (<c>PushdownNotOffered</c>) and a planner reads it in memory as before.
+    /// </remarks>
+    public async Task<IGenericResult<PushdownContainer>> Describe(DataStoreTarget target, CancellationToken cancellationToken = default)
+    {
+        var hostDeclared = await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (hostDeclared.IsFailure)
+            return hostDeclared.ToNewResult<PushdownContainer>();
+
+        if (hostDeclared.Value)
+            return GenericResult<PushdownContainer>.Failure(
+                DataServiceResultCodes.ByName("PushdownNotOffered"), _logger,
+                ResultDetails.Create("container", target.Container, "dataStore", target.DataStore, "reason", "the host declares this store and reads it through the configuration gateway"));
+
+        var resolved = await ResolveTargetConnection(new QueryCommand<Dictionary<string, object?>>(), target, cancellationToken).ConfigureAwait(false);
+        if (!resolved.IsSuccess)
+            return resolved.ToNewResult<PushdownContainer>();
+
+        var store = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
+        return store.IsSuccess && store.Value is { } record
+            ? GenericResult<PushdownContainer>.Success(PushdownContainers.Of(record.Id, resolved.Value.Container, resolved.Value.Connection))
+            : GenericResult<PushdownContainer>.Failure(DataGatewayLogger.DataStoreNotFoundForSource(_logger, target.DataStore));
     }
 
     /// <inheritdoc/>
@@ -665,7 +695,7 @@ public sealed partial class DataGatewayService : IDataGateway
 
         DataGatewayLogger.RoutingToDataSet(_logger, target.DataSet);
         return GenericResult<(IDataSetType, DataSetExecutionContext)>.Success(
-            (strategy, new DataSetExecutionContext(config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger, this, _graphRunner)));
+            (strategy, new DataSetExecutionContext(config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger, this, _graphRunner, _federation)));
     }
 
 

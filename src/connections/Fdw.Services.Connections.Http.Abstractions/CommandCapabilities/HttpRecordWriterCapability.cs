@@ -20,7 +20,7 @@ namespace Fdw.Services.Connections.Http.Abstractions.CommandCapabilities;
 /// via <c>RecordWriterTypes.ByName(format).Create(context)</c> — no per-format branching in the connector.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(CommandCapabilityTypes), "HttpRecordWriter", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(CommandCapabilityTypes), "HttpRecordWriter")]
 public sealed class HttpRecordWriterCapability : CommandCapabilityTypeBase
 {
     /// <summary>

@@ -44,6 +44,13 @@ public interface IQueryCommand : IDataCommand
     IReadOnlyList<IJoinExpression> Joins { get; }
 
     /// <summary>
+    /// Gets the containers whose rows the query stacks under its own as <c>UNION ALL</c> branches (FDW-6946); empty for a query that stacks
+    /// nothing. The query's own projection over its own container is the first branch, and the filter, ordering and paging apply to the
+    /// stacked rows by the branches' aliases.
+    /// </summary>
+    IReadOnlyList<IUnionBranch> Unions { get; }
+
+    /// <summary>
     /// Gets a value indicating whether the rows are read to be written over (the current rows a configuration save closes), so a
     /// container that has nothing stored yet holds no rows. A read for any other purpose of a container with nothing stored is
     /// refused by a kind that stores nothing until the first write, such as a file.

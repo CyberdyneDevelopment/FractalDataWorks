@@ -28,15 +28,20 @@ namespace Fdw.WebMcp.Hosting;
 internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
 {
     private readonly List<WebMcpToolDescriptor> _tools = [];
+    private readonly List<WebMcpToolPlan> _plans = [];
 
     /// <inheritdoc/>
     public IReadOnlyList<WebMcpToolDescriptor> Tools => _tools;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<WebMcpToolPlan> Plans => _plans;
 
     /// <summary>
     /// Resolves declared tools against the application's route table.
     /// </summary>
     /// <param name="declarations">What the endpoint options declared.</param>
     /// <param name="endpoints">The application's endpoints, after routing is built.</param>
+    /// <param name="maxDepth">How many lists and objects a tool's request may nest: the setting <c>WebMcpToolSchemaMaxDepth</c>. A tool whose request nests deeper, or reaches itself, is refused and not served.</param>
     /// <param name="logger">The logger.</param>
     /// <remarks>
     /// The declarations are passed in rather than read from <see cref="DeclaredWebMcpTools"/> here.
@@ -46,6 +51,7 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
     internal void Resolve(
         IReadOnlyList<WebMcpToolDeclaration> declarations,
         IEnumerable<Endpoint> endpoints,
+        int maxDepth,
         ILogger logger)
     {
         var routesByEndpointType = MapRoutesByEndpointType(endpoints);
@@ -89,7 +95,7 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
 
             var presetValue = ResolvePresetValue(declaration.PresetOptionType, declaration.Name);
 
-            _tools.Add(new WebMcpToolDescriptor(
+            var descriptor = new WebMcpToolDescriptor(
                 declaration.Name,
                 declaration.Description,
                 selected.Value.Route,
@@ -101,14 +107,46 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                 PresetValue: presetValue)
             {
                 Endpoint = selected.Value.Endpoint,
-            });
+            };
 
+            // Refused here, with the plan's own message logged, so no agent is handed a tool whose request the host could not
+            // describe whole: one that nests deeper than the setting allows, or reaches itself.
+            if (WebMcpToolPlan.Create(descriptor, maxDepth, logger).IsFailure)
+            {
+                continue;
+            }
+
+            _tools.Add(descriptor);
             WebMcpLog.ToolDiscovered(logger, declaration.Name, selected.Value.Route, selected.Value.HttpMethod);
         }
 
         AttachParentLists(logger);
+        BuildPlans(maxDepth, logger);
 
         WebMcpLog.ToolsRegistered(logger, _tools.Count);
+    }
+
+    /// <summary>Builds the plan of each tool that was kept, after the parent lists are attached, because a plan reads them.</summary>
+    /// <param name="maxDepth">The depth the tools were already checked against.</param>
+    /// <param name="logger">The logger.</param>
+    /// <exception cref="InvalidOperationException">
+    /// A kept tool no longer describes. Each passed the same check when it was kept, and attaching a parent list changes nothing the
+    /// description reads, so reaching it means the two steps have come apart; a registry with a tool and no plan would serve a
+    /// catalog the transports cannot describe.
+    /// </exception>
+    private void BuildPlans(int maxDepth, ILogger logger)
+    {
+        foreach (var tool in _tools)
+        {
+            var plan = WebMcpToolPlan.Create(tool, maxDepth, logger);
+            if (plan.IsFailure || plan.Value is not { } built)
+            {
+                throw new InvalidOperationException(
+                    $"Tool '{tool.Name}' was kept because its request describes, and now does not: {plan.CurrentMessage}");
+            }
+
+            _plans.Add(built);
+        }
     }
 
     /// <summary>

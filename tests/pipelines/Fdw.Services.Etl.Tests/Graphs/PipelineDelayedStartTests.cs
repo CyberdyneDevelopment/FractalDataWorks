@@ -27,6 +27,17 @@ public sealed class PipelineDelayedStartTests
         Read(600, null, null).DueAt(Now).ShouldBe(Now.AddMinutes(10));
     }
 
+    // FDW-7106: the only ceiling is the timer's (about 49 days); a delay past the old 30 days that was a choice in code is the pipeline's to state.
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void ADelayUpToTheLongestATimerWaitsIsTheirsToState()
+    {
+        Read(45 * 86_400, null, null).DueAt(Now).ShouldBe(Now.AddDays(45));
+        Read(PipelineDelayedStart.MaximumSeconds, null, null).DueAt(Now).ShouldBe(Now.AddSeconds(PipelineDelayedStart.MaximumSeconds));
+        TimeSpan.FromSeconds(PipelineDelayedStart.MaximumSeconds).TotalMilliseconds.ShouldBeLessThanOrEqualTo(uint.MaxValue - 1);
+    }
+
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
@@ -91,7 +102,7 @@ public sealed class PipelineDelayedStartTests
     [Trait("Category", "Etl")]
     [InlineData(0, null, null, "delayedStartSeconds")]
     [InlineData(-5, null, null, "delayedStartSeconds")]
-    [InlineData(2_592_001, null, null, "delayedStartSeconds")]
+    [InlineData(4_294_968, null, null, "delayedStartSeconds")]
     [InlineData(60, null, "UTC", "delayedStartTimeZoneId")]
     [InlineData(null, "25:00", "UTC", "delayedStartTimeOfDay")]
     [InlineData(null, "7:5", "UTC", "delayedStartTimeOfDay")]

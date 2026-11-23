@@ -19,7 +19,7 @@ public class WebMcpRequestBuilderTests
     private static WebMcpToolRequest Build(WebMcpToolDescriptor tool, string json)
     {
         var built = WebMcpRequestBuilder.Build(
-            WebMcpToolPlan.Create(tool, NullLogger.Instance), Args(json), NullLogger.Instance);
+            WebMcpToolPlan.Create(tool, BridgeCatalog.MaxDepth, NullLogger.Instance).Value.ShouldNotBeNull(), Args(json), NullLogger.Instance);
 
         built.IsSuccess.ShouldBeTrue(built.CurrentMessage);
         return built.Value!;
@@ -31,7 +31,7 @@ public class WebMcpRequestBuilderTests
     public void APathValueIsEncodedIntoTheUrlRatherThanSubstitutedRaw()
     {
         // A value carrying '/' would reshape the path it landed in.
-        Build(BridgeCatalogue.GetItem, """{"Name":"a/b c"}""")
+        Build(BridgeCatalog.GetItem, """{"Name":"a/b c"}""")
             .RelativeUrl.ShouldBe("/items/a%2Fb%20c");
     }
 
@@ -41,7 +41,7 @@ public class WebMcpRequestBuilderTests
     public void AMissingRequiredValueIsRefusedAndNothingIsSent()
     {
         var built = WebMcpRequestBuilder.Build(
-            WebMcpToolPlan.Create(BridgeCatalogue.GetItem, NullLogger.Instance),
+            WebMcpToolPlan.Create(BridgeCatalog.GetItem, BridgeCatalog.MaxDepth, NullLogger.Instance).Value.ShouldNotBeNull(),
             Args("""{}"""),
             NullLogger.Instance);
 
@@ -55,7 +55,7 @@ public class WebMcpRequestBuilderTests
     public void OnlySuppliedFiltersReachTheQueryString()
     {
         // An omitted filter must widen the result, not narrow it to the empty string.
-        Build(BridgeCatalogue.ListItems, """{"Take":5,"ReferenceId":""}""")
+        Build(BridgeCatalog.ListItems, """{"Take":5,"ReferenceId":""}""")
             .RelativeUrl.ShouldBe("/items?Take=5");
     }
 
@@ -65,7 +65,7 @@ public class WebMcpRequestBuilderTests
     public void ABooleanTravelsAsJsonNotAsDotNetToString()
     {
         // JsonElement.ToString() renders this as "True"; the browser sends "true".
-        Build(BridgeCatalogue.ListItems, """{"IncludeRetired":true}""")
+        Build(BridgeCatalog.ListItems, """{"IncludeRetired":true}""")
             .RelativeUrl.ShouldBe("/items?IncludeRetired=true");
     }
 
@@ -74,7 +74,7 @@ public class WebMcpRequestBuilderTests
     [Trait("Category", "Api")]
     public void APathValueIsNeverAlsoSentAsQuery()
     {
-        Build(BridgeCatalogue.DeleteItem, """{"Name":"alpha"}""")
+        Build(BridgeCatalog.DeleteItem, """{"Name":"alpha"}""")
             .RelativeUrl.ShouldBe("/items/alpha");
     }
 
@@ -83,7 +83,7 @@ public class WebMcpRequestBuilderTests
     [Trait("Category", "Api")]
     public void ABodylessVerbCarriesNoBody()
     {
-        Build(BridgeCatalogue.GetItem, """{"Name":"alpha"}""").Body.ShouldBeNull();
+        Build(BridgeCatalog.GetItem, """{"Name":"alpha"}""").Body.ShouldBeNull();
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class WebMcpRequestBuilderTests
     public void ThePresetWinsOverWhateverTheAgentSent()
     {
         // The tool's own identity decides this value; an agent cannot talk it into another one.
-        Build(BridgeCatalogue.CreateItem, """{"Name":"alpha","ServiceType":"PostgreSql"}""")
+        Build(BridgeCatalog.CreateItem, """{"Name":"alpha","ServiceType":"PostgreSql"}""")
             .Body.ShouldBe("""{"Name":"alpha","ServiceType":"MsSql"}""");
     }
 
@@ -101,6 +101,6 @@ public class WebMcpRequestBuilderTests
     [Trait("Category", "Api")]
     public void TheMethodIsTheToolsOwnVerb()
     {
-        Build(BridgeCatalogue.DeleteItem, """{"Name":"alpha"}""").Method.ShouldBe("DELETE");
+        Build(BridgeCatalog.DeleteItem, """{"Name":"alpha"}""").Method.ShouldBe("DELETE");
     }
 }

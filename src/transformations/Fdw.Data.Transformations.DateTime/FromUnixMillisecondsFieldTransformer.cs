@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
@@ -46,28 +45,10 @@ public sealed class FromUnixMillisecondsFieldTransformer : FieldTransformationBa
             return Task.FromResult(GenericResult<object?>.Failure(FieldTransformerLog.InputIsNull(Logger)));
         }
 
-        long epochMs;
-        switch (input)
+        if (WholeNumberInputKinds.Read(input) is not { } epochMs)
         {
-            case long l:
-                epochMs = l;
-                break;
-
-            case int i:
-                epochMs = i;
-                break;
-
-            case short s:
-                epochMs = s;
-                break;
-
-            case string str when long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed):
-                epochMs = parsed;
-                break;
-
-            default:
-                return Task.FromResult(GenericResult<object?>.Failure(
-                    FieldTransformerLog.InputNotConvertibleToLong(Logger, input.GetType().Name)));
+            return Task.FromResult(GenericResult<object?>.Failure(
+                FieldTransformerLog.InputNotConvertibleToLong(Logger, input.GetType().Name)));
         }
 
         return Task.FromResult(GenericResult<object?>.Success((object?)DateTimeOffset.FromUnixTimeMilliseconds(epochMs)));

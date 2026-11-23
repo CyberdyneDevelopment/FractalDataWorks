@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Authorization.Abstractions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Logging;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,7 @@ public sealed class InheritedSettings : IInheritedSettings
     private readonly ITenantSettingConfigurationProvider _tenants;
     private readonly IOrganizationSettingConfigurationProvider _organizations;
     private readonly IOrganizationScope _scope;
+    private readonly IDescriptionReader _reader;
     private readonly ILogger<InheritedSettings> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="InheritedSettings"/> class.</summary>
@@ -34,18 +36,21 @@ public sealed class InheritedSettings : IInheritedSettings
     /// <param name="tenants">Reads and writes the tenants' values.</param>
     /// <param name="organizations">Reads and writes the organizations' values.</param>
     /// <param name="scope">Finds an organization's tenant, and checks the caller's right at the organization's scope.</param>
+    /// <param name="reader">Reads the descriptions of the settings an answer shows, once for the answer (FDW-6208): the server setting provider never fills them on load.</param>
     /// <param name="logger">The logger.</param>
     public InheritedSettings(
         IServerSettingConfigurationProvider server,
         ITenantSettingConfigurationProvider tenants,
         IOrganizationSettingConfigurationProvider organizations,
         IOrganizationScope scope,
+        IDescriptionReader reader,
         ILogger<InheritedSettings>? logger)
     {
         _server = server;
         _tenants = tenants;
         _organizations = organizations;
         _scope = scope;
+        _reader = reader;
         _logger = logger ?? NullLogger<InheritedSettings>.Instance;
     }
 
@@ -63,17 +68,28 @@ public sealed class InheritedSettings : IInheritedSettings
         var loaded = await Load(scope, OrganizationRights.Read, cancellationToken).ConfigureAwait(false);
         return loaded.IsFailure || loaded.Value is not { } layers
             ? loaded.ToNewResult<IReadOnlyList<EffectiveSetting>>()
-            : GenericResult<IReadOnlyList<EffectiveSetting>>.Success(
-                [.. layers.Server.Where(row => row.IsActive).Select(row => Resolve(layers, row.Name)).OfType<EffectiveSetting>()]);
+            : await Described(layers, [.. layers.Server.Where(row => row.IsActive).Select(row => Resolve(layers, row.Name)).OfType<EffectiveSetting>()], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<EffectiveSetting>> Get(SettingScope scope, string settingName, CancellationToken cancellationToken = default)
     {
         var loaded = await Load(scope, OrganizationRights.Read, cancellationToken).ConfigureAwait(false);
-        return loaded.IsFailure || loaded.Value is not { } layers
-            ? loaded.ToNewResult<EffectiveSetting>()
-            : ViewOf(layers, settingName);
+        if (loaded.IsFailure || loaded.Value is not { } layers)
+        {
+            return loaded.ToNewResult<EffectiveSetting>();
+        }
+
+        var view = ViewOf(layers, settingName);
+        if (view.IsFailure || view.Value is not { } found)
+        {
+            return view;
+        }
+
+        var described = await Described(layers, [found], cancellationToken).ConfigureAwait(false);
+        return described.IsFailure || described.Value is not { } shown
+            ? described.ToNewResult<EffectiveSetting>()
+            : GenericResult<EffectiveSetting>.Success(shown[0]);
     }
 
     /// <inheritdoc />
@@ -150,8 +166,22 @@ public sealed class InheritedSettings : IInheritedSettings
             setAt = SettingScope.OrganizationLevel;
         }
 
-        return new EffectiveSetting(server.Name, server.DataType, server.Description, value, setAt, lockedAt);
+        // The row carries no text: the server setting provider never fills a description on load, and Described reads it once for the answer.
+        return new EffectiveSetting(server.Name, server.DataType, null, value, setAt, lockedAt);
     }
+
+    // Each setting's description, read once for the whole answer (FDW-6208); a read that fails fails the answer, and no text stands in for the one it could not read.
+    private async Task<IGenericResult<IReadOnlyList<EffectiveSetting>>> Described(Layers layers, IReadOnlyList<EffectiveSetting> views, CancellationToken cancellationToken)
+    {
+        var read = await _reader.ReadMany(
+            ServerSettingDescriptionType.OptionName, DescriptionTextSubType.OptionName, [.. views.Select(view => ServerRowId(layers, view.Name))], cancellationToken).ConfigureAwait(false);
+        return read.IsFailure || read.Value is not { } texts
+            ? read.ToNewResult<IReadOnlyList<EffectiveSetting>>()
+            : GenericResult<IReadOnlyList<EffectiveSetting>>.Success(
+                [.. views.Select(view => texts.TryGetValue(ServerRowId(layers, view.Name), out var entry) ? view with { Description = entry.Text } : view)]);
+    }
+
+    private static Guid ServerRowId(Layers layers, string settingName) => layers.Server.First(row => Same(row.Name, settingName)).Id;
 
     private IGenericResult<EffectiveSetting> ViewOf(Layers layers, string settingName)
     {
@@ -270,7 +300,6 @@ public sealed class InheritedSettings : IInheritedSettings
             {
                 Name = settingName,
                 DataType = definition.DataType,
-                Description = definition.Description,
                 IsActive = true,
             };
         }

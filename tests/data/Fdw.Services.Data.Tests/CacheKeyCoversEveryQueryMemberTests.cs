@@ -35,6 +35,7 @@ public sealed class CacheKeyCoversEveryQueryMemberTests
         Projection = new ProjectionExpression { Fields = [new ProjectionField { PropertyName = "Name" }] },
         Aggregation = new AggregationExpression { GroupByFields = ["Name"], Aggregations = new Dictionary<string, string> { ["Id"] = "Count" } },
         Joins = [new JoinExpression { TargetContainerName = "Users", JoinType = "Inner", JoinConditions = [("UsersRowId", "RowId")] }],
+        Unions = [new UnionBranch { ContainerName = "FormerUsers", Fields = [new ProjectionField { PropertyName = "Name", Alias = "Name" }] }],
     };
 
     // For each member that changes the answer, the base query with only that member changed.
@@ -68,6 +69,10 @@ public sealed class CacheKeyCoversEveryQueryMemberTests
         [nameof(IQueryCommand.Joins)] = query => query with
         {
             Joins = [new JoinExpression { TargetContainerName = "Roles", JoinType = "Inner", JoinConditions = [("UsersRowId", "RowId")] }],
+        },
+        [nameof(IQueryCommand.Unions)] = query => query with
+        {
+            Unions = [new UnionBranch { ContainerName = "ArchivedUsers", Fields = [new ProjectionField { PropertyName = "Name", Alias = "Name" }] }],
         },
         [nameof(IQueryCommand.ReadsForWrite)] = query => query with { ReadsForWrite = true },
         [nameof(IQueryCommand.IncludeMetadata)] = query => query with { IncludeMetadata = true },
@@ -202,6 +207,8 @@ public sealed class CacheKeyCoversEveryQueryMemberTests
         public IAggregationExpression? Aggregation { get; init; }
 
         public required IReadOnlyList<IJoinExpression> Joins { get; init; }
+
+        public required IReadOnlyList<IUnionBranch> Unions { get; init; }
 
         public bool ReadsForWrite { get; init; }
 

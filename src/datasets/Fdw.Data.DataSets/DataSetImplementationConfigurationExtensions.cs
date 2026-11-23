@@ -32,4 +32,18 @@ public static class DataSetImplementationConfigurationExtensions
     /// <returns>The strategy's name; null when the kind has no strategy, or when a federated data set names none.</returns>
     public static string? FederationStrategyOrNone(this IDataSetImplementationConfiguration configuration)
         => configuration is IFederatedDataSetConfiguration federated ? federated.FederationStrategy : null;
+
+    /// <summary>Gets how the data set's sources combine, or null for a kind that has one source or a data set that states none (FDW-6946).</summary>
+    /// <param name="configuration">The data set's configuration.</param>
+    /// <returns>The name of the <c>DataSetCompositionTypes</c> member the data set states, or null.</returns>
+    public static string? SourceCombinationOrNone(this IDataSetImplementationConfiguration configuration)
+        => configuration is IJoinedDataSetConfiguration joined ? joined.SourceCombination : null;
+
+    /// <summary>Gets the data set's own federation option values, or none for a kind that has none (FDW-6901): a Federated or a Graph data set has them.</summary>
+    /// <param name="configuration">The data set's configuration.</param>
+    /// <returns>The values as stored.</returns>
+    public static IReadOnlyList<DataSetFederationOptionConfiguration> FederationOptionsOrNone(this IDataSetImplementationConfiguration configuration)
+        => configuration is IFederatedDataSetConfiguration federated ? [.. federated.FederationOptions]
+            : configuration is GraphDataSetConfiguration graph ? [.. graph.FederationOptions]
+            : [];
 }

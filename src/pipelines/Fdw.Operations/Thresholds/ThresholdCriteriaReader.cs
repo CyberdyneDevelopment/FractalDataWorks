@@ -69,13 +69,8 @@ public static class ThresholdCriteriaReader
             return Invalid(threshold, rule, "its filter groups make a cycle");
         }
 
-        var logical = group.Operator switch
-        {
-            AllOperator => LogicalOperator.And,
-            AnyOperator => LogicalOperator.Or,
-            _ => null,
-        };
-        if (logical is null)
+        var groupOperator = ThresholdGroupOperators.ByWord(group.Operator);
+        if (ReferenceEquals(groupOperator, ThresholdGroupOperators.NotFound))
         {
             return Invalid(threshold, rule, $"a filter group has the operator '{group.Operator}', which is neither {AllOperator} nor {AnyOperator}");
         }
@@ -105,7 +100,7 @@ public static class ThresholdCriteriaReader
 
         return children.Count == 0
             ? Invalid(threshold, rule, "a filter group has no condition and no group in it")
-            : GenericResult<IFilterNode>.Success(new FilterGroup { Operator = logical, Nodes = children });
+            : GenericResult<IFilterNode>.Success(new FilterGroup { Operator = groupOperator.Logical, Nodes = children });
     }
 
     private static IGenericResult<IFilterNode> Condition(ThresholdFilterConditionConfiguration condition, ThresholdRuleConfiguration rule, string threshold)

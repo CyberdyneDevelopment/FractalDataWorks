@@ -83,7 +83,7 @@ public sealed class Once : TriggerTypeBase
     /// Once triggers do not require schedule persistence as they execute only once and
     /// do not execute immediately - they wait for their specified execution time.
     /// </remarks>
-    public Once(ILogger<Once>? logger = null) : base("Once", requiresSchedule: false, isImmediate: false)
+    public Once(ILogger<Once>? logger = null) : base("Once", requiresSchedule: false, isImmediate: false, description: "Single execution at a specific date and time")
     {
         _logger = logger ?? NullLogger<Once>.Instance;
     }
@@ -392,31 +392,5 @@ public sealed class Once : TriggerTypeBase
     /// <summary>
     /// Attempts to convert an object to a DateTime.
     /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <param name="result">The converted DateTime value.</param>
-    /// <returns><c>true</c> if conversion succeeded; otherwise, <c>false</c>.</returns>
-    private static bool TryConvertToDateTime(object? value, out DateTime result)
-    {
-        result = default;
-
-        return value switch
-        {
-            DateTime dateTimeValue => TryAssignDateTime(dateTimeValue, out result),
-            DateTimeOffset dateTimeOffsetValue => TryAssignDateTime(dateTimeOffsetValue.DateTime, out result),
-            string stringValue => DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out result),
-            _ => false
-        };
-    }
-
-    /// <summary>
-    /// Helper method to assign a DateTime value to the result parameter.
-    /// </summary>
-    /// <param name="value">The value to assign.</param>
-    /// <param name="result">The result parameter to assign to.</param>
-    /// <returns>Always returns <c>true</c>.</returns>
-    private static bool TryAssignDateTime(DateTime value, out DateTime result)
-    {
-        result = value;
-        return true;
-    }
+    private static bool TryConvertToDateTime(object? value, out DateTime result) => TriggerValueShapes.ReadDateTime(value, out result);
 }

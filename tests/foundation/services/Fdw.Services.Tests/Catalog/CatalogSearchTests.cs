@@ -106,7 +106,7 @@ public class CatalogSearchTests
             (pipelines ?? Pipelines()).Object,
             (calculations ?? Calculations()).Object,
             Transformations().Object,
-            [.. fields, new GlossaryTermSearch((terms ?? new InMemoryTerms([])).Provider.Object, NullLogger.Instance)],
+            [.. fields, new GlossaryTermSearch((terms ?? new InMemoryTerms([])).Provider.Object, GlossaryTermSearchTests.Gateways(1000), NullLogger.Instance)],
             NullLogger.Instance);
 
     private static CatalogKindSet Kinds(params string[] names) => CatalogKindSet.Of(names).Kinds!;

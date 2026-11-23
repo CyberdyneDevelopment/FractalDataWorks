@@ -8,7 +8,7 @@ namespace Fdw.Services.Connections.Http.Results;
 /// <summary>
 /// Source configuration is missing HttpEndpoint — cannot resolve to a container.
 /// </summary>
-[TypeOption(typeof(HttpResultCodes), "SourceMissingHttpEndpoint", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(HttpResultCodes), "SourceMissingHttpEndpoint")]
 [ExcludeFromCodeCoverage]
 public sealed class SourceMissingHttpEndpointCode : HttpResultCodeBase
 {

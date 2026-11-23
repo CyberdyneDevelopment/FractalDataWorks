@@ -115,14 +115,11 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
         if (!int.TryParse(input[..^1], System.Globalization.CultureInfo.InvariantCulture, out var value) || value <= 0)
             return false;
 
-        window = unit switch
-        {
-            'm' => TimeSpan.FromMinutes(value),
-            'h' => TimeSpan.FromHours(value),
-            'd' => TimeSpan.FromDays(value),
-            _ => TimeSpan.Zero
-        };
+        var windowUnit = HealthWindowUnits.BySymbol(unit);
+        if (ReferenceEquals(windowUnit, HealthWindowUnits.NotFound))
+            return false;
 
+        window = windowUnit.Window(value);
         return window > TimeSpan.Zero;
     }
 

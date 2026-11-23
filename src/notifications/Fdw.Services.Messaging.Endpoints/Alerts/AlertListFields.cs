@@ -50,9 +50,10 @@ public static class AlertListFields
             return read.ToNewResult<string>();
 
         var list = read.Value!;
-        for (var start = 0; start < list.Rows.Count; start += AlertLimits.MaxAlerts)
+        // Why the chunk is read from the service: the most alerts one question may name is the host's configuration (FDW-7059), and the service holds it.
+        for (var start = 0; start < list.Rows.Count; start += alerts.Limits.MaxAlerts)
         {
-            var attached = await AttachTo(alerts, kind, list.Rows.GetRange(start, Math.Min(AlertLimits.MaxAlerts, list.Rows.Count - start)), cancellationToken).ConfigureAwait(false);
+            var attached = await AttachTo(alerts, kind, list.Rows.GetRange(start, Math.Min(alerts.Limits.MaxAlerts, list.Rows.Count - start)), cancellationToken).ConfigureAwait(false);
             if (attached.IsFailure)
                 return attached.ToNewResult<string>();
         }

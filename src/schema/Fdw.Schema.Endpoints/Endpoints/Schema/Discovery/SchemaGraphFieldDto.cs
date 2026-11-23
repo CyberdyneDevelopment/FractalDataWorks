@@ -14,6 +14,9 @@ public class SchemaGraphFieldDto
     /// <summary>Gets or sets whether the field is nullable.</summary>
     public bool IsNullable { get; set; }
 
+    /// <summary>Gets or sets whether the field is a column of the container's primary key; every column of a composite key is.</summary>
+    public bool IsPrimaryKey { get; set; }
+
     /// <summary>Gets or sets whether the field is a foreign key.</summary>
     public bool IsForeignKey { get; set; }
 

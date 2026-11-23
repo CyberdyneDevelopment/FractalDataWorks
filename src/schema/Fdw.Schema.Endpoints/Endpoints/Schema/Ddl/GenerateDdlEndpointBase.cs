@@ -5,11 +5,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Data.Abstractions;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Schema.Ddl;
 using Fdw.Schema.Ddl.Commands;
 using Fdw.Schema.Ddl.Definitions;
 using Fdw.Services.Connections;
+using Fdw.Services.Data;
+using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Connections.Clients.Models;
@@ -99,35 +102,17 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
                 return;
             }
 
-            var containersResult = await DiscoverContainers(req.Name, ct).ConfigureAwait(false);
-
-            if (containersResult.IsFailure)
+            // The discovery's choices come from the request (FDW-3823); one left out is refused, naming it.
+            var discovery = DataStoreDiscoveryChoices.FromRequest(
+                req.ExcludedSchemas, req.IncludeOnlySchemas, req.DiscoverViews, req.DiscoverIndexes, req.DiscoverForeignKeys,
+                req.DiscoverDescriptions, req.Name, _logger);
+            if (discovery.IsFailure)
             {
-                await Send.ResultAsync(ResultHttpStatusMapper.Answer(containersResult, HttpContext)).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(discovery, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
-            if (containersResult.Value == null)
-            {
-                SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.Name, "generate-ddl");
-                await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.GenerateDdlConnectionNotFound(_logger, req.Name)), HttpContext)).ConfigureAwait(false);
-                return;
-            }
-
-            var commands = BuildCreateTableCommands(containersResult.Value, req.SchemaFilter);
-            var script = generator.Value!.GenerateScript(commands);
-            if (script.IsFailure)
-            {
-                await Send.ResultAsync(ResultHttpStatusMapper.Answer(script, HttpContext)).ConfigureAwait(false);
-                return;
-            }
-
-            await Send.OkAsync(new GenerateDdlResponse
-            {
-                ConnectionName = req.Name,
-                Ddl = script.Value!,
-                StatementCount = commands.Count
-            }, ct).ConfigureAwait(false);
+            await AnswerWithDdl(req, generator.Value!, discovery.Value!, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -141,13 +126,53 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
     }
 
     /// <summary>
+    /// Discovers the containers with the stated choices and answers the DDL the connection type's generator writes for them.
+    /// </summary>
+    private async Task AnswerWithDdl(GenerateDdlRequest req, IDdlGenerator generator, DataStoreDiscoveryOptions options, CancellationToken ct)
+    {
+        var containersResult = await DiscoverContainers(req.Name, options, ct).ConfigureAwait(false);
+
+        if (containersResult.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(containersResult, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (containersResult.Value == null)
+        {
+            SchemaEndpointLog.SchemaConnectionNotFound(_logger, req.Name, "generate-ddl");
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(SchemaEndpointLog.GenerateDdlConnectionNotFound(_logger, req.Name)), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var commands = BuildCreateTableCommands(containersResult.Value, req.SchemaFilter);
+        var warnings = WarningsOf(containersResult, containersResult.Value, req.SchemaFilter);
+        var script = generator.GenerateScript(commands);
+        if (script.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(script, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(new GenerateDdlResponse
+        {
+            ConnectionName = req.Name,
+            Ddl = script.Value!,
+            StatementCount = commands.Count,
+            Warnings = warnings,
+        }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Discovers storage containers for the specified connection.
     /// </summary>
     /// <param name="connectionName">The connection name.</param>
+    /// <param name="options">The discovery choices the request stated.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the discovered storage containers.</returns>
     protected abstract Task<IGenericResult<IReadOnlyList<IStorageContainer>>> DiscoverContainers(
         string connectionName,
+        DataStoreDiscoveryOptions options,
         CancellationToken ct);
 
     /// <summary>
@@ -188,15 +213,44 @@ public abstract class GenerateDdlEndpointBase : Endpoint<GenerateDdlRequest, Gen
     protected virtual IReadOnlyList<IDdlCommand> BuildCreateTableCommands(
         IReadOnlyList<IStorageContainer> containers,
         string? schemaFilter)
-        => [.. containers
-            .Where(c => !string.Equals(c.ContainerType.Name, "View", StringComparison.Ordinal))
-            .GroupBy(c => c.Path.PathValue, StringComparer.OrdinalIgnoreCase)
-            .Where(group => string.IsNullOrEmpty(schemaFilter) || string.Equals(group.Key, schemaFilter, StringComparison.OrdinalIgnoreCase))
+        => [.. TablesToGenerate(containers, schemaFilter)
             .SelectMany(group => group.Select(container => CreateTable(group.Key, container)))];
+
+    /// <summary>
+    /// Lists what the generated DDL does not carry of the schema, and the warnings the discovery returned with its success: one for each
+    /// foreign key of a table the DDL is generated for, because a foreign key in the DDL is one column with its referential actions, and
+    /// the discovery holds neither (FDW-6309).
+    /// </summary>
+    /// <param name="discovery">The discovery's result, whose warnings are carried over.</param>
+    /// <param name="containers">The discovered storage containers.</param>
+    /// <param name="schemaFilter">Optional schema name filter.</param>
+    /// <returns>The warnings, in the order of the containers.</returns>
+    protected virtual IList<GenerateDdlWarning> WarningsOf(IGenericResult discovery, IReadOnlyList<IStorageContainer> containers, string? schemaFilter)
+    {
+        var warnings = new List<IGenericMessage>(discovery.Messages);
+        foreach (var group in TablesToGenerate(containers, schemaFilter))
+        {
+            foreach (var container in group)
+            {
+                foreach (var key in container.Keys.Where(key => key.KeyType.IsReference))
+                    warnings.Add(SchemaEndpointLog.GenerateDdlForeignKeyNotGenerated(_logger, key.KeyName, group.Key, container.Name));
+            }
+        }
+
+        return [.. warnings.Select(message => new GenerateDdlWarning { Code = message.Code ?? string.Empty, Message = message.Message })];
+    }
+
+    private static IEnumerable<IGrouping<string, IStorageContainer>> TablesToGenerate(IReadOnlyList<IStorageContainer> containers, string? schemaFilter)
+        => containers
+            .Where(c => c.SupportedOperations.Contains("Insert", StringComparer.Ordinal))
+            .GroupBy(c => c.Path.PathValue, StringComparer.OrdinalIgnoreCase)
+            .Where(group => string.IsNullOrEmpty(schemaFilter) || string.Equals(group.Key, schemaFilter, StringComparison.OrdinalIgnoreCase));
 
     private static CreateTableCommand CreateTable(string schemaName, IStorageContainer container)
     {
-        var keyColumns = container.Schema.GetIdentityFields().Select(field => field.Name).ToList();
+        // The primary key the container declares, the whole key. It was the identity columns, which are not the key: a table whose key
+        // is not an identity column was generated with none, and a table with an identity column that is not its key with a wrong one.
+        var keyColumns = container.PrimaryKeyFieldNames();
 
         return new CreateTableCommand
         {

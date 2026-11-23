@@ -12,5 +12,8 @@ public abstract class XlsxValueKindBase : TypeOptionBase<XlsxValueKindBase>, IXl
     }
 
     /// <inheritdoc />
+    public abstract bool CoversBuiltInFormat(int formatId);
+
+    /// <inheritdoc />
     public abstract object Read(string text, bool date1904);
 }

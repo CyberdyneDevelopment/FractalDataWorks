@@ -14,7 +14,7 @@ public sealed class VarianceAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="VarianceAggregationType"/> class.
     /// </summary>
-    public VarianceAggregationType() : base("Variance", values =>
+    public VarianceAggregationType() : base("Variance", "Calculates the variance of all values", values =>
     {
         if (values.Count == 0) return 0m;
         var average = values.Average();

@@ -15,7 +15,7 @@ public sealed class YearOverYearPeriodComparisonType : PeriodComparisonTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="YearOverYearPeriodComparisonType"/> class.
     /// </summary>
-    public YearOverYearPeriodComparisonType() : base("YearOverYear", isCumulative: false) { }
+    public YearOverYearPeriodComparisonType() : base("YearOverYear", "Compares current year to previous year", isCumulative: false) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => TimeSpan.FromDays(-365);

@@ -20,6 +20,9 @@ using Fdw.Services.Authentication.SignIns;
 using Fdw.Services.Authentication.Steps;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
+using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Security.Encryption;
 using Fdw.Services.SecretManagers.Abstractions;
@@ -74,6 +77,10 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
     {
         var collectOptions = RegisterFunc;
 
+        // The flow provider writes each flow's description with the descriptions writer, in the unit of the write (FDW-6208): a host that registered this collection
+        // without the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<IDescriptionWriter>(AuthenticationFlowDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         Registration((builder, loggerFactory) =>
         {
             collectOptions?.Invoke(builder, loggerFactory);
@@ -111,6 +118,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddScoped<IAuthenticationFlowAdministration>(sp => new AuthenticationFlowAdministration(
                 sp.GetRequiredService<IAuthenticationFlowConfigurationProvider>(),
                 sp.GetRequiredService<IAuthenticationFlowProvider>(),
+                sp.GetRequiredService<IDescriptionReader>(),
                 sp.GetRequiredService<IPermissionConfigurationProvider>(),
                 sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
                 sp.GetRequiredService<ITenantResolver>(),
@@ -158,7 +166,8 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             {
                 var domain = new AuthenticationFlowConfigurationProvider(
                     sp.GetRequiredService<ILogger<AuthenticationFlowConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection, "auth", "AuthenticationFlow");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection, "auth", "AuthenticationFlow",
+                    sp.GetRequiredService<IDescriptionWriter>());
                 domain.Register("AuthenticationFlow", sp.GetRequiredService<IAuthenticationFlowImplementationConfigurationProvider>());
                 return domain;
             });

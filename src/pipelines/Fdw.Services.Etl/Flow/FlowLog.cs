@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Flow;
 /// <summary>
 /// MessageLogging for the row-flow engine (FDW-1386): graph refusals, component failures and the end of a run. Every refusal is
 /// logged and returned in the failure result.
-/// EventId range: 20901-20949. The Set variable calculation and script token messages (FDW-1957, FDW-1970) take the catalog's category numbers (RESULTCODE-CATALOG.md): 20000 and 20001 for a value that is missing or invalid, 30000 for a name that is not found, 90001 for an operation that failed, and 21000 and 21001 for this package's own missing and invalid values.
+/// EventId range: 20901-20949, 21036-21039 for the decisions of FDW-6134 and 21047-21049 and 21052 for the targets of FDW-6135, 21045 and 21055-21059 for the Send component of FDW-6138. The Set variable calculation and script token messages (FDW-1957, FDW-1970) take the catalog's category numbers (RESULTCODE-CATALOG.md): 20000 and 20001 for a value that is missing or invalid, 30000 for a name that is not found, 90001 for an operation that failed, and 21000 and 21001 for this package's own missing and invalid values.
 /// </summary>
 [MessageLoggingTypeCode("FLOW")]
 public static partial class FlowLog
@@ -237,6 +237,111 @@ public static partial class FlowLog
     [MessageLogging(EventId = 21001, Level = LogLevel.Error,
         Message = "'{owner}' names $({name}) in its script, whose value is not a name; a token takes letters, digits, underscore and dot only (a value belongs in a named parameter such as @Year), and the script did not run")]
     public static partial IGenericMessage ScriptTokenNotAName(ILogger logger, string owner, string name);
+
+    /// <summary>A decision's output (a condition's true or false, a switch's outcome) that no line leaves (FDW-6134).</summary>
+    [MessageLogging(EventId = 20943, Level = LogLevel.Error,
+        Message = "The output '{output}' of the {kind} '{component}' has no line leaving it, so what it decides leads nowhere; draw a line from it or take the component out")]
+    public static partial IGenericMessage ComponentOutputUnused(ILogger logger, string component, string kind, string output);
+
+    /// <summary>A gate no line feeds, or one a line that is not a decision's output feeds (FDW-6134).</summary>
+    [MessageLogging(EventId = 20944, Level = LogLevel.Error,
+        Message = "The gate '{component}' is not fed: {reason}; a gate's input lines come from the outputs of conditions, switches and other gates")]
+    public static partial IGenericMessage GateInputUnfed(ILogger logger, string component, string reason);
+
+    /// <summary>A gate whose logic is not one of GateLogics or whose number of input lines the logic does not take (FDW-6134).</summary>
+    [MessageLogging(EventId = 20945, Level = LogLevel.Error,
+        Message = "The gate '{component}' states the logic '{logic}', which {reason}")]
+    public static partial IGenericMessage GateLogicInvalid(ILogger logger, string component, string logic, string reason);
+
+    /// <summary>A switch whose outcomes are missing, repeated or not names an output can have (FDW-6134).</summary>
+    [MessageLogging(EventId = 20946, Level = LogLevel.Error,
+        Message = "The switch '{component}' does not state its outcomes soundly: {reason}")]
+    public static partial IGenericMessage SwitchOutcomeMissing(ILogger logger, string component, string reason);
+
+    /// <summary>Decisions whose lines lead back to themselves (FDW-6134).</summary>
+    [MessageLogging(EventId = 20947, Level = LogLevel.Error,
+        Message = "The decisions {components} feed one another in a circle, so none could be judged first")]
+    public static partial IGenericMessage DecisionCycle(ILogger logger, string components);
+
+    /// <summary>A loop whose testOutput does not name a decision inside the loop (FDW-6134).</summary>
+    [MessageLogging(EventId = 20948, Level = LogLevel.Error,
+        Message = "The loop '{component}' takes '{test}' as its test, which {reason}")]
+    public static partial IGenericMessage LoopTestNotInBody(ILogger logger, string component, string test, string reason);
+
+    /// <summary>A loop that states both a condition and a testOutput, or neither (FDW-6134).</summary>
+    [MessageLogging(EventId = 20949, Level = LogLevel.Error,
+        Message = "The loop '{component}' must state its test exactly once, as a condition or as a testOutput, and it states {stated}")]
+    public static partial IGenericMessage LoopTestAmbiguous(ILogger logger, string component, string stated);
+
+    /// <summary>A component that ran no step because none of the lines that lead to it fired (FDW-6134).</summary>
+    [MessageLogging(EventId = 21036, Level = LogLevel.Information,
+        Message = "Component '{component}' was skipped: none of the decision outputs that lead to it fired")]
+    public static partial IGenericMessage ComponentSkippedNoSignal(ILogger logger, string component);
+
+    /// <summary>A switch met a value no outcome names and does not say otherwise (FDW-6134).</summary>
+    [MessageLogging(EventId = 21037, Level = LogLevel.Error,
+        Message = "The switch '{component}' met the value '{value}', which none of its outcomes names, and it has no otherwise")]
+    public static partial IGenericMessage SwitchOutcomeUnmatched(ILogger logger, string component, string value);
+
+    /// <summary>A switch whose variable is not in scope when it runs (FDW-6134).</summary>
+    [MessageLogging(EventId = 21038, Level = LogLevel.Error,
+        Message = "The switch '{component}' reads the variable '{variable}', which has no value in scope")]
+    public static partial IGenericMessage SwitchVariableMissing(ILogger logger, string component, string variable);
+
+    /// <summary>A gate whose input lines its logic does not take, found when the graph is built (FDW-6134).</summary>
+    [MessageLogging(EventId = 21039, Level = LogLevel.Error,
+        Message = "The gate '{component}' has {count} input lines, which its logic '{logic}' does not take")]
+    public static partial IGenericMessage GateInputCountInvalid(ILogger logger, string component, int count, string logic);
+
+    /// <summary>An Execute pipeline step whose variable names a pipeline that is not on the list the step states (FDW-6135).</summary>
+    [MessageLogging(EventId = 21047, Level = LogLevel.Error,
+        Message = "Step '{step}' was told to start '{pipeline}', which is not one of the pipelines it may start ({targets}), so nothing was started")]
+    public static partial IGenericMessage ExecutePipelineTargetNotListed(ILogger logger, string step, string pipeline, string targets);
+
+    /// <summary>An Execute pipeline step whose variable has no value when it runs (FDW-6135).</summary>
+    [MessageLogging(EventId = 21048, Level = LogLevel.Error,
+        Message = "Step '{step}' starts the pipeline the variable '{variable}' names, and the variable has no value, so nothing was started")]
+    public static partial IGenericMessage ExecutePipelineTargetVariableMissing(ILogger logger, string step, string variable);
+
+    /// <summary>An Execute pipeline component that states both a pipeline and a targetVariable, or neither (FDW-6135).</summary>
+    [MessageLogging(EventId = 21049, Level = LogLevel.Error,
+        Message = "The Execute pipeline component '{component}' must state the pipeline to start exactly once, as a pipeline or as a targetVariable, and it states {stated}")]
+    public static partial IGenericMessage ExecutePipelineTargetAmbiguous(ILogger logger, string component, string stated);
+
+    /// <summary>An Execute pipeline component that names its pipeline by a variable and does not state the pipelines it may start (FDW-6135).</summary>
+    [MessageLogging(EventId = 21052, Level = LogLevel.Error,
+        Message = "The Execute pipeline component '{component}' starts the pipeline a variable names and states no targets, so it does not say which pipelines it may start")]
+    public static partial IGenericMessage ExecutePipelineTargetsMissing(ILogger logger, string component);
+
+    /// <summary>A Send step whose notification could not be sent (FDW-6138): the step fails.</summary>
+    [MessageLogging(EventId = 21055, Level = LogLevel.Error,
+        Message = "Step '{step}' could not send through the notification rule '{rule}': {reason}")]
+    public static partial IGenericMessage NotificationSendFailed(ILogger logger, string step, string rule, string? reason);
+
+    /// <summary>A Send step or component that names a payload type that is none of NotificationPayloadTypes (FDW-6138).</summary>
+    [MessageLogging(EventId = 21056, Level = LogLevel.Error,
+        Message = "The Send component '{component}' names the payload type '{payloadType}', which is not a payload type")]
+    public static partial IGenericMessage NotificationPayloadTypeUnknown(ILogger logger, string component, string payloadType);
+
+    /// <summary>A Send component that states a payload field its payload type does not declare (FDW-6138).</summary>
+    [MessageLogging(EventId = 21057, Level = LogLevel.Error,
+        Message = "The Send component '{component}' states the payload field '{field}', which the payload type '{payloadType}' does not declare")]
+    public static partial IGenericMessage NotificationPayloadFieldUnknown(ILogger logger, string component, string field, string payloadType);
+
+    /// <summary>A Send component that leaves out a payload field its payload type requires (FDW-6138).</summary>
+    [MessageLogging(EventId = 21058, Level = LogLevel.Error,
+        Message = "The Send component '{component}' does not state the payload field '{field}', which the payload type '{payloadType}' requires")]
+    public static partial IGenericMessage NotificationPayloadFieldMissing(ILogger logger, string component, string field, string payloadType);
+
+    /// <summary>A Send component that states payload fields and no payload type (FDW-6138).</summary>
+    [MessageLogging(EventId = 21059, Level = LogLevel.Error,
+        Message = "The Send component '{component}' states payload fields and no payload type, so it does not say what they are the fields of")]
+    public static partial IGenericMessage NotificationFieldsNeedAType(ILogger logger, string component);
+
+    /// <summary>A Send step whose words or fields name a variable that has no value when it runs (FDW-6138).</summary>
+    [MessageLogging(EventId = 21045, Level = LogLevel.Error,
+        Message = "Step '{step}' could not make its words or its payload from the variables: {reason}, so nothing was sent")]
+    public static partial IGenericMessage SendTextNotRendered(ILogger logger, string step, string reason);
 
     /// <summary>Error: a filter needs an expression; an empty expression is refused.</summary>
     [MessageLogging(EventId = 21800, Level = LogLevel.Error,

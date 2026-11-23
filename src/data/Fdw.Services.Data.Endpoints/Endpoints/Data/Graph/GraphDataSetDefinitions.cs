@@ -4,8 +4,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.DataSets.Results;
 using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
@@ -127,6 +129,7 @@ internal static class GraphDataSetDefinitions
             () => Fields(graph, request.FieldsOut, values, stamp, logger),
             () => Body(graph, request.Components, request.Links, logger),
             () => FieldsOut(graph, request.FieldsOutComponent, request.FieldsOutOutput, logger),
+            () => Strategy(graph, request.FederationStrategy, logger),
         };
         foreach (var step in steps)
         {
@@ -134,6 +137,34 @@ internal static class GraphDataSetDefinitions
             if (done.IsFailure) return done;
         }
 
+        return GenericResult.Success();
+    }
+
+    /// <summary>Sets the federation strategy the data set's reads across data stores run under (FDW-6970), when the request states one.</summary>
+    /// <remarks>
+    /// Left out keeps the stored one; empty takes it away, so the FDW-level default applies; a name must be a registered <c>FederationStrategies</c>
+    /// member, as a Federated data set's must.
+    /// </remarks>
+    internal static IGenericResult Strategy(IGraphDataSetConfiguration graph, string? stated, ILogger logger)
+    {
+        if (stated is null)
+        {
+            return GenericResult.Success();
+        }
+
+        if (stated.Length == 0)
+        {
+            graph.FederationStrategy = null;
+            return GenericResult.Success();
+        }
+
+        if (ReferenceEquals(FederationStrategies.ByName(stated), FederationStrategies.NotFound))
+        {
+            return GenericResult.Failure(
+                DataSetsResultCodes.FederationStrategyInvalid, logger, ResultDetails.Create("name", graph.Name, "federationStrategy", stated));
+        }
+
+        graph.FederationStrategy = stated;
         return GenericResult.Success();
     }
 

@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Transformations;
+using Fdw.Services.Etl.Abstractions.AnswerRequests;
 using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
+using Fdw.Services.Etl.Execution.Answering;
 using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Etl.Flow;
 using Fdw.Services.Etl.Graphs.Building;
+using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Pipelines.Loads;
+using Fdw.Services.Notifications.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Conventions;
 
@@ -34,11 +38,12 @@ public static class GraphComponentValidator
     /// <param name="broken">Receives the names of the components that have a problem of their own.</param>
     /// <param name="logger">The logger a condition's refusal is written to.</param>
     /// <returns>The problems, each with its path.</returns>
-    public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph, HashSet<string> broken, ILogger logger)
+    public static IReadOnlyList<GraphProblem> Problems(IGraphPipelineConfiguration graph, HashSet<string> broken, ILogger logger)
     {
         var problems = new List<GraphProblem>();
         problems.AddRange(ParameterProblems(graph));
         problems.AddRange(VariableProblems(graph));
+        problems.AddRange(OutputProblems(graph, logger));
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var component in graph.Components)
         {
@@ -76,7 +81,7 @@ public static class GraphComponentValidator
             }
         }
 
-        problems.AddRange(SourceParameterProblems(graph));
+        problems.AddRange(UnboundSourceParameterProblems(graph));
         problems.AddRange(ScriptTokenProblems(graph));
         problems.AddRange(SettingBindingRules.Problems(graph));
         return problems;
@@ -84,12 +89,12 @@ public static class GraphComponentValidator
 
     // The mappings on a component's inputs (FDW-2013): each names an input the component has and something is linked to; a union all maps every
     // input or none; and a mapping a run supplies as a list can only be for a component with one input, since the list names no input.
-    private static IEnumerable<GraphProblem> MappingProblems(GraphPipelineConfiguration graph, PipelineComponentConfiguration component)
+    private static IEnumerable<GraphProblem> MappingProblems(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component)
     {
         var rows = component.Fields
             .Where(field => string.Equals(field.SettingName, ComponentTypeBase.MappingsSetting, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        var inputs = ComponentShapes.Of(component, [.. graph.Links]).Inputs;
+        var inputs = ComponentShapes.Of(component, [.. graph.Links], graph.Components).Inputs;
         var path = new[] { "components", component.Name, "settings", ComponentTypeBase.MappingsSetting };
         if (ParameterSettings.IsBound(component, ComponentTypeBase.MappingsSetting) && inputs.Count != 1)
         {
@@ -114,7 +119,7 @@ public static class GraphComponentValidator
     // settings are read when the run starts, so a variable a component sets would be rendered with its starting value and the component ignored. The
     // exception is a setting that is read when its stage starts (FDW-1958, the physical path and name of a source): it may also name a variable
     // that a component of a lower stage sets.
-    private static IEnumerable<GraphProblem> SourceParameterProblems(GraphPipelineConfiguration graph)
+    private static IEnumerable<GraphProblem> UnboundSourceParameterProblems(IGraphPipelineConfiguration graph)
     {
         var declared = new HashSet<string>(graph.Parameters.Select(parameter => parameter.Name), StringComparer.OrdinalIgnoreCase);
         var assigned = Building.GraphScope.AssignedVariables(graph);
@@ -146,7 +151,7 @@ public static class GraphComponentValidator
 
     // A SQL source's script may name $(Name) (FDW-1970): the name is a declared parameter or variable, and a variable a component sets is set by a component
     // of a lower stage than the source's own, because the script is rendered when the source's stage starts.
-    private static IEnumerable<GraphProblem> ScriptTokenProblems(GraphPipelineConfiguration graph)
+    private static IEnumerable<GraphProblem> ScriptTokenProblems(IGraphPipelineConfiguration graph)
     {
         var parameters = new HashSet<string>(graph.Parameters.Select(parameter => parameter.Name).Concat(RunFacts.Names), StringComparer.OrdinalIgnoreCase);
         var variables = new HashSet<string>(graph.Variables.Select(variable => variable.Name), StringComparer.OrdinalIgnoreCase);
@@ -169,17 +174,12 @@ public static class GraphComponentValidator
     }
 
     private static string SourceParameterReason(string component, string setting, string name, bool isAssignedVariable, bool late) =>
-        (isAssignedVariable, late) switch
-        {
-            (true, true) => $"component '{component}' names the variable '{name}' in its {setting} setting, but no component of a lower stage sets '{name}', so it would have only its starting value; give the component that sets '{name}' a lower stage than this one",
-            (true, false) => $"component '{component}' names the variable '{name}' in its {setting} setting, but a component sets '{name}' while the run goes, and this setting is read when the run starts, so that component would be ignored; name a parameter or a variable no component sets (a source's physical path and name are read when its stage starts, so they may name a variable a component of a lower stage sets)",
-            _ => $"component '{component}' names '{name}' in its {setting} setting, but the pipeline declares no parameter or variable '{name}'",
-        };
+        SourceParameterProblems.Of(isAssignedVariable, late).Reason(component, setting, name);
 
     private static bool IsAction(PipelineComponentConfiguration component) => ComponentTypes.ByName(component.ComponentType).IsAction;
 
     // Whether a component that runs before the given one sets the variable: it names it as the variable it sets or the one that keeps its result.
-    private static bool SetBefore(GraphPipelineConfiguration graph, string variable, PipelineComponentConfiguration reader) =>
+    private static bool SetBefore(IGraphPipelineConfiguration graph, string variable, PipelineComponentConfiguration reader) =>
         graph.Components.Any(other => !ReferenceEquals(other, reader)
             && (string.Equals(other.VariableName, variable, StringComparison.OrdinalIgnoreCase) || string.Equals(other.ResultVariable, variable, StringComparison.OrdinalIgnoreCase))
             && RunsBefore(graph, other, reader));
@@ -189,7 +189,7 @@ public static class GraphComponentValidator
     /// <param name="first">The component that must have finished.</param>
     /// <param name="second">The component that starts after it.</param>
     /// <returns><see langword="true"/> when the first's stage is lower; a component inside a loop is never before the loop's own settings, nor after them.</returns>
-    internal static bool RunsBefore(GraphPipelineConfiguration graph, PipelineComponentConfiguration first, PipelineComponentConfiguration second)
+    internal static bool RunsBefore(IGraphPipelineConfiguration graph, PipelineComponentConfiguration first, PipelineComponentConfiguration second)
     {
         var a = Chain(graph, first);
         var b = Chain(graph, second);
@@ -207,7 +207,7 @@ public static class GraphComponentValidator
     }
 
     // The loops that hold the component, outermost first, then the component itself.
-    private static List<PipelineComponentConfiguration> Chain(GraphPipelineConfiguration graph, PipelineComponentConfiguration component)
+    private static List<PipelineComponentConfiguration> Chain(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component)
     {
         var chain = new List<PipelineComponentConfiguration> { component };
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { component.Name };
@@ -228,7 +228,7 @@ public static class GraphComponentValidator
     }
 
     // A parameter has a name of its own among the parameters and the variables, a data type, and is not a name a run reserves.
-    private static IEnumerable<GraphProblem> ParameterProblems(GraphPipelineConfiguration graph)
+    private static IEnumerable<GraphProblem> ParameterProblems(IGraphPipelineConfiguration graph)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in graph.Parameters)
@@ -287,7 +287,30 @@ public static class GraphComponentValidator
         }
     }
 
-    private static IEnumerable<GraphProblem> VariableProblems(GraphPipelineConfiguration graph)
+    // The outputs the graph gives back (FDW-6136): each is named once, is kept in a variable the graph declares and has the type of that variable, which is a data type. Nothing is read from the variable's type:
+    // the output states its own, so a variable whose type changes later is a problem here and not a surprise in the run that reads it.
+    private static IEnumerable<GraphProblem> OutputProblems(IGraphPipelineConfiguration graph, ILogger logger)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var output in graph.Outputs)
+        {
+            var variable = graph.Variables.FirstOrDefault(declared => string.Equals(declared.Name, output.VariableName, StringComparison.OrdinalIgnoreCase));
+            if (!names.Add(output.Name))
+            {
+                yield return new GraphProblem(["outputs", output.Name], PipelineOutputLog.OutputNameDuplicate(logger, graph.Name, output.Name).Message);
+            }
+            else if (variable is null)
+            {
+                yield return new GraphProblem(["outputs", output.Name, "variable"], PipelineOutputLog.OutputVariableUnknown(logger, graph.Name, output.Name, output.VariableName).Message);
+            }
+            else if (ReferenceEquals(DataTypes.ByName(output.DataType), DataTypes.NotFound) || !string.Equals(variable.DataType, output.DataType, StringComparison.OrdinalIgnoreCase))
+            {
+                yield return new GraphProblem(["outputs", output.Name, "dataType"], PipelineOutputLog.OutputTypeMismatch(logger, graph.Name, output.Name, output.DataType, variable.Name, variable.DataType).Message);
+            }
+        }
+    }
+
+    private static IEnumerable<GraphProblem> VariableProblems(IGraphPipelineConfiguration graph)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var variable in graph.Variables)
@@ -311,10 +334,10 @@ public static class GraphComponentValidator
 
     // Where the component sits: its parent exists and is a loop, the parents do not loop back, a component with a parent is not a loop's
     // body that holds nothing, and a loop has components in its body.
-    private static IEnumerable<GraphProblem> PlaceProblems(GraphPipelineConfiguration graph, PipelineComponentConfiguration component) =>
+    private static IEnumerable<GraphProblem> PlaceProblems(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component) =>
         ParentProblems(graph, component).Concat(HoldingProblems(graph, component));
 
-    private static IEnumerable<GraphProblem> ParentProblems(GraphPipelineConfiguration graph, PipelineComponentConfiguration component)
+    private static IEnumerable<GraphProblem> ParentProblems(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component)
     {
         if (component.ParentComponent is not { } parentName)
         {
@@ -337,7 +360,7 @@ public static class GraphComponentValidator
         }
     }
 
-    private static IEnumerable<GraphProblem> HoldingProblems(GraphPipelineConfiguration graph, PipelineComponentConfiguration component)
+    private static IEnumerable<GraphProblem> HoldingProblems(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component)
     {
         var kind = ComponentTypes.ByName(component.ComponentType);
         if (kind.HoldsComponents && !graph.Components.Any(child => string.Equals(child.ParentComponent, component.Name, StringComparison.OrdinalIgnoreCase)))
@@ -346,7 +369,7 @@ public static class GraphComponentValidator
         }
     }
 
-    private static bool LoopsBack(GraphPipelineConfiguration graph, PipelineComponentConfiguration component)
+    private static bool LoopsBack(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { component.Name };
         var current = component;
@@ -370,7 +393,7 @@ public static class GraphComponentValidator
     }
 
     // What a kind's settings mean together, judged with the variables the component can see.
-    private static IEnumerable<GraphProblem> KindProblems(GraphPipelineConfiguration graph, PipelineComponentConfiguration component, ILogger logger)
+    private static IEnumerable<GraphProblem> KindProblems(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component, ILogger logger)
     {
         var scope = VariablesInScope(graph, component);
         string[] settings = ["components", component.Name, "settings"];
@@ -378,7 +401,10 @@ public static class GraphComponentValidator
 
         return LoopProblems(component, scope, logger, Problem)
             .Concat(SetVariableProblems(component, scope, Problem))
-            .Concat(ExecuteProblems(component, scope, Problem))
+            .Concat(ExecuteProblems(component, scope, logger, Problem))
+            .Concat(SendProblems(component, logger, Problem))
+            .Concat(AskProblems(component, logger, Problem))
+            .Concat(ReservedNameProblems(component, logger))
             .Concat(ExecuteSqlProblems(component, scope, Problem))
             .Concat(ReadDataOptionsProblems(component, scope, Problem))
             .Concat(NotifyProblems(component, Problem))
@@ -400,19 +426,21 @@ public static class GraphComponentValidator
             yield return problem("list", $"for each '{component.Name}' reads its list from '{component.ListVariable}', which is not a variable in scope");
         }
 
-        if (!component.ComponentType.Equals("DoWhile", StringComparison.OrdinalIgnoreCase))
+        // Why the while loop and the condition are judged here too (FDW-6134): they state a condition in the same words as a do while, and the loops keep the same stated most.
+        var kind = ComponentTypes.ByName(component.ComponentType);
+        if (kind is not (DoWhileComponentType or WhileComponentType or ConditionComponentType))
         {
             yield break;
         }
 
-        if (component.MaxIterations < 1)
+        if (kind is not ConditionComponentType && component.MaxIterations < 1)
         {
-            yield return problem("maximum", $"do while '{component.Name}' may run its components at most {component.MaxIterations} times, which is not at least one");
+            yield return problem("maximum", $"{kind.Name} '{component.Name}' may run its components at most {component.MaxIterations} times, which is not at least one");
         }
 
         if (component.ConditionExpression is { } condition && FlowCondition.FromExpression(condition, logger) is { IsFailure: true } unreadable)
         {
-            yield return problem("condition", $"do while '{component.Name}' has a condition that cannot be read: {unreadable.CurrentMessage}");
+            yield return problem("condition", $"{kind.Name} '{component.Name}' has a condition that cannot be read: {unreadable.CurrentMessage}");
         }
     }
 
@@ -456,7 +484,7 @@ public static class GraphComponentValidator
     }
 
     private static IEnumerable<GraphProblem> ReadOnlyTargetProblems(
-        GraphPipelineConfiguration graph, PipelineComponentConfiguration component, Func<string, string, GraphProblem> problem)
+        IGraphPipelineConfiguration graph, PipelineComponentConfiguration component, Func<string, string, GraphProblem> problem)
     {
         bool IsReadOnly(string? name) =>
             name is not null && graph.Parameters.Any(parameter => parameter.IsReadOnly && string.Equals(parameter.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -561,29 +589,140 @@ public static class GraphComponentValidator
         }
     }
 
-    private static IEnumerable<GraphProblem> ExecuteProblems(
-        PipelineComponentConfiguration component, VariableScope scope, Func<string, string, GraphProblem> problem)
+    // A Send component's payload (FDW-6138): its type is one of NotificationPayloadTypes, its fields are the type's and every field the type requires is stated.
+    private static IEnumerable<GraphProblem> SendProblems(PipelineComponentConfiguration component, ILogger logger, Func<string, string, GraphProblem> problem)
     {
-        if (!component.ComponentType.Equals("ExecutePipeline", StringComparison.OrdinalIgnoreCase))
+        if (!component.ComponentType.Equals("Send", StringComparison.OrdinalIgnoreCase))
         {
             yield break;
         }
 
-        if (component.AwaitCompletion is true && component.FailOnChildFailure is null)
+        var type = DecisionTests.StatedText(component, SendComponentType.PayloadTypeSetting);
+        if (type is null)
         {
-            yield return problem("failOnChildFailure", $"execute pipeline '{component.Name}' waits for '{component.TargetPipeline}' but does not state whether it fails when that pipeline fails");
+            if (component.Parameters.Count > 0)
+            {
+                yield return problem(SendComponentType.FieldsSetting, FlowLog.NotificationFieldsNeedAType(logger, component.Name).Message);
+            }
+
+            yield break;
         }
 
-        if (component.AwaitCompletion is false && (component.ResultVariable is not null || component.FailOnChildFailure is not null))
+        var found = NotificationPayloadTypes.ByName(type);
+        if (ReferenceEquals(found, NotificationPayloadTypes.NotFound))
         {
-            yield return problem("awaitCompletion", $"execute pipeline '{component.Name}' does not wait for '{component.TargetPipeline}', so it has no result to keep or to fail on");
+            yield return problem(SendComponentType.PayloadTypeSetting, FlowLog.NotificationPayloadTypeUnknown(logger, component.Name, type).Message);
+            yield break;
         }
 
-        if (component.ResultVariable is { } result && !scope.Contains(result))
+        foreach (var parameter in component.Parameters.Where(parameter => !found.Fields.Any(field => string.Equals(field.Name, parameter.ParameterName, StringComparison.Ordinal))))
         {
-            yield return problem("resultVariable", $"execute pipeline '{component.Name}' keeps its result in '{result}', which is not a variable in scope");
+            yield return problem(SendComponentType.FieldsSetting, FlowLog.NotificationPayloadFieldUnknown(logger, component.Name, parameter.ParameterName, found.Name).Message);
         }
 
+        foreach (var field in found.Fields.Where(field => field.IsRequired && !component.Parameters.Any(parameter => string.Equals(parameter.ParameterName, field.Name, StringComparison.Ordinal))))
+        {
+            yield return problem(SendComponentType.FieldsSetting, FlowLog.NotificationPayloadFieldMissing(logger, component.Name, field.Name, found.Name).Message);
+        }
+    }
+
+    // The claim of an answered step (FDW-6142) is made under a component name that starts with AnswerRequests.ClaimNamePrefix, in the claims of the asking run's chain: a component of any graph named so
+    // could have its own claim taken for it, so the name is refused.
+    private static IEnumerable<GraphProblem> ReservedNameProblems(PipelineComponentConfiguration component, ILogger logger)
+    {
+        if (component.Name.StartsWith(AnswerRequests.ClaimNamePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return new GraphProblem(["components", component.Name], AnswerRequestLog.ComponentNameReserved(logger, component.Name, AnswerRequests.ClaimNamePrefix).Message);
+        }
+    }
+
+    // An Ask component's request (FDW-6142): its kind is one of the answer request kinds, a choice states options and a question states none, and no argument is named like the parameter the answer goes to.
+    private static IEnumerable<GraphProblem> AskProblems(PipelineComponentConfiguration component, ILogger logger, Func<string, string, GraphProblem> problem)
+    {
+        if (!component.ComponentType.Equals("Ask", StringComparison.OrdinalIgnoreCase))
+        {
+            yield break;
+        }
+
+        if (DecisionTests.StatedText(component, AskComponentType.KindSetting) is { } kind)
+        {
+            var found = AnswerRequestKinds.ByName(kind);
+            if (ReferenceEquals(found, AnswerRequestKinds.NotFound))
+            {
+                yield return problem(AskComponentType.KindSetting, AnswerRequestLog.KindUnknown(logger, component.Name, kind).Message);
+            }
+            else
+            {
+                var options = DecisionTests.StatedText(component, AskComponentType.OptionsSetting) is { } listed ? AskComponentType.OptionsOf(listed).Count : 0;
+                if (found.AnswerMustBeAnOption && options == 0)
+                {
+                    yield return problem(AskComponentType.OptionsSetting, AnswerRequestLog.ChoiceNeedsOptions(logger, component.Name).Message);
+                }
+
+                if (!found.AnswerMustBeAnOption && options > 0)
+                {
+                    yield return problem(AskComponentType.OptionsSetting, AnswerRequestLog.QuestionTakesNoOptions(logger, component.Name).Message);
+                }
+            }
+        }
+
+        var answerParameter = DecisionTests.StatedText(component, AskComponentType.AnswerParameterSetting);
+        foreach (var parameter in component.Parameters.Where(parameter => answerParameter is not null && string.Equals(parameter.ParameterName, answerParameter, StringComparison.OrdinalIgnoreCase)))
+        {
+            yield return problem(AskComponentType.ArgumentsSetting, AnswerRequestLog.ArgumentNamedLikeTheAnswer(logger, component.Name, parameter.ParameterName).Message);
+        }
+    }
+
+    // What the problems of an Execute pipeline step call the pipeline it starts: the one its author stated, or the one a variable names.
+    private static string TargetText(PipelineComponentConfiguration component)
+        => component.TargetPipeline is { Length: > 0 } stated
+            ? $"'{stated}'"
+            : $"the pipeline the variable '{DecisionTests.StatedText(component, ExecutePipelineComponentType.TargetVariableSetting)}' names";
+
+    // The pipeline is stated once: by its author or by a variable, and a variable names one of a list the component states.
+    private static IEnumerable<GraphProblem> TargetProblems(PipelineComponentConfiguration component, ILogger logger, Func<string, string, GraphProblem> problem)
+    {
+        var variable = DecisionTests.StatedText(component, ExecutePipelineComponentType.TargetVariableSetting);
+        if ((component.TargetPipeline is { Length: > 0 }) == (variable is not null))
+        {
+            yield return problem("pipeline", FlowLog.ExecutePipelineTargetAmbiguous(logger, component.Name, variable is null ? "neither" : "both").Message);
+        }
+        else if (variable is not null && DecisionTests.StatedText(component, ExecutePipelineComponentType.TargetsSetting) is null)
+        {
+            yield return problem(ExecutePipelineComponentType.TargetsSetting, FlowLog.ExecutePipelineTargetsMissing(logger, component.Name).Message);
+        }
+    }
+
+    // The outputs of the started pipeline an Execute pipeline step reads into variables (FDW-6136): each line is an output name and a variable, the variable is one in scope, and the step waits for the pipeline.
+    // The output's own type is the started pipeline's to state; it is checked against the variable's when the step runs.
+    private static IEnumerable<GraphProblem> ExecuteOutputProblems(
+        PipelineComponentConfiguration component, VariableScope scope, ILogger logger, Func<string, string, GraphProblem> problem)
+    {
+        if (DecisionTests.StatedText(component, ExecutePipelineComponentType.OutputsSetting) is not { } mapped)
+        {
+            yield break;
+        }
+
+        if (!ExecutePipelineComponentType.TryReadOutputs(mapped, out var map))
+        {
+            yield return problem(ExecutePipelineComponentType.OutputsSetting, PipelineOutputLog.OutputMapMalformed(logger, component.Name, mapped).Message);
+            yield break;
+        }
+
+        if (map.Count > 0 && component.AwaitCompletion is not true)
+        {
+            yield return problem(ExecutePipelineComponentType.OutputsSetting, PipelineOutputLog.OutputsNeedAwait(logger, component.Name).Message);
+        }
+
+        foreach (var pair in map.Where(pair => !scope.Contains(pair.Value)))
+        {
+            yield return problem(ExecutePipelineComponentType.OutputsSetting, $"execute pipeline '{component.Name}' keeps the output '{pair.Key}' in '{pair.Value}', which is not a variable in scope");
+        }
+    }
+
+    // The run point an Execute pipeline step starts at is one the platform has, and one that fires on failure sits at the top of the pipeline.
+    private static IEnumerable<GraphProblem> ExecuteRunPointProblems(PipelineComponentConfiguration component, Func<string, string, GraphProblem> problem)
+    {
         if (component.RunPoint is { } runPoint)
         {
             var point = RunPoints.ByName(runPoint);
@@ -595,6 +734,47 @@ public static class GraphComponentValidator
             {
                 yield return problem("runPoint", $"execute pipeline '{component.Name}' starts on failure but sits inside '{component.ParentComponent}'; a component that starts on failure sits at the top of the pipeline");
             }
+        }
+    }
+
+    private static IEnumerable<GraphProblem> ExecuteProblems(
+        PipelineComponentConfiguration component, VariableScope scope, ILogger logger, Func<string, string, GraphProblem> problem)
+    {
+        if (!component.ComponentType.Equals("ExecutePipeline", StringComparison.OrdinalIgnoreCase))
+        {
+            yield break;
+        }
+
+        // The pipeline is stated once, by its author or by a variable (FDW-6135), and a variable names one of a list the component states.
+        var target = TargetText(component);
+        foreach (var targetProblem in TargetProblems(component, logger, problem))
+        {
+            yield return targetProblem;
+        }
+
+        if (component.AwaitCompletion is true && component.FailOnChildFailure is null)
+        {
+            yield return problem("failOnChildFailure", $"execute pipeline '{component.Name}' waits for {target} but does not state whether it fails when that pipeline fails");
+        }
+
+        if (component.AwaitCompletion is false && (component.ResultVariable is not null || component.FailOnChildFailure is not null))
+        {
+            yield return problem("awaitCompletion", $"execute pipeline '{component.Name}' does not wait for {target}, so it has no result to keep or to fail on");
+        }
+
+        if (component.ResultVariable is { } result && !scope.Contains(result))
+        {
+            yield return problem("resultVariable", $"execute pipeline '{component.Name}' keeps its result in '{result}', which is not a variable in scope");
+        }
+
+        foreach (var outputProblem in ExecuteOutputProblems(component, scope, logger, problem))
+        {
+            yield return outputProblem;
+        }
+
+        foreach (var runPointProblem in ExecuteRunPointProblems(component, problem))
+        {
+            yield return runPointProblem;
         }
 
         foreach (var parameterProblem in ParameterProblems(component, scope, problem))
@@ -629,7 +809,7 @@ public static class GraphComponentValidator
         }
     }
 
-    // Read data options (FDW-5347): the variable that keeps the list is one in scope, and the most rows it may read is at least one.
+    // Read data options (FDW-5347, FDW-6344): the variable that keeps the list is one in scope, and the most rows it may read is at least one.
     private static IEnumerable<GraphProblem> ReadDataOptionsProblems(
         PipelineComponentConfiguration component, VariableScope scope, Func<string, string, GraphProblem> problem)
     {
@@ -645,7 +825,7 @@ public static class GraphComponentValidator
 
         if (component.MaxRows < 1)
         {
-            yield return problem("maxRows", $"read data options '{component.Name}' may read at most {component.MaxRows} option rows, which is not at least one");
+            yield return problem("maxRows", $"read data options '{component.Name}' may read at most {component.MaxRows} rule value rows, which is not at least one");
         }
     }
 
@@ -697,7 +877,7 @@ public static class GraphComponentValidator
     }
 
     // The graph's variables and parameters and the counters or elements of every loop that holds the component.
-    private static VariableScope VariablesInScope(GraphPipelineConfiguration graph, PipelineComponentConfiguration component)
+    private static VariableScope VariablesInScope(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component)
     {
         var scope = new VariableScope();
         foreach (var name in graph.Variables.Select(variable => variable.Name).Concat(graph.Parameters.Select(parameter => parameter.Name)).Concat(RunFacts.Names))
@@ -750,7 +930,7 @@ public static class GraphComponentValidator
     /// <param name="component">The component as the run builds it, with its bound settings given their values.</param>
     /// <param name="logger">The logger a condition's refusal is written to.</param>
     /// <returns>The problems, each with its path.</returns>
-    public static IReadOnlyList<GraphProblem> ComponentProblems(GraphPipelineConfiguration graph, PipelineComponentConfiguration component, ILogger logger)
+    public static IReadOnlyList<GraphProblem> ComponentProblems(IGraphPipelineConfiguration graph, PipelineComponentConfiguration component, ILogger logger)
     {
         return [.. KindProblems(graph, component, logger)];
     }

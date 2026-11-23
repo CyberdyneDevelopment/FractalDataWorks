@@ -33,6 +33,7 @@ public sealed partial class DataSetCategoryConfiguration : ICategoryImplementati
     public string DisplayName { get; set; } = string.Empty;
 
     /// <inheritdoc />
+    /// <remarks>Filled by the provider from the descriptions table and written there on a save (FDW-6815); never persisted on either category table.</remarks>
     public string? Description { get; set; }
 
     /// <inheritdoc />

@@ -1,5 +1,6 @@
 using Fdw.Configuration;
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Abstractions;
@@ -61,6 +62,10 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
         // The data store provider is built on the cross-tenant change policy, which the Settings service type registers (FDW-4459); checked once at Initialize, after every registration.
         Requires<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(DataStoreCrossTenantLog.CrossTenantChangePolicyNotRegistered);
 
+        // The data set (FDW-6121), data store (FDW-6208), category (FDW-6815) and transformation (FDW-6208) providers write each description with the descriptions writer, in the unit of the write: a host that
+        // registered this collection without the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<Fdw.Services.Descriptions.IDescriptionWriter>(DataSetDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         // The implementation providers are attached to their domain providers after Build, once the options have initialized, so a registration that fails stops the host with
         // a failed result and does not throw out of a singleton factory or pass unseen (FDW-3966).
         Initialization((host, loggerFactory) =>
@@ -101,7 +106,9 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     DataStoreTypes.ConfigurationConnection, "data", "DataStore",
                     ConfigurationPlacementSource.From(sp),
                     sp.GetRequiredService<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(),
-                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>());
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
                 return domain;
             });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(
@@ -142,7 +149,9 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<ILogger<DataSetConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data", "DataSet",
-                    ConfigurationPlacementSource.From(sp));
+                    ConfigurationPlacementSource.From(sp),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
                 return domain;
             });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetImplementationConfiguration>>(
@@ -155,7 +164,8 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 new DataSetVariationListProvider(
                     sp.GetRequiredService<ILogger<DataSetVariationListProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data", "DataSetVariationList"));
+                    DataStoreTypes.ConfigurationConnection, "data", "DataSetVariationList",
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>()));
             builder.Services.TryAddSingleton<DataSetVariationConfigurationProvider>(sp =>
                 new DataSetVariationConfigurationProvider(
                     sp.GetRequiredService<IDataSetConfigurationProvider>(),
@@ -170,6 +180,11 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IDataSetConfigurationProvider>(),
                     sp.GetRequiredService<IDataSetVariationConfigurationProvider>(),
                     sp.GetService<ILogger<DataSetResolver>>()));
+
+            // Who owns a variation and so may be told what it varies (FDW-5446). Scoped: it reads the caller. The workspace package registers one that also answers for a
+            // Scoped variation, in its place.
+            builder.Services.TryAddScoped<IVariationChainAccess>(sp =>
+                new DataViewChainAccess(sp.GetRequiredService<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>()));
 
             // The status of the data sets the caller may see (FDW-4488). Scoped: the tenant, the pipelines that write the data sets and their latest runs are the caller's. The pipelines
             // implement IDataSetWriterRuns, so a host that serves the status also runs them; a host that does not fails when a request asks for it.
@@ -213,7 +228,9 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 var domain = new CategoryConfigurationProvider(
                     sp.GetRequiredService<ILogger<CategoryConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "catalog", "Category");
+                    DataStoreTypes.ConfigurationConnection, "catalog", "Category",
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
                 return domain;
             });
             builder.Services.TryAddSingleton<ICategoryConfigurationProvider>(
@@ -265,7 +282,9 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 var domain = new TransformationConfigurationProvider(
                     sp.GetRequiredService<ILogger<TransformationConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "transform", "Transformation");
+                    DataStoreTypes.ConfigurationConnection, "transform", "Transformation",
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
                 return domain;
             });
             builder.Services.TryAddSingleton<ITransformationConfigurationProvider>(
@@ -275,9 +294,11 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
             // sources a catalog search asks (FDW-2444).
             builder.Services.AddSingleton<IRankedSearch>(sp => new DataSetFieldSearch(
                 sp.GetRequiredService<IConfigurationGatewayProvider>(), DataStoreTypes.ConfigurationConnection, "data",
+                new DataSetFieldDescriptions(sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>()),
                 sp.GetRequiredService<ILogger<DataSetFieldSearch>>()));
             builder.Services.AddSingleton<IRankedSearch>(sp => new ContainerFieldSearch(
                 sp.GetRequiredService<IConfigurationGatewayProvider>(), DataStoreTypes.ConfigurationConnection, "data",
+                new ContainerFieldDescriptions(sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>()),
                 sp.GetRequiredService<ILogger<ContainerFieldSearch>>()));
 
             // The containers of all stores, one page at a time, with the names of their paths and stores (FDW-2311).
@@ -287,6 +308,16 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
 
             // What makes an attached transformation apply on a data-set read (FDW-877).
             builder.Services.TryAddSingleton<FieldMappingTransformationResolver>();
+
+            // The strategy a Federated or Graph data set that states none reads under (FDW-6806) and each strategy's values (FDW-6901), through the
+            // one declared-defaults mechanism: what the host's configuration states under DataStores:Federation wins, else a host's
+            // ServiceTypeDefaults.Override, else what the Federated kind and each strategy declare. A value that cannot be used refuses
+            // registration. A host that registers its own FederationSettings first replaces them.
+            var federation = FederationSettingsConfiguration.Read(
+                builder, (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<FederationSettings>());
+            if (federation.IsFailure || federation.Value is null)
+                return federation.ToNewResult<IHostApplicationBuilder>();
+            builder.Services.TryAddSingleton(federation.Value);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

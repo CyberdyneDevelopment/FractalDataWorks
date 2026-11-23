@@ -30,6 +30,13 @@ public abstract class ClearDataStoreContainerPagingEndpointBase : CrudDeleteEndp
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datastores";
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// <see cref="IDataStoreWrites"/> decides (FDW-6968): a path or container a workspace owns at its owner's scope alone, so a member of the owner who
+    /// holds no store permission may change it; everything else by the store's rule, the <c>datastores:write</c> permission it asks as before.
+    /// </remarks>
+    protected override bool ResourceDecidesAccess => true;
+
     /// <summary>Gets the write policy: removing a container's paging changes the data store, as adding a container does.</summary>
     protected override string DeletePolicy => "datastores:write";
 
@@ -60,6 +67,6 @@ public abstract class ClearDataStoreContainerPagingEndpointBase : CrudDeleteEndp
             return found;
 
         ContainerPagingBuilder.Apply(location.Container, null, ImmutableDictionary<string, string?>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase));
-        return await _dataStoreProvider.UpdateStore(location.Store, ct).ConfigureAwait(false);
+        return await Resolve<IDataStoreWrites>().UpdateStore(location.Store, ct).ConfigureAwait(false);
     }
 }

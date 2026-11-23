@@ -30,6 +30,9 @@ public sealed partial class HttpConnectionLimitConfiguration : ConnectionLimitCo
 
 
     /// <summary>Gets or sets an optional description.</summary>
+    // Why [NotStored]: the column is gone from the limit table (FDW-6208) and nothing loads or saves a limit record today (the connection's Limits list carries no child-table attribute,
+    // and a limit row has no Id of its own, only a database-made default), so there is no description to move and no description type. The member stays, empty.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether this is the current active version.</summary>

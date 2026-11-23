@@ -9,7 +9,7 @@ graph TD
         SM --> CONN["ConnectionTypes"]
         CONN --> AUTH["AuthenticationServiceTypes"]
         AUTH --> AUTHZ["AuthorizationTypes"]
-        CONN --> ETL["EtlPipelineTypes"]
+        CONN --> ETL["PipelineTypes"]
         CONN --> SCH["SchedulerTypes"]
     end
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Authorization.Abstractions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Settings;
 using Fdw.Services.Settings.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -32,6 +33,8 @@ public sealed class InheritedSettingsTests
     private readonly Mock<ITenantSettingConfigurationProvider> _tenantProvider = new();
     private readonly Mock<IOrganizationSettingConfigurationProvider> _organizationProvider = new();
     private readonly Mock<IOrganizationScope> _scope = new();
+    private readonly Mock<IDescriptionReader> _reader = new();
+    private readonly Dictionary<Guid, DescriptionEntry> _texts = [];
 
     public InheritedSettingsTests()
     {
@@ -63,6 +66,8 @@ public sealed class InheritedSettingsTests
             .Callback((IOrganizationSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_organizations, row))
             .ReturnsAsync(GenericResult.Success());
         _scope.Setup(s => s.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
+        _reader.Setup(r => r.ReadMany(ServerSettingDescriptionType.OptionName, DescriptionTextSubType.OptionName, It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => GenericResult<IReadOnlyDictionary<Guid, DescriptionEntry>>.Success(_texts));
     }
 
     // A save stores the row it was given, replacing the one of the same name, as the store would.
@@ -77,7 +82,7 @@ public sealed class InheritedSettingsTests
     }
 
     private InheritedSettings Create()
-        => new(_serverProvider.Object, _tenantProvider.Object, _organizationProvider.Object, _scope.Object, NullLogger<InheritedSettings>.Instance);
+        => new(_serverProvider.Object, _tenantProvider.Object, _organizationProvider.Object, _scope.Object, _reader.Object, NullLogger<InheritedSettings>.Instance);
 
     private void Platform(string name, string value, bool locked = false)
         => _server.Add(new ServerSettingImplementationConfiguration { IsActive = true, Name = name, SettingValue = value, DataType = "Int32", IsLocked = locked });
@@ -104,6 +109,56 @@ public sealed class InheritedSettingsTests
         view.Value!.Value.ShouldBe("500");
         view.Value.SetAt.ShouldBe(SettingScope.PlatformLevel);
         view.Value.IsLocked.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task ASettingsDescriptionIsReadOnceForTheWholeListAndTheRowsCarryNone()
+    {
+        var maxRows = new ServerSettingImplementationConfiguration { Id = Guid.NewGuid(), IsActive = true, Name = "MaxRows", SettingValue = "500", DataType = "Int32" };
+        var maxDepth = new ServerSettingImplementationConfiguration { Id = Guid.NewGuid(), IsActive = true, Name = "MaxDepth", SettingValue = "8", DataType = "Int32" };
+        _server.AddRange([maxRows, maxDepth]);
+        _texts[maxRows.Id] = new DescriptionEntry(new DescriptionKey(ServerSettingDescriptionType.OptionName, DescriptionTextSubType.OptionName, maxRows.Id, "en-US"), "MaxRows", null, "The most rows a query reads");
+
+        var listed = await Create().List(SettingScope.ForTenant(Tenant), TestContext.Current.CancellationToken);
+
+        listed.IsSuccess.ShouldBeTrue();
+        listed.Value!.Single(s => s.Name == "MaxRows").Description.ShouldBe("The most rows a query reads");
+        listed.Value!.Single(s => s.Name == "MaxDepth").Description.ShouldBeNull();
+        maxRows.Description.ShouldBeNull();
+        _reader.Verify(r => r.ReadMany(ServerSettingDescriptionType.OptionName, DescriptionTextSubType.OptionName,
+            It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 2 && ids.Contains(maxRows.Id) && ids.Contains(maxDepth.Id)), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task AReadThatFailsFailsTheAnswerAndNoTextStandsInForIt()
+    {
+        Platform("MaxRows", "500");
+        _reader.Setup(r => r.ReadMany(ServerSettingDescriptionType.OptionName, DescriptionTextSubType.OptionName, It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyDictionary<Guid, DescriptionEntry>>.Failure(new GenericMessage("DescriptionLanguageNotStated")));
+
+        var one = await Create().Get(SettingScope.ForTenant(Tenant), "MaxRows", TestContext.Current.CancellationToken);
+        var all = await Create().List(SettingScope.ForTenant(Tenant), TestContext.Current.CancellationToken);
+
+        one.IsFailure.ShouldBeTrue();
+        all.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task APlatformValueSetForASettingWithNoRowSavesARowThatCarriesNoText()
+    {
+        var saved = new List<IServerSettingImplementationConfiguration>();
+        _serverProvider.Setup(p => p.Save(It.IsAny<IServerSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((IServerSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => { saved.Add(row); Keep(_server, row); })
+            .ReturnsAsync(GenericResult.Success());
+
+        var set = await Create().Set(SettingScope.ForPlatform(), SettingDefinitions.DescriptionLanguage, "en-US", locked: false, TestContext.Current.CancellationToken);
+
+        set.IsSuccess.ShouldBeTrue();
+        saved.Single().Name.ShouldBe(SettingDefinitions.DescriptionLanguage);
+        saved.Single().Description.ShouldBeNull();
     }
 
     [Fact]

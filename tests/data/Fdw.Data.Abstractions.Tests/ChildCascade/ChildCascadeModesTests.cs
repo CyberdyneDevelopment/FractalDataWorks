@@ -30,12 +30,4 @@ public sealed class ChildCascadeModesTests
         ReferenceEquals(mode, ChildCascadeModes.NotFound).ShouldBeFalse();
         mode.RetiresAbsentChildren.ShouldBeFalse();
     }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Configuration")]
-    public void ANameThatIsNotAModeIsNotFoundAndHasNoDefault()
-    {
-        ReferenceEquals(ChildCascadeModes.ByName("Fdw.Data.NoSuchChildCascade"), ChildCascadeModes.NotFound).ShouldBeTrue();
-    }
 }

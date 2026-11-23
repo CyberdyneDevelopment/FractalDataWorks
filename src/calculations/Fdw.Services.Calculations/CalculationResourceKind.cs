@@ -21,7 +21,7 @@ public sealed class CalculationResourceKind : WorkspaceResourceKindBase
     /// own data, not a shared facility other projects read through.
     /// </remarks>
     public CalculationResourceKind()
-        : base("Calculation", canBeOwned: true)
+        : base("Calculation", canBeOwned: true, releasedOnArchive: false)
     {
     }
 }

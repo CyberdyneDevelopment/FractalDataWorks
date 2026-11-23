@@ -97,6 +97,10 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
     /// <value>The joins to apply, or empty for no joins.</value>
     public IReadOnlyList<IJoinExpression> Joins { get; init; } = [];
 
+    /// <summary>Gets or sets the containers whose rows the query stacks under its own (UNION ALL branches, FDW-6946).</summary>
+    /// <value>The branches after the query's own, or empty for a query that stacks nothing.</value>
+    public IReadOnlyList<IUnionBranch> Unions { get; init; } = [];
+
     /// <inheritdoc />
     public bool ReadsForWrite { get; init; }
 }

@@ -222,25 +222,4 @@ public sealed class SchemaApiClientTests
             () => sut.DiscoverSchema(TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Api")]
-    public async Task ExecuteDdlSendsCorrectRequest()
-    {
-        var expected = new ExecuteDdlResponse { Success = true, Message = "OK" };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(expected)
-        });
-        var sut = CreateClient(handler, "MyConn");
-
-        var result = await sut.ExecuteDdl("CREATE TABLE Test (Id INT)", TestContext.Current.CancellationToken);
-
-        handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/connections/MyConn/execute-ddl");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value!.Success.ShouldBeTrue();
-    }
 }

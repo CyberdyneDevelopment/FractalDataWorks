@@ -27,6 +27,7 @@ using Microsoft.Extensions.Options;
 using IAspNetAuthorizationHandler = Microsoft.AspNetCore.Authorization.IAuthorizationHandler;
 using IAspNetAuthorizationPolicyProvider = Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider;
 using Fdw.Results;
+using Fdw.ServiceTypes;
 
 namespace Fdw.Services.Authorization;
 
@@ -38,6 +39,17 @@ namespace Fdw.Services.Authorization;
 [Implementation(typeof(AuthorizationServiceTypes), "Default")]
 public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGenericService, IAuthorizationFactory>
 {
+    // The read caps of one person's authorization (FDW-7103), by the key a host states them under (Authorization:Default): the most grant rows their roles
+    // may hold and the most role assignments, each a lookup that carries a key per row. A host changes one with ServiceTypeDefaults.Override before Register.
+    private static readonly IReadOnlyDictionary<string, object> Defaults = new Dictionary<string, object>(StringComparer.Ordinal)
+    {
+        ["MaxGrantRows"] = 20000,
+        ["MaxRoleAssignments"] = 1000,
+    };
+
+    /// <inheritdoc />
+    public override IReadOnlyDictionary<string, object> DeclaredDefaults => Defaults;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultAuthorizationServiceType"/> class.
     /// </summary>
@@ -51,9 +63,20 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             "Default authorization service with ASP.NET Core policy bridge and database-backed permissions",
             defaultContainerName: "Role")
     {
+        // The permission, role and organization role providers write each description with the descriptions writer, in the unit of the write (FDW-6208): a host that registered this service
+        // type without the Descriptions service type is refused at Initialize with a coded message, never given a provider that fails on its first save.
+        Requires<Fdw.Services.Descriptions.IDescriptionWriter>(AuthorizationDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         Registration((builder, loggerFactory) =>
         {
+            var limitsLogger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DefaultAuthorizationServiceType>();
+            var maxGrantRows = DeclaredSetting.ConfiguredCount(builder, ConfigurationKey, this, "MaxGrantRows", limitsLogger);
+            if (!maxGrantRows.IsSuccess)
+                return maxGrantRows.ToNewResult<IHostApplicationBuilder>();
 
+            var maxRoleAssignments = DeclaredSetting.ConfiguredCount(builder, ConfigurationKey, this, "MaxRoleAssignments", limitsLogger);
+            if (!maxRoleAssignments.IsSuccess)
+                return maxRoleAssignments.ToNewResult<IHostApplicationBuilder>();
 
             builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
             builder.Services.TryAddSingleton<IUserPermissions>(sp =>
@@ -136,7 +159,9 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<ILogger<RoleConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", "Role",
                     sp.GetRequiredService<IUserRoleConfigurationProvider>(),
-                    sp.GetRequiredService<IRolePermissionConfigurationProvider>());
+                    sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
                 domain.Register("Role", sp.GetRequiredService<IRoleImplementationConfigurationProvider>());
                 return domain;
             });
@@ -157,10 +182,10 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             // The roles one person holds, read by the person's id and not by reading every assignment (FDW-2668).
             builder.Services.TryAddSingleton<IUserRolesHeld>(sp => new UserRolesHeld(
-                sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz",
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", maxRoleAssignments.Value,
                 sp.GetRequiredService<ILogger<UserRolesHeld>>()));
             builder.Services.TryAddSingleton<IUserPermissionGrants>(sp => new UserPermissionGrants(
-                sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz",
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", maxGrantRows.Value,
                 sp.GetRequiredService<ILogger<UserPermissionGrants>>()));
 
             // The roles an organization defines for its own members (FDW-1593): tenant.OrganizationRole (domain), tenant.OrganizationRoleConfiguration
@@ -173,7 +198,9 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             {
                 var domain = new OrganizationRoleConfigurationProvider(
                     sp.GetRequiredService<ILogger<OrganizationRoleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "tenant", "OrganizationRole");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "tenant", "OrganizationRole",
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
                 domain.Register("OrganizationRole", sp.GetRequiredService<IOrganizationRoleImplementationConfigurationProvider>());
                 return domain;
             });
@@ -216,7 +243,9 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             {
                 var domain = new PermissionConfigurationProvider(
                     sp.GetRequiredService<ILogger<PermissionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", "Permission");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", "Permission",
+                    sp.GetRequiredService<Fdw.Services.Descriptions.IDescriptionWriter>(),
+                    sp.GetRequiredService<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>());
                 domain.Register("Permission", sp.GetRequiredService<IPermissionImplementationConfigurationProvider>());
                 return domain;
             });

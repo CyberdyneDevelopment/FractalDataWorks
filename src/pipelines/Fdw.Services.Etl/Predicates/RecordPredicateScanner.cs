@@ -134,8 +134,14 @@ internal sealed class RecordPredicateScanner
         var keyword = TakeFrom(RecordPredicateKeywords.TextWords, requireWord: true);
         if (keyword is not null)
         {
+            var match = RecordTextMatches.ByWord(keyword);
+            if (ReferenceEquals(match, RecordTextMatches.NotFound))
+            {
+                return Fail($"'{keyword}' is not a text comparison");
+            }
+
             var text = ReadValue(out _);
-            return text is null ? null : new TextRecordPredicate(fieldName, keyword, text);
+            return text is null ? null : new TextRecordPredicate(fieldName, match, text);
         }
 
         if (AtBoundary())
@@ -160,7 +166,13 @@ internal sealed class RecordPredicateScanner
             return new NullCheckRecordPredicate(fieldName, wantsNull: string.Equals(comparator, RecordPredicateKeywords.Equal, StringComparison.Ordinal));
         }
 
-        return new ComparisonRecordPredicate(fieldName, comparator, value);
+        var ordering = RecordOrderings.ByWord(comparator);
+        if (!isEquality && ReferenceEquals(ordering, RecordOrderings.NotFound))
+        {
+            return Fail($"'{comparator}' is not a comparison");
+        }
+
+        return new ComparisonRecordPredicate(fieldName, comparator, value, ordering);
     }
 
     // A value is a quoted text, or the bare text up to the next 'and' / 'or' / '&&' / '||' or the parenthesis that

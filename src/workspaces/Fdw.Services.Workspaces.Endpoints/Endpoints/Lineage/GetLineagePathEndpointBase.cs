@@ -41,7 +41,7 @@ public abstract class GetLineagePathEndpointBase : LineageEndpointBase<LineagePa
 
     private async Task<IGenericResult<LineagePathResponse>> Trace(LineagePathRequest request, CancellationToken ct)
     {
-        var query = LineageRequests.Path(request, LineageLogger);
+        var query = LineageRequests.Path(request, Resolve<WorkspaceLimits>(), LineageLogger);
         if (query.IsFailure) return query.ToNewResult<LineagePathResponse>();
 
         var graph = await Reader.Read(request.Workspace, User, readCategories: false, ct).ConfigureAwait(false);

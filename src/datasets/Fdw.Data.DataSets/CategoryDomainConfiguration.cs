@@ -20,6 +20,9 @@ public partial class CategoryDomainConfiguration : DomainConfiguration
     public string DisplayName { get; set; } = string.Empty;
 
     /// <summary>Gets or sets what the category is for.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-6815), which the domain table
+    // cannot hold, so the column is gone; the provider fills the member for every page it reads. Off the mapper, it is no list field either.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the identity of the category it sits under; null for a top-level category.</summary>

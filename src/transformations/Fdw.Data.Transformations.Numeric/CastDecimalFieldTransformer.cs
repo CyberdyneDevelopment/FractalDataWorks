@@ -40,19 +40,7 @@ public sealed class CastDecimalFieldTransformer : FieldTransformationBase
             return Task.FromResult(GenericResult<object?>.Success(null));
         }
 
-        return Task.FromResult<IGenericResult<object?>>(input switch
-        {
-            decimal d => GenericResult<object?>.Success(d),
-            double d => GenericResult<object?>.Success(Convert.ToDecimal(d)),
-            float f => GenericResult<object?>.Success(Convert.ToDecimal(f)),
-            int i => GenericResult<object?>.Success(Convert.ToDecimal(i)),
-            long l => GenericResult<object?>.Success(Convert.ToDecimal(l)),
-            short s => GenericResult<object?>.Success(Convert.ToDecimal(s)),
-            byte b => GenericResult<object?>.Success(Convert.ToDecimal(b)),
-            _ => throw new InvalidOperationException(
-                $"CastDecimal does not support input type '{input.GetType().Name}'. " +
-                "Supported types: decimal, double, float, int, long, short, byte.")
-        });
+        return Task.FromResult(GenericResult<object?>.Success(NumericInputKinds.ToDecimal(input, "CastDecimal")));
     }
 
 }

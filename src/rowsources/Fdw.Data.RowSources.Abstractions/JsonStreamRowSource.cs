@@ -1,4 +1,3 @@
-using Fdw.Conventions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -21,7 +20,7 @@ namespace Fdw.Data.RowSources.Json.Abstractions;
 /// A malformed document ends the read with <see cref="ReadFailure"/> set, after every record before it. The stream is not owned:
 /// whoever opened it and asked the format for this reader disposes it.
 /// </remarks>
-public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReader, IReportsReadFailure
+public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReader, IReportsReadFailure, IJsonRowSink
 {
     [SuppressMessage("Reliability", "CA2213:Disposable fields should be disposed", Justification = "Not owned: the content stream; whoever opened it and asked the format for this reader (StreamedFileRecordSource for a file) disposes it.")]
     private readonly Stream _stream;
@@ -194,7 +193,6 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
         return true;
     }
 
-    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // JSON parsing — type-based property extraction with nested object/array flattening
     private void ReadObjectProperties(JsonElement element, string prefix)
     {
         foreach (var property in element.EnumerateObject())
@@ -203,123 +201,28 @@ public sealed class JsonStreamRowSource : IRowSourceReader, IAsyncRowSourceReade
                 ? property.Name
                 : $"{prefix}{_options.FlattenSeparator}{property.Name}";
 
-            switch (property.Value.ValueKind)
-            {
-                case JsonValueKind.Object when _options.FlattenNestedObjects:
-                    ReadObjectProperties(property.Value, fieldName);
-                    break;
-
-                case JsonValueKind.Array when _options.FlattenNestedObjects:
-                    FlattenArrayByIndex(property.Value, fieldName);
-                    break;
-
-                case JsonValueKind.Null:
-                    AddFieldValue(fieldName, null);
-                    break;
-
-                case JsonValueKind.String:
-                    AddFieldValue(fieldName, property.Value.GetString());
-                    break;
-
-                case JsonValueKind.Number:
-                    if (property.Value.TryGetInt64(out var longValue))
-                    {
-                        AddFieldValue(fieldName, longValue);
-                    }
-                    else if (property.Value.TryGetDouble(out var doubleValue))
-                    {
-                        AddFieldValue(fieldName, doubleValue);
-                    }
-                    else
-                    {
-                        AddFieldValue(fieldName, property.Value.GetRawText());
-                    }
-
-                    break;
-
-                case JsonValueKind.True:
-                    AddFieldValue(fieldName, true);
-                    break;
-
-                case JsonValueKind.False:
-                    AddFieldValue(fieldName, false);
-                    break;
-
-                case JsonValueKind.Array:
-                    // FlattenNestedObjects is false: store array as raw JSON string
-                    AddFieldValue(fieldName, property.Value.GetRawText());
-                    break;
-
-                case JsonValueKind.Object:
-                    // Store objects as JSON strings if not flattening
-                    AddFieldValue(fieldName, property.Value.GetRawText());
-                    break;
-
-                default:
-                    AddFieldValue(fieldName, property.Value.GetRawText());
-                    break;
-            }
+            JsonRowValueKinds.Visit(this, fieldName, property.Value, _options.FlattenNestedObjects);
         }
     }
 
-    [ConventionOverride(MaxCyclomaticComplexity = 15)]  // JSON parsing — recursive scalar extraction per array element
     private void FlattenArrayByIndex(JsonElement array, string fieldName)
     {
         var index = 0;
         foreach (var element in array.EnumerateArray())
         {
-            var indexedName = $"{fieldName}{_options.FlattenSeparator}{index}";
-
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.Object:
-                    ReadObjectProperties(element, indexedName);
-                    break;
-
-                case JsonValueKind.Array:
-                    FlattenArrayByIndex(element, indexedName);
-                    break;
-
-                case JsonValueKind.Null:
-                    AddFieldValue(indexedName, null);
-                    break;
-
-                case JsonValueKind.String:
-                    AddFieldValue(indexedName, element.GetString());
-                    break;
-
-                case JsonValueKind.Number:
-                    if (element.TryGetInt64(out var longValue))
-                    {
-                        AddFieldValue(indexedName, longValue);
-                    }
-                    else if (element.TryGetDouble(out var doubleValue))
-                    {
-                        AddFieldValue(indexedName, doubleValue);
-                    }
-                    else
-                    {
-                        AddFieldValue(indexedName, element.GetRawText());
-                    }
-
-                    break;
-
-                case JsonValueKind.True:
-                    AddFieldValue(indexedName, true);
-                    break;
-
-                case JsonValueKind.False:
-                    AddFieldValue(indexedName, false);
-                    break;
-
-                default:
-                    AddFieldValue(indexedName, element.GetRawText());
-                    break;
-            }
-
+            JsonRowValueKinds.Visit(this, $"{fieldName}{_options.FlattenSeparator}{index}", element, nestedFlattened: true);
             index++;
         }
     }
+
+    /// <inheritdoc />
+    void IJsonRowSink.AddValue(string name, object? value) => AddFieldValue(name, value);
+
+    /// <inheritdoc />
+    void IJsonRowSink.FlattenObject(JsonElement element, string prefix) => ReadObjectProperties(element, prefix);
+
+    /// <inheritdoc />
+    void IJsonRowSink.FlattenArray(JsonElement array, string name) => FlattenArrayByIndex(array, name);
 
     private void AddFieldValue(string name, object? value)
     {

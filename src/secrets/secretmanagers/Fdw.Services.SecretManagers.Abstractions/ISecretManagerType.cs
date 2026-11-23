@@ -80,4 +80,15 @@ public interface ISecretManagerType : IServiceType
     /// Gets the cloud provider or platform for this secret management service.
     /// </summary>
     string CloudProvider { get; }
+
+    /// <summary>
+    /// Gets whether a manager of this kind can be built from its declaration alone (FDW-6360): from its own body and its factory, with no
+    /// gateway, no configuration store and no other service the host has not yet built.
+    /// </summary>
+    /// <remarks>
+    /// A kind that says yes can be declared in <c>configurationSchema.json</c> and read before any provider exists, so a connection that opens
+    /// the configuration store can take its secret from it. A kind that reads its own settings or secrets from a database or a vault says no, and a host
+    /// that declares one in the schema stops with a coded message naming it. A kind has no default: each states it.
+    /// </remarks>
+    bool BuildableFromDeclarationAlone { get; }
 }

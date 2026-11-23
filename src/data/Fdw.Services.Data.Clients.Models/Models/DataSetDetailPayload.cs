@@ -41,6 +41,10 @@ public sealed class DataSetDetailPayload
     public IReadOnlyList<DataSetSourcePayload> Sources { get; set; } = Array.Empty<DataSetSourcePayload>();
     /// <summary>Gets or sets the joins.</summary>
     public IReadOnlyList<DataSetJoinPayload> Joins { get; set; } = Array.Empty<DataSetJoinPayload>();
+    /// <summary>Gets or sets how the data set's sources combine, "Join" or "Union" (FDW-6946).</summary>
+    public string? SourceCombination { get; set; }
+    /// <summary>Gets or sets a Federated data set's own federation option values (FDW-6901).</summary>
+    public IReadOnlyList<DataSetFederationOptionPayload> FederationOptions { get; set; } = [];
     /// <summary>Gets or sets the caching configuration.</summary>
     public DataSetCachingPayload Caching { get; set; } = new();
     /// <summary>Gets or sets the stored filter conditions applied when querying this DataSet.</summary>

@@ -21,6 +21,7 @@ public sealed class GraphStageListBindingMappingTests
         once.Settings["batchSize"] = Json("100");
         return new GraphPayload
         {
+            Implementation = "Graph",
             Name = "DistinctBound",
             IsEnabled = true,
             LinkCapacity = 4,
@@ -68,6 +69,7 @@ public sealed class GraphStageListBindingMappingTests
         ordered.Settings["batchSize"] = Json("100");
         var payload = new GraphPayload
         {
+            Implementation = "Graph",
             Name = "SortBound",
             IsEnabled = true,
             LinkCapacity = 4,

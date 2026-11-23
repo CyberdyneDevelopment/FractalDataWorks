@@ -94,11 +94,13 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
         IReadOnlyList<string> returned)
     {
         var dialect = dbPath.Dialect;
-        var pkFieldName = container.GetPrimaryKeyFieldName();
+        // The primary key's columns are never in SET, with a filter or without one (FDW-6309): without a filter the key is the WHERE,
+        // and with one a record that carries its key would write that one key value onto every row the filter matches.
+        var keyColumns = container.PrimaryKeyFieldNames();
 
         var updateFields = container.Schema.Fields
             .Where(f =>
-                !string.Equals(f.Name, pkFieldName, StringComparison.OrdinalIgnoreCase)
+                !keyColumns.Contains(f.Name, StringComparer.OrdinalIgnoreCase)
                 && !f.IsIdentity
                 && !f.IsComputed
                 && !f.IsSystemProvided)
@@ -129,24 +131,37 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
         }
         else
         {
-            var pkName = container.GetPrimaryKeyFieldName();
-            var pkField = pkName != null ? container.Schema?.Fields?.FirstOrDefault(f => string.Equals(f.Name, pkName, StringComparison.OrdinalIgnoreCase)) : null;
-            if (pkField == null)
+            // The statement states no rows, so the container's primary key does: every column of it, never the first alone, or an UPDATE
+            // writes every row that shares one column's value (FDW-6309). The key columns are the WHERE and so are not in SET.
+            var keyNames = container.PrimaryKeyFieldNames();
+            if (keyNames.Count == 0)
                 throw new InvalidOperationException($"Container {container.Name} has no primary key and no filter provided");
 
-            // No filter and no key in the record names no rows; an UPDATE without a WHERE writes every row, so it is refused.
-            if (!RowValues.TryRead(data, pkField.Name, out var pkValue, out _))
-                return GenericResult<SqliteCommand>.Failure(
-                    SqliteDataResultCodes.ByName("MissingPrimaryKeyValue"),
-                    ResultDetails.Create("Container", container.Name, "PrimaryKeyField", pkField.Name));
+            var conditions = new List<string>(keyNames.Count);
+            for (var i = 0; i < keyNames.Count; i++)
+            {
+                var keyName = keyNames[i];
+                var keyField = container.Schema.Fields.FirstOrDefault(f => string.Equals(f.Name, keyName, StringComparison.OrdinalIgnoreCase));
+                if (keyField == null)
+                    throw new InvalidOperationException($"Container {container.Name} has no primary key and no filter provided");
 
-            if (pkValue == null)
-                return GenericResult<SqliteCommand>.Failure(
-                    SqliteDataResultCodes.ByName("NullPrimaryKeyValue"),
-                    ResultDetails.Create("PrimaryKeyField", pkField.Name));
+                // No filter and no key in the record names no rows; an UPDATE without a WHERE writes every row, so it is refused.
+                if (!RowValues.TryRead(data, keyField.Name, out var keyValue, out _))
+                    return GenericResult<SqliteCommand>.Failure(
+                        SqliteDataResultCodes.ByName("MissingPrimaryKeyValue"),
+                        ResultDetails.Create("Container", container.Name, "PrimaryKeyField", keyField.Name));
 
-            AddParameter(command, "where_pk", pkValue);
-            command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {prefix}where_pk";
+                if (keyValue == null)
+                    return GenericResult<SqliteCommand>.Failure(
+                        SqliteDataResultCodes.ByName("NullPrimaryKeyValue"),
+                        ResultDetails.Create("PrimaryKeyField", keyField.Name));
+
+                var parameterName = keyNames.Count == 1 ? "where_pk" : $"where_pk{i}";
+                AddParameter(command, parameterName, keyValue);
+                conditions.Add($"{dialect.QuoteIdentifier(keyField.Name)} = {prefix}{parameterName}");
+            }
+
+            command.CommandText += $" WHERE {string.Join(" AND ", conditions)}";
         }
 
         if (returned.Count > 0)

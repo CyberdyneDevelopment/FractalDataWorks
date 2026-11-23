@@ -153,6 +153,13 @@ public abstract class SecretManagerTypeBase<TService, TFactory, TConfiguration> 
     /// </remarks>
     public bool SupportsTagging { get; }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Abstract and without a default: every kind states it, so a kind that forgot cannot be taken for one that can be built alone. The empty
+    /// kind the type collection returns for an unknown name answers false.
+    /// </remarks>
+    public abstract bool BuildableFromDeclarationAlone { get; }
+
     /// <summary>
     /// Gets the priority for provider selection when multiple providers are available.
     /// </summary>

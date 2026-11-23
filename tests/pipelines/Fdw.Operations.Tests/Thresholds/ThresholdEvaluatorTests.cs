@@ -256,7 +256,7 @@ public sealed class ThresholdEvaluatorTests
     public void TheConsequencesAreTheFeatureStatesPlusHoldNewRunsAndAlertNeedsAPolicy()
     {
         EscalationTypes.All().Select(type => type.Name).OrderBy(name => name, StringComparer.Ordinal).ToList()
-            .ShouldBe(["Alert", "DisableConnection", "DisablePipeline", "HoldNewRuns", "Notify", "StopRun"]);
+            .ShouldBe(["Alert", "DisableConnection", "DisablePipeline", "HoldNewRuns", "Notify", "PauseSchedule", "StopRun"]);
         EscalationTypes.ByName("Alert").NeedsPolicy.ShouldBeTrue();
         EscalationTypes.ByName("Notify").NeedsNotificationRules.ShouldBeTrue();
         EscalationTypes.ByName("StopRun").ActsOnRun.ShouldBeTrue();

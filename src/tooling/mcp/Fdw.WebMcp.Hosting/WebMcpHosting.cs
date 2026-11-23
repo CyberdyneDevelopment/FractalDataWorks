@@ -3,6 +3,7 @@ using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.WebMcp.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -105,7 +106,7 @@ public sealed class WebMcpHosting
         }
 
         var settings = ReadSettings(host.Services, logger);
-        if (settings.IsFailure)
+        if (settings.IsFailure || settings.Value is not { } resolved)
         {
             return settings.ToNewResult<IHost>();
         }
@@ -118,10 +119,10 @@ public sealed class WebMcpHosting
         registry.Resolve(
             DeclaredWebMcpTools.Declarations,
             endpoints.DataSources.SelectMany(static source => source.Endpoints).ToList(),
+            resolved.SchemaMaxDepth,
             logger);
 
         var generator = host.Services.GetRequiredService<WebMcpJsGenerator>();
-        var resolved = settings.Value!;
         endpoints.MapGet(ScriptPath, (HttpContext httpContext) => Script(httpContext, generator.Generate(resolved)))
             .ExcludeFromDescription();
 
@@ -168,6 +169,11 @@ public sealed class WebMcpHosting
         if (services.GetService<ISecretManagerProvider>() is null)
         {
             return GenericResult<WebMcpHostSettings>.Failure(WebMcpLog.NotRegistered(logger, nameof(ISecretManagerProvider)));
+        }
+
+        if (services.GetService<IEffectiveSettingsProvider>() is null)
+        {
+            return GenericResult<WebMcpHostSettings>.Failure(WebMcpLog.NotRegistered(logger, nameof(IEffectiveSettingsProvider)));
         }
 
         // Why blocking: Initialize is synchronous and runs once, before the host takes a request.

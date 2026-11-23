@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Tags.Abstractions;
 using Fdw.Services.Tags.Configuration;
@@ -27,6 +28,7 @@ public sealed class TagService : ITagService
     private readonly ITagConfigurationProvider _tags;
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly ITagScope _scope;
+    private readonly ICitedConfigurations _cited;
     private readonly string _dataStoreName;
     private readonly ILogger _logger;
 
@@ -34,18 +36,21 @@ public sealed class TagService : ITagService
     /// <param name="tags">Reads and writes the tags.</param>
     /// <param name="gateways">Supplies the gateway onto the configuration store, for the link tables.</param>
     /// <param name="scope">Decides whether a tag may be put on a thing.</param>
+    /// <param name="cited">Says whether the thing a tag is put on exists, by the domain its option of TaggableKinds cites.</param>
     /// <param name="dataStoreName">The configuration connection the tag and link tables live on.</param>
     /// <param name="logger">The logger.</param>
     public TagService(
         ITagConfigurationProvider tags,
         IConfigurationGatewayProvider gateways,
         ITagScope scope,
+        ICitedConfigurations cited,
         string dataStoreName,
         ILogger<TagService>? logger = null)
     {
         _tags = tags;
         _gateways = gateways;
         _scope = scope;
+        _cited = cited;
         _dataStoreName = dataStoreName;
         _logger = logger ?? NullLogger<TagService>.Instance;
     }
@@ -85,6 +90,12 @@ public sealed class TagService : ITagService
 
         var tag = await Find(tagName, cancellationToken).ConfigureAwait(false);
         if (tag.IsFailure || tag.Value is not { } found) return tag;
+
+        // The thing's key is a citation, not a foreign key, for a domain whose row's Id is unique among current rows only (FDW-6221).
+        var cited = await _cited.StateOf(resolved.Kind.Cites, thingId, cancellationToken).ConfigureAwait(false);
+        if (cited.IsFailure) return cited;
+        if (cited.Value == CitedStates.Absent) return Refuse<bool>("TagThingNotFound", "kind", kind, "thingId", thingId.ToString("D"));
+        if (cited.Value == CitedStates.Retired) return Refuse<bool>("TagThingRetired", "kind", kind, "thingId", thingId.ToString("D"));
 
         var allowed = await _scope.Allows(found, resolved.Kind, thingId, cancellationToken).ConfigureAwait(false);
         if (allowed.IsFailure) return allowed;

@@ -14,6 +14,9 @@ public sealed class DataSetVariationResponse
     /// <summary>Gets or sets the variation's display name, when it has one.</summary>
     public string? DisplayName { get; set; }
 
+    /// <summary>Gets or sets the variation's abbreviation, when it has one.</summary>
+    public string? Abbreviation { get; set; }
+
     /// <summary>Gets or sets the workspace that owns it.</summary>
     public string WorkspaceName { get; set; } = string.Empty;
 

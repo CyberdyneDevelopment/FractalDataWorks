@@ -45,6 +45,15 @@ public partial class PipelineExecutionDbRecord
     /// <summary>Gets or sets the error message if execution failed.</summary>
     public string? ErrorMessage { get; set; }
 
-    /// <summary>Gets or sets who executed the pipeline.</summary>
-    public string? ExecutedBy { get; set; }
+    /// <summary>Gets or sets the person the run acted as (FDW-6519), or null for a run that acts as a tenant or a row written before 1.6.0.</summary>
+    public Guid? ActingPersonId { get; set; }
+
+    /// <summary>Gets or sets the name of the run mode that ran it (FDW-6519), or null on a row written before 1.6.0.</summary>
+    public string? RunMode { get; set; }
+
+    /// <summary>Gets or sets the application name of the host process that ran it (FDW-6519), or null on a row written before 1.6.0.</summary>
+    public string? ExecutingHost { get; set; }
+
+    /// <summary>Gets or sets the slot's own name as the slot file states it (FDW-6519), or null when the host does not run on a slot.</summary>
+    public string? ExecutingSlot { get; set; }
 }

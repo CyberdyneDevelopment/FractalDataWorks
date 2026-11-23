@@ -19,6 +19,9 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 public partial class RoslynWorkspaceConnectionConfiguration : IConnectionImplementationConfiguration
 {
     /// <inheritdoc/>
+    // Why [NotStored]: a connection's description is a row of the descriptions table under the description type Connection, filled by the connection provider once for every
+    // set it reads and written in the unit of the connection's save (FDW-6208); the column is gone from conn.Connection, so no read selects it and no save writes it.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc/>

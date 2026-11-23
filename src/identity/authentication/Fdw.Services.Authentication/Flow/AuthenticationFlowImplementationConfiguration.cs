@@ -27,6 +27,9 @@ public sealed partial class AuthenticationFlowImplementationConfiguration : IAut
 
 
     /// <inheritdoc/>
+    // Why [NotStored]: a flow's description is a row of the descriptions table under the description type AuthenticationFlow, written in the unit of the flow's save (FDW-6208);
+    // the column is gone from auth.AuthenticationFlowConfiguration. It is never filled on load, so it is null until a caller states one, and it has no initializer.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc/>

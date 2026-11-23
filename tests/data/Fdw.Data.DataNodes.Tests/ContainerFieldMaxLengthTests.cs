@@ -28,7 +28,7 @@ public sealed class ContainerFieldMaxLengthTests
                 {
                     Id = Guid.NewGuid(),
                     Name = "data",
-                    Containers = [new DataContainerConfiguration { Id = Guid.NewGuid(), Name = "DataConfigurationRule", Fields = [.. fields] }],
+                    Containers = [new DataContainerConfiguration { Id = Guid.NewGuid(), Name = "DataConfigurationRule", TypeId = "Endpoint", Fields = [.. fields] }],
                 },
             ],
         };

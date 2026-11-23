@@ -49,14 +49,15 @@ public sealed class EtlPipelineExecutionRecord
 
     /// <summary>
     /// Gets or sets when the pipeline execution started. Null while the run is queued; the executor
-    /// sets it when the run moves to Running. The row's CreateDate is metadata and never stands in for it.
+    /// sets it when the run moves to Running. The row's CreateDate is metadata and never stands in for it. A <c>DateTimeOffset</c>, as the column is (FDW-7403: a <c>DateTime</c> here
+    /// made the mapper fail on every row that had started).
     /// </summary>
-    public DateTime? StartedAt { get; set; }
+    public DateTimeOffset? StartedAt { get; set; }
 
     /// <summary>
     /// Gets or sets when the pipeline execution completed. Null if still running.
     /// </summary>
-    public DateTime? CompletedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
 
     /// <summary>
     /// Gets or sets the number of records extracted from the source.
@@ -89,7 +90,22 @@ public sealed class EtlPipelineExecutionRecord
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Gets or sets the user or service that executed the pipeline.
+    /// Gets or sets the person the run acts as (FDW-6519), or null for a run that acts as a tenant. Stated by the writer of every new row from the run's origin.
     /// </summary>
-    public string? ExecutedBy { get; set; }
+    public Guid? ActingPersonId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the run mode that ran it (FDW-6519). Stated by the writer of every new row; null only on a row written before 1.6.0.
+    /// </summary>
+    public string? RunMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the application name of the host process that ran it (FDW-6519). Stated by the writer of every new row; null only on a row written before 1.6.0.
+    /// </summary>
+    public string? ExecutingHost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the slot's own name as the slot file states it (FDW-6519), or null when the host does not run on a slot.
+    /// </summary>
+    public string? ExecutingSlot { get; set; }
 }

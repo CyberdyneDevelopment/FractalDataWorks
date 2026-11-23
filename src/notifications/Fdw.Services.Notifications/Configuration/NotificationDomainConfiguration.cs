@@ -29,6 +29,9 @@ public partial class NotificationDomainConfiguration : DomainConfiguration
     /// <summary>Gets or sets the name of the secret the channel reads from its secret manager, when it has one.</summary>
     public string? SecretKeyName { get; set; }
 
-    /// <summary>Gets or sets what the notification is for, kept on the domain row.</summary>
+    /// <summary>Gets or sets what the notification is for.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7203), which the domain table cannot hold, so the
+    // column is gone; the provider fills the member for every page it reads. Off the mapper, it is no list field either.
+    [NotStored]
     public string? Description { get; set; }
 }

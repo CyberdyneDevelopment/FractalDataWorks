@@ -7,7 +7,7 @@ using Fdw.Services.Etl.Graphs.Logging;
 
 namespace Fdw.Services.Etl.Graphs.Building;
 
-/// <summary>Builds a step that reads the data options stored for a column, applies them and keeps the list of values they leave in a variable (FDW-5347).</summary>
+/// <summary>Builds a step that reads the data configuration rules of a column and keeps the list of values they pick in a variable (FDW-5347, FDW-6344).</summary>
 [TypeOption(typeof(FlowStepBuilders), "ReadDataOptions")]
 public sealed class ReadDataOptionsFlowStepBuilder : FlowStepBuilderBase
 {
@@ -23,8 +23,10 @@ public sealed class ReadDataOptionsFlowStepBuilder : FlowStepBuilderBase
     public override IGenericResult<IFlowStep> Create(PipelineComponentConfiguration component, IReadOnlyList<IFlowStep> body, FlowBuildContext context)
     {
         if (component.OptionsDataStoreName is not { } optionsDataStore
-            || component.OptionsContainerName is not { } optionsContainer
+            || component.OptionsContainerName is not { } rulesContainer
+            || component.OptionValuesContainerName is not { } valuesContainer
             || component.DataStoreName is not { } dataStore
+            || component.PathName is not { } pathName
             || component.ContainerName is not { } container
             || component.FieldName is not { } column
             || component.MaxRows is not { } maxRows
@@ -39,6 +41,6 @@ public sealed class ReadDataOptionsFlowStepBuilder : FlowStepBuilderBase
         }
 
         return GenericResult<IFlowStep>.Success(new FlowReadDataOptions(
-            component.Name, gateway, optionsDataStore, optionsContainer, dataStore, container, column, maxRows, resultVariable, context.Logger));
+            component.Name, gateway, optionsDataStore, rulesContainer, valuesContainer, dataStore, pathName, container, column, maxRows, resultVariable, context.Logger));
     }
 }

@@ -142,13 +142,7 @@ public sealed class RecordDictionaryReader : DbDataReader
     public override Guid GetGuid(int ordinal)
     {
         var value = GetValue(ordinal);
-        return value switch
-        {
-            Guid guid => guid,
-            string text => Guid.Parse(text),
-            _ => throw new InvalidCastException(
-                $"Cannot convert value of type '{value.GetType().Name}' to Guid for column '{GetName(ordinal)}'."),
-        };
+        return ReaderValueKinds.OfValue(value).ToGuid(value, GetName(ordinal));
     }
 
     /// <inheritdoc/>
@@ -158,28 +152,14 @@ public sealed class RecordDictionaryReader : DbDataReader
         if (ReferenceEquals(value, DBNull.Value))
             throw new InvalidCastException($"Column '{GetName(ordinal)}' is null; GetString cannot read a null column.");
 
-        return value switch
-        {
-            string text => text,
-            _ => Convert.ToString(value, CultureInfo.InvariantCulture)
-                ?? throw new InvalidCastException($"Cannot convert value of type '{value.GetType().Name}' to string for column '{GetName(ordinal)}'."),
-        };
+        return ReaderValueKinds.OfValue(value).ToText(value, GetName(ordinal));
     }
 
     /// <inheritdoc/>
     public override bool GetBoolean(int ordinal)
     {
         var value = GetValue(ordinal);
-        return value switch
-        {
-            bool flag => flag,
-            string text when bool.TryParse(text, out var parsedBool) => parsedBool,
-            string text when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedInt) => parsedInt != 0,
-            long integral => integral != 0,
-            decimal number => number != 0,
-            double real => real != 0,
-            _ => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
-        };
+        return ReaderValueKinds.OfValue(value).ToBoolean(value);
     }
 
     /// <inheritdoc/>
@@ -203,27 +183,14 @@ public sealed class RecordDictionaryReader : DbDataReader
     public override DateTime GetDateTime(int ordinal)
     {
         var value = GetValue(ordinal);
-        return value switch
-        {
-            DateTime dateTime => dateTime,
-            DateTimeOffset dateTimeOffset => dateTimeOffset.UtcDateTime,
-            string text => DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-            _ => Convert.ToDateTime(value, CultureInfo.InvariantCulture),
-        };
+        return ReaderValueKinds.OfValue(value).ToDateTime(value);
     }
 
     /// <inheritdoc/>
     public override decimal GetDecimal(int ordinal)
     {
         var value = GetValue(ordinal);
-        return value switch
-        {
-            decimal number => number,
-            long integral => integral,
-            double real => (decimal)real,
-            string text => decimal.Parse(text, CultureInfo.InvariantCulture),
-            _ => Convert.ToDecimal(value, CultureInfo.InvariantCulture),
-        };
+        return ReaderValueKinds.OfValue(value).ToDecimal(value);
     }
 
     /// <inheritdoc/>
@@ -277,14 +244,7 @@ public sealed class RecordDictionaryReader : DbDataReader
     private DateTimeOffset GetDateTimeOffset(int ordinal)
     {
         var value = GetValue(ordinal);
-        return value switch
-        {
-            DateTimeOffset dateTimeOffset => dateTimeOffset,
-            DateTime dateTime => new DateTimeOffset(dateTime),
-            string text => DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-            _ => throw new InvalidCastException(
-                $"Cannot convert value of type '{value.GetType().Name}' to DateTimeOffset for column '{GetName(ordinal)}'."),
-        };
+        return ReaderValueKinds.OfValue(value).ToDateTimeOffset(value, GetName(ordinal));
     }
 
     /// <inheritdoc/>

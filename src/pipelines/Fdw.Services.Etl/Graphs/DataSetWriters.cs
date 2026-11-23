@@ -41,7 +41,7 @@ public sealed class DataSetWriters : IDataSetWriters
     /// <inheritdoc/>
     public async Task<IGenericResult<IReadOnlyDictionary<string, IReadOnlyList<DataSetWriter>>>> ByDataSet(CancellationToken cancellationToken = default)
     {
-        var read = await _pipelines.GetFlat(ConfigurationLevels.Children, cancellationToken).ConfigureAwait(false);
+        var read = await _pipelines.GetFlat(ConfigurationLevels.Children, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (read.IsFailure)
             return read.ToNewResult<IReadOnlyDictionary<string, IReadOnlyList<DataSetWriter>>>();
 

@@ -153,7 +153,7 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CONSTRAINT PK_UserRoles PRIMARY KEY (TenantId, UserId)");
+        result.Value.ShouldContain("CONSTRAINT [PK_UserRoles] PRIMARY KEY ([TenantId], [UserId])");
     }
 
     [Fact]
@@ -280,8 +280,8 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CONSTRAINT FK_Child_Parent");
-        result.Value.ShouldContain("CONSTRAINT FK_Child_Category");
+        result.Value.ShouldContain("CONSTRAINT [FK_Child_Parent]");
+        result.Value.ShouldContain("CONSTRAINT [FK_Child_Category]");
         result.Value.ShouldContain("ON DELETE CASCADE");
         result.Value.ShouldContain("ON DELETE SET NULL");
     }
@@ -300,7 +300,7 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("DROP TABLE TempTable");
+        result.Value.ShouldContain("DROP TABLE [TempTable]");
     }
 
     [Fact]
@@ -322,7 +322,7 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("DROP INDEX IX_Temp ON TempTable");
+        result.Value.ShouldContain("DROP INDEX [IX_Temp] ON [TempTable]");
     }
 
     [Fact]
@@ -351,7 +351,7 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("ON PlainTable (Col1, Col2)");
+        result.Value.ShouldContain("ON [PlainTable] ([Col1], [Col2])");
     }
 
     [Fact]
@@ -382,7 +382,7 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("(TenantId, Status, CreatedDate)");
+        result.Value.ShouldContain("([TenantId], [Status], [CreatedDate])");
     }
 
     [Fact]
@@ -412,8 +412,8 @@ public sealed class MsSqlDdlGeneratorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CONSTRAINT PK_Users PRIMARY KEY (Id)");
-        result.Value.ShouldContain("CONSTRAINT UQ_Users_Email UNIQUE (Email)");
-        result.Value.ShouldContain("CONSTRAINT UQ_Users_Code UNIQUE (Code)");
+        result.Value.ShouldContain("CONSTRAINT [PK_Users] PRIMARY KEY ([Id])");
+        result.Value.ShouldContain("CONSTRAINT [UQ_Users_Email] UNIQUE ([Email])");
+        result.Value.ShouldContain("CONSTRAINT [UQ_Users_Code] UNIQUE ([Code])");
     }
 }

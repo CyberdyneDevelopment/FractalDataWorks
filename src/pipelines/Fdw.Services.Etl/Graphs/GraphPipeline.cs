@@ -60,6 +60,11 @@ public sealed class GraphPipeline : EtlPipelineBase
     private readonly RunningFlows? _runningFlows;
     private readonly IThresholdEvaluator? _thresholds;
     private readonly TimeProvider? _clock;
+    private readonly FlowBuildContributions? _contributions;
+    private readonly IPipelineRunOutputs? _runOutputs;
+    private readonly IPipelineStepClaims? _stepClaims;
+    private readonly IRunStream? _runStream;
+    private readonly FlowAskServices? _askServices;
     private int _isExecuting;
 
     /// <summary>Initializes a new instance of the <see cref="GraphPipeline"/> class.</summary>
@@ -80,6 +85,11 @@ public sealed class GraphPipeline : EtlPipelineBase
     /// <param name="runningFlows">What the live view reads: the run is listed there, component by component, while it runs (optional: a host without the view passes none).</param>
     /// <param name="thresholds">Judges what each component took in, passed on, rejected and how long it ran against the thresholds of the run's tenant (a run refuses without it, and a host that runs pipelines refuses to start without it).</param>
     /// <param name="clock">The run's clock, which its Compute stages' calculations read the time from (optional; a Compute calculation that reads the time fails with ClockMissing without it).</param>
+    /// <param name="contributions">The build contributions the host registered, which a component type from another package reads its services from (FDW-6132; optional: absent is a host that registered none).</param>
+    /// <param name="runStream">Keeps the pieces the run gives the person it acts as (FDW-6140; optional: a host that keeps none writes none).</param>
+    /// <param name="stepClaims">Claims a step that acts outside the run before it acts (FDW-6139; optional: a graph that has such a step refuses to build without it).</param>
+    /// <param name="askServices">What an Ask component keeps its request with and judges its call by (FDW-6142; optional: a graph that has such a step refuses to build without it).</param>
+    /// <param name="runOutputs">Records the outputs the run gives back when it ends (FDW-6136; optional: a graph that declares outputs fails when its run ends without it, since the outputs could not be recorded).</param>
     public GraphPipeline(
         GraphPipelineConfiguration configuration,
         ILogger<GraphPipeline> logger,
@@ -97,7 +107,12 @@ public sealed class GraphPipeline : EtlPipelineBase
         IExecutionTracker? tracker = null,
         RunningFlows? runningFlows = null,
         IThresholdEvaluator? thresholds = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        FlowBuildContributions? contributions = null,
+        IPipelineRunOutputs? runOutputs = null,
+        IPipelineStepClaims? stepClaims = null,
+        IRunStream? runStream = null,
+        FlowAskServices? askServices = null)
         : base(logger)
     {
         _configuration = configuration;
@@ -117,6 +132,11 @@ public sealed class GraphPipeline : EtlPipelineBase
         _runningFlows = runningFlows;
         _thresholds = thresholds;
         _clock = clock;
+        _contributions = contributions;
+        _runOutputs = runOutputs;
+        _stepClaims = stepClaims;
+        _runStream = runStream;
+        _askServices = askServices;
     }
 
     /// <inheritdoc />
@@ -276,12 +296,17 @@ public sealed class GraphPipeline : EtlPipelineBase
             _logger,
             commitReportInterval.Value,
             unmatchedKeySample.Value,
+            _contributions is null ? FlowBuildContributions.None : _contributions,
             _etlGateway,
             _notifier,
             resolved.Value.Built,
             resolved.Value.Chains,
             options.IsTestMode ? new GraphTestRun(options.MaxRowsPerSource, options.SkipDestinationWrites) : null,
-            _clock);
+            _clock)
+        {
+            StepClaims = _stepClaims,
+            AskServices = _askServices,
+        };
 
         var pipeline = GraphFlowBuilder.Build(_configuration, context);
         if (pipeline.IsFailure || pipeline.Value is null)
@@ -299,7 +324,9 @@ public sealed class GraphPipeline : EtlPipelineBase
             identity,
             ReporterOf(options),
             null,
-            options.PauseGate);
+            options.PauseGate,
+            options.StepLimit,
+            _runStream);
         var ran = await pipeline.Value.Run(stepContext, cancellationToken).ConfigureAwait(false);
         if (ran.IsFailure)
         {
@@ -307,7 +334,26 @@ public sealed class GraphPipeline : EtlPipelineBase
         }
 
         RecordCounts(result, tally, context);
-        return GenericResult.Success();
+        return await RecordOutputs(variables.Value, result.ExecutionId, thresholds.TenantId, cancellationToken).ConfigureAwait(false);
+    }
+
+    // What the run gives back (FDW-6136): written once, after the steps succeeded and before the run is recorded as ended, so a pipeline that waits for it finds them.
+    private async Task<IGenericResult> RecordOutputs(FlowVariables variables, Guid executionId, Guid tenantId, CancellationToken cancellationToken)
+    {
+        if (_configuration.Outputs.Count == 0)
+        {
+            return GenericResult.Success();
+        }
+
+        var collected = GraphRunOutputs.Collect(_configuration, variables, _logger);
+        if (collected.IsFailure || collected.Value is null)
+        {
+            return collected;
+        }
+
+        return _runOutputs is null
+            ? GenericResult.Failure(PipelineOutputLog.NotWritten(_logger, executionId, "the host registers no store for the outputs of a run"))
+            : await _runOutputs.Record(executionId, tenantId, collected.Value, cancellationToken).ConfigureAwait(false);
     }
 
     // Why the executor is always wrapped: a component's figures are judged against the thresholds of the run's tenant (FDW-3865); a run without the evaluator
@@ -443,7 +489,7 @@ public sealed class GraphPipeline : EtlPipelineBase
     // untracked run has no identity, and a step that needs one refuses.
     private static FlowRunIdentity? IdentityOf(PipelineExecutionOptions options, Guid executionId) =>
         options.ExecutionId is not null && options.TenantId is { } tenantId && options.RunRoles is { } roles
-            ? new FlowRunIdentity(executionId, tenantId, roles)
+            ? new FlowRunIdentity(executionId, tenantId, roles) { PersonId = options.PersonId, ContinuesRun = options.ContinuesRun }
             : null;
 
     private static int Saturate(long value) => value > int.MaxValue ? int.MaxValue : (int)value;

@@ -114,6 +114,25 @@ public class NotFoundSentinelGuardTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
+    public void AnOptionBaseThatTakesAnotherCollectionsOptionReportsTc009()
+    {
+        // FDW-6244: a pipeline type states its run mode. Handed over as the run-mode option itself, the parameter is an interface the sentinel can only pass
+        // null to, so the collection reports TC009 (an error in Release); handed over by name, it is a string the sentinel builds. Hence runModeName.
+        var source = Cases["ServiceTypeCollection"].BuildSource("IWidgetMode runMode") + """
+
+            public interface IWidgetMode { string Name { get; } }
+            """;
+
+        var (_, diagnostics) = RealGeneratorHelper.Run(new ServiceTypeCollectionGenerator(), source);
+
+        var tc009 = diagnostics.Where(d => string.Equals(d.Id, "TC009", System.StringComparison.Ordinal)).ToList();
+        tc009.Count.ShouldBe(1);
+        tc009[0].GetMessage(System.Globalization.CultureInfo.InvariantCulture).ShouldContain("runMode");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
     public void OptionNamedNotFoundReplacesTheSentinelSoNothingIsReported()
     {
         var source = Cases["TypeCollection"].BuildSource(HostileParameter) + """

@@ -20,7 +20,7 @@ public sealed class ExcludeOption : SelectListOptionBase
     /// Initializes a new instance of the <see cref="ExcludeOption"/> class.
     /// </summary>
     public ExcludeOption()
-        : base("Exclude", 2)
+        : base("Exclude", 2, "NotIn")
     {
     }
 

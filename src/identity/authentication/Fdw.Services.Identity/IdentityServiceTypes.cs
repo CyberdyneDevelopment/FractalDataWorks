@@ -14,6 +14,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Identity.Logging;
 using Fdw.Services.Identity.Commands;
 
 namespace Fdw.Services.Identity;
@@ -83,6 +85,10 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
     {
         var providerService = typeof(IIdentityServiceProvider).ToString();
 
+        // The identity provider writes each identity's description with the descriptions writer, in the unit of the write (FDW-6208): a host that registered this collection without the
+        // Descriptions service type is refused here with a coded message, never given a provider that fails on its first save. Checked once at Initialize, after every registration.
+        Requires<IDescriptionWriter>(IdentityDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<IdentityServiceTypes>() ?? NullLogger<IdentityServiceTypes>.Instance;
@@ -90,7 +96,8 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IIdentityServiceConfigurationProvider>(sp =>
                 new IdentityServiceConfigurationProvider(
                     sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), IdentityServiceTypes.ConfigurationConnection, "sec", "Identity"));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), IdentityServiceTypes.ConfigurationConnection, "sec", "Identity",
+                    sp.GetRequiredService<IDescriptionWriter>()));
             builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
                 sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
 

@@ -13,7 +13,7 @@ namespace Fdw.Data.Abstractions;
 /// A built container is immediately a valid <see cref="IStorageContainer"/> (its
 /// <see cref="IStorageContainer.Schema"/> is a synchronous projection over its field children) and a
 /// valid <see cref="IDataNode"/> (its child <see cref="IDataNode.Nodes"/> are its fields; its
-/// <see cref="Keys"/> and <see cref="ReferencingKeys"/> are present). There is no materialization step.
+/// <see cref="IStorageContainer.Keys"/> and <see cref="ReferencingKeys"/> are present). There is no materialization step.
 /// <para>
 /// The tree-navigation parent of a container is its owning <see cref="Parent"/> (an
 /// <see cref="IDataNodePath"/>). The physical address is the distinct <see cref="IStorageContainer.Path"/>
@@ -43,15 +43,6 @@ public interface IDataContainer : IDataNode, IStorageContainer
     /// <see cref="IStorageContainer.Path"/>; tree navigation reads <see cref="Parent"/>.
     /// </remarks>
     IDataNodePath Parent { get; }
-
-    /// <summary>
-    /// Gets the keys defined on this container.
-    /// </summary>
-    /// <remarks>
-    /// Why: keys are meaningful only for a storage container, so the contract lives here rather than on
-    /// <see cref="IDataNode"/>. Populated at build time. Empty list when the container has no keys.
-    /// </remarks>
-    IReadOnlyList<IContainerKey> Keys { get; }
 
     /// <summary>
     /// Gets all keys on OTHER containers that reference THIS container (inbound FK references).

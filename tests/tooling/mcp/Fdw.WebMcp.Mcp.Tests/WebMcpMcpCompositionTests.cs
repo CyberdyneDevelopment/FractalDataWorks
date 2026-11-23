@@ -3,6 +3,7 @@ using System.Threading;
 using Fdw.Results;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.WebMcp.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -31,7 +32,7 @@ public class WebMcpMcpCompositionTests
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         builder.Services.ShouldContain(descriptor => descriptor.ServiceType == typeof(WebMcpToolInvoker));
-        builder.Services.ShouldContain(descriptor => descriptor.ServiceType == typeof(WebMcpMcpCatalogue));
+        builder.Services.ShouldContain(descriptor => descriptor.ServiceType == typeof(WebMcpMcpCatalog));
     }
 
     [Fact]
@@ -116,6 +117,10 @@ public class WebMcpMcpCompositionTests
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddSingleton(configurations.Object);
         builder.Services.AddSingleton(new Mock<ISecretManagerProvider>().Object);
+        var depth = BridgeCatalog.MaxDepth;
+        var settings = new Mock<IEffectiveSettingsProvider>();
+        settings.Setup(s => s.TryGetEffectiveValue(SettingDefinitions.WebMcpToolSchemaMaxDepth, out depth, null, null)).Returns(true);
+        builder.Services.AddSingleton(settings.Object);
         WebMcpHosting.Register(builder).IsSuccess.ShouldBeTrue();
         WebMcpMcpHosting.Register(builder).IsSuccess.ShouldBeTrue();
         return builder.Build();

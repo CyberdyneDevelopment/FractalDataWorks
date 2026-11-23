@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Fdw.Data.DataSets.Results;
 using Fdw.Services.Data.Results;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,6 +35,42 @@ public sealed class GraphDataSetValidatorTests
         answer.IsValid.ShouldBeTrue();
         answer.NotBound.Select(source => (string.Join('/', source.Path), source.Name, source.Exists)).ShouldBe(
             new[] { ("intendedSources/0", "Weather feed", false), ("intendedSources/1", "RawCustomers", true) });
+    }
+
+    [Fact]
+    public async Task ADisplayNameAndAnAbbreviationLongerThanTheirColumnsAreEachListedAtTheirOwnPath()
+    {
+        var request = new CreateGraphDataSetRequest
+        {
+            Name = "CustomerSegments",
+            FieldsOut = [Field("Segment")],
+            DisplayName = new string('d', 201),
+            Abbreviation = new string('a', 21),
+        };
+
+        var answer = await Validate(request, new StubGraphDataSetSources());
+
+        answer.IsValid.ShouldBeFalse();
+        var found = answer.Problems.Select(problem => (problem.Code, string.Join('/', problem.Path))).ToList();
+        found.ShouldContain((DataSetsResultCodes.DisplayNameTooLong.Code, "displayName"));
+        found.ShouldContain((DataSetsResultCodes.AbbreviationTooLong.Code, "abbreviation"));
+    }
+
+    [Fact]
+    public async Task ADisplayNameAndAnAbbreviationAtTheirLimitsAreNotProblems()
+    {
+        var request = new CreateGraphDataSetRequest
+        {
+            Name = "CustomerSegments",
+            FieldsOut = [Field("Segment")],
+            DisplayName = new string('d', 200),
+            Abbreviation = new string('a', 20),
+        };
+
+        var answer = await Validate(request, new StubGraphDataSetSources());
+
+        answer.Problems.Select(problem => string.Join('/', problem.Path)).ShouldNotContain("displayName");
+        answer.Problems.Select(problem => string.Join('/', problem.Path)).ShouldNotContain("abbreviation");
     }
 
     [Fact]

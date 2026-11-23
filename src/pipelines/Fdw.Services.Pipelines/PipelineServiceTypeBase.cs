@@ -1,3 +1,5 @@
+using Fdw.Services.Descriptions;
+using Fdw.Services.Pipelines.Logging;
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
@@ -26,5 +28,7 @@ public abstract class PipelineServiceTypeBase : ServiceTypeBase<IGenericService,
         string? category = null)
         : base(name, sectionName, displayName, description, category ?? DefaultCategory)
     {
+        // Why required of every option (FDW-7323): the script, webhook trigger and orchestration node providers each write their description in the unit of the save, which needs the descriptions writer.
+        Requires<IDescriptionWriter>(PipelineTypesLog.ServiceDescriptionWriterNotRegistered);
     }
 }

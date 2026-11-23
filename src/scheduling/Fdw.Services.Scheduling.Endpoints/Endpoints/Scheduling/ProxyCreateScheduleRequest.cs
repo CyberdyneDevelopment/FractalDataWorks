@@ -1,3 +1,4 @@
+using Fdw.Services.Scheduling.Clients.Abstractions;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using System.Collections.Generic;
 using System;
@@ -57,4 +58,10 @@ public sealed class ProxyCreateScheduleRequest
     /// then reads and writes; a pipeline carries no roles of its own.
     /// </summary>
     public IList<string>? RunRoles { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the person states to have the schedule's runs act as them (FDW-6144): what the runs may do while they are away and until when. Needs the permission
+    /// <c>schedules:run-as-me</c>. Null leaves the schedule's runs acting as its tenant, as they always have.
+    /// </summary>
+    public ScheduleRunAsRequest? RunAs { get; set; }
 }

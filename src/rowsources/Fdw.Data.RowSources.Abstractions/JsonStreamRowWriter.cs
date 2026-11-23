@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Globalization;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -204,28 +203,13 @@ public sealed class JsonStreamRowWriter : IRowWriter
     // value cannot mean one thing in a CSV export and another in a JSON one.
     private static void WriteValue(Utf8JsonWriter writer, object? value, string columnName)
     {
-        switch (value)
+        if (RecordValueText.IsAbsent(value))
         {
-            case null:
-            case DBNull:
-                writer.WriteNullValue();
-                break;
-            case bool flag:
-                writer.WriteBooleanValue(flag);
-                break;
-            case byte or sbyte or short or ushort or int or uint or long:
-                writer.WriteNumberValue(Convert.ToInt64(value, CultureInfo.InvariantCulture));
-                break;
-            case ulong unsigned:
-                writer.WriteNumberValue(unsigned);
-                break;
-            case float or double or decimal:
-                writer.WriteNumberValue(Convert.ToDecimal(value, CultureInfo.InvariantCulture));
-                break;
-            default:
-                writer.WriteStringValue(RecordValueText.Format(value, columnName));
-                break;
+            writer.WriteNullValue();
+            return;
         }
+
+        RecordValueText.KindOf(value!, columnName).WriteJson(writer, value!);
     }
 
     /// <inheritdoc />

@@ -23,7 +23,8 @@ public sealed class DataStoreLoadTests
         new ServiceCollection()
             .AddSingleton(new DataStoreConfigurationProvider(
                 NullLogger<DataStoreConfigurationProvider>.Instance, gateways.Object, "ConfigurationDb", "data", "DataStoreConfiguration", new Mock<IConfigurationPlacement>().Object,
-                Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>()))
+                Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
+                DataStoreDescriptionDoubles.Writer(), DataStoreDescriptionDoubles.Reader()))
             .BuildServiceProvider();
 
     [Fact]

@@ -16,6 +16,7 @@ public sealed class MaxCalculationType : CalculationTypeBase
     public MaxCalculationType() : base(
         name: "Max",
         category: "Aggregation",
+        description: "Returns the maximum value",
         calculate: (rows, col, _) =>
         {
             var max = decimal.MinValue;

@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +33,7 @@ public static class OwningOrg
     /// <returns>The organization's Id, null when the pipeline states none, or the read's own failure.</returns>
     public static async Task<IGenericResult<Guid?>> Of(IPipelineConfigurationProvider provider, Guid pipelineId, CancellationToken cancellationToken)
     {
-        var read = await provider.Get(pipelineId, cancellationToken).ConfigureAwait(false);
+        var read = await provider.Get(pipelineId, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         return read.IsFailure
             ? read.ToNewResult<Guid?>()
             : GenericResult<Guid?>.Success(read.Value?.OrgId);

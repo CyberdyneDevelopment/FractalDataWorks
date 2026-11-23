@@ -20,6 +20,7 @@
          is ever called. -->
     <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\..\src\pipelines\Fdw.Services.Etl.Projects\Fdw.Services.Etl.Projects.csproj" />
+    <ProjectReference Include="..\..\pipelines\Fdw.Services.Etl.TestDouble\Fdw.Services.Etl.TestDouble.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <!-- Only include Fdw.Web.Api in coverage -->

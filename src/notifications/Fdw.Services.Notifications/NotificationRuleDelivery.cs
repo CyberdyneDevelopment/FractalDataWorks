@@ -51,16 +51,29 @@ public static class NotificationRuleDelivery
                 ResultDetails.Create().With("ChannelName", rule.NotificationServiceName));
         }
 
-        var sendResult = await service.Send(
-            new NotificationRequest(
-                channelName: rule.NotificationServiceType,
-                recipients: [],
-                subject: notification.Subject,
-                message: notification.Message,
-                priority: NotificationPriorities.ByName(priorityName),
-                metadata: notification.Metadata,
-                correlationId: notification.CorrelationId),
-            cancellationToken).ConfigureAwait(false);
+        // Why the payload goes only to a service that handles its type (FDW-6138): every other service is sent the words, as before.
+        var sendResult = notification.Payload is { } payload && service is IPayloadNotificationService payloadService && payloadService.Handles(payload.TypeName)
+            ? await payloadService.SendPayload(
+                new PayloadNotificationRequest(
+                    channelName: rule.NotificationServiceType,
+                    recipients: [],
+                    subject: notification.Subject,
+                    message: notification.Message,
+                    priority: NotificationPriorities.ByName(priorityName),
+                    payload: payload,
+                    metadata: notification.Metadata,
+                    correlationId: notification.CorrelationId),
+                cancellationToken).ConfigureAwait(false)
+            : await service.Send(
+                new NotificationRequest(
+                    channelName: rule.NotificationServiceType,
+                    recipients: [],
+                    subject: notification.Subject,
+                    message: notification.Message,
+                    priority: NotificationPriorities.ByName(priorityName),
+                    metadata: notification.Metadata,
+                    correlationId: notification.CorrelationId),
+                cancellationToken).ConfigureAwait(false);
         if (sendResult.IsFailure)
         {
             RuleNotificationLog.RuleNotificationSendFailed(logger, rule.Name, rule.NotificationServiceName, sendResult.CurrentMessage);

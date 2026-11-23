@@ -57,7 +57,7 @@ internal static class PipelineLineageLoader
         ILogger logger,
         CancellationToken ct)
     {
-        var configured = await provider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        var configured = await provider.Get(ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
         if (!configured.IsSuccess)
             return configured.ToNewResult<IReadOnlyList<PipelineLineageRecord>>();
 
@@ -92,7 +92,7 @@ internal static class PipelineLineageLoader
         IPipelineConfigurationProvider provider,
         CancellationToken ct)
     {
-        var configured = await provider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        var configured = await provider.Get(ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
         if (!configured.IsSuccess)
             return configured.ToNewResult<IReadOnlyList<GraphPipelineConfiguration>>();
 
@@ -118,6 +118,6 @@ internal static class PipelineLineageLoader
         if (pipeline is not GraphPipelineConfiguration graph || graph.Components.Count > 0)
             return GenericResult<IPipelineImplementationConfiguration>.Success(pipeline);
 
-        return await provider.Get(pipeline.Id, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
+        return await provider.Get(pipeline.Id, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
     }
 }

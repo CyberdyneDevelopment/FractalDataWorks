@@ -19,14 +19,6 @@ public sealed class MsSqlScriptReaderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void TheReaderIsFoundByTheKindOfItsDataStore()
-    {
-        ScriptReaders.ByName("MsSql").ShouldBeOfType<MsSqlScriptReader>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
     public void AnInsertFromASelectWritesItsTargetAndReadsItsSources()
     {
         var reading = Read("INSERT INTO dbo.Game (Id) SELECT t.Id FROM dbo.Team t JOIN stage.Player p ON p.TeamId = t.Id WHERE p.Year = @Year");

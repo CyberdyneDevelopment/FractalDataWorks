@@ -15,12 +15,14 @@ namespace Fdw.Services.Scheduling.Abstractions.Configuration;
 public interface IScheduleRunRecorder
 {
     /// <summary>Records a fire on the current row of a schedule.</summary>
-    /// <param name="scheduleId">The schedule's durable Id.</param>
+    /// <param name="schedule">The schedule the fire is of, as it was read for this fire: its durable Id, name, tenant and the count of failed fires so far.</param>
     /// <param name="lastRunTime">When the fire ran.</param>
     /// <param name="nextRunTime">When the schedule fires next; null when it does not.</param>
     /// <param name="lastRunStatus">How the fire ended.</param>
+    /// <param name="fireFailed">Whether the fire failed to start a run (FDW-6144): a failed fire adds one to the schedule's count of failed fires in a row, any other fire starts the count again.
+    /// The caller states it, so no status name is matched here. The count is then reported to the thresholds that judge the schedule.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    /// <returns>Success; a coded failure when the schedule has no current row, or the write fails.</returns>
+    /// <returns>Success; a coded failure when the schedule has no current row, the write fails, or the thresholds that judge the count could not be read or judged (the fire's outcome is written first and stands).</returns>
     Task<IGenericResult> RecordRun(
-        Guid scheduleId, DateTimeOffset lastRunTime, DateTimeOffset? nextRunTime, string lastRunStatus, CancellationToken cancellationToken = default);
+        IScheduleImplementationConfiguration schedule, DateTimeOffset lastRunTime, DateTimeOffset? nextRunTime, string lastRunStatus, bool fireFailed, CancellationToken cancellationToken = default);
 }

@@ -7,6 +7,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Workspaces.Results;
 using Microsoft.Extensions.Logging;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Workspaces;
 
@@ -23,6 +24,7 @@ namespace Fdw.Services.Workspaces;
 public static class DataSetVariationChain
 {
     /// <summary>The most views one chain may hold, the view itself included.</summary>
+    [ConfigurationPending("FDW-7105")]
     public const int MaxDepth = 8;
 
     /// <summary>The views above a view, the root-most first.</summary>

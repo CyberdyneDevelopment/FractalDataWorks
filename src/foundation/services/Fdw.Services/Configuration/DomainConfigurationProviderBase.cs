@@ -97,6 +97,10 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     // same answer every time.
     private IReadOnlyList<string>? _listFields;
 
+    // The records this provider handed out from a read that stated it leaves the fill out (FDW-7326). The key is the instance, which is sound because every read builds its own
+    // records (the implementation provider detaches the rows it reads from the gateway's cache), and it holds no record alive. A record in it is for reading: Save and Update refuse it.
+    private readonly ConditionalWeakTable<object, object> _readWithoutFill = [];
+
     // How many of the rows an ambiguous name matched are listed in the refusal: enough to address each by id.
     private const int MaxAmbiguousIds = 10;
 
@@ -160,7 +164,11 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         => Get(name, ConfigurationLevels.WholeAggregate, ct);
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, CancellationToken ct = default)
+    public Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, CancellationToken ct = default)
+        => Get(name, levels, ConfigurationReadOptions.Whole, ct);
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
     {
         if (levels < 0)
             return GenericResult<TImplementationConfiguration>.Failure(
@@ -170,11 +178,15 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (row.IsFailure) return row.ToNewResult<TImplementationConfiguration>();
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
-            : await Compose(member, provider => provider.Get(member.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
+            : await ComposeOne(member, provider => provider.Get(member.Id, levels, ct), levels, null, options, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
+    public Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, CancellationToken ct = default)
+        => Get(name, levels, narrowing, ConfigurationReadOptions.Whole, ct);
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<TImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, ConfigurationReadOptions options, CancellationToken ct = default)
     {
         if (levels < 0)
             return GenericResult<TImplementationConfiguration>.Failure(
@@ -184,7 +196,30 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (row.IsFailure) return row.ToNewResult<TImplementationConfiguration>();
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
-            : await Compose(member, provider => provider.Get(member.Id, levels, narrowing, ct), levels, null, ct).ConfigureAwait(false);
+            : await ComposeOne(member, provider => provider.Get(member.Id, levels, narrowing, ct), levels, null, options, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public string Container => PathName + "." + _commands.TableName;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// One query on the domain table for a member that is there: the implementation is never read, so a record that cites a member can ask cheaply. A second
+    /// query, across every version of the row, runs only when the first found none, to tell a retired member from one that was never there (FDW-6221).
+    /// </remarks>
+    public async Task<IGenericResult<ICitedState>> StateOf(Guid id, CancellationToken cancellationToken = default)
+    {
+        var current = await DomainRow(_commands.Get(DataStoreName, PathName, id), id.ToString(), cancellationToken).ConfigureAwait(false);
+        if (current.IsFailure) return current.ToNewResult<ICitedState>();
+        if (current.Value is not null) return GenericResult<ICitedState>.Success(CitedStates.Current);
+
+        var gateway = _gatewayProvider.Get(DataStoreName);
+        if (gateway.IsFailure) return gateway.ToNewResult<ICitedState>();
+
+        var versions = await gateway.Value!.Execute<IEnumerable<TDomain>>(_commands.ListVersions(DataStoreName, PathName, id), Target, cancellationToken).ConfigureAwait(false);
+        if (!versions.IsSuccess) return versions.ToNewResult<ICitedState>();
+
+        return GenericResult<ICitedState>.Success(versions.Value is not null && versions.Value.Any() ? CitedStates.Retired : CitedStates.Absent);
     }
 
     /// <inheritdoc/>
@@ -192,7 +227,11 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         => Get(id, ConfigurationLevels.WholeAggregate, ct);
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<TImplementationConfiguration>> Get(Guid id, int levels, CancellationToken ct = default)
+    public Task<IGenericResult<TImplementationConfiguration>> Get(Guid id, int levels, CancellationToken ct = default)
+        => Get(id, levels, ConfigurationReadOptions.Whole, ct);
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<TImplementationConfiguration>> Get(Guid id, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
     {
         if (levels < 0)
             return GenericResult<TImplementationConfiguration>.Failure(
@@ -202,7 +241,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (row.IsFailure) return row.ToNewResult<TImplementationConfiguration>();
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
-            : await Compose(member, provider => provider.Get(member.Id, levels, ct), levels, null, ct).ConfigureAwait(false);
+            : await ComposeOne(member, provider => provider.Get(member.Id, levels, ct), levels, null, options, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -214,16 +253,23 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         // The instant reaches the implementation read too, or the answer mixes two versions.
         return row.Value is not { } member
             ? GenericResult<TImplementationConfiguration>.Success(default!)
-            : await Compose(member, provider => provider.Get(member.Id, asOf, ct), ConfigurationLevels.WholeAggregate, asOf, ct).ConfigureAwait(false);
+            : await ComposeOne(member, provider => provider.Get(member.Id, asOf, ct), ConfigurationLevels.WholeAggregate, asOf, ConfigurationReadOptions.Whole, ct).ConfigureAwait(false);
     }
+
+    /// <inheritdoc/>
+    public Task<IGenericResult<ConfigurationPage<TImplementationConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
+        => Get(skip, take, levels, ConfigurationReadOptions.Whole, ct);
 
     /// <inheritdoc/>
     /// <remarks>
     /// The page's domain rows are read in one query, with one row past the page: that row is how the
     /// page knows another follows, without counting the domain. Each member is composed only when the
     /// caller reaches it, so a caller streaming the page to a client holds one composed member at a time.
+    /// A caller that states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/> gets the members as their own rows hold them: the provider's read
+    /// observer is not called, so what it fills from another domain is not read (FDW-6124).
     /// </remarks>
-    public async Task<IGenericResult<ConfigurationPage<TImplementationConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
+    public async Task<IGenericResult<ConfigurationPage<TImplementationConfiguration>>> Get(
+        int skip, int take, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
     {
         if (skip < 0)
             return GenericResult<ConfigurationPage<TImplementationConfiguration>>.Failure(
@@ -247,7 +293,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
         var read = rows.Value.ToList();
         return GenericResult<ConfigurationPage<TImplementationConfiguration>>.Success(new ConfigurationPage<TImplementationConfiguration>(
-            skip, take, read.Count > take, fail => Members(read.Take(take).ToList(), levels, fail, ct)));
+            skip, take, read.Count > take, fail => Members(read.Take(take).ToList(), levels, options, fail, ct)));
     }
 
     /// <inheritdoc/>
@@ -283,7 +329,11 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var total = await Total(gateway.Value!, query, ct).ConfigureAwait(false);
         if (total.IsFailure) return total.ToNewResult<ConfigurationPage<TDomain>>();
 
-        var read = rows.Value.ToList();
+        var filled = await FilledDomainPage(rows.Value, query.Take, ct).ConfigureAwait(false);
+        if (filled.IsFailure) return filled.ToNewResult<ConfigurationPage<TDomain>>();
+
+        var read = filled.Value!;
+
         DefaultConfigurationProviderLog.DomainPageRead(
             _logger, typeof(TDomain).Name, query.Skip, query.Take, Math.Min(read.Count, query.Take),
             total.Value is { } counted ? counted.ToString(CultureInfo.InvariantCulture) : "not asked");
@@ -379,7 +429,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <inheritdoc/>
     /// <remarks>
     /// A member that does not exist is a failure here, not an empty collection: an empty list would say
-    /// the member has none, about a member that is not there.
+    /// the member has none, about a member that is not there. A provider that fills its children from another domain is handed them once (FDW-6777).
     /// </remarks>
     public async Task<IGenericResult<IReadOnlyList<TChild>>> Get<TChild>(string name, int levels, CancellationToken ct = default)
     {
@@ -387,20 +437,34 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (provider.IsFailure) return provider.ToNewResult<IReadOnlyList<TChild>>();
 
         var (member, implementation) = provider.Value;
-        return await implementation.Get<TImplementationConfiguration, TChild>(member.Id, levels, ct).ConfigureAwait(false);
+        var children = await implementation.Get<TImplementationConfiguration, TChild>(member.Id, levels, ct).ConfigureAwait(false);
+        return await FillChildren(member.Id, children, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
     /// <remarks>
     /// The owner is identified by its id alone; the member's name selects the implementation that
-    /// reads it. A member that does not exist is a failure, as it is for the member's own collections.
+    /// reads it. A member that does not exist is a failure, as it is for the member's own collections. A provider that fills its children from another
+    /// domain is handed them once, with the Id of the member they hang from, whose descriptions own theirs (FDW-6777).
     /// </remarks>
     public async Task<IGenericResult<IReadOnlyList<TChild>>> Get<TOwner, TChild>(string name, Guid ownerId, int levels, CancellationToken ct = default)
     {
         var provider = await MemberProvider(name, ct).ConfigureAwait(false);
         if (provider.IsFailure) return provider.ToNewResult<IReadOnlyList<TChild>>();
 
-        return await provider.Value.Implementation.Get<TOwner, TChild>(ownerId, levels, ct).ConfigureAwait(false);
+        var children = await provider.Value.Implementation.Get<TOwner, TChild>(ownerId, levels, ct).ConfigureAwait(false);
+        return await FillChildren(provider.Value.Member.Id, children, ct).ConfigureAwait(false);
+    }
+
+    // The children of a child read, handed once to a provider that fills them from another domain (FDW-6777). A failed read, a read that found none and a
+    // provider that fills nothing answer as they were read.
+    private async Task<IGenericResult<IReadOnlyList<TChild>>> FillChildren<TChild>(Guid memberId, IGenericResult<IReadOnlyList<TChild>> children, CancellationToken ct)
+    {
+        if (children.IsFailure || children.Value is not { Count: > 0 } read || this is not IConfigurationChildReadObserver<TImplementationConfiguration> observer)
+            return children;
+
+        var filled = await observer.ReadChildren(memberId, read, ct).ConfigureAwait(false);
+        return filled.IsFailure ? filled.ToNewResult<IReadOnlyList<TChild>>() : children;
     }
 
     // The members of one page, composed one at a time as the caller enumerates them. The first member
@@ -408,6 +472,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     private async IAsyncEnumerable<TImplementationConfiguration> Members(
         List<TDomain> rows,
         int levels,
+        ConfigurationReadOptions options,
         Action<IGenericResult> fail,
         [EnumeratorCancellation] CancellationToken ct)
     {
@@ -418,23 +483,31 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             yield break;
         }
 
-        var composed = 0;
+        // The page is composed whole and filled once (FDW-6208): a page that streamed one member at a time could not fill it with one read. The set is
+        // already in memory, so holding the composed members costs no new memory.
+        var members = new List<TImplementationConfiguration>(rows.Count);
         foreach (var row in rows)
         {
-            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, ct).ConfigureAwait(false);
-            if (loaded.IsSuccess)
+            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, options, ct).ConfigureAwait(false);
+            if (!loaded.IsSuccess)
             {
-                if (loaded.Value is null) continue;
-                composed++;
-                yield return loaded.Value;
-                continue;
+                fail(loaded);
+                yield break;
             }
 
-            fail(loaded);
+            if (loaded.Value is not null) members.Add(loaded.Value);
+        }
+
+        var filled = await FillPage(members, options, ct).ConfigureAwait(false);
+        if (filled.IsFailure)
+        {
+            fail(filled);
             yield break;
         }
 
-        DefaultConfigurationProviderLog.DomainListComposed(_logger, typeof(TImplementationConfiguration).Name, rows.Count, composed);
+        foreach (var member in members) yield return member;
+
+        DefaultConfigurationProviderLog.DomainListComposed(_logger, typeof(TImplementationConfiguration).Name, rows.Count, members.Count);
     }
 
     // The current domain row a command selects, or none. None is not a failure here: a read by name
@@ -533,6 +606,56 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         => Task.FromResult<IGenericResult<TImplementationConfiguration>>(
             GenericResult<TImplementationConfiguration>.Success(set.GetValueOrDefault(row.Id)!));
 
+    // A single member read: composed, then filled when this provider declares it fills from another domain (FDW-6208). A past instant is refused for
+    // such a provider, because what it fills has no as-of read.
+    private async Task<IGenericResult<TImplementationConfiguration>> ComposeOne(
+        TDomain row,
+        Func<IImplementationConfigurationProvider<TImplementationConfiguration>, Task<IGenericResult<TImplementationConfiguration>>> read,
+        int levels,
+        DateTimeOffset? asOf,
+        ConfigurationReadOptions options,
+        CancellationToken ct)
+    {
+        if (asOf is not null && this is IConfigurationReadObserver<TImplementationConfiguration>)
+            return GenericResult<TImplementationConfiguration>.Failure(
+                DefaultConfigurationProviderLog.ReadObserverAsOfNotSupported(_logger, typeof(TImplementationConfiguration).Name, row.Name));
+
+        var loaded = await Compose(row, read, levels, asOf, options, ct).ConfigureAwait(false);
+        if (!loaded.IsSuccess) return loaded;
+        if (loaded.Value is null) return loaded;
+
+        var filled = await FillOrLeaveOut([loaded.Value], asOf, options, ct).ConfigureAwait(false);
+        return filled.IsFailure ? filled.ToNewResult<TImplementationConfiguration>() : loaded;
+    }
+
+    // The members of a page, filled unless the read stated it leaves the fill out: then they stay as their own rows hold them, and the read says so (FDW-6124).
+    private Task<IGenericResult> FillPage(List<TImplementationConfiguration> members, ConfigurationReadOptions options, CancellationToken ct)
+        => FillOrLeaveOut(members, null, options, ct);
+
+    // The one rule of the read options (FDW-7326): a read that states it leaves the fill out runs no fill observer of any kind for the members it hands out. The members
+    // of the other reads that state no options are filled as they always were.
+    private Task<IGenericResult> FillOrLeaveOut(List<TImplementationConfiguration> members, DateTimeOffset? asOf, ConfigurationReadOptions options, CancellationToken ct)
+    {
+        if (options.FillsMembers) return FillSet(members, asOf, ct);
+
+        if (this is not IConfigurationReadObserver<TImplementationConfiguration>)
+            return Task.FromResult(GenericResult.Success());
+
+        // Only a provider that fills has a member the read left empty; a record of any other provider reads the same either way and saves as it always did.
+        foreach (var member in members) _readWithoutFill.AddOrUpdate(member, member);
+        DefaultConfigurationProviderLog.FillLeftOut(_logger, typeof(TImplementationConfiguration).Name, members.Count);
+        return Task.FromResult(GenericResult.Success());
+    }
+
+    // The members of one read, filled once by the provider that declares it fills them from another domain (FDW-6208); nothing happens for one that does not.
+    private async Task<IGenericResult> FillSet(List<TImplementationConfiguration> members, DateTimeOffset? asOf, CancellationToken ct)
+    {
+        if (members.Count == 0 || this is not IConfigurationReadObserver<TImplementationConfiguration> observer)
+            return GenericResult.Success();
+
+        return await observer.Read(members, asOf, ct).ConfigureAwait(false);
+    }
+
     // Reads a domain row's implementation through the provider the row names, then stamps the row's
     // identity onto it.
     private async Task<IGenericResult<TImplementationConfiguration>> Compose(
@@ -540,6 +663,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         Func<IImplementationConfigurationProvider<TImplementationConfiguration>, Task<IGenericResult<TImplementationConfiguration>>> read,
         int levels,
         DateTimeOffset? asOf,
+        ConfigurationReadOptions options,
         CancellationToken ct,
         bool attachTrees = true)
     {
@@ -567,7 +691,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             // The members of a tree are members of this domain, so they can only be hung once this one's identity is stamped.
             if (attachTrees)
             {
-                var hung = await AttachTrees(loaded.Value, levels, asOf, ct).ConfigureAwait(false);
+                var hung = await AttachTrees(loaded.Value, levels, asOf, options, ct).ConfigureAwait(false);
                 if (hung.IsFailure) return hung.ToNewResult<TImplementationConfiguration>();
             }
 
@@ -580,7 +704,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
     // A record that holds a list of its own type is a tree (see ConfigurationTrees): its members are the other members of this
     // domain whose parent link names it. Every member is composed once, flat, and hung in memory.
-    private async Task<IGenericResult> AttachTrees(TImplementationConfiguration root, int levels, DateTimeOffset? asOf, CancellationToken ct)
+    private async Task<IGenericResult> AttachTrees(TImplementationConfiguration root, int levels, DateTimeOffset? asOf, ConfigurationReadOptions options, CancellationToken ct)
     {
         // A record with no generated mapper declares no child lists, so it holds no tree.
         var recordType = root.GetType();
@@ -598,7 +722,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var link = TreeLink(root);
         if (link.IsFailure) return link;
 
-        var members = await ComposeMembers(levels - 1, ct).ConfigureAwait(false);
+        var members = await ComposeMembers(levels - 1, options, ct).ConfigureAwait(false);
         if (members.IsFailure) return members;
 
         return ConfigurationTrees.Attach(root, members.Value!, link.Value!, trees, mapper, levels, _logger);
@@ -615,20 +739,24 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
     /// <param name="levels">How many levels of child collections to read: <see cref="ConfigurationLevels.RecordOnly"/> for the rows alone, <see cref="ConfigurationLevels.Children"/> for each member's own child collections.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Every member, flat, or the failure of the read.</returns>
-    public async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> GetFlat(int levels, CancellationToken ct = default)
+    public Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> GetFlat(int levels, CancellationToken ct = default)
+        => GetFlat(levels, ConfigurationReadOptions.Whole, ct);
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> GetFlat(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
     {
         if (levels < 0)
             return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Failure(
                 DefaultConfigurationProviderLog.ReadArgumentOutOfRange(_logger, typeof(TImplementationConfiguration).Name, nameof(levels), levels));
 
-        var members = await ComposeMembers(levels, ct).ConfigureAwait(false);
+        var members = await ComposeMembers(levels, options, ct).ConfigureAwait(false);
         return members.IsFailure
             ? members.ToNewResult<IReadOnlyList<TImplementationConfiguration>>()
             : GenericResult<IReadOnlyList<TImplementationConfiguration>>.Success([.. members.Value!.OfType<TImplementationConfiguration>()]);
     }
 
     // Every member of the domain, composed to the given levels but not hung into trees.
-    private async Task<IGenericResult<IReadOnlyList<IImplementationConfiguration>>> ComposeMembers(int levels, CancellationToken ct)
+    private async Task<IGenericResult<IReadOnlyList<IImplementationConfiguration>>> ComposeMembers(int levels, ConfigurationReadOptions options, CancellationToken ct)
     {
         var gateway = _gatewayProvider.Get(DataStoreName);
         if (gateway.IsFailure) return gateway.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
@@ -645,13 +773,18 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var sets = await ReadSets([.. rows.Value], levels, ct).ConfigureAwait(false);
         if (sets.IsFailure) return sets.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
 
+        var composed = new List<TImplementationConfiguration>();
         foreach (var row in rows.Value)
         {
-            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, ct, attachTrees: false).ConfigureAwait(false);
+            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, options, ct, attachTrees: false).ConfigureAwait(false);
             if (!loaded.IsSuccess) return loaded.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
-            if (loaded.Value is not null) members.Add(loaded.Value);
+            if (loaded.Value is not null) composed.Add(loaded.Value);
         }
 
+        var filled = await FillOrLeaveOut(composed, null, options, ct).ConfigureAwait(false);
+        if (filled.IsFailure) return filled.ToNewResult<IReadOnlyList<IImplementationConfiguration>>();
+
+        foreach (var member in composed) members.Add(member);
         return GenericResult<IReadOnlyList<IImplementationConfiguration>>.Success(members);
     }
 
@@ -727,6 +860,39 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         return GenericResult<IReadOnlyList<string>>.Success(_listFields);
     }
 
+    // The rows of a domain page, copied and then filled by the observer the provider declares. The rows are the gateway cache's, shared by every caller of the same query: the fill
+    // writes into the copies, never into them (FDW-7326).
+    private async Task<IGenericResult<List<TDomain>>> FilledDomainPage(IEnumerable<TDomain> rows, int take, CancellationToken ct)
+    {
+        var copied = CopyDomainRows(rows);
+        if (copied.IsFailure || this is not IConfigurationDomainReadObserver<TDomain> observer || copied.Value!.Count == 0)
+            return copied;
+
+        var filled = await observer.Read(copied.Value.Take(take).ToList(), ct).ConfigureAwait(false);
+        return filled.IsFailure ? filled.ToNewResult<List<TDomain>>() : copied;
+    }
+
+    // The domain rows of a page, each copied through the row mapper (the way the implementation provider detaches the rows it reads): a record the gateway cached is the cache's,
+    // and the page's fill writes the description onto the rows it returns.
+    private IGenericResult<List<TDomain>> CopyDomainRows(IEnumerable<TDomain> rows)
+    {
+        var mapper = PocoMapperCollection.ByName(typeof(TDomain).Name);
+        if (mapper == PocoMapperCollection.NotFound)
+            return GenericResult<List<TDomain>>.Failure(DefaultConfigurationProviderLog.DetachMapperMissing(_logger, typeof(TDomain).Name));
+
+        var copies = new List<TDomain>();
+        foreach (var row in rows)
+        {
+            var copy = new TDomain();
+            foreach (var parameter in mapper.MapToParameters(row))
+                mapper.SetValue(copy, parameter.Key, parameter.Value);
+
+            copies.Add(copy);
+        }
+
+        return GenericResult<List<TDomain>>.Success(copies);
+    }
+
     /// <summary>Copies the domain row's list fields onto the implementation a read composed.</summary>
     private IGenericResult StampListFields(TDomain row, TImplementationConfiguration implementation)
     {
@@ -795,7 +961,11 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         => Get(ConfigurationLevels.WholeAggregate, ct);
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> Get(int levels, CancellationToken ct = default)
+    public Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> Get(int levels, CancellationToken ct = default)
+        => Get(levels, ConfigurationReadOptions.Whole, ct);
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> Get(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
     {
         if (levels < 0)
             return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Failure(
@@ -814,11 +984,14 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var found = new List<TImplementationConfiguration>();
         foreach (var row in rows.Value ?? [])
         {
-            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, ct).ConfigureAwait(false);
+            var loaded = await Compose(row, _ => FromSet(sets.Value!, row), levels, null, options, ct).ConfigureAwait(false);
             if (!loaded.IsSuccess) return loaded.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
             if (loaded.Value is null) continue;
             found.Add(loaded.Value);
         }
+
+        var filled = await FillOrLeaveOut(found, null, options, ct).ConfigureAwait(false);
+        if (filled.IsFailure) return filled.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
 
         return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Success(found);
     }
@@ -860,17 +1033,47 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         where T : TImplementationConfiguration
         => WriteInOwnUnit(implementationConfiguration, domain, implementationName, name, mayCreate: true, mayReplace: false, ct);
 
+    // A record read without the members another domain supplies is for reading (FDW-7326): its empty member is "not read", and the write observer would take it for "cleared"
+    // and remove the stored text. The refusal comes before any write and before an observer runs, and says what to do.
+    private IGenericResult RefuseReadWithoutFill(TImplementationConfiguration implementationConfiguration)
+        => _readWithoutFill.TryGetValue(implementationConfiguration, out _)
+            ? GenericResult.Failure(DefaultConfigurationProviderLog.RecordReadWithoutFillNotSaved(
+                _logger, typeof(TImplementationConfiguration).Name, implementationConfiguration.Name))
+            : GenericResult.Success();
+
+    // The write of a unit the caller opened: refused first when the record was read without the members another domain supplies.
+    private Task<IGenericResult> WriteWhole<T>(
+        T implementationConfiguration, string domain, string implementationName, string name, bool mayCreate, ConfigurationWriteScope unit, CancellationToken ct)
+        where T : TImplementationConfiguration
+    {
+        var whole = RefuseReadWithoutFill(implementationConfiguration);
+        return whole.IsFailure
+            ? Task.FromResult(whole)
+            : WriteMember(implementationConfiguration, domain, implementationName, name, mayCreate, mayReplace: true, unit, ct);
+    }
+
     // One write in a unit of its own: opened here, committed on success and rolled back on a failure.
     private async Task<IGenericResult> WriteInOwnUnit<T>(
         T implementationConfiguration, string domain, string implementationName, string name, bool mayCreate, bool mayReplace,
         CancellationToken ct)
         where T : TImplementationConfiguration
     {
+        var whole = RefuseReadWithoutFill(implementationConfiguration);
+        if (whole.IsFailure) return whole;
+
         // Checked before the unit is opened: a save naming an implementation nothing is registered
         // for cannot proceed however the transaction goes, so it should not take one out.
         if (!_implementations.ContainsKey(implementationName))
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
+
+        // What the write needs from other stores is resolved here, before any unit is open (FDW-7256): a read made on another connection while the unit holds
+        // locks on rows it wrote waits for the unit, which waits for the read.
+        if (this is IConfigurationWritePreparer<TImplementationConfiguration> preparer)
+        {
+            var prepared = await preparer.Prepare(implementationConfiguration, ct).ConfigureAwait(false);
+            if (prepared.IsFailure) return prepared;
+        }
 
         var unit = await BeginWriteScope(ct).ConfigureAwait(false);
         if (unit.IsFailure) return unit;
@@ -896,7 +1099,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         T implementationConfiguration, string domain, string implementationName, string name,
         ConfigurationWriteScope unit, CancellationToken ct = default)
         where T : TImplementationConfiguration
-        => WriteMember(implementationConfiguration, domain, implementationName, name, mayCreate: true, mayReplace: true, unit, ct);
+        => WriteWhole(implementationConfiguration, domain, implementationName, name, mayCreate: true, unit, ct);
 
     /// <summary>Updates an existing member inside a unit of work the caller opened and will commit.</summary>
     /// <remarks>
@@ -906,7 +1109,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         T implementationConfiguration, string domain, string implementationName, string name,
         ConfigurationWriteScope unit, CancellationToken ct = default)
         where T : TImplementationConfiguration
-        => WriteMember(implementationConfiguration, domain, implementationName, name, mayCreate: false, mayReplace: true, unit, ct);
+        => WriteWhole(implementationConfiguration, domain, implementationName, name, mayCreate: false, unit, ct);
 
     // The write Save, Update and Create make. Only a Save or a Create (mayCreate) may mint a member; an Update whose record identifies
     // none fails, so a read that outlived its row cannot bring the member back or overwrite one made since under its name.
@@ -963,6 +1166,14 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
         var placed = await PlaceMinted(implementationConfiguration, domainRow.Value.Action, unit, ct).ConfigureAwait(false);
         if (placed.IsFailure) return placed;
+
+        // What a provider that declares it writes more in the unit of every write of a member writes now, on every outcome of the domain row (FDW-6121):
+        // a failure returns from here, so the unit rolls back and nothing lands half.
+        if (this is IConfigurationWriteObserver<TImplementationConfiguration> observer)
+        {
+            var observed = await observer.Written(implementationConfiguration, unit, ct).ConfigureAwait(false);
+            if (observed.IsFailure) return observed;
+        }
 
         DefaultConfigurationProviderLog.DomainRowSaved(
             _logger, typeof(TImplementationConfiguration).Name, name, domainId, domainRow.Value.Action);
@@ -1083,12 +1294,15 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var stored = await ExistingDomainRow(current, unit, ct).ConfigureAwait(false);
         if (stored.IsFailure) return stored.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
 
+        // A record of another implementation than the stored one moves the member (FDW-6806): the domain row takes the new implementation, the
+        // old implementation's row and children are retired, and the new implementation's are written under the same Id, all in this unit.
+        var moves = !string.Equals(current.Implementation, implementation.Implementation, StringComparison.Ordinal);
         var wanted = new TDomain
         {
             Id = current.Id,
             Name = current.Name,
             Domain = current.Domain,
-            Implementation = current.Implementation,
+            Implementation = moves ? implementation.Implementation : current.Implementation,
         };
         var taken = TakeListFields(implementation, wanted);
         if (taken.IsFailure) return taken.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
@@ -1099,12 +1313,12 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var listed = ListFields();
         if (listed.IsFailure) return listed.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
 
-        if (listed.Value!.All(field => Equals(held[field], carried[field])))
+        if (!moves && listed.Value!.All(field => Equals(held[field], carried[field])))
             return GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Success((current.Id, stored.Value.Keys, "reused"));
 
-        if (writable is not IConfigurationSupersedeParticipant<TImplementationConfiguration> superseding)
-            return GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Failure(
-                DefaultConfigurationProviderLog.ProviderCannotSupersede(_logger, current.Name, writable.GetType().ToString()));
+        var leaving = Superseding(current, writable, moves);
+        if (leaving.IsFailure) return leaving.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
+        var superseding = leaving.Value!;
 
         // The implementation goes first, while the row it hangs from is still current: the security
         // predicate on its table reaches the domain row through its key.
@@ -1122,9 +1336,23 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (written.IsFailure) return written.ToNewResult<(Guid, IReadOnlyDictionary<string, object?>, string)>();
 
         return written.Value?.Written is { } keys
-            ? GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Success((wanted.Id, keys, "reversioned"))
+            ? GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Success((wanted.Id, keys, moves ? "moved" : "reversioned"))
             : GenericResult<(Guid, IReadOnlyDictionary<string, object?>, string)>.Failure(
                 DefaultConfigurationProviderLog.WriteReturnedNoRow(_logger, _commands.TableName));
+    }
+
+    // The participant that retires the rows hanging from the domain row's current version: the stored implementation's, which on a move
+    // (FDW-6806) is not the one the record is written by.
+    private IGenericResult<IConfigurationSupersedeParticipant<TImplementationConfiguration>> Superseding(
+        TDomain current, IConfigurationWriteParticipant<TImplementationConfiguration> writable, bool moves)
+    {
+        var leaving = moves ? WritableImplementation(current.Implementation ?? string.Empty, current.Name) : GenericResult<IConfigurationWriteParticipant<TImplementationConfiguration>>.Success(writable);
+        if (leaving.IsFailure) return leaving.ToNewResult<IConfigurationSupersedeParticipant<TImplementationConfiguration>>();
+
+        return leaving.Value is IConfigurationSupersedeParticipant<TImplementationConfiguration> superseding
+            ? GenericResult<IConfigurationSupersedeParticipant<TImplementationConfiguration>>.Success(superseding)
+            : GenericResult<IConfigurationSupersedeParticipant<TImplementationConfiguration>>.Failure(
+                DefaultConfigurationProviderLog.ProviderCannotSupersede(_logger, current.Name, leaving.Value!.GetType().ToString()));
     }
 
     /// <summary>Refuses a record that is one member saved under the name of another.</summary>
@@ -1176,9 +1404,11 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
     /// <summary>Gives a member's domain row its new name, in place.</summary>
     /// <remarks>
-    /// Why in place and not a new version of the row: the domain tables declare their unique index on Id without a version filter, and other
-    /// tables cite that Id, so a domain row has one row for its whole life and its Id is its identity. A new version under the same Id would
-    /// be refused by the index (FDW-3082). The implementation is saved against the same row's keys afterwards, as for any update.
+    /// Why in place and not a new version of the row: a rename changes no list field, so there is nothing to version, and a domain table that declares
+    /// its unique index on Id without a version filter cannot hold a second row under the Id (FDW-3082). A domain that lists fields (data sets, data
+    /// stores, glossary terms, categories) declares the index filtered on IsCurrent, so a change to one of those fields is a new version under the same
+    /// Id (see <c>CurrentDomainRow</c>); other tables cite that Id and the owning domain checks the citation (<c>ICitedConfigurations</c>, FDW-6221).
+    /// The implementation is saved against the same row's keys afterwards, as for any update.
     /// </remarks>
     private async Task<IGenericResult<(Guid Id, IReadOnlyDictionary<string, object?> Keys, string Action)>> RenameDomainRow(
         TDomain row, string name, ConfigurationWriteScope unit, CancellationToken ct)

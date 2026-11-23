@@ -127,12 +127,8 @@ public sealed class PredicatePushdownAnalyzer
         root is FilterGroup group && ReferenceEquals(group.Operator, LogicalOperator.And) ? group.Nodes : [root];
 
     // Every field a filter node names, once each.
-    private static IEnumerable<string> FieldNames(IFilterNode node) => node switch
-    {
-        IFilterCondition condition => [condition.PropertyName],
-        FilterGroup group => group.Nodes.SelectMany(FieldNames).Distinct(StringComparer.Ordinal),
-        _ => [],
-    };
+    private static IEnumerable<string> FieldNames(IFilterNode node) =>
+        FilterNodeKinds.Conditions(node).Select(condition => condition.PropertyName).Distinct(StringComparer.Ordinal);
 
     // The one source a conjunct can be pushed to, or null when it must be applied to the joined rows: every field it names is mapped by
     // that source and no other, the source applies filters in its store, and no outer join makes it optional.
@@ -278,17 +274,10 @@ public sealed class PredicatePushdownAnalyzer
     /// <summary>
     /// Translates a filter node (condition or group) to use physical field names.
     /// </summary>
-    private IFilterNode TranslateNode(
+    private static IFilterNode TranslateNode(
         IFilterNode node,
-        IReadOnlyDictionary<string, string>? fieldMappings)
-    {
-        return node switch
-        {
-            IFilterCondition condition => (IFilterNode)TranslateCondition(condition, fieldMappings),
-            FilterGroup group => TranslateGroup(group, fieldMappings),
-            _ => node
-        };
-    }
+        IReadOnlyDictionary<string, string>? fieldMappings) =>
+        FilterNodeKinds.Rewrite(node, condition => TranslateCondition(condition, fieldMappings));
 
     /// <summary>
     /// Translates a filter condition to use physical field names.
@@ -311,24 +300,6 @@ public sealed class PredicatePushdownAnalyzer
             PropertyName = physicalFieldName,
             Operator = condition.Operator,
             Value = condition.Value
-        };
-    }
-
-    /// <summary>
-    /// Translates a filter group recursively to use physical field names.
-    /// </summary>
-    private FilterGroup TranslateGroup(
-        FilterGroup group,
-        IReadOnlyDictionary<string, string>? fieldMappings)
-    {
-        var translatedNodes = group.Nodes
-            .Select(node => TranslateNode(node, fieldMappings))
-            .ToList();
-
-        return new FilterGroup
-        {
-            Operator = group.Operator,
-            Nodes = translatedNodes
         };
     }
 }

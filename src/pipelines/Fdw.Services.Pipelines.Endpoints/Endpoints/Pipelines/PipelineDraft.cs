@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Services.Pipelines.Abstractions;
@@ -17,7 +18,7 @@ public static class PipelineDraft
     public static async Task<bool> NameTaken(
         IPipelineConfigurationProvider provider, string name, CancellationToken cancellationToken = default)
     {
-        var existing = await provider.Get(name, cancellationToken).ConfigureAwait(false);
+        var existing = await provider.Get(name, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         return existing.IsSuccess && existing.Value != null;
     }
 }

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.OData.FilterNodes;
 using Fdw.Data.OData.Logging;
 using Fdw.Results;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,23 +68,25 @@ public abstract class ODataCommandTranslatorBase : DataCommandTranslatorBase<Htt
     /// </summary>
     private static string BuildODataNode(IFilterNode node)
     {
-        switch (node)
+        // The node's kind names its handler; a node that is neither a condition nor a group has no kind and is refused.
+        var kind = FilterNodeKinds.Of(node);
+        var handler = ReferenceEquals(kind, FilterNodeKinds.NotFound)
+            ? ODataFilterNodeHandlers.NotFound
+            : ODataFilterNodeHandlers.ByName(kind.Name);
+        if (ReferenceEquals(handler, ODataFilterNodeHandlers.NotFound))
         {
-            case FilterCondition condition:
-                return BuildODataCondition(condition);
-            case FilterGroup group:
-                return BuildODataGroup(group);
-            default:
-                ODataCommandTranslatorBaseLog.UnknownFilterNodeType(
-                    NullLogger<ODataCommandTranslatorBase>.Instance, node.GetType().Name);
-                throw new InvalidOperationException($"Unknown filter node type: {node.GetType().Name}");
+            ODataCommandTranslatorBaseLog.UnknownFilterNodeType(
+                NullLogger<ODataCommandTranslatorBase>.Instance, node.GetType().Name);
+            throw new InvalidOperationException($"Unknown filter node type: {node.GetType().Name}");
         }
+
+        return handler.Build(node);
     }
 
     /// <summary>
     /// Builds OData filter for a single condition.
     /// </summary>
-    private static string BuildODataCondition(FilterCondition condition)
+    internal static string BuildODataCondition(FilterCondition condition)
     {
         var odataCondition = $"{condition.PropertyName} {condition.Operator.ODataOperator}";
 
@@ -99,7 +102,7 @@ public abstract class ODataCommandTranslatorBase : DataCommandTranslatorBase<Htt
     /// <summary>
     /// Builds OData filter for a group of conditions with proper parentheses for precedence.
     /// </summary>
-    private static string BuildODataGroup(FilterGroup group)
+    internal static string BuildODataGroup(FilterGroup group)
     {
         var clauses = new List<string>();
 

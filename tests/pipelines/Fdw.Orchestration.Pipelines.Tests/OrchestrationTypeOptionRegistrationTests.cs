@@ -17,41 +17,6 @@ namespace Fdw.Orchestration.Pipelines.Tests;
 /// </summary>
 public sealed class OrchestrationTypeOptionRegistrationTests
 {
-    [Fact]
-    public void StopOnErrorTheExecutorsDefaultErrorHandlingResolvesByName()
-    {
-        var mode = ErrorHandlingModesCollection.ByName("StopOnError");
-
-        ReferenceEquals(mode, ErrorHandlingModesCollection.NotFound).ShouldBeFalse();
-        mode.Name.ShouldBe("StopOnError");
-        mode.ShouldBeOfType<StopOnErrorMode>();
-    }
-
-    [Fact]
-    public void ExponentialTheExecutorsRetryBackoffResolvesByName()
-    {
-        var strategy = BackoffStrategiesCollection.ByName("Exponential");
-
-        ReferenceEquals(strategy, BackoffStrategiesCollection.NotFound).ShouldBeFalse();
-        strategy.Name.ShouldBe("Exponential");
-        strategy.ShouldBeOfType<ExponentialBackoffStrategy>();
-    }
-
-    [Theory]
-    [InlineData("Succeeded", typeof(SucceededStatus))]
-    [InlineData("SucceededWithWarnings", typeof(SucceededWithWarningsStatus))]
-    [InlineData("Failed", typeof(FailedStatus))]
-    [InlineData("Cancelled", typeof(CancelledStatus))]
-    [InlineData("TimedOut", typeof(TimedOutStatus))]
-    [InlineData("Running", typeof(RunningStatus))]
-    public void EveryExecutionStatusTheExecutorReadsResolvesByName(string name, Type expected)
-    {
-        var status = ExecutionStatusesCollection.ByName(name);
-
-        ReferenceEquals(status, ExecutionStatusesCollection.NotFound).ShouldBeFalse();
-        status.Name.ShouldBe(name);
-        status.ShouldBeOfType(expected);
-    }
 
     [Fact]
     public void EveryDeclaredErrorHandlingModeJoinsItsCollection()

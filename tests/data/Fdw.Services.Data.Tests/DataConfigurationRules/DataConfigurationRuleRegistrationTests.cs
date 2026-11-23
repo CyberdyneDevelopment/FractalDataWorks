@@ -8,6 +8,8 @@ using Fdw.Services.Authorization;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Abstractions.DataConfigurationRules;
 using Fdw.Services.Data.DataConfigurationRules;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Settings;
 using Fdw.Services.Workspaces;
@@ -24,7 +26,8 @@ namespace Fdw.Services.Data.Tests.DataConfigurationRules;
 /// <summary>
 /// FDW-6346 (Release-Supervisor's condition on FDW-6489): the rule service and the names directory take services other domains register, and a host that lacks one does not start
 /// (PlatformServices.Configure turns on ValidateOnBuild in every environment). The data gateway's own Register reads the configuration store, so no unit test can run it; this test
-/// runs what can run without a database, the registrations of the workspaces and authorization domains, adds the two registrations the data gateway makes, and walks every constructor
+/// runs what can run without a database, the registrations of the workspaces, authorization and descriptions domains (the rule service writes and reads each rule's description with the
+/// descriptions writer and reader, FDW-6208), adds the two registrations the data gateway makes, and walks every constructor
 /// dependency of the two services through the registrations the way ValidateOnBuild reads them. Everything that is still unregistered is named in <see cref="HostContract"/>: what the
 /// other domains of a host (settings, tenancy, operations, authentication and the data set provider) must register. A new dependency that no domain registers, as IWorkspaceAccessPolicy
 /// was not, shows here.
@@ -76,10 +79,21 @@ public sealed class DataConfigurationRuleRegistrationTests
         Unregistered(services, typeof(IDataConfigurationRules), typeof(IDataConfigurationRuleNames)).ShouldContain("Fdw.Services.Authorization.Abstractions.IPermissionHolders");
     }
 
+    [Fact]
+    public void AMissingDescriptionsDomainIsReportedByNamingTheWriterAndTheReader()
+    {
+        var services = Composition(withWorkspaces: true, withAuthorization: true, withDescriptions: false);
+
+        var missing = Unregistered(services, typeof(IDataConfigurationRules), typeof(IDataConfigurationRuleNames));
+
+        missing.ShouldContain(typeof(IDescriptionWriter).FullName!);
+        missing.ShouldContain(typeof(IDescriptionReader).FullName!);
+    }
+
     // A stand-in for a host contract type known only at run time.
     private static object StandIn(Type contract) => ((Mock)Activator.CreateInstance(typeof(Mock<>).MakeGenericType(contract))!).Object;
 
-    private static IServiceCollection Composition(bool withWorkspaces, bool withAuthorization)
+    private static IServiceCollection Composition(bool withWorkspaces, bool withAuthorization, bool withDescriptions = true)
     {
         var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
         builder.Services.AddLogging();
@@ -90,6 +104,8 @@ public sealed class DataConfigurationRuleRegistrationTests
             new DefaultWorkspaceServiceType().Register(builder, NullLoggerFactory.Instance).IsSuccess.ShouldBeTrue();
         if (withAuthorization)
             new DefaultAuthorizationServiceType().Register(builder, NullLoggerFactory.Instance).IsSuccess.ShouldBeTrue();
+        if (withDescriptions)
+            new DefaultDescriptionServiceType().Register(builder, NullLoggerFactory.Instance).IsSuccess.ShouldBeTrue();
 
         // The two registrations the data gateway makes (MainDataGatewayImplementation): its Register reads the configuration store first, so a test cannot run it.
         builder.Services.TryAddScoped<IDataConfigurationRules, DataConfigurationRuleService>();

@@ -25,4 +25,4 @@ An unknown option type or option gives the collection's NotFound sentinel, whose
 
 Another package adds an option type with `[TypeOption(typeof(DataOptions), "Name")]`, or an option of SelectList with `[TypeOption(typeof(SelectListOptions), "Name")]`.
 
-The `ReadDataOptions` pipeline step (`Fdw.Services.Etl`) reads the stored rows for a column and keeps the resulting list in a variable.
+The `ReadDataOptions` pipeline step (`Fdw.Services.Etl`) reads the current, active data configuration rules of a column and their values (FDW-6344) and keeps the resulting list in a variable: a rule of kind `In` puts its values in the list (`Include`) and a rule of kind `NotIn` takes them out (`Exclude`).

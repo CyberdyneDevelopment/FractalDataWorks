@@ -36,12 +36,10 @@ internal static class DataSetVariationScope
             nodes.Add(node.Value);
         }
 
-        return GenericResult<QueryFilterNode?>.Success(nodes.Count switch
-        {
-            0 => null,
-            1 => nodes[0],
-            _ => new QueryFilterNode { Logic = "And", Nodes = nodes },
-        });
+        if (nodes.Count == 0)
+            return GenericResult<QueryFilterNode?>.Success(null);
+
+        return GenericResult<QueryFilterNode?>.Success(nodes.Count == 1 ? nodes[0] : new QueryFilterNode { Logic = "And", Nodes = nodes });
     }
 
     private static IGenericResult<QueryFilterNode> Read(string text, string viewName, ILogger logger)

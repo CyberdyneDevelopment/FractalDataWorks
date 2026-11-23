@@ -40,15 +40,16 @@ public sealed class MsSqlUpdateTranslatorTests
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
         containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? []);
 
+        // A container states its primary key in Keys (FDW-6309).
         var metadata = new Dictionary<string, object>();
-        if (primaryKeyFieldName != null)
-            metadata["SurrogateKeyField"] = primaryKeyFieldName;
+        var keys = primaryKeyFieldName is null ? new List<IContainerKey>() : TestPrimaryKeys.On(primaryKeyFieldName);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);
         container.Setup(c => c.Path).Returns(dbPath);
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.Metadata).Returns(metadata);
+        container.Setup(c => c.Keys).Returns(keys);
 
         return container;
     }

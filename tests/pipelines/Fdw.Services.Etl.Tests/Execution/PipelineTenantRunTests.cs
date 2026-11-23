@@ -50,7 +50,7 @@ public sealed class PipelineTenantRunTests
         roles.Setup(r => r.Get(request.RunRoles, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(["datasets:read", "datasets:write"]));
 
-        var result = await PipelineExecutionBackgroundService.ResolveTenantRun(
+        var result = await PipelineRequestProcessor.ResolveTenantRun(
             Services(roles), request, NullLogger.Instance, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
@@ -69,7 +69,7 @@ public sealed class PipelineTenantRunTests
     {
         var roles = new Mock<IRoleGrants>(MockBehavior.Strict);
 
-        var result = await PipelineExecutionBackgroundService.ResolveTenantRun(
+        var result = await PipelineRequestProcessor.ResolveTenantRun(
             Services(roles), Request(null), NullLogger.Instance, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -85,7 +85,7 @@ public sealed class PipelineTenantRunTests
         roles.Setup(r => r.Get(request.RunRoles, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Failure(new GenericMessage("the role no longer exists")));
 
-        var result = await PipelineExecutionBackgroundService.ResolveTenantRun(
+        var result = await PipelineRequestProcessor.ResolveTenantRun(
             Services(roles), request, NullLogger.Instance, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();

@@ -198,4 +198,21 @@ public sealed class RecordPredicatesTests
         parsed.Evaluate(young).ShouldBeFalse();
         parsed.Evaluate(old).ShouldBeTrue();
     }
+
+    /// <summary>FDW-4402: the scanner refuses a word no option holds, so every word it offers has to be held by the collection that reads it.</summary>
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Etl")]
+    public void EveryWordTheScannerOffersIsHeldByTheCollectionThatReadsIt()
+    {
+        foreach (var word in new[] { "contains", "startswith", "endswith" })
+        {
+            ReferenceEquals(RecordTextMatches.ByWord(word), RecordTextMatches.NotFound).ShouldBeFalse(word);
+        }
+
+        foreach (var word in new[] { ">=", "<=", ">", "<" })
+        {
+            ReferenceEquals(RecordOrderings.ByWord(word), RecordOrderings.NotFound).ShouldBeFalse(word);
+        }
+    }
 }

@@ -28,14 +28,21 @@ public sealed class SlotRole : ISlotRole
     /// <summary>What the role file says when this copy is standby.</summary>
     public const string Standby = "standby";
 
+    /// <summary>The key of the slot file that holds the slot's own name (FDW-6519).</summary>
+    public const string SlotKey = "slot";
+
     private readonly string? _roleFile;
     private readonly ILogger _logger;
 
-    private SlotRole(string? roleFile, ILogger logger)
+    private SlotRole(string? roleFile, string? slotName, ILogger logger)
     {
         _roleFile = roleFile;
+        SlotName = slotName;
         _logger = logger;
     }
+
+    /// <inheritdoc />
+    public string? SlotName { get; }
 
     /// <summary>Builds the gate for the host this process is.</summary>
     /// <param name="logger">The logger.</param>
@@ -45,7 +52,7 @@ public sealed class SlotRole : ISlotRole
         if (SlotFile.DeclaredPath() is not { } declared)
         {
             SlotRoleLog.GateNotOnSlot(logger);
-            return GenericResult<ISlotRole>.Success(new SlotRole(null, logger));
+            return GenericResult<ISlotRole>.Success(new SlotRole(null, null, logger));
         }
 
         var read = SlotFile.Read(declared, logger);
@@ -56,7 +63,7 @@ public sealed class SlotRole : ISlotRole
             return GenericResult<ISlotRole>.Failure(SlotRoleLog.RoleFileNotStated(logger, file.FilePath));
 
         SlotRoleLog.GateOnSlot(logger, roleFile);
-        return GenericResult<ISlotRole>.Success(new SlotRole(roleFile, logger));
+        return GenericResult<ISlotRole>.Success(new SlotRole(roleFile, file.Values.TryGetValue(SlotKey, out var slot) ? slot : null, logger));
     }
 
     /// <inheritdoc />

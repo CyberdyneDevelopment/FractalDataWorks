@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -45,7 +46,7 @@ public sealed class ThresholdNotifier : IThresholdNotifier
 
         foreach (var name in rules)
         {
-            var rule = await _rules.Get(name, cancellationToken).ConfigureAwait(false);
+            var rule = await _rules.Get(name, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
             if (rule.IsFailure || rule.Value is null)
             {
                 return rule;

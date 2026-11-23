@@ -46,13 +46,14 @@ public abstract class TriggerTypeBase : TypeOptionBase<TriggerTypeBase>, ITypeOp
     /// <param name="name">The name of this trigger type.</param>
     /// <param name="requiresSchedule">Whether this trigger type requires schedule persistence.</param>
     /// <param name="isImmediate">Whether this trigger type executes immediately upon creation.</param>
+    /// <param name="description">What this trigger type does, in one sentence a person reads when choosing a schedule type.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
     /// <remarks>
     /// The constructor validates that the name is not null and initializes the trigger type
     /// characteristics that determine its scheduling behavior.
     /// </remarks>
-    protected TriggerTypeBase(string name, bool requiresSchedule, bool isImmediate)
-        : base(name)
+    protected TriggerTypeBase(string name, bool requiresSchedule, bool isImmediate, string description)
+        : base(name, name, description, string.Empty)
     {
         RequiresSchedule = requiresSchedule;
         IsImmediate = isImmediate;

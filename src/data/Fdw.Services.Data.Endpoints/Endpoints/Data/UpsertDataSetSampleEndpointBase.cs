@@ -69,7 +69,7 @@ public abstract class UpsertDataSetSampleEndpointBase : Endpoint<DataSetSampleRe
         if (gateway.IsFailure) { await SendError(gateway, ct).ConfigureAwait(false); return; }
 
         var upserted = await DataSetSampleWriter.Upsert(
-            gateway.Value!, _dataSets.DataStoreName, _dataSets.PathName, dataSet.Value.Id, fieldIdsByName, req, _logger, ct)
+            gateway.Value!, _dataSets.DataStoreName, _dataSets.PathName, _dataSets, dataSet.Value.Id, fieldIdsByName, req, _logger, ct)
             .ConfigureAwait(false);
         if (upserted.IsFailure)
         {

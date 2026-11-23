@@ -57,6 +57,15 @@ public interface IDataStoreType : ITypeOption<Guid, IDataStoreType>
     /// </remarks>
     IContainerPagingRules? ContainerPaging { get; }
 
+    /// <summary>
+    /// Gets the names of the container types (the options of <c>ContainerTypes</c>) a store of this type holds: the ones its builder builds (FDW-6428).
+    /// </summary>
+    /// <remarks>
+    /// Stated by every data store type, never assumed. A container written to a store of this type, or built into one, is of one of these; one that states another
+    /// connection type's option (a Table in an Http store) is refused at the write by <c>DataContainerTypeRule</c>, the rule the builder asks too.
+    /// </remarks>
+    IReadOnlyList<string> ContainerTypeNames { get; }
+
 }
 
 /// <summary>

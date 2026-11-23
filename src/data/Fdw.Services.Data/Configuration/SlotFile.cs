@@ -87,27 +87,9 @@ public sealed class SlotFile
     }
 
     private static string? Flatten(JsonElement element, string name, Dictionary<string, string> values)
-    {
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.Object:
-                return FlattenObject(element, name, values);
-            case JsonValueKind.Array:
-                return FlattenArray(element, name, values);
-            case JsonValueKind.String:
-                return element.GetString() is { Length: > 0 } text ? Add(values, name, text) : null;
-            case JsonValueKind.Number:
-                return Add(values, name, element.GetRawText());
-            case JsonValueKind.True:
-                return Add(values, name, "true");
-            case JsonValueKind.False:
-                return Add(values, name, "false");
-            default:
-                return null;
-        }
-    }
+        => SlotFileValueKinds.Flatten(element, name, values);
 
-    private static string? FlattenObject(JsonElement element, string name, Dictionary<string, string> values)
+    internal static string? FlattenObject(JsonElement element, string name, Dictionary<string, string> values)
     {
         foreach (var property in element.EnumerateObject())
         {
@@ -118,7 +100,7 @@ public sealed class SlotFile
         return null;
     }
 
-    private static string? FlattenArray(JsonElement element, string name, Dictionary<string, string> values)
+    internal static string? FlattenArray(JsonElement element, string name, Dictionary<string, string> values)
     {
         var index = 0;
         foreach (var item in element.EnumerateArray())
@@ -130,7 +112,4 @@ public sealed class SlotFile
 
         return null;
     }
-
-    private static string? Add(Dictionary<string, string> values, string name, string value)
-        => values.TryAdd(name, value) ? null : name;
 }

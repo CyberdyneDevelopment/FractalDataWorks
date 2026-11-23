@@ -8,11 +8,11 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql;
+using Fdw.Data.MsSql.Tests.TestSupport;
 using Fdw.Results;
 using Moq;
 using Shouldly;
 using Xunit;
-using Fdw.Data.MsSql.Tests.TestSupport;
 
 namespace Fdw.Data.MsSql.Tests.Translators;
 
@@ -37,13 +37,11 @@ public sealed class MsSqlQueryTranslatorTests
         container.Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Name).Returns(name);
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
-        if (declaredKey is not null)
-            container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = declaredKey });
 
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
-        container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
+        container.Setup(c => c.Keys).Returns(declaredKey is null ? new List<IContainerKey>() : TestPrimaryKeys.On(declaredKey));
 
         return container;
     }
@@ -218,6 +216,66 @@ public sealed class MsSqlQueryTranslatorTests
 
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(message => string.Equals(message.Code, code, StringComparison.Ordinal));
+    }
+
+    // A Compound union (FDW-6946): Order's columns, and Customer's stacked under them under the same names.
+    private static QueryCommand<object> UnionRead(IOrderingExpression? ordering, IPagingExpression? paging, string secondAlias = "Status") => new()
+    {
+        Projection = new ProjectionExpression
+        {
+            Fields = [new ProjectionField { PropertyName = "order_id", Alias = "Id" }, new ProjectionField { PropertyName = "status", Alias = "Status" }],
+        },
+        Unions =
+        [
+            new UnionBranch
+            {
+                ContainerName = "Customer",
+                Fields = [new ProjectionField { PropertyName = "code", Alias = "Id" }, new ProjectionField { PropertyName = "state", Alias = secondAlias }],
+            },
+        ],
+        Filter = new FilterExpression { Root = new FilterCondition { PropertyName = "Status", Operator = FilterOperators.ByName("Equal"), Value = "Open" } },
+        Ordering = ordering,
+        Paging = paging,
+    };
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW6946")]
+    public async Task AUnionIsOneUnionAllStatementWithTheFilterOrderAndPageOnTheStackedRows()
+    {
+        var ordering = new OrderingExpression { OrderedFields = [new OrderedField { PropertyName = "Id", Direction = new AscendingDirection() }] };
+        var result = await _sut.Translate(UnionRead(ordering, new PagingExpression { Skip = 0, Take = 5 }), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var sql = result.Value!.CommandText;
+        sql.ShouldStartWith("SELECT [Id], [Status] FROM (SELECT [order_id] AS [Id], [status] AS [Status] FROM ", Case.Sensitive);
+        sql.ShouldContain(" UNION ALL SELECT [code] AS [Id], [state] AS [Status] FROM [dbo].[Customer]) AS [u]", Case.Sensitive);
+        sql.ShouldContain(" WHERE [Status] = @p0", Case.Sensitive);
+        sql.ShouldContain(" ORDER BY [Id] ASC", Case.Sensitive);
+        sql.ShouldNotContain("UNION ALL SELECT DISTINCT");
+        result.Value.Parameters.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW6946")]
+    public async Task AUnionBranchWhoseColumnsAreNotTheFirstBranchsIsRefused()
+    {
+        var result = await _sut.Translate(UnionRead(null, null, secondAlias: "State"), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(message => string.Equals(message.Code, "CMDDATA-22034", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataSets.FDW6946")]
+    public async Task APagedUnionThatStatesNoOrderIsRefused()
+    {
+        var result = await _sut.Translate(UnionRead(null, new PagingExpression { Skip = 0, Take = 5 }), CompoundStore().Object, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(message => string.Equals(message.Code, "CMDDATA-22036", StringComparison.Ordinal));
     }
 
     private static QueryCommand<object> CompoundRead(IOrderingExpression? ordering, IPagingExpression? paging) => new()

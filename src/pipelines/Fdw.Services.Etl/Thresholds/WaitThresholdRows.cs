@@ -9,6 +9,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Thresholds;
 
@@ -39,7 +40,7 @@ internal sealed class WaitThresholdRows(ILogger logger)
     {
         var result = await gateway
             .Execute<IEnumerable<T>>(
-                new QueryCommand<T> { Filter = ActiveRows() }, new DataStoreTarget(EtlPipelineTypes.ConfigurationConnection, path, container), cancellationToken)
+                new QueryCommand<T> { Filter = ActiveRows() }, new DataStoreTarget(PipelineTypes.ConfigurationConnection, path, container), cancellationToken)
             .ConfigureAwait(false);
         return result.IsFailure || result.Value is null
             ? GenericResult<IReadOnlyList<T>>.Failure(WaitThresholdLog.RowsNotRead(logger, container, result.CurrentMessage))
@@ -58,7 +59,7 @@ internal sealed class WaitThresholdRows(ILogger logger)
     /// <summary>Gets the target of one of the containers that hold thresholds.</summary>
     /// <param name="container">The container.</param>
     /// <returns>The target.</returns>
-    public static DataStoreTarget Target(string container) => new(EtlPipelineTypes.ConfigurationConnection, PathName, container);
+    public static DataStoreTarget Target(string container) => new(PipelineTypes.ConfigurationConnection, PathName, container);
 
     /// <summary>Retires rows of a container, each by its own logical Id (a retire command takes the key values of one row).</summary>
     /// <param name="gateway">The configuration gateway.</param>

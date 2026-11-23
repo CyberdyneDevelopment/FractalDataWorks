@@ -49,4 +49,11 @@ internal sealed class FakeRunStarter : IPipelineRunStarter
 
     /// <inheritdoc />
     public Task<bool> Await(Guid executionId, CancellationToken cancellationToken = default) => Task.FromResult(AwaitResult);
+
+    /// <summary>Gets the outputs <see cref="Outputs"/> answers for every run.</summary>
+    public List<PipelineOutputValue> RecordedOutputs { get; } = [];
+
+    /// <inheritdoc />
+    public Task<IGenericResult<IReadOnlyList<PipelineOutputValue>>> Outputs(Guid executionId, Guid tenantId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(GenericResult<IReadOnlyList<PipelineOutputValue>>.Success([.. RecordedOutputs]));
 }

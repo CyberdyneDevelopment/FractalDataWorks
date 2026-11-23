@@ -186,13 +186,12 @@ public static class SqlArithmetic
     }
 
     // ~ on a bigint gives a bigint; on any smaller integer it gives an int.
-    private static IGenericResult<object?> BitwiseNot(object operand, ScalarExpression expression, SqlScope scope) => operand switch
+    private static IGenericResult<object?> BitwiseNot(object operand, ScalarExpression expression, SqlScope scope)
     {
-        long whole => GenericResult<object?>.Success(~whole),
-        int whole => GenericResult<object?>.Success(~whole),
-        short whole => GenericResult<object?>.Success(~whole),
-        byte whole => GenericResult<object?>.Success(~whole),
-        _ => Incompatible(expression, scope),
-    };
+        var number = SqlWholeNumbers.ByClrType(operand.GetType());
+        return ReferenceEquals(number, SqlWholeNumbers.NotFound)
+            ? Incompatible(expression, scope)
+            : GenericResult<object?>.Success(number.BitwiseNot(operand));
+    }
 
 }

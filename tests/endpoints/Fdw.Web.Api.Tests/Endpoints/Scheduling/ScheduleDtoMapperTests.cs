@@ -93,6 +93,9 @@ public sealed class ScheduleDtoMapperTests
         schedule.ModifyBy = "modifier";
         schedule.CreateOnBehalfOf = "creator-for";
         schedule.ModifyOnBehalfOf = "modifier-for";
+        schedule.RunGrantId = Guid.NewGuid();
+        schedule.PausedAt = DateTimeOffset.UtcNow.AddHours(-1);
+        schedule.PausedReason = "three fires in a row failed to start a run";
         return schedule;
     }
 

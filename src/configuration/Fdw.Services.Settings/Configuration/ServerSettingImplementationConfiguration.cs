@@ -38,6 +38,9 @@ public sealed partial class ServerSettingImplementationConfiguration : IServerSe
     public string DataType { get; set; } = string.Empty;
 
     /// <inheritdoc/>
+    // Why [NotStored]: a setting's description is a row of the descriptions table under the description type ServerSetting, written in the unit of the setting's save
+    // (FDW-6208); the column is gone from settings.ServerSettingConfiguration. It is never filled on load, so it is null until a caller states one, and it has no initializer.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc/>

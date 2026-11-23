@@ -54,11 +54,15 @@ public static class UpdateScheduleChanges
             Apply: (request, schedule, _) => schedule.MissedFireRule = request.MissedFireRule!),
 
         new(nameof(UpdateScheduleRequest.IsEnabled), request => request.IsEnabled.HasValue,
-            Apply: (request, schedule, _) => schedule.IsEnabled = request.IsEnabled!.Value),
+            Apply: (request, schedule, _) => schedule.ChangeEnabled(request.IsEnabled!.Value)),
 
         // Stated values replace the stored set whole; a body that states none leaves them (contract v2 item 9).
         new(nameof(UpdateScheduleRequest.Parameters), request => request.Parameters is not null,
             Apply: (request, schedule, _) => schedule.Parameters = ScheduleParameterMapper.ToConfiguration(request.Parameters)),
+
+        // The grant a person states is issued by the endpoint (ScheduleRunAsGrants), which stores its id on the schedule; the member is here so a body that states only it is a change (FDW-6144).
+        new(nameof(UpdateScheduleRequest.RunAs), request => request.RunAs is not null,
+            Apply: (_, _, _) => { }),
 
         // The roles arrive already judged (RunRoleAuthority); stated roles replace the recorded ones whole (FDW-1161).
         new(nameof(UpdateScheduleRequest.RunRoles), request => request.RunRoles is not null,

@@ -8,7 +8,7 @@ public sealed class LoopGraphRefusedComponentKind : GraphRefusedComponentKindBas
 {
     /// <summary>Initializes a new instance of the <see cref="LoopGraphRefusedComponentKind"/> class.</summary>
     public LoopGraphRefusedComponentKind()
-        : base("Loop", "A loop runs the components inside it again; a Graph data set is a graph of row components with no repetition of effects.", ["DoWhile", "ForEach", "ForLoop"], "GraphDataSetLoopRefused")
+        : base("Loop", "A loop runs the components inside it again; a Graph data set is a graph of row components with no repetition of effects.", ["DoWhile", "ForEach", "ForLoop", "While"], "GraphDataSetLoopRefused")
     {
     }
 }

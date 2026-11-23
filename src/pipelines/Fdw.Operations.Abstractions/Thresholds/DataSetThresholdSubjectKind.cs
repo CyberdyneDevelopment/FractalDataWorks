@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Operations.Abstractions.Thresholds;
 
@@ -13,4 +14,7 @@ public sealed class DataSetThresholdSubjectKind : ThresholdSubjectKindBase
         : base("DataSet", "A data set", "data", "DataSetThreshold")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.Of("data.DataSet");
 }

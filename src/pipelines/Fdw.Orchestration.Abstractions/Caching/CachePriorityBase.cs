@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Fdw.Orchestration.Abstractions.Caching;
 
@@ -10,5 +11,13 @@ public abstract class CachePriorityBase : TypeOptionBase<CachePriorityBase>, ICa
     /// <summary>
     /// Initializes a new instance of <see cref="CachePriorityBase"/>.
     /// </summary>
-    protected CachePriorityBase(string name) : base(name) { }
+    /// <param name="name">The option name.</param>
+    /// <param name="memoryPriority">The memory cache's own priority this level means.</param>
+    protected CachePriorityBase(string name, CacheItemPriority memoryPriority) : base(name)
+    {
+        MemoryPriority = memoryPriority;
+    }
+
+    /// <inheritdoc />
+    public CacheItemPriority MemoryPriority { get; }
 }

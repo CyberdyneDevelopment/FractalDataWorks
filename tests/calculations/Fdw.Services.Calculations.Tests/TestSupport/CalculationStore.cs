@@ -83,7 +83,8 @@ internal sealed class CalculationStore
             .Setup(p => p.Supersede(It.IsAny<IDataContainer>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult.Success());
         Provider = new CalculationConfigurationProvider(
-            NullLogger<CalculationConfigurationProvider>.Instance, gateways.Object, StoreName, "calc", "CalculationEntity", Placing());
+            NullLogger<CalculationConfigurationProvider>.Instance, gateways.Object, StoreName, "calc", "CalculationEntity", Placing(),
+            DescriptionDoubles.Writer(), DescriptionDoubles.Reader());
         Provider.Register(OneImplementation, Implementations.Object);
 
         Holds();

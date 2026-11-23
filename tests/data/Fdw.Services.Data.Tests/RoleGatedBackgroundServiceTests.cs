@@ -20,6 +20,8 @@ public sealed class RoleGatedBackgroundServiceTests
 {
     private sealed class ScriptedRole(params IGenericResult<bool>[] answers) : ISlotRole
     {
+        public string? SlotName => null;
+
         private int _next;
 
         public int Asked => _next;

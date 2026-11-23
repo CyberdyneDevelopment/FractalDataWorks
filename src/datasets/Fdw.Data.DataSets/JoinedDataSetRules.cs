@@ -22,12 +22,18 @@ public static class JoinedDataSetRules
     /// <param name="dataSet">The data set, as it will be saved or as it was read.</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <returns>
-    /// Success, or the first refusal: <c>JoinSourceNotInDataSet</c> naming a source that is not one of the data set's, <c>JoinTypeMissing</c>
+    /// Success, or the first refusal: a refusal of how the sources combine (<see cref="SourceCombinationRules"/>), <c>JoinSourceNotInDataSet</c>
+    /// naming a source that is not one of the data set's, <c>JoinTypeMissing</c>
     /// for a join with no type, <c>JoinTypeNotFound</c> for a type no <see cref="JoinTypes"/> option is named, or <c>JoinTypeNotSupported</c>
     /// for an option that joins nothing (None).
     /// </returns>
     public static IGenericResult Validate(IJoinedDataSetConfiguration dataSet, ILogger logger)
     {
+        // How the sources combine comes first: a join or a union, stated, never neither and never both (FDW-6946).
+        var combined = SourceCombinationRules.Validate(dataSet, logger);
+        if (combined.IsFailure)
+            return combined;
+
         var sources = dataSet.Sources.Select(s => s.SourceName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var join in dataSet.Joins)
         {

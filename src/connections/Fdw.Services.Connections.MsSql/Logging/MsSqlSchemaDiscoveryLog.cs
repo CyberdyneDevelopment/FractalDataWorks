@@ -443,4 +443,71 @@ public static partial class MsSqlSchemaDiscoveryLog
     [MessageLogging(EventId = 91003, Level = LogLevel.Error,
         Message = "[MsSql] DiscoverSchema called with wrong connection type — expected MsSqlConnection")]
     public static partial IGenericMessage ConnectionTypeMismatch(ILogger logger);
+
+    // ── Keys of a discovery (FDW-6309) ─────────────────────────────────────────
+
+    /// <summary>
+    /// Logs a foreign key whose referenced container the discovery did not read.
+    /// </summary>
+    [MessageLogging(
+        EventId = 41010,
+        Level = LogLevel.Warning,
+        Message = "Foreign key '{keyName}' of '{schemaName}.{tableName}' references '{referencedSchema}.{referencedTable}', which this discovery did not read (its schema is left out, or it is not a table). The key stays on its table, its columns are foreign key columns, and no relationship is drawn")]
+    public static partial IGenericMessage ForeignKeyTargetNotDiscovered(ILogger logger, string keyName, string schemaName, string tableName, string referencedSchema, string referencedTable);
+
+    /// <summary>
+    /// Logs a table whose key metadata the login cannot see.
+    /// </summary>
+    [MessageLogging(
+        EventId = 41011,
+        Level = LogLevel.Warning,
+        Message = "The login cannot see the key metadata of '{schemaName}.{tableName}' (VIEW DEFINITION on it is missing), so its primary key and foreign keys are not known")]
+    public static partial IGenericMessage KeyMetadataHidden(ILogger logger, string schemaName, string tableName);
+
+    /// <summary>
+    /// Logs a table that has a primary key the discovery read none of.
+    /// </summary>
+    [MessageLogging(
+        EventId = 41012,
+        Level = LogLevel.Warning,
+        Message = "Table '{schemaName}.{tableName}' has a primary key, and the catalog read through this login returned none of its columns (VIEW DEFINITION on it may be missing), so its primary key is not known")]
+    public static partial IGenericMessage PrimaryKeyNotRead(ILogger logger, string schemaName, string tableName);
+
+    /// <summary>
+    /// Logs a table that has foreign keys the discovery read none of.
+    /// </summary>
+    [MessageLogging(
+        EventId = 41013,
+        Level = LogLevel.Warning,
+        Message = "Table '{schemaName}.{tableName}' has foreign keys, and the catalog read through this login returned none of them (VIEW DEFINITION on it may be missing), so its foreign keys are not known")]
+    public static partial IGenericMessage ForeignKeysNotRead(ILogger logger, string schemaName, string tableName);
+
+    /// <summary>
+    /// Logs a key that names a column its table does not have, which refuses the discovery.
+    /// </summary>
+    [MessageLogging(
+        EventId = 91004,
+        Level = LogLevel.Error,
+        Message = "Key '{keyName}' of '{schemaName}.{tableName}' names column '{columnName}', which the discovery did not read for that table")]
+    public static partial IGenericMessage KeyColumnNotFound(ILogger logger, string keyName, string schemaName, string tableName, string columnName);
+
+    // ── Container types of a discovery (FDW-6309, FDW-6387) ────────────────────
+
+    /// <summary>
+    /// Logs a container type word the SQL Server discoverer wrote that this connection type maps to no container type option.
+    /// </summary>
+    [MessageLogging(
+        EventId = 31010,
+        Level = LogLevel.Error,
+        Message = "The discovery named a container of type '{containerTypeWord}', which SQL Server maps to no container type option (it maps Table, View and StoredProcedure)")]
+    public static partial IGenericMessage ContainerTypeWordNotMapped(ILogger logger, string containerTypeWord);
+
+    /// <summary>
+    /// Logs a container type option SQL Server discovery resolves that ContainerTypes does not hold.
+    /// </summary>
+    [MessageLogging(
+        EventId = 31011,
+        Level = LogLevel.Error,
+        Message = "Container type option '{optionName}' is not registered in ContainerTypes, so a discovered SQL Server container cannot be given its type")]
+    public static partial IGenericMessage ContainerTypeNotRegistered(ILogger logger, string optionName);
 }

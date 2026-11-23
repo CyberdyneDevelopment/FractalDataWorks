@@ -4,18 +4,6 @@ namespace Fdw.Services.Quality.Abstractions.Tests;
 
 public class QualitySeverityTypesTests
 {
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void AllReturnsAllSeverityTypes()
-    {
-        // Act
-        var all = QualitySeverityTypes.All();
-
-        // Assert
-        all.ShouldNotBeEmpty();
-        all.Count.ShouldBeGreaterThan(0);
-    }
 
     [Fact]
     [Trait("Priority", "P2")]

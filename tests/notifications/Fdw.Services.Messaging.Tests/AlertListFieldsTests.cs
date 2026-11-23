@@ -35,9 +35,13 @@ public sealed class AlertListFieldsTests
         Actions = [new AlertActionOffer { Name = "Acknowledge", DisplayName = "Acknowledge", Description = "Say you have seen it" }],
     };
 
+    // The most alerts one question names, as a host configured it (FDW-7059): small, so a list of a few rows is asked in several chunks.
+    private const int Chunk = 7;
+
     private static Mock<IAlertActionService> Alerts(params Guid[] knownAlerts)
     {
         var alerts = new Mock<IAlertActionService>(MockBehavior.Strict);
+        alerts.SetupGet(a => a.Limits).Returns(new AlertLimits(Chunk));
         alerts
             .Setup(a => a.List(It.IsAny<IReadOnlyList<AlertKey>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyList<AlertKey> keys, CancellationToken _) => GenericResult<AlertList>.Success(new AlertList
@@ -96,14 +100,14 @@ public sealed class AlertListFieldsTests
     [Fact]
     public async Task MoreRowsThanOneQuestionMayNameAreAskedInChunks()
     {
-        var rows = Enumerable.Range(0, AlertLimits.MaxAlerts + 30).Select(_ => (Guid.NewGuid(), "Failed")).ToArray();
+        var rows = Enumerable.Range(0, (Chunk * 2) + 3).Select(_ => (Guid.NewGuid(), "Failed")).ToArray();
         var alerts = Alerts(rows.Select(row => row.Item1).ToArray());
 
         var answer = await AlertListFields.Attach(alerts.Object, Kind, List(rows), NullLogger.Instance, TestContext.Current.CancellationToken);
 
         answer.IsSuccess.ShouldBeTrue(answer.CurrentMessage);
-        alerts.Verify(a => a.List(It.Is<IReadOnlyList<AlertKey>>(keys => keys.Count == AlertLimits.MaxAlerts), It.IsAny<CancellationToken>()), Times.Once());
-        alerts.Verify(a => a.List(It.Is<IReadOnlyList<AlertKey>>(keys => keys.Count == 30), It.IsAny<CancellationToken>()), Times.Once());
+        alerts.Verify(a => a.List(It.Is<IReadOnlyList<AlertKey>>(keys => keys.Count == Chunk), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        alerts.Verify(a => a.List(It.Is<IReadOnlyList<AlertKey>>(keys => keys.Count == 3), It.IsAny<CancellationToken>()), Times.Once());
         JsonNode.Parse(answer.Value!)!["items"]!.AsArray().Count(row => row!.AsObject().ContainsKey("alert")).ShouldBe(rows.Length);
     }
 
@@ -123,6 +127,7 @@ public sealed class AlertListFieldsTests
     public async Task AKindThatDoesNotExistFailsTheAnswerWithTheServicesRefusal()
     {
         var alerts = new Mock<IAlertActionService>(MockBehavior.Strict);
+        alerts.SetupGet(a => a.Limits).Returns(new AlertLimits(Chunk));
         alerts
             .Setup(a => a.List(It.IsAny<IReadOnlyList<AlertKey>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<AlertList>.Failure(new GenericMessage("no such kind")));

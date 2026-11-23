@@ -195,7 +195,7 @@ A .NET consumer (the terminal UI, or a host that calls another host's API) refer
 | `Services.Quality.Clients` | `QualityApiClient` | Data quality |
 | `Services.Catalog.Clients` | `CatalogApiClient` | Catalog browsing |
 | `Operations.Clients` | `ConfigurationApiClient`, `DataflowApiClient`, `LineageApiClient` | Operations |
-| `Schema.Clients` | `SchemaApiClient`, `TableApiClient` | Schema introspection |
+| `Schema.Clients` | `SchemaApiClient` | Schema introspection |
 | `UI.Themes.Clients` | `ThemeApiClient` | Theme management |
 | `Web.Calculations.Clients` | `CalculationApiClient` | Calculations |
 | `Web.Analytics.Clients` | `AnalyticsApiClient`, `PromotionApiClient` | Analytics |

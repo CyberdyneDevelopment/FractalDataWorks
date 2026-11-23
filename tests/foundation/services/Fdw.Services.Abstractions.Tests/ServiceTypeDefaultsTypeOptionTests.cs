@@ -39,7 +39,7 @@ public sealed class ServiceTypeDefaultsTypeOptionTests
         public override string Category => "StubCategory";
     }
 
-    private sealed class UncategorisedOption : OptionStub
+    private sealed class UncategorizedOption : OptionStub
     {
         public override string Category => string.Empty;
     }
@@ -83,7 +83,7 @@ public sealed class ServiceTypeDefaultsTypeOptionTests
         // No key is guessed for an option that states no category; it gives its own declared value.
         ServiceTypeDefaults.OverrideForCategory("Elsewhere", "PoolSize", 99);
 
-        ServiceTypeDefaults.TryResolve(new UncategorisedOption(), "PoolSize", out var value).ShouldBeTrue();
+        ServiceTypeDefaults.TryResolve(new UncategorizedOption(), "PoolSize", out var value).ShouldBeTrue();
         value.ShouldBe(10);
     }
 }

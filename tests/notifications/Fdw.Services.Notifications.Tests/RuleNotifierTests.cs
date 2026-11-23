@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -45,11 +46,11 @@ public sealed class RuleNotifierTests
     };
 
     private void RuleExists(NotificationRuleImplementationConfiguration rule) =>
-        _rules.Setup(r => r.Get("ops-alerts", It.IsAny<CancellationToken>()))
+        _rules.Setup(r => r.Get("ops-alerts", ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<INotificationRuleImplementationConfiguration>.Success(rule));
 
     private void RuleMissing() =>
-        _rules.Setup(r => r.Get("ops-alerts", It.IsAny<CancellationToken>()))
+        _rules.Setup(r => r.Get("ops-alerts", ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<INotificationRuleImplementationConfiguration>.Failure(new GenericMessage("no such rule")));
 
     private void ChannelResolves(bool sends = true)
@@ -254,5 +255,96 @@ public sealed class RuleNotifierTests
         found.IsSuccess.ShouldBeTrue(found.CurrentMessage);
         missing.IsFailure.ShouldBeTrue();
         missing.Code.ShouldBe(NotificationResultCodes.ByName("RuleNotFound"));
+    }
+
+    private static RuleNotification WithPayload(string type) => new()
+    {
+        RuleName = "ops-alerts",
+        Subject = "copy: Alert",
+        Message = "113 rows loaded",
+        Metadata = new Dictionary<string, object?>(),
+        CorrelationId = "run-1",
+        Payload = new NotificationPayload(type, new Dictionary<string, string> { ["text"] = "hello" }),
+    };
+
+    private (Mock<IPayloadNotificationService> Service, List<INotificationRequest> Words, List<IPayloadNotificationRequest> Payloads) ChannelThatHandles(params string[] types)
+    {
+        var service = new Mock<IPayloadNotificationService>();
+        List<INotificationRequest> words = [];
+        List<IPayloadNotificationRequest> payloads = [];
+        service.Setup(s => s.Handles(It.IsAny<string>())).Returns<string>(type => Array.IndexOf(types, type) >= 0);
+        service.Setup(s => s.Send(It.IsAny<INotificationRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<INotificationRequest, CancellationToken>((request, _) => words.Add(request))
+            .ReturnsAsync(GenericResult<INotificationResult>.Success(new Mock<INotificationResult>().Object));
+        service.Setup(s => s.SendPayload(It.IsAny<IPayloadNotificationRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<IPayloadNotificationRequest, CancellationToken>((request, _) => payloads.Add(request))
+            .ReturnsAsync(GenericResult<INotificationResult>.Success(new Mock<INotificationResult>().Object));
+        _services.Setup(s => s.Get("console-channel", It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IPlatformNotification>.Success(service.Object));
+        return (service, words, payloads);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Notifications")]
+    public async Task APayloadOfATypeTheServiceHandlesIsGivenToItWithTheWordsAlongside()
+    {
+        RuleExists(Rule());
+        var (_, words, payloads) = ChannelThatHandles("Reply");
+
+        var result = await Sut().Notify(WithPayload("Reply"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        words.ShouldBeEmpty();
+        var request = payloads.ShouldHaveSingleItem();
+        request.Payload.TypeName.ShouldBe("Reply");
+        request.Payload.Fields["text"].ShouldBe("hello");
+        request.Subject.ShouldBe("copy: Alert");
+        request.Message.ShouldBe("113 rows loaded");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Notifications")]
+    public async Task APayloadOfATypeTheServiceDoesNotHandleSendsTheWordsInstead()
+    {
+        RuleExists(Rule());
+        var (_, words, payloads) = ChannelThatHandles("Card");
+
+        var result = await Sut().Notify(WithPayload("Reply"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        payloads.ShouldBeEmpty();
+        words.ShouldHaveSingleItem().Message.ShouldBe("113 rows loaded");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Notifications")]
+    public async Task AServiceThatKnowsNoPayloadsIsSentTheWordsWhateverThePayload()
+    {
+        RuleExists(Rule());
+        ChannelResolves();
+
+        var result = await Sut().Notify(WithPayload("Reply"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        var request = _sent.ShouldHaveSingleItem();
+        request.ShouldNotBeAssignableTo<IPayloadNotificationRequest>();
+        request.Message.ShouldBe("113 rows loaded");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Notifications")]
+    public async Task ANotificationWithNoPayloadIsSentAsWordsEvenToAServiceThatHandlesPayloads()
+    {
+        RuleExists(Rule());
+        var (_, words, payloads) = ChannelThatHandles("Reply");
+
+        var result = await Sut().Notify(Notification(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        payloads.ShouldBeEmpty();
+        words.ShouldHaveSingleItem();
     }
 }

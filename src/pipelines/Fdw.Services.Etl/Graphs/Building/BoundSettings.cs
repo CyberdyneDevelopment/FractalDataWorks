@@ -176,10 +176,7 @@ public static class BoundSettings
             : GenericResult<object>.Failure(GraphLog.ParameterNotConvertible(logger, owner, setting, parameter, SettingKindWords(settingKind)));
     }
 
-    private static string SettingKindWords(string settingKind) => settingKind switch
-    {
-        "Number" => "a whole number",
-        "Boolean" => "true or false",
-        _ => "text",
-    };
+    // The kind in words for a refusal; a kind that is not a single value (a list, or none) is said as text, as it was before the kinds were a collection.
+    private static string SettingKindWords(string settingKind) =>
+        GraphSettingKinds.ByName(settingKind).Words is { Length: > 0 } words ? words : "text";
 }

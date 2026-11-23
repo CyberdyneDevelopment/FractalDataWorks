@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Flow;
@@ -64,17 +63,7 @@ public static class SettingBindingRules
     /// <summary>Says which <c>DataTypes</c> option a parameter must have to supply a setting of a kind.</summary>
     /// <param name="settingKind">What the setting holds: <c>Text</c>, <c>Number</c>, <c>Boolean</c> or <c>ColumnList</c>.</param>
     /// <returns>The data type name (of each item, for a list), or an empty text for a kind no parameter can supply.</returns>
-    public static string ParameterTypeFor(string settingKind) => settingKind switch
-    {
-        "Text" => "String",
-        "Number" => "Int32",
-        "Boolean" => "Bool",
-        "ColumnList" => "String",
-        "Distinct" => "String",
-        "SortFieldList" => "String",
-        FieldMapPairsKind => "String",
-        _ => string.Empty,
-    };
+    public static string ParameterTypeFor(string settingKind) => GraphSettingKinds.ParameterTypeFor(settingKind);
 
     /// <summary>Makes a setting's value out of the value a run was given for a parameter.</summary>
     /// <param name="settingKind">What the setting holds: <c>Text</c>, <c>Number</c> or <c>Boolean</c>.</param>
@@ -83,40 +72,13 @@ public static class SettingBindingRules
     /// <returns><see langword="true"/> when the value is of the setting's kind or converts to it.</returns>
     public static bool TryConvert(string settingKind, object value, out object? typed)
     {
-        typed = null;
-        switch (settingKind)
-        {
-            case "Text":
-                typed = Convert.ToString(value, CultureInfo.InvariantCulture);
-                return typed is not null;
-            case "Number" when value is IConvertible number:
-                return TryInt(number, out typed);
-            case "Boolean" when value is bool flag:
-                typed = flag;
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static bool TryInt(IConvertible number, out object? typed)
-    {
-        try
-        {
-            typed = number.ToInt32(CultureInfo.InvariantCulture);
-            return true;
-        }
-        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException)
-        {
-            typed = null;
-            return false;
-        }
+        return GraphSettingKinds.ByName(settingKind).TryConvert(value, out typed);
     }
 
     /// <summary>Lists every way the bindings of a graph's components are wrong.</summary>
     /// <param name="graph">The stored graph.</param>
     /// <returns>The problems, each with its path: a setting that does not exist or cannot be bound, a parameter the pipeline does not declare or of the wrong type, a setting that is bound twice or also holds a value.</returns>
-    public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph)
+    public static IReadOnlyList<GraphProblem> Problems(IGraphPipelineConfiguration graph)
     {
         var parameters = new Dictionary<string, (string Type, bool IsList)>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in graph.Parameters.Where(parameter => !string.IsNullOrWhiteSpace(parameter.Name)))

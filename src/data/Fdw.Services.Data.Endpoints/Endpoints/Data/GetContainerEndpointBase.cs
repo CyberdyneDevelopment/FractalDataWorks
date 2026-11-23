@@ -75,8 +75,13 @@ public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContaine
         if (paging.IsFailure)
             return paging.ToNewResult<DataStoreContainerDetailDto?>();
 
+        var owners = await Resolve<IDataStoreItemOwnership>().Owners(store.Value.Id, ct).ConfigureAwait(false);
+        if (owners.IsFailure)
+            return owners.ToNewResult<DataStoreContainerDetailDto?>();
+
         var detail = MapToDetail(container, fields.Value!);
         detail.Paging = paging.Value;
+        detail.Owner = DataStoreItemOwnerResponse.From(owners.Value!.Of(path, container));
         return GenericResult<DataStoreContainerDetailDto?>.Success(detail);
     }
 

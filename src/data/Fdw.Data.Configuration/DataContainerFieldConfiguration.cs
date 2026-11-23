@@ -94,6 +94,9 @@ public partial class DataContainerFieldConfiguration : IGenericConfiguration
     /// <summary>
     /// Gets or sets the optional description for this field.
     /// </summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant, owned by the data store (FDW-6589), which this
+    // table cannot hold, so the column is gone; the data store provider fills it on every read that composes it. Off the mapper, it is no list field either.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>

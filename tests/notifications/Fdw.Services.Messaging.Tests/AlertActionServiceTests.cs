@@ -74,6 +74,11 @@ public sealed class AlertActionServiceTests
     private sealed class Fixture
     {
         public Fixture(DateTimeOffset? now = null, params StubSource[] sources)
+            : this(new AlertLimits(MessagingDefaults.Of("MaxAlerts")), now, sources)
+        {
+        }
+
+        public Fixture(AlertLimits limits, DateTimeOffset? now, params StubSource[] sources)
         {
             Sources = sources.Length > 0 ? sources : new[] { new StubSource("Stub", "Acknowledge", "Snooze", "Silence", "Dismiss", "Discard") };
             var gateway = new Mock<IDataGateway>(MockBehavior.Loose);
@@ -111,7 +116,8 @@ public sealed class AlertActionServiceTests
                     : GenericResult<string>.Failure(new GenericMessage("the signed-in person has no account")));
 
             Service = new AlertActionService(
-                NullLogger<AlertActionService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, names.Object, new FixedClock(now ?? Now), Sources);
+                NullLogger<AlertActionService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, names.Object, new FixedClock(now ?? Now), Sources,
+                limits);
         }
 
         public AlertActionService Service { get; }
@@ -269,13 +275,31 @@ public sealed class AlertActionServiceTests
         var alert = fixture.Source.Add();
 
         var none = await fixture.Service.List([], Ct);
-        var tooMany = await fixture.Service.List([.. Enumerable.Range(0, AlertLimits.MaxAlerts + 1).Select(_ => Key(alert))], Ct);
+        var tooMany = await fixture.Service.List([.. Enumerable.Range(0, fixture.Service.Limits.MaxAlerts + 1).Select(_ => Key(alert))], Ct);
         var unknown = await fixture.Service.List([new AlertKey("Nothing", alert.Id)], Ct);
 
         none.Messages.ShouldContain(m => m.Code == "MESSAGING-21013");
         tooMany.Messages.ShouldContain(m => m.Code == "MESSAGING-21013");
         unknown.Messages.ShouldContain(m => m.Code == "MESSAGING-21010");
         unknown.CurrentMessage!.ShouldContain("Stub");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task ListTakesAsManyAlertsAsTheHostConfiguredAndNamesThatNumberWhenAskedMore()
+    {
+        // FDW-7059: the most alerts one question names is configuration, so a host that configures more takes more and one that configures fewer refuses past it.
+        var wide = new Fixture(new AlertLimits(MessagingDefaults.Of("MaxAlerts") + 50), null).SignedInAs(Ben, "Ben");
+        var narrow = new Fixture(new AlertLimits(3), null).SignedInAs(Ben, "Ben");
+        var narrowAlert = narrow.Source.Add();
+
+        var taken = await wide.Service.List([.. Enumerable.Range(0, MessagingDefaults.Of("MaxAlerts") + 1).Select(_ => Key(wide.Source.Add()))], Ct);
+        var refused = await narrow.Service.List([.. Enumerable.Range(0, 4).Select(_ => Key(narrowAlert))], Ct);
+
+        taken.IsSuccess.ShouldBeTrue(taken.CurrentMessage);
+        refused.Messages.ShouldContain(m => m.Code == "MESSAGING-21013");
+        refused.CurrentMessage!.ShouldContain("at most 3 alerts");
     }
 
     // ── When an alert is shown ──────────────────────────────────────────────

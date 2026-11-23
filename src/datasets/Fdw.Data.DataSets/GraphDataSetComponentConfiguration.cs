@@ -101,6 +101,9 @@ public sealed partial class GraphDataSetComponentConfiguration : IGenericConfigu
     /// <summary>Gets or sets a split's filtered outputs. Cascade children (<c>data.GraphDataSetComponentSplitOutput</c>).</summary>
     public IList<GraphDataSetComponentSplitOutputConfiguration> SplitOutputs { get; set; } = [];
 
+    /// <summary>Gets or sets the settings the component's type declares that no column holds (FDW-6133). Cascade children (<c>data.GraphDataSetComponentSetting</c>).</summary>
+    public IList<GraphDataSetComponentSettingConfiguration> DeclaredSettings { get; set; } = [];
+
     /// <summary>
     /// Gets or sets the stage a component of a stage tool kind (Filter, Sort, Aggregate, Calculate and so on) applies, one at most, held as a
     /// <c>data.GraphDataSetStage</c> row that the component owns. Empty on every other kind.

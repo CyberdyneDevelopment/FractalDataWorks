@@ -18,6 +18,7 @@ using Fdw.Services.Hosts.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Tests.Execution;
 
@@ -34,7 +35,7 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
     private static readonly Guid OtherHost = Guid.Parse("dddddddd-0000-0000-0000-000000000002");
     private const string HostName = "reference-etl";
 
-    private readonly string? _before = EtlPipelineTypes.OperationalConnection;
+    private readonly string? _before = PipelineTypes.OperationalConnection;
     private readonly Mock<IDataGateway> _gateway = new();
     private readonly Mock<IExecutionTracker> _tracker = new();
     private readonly List<(IDataCommand Command, DataStoreTarget Target)> _calls = [];
@@ -45,7 +46,7 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
 
     public PipelineRunRequestStoreTests()
     {
-        EtlPipelineTypes.OperationalConnection = "Ops";
+        PipelineTypes.OperationalConnection = "Ops";
         var gateways = new Mock<IDataGatewayProvider>();
         gateways.Setup(provider => provider.ByName("Main")).Returns(_gateway.Object);
         var accessor = new Mock<IAuthenticationContextAccessor>();
@@ -55,7 +56,7 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         HostRowIs(ThisHost);
         _logger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         var services = new ServiceCollection().AddSingleton(gateways.Object).AddSingleton(_tracker.Object).AddSingleton(accessor.Object)
-            .AddSingleton(environment.Object).AddSingleton(_hosts.Object).BuildServiceProvider();
+            .AddSingleton(environment.Object).AddSingleton(_hosts.Object).AddSingleton<IPipelineRunOrigins>(TestRunOrigins.Create(HostName)).BuildServiceProvider();
         _store = new PipelineRunRequestStore(services.GetRequiredService<IServiceScopeFactory>(), _logger.Object);
     }
 
@@ -64,9 +65,10 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         .Setup(h => h.Get(HostName, It.IsAny<CancellationToken>()))
         .ReturnsAsync(GenericResult<IHostImplementationConfiguration>.Success(new HostImplementationConfiguration { Id = id, Name = HostName }));
 
-    public void Dispose() => EtlPipelineTypes.OperationalConnection = _before;
+    public void Dispose() => PipelineTypes.OperationalConnection = _before;
 
-    private static PipelineExecutionRequest Request(Guid id, string pipeline = "monthly-sales", Guid? tenant = null, object? value = null) => new()
+    private static PipelineExecutionRequest Request(
+        Guid id, string pipeline = "monthly-sales", Guid? tenant = null, object? value = null, Guid? person = null, Guid? continues = null) => new()
     {
         ExecutionId = id,
         PipelineId = Guid.NewGuid(),
@@ -74,7 +76,9 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         TriggerSource = "Api",
         TenantId = tenant ?? Tenant,
         RunRoles = ["DataWriter"],
-        Parameters = new Dictionary<string, object?> { ["Size"] = value ?? 5 }
+        Parameters = new Dictionary<string, object?> { ["Size"] = value ?? 5 },
+        PersonId = person,
+        ContinuesRun = continues
     };
 
     // The writes (insert, update, delete) answer in turn, and every call is noted.
@@ -204,7 +208,7 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
 
         var none = await _store.Record(noTenant, TestContext.Current.CancellationToken);
         var odd = await _store.Record(Request(Guid.NewGuid(), value: new object()), TestContext.Current.CancellationToken);
-        EtlPipelineTypes.OperationalConnection = null;
+        PipelineTypes.OperationalConnection = null;
         var unnamed = await _store.Record(Request(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         none.IsFailure.ShouldBeTrue();
@@ -613,6 +617,42 @@ public sealed class PipelineRunRequestStoreTests : IDisposable
         recovery.IsSuccess.ShouldBeTrue(recovery.CurrentMessage);
         recovery.Value!.Interrupted.ShouldHaveSingleItem().Request.PipelineName.ShouldBe("stopped-one");
         _calls.Count(call => call.Command is DeleteCommand).ShouldBe(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ARunStartedAgainActsAsTheSamePersonAndNamesTheFirstRunOfItsChain()
+    {
+        var person = Guid.Parse("66666666-0000-0000-0000-000000000006");
+        var first = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
+        var restartOfFirst = Request(Guid.NewGuid(), "running-one", person: person, continues: first);
+        var newId = Guid.NewGuid();
+        CreatedItemIs(newId);
+        WritesReturn();
+
+        var again = await _store.StartAgain(new InterruptedRun(restartOfFirst, 1), TestContext.Current.CancellationToken);
+
+        again.IsSuccess.ShouldBeTrue(again.CurrentMessage);
+        again.Value!.PersonId.ShouldBe(person, "a restarted run acts as the person it acted as, never as nobody");
+        again.Value.ContinuesRun.ShouldBe(first, "the chain's first run, not the run just cut off");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ARunThatIsNotARestartIsTheFirstRunOfTheChainItsRestartNames()
+    {
+        var old = Request(Guid.NewGuid(), "running-one");
+        var newId = Guid.NewGuid();
+        CreatedItemIs(newId);
+        WritesReturn();
+
+        var again = await _store.StartAgain(new InterruptedRun(old, 0), TestContext.Current.CancellationToken);
+
+        again.IsSuccess.ShouldBeTrue(again.CurrentMessage);
+        again.Value!.ContinuesRun.ShouldBe(old.ExecutionId);
+        again.Value.PersonId.ShouldBeNull();
     }
 
     [Fact]

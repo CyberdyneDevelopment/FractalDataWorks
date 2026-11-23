@@ -29,8 +29,17 @@ public abstract class FlowComponentBuilderBase : TypeOptionBase<FlowComponentBui
     }
 
     /// <inheritdoc />
+    public virtual IReadOnlyList<Type> Needs => [];
+
+    /// <inheritdoc />
     public IGenericResult<IFlowComponent> Build(PipelineComponentConfiguration component, FlowBuildContext context)
     {
+        var needs = context.NeedsMet(component, Needs);
+        if (needs.IsFailure)
+        {
+            return needs.ToNewResult<IFlowComponent>();
+        }
+
         try
         {
             var created = Create(component, context);

@@ -82,12 +82,10 @@ internal static class XlsxStyles
             return KindOfCode(code);
         }
 
-        return formatId switch
-        {
-            14 or 15 or 16 or 17 or 22 or (>= 27 and <= 36) or (>= 50 and <= 58) => KindDateTime,
-            18 or 19 or 20 or 21 or 45 or 46 or 47 => KindTime,
-            _ => KindNumber,
-        };
+        var kind = XlsxValueKinds.OfBuiltInFormat(formatId);
+        return ReferenceEquals(kind, XlsxValueKinds.NotFound)
+            ? throw new InvalidDataException($"The built-in number format id {formatId} is not one any value kind covers.")
+            : kind;
     }
 
     // A format with a year or a day is a date; one with only hours or seconds is a time. A lone m is a month (it is a

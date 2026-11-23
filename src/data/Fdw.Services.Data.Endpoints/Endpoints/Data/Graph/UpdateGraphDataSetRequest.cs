@@ -17,6 +17,12 @@ public sealed class UpdateGraphDataSetRequest
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>Gets or sets the display name; left out, the stored one stays, and an empty string clears it (FDW-6118).</summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>Gets or sets the abbreviation; left out, the stored one stays, and an empty string clears it (FDW-6129).</summary>
+    public string? Abbreviation { get; set; }
+
     /// <summary>Gets or sets how sensitive the data set is.</summary>
     public int? ClassificationId { get; set; }
 
@@ -37,6 +43,12 @@ public sealed class UpdateGraphDataSetRequest
 
     /// <summary>Gets or sets the name of the output node of <see cref="FieldsOutComponent"/> that carries the fields out.</summary>
     public string? FieldsOutOutput { get; set; }
+
+    /// <summary>
+    /// Gets or sets the federation strategy the data set's reads across data stores run under (FDW-6970): a registered <c>FederationStrategies</c>
+    /// member; empty states none, so the FDW-level default applies; left out keeps the stored one.
+    /// </summary>
+    public string? FederationStrategy { get; set; }
 
     /// <summary>Gets or sets the components of the graph, replacing the stored ones; sent with <see cref="Links"/>.</summary>
     public IList<GraphComponentPayload>? Components { get; set; }

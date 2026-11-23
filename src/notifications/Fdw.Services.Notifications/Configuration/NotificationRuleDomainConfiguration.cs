@@ -19,6 +19,9 @@ namespace Fdw.Services.Notifications.Configuration;
 public partial class NotificationRuleDomainConfiguration : DomainConfiguration
 {
     /// <summary>Gets or sets the rule's description.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7203), which the domain table cannot hold, so the
+    // column is gone; the provider fills the member for every page it reads. Off the mapper, it is no list field either.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether the rule is in force.</summary>

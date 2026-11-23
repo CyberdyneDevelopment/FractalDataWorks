@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Configuration;
+using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Shouldly;
@@ -22,7 +24,8 @@ public sealed class DeclaredConnectionProviderTests
         foreach (var connection in declared)
             schema.Connections.Add(connection);
 
-        return new DeclaredConnectionProvider(schema, new ServiceCollection().BuildServiceProvider());
+        return new DeclaredConnectionProvider(
+            schema, new ServiceCollection().BuildServiceProvider(), new SchemaSecretManagerProvider(new Dictionary<string, ISecretManager>()), null);
     }
 
     private static IConnectionImplementationConfiguration Declared(string name, string implementation)

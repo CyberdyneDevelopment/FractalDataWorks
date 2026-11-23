@@ -38,4 +38,7 @@ public class DataStorePathResponse
 
     /// <summary>Gets or sets the containers within this path.</summary>
     public IList<DataStoreContainerResponse> Containers { get; set; } = [];
+
+    /// <summary>Gets or sets the workspace that owns it (FDW-6967); null when it is the data store's.</summary>
+    public DataStoreItemOwnerResponse? Owner { get; set; }
 }

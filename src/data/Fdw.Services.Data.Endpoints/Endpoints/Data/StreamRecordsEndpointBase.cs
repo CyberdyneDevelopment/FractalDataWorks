@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Data.RowSources;
 using Fdw.Data.RowSources.Abstractions;
-using Fdw.Data.RowSources.Abstractions.Logging;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Data.Endpoints.Logging;
@@ -254,15 +253,14 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     }
 
     // The refusal for a failed options build, by its reason; the reason's text is read by the caller, where the build is known to have failed.
-    private IGenericResult<RowWriterOptions> ChoiceRefusal(IGenericResult<RowWriterOptions> failed, string reason, string format, string resource) =>
-        failed.FirstFailureMessage()?.Number switch
-        {
-            RowSourceLog.FormatChoiceNotStatedId => GenericResult<RowWriterOptions>.Failure(
-                StreamRecordsEndpointLog.StreamRecordsFormatChoiceNotStated(Logger, resource, format, reason)),
-            RowSourceLog.FormatChoiceNotUsableId => GenericResult<RowWriterOptions>.Failure(
-                StreamRecordsEndpointLog.StreamRecordsFormatChoiceNotUsable(Logger, resource, format, reason)),
-            _ => failed,
-        };
+    private IGenericResult<RowWriterOptions> ChoiceRefusal(IGenericResult<RowWriterOptions> failed, string reason, string format, string resource)
+    {
+        if (failed.FirstFailureMessage() is not { } first)
+            return failed;
+
+        var refusal = FormatChoiceRefusals.ByMessageNumber(first.Number);
+        return ReferenceEquals(refusal, FormatChoiceRefusals.NotFound) ? failed : refusal.Refuse(Logger, resource, format, reason);
+    }
 
     // The first record, or null when there is none; a read that throws is a coded failure, as an open that throws is.
     private async Task<IGenericResult<DataRecord>?> First(IAsyncEnumerator<IGenericResult<DataRecord>> records, string resource, CancellationToken ct)

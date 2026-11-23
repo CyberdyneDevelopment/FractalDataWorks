@@ -104,7 +104,15 @@ public static class GraphDataSetComponents
             Fields = [.. source.Fields.Select(ComponentField)],
             Columns = [.. source.Columns.Select(ComponentColumn)],
             SplitOutputs = [.. source.SplitOutputs.Select(SplitOutput)],
+            DeclaredSettings = [.. source.DeclaredSettings.Select(DeclaredSetting)],
             Stages = [.. source.Stages.Select(Stage)],
+        };
+
+    private static GraphDataSetComponentSettingConfiguration DeclaredSetting(PipelineComponentSettingConfiguration source) => new()
+        {
+            Id = source.Id,
+            SettingName = source.SettingName,
+            ValueText = source.ValueText,
         };
 
     private static GraphDataSetComponentFieldConfiguration ComponentField(PipelineComponentFieldConfiguration source) => new()

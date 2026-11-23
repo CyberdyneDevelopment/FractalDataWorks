@@ -15,8 +15,10 @@ using Fdw.Results;
 using Fdw.Results.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes;
+using Fdw.Services.Connections.Http.Abstractions.OptionTypes.CommandVerbs;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
 using Fdw.Services.Connections.Http.Abstractions.Results;
+using Fdw.Services.Connections.Http.Protocols.GraphQLOperators;
 using Fdw.Services.Connections.Http.Security;
 
 namespace Fdw.Services.Connections.Http.Protocols;
@@ -265,15 +267,18 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
             return Task.FromResult(GenericResult<string>.Success(explicitQuery));
         }
 
-        // Build query from command type
-        var query = command.CommandType switch
+        // Build query from command type: the verb states the mutation it is sent as, or none for a query
+        var verb = HttpCommandVerbs.ByName(command.CommandType);
+        if (ReferenceEquals(verb, HttpCommandVerbs.NotFound))
         {
-            "Query" or "Select" => BuildQueryOperation(command, container),
-            "Insert" or "Create" => BuildMutationOperation(command, container, "create"),
-            "Update" => BuildMutationOperation(command, container, "update"),
-            "Delete" => BuildMutationOperation(command, container, "delete"),
-            _ => BuildQueryOperation(command, container)
-        };
+            return Task.FromResult(GenericResult<string>.Failure(
+                HttpResultCodes.ByName("CommandTypeUnsupported"),
+                ResultDetails.Create("Protocol", Name, "CommandType", command.CommandType)));
+        }
+
+        var query = verb.GraphQLMutationAction is { } action
+            ? BuildMutationOperation(command, container, action)
+            : BuildQueryOperation(command, container);
 
         return Task.FromResult(GenericResult<string>.Success(query));
     }
@@ -492,12 +497,8 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     /// for a needless one. <see cref="Translate"/> refuses only what genuinely has no mapping.
     /// </remarks>
     /// <param name="operatorName">The filter operator's <c>IFilterOperator.Name</c>.</param>
-    protected virtual bool SupportsOperator(string operatorName) => operatorName switch
-    {
-        "Equal" or "NotEqual" or "GreaterThan" or "GreaterThanOrEqual" or "LessThan" or "LessThanOrEqual"
-            or "Contains" or "StartsWith" or "EndsWith" or "In" or "NotIn" or "IsNull" or "IsNotNull" => true,
-        _ => false,
-    };
+    protected virtual bool SupportsOperator(string operatorName) =>
+        !ReferenceEquals(GraphQLOperatorWords.ByName(operatorName), GraphQLOperatorWords.NotFound);
 
     /// <summary>
     /// Walks a filter tree depth-first and returns the first node -- a condition whose operator
@@ -535,32 +536,14 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     /// </summary>
     protected virtual string MapOperatorToGraphQL(string operatorName)
     {
-        return operatorName switch
-        {
-            "Equal" => "eq",
-            "NotEqual" => "ne",
-            "GreaterThan" => "gt",
-            "GreaterThanOrEqual" => "gte",
-            "LessThan" => "lt",
-            "LessThanOrEqual" => "lte",
-            "Contains" => "contains",
-            "StartsWith" => "startsWith",
-            "EndsWith" => "endsWith",
-            "In" => "in",
-            "NotIn" => "notIn",
-            // IsNull/IsNotNull carry no separate value (Value is null by convention); "eq"/"ne"
-            // against a null Value is this class's existing null-comparison vocabulary.
-            "IsNull" => "eq",
-            "IsNotNull" => "ne",
-            // Unreachable from Translate -- SupportsOperator gates every operator this switch does
-            // not name before BuildFilterObjectFromExpression (and so this method) is ever reached.
-            // Kept as a thrown failure rather than a silent "eq" default so a direct call (e.g. a
-            // future override forgetting to also override SupportsOperator) fails loud instead of
-            // mis-mapping -- see RecordRowMatcher.Matches for the same "should have been rejected
-            // first" idiom elsewhere in this codebase.
-            _ => throw new InvalidOperationException(
-                $"Filter operator '{operatorName}' has no GraphQL mapping.")
-        };
+        // The operator's word; an operator with none is unreachable from Translate, since SupportsOperator gates it before
+        // BuildFilterObjectFromExpression (and so this method) is ever reached. Kept as a thrown failure rather than a silent default so
+        // a direct call (e.g. a future override forgetting to also override SupportsOperator) fails loud instead of mis-mapping -- see
+        // RecordRowMatcher.Matches for the same "should have been rejected first" idiom elsewhere in this codebase.
+        var word = GraphQLOperatorWords.ByName(operatorName);
+        return ReferenceEquals(word, GraphQLOperatorWords.NotFound)
+            ? throw new InvalidOperationException($"Filter operator '{operatorName}' has no GraphQL mapping.")
+            : word.Word;
     }
 
     /// <summary>
@@ -581,15 +564,11 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
             return name;
         }
 
-        var typeName = container.Name;
-        return command.CommandType switch
-        {
-            "Query" or "Select" => $"Get{typeName}",
-            "Insert" or "Create" => $"Create{typeName}",
-            "Update" => $"Update{typeName}",
-            "Delete" => $"Delete{typeName}",
-            _ => null
-        };
+        // The verb names the operation, or none; BuildGraphQLQuery refused a command type with no verb before this is asked.
+        var verb = HttpCommandVerbs.ByName(command.CommandType);
+        return ReferenceEquals(verb, HttpCommandVerbs.NotFound)
+            ? throw new InvalidOperationException($"Protocol '{Name}' has no HTTP verb for the data command type '{command.CommandType}'.")
+            : verb.OperationPrefix is { } prefix ? $"{prefix}{container.Name}" : null;
     }
 
     /// <summary>

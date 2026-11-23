@@ -10,7 +10,7 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// over the graph's nodes and one over its flows: no read of its own, so the cost follows the graph and not the number of pipelines.
 /// </summary>
 /// <remarks>
-/// Grouping by category puts each data set in its category (or Uncategorised). Grouping by tag puts a data set in the group of each tag it
+/// Grouping by category puts each data set in its category (or Uncategorized). Grouping by tag puts a data set in the group of each tag it
 /// carries (or Untagged), so one data set can sit in several groups. A step through a pipeline makes a line for every pair of different groups
 /// its two ends sit in; an end pair that shares a group makes no line for that group.
 /// </remarks>
@@ -38,7 +38,7 @@ internal static class LineageGroups
     public const string StorePathKind = "StorePath";
 
     /// <summary>The kind and id of the group for data sets that sit under no category.</summary>
-    public const string Uncategorised = "Uncategorised";
+    public const string Uncategorized = "Uncategorized";
 
     /// <summary>The kind and id of the group for data sets that carry no tag.</summary>
     public const string Untagged = "Untagged";
@@ -135,7 +135,7 @@ internal static class LineageGroups
         => MapNodeIds.TryParse(node.Id, out _, out var id) && query.TagsOfDataSets.TryGetValue(id, out var found) ? found : [];
 
     private static LineageGroupKey CategoryKeyOf(string? path)
-        => string.IsNullOrEmpty(path) ? new LineageGroupKey(Uncategorised, Uncategorised, Uncategorised, null) : CategoryKey(path);
+        => string.IsNullOrEmpty(path) ? new LineageGroupKey(Uncategorized, Uncategorized, Uncategorized, null) : CategoryKey(path);
 
     // A thing is in the group of each tag it carries, and in Untagged when it carries none. A tag limit keeps the things that carry the tag
     // and groups them by their other tags: the limiting tag would hold every one of them.
@@ -159,7 +159,7 @@ internal static class LineageGroups
             : new LineageGroupKey(CategoryPrefix + path, CategoryKind, path[(cut + CategoryTree.PathSeparator.Length)..], CategoryPrefix + path[..cut]);
     }
 
-    // A category answer holds the category and the categories under it, and no store path or uncategorised group. Other groupings are not limited here.
+    // A category answer holds the category and the categories under it, and no store path or uncategorized group. Other groupings are not limited here.
     private static bool InScope(LineageGroupKey key, LineageGroupsQuery query)
         => query.CategoryPath is null || (string.Equals(key.Kind, CategoryKind, StringComparison.Ordinal) && InPath(key, query.CategoryPath));
 

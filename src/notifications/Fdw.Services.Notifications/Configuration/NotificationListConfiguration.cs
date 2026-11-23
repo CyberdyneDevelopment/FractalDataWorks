@@ -20,6 +20,9 @@ public partial class NotificationListConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the optional description of this notification list.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7203), so the column is gone; the lists reader
+    // fills the member for every list it reads.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether this notification list is enabled.</summary>

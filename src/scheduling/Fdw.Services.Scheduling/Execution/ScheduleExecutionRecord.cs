@@ -105,9 +105,14 @@ public sealed partial class ScheduleExecutionRecord
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Gets or sets the hostname/instance that processed this schedule.
+    /// Gets or sets the host that made this fire: the application name of the scheduler host. The same fact a pipeline run states as <c>ExecutingHost</c> (FDW-6519); it replaces <c>ExecutedBy</c>, which held a machine name (FDW-6144).
     /// </summary>
-    public string? ExecutedBy { get; set; }
+    public string? ExecutingHost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the slot the scheduler copy that made this fire runs on (<c>a</c> or <c>b</c>), or none for a host off a slot. The same fact a pipeline run states as <c>ExecutingSlot</c> (FDW-6519).
+    /// </summary>
+    public string? ExecutingSlot { get; set; }
 
     /// <summary>
     /// Gets or sets the correlation ID linking to pipeline execution.

@@ -166,6 +166,40 @@ public static class SettingDefinitions
     public const string MaxQueuedPipelineTriggers = "MaxQueuedPipelineTriggers";
 
     /// <summary>
+    /// The most seconds an Interactive pipeline may state as its time limit (FDW-6141). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: an at-once run is refused when the setting is absent or not positive, and no ceiling is assumed. A pipeline that states more is refused, never run with a
+    /// lower limit. Resolved for the run's tenant, then the server.
+    /// </remarks>
+    public const string InteractiveMaxRunSecondsCeiling = "InteractiveMaxRunSecondsCeiling";
+
+    /// <summary>
+    /// The most steps an Interactive pipeline may state as its step limit (FDW-6141). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>Required, as <see cref="InteractiveMaxRunSecondsCeiling"/> is.</remarks>
+    public const string InteractiveMaxStepsCeiling = "InteractiveMaxStepsCeiling";
+
+    /// <summary>
+    /// The most levels a pipeline's components that hold other components (a container, a loop, a kind another package makes that holds components) may nest (FDW-6134).
+    /// DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required by a save of a graph that has such a component: a graph nested deeper is refused, and when the setting is not set the save is refused naming it; no depth is assumed.
+    /// Resolved for the caller's tenant, then the server.
+    /// </remarks>
+    public const string MaxContainerDepth = "MaxContainerDepth";
+
+    /// <summary>
+    /// The most pipeline runs one run may chain: a run, the pipeline it starts, the pipeline that one starts, and so on, the first included (FDW-6135). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required by a start under another run: when the setting is not set the start is refused naming it, and when the chain would be longer the start is refused. No limit is assumed.
+    /// Resolved for the run's tenant, then the server.
+    /// </remarks>
+    public const string MaxPipelineChainDepth = "MaxPipelineChainDepth";
+
+    /// <summary>
     /// How often the console reads the run queue again while the queue tab is open, in seconds (FDW-3382). DataType: Int32. Must be positive.
     /// </summary>
     /// <remarks>
@@ -191,6 +225,16 @@ public static class SettingDefinitions
     /// completed a run inside the window is Current; one with writers and no completed run inside it is Idle. It resolves server, then tenant, so a tenant can set its own.
     /// </remarks>
     public const string DataSetStatusWindowHours = "DataSetStatusWindowHours";
+
+    /// <summary>
+    /// The language tag the descriptions of today are written in (FDW-6120). DataType: String, a language tag such as <c>en-US</c>.
+    /// </summary>
+    /// <remarks>
+    /// Required, with no language assumed: the descriptions service refuses a call that needs it (result code 61400, DescriptionLanguageNotStated) when it resolves to nothing. The text every
+    /// owning domain copies into the descriptions table is stored under it, and a read or search that names no language uses it. It resolves server, then tenant, so a
+    /// tenant can set its own. A second language is more rows, never a table change.
+    /// </remarks>
+    public const string DescriptionLanguage = "DescriptionLanguage";
 
     /// <summary>
     /// Who can answer a question left on a screen: a UI comment whose tag asks for an answer is also told to the holders of the permission mapped to the
@@ -315,6 +359,14 @@ public static class SettingDefinitions
     public const string PipelineTriggerKeyRetentionSeconds = "PipelineTriggerKeyRetentionSeconds";
 
     /// <summary>
+    /// How long the ETL host keeps the pieces a run gave its person (FDW-6140), in seconds. Required, with no number assumed: while it is absent or not positive no piece is written. Older pieces are removed as the next step starts.
+    /// </summary>
+    public const string RunStreamRetentionSeconds = "RunStreamRetentionSeconds";
+
+    /// <summary>The most pieces of a run one read of its stream answers (FDW-6140). Required, with no number assumed: while it is absent or not positive the stream is not read.</summary>
+    public const string RunStreamPageSize = "RunStreamPageSize";
+
+    /// <summary>
     /// How long a stopping ETL host lets the pipeline runs in flight go on before it stops them, in seconds (FDW-3786). DataType: Int32. Must be positive.
     /// </summary>
     /// <remarks>
@@ -324,6 +376,33 @@ public static class SettingDefinitions
     /// and the service unit's stop timeout must be longer than that.
     /// </remarks>
     public const string PipelineStopGraceSeconds = "PipelineStopGraceSeconds";
+
+    /// <summary>
+    /// How long, in seconds, the claim of a pipeline run is leased before it lapses unless its holder renews it (FDW-6629). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: the claim service refuses to build, naming the setting, when it is absent or not positive, and no number is assumed. It is the time on the database's clock the claim procedures
+    /// give a row; a holder that stopped renewing loses its claim after it, and the engine is told which runs lapsed.
+    /// </remarks>
+    public const string PipelineRunClaimLeaseSeconds = "PipelineRunClaimLeaseSeconds";
+
+    /// <summary>
+    /// How often, in seconds, the holder of a claim renews it (FDW-6629). DataType: Int32. Must be positive and less than <see cref="PipelineRunClaimLeaseSeconds"/>.
+    /// </summary>
+    /// <remarks>Required, as <see cref="PipelineRunClaimLeaseSeconds"/> is. A renewal not shorter than the lease would let the claim lapse before it is renewed.</remarks>
+    public const string PipelineRunClaimRenewalSeconds = "PipelineRunClaimRenewalSeconds";
+
+    /// <summary>
+    /// How often, in seconds, a run that is waiting for its claim asks again (FDW-6629). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>Required, as <see cref="PipelineRunClaimLeaseSeconds"/> is. A release answers the runs it promotes, so a poll only finds a promotion the answer did not reach.</remarks>
+    public const string PipelineRunClaimWaitingPollSeconds = "PipelineRunClaimWaitingPollSeconds";
+
+    /// <summary>
+    /// How long, in milliseconds, a call of a claim procedure waits for the claim lock before it fails (FDW-6629). DataType: Int32. Must be 0 or more.
+    /// </summary>
+    /// <remarks>Required, as <see cref="PipelineRunClaimLeaseSeconds"/> is. A call that does not get the lock in this time fails loudly; it never runs without it.</remarks>
+    public const string PipelineRunClaimLockTimeoutMilliseconds = "PipelineRunClaimLockTimeoutMilliseconds";
 
     /// <summary>
     /// How often a host looks at its configuration databases to see whether one was dropped and created again, in seconds (FDW-3207).
@@ -392,6 +471,16 @@ public static class SettingDefinitions
     /// <summary>Whether two-factor authentication is required for all users.</summary>
     public const string Enable2FA = "Enable2FA";
 
+    /// <summary>
+    /// How many lists and objects the request of a WebMCP tool may nest (FDW-6143). DataType: Int32. Must be positive.
+    /// </summary>
+    /// <remarks>
+    /// Required: a host that serves WebMCP stops when it is absent or not positive, because the depth a tool is described to is
+    /// never assumed. A tool whose request nests deeper, or reaches itself, is refused when the host starts and is not offered to
+    /// an agent. Read at host start.
+    /// </remarks>
+    public const string WebMcpToolSchemaMaxDepth = "WebMcpToolSchemaMaxDepth";
+
     /// <summary>Whether pipeline-failure notifications are enabled.</summary>
     public const string NotifyPipelineFailures = "NotifyPipelineFailures";
 
@@ -437,6 +526,18 @@ public static class SettingDefinitions
     /// <remarks>Required, with no default, like <see cref="DataConfigurationRuleDataStore"/>.</remarks>
     public const string DataConfigurationRuleValueContainer = "DataConfigurationRuleValueContainer";
 
+    /// <summary>
+    /// How many organizations the data option owner picker reads in one page of the organization domain (FDW-6717). DataType: Int32.
+    /// </summary>
+    /// <remarks>Required, with no default, and at least one: while it is not set, the owner picker's organization list answers a refusal naming it. Nothing caps what it states.</remarks>
+    public const string DataOptionOwnerReadSize = "DataOptionOwnerReadSize";
+
+    /// <summary>
+    /// How many organizations the tag owners list reads in one page of the organization domain (FDW-6737). DataType: Int32.
+    /// </summary>
+    /// <remarks>Required, with no default, and at least one: while it is not set, the tag owners list answers a refusal naming it. Nothing caps what it states.</remarks>
+    public const string TagOwnerReadSize = "TagOwnerReadSize";
+
     private static readonly Dictionary<string, SettingDefinition> KnownSettings =
         new Dictionary<string, SettingDefinition>(StringComparer.OrdinalIgnoreCase)
         {
@@ -448,6 +549,8 @@ public static class SettingDefinitions
             [DataConfigurationRulePath] = new("String", "The path of the data configuration rule tables in their data store. Not set: every rule route refuses and names this setting."),
             [DataConfigurationRuleContainer] = new("String", "The container that is the data configuration rule table. Not set: every rule route refuses and names this setting."),
             [DataConfigurationRuleValueContainer] = new("String", "The container that is the data configuration rule value table, in the data store and path of the rule table. Not set: every rule route refuses and names this setting."),
+            [DataOptionOwnerReadSize] = new("Int32", "How many organizations the data option owner picker reads in one page of the organization domain. Not set, or below one: the owner picker's organization list refuses and names this setting."),
+            [TagOwnerReadSize] = new("Int32", "How many organizations the tag owners list reads in one page of the organization domain. Not set, or below one: the tag owners list refuses and names this setting."),
             [DefaultPaginationSize] = new("Int32", "The page a paginated list endpoint returns when the request names no take."),
             [ApiKeyMaxPaginationSize] = new("Int32", "The largest page a caller authenticated with an API key may ask for; 0 means no limit."),
             [ApiKeyDefaultPaginationSize] = new("Int32", "The page a caller authenticated with an API key gets when the request names no take; 0 means no limit, every row is returned."),
@@ -465,8 +568,13 @@ public static class SettingDefinitions
             [MaxConcurrentPipelineRunsPerServer] = new("Int32", "The most pipeline runs in flight on the whole ETL host at once."),
             [MaxConcurrentPipelineRunsPerTenant] = new("Int32", "The most pipeline runs in flight for one tenant at once; a tenant may override the server's value."),
             [MaxQueuedPipelineTriggers] = new("Int32", "The most pipeline triggers the ETL host holds before it starts them; a trigger past that is dropped. Read at host start."),
+            [InteractiveMaxRunSecondsCeiling] = new("Int32", "The most seconds an Interactive pipeline may state as its time limit; a pipeline that states more is refused, and the run is never started with a lower limit. Not set: an at-once run is refused and names this setting."),
+            [InteractiveMaxStepsCeiling] = new("Int32", "The most steps an Interactive pipeline may state as its step limit; a pipeline that states more is refused, and the run is never started with a lower limit. Not set: an at-once run is refused and names this setting."),
+            [MaxPipelineChainDepth] = new("Int32", "The most pipeline runs one run may chain, the first included: a run, the pipeline it starts, the pipeline that one starts, and so on; a start that would make the chain longer is refused. Not set: a start under another run is refused and names this setting."),
+            [MaxContainerDepth] = new("Int32", "The most levels a pipeline's components that hold other components (containers, loops) may nest; a graph nested deeper is refused when it is saved. Not set: a save of a graph that nests components is refused and names this setting."),
             [LineageLinePipelines] = new("Int32", "The most pipelines one line of the lineage groups names; the line still counts all of them."),
             [DataSetStatusWindowHours] = new("Int32", "How many hours a completed run of a pipeline that writes a data set counts as recent: inside it the data set is Current, outside it Idle. Not set: the data set list stops and names this setting."),
+            [DescriptionLanguage] = new("String", "The language tag the descriptions of today are written in, such as en-US. The text copied into the descriptions table is stored under it, and a read or search that names no language uses it. Not set: the descriptions service refuses the call and names this setting."),
             [UiFeedbackQuestionAnswerers] = new("String", "Who can answer a question left on a screen: a JSON array of { routePrefix, permission }; the longest prefix that matches the route wins, and the permission's holders are told of the question and may open and answer it. Not set, or no prefix matches: only the comment readers are told."),
             [LiveViewRefreshSeconds] =new("Int32", "How often, in seconds, the console reads the run queue again while the queue tab is open. Not set: the tab does not read again by itself."),
             [PipelineEventRelayEnabled] = new("Boolean", "Whether a host that serves no real-time hub relays its pipeline events to the host that does."),
@@ -477,6 +585,12 @@ public static class SettingDefinitions
             [EscalationAdvanceIntervalSeconds] = new("Int32", "How often, in seconds, the host looks at its open escalation alerts and sends the levels that have fallen due. Not set: the host does not start the escalation timer and says so."),
             [EscalationNotificationPriority] = new("String", "The notification priority an escalation level is sent with: the name of a notification priority such as Normal, High or Critical. Not set, or naming no priority: the level is not sent, and the next pass tries again."),
             [PipelineStopGraceSeconds] = new("Int32", "How long, in seconds, a stopping ETL host lets the pipeline runs in flight go on before it stops them and marks each Interrupted. Not set or not positive: the host does not start. Read at host start. The service unit's stop timeout must be longer than twice this."),
+            [PipelineRunClaimLeaseSeconds] = new("Int32", "How long, in seconds, the claim of a pipeline run is leased before it lapses unless its holder renews it. Not set or not positive: the claim service does not start."),
+            [PipelineRunClaimRenewalSeconds] = new("Int32", "How often, in seconds, the holder of a pipeline run's claim renews it; less than the lease. Not set or not usable: the claim service does not start."),
+            [PipelineRunClaimWaitingPollSeconds] = new("Int32", "How often, in seconds, a pipeline run that waits for its claim asks again. Not set or not positive: the claim service does not start."),
+            [PipelineRunClaimLockTimeoutMilliseconds] = new("Int32", "How long, in milliseconds, a call of a claim procedure waits for the claim lock before it fails. Not set or negative: the claim service does not start."),
+            [RunStreamRetentionSeconds] = new("Int32", "How long the ETL host keeps the pieces a run gave the person it is for, in seconds. Older pieces are removed as the next step starts. Required: a piece is not written while it is not set."),
+            [RunStreamPageSize] = new("Int32", "The most pieces of a run one read of its stream answers; a client that asks fewer gets fewer and asks again from the last sequence it received. Required: the stream is not read while it is not set."),
             [PipelineTriggerKeyRetentionSeconds] = new("Int32", "How long the ETL host remembers the key of a scheduled fire, in seconds. A retry of the same fire within that time gets the run the first call started instead of a second run; a fire older than it is refused as expired. Required: a scheduled fire is refused while it is not set."),
             [MaxPipelineRunRestarts] = new("Int32", "How many times the ETL host starts the same pipeline run again after the host stopped while it ran. Not set: a cut-off run is left Interrupted and not started again; 0 does the same. Read at host start."),
             [PipelineComponentsPublishSeconds] = new("Int32", "How often, in seconds, the ETL host publishes the components of the runs in flight; read at host start."),
@@ -484,6 +598,7 @@ public static class SettingDefinitions
             [PipelineCommittedReportSeconds] = new("Int32", "How often, in seconds, a pipeline destination writes the rows it has committed to the run's record; 0 writes after every commit. The first commit, a target emptied and the final figure are always written at once. Not set: the default the graph pipeline type declares applies. Read at the start of each run."),
             [ResetWatchIntervalSeconds] = new("Int32", "How often, in seconds, a host looks at its configuration databases to see whether one was reset; the host then empties its result cache. Read at host start."),
             [CacheChangePollIntervalSeconds] = new("Int32", "How often, in seconds, a host with a result cache looks at the configuration changes the other hosts published, and drops them from its cache. Not set: the interval the host declares applies. Not positive: a host with a cache does not start. Read at host start."),
+            [WebMcpToolSchemaMaxDepth] = new("Int32", "How many lists and objects the request of a WebMCP tool may nest. A tool whose request nests deeper, or reaches itself, is not offered to agents. Required: a host that serves WebMCP does not start without it. Read at host start."),
             [MaxPreviewRows] = new("Int32", "Maximum number of rows returned by data preview endpoints."),
             [DefaultTimeoutMs] = new("Int32", "Default timeout in milliseconds for data operations."),
             [EnableLineageTracking] = new("Boolean", "Whether data lineage tracking is enabled."),

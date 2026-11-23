@@ -23,7 +23,7 @@ namespace Fdw.Services.Etl.Graphs;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "Graph")]
-public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementationConfiguration, IApprovalGatedPipelineConfiguration, IParallelRunPipelineConfiguration, ITemplatePipelineConfiguration, IDeclaresRunParameters
+public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementationConfiguration, IGraphPipelineConfiguration, IApprovalGatedPipelineConfiguration, IParallelRunPipelineConfiguration, IClaimKeyPipelineConfiguration, IHalfDoneRulePipelineConfiguration, IRunTimeLimitPipelineConfiguration, ITemplatePipelineConfiguration, IDeclaresRunParameters
 {
     /// <summary>Gets or sets the durable identity of the pipeline, the domain row's.</summary>
     public Guid Id { get; set; }
@@ -44,7 +44,15 @@ public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementat
     public bool IsEnabled { get; set; }
 
     /// <summary>Gets or sets what the pipeline is for.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7323), which the {t} table cannot hold, so the
+    // column is gone; the provider fills the member for every set it reads. Off the mapper, it is no column of the table.
+    [NotStored]
     public string? Description { get; set; }
+
+    /// <inheritdoc />
+    // Why [NotStored]: the parameters the description provider reaches through the pipeline are the ones in Parameters, so this is derived and no column of the table.
+    [NotStored]
+    public IReadOnlyList<IDescribedPipelineParameter> DescribedParameters => [.. Parameters];
 
     /// <summary>
     /// Gets or sets how many batches each link buffers before its producer waits. There is no default: a graph states it, and one
@@ -57,6 +65,28 @@ public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementat
     /// omits it states false.
     /// </summary>
     public bool RequireApprovalToRun { get; set; }
+
+    /// <summary>
+    /// Gets or sets the template, over the pipeline's declared parameters, of the key a run claims beside the tables it writes (FDW-6141). Null when the pipeline
+    /// claims no key of its own; no default.
+    /// </summary>
+    public string? ClaimKeyTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the <c>HalfDoneRules</c> option that says what happens to a run found half-done after a restart (FDW-6141). Null when the pipeline
+    /// states none; a pipeline type may require it.
+    /// </summary>
+    public string? HalfDoneRule { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most seconds a run may take (FDW-6141). Null when the pipeline states none; a pipeline type may require it.
+    /// </summary>
+    public int? MaxRunSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most steps a run may take (FDW-6141): a step is a graph fact. Null when the pipeline states none; a pipeline type may require it.
+    /// </summary>
+    public int? MaxSteps { get; set; }
 
     /// <summary>
     /// Gets or sets how many runs of the pipeline may run at once (FDW-3117). There is no default: a graph states it, and one that does not
@@ -120,6 +150,9 @@ public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementat
 
     /// <summary>Gets or sets the variables the graph declares. Cascade children (<c>pipe.PipelineVariable</c>).</summary>
     public IList<PipelineVariableConfiguration> Variables { get; set; } = [];
+
+    /// <summary>Gets or sets the outputs the graph gives back to the pipeline that starts it (FDW-6136). Cascade children (<c>pipe.PipelineOutput</c>).</summary>
+    public IList<PipelineOutputConfiguration> Outputs { get; set; } = [];
 
     /// <summary>Gets or sets the parameters the graph declares: typed values whoever starts a run supplies by name (FDW-1549).</summary>
     public IList<PipelineParameterConfiguration> Parameters { get; set; } = [];

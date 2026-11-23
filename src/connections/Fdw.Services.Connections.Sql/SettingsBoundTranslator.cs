@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
@@ -16,7 +17,7 @@ namespace Fdw.Services.Connections.Sql;
 /// translator that does not filter by key lists is run as it is.
 /// </remarks>
 /// <typeparam name="TCommand">The provider's command type.</typeparam>
-public sealed class SettingsBoundTranslator<TCommand> : IDataCommandTranslator<TCommand>
+public sealed class SettingsBoundTranslator<TCommand> : IDataCommandTranslator<TCommand>, IStatesOperations
 {
     private readonly IDataCommandTranslator<TCommand> _inner;
     private readonly TranslationSettings _settings;
@@ -36,6 +37,10 @@ public sealed class SettingsBoundTranslator<TCommand> : IDataCommandTranslator<T
     /// <returns>The translator, bound to the setting.</returns>
     public static IDataCommandTranslator<TCommand> Bind(IDataCommandTranslator<TCommand> translator, TranslationSettings settings)
         => new SettingsBoundTranslator<TCommand>(translator, settings);
+
+    /// <inheritdoc />
+    /// <remarks>What the inner translator states; the wrapper adds settings, not operations, so the operation rule sees through it (FDW-6682).</remarks>
+    public IReadOnlyList<string> Operations => _inner is IStatesOperations states ? states.Operations : [];
 
     /// <inheritdoc />
     public int Id => _inner.Id;

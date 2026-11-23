@@ -26,8 +26,9 @@ public sealed class ActionCatalogueWiringTests
     [Trait("Category", "DataIntegrity")]
     public void EverySingleValueSettingAnActionKindListsHasABindingOfTheSameKind()
     {
+        // A setting a kind declares with its own data type (FDW-6133, FDW-6134) is held as a declared setting and has no binding: it is judged by the declared-setting tests.
         foreach (var (kind, setting) in ComponentTypes.All().Where(kind => kind.IsAction)
-            .SelectMany(kind => kind.Settings.Select(setting => (Kind: kind.Name, Setting: setting)))
+            .SelectMany(kind => kind.Settings.Where(setting => !ComponentSettingBindings.IsDeclared(kind, setting)).Select(setting => (Kind: kind.Name, Setting: setting)))
             .Where(pair => pair.Setting.Kind != "Parameters"))
         {
             var binding = ComponentSettingBindings.Find(setting.Name).ShouldNotBeNull($"{kind}: {setting.Name}");
@@ -39,12 +40,12 @@ public sealed class ActionCatalogueWiringTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void OnlyTheLoopsHoldComponentsAndTheActionsAreTheStepKinds()
+    public void OnlyTheLoopsAndTheContainerHoldComponentsAndTheActionsAreTheStepKinds()
     {
         ComponentTypes.All().Where(kind => kind.HoldsComponents).Select(kind => kind.Name).OrderBy(name => name, System.StringComparer.Ordinal)
-            .ShouldBe(["DoWhile", "ForEach", "ForLoop"]);
+            .ShouldBe(["Container", "DoWhile", "ForEach", "ForLoop", "While"]);
         ComponentTypes.All().Where(kind => kind.IsAction).Select(kind => kind.Name).OrderBy(name => name, System.StringComparer.Ordinal)
-            .ShouldBe(["DoWhile", "ExecutePipeline", "ExecuteSql", "ForEach", "ForLoop", "Notify", "ReadDataOptions", "SetVariable"]);
+            .ShouldBe(["Ask", "Condition", "Container", "DoWhile", "ExecutePipeline", "ExecuteSql", "ForEach", "ForLoop", "Gate", "Notify", "ReadDataOptions", "Send", "SetVariable", "Switch", "While"]);
         ComponentTypes.All().Where(kind => kind.IsAction).ShouldAllBe(kind => kind.Inputs.Count == 0 && kind.Outputs.Count == 0);
     }
 }

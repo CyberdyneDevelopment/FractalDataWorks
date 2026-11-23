@@ -1,4 +1,6 @@
+using Fdw.Services.Workspaces;
 using Fdw.Services.Workspaces.Endpoints;
+using Fdw.ServiceTypes;
 using Fdw.Services.Workspaces.Lineage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
@@ -11,6 +13,36 @@ namespace Fdw.Services.Tests.Workspaces.Lineage;
 [Collection(nameof(ServicesTestCollection))]
 public class LineageRequestsTests
 {
+    // The limits a host that changes nothing gets (FDW-7104): the workspace option's declared defaults, resolved the way registration resolves them.
+    private static readonly WorkspaceLimits Limits = new(
+        Declared(nameof(WorkspaceLimits.LineageMaxNodes)), Declared(nameof(WorkspaceLimits.LineageMaxDepth)), Declared(nameof(WorkspaceLimits.LineageMaxPathDepth)),
+        Declared(nameof(WorkspaceLimits.LineageSearchDefaultTake)), Declared(nameof(WorkspaceLimits.LineageSearchMaxTake)), Declared(nameof(WorkspaceLimits.NoteMaxBodyLength)));
+
+    private static int Declared(string field) => DeclaredSetting.Count(new DefaultWorkspaceServiceType(), field, null).Value;
+
+    [Fact]
+    public void TheDeclaredLineageLimitsAreFiveHundredNodesDepthFivePathEightAndSearchPagesOfTwentyUpToAHundred()
+    {
+        Limits.LineageMaxNodes.ShouldBe(500);
+        Limits.LineageMaxDepth.ShouldBe(5);
+        Limits.LineageMaxPathDepth.ShouldBe(8);
+        Limits.LineageSearchDefaultTake.ShouldBe(20);
+        Limits.LineageSearchMaxTake.ShouldBe(100);
+        Limits.NoteMaxBodyLength.ShouldBe(4000);
+    }
+
+    [Fact]
+    public void AConfiguredSearchMostIsTheOneATakeIsHeldTo()
+    {
+        // FDW-7104: the most is configuration, so a host that configures 300 takes 250 and refuses 301, naming 300.
+        var wide = new WorkspaceLimits(500, 5, 8, 20, 300, 4000);
+
+        LineageRequests.Search(new LineageSearchRequest { Q = "o", Take = 250 }, wide, NullLogger.Instance).IsSuccess.ShouldBeTrue();
+        var refused = LineageRequests.Search(new LineageSearchRequest { Q = "o", Take = 301 }, wide, NullLogger.Instance);
+        refused.IsFailure.ShouldBeTrue();
+        refused.CurrentMessage!.ShouldContain("300");
+    }
+
     private static LineageNeighbourhoodRequest Neighbourhood() => new()
     {
         Node = DataSetId(1),
@@ -21,7 +53,7 @@ public class LineageRequestsTests
     [Fact]
     public void AValidNeighbourhoodRequestIsAccepted()
     {
-        var query = LineageRequests.Neighbourhood(Neighbourhood(), NullLogger.Instance);
+        var query = LineageRequests.Neighbourhood(Neighbourhood(), Limits, NullLogger.Instance);
 
         query.IsSuccess.ShouldBeTrue();
         query.Value!.Direction.ShouldBeSameAs(LineageDirections.Both);
@@ -39,8 +71,8 @@ public class LineageRequestsTests
         var tooDeep = Neighbourhood();
         tooDeep.Depth = 6;
 
-        LineageRequests.Neighbourhood(missing, NullLogger.Instance).IsFailure.ShouldBeTrue();
-        LineageRequests.Neighbourhood(tooDeep, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Neighbourhood(missing, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Neighbourhood(tooDeep, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
     }
 
     [Theory]
@@ -52,7 +84,7 @@ public class LineageRequestsTests
         var request = Neighbourhood();
         request.Direction = wire;
 
-        var direction = LineageRequests.Neighbourhood(request, NullLogger.Instance).Value!.Direction;
+        var direction = LineageRequests.Neighbourhood(request, Limits, NullLogger.Instance).Value!.Direction;
 
         direction.Name.ShouldBe(name);
         direction.Wire.ShouldBe(wire);
@@ -73,7 +105,7 @@ public class LineageRequestsTests
         var request = Neighbourhood();
         request.Direction = direction;
 
-        LineageRequests.Neighbourhood(request, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Neighbourhood(request, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
     }
 
     [Fact]
@@ -82,7 +114,7 @@ public class LineageRequestsTests
         var request = Neighbourhood();
         request.Direction = "sideways";
 
-        var result = LineageRequests.Neighbourhood(request, NullLogger.Instance);
+        var result = LineageRequests.Neighbourhood(request, Limits, NullLogger.Instance);
 
         result.IsFailure.ShouldBeTrue();
         result.Code!.Name.ShouldBe("MapRequestInvalid");
@@ -102,7 +134,7 @@ public class LineageRequestsTests
         var request = Neighbourhood();
         request.Node = node;
 
-        LineageRequests.Neighbourhood(request, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Neighbourhood(request, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
     }
 
     [Fact]
@@ -113,8 +145,8 @@ public class LineageRequestsTests
         var connection = Neighbourhood();
         connection.Kinds = "DataSet,Connection";
 
-        LineageRequests.Neighbourhood(unknown, NullLogger.Instance).IsFailure.ShouldBeTrue();
-        LineageRequests.Neighbourhood(connection, NullLogger.Instance).Value!.Kinds.Unavailable.ShouldBe(new[] { "Connection" });
+        LineageRequests.Neighbourhood(unknown, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Neighbourhood(connection, Limits, NullLogger.Instance).Value!.Kinds.Unavailable.ShouldBe(new[] { "Connection" });
     }
 
     [Fact]
@@ -123,22 +155,22 @@ public class LineageRequestsTests
         var request = Neighbourhood();
         request.Kinds = "Pipeline";
 
-        LineageRequests.Neighbourhood(request, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Neighbourhood(request, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
     }
 
     [Fact]
     public void ASearchNeedsTextAndHoldsTheCountToItsMaximum()
     {
-        LineageRequests.Search(new LineageSearchRequest { Q = " " }, NullLogger.Instance).IsFailure.ShouldBeTrue();
-        LineageRequests.Search(new LineageSearchRequest { Q = "o", Take = 101 }, NullLogger.Instance).IsFailure.ShouldBeTrue();
-        LineageRequests.Search(new LineageSearchRequest { Q = "o" }, NullLogger.Instance).Value!.Take.ShouldBe(20);
+        LineageRequests.Search(new LineageSearchRequest { Q = " " }, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Search(new LineageSearchRequest { Q = "o", Take = 101 }, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Search(new LineageSearchRequest { Q = "o" }, Limits, NullLogger.Instance).Value!.Take.ShouldBe(20);
     }
 
     [Fact]
     public void ASearchPageStartsAtAnOffsetAndMatchesByContainsOrStartsWith()
     {
-        var plain = LineageRequests.Search(new LineageSearchRequest { Q = "o" }, NullLogger.Instance).Value!;
-        var paged = LineageRequests.Search(new LineageSearchRequest { Q = "o", Skip = 40, Match = "startsWith" }, NullLogger.Instance).Value!;
+        var plain = LineageRequests.Search(new LineageSearchRequest { Q = "o" }, Limits, NullLogger.Instance).Value!;
+        var paged = LineageRequests.Search(new LineageSearchRequest { Q = "o", Skip = 40, Match = "startsWith" }, Limits, NullLogger.Instance).Value!;
 
         plain.Skip.ShouldBe(0);
         plain.StartsWith.ShouldBeFalse();
@@ -150,12 +182,12 @@ public class LineageRequestsTests
     [InlineData(-1, null)]
     [InlineData(null, "like")]
     public void ASkipBelowZeroOrAMatchThatIsNeitherWordIsRefused(int? skip, string? match)
-        => LineageRequests.Search(new LineageSearchRequest { Q = "o", Skip = skip, Match = match }, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        => LineageRequests.Search(new LineageSearchRequest { Q = "o", Skip = skip, Match = match }, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
 
     [Fact]
     public void ASearchWithNoKindsSearchesDataSetsDataStoresAndPipelines()
     {
-        var kinds = LineageRequests.Search(new LineageSearchRequest { Q = "o" }, NullLogger.Instance).Value!.Kinds;
+        var kinds = LineageRequests.Search(new LineageSearchRequest { Q = "o" }, Limits, NullLogger.Instance).Value!.Kinds;
 
         kinds.Admits(MapKinds.DataSet).ShouldBeTrue();
         kinds.Admits(MapKinds.DataStore).ShouldBeTrue();
@@ -169,10 +201,10 @@ public class LineageRequestsTests
         var pipelineEnd = new LineagePathRequest { From = DataSetId(1), To = PipelineId(1) };
         var tooDeep = new LineagePathRequest { From = DataSetId(1), To = DataSetId(2), MaxDepth = 9 };
 
-        LineageRequests.Path(ok, NullLogger.Instance).Value!.MaxDepth.ShouldBe(8);
-        LineageRequests.Path(pipelineEnd, NullLogger.Instance).IsFailure.ShouldBeTrue();
-        LineageRequests.Path(tooDeep, NullLogger.Instance).IsFailure.ShouldBeTrue();
-        LineageRequests.Path(new LineagePathRequest { From = DataSetId(1) }, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Path(ok, Limits, NullLogger.Instance).Value!.MaxDepth.ShouldBe(8);
+        LineageRequests.Path(pipelineEnd, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Path(tooDeep, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
+        LineageRequests.Path(new LineagePathRequest { From = DataSetId(1) }, Limits, NullLogger.Instance).IsFailure.ShouldBeTrue();
     }
 
     [Theory]

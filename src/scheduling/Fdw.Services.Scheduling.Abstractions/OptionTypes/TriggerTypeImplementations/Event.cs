@@ -64,7 +64,7 @@ public sealed class Event : TriggerTypeBase
     /// Initializes a new instance of the <see cref="Event"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
-    public Event(ILogger<Event>? logger = null) : base("Event", requiresSchedule: false, isImmediate: true)
+    public Event(ILogger<Event>? logger = null) : base("Event", requiresSchedule: false, isImmediate: true, description: "Execution triggered by a named application event")
     {
         _logger = logger ?? NullLogger<Event>.Instance;
     }

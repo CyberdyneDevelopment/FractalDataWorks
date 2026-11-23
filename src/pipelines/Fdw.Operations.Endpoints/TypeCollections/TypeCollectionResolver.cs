@@ -204,6 +204,7 @@ internal static class TypeCollectionResolver
             NeedsAcknowledgement = typeOption is IAcknowledgementShape acknowledged ? acknowledged.NeedsAcknowledgement : null,
             IsAction = typeOption is IComponentType action ? action.IsAction : null,
             HoldsComponents = typeOption is IComponentType holder ? holder.HoldsComponents : null,
+            IsDecision = typeOption is IComponentType kind ? kind is IDecisionComponentType : null,
             SummarySeparator = typeOption is IComponentType joined ? joined.SummarySeparator : null
         };
     }

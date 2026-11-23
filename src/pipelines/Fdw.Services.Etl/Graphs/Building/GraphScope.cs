@@ -22,7 +22,7 @@ public static class GraphScope
     /// <summary>Lists the variables some step changes while the run goes: a Set variable target, a loop's variable, a step's result variable.</summary>
     /// <param name="graph">The stored graph.</param>
     /// <returns>The names, compared without regard to case.</returns>
-    public static IReadOnlySet<string> AssignedVariables(GraphPipelineConfiguration graph)
+    public static IReadOnlySet<string> AssignedVariables(IGraphPipelineConfiguration graph)
     {
         return graph.Components
             .SelectMany(component => new[] { component.VariableName, component.ResultVariable })
@@ -37,7 +37,7 @@ public static class GraphScope
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <returns>The values by name, or the failure that names the variable whose starting value is not a value of its type.</returns>
     public static IGenericResult<IReadOnlyDictionary<string, object?>> RenderValues(
-        GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
+        IGraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
     {
         var values = new Dictionary<string, object?>(parameters, StringComparer.OrdinalIgnoreCase);
         var assigned = AssignedVariables(graph);

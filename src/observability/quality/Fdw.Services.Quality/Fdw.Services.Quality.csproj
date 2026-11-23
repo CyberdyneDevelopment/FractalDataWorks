@@ -23,6 +23,8 @@
     <ProjectReference Include="..\..\..\foundation\services\Fdw.Services\Fdw.Services.csproj" />
     <ProjectReference Include="..\..\..\foundation\validation\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\..\..\pipelines\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\data\Fdw.Services.Descriptions\Fdw.Services.Descriptions.csproj" />
+    <ProjectReference Include="..\..\..\data\Fdw.Services.Descriptions.Abstractions\Fdw.Services.Descriptions.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

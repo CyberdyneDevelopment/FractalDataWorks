@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Fdw.Results;
 using Fdw.Services.Data.Logging;
@@ -36,12 +37,7 @@ public static class StoredViewFilters
             nodes.Add(node.Value);
         }
 
-        return GenericResult<QueryFilterNode?>.Success(nodes.Count switch
-        {
-            0 => null,
-            1 => nodes[0],
-            _ => new QueryFilterNode { Logic = "And", Nodes = nodes },
-        });
+        return GenericResult<QueryFilterNode?>.Success(nodes.Count > 1 ? new QueryFilterNode { Logic = "And", Nodes = nodes } : nodes.SingleOrDefault());
     }
 
     private static IGenericResult<QueryFilterNode> Read(string text, string viewName, ILogger logger)

@@ -12,6 +12,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
 using Xunit;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 
 namespace Fdw.Services.Tests.Workspaces;
 
@@ -30,7 +32,8 @@ public sealed class PlacementOptInTests
     public void TheDataStoreProviderPlacesItsMembersAsADataStore()
     {
         var provider = new DataStoreConfigurationProvider(
-            NullLogger<DataStoreConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataStore", Placing(), Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>());
+            NullLogger<DataStoreConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "data", "DataStore", Placing(), Mock.Of<Fdw.Services.Authentication.Abstractions.Security.IAuthenticationContextAccessor>(), Mock.Of<Fdw.Services.Multitenancy.Abstractions.ICrossTenantChangePolicy>(),
+            new Mock<IDescriptionWriter>(MockBehavior.Strict).Object, new Mock<IDescriptionReader>(MockBehavior.Strict).Object);
 
         WorkspaceResourceKinds.ByName(provider.PlacementKind).ShouldNotBeSameAs(WorkspaceResourceKinds.NotFound);
         provider.PlacementKind.ShouldBe("DataStore");
@@ -42,7 +45,8 @@ public sealed class PlacementOptInTests
     public void TheCalculationProviderPlacesItsMembersAsACalculation()
     {
         var provider = new CalculationConfigurationProvider(
-            NullLogger<CalculationConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "calc", "CalculationEntity", Placing());
+            NullLogger<CalculationConfigurationProvider>.Instance, Mock.Of<IConfigurationGatewayProvider>(), "PlatformConfiguration", "calc", "CalculationEntity", Placing(),
+            new Mock<IDescriptionWriter>(MockBehavior.Strict).Object, new Mock<IDescriptionReader>(MockBehavior.Strict).Object);
 
         WorkspaceResourceKinds.ByName(provider.PlacementKind).ShouldNotBeSameAs(WorkspaceResourceKinds.NotFound);
         provider.PlacementKind.ShouldBe("Calculation");

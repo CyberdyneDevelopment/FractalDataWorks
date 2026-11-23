@@ -16,6 +16,10 @@ namespace Fdw.Services.Messaging;
 /// </remarks>
 public interface IUiFeedbackService
 {
+    /// <summary>Gets the limits a comment is held to, as this host configured them (FDW-7058): the defaults the messaging option declares, changed at
+    /// registration or by a value stated under <c>Messaging:Default:UiFeedback</c>.</summary>
+    UiFeedbackLimits Limits { get; }
+
     /// <summary>Leaves a comment.</summary>
     /// <param name="request">What the tester sent.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

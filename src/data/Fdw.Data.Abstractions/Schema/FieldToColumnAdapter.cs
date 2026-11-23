@@ -46,7 +46,7 @@ public sealed class FieldToColumnAdapter : IColumnDefinition
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Inferred from IField.FieldType. Default is NVarChar for flexibility.
+    /// Inferred from IField.FieldType through SqlTypeWords; a field type name no SQL type is named for is NVarChar.
     /// </remarks>
     public SqlDbType SqlType
     {
@@ -60,28 +60,13 @@ public sealed class FieldToColumnAdapter : IColumnDefinition
                 return (SqlDbType)_field.ConverterTypeId.Value;
             }
 
-            // Otherwise, infer from FieldType (simplified mapping)
+            // Otherwise, infer from FieldType (simplified mapping). A field's type name is whatever its source called it (a
+            // discovered column, a JSON value, a file), so the set of names is open: a name SqlTypeWords does not hold reads as
+            // NVarChar, as it always has. 1.6.0 keeps that reading by the release manager's ruling; the site is on the open-set
+            // list (FDW-6888).
             var fieldTypeName = _field.FieldType?.TypeName ?? string.Empty;
-            return fieldTypeName.ToLowerInvariant() switch
-            {
-                "int" or "int32" => SqlDbType.Int,
-                "long" or "int64" => SqlDbType.BigInt,
-                "short" or "int16" => SqlDbType.SmallInt,
-                "byte" => SqlDbType.TinyInt,
-                "bool" or "boolean" => SqlDbType.Bit,
-                "decimal" or "money" => SqlDbType.Decimal,
-                "float" or "single" => SqlDbType.Real,
-                "double" => SqlDbType.Float,
-                "datetime" => SqlDbType.DateTime2,
-                "datetimeoffset" => SqlDbType.DateTimeOffset,
-                "date" => SqlDbType.Date,
-                "time" => SqlDbType.Time,
-                "guid" or "uniqueidentifier" => SqlDbType.UniqueIdentifier,
-                "string" or "varchar" => SqlDbType.VarChar,
-                "nvarchar" or "text" => SqlDbType.NVarChar,
-                "binary" or "varbinary" => SqlDbType.VarBinary,
-                _ => SqlDbType.NVarChar // Default to NVarChar for unknown types
-            };
+            var sqlType = SqlTypeWords.OfWord(fieldTypeName);
+            return ReferenceEquals(sqlType, SqlTypeWords.NotFound) ? SqlDbType.NVarChar : sqlType.SqlType;
         }
     }
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Tags.Abstractions;
 using Fdw.Services.Tags.Configuration;
@@ -29,6 +30,7 @@ public sealed class TagServiceTests
     private readonly Mock<ITagConfigurationProvider> _tags = new();
     private readonly Mock<ITagScope> _scope = new();
     private readonly Mock<IConfigurationGateway> _gateway = new();
+    private readonly Mock<ICitedConfigurations> _cited = new();
     private readonly List<IDataCommand> _written = [];
 
     private TagService Service()
@@ -42,7 +44,10 @@ public sealed class TagServiceTests
         _scope
             .Setup(s => s.Allows(It.IsAny<TagDomainConfiguration>(), It.IsAny<ITaggableKind>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult.Success());
-        return new TagService(_tags.Object, gateways.Object, _scope.Object, Store, NullLogger<TagService>.Instance);
+        _cited
+            .Setup(c => c.StateOf(It.IsAny<Citation>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICitedState>.Success(CitedStates.Current));
+        return new TagService(_tags.Object, gateways.Object, _scope.Object, _cited.Object, Store, NullLogger<TagService>.Instance);
     }
 
     private void TagExists(string name, string ownerKind = "Tenant")
@@ -72,6 +77,92 @@ public sealed class TagServiceTests
 
         linked.IsSuccess.ShouldBeTrue();
         _written.ShouldHaveSingleItem().ShouldBeOfType<ConfigurationSaveCommand<DataSetTagConfiguration>>();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task LinkRefusesAThingThatDoesNotExistAndWritesNothing()
+    {
+        TagExists("finance");
+        LinksOfTheThing();
+        var service = Service();
+        _cited
+            .Setup(c => c.StateOf(It.IsAny<Citation>(), Thing, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICitedState>.Success(CitedStates.Absent));
+
+        var linked = await service.Link("DataSet", Thing, "finance", TestContext.Current.CancellationToken);
+
+        linked.IsFailure.ShouldBeTrue();
+        linked.Code!.Name.ShouldBe("TagThingNotFound");
+        _written.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task LinkRefusesAThingThatWasRetiredForItsOwnReasonAndWritesNothing()
+    {
+        TagExists("finance");
+        LinksOfTheThing();
+        var service = Service();
+        _cited
+            .Setup(c => c.StateOf(It.IsAny<Citation>(), Thing, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICitedState>.Success(CitedStates.Retired));
+
+        var linked = await service.Link("DataSet", Thing, "finance", TestContext.Current.CancellationToken);
+
+        linked.IsFailure.ShouldBeTrue();
+        linked.Code!.Name.ShouldBe("TagThingRetired");
+        _written.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task LinkAsksForTheThingTheKindDeclaresItCites()
+    {
+        TagExists("finance");
+        LinksOfTheThing();
+        var service = Service();
+
+        await service.Link("DataSet", Thing, "finance", TestContext.Current.CancellationToken);
+
+        _cited.Verify(c => c.StateOf(It.Is<Citation>(citation => citation.Container == "data.DataSet"), Thing, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task LinkFailsWhenTheCitationCannotBeChecked()
+    {
+        TagExists("finance");
+        LinksOfTheThing();
+        var service = Service();
+        _cited
+            .Setup(c => c.StateOf(It.IsAny<Citation>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICitedState>.Failure(new Fdw.Messages.GenericMessage("gateway exploded")));
+
+        var linked = await service.Link("DataSet", Thing, "finance", TestContext.Current.CancellationToken);
+
+        linked.IsFailure.ShouldBeTrue();
+        _written.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task TagsAlreadyOnARetiredThingStillReadAndComeOffWithoutAskingWhetherItExists()
+    {
+        TagExists("finance");
+        LinksOfTheThing(new DataSetTagConfiguration { Id = Guid.NewGuid(), DataSetId = Thing, TagId = TagId });
+        var service = Service();
+        _cited
+            .Setup(c => c.StateOf(It.IsAny<Citation>(), Thing, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICitedState>.Success(CitedStates.Retired));
+
+        var tags = await service.TagsOf("DataSet", Thing, TestContext.Current.CancellationToken);
+        var unlinked = await service.Unlink("DataSet", Thing, "finance", TestContext.Current.CancellationToken);
+
+        tags.IsSuccess.ShouldBeTrue();
+        tags.Value.ShouldBe(["finance"]);
+        unlinked.IsSuccess.ShouldBeTrue();
+        _cited.Verify(c => c.StateOf(It.IsAny<Citation>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

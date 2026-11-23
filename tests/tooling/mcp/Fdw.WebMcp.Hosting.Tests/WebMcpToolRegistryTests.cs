@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fdw.WebMcp.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -28,7 +29,7 @@ public class WebMcpToolRegistryTests
         RouteTable routes)
     {
         var registry = new WebMcpToolRegistry();
-        registry.Resolve(declarations, routes.Endpoints, NullLogger.Instance);
+        registry.Resolve(declarations, routes.Endpoints, WebMcpCompositeCatalog.MaxDepth, NullLogger.Instance);
         return registry.Tools;
     }
 
@@ -106,6 +107,47 @@ public class WebMcpToolRegistryTests
             [Declaration(typeof(ListUsersEndpoint))],
             new RouteTable().AddUndefined("/healthz"))
             .ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ServesAPlanForEveryToolItServes()
+    {
+        var registry = new WebMcpToolRegistry();
+        registry.Resolve(
+            [Declaration(typeof(ListUsersEndpoint))],
+            new RouteTable().Add("/users", typeof(ListUsersEndpoint), verbs: "GET").Endpoints,
+            WebMcpCompositeCatalog.MaxDepth,
+            NullLogger.Instance);
+
+        registry.Plans.Select(plan => plan.Tool).ShouldBe(registry.Tools);
+    }
+
+    [Fact]
+    public void SkipsAToolWhoseRequestNestsDeeperThanTheStatedDepth()
+    {
+        // Refused when the plan is built, so no agent is handed a tool the host would not describe whole.
+        var registry = new WebMcpToolRegistry();
+        registry.Resolve(
+            [Declaration(typeof(SaveUserEndpoint))],
+            new RouteTable().Add("/deep", typeof(SaveUserEndpoint), typeof(WebMcpCompositeCatalog.DeepRequest), typeof(UserResponse), "POST").Endpoints,
+            WebMcpCompositeCatalog.MaxDepth,
+            NullLogger.Instance);
+
+        registry.Tools.ShouldBeEmpty();
+        registry.Plans.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void SkipsAToolWhoseRequestTypeReachesItself()
+    {
+        var registry = new WebMcpToolRegistry();
+        registry.Resolve(
+            [Declaration(typeof(SaveUserEndpoint))],
+            new RouteTable().Add("/nodes", typeof(SaveUserEndpoint), typeof(WebMcpCompositeCatalog.Node), typeof(UserResponse), "POST").Endpoints,
+            WebMcpCompositeCatalog.MaxDepth,
+            NullLogger.Instance);
+
+        registry.Tools.ShouldBeEmpty();
     }
 
     [Fact]

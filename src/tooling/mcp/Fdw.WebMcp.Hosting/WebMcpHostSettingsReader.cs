@@ -5,6 +5,7 @@ using Fdw.Results;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Commands;
+using Fdw.Services.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -13,7 +14,8 @@ namespace Fdw.WebMcp.Hosting;
 /// <summary>
 /// Reads what a host's WebMCP surface needs from its WebMcp configuration row: the header the client
 /// key travels in, the key itself from the secret manager the row names, and where the address the
-/// host reaches its own routes on comes from.
+/// host reaches its own routes on comes from, plus how deep a tool's request may nest, which the
+/// server setting <c>WebMcpToolSchemaMaxDepth</c> states.
 /// </summary>
 /// <remarks>
 /// Read once and kept. The row is startup configuration -- an edit to it is seen after a restart, like
@@ -24,20 +26,24 @@ public sealed class WebMcpHostSettingsReader
 {
     private readonly IWebMcpConfigurationProvider _configurations;
     private readonly ISecretManagerProvider _secretManagers;
+    private readonly IEffectiveSettingsProvider _settingsProvider;
     private readonly ILogger<WebMcpHostSettingsReader> _logger;
     private WebMcpHostSettings? _settings;
 
     /// <summary>Initializes the reader.</summary>
     /// <param name="configurations">The WebMcp domain's configuration provider.</param>
     /// <param name="secretManagers">Resolves the secret manager a row names.</param>
+    /// <param name="settingsProvider">Resolves the server settings, here the depth a tool's request may nest.</param>
     /// <param name="logger">The logger.</param>
     public WebMcpHostSettingsReader(
         IWebMcpConfigurationProvider configurations,
         ISecretManagerProvider secretManagers,
+        IEffectiveSettingsProvider settingsProvider,
         ILogger<WebMcpHostSettingsReader>? logger = null)
     {
         _configurations = configurations;
         _secretManagers = secretManagers;
+        _settingsProvider = settingsProvider;
         _logger = logger ?? NullLogger<WebMcpHostSettingsReader>.Instance;
     }
 
@@ -97,11 +103,27 @@ public sealed class WebMcpHostSettingsReader
             return selfAddress.ToNewResult<WebMcpHostSettings>();
         }
 
-        var settings = new WebMcpHostSettings(configuration.ApiKeyHeader, clientKey.Value, source.Value, selfAddress.Value);
+        var depth = SchemaMaxDepth();
+        if (depth.IsFailure)
+        {
+            return depth.ToNewResult<WebMcpHostSettings>();
+        }
+
+        var settings = new WebMcpHostSettings(configuration.ApiKeyHeader, clientKey.Value, source.Value, selfAddress.Value, depth.Value);
         WebMcpLog.SettingsRead(_logger, name, settings.ApiKeyHeader,
             servesClientKey: settings.ClientApiKey is not null, selfAddressSource: settings.SelfAddressSource?.Name ?? string.Empty);
         return GenericResult<WebMcpHostSettings>.Success(settings);
     }
+
+    /// <summary>The depth the setting states for how many lists and objects a tool's request may nest.</summary>
+    /// <remarks>
+    /// Not read through <c>GetEffectiveValue</c>: that answers 0 for a setting nobody declared, and 0 here would read as no
+    /// room at all. A setting that is absent or not positive is refused, naming it.
+    /// </remarks>
+    private IGenericResult<int> SchemaMaxDepth()
+        => _settingsProvider.TryGetEffectiveValue<int>(SettingDefinitions.WebMcpToolSchemaMaxDepth, out var depth) && depth > 0
+            ? GenericResult<int>.Success(depth)
+            : GenericResult<int>.Failure(WebMcpLog.SchemaMaxDepthNotSet(_logger));
 
     /// <summary>The client key the row names, or <see langword="null"/> when it names none.</summary>
     private async Task<IGenericResult<string?>> ClientKey(

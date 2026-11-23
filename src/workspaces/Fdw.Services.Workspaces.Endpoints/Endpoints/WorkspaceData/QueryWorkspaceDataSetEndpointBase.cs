@@ -122,6 +122,20 @@ public abstract class QueryWorkspaceDataSetEndpointBase
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The name the data set is attached or owned under in the workspace, which for a variation is its own name (FDW-5446): the data set that is read is the
+    /// variation's root, and its name is not told to a person who holds only the variation. Resolved again, as the scope filter is, from the provider's cache.
+    /// </remarks>
+    protected override async Task<IGenericResult<string>> AnswerName(
+        QueryWorkspaceDataSetRequest req, IDataSetImplementationConfiguration dataSet, CancellationToken ct)
+    {
+        var resolved = await _workspaces.DataSet(req.WorkspaceName, req.DataSetName, ct).ConfigureAwait(false);
+        return resolved.IsFailure
+            ? resolved.ToNewResult<string>()
+            : GenericResult<string>.Success(resolved.Value!.Name);
+    }
+
+    /// <inheritdoc />
     protected override WorkspaceDataSetQueryResponse NewResponse(QueryWorkspaceDataSetRequest req)
         => new() { WorkspaceName = req.WorkspaceName };
 

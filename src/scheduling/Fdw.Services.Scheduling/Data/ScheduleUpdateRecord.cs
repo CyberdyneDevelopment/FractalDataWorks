@@ -27,4 +27,7 @@ public sealed class ScheduleUpdateRecord
     /// the canonical <c>Fdw.Results.ExecutionStatus.ExecutionStatuses</c> names).
     /// </summary>
     public string? LastRunStatus { get; set; }
+
+    /// <summary>Gets or sets how many fires in a row failed to start a run, after this fire (FDW-6144).</summary>
+    public int ConsecutiveFailures { get; set; }
 }

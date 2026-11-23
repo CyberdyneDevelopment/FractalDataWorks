@@ -273,6 +273,21 @@ public static partial class EndpointLogger
         string serviceName);
 
     /// <summary>
+    /// Logs that a list request states identifiers and no configuration gateway provider is registered, so the most keys one statement carries,
+    /// which is the most identifiers one call may state, cannot be read (FDW-7106).
+    /// </summary>
+    /// <param name="logger">The logger instance to write to.</param>
+    /// <param name="serviceName">The service that is not registered.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(
+        EventId = 61005,
+        Level = LogLevel.Error,
+        Message = "List search refused: '{serviceName}' is not registered, so the most identifiers one call may state cannot be read")]
+    public static partial IGenericMessage ListSearchKeyLimitUnavailable(
+        ILogger logger,
+        string serviceName);
+
+    /// <summary>
     /// Logs that a paging query parameter is not a number in its allowed range.
     /// </summary>
     /// <param name="logger">The logger instance to write to.</param>
@@ -474,6 +489,38 @@ public static partial class EndpointLogger
         ILogger logger,
         string resource,
         string reason);
+
+    /// <summary>
+    /// Logs that a query over a resource was refused because its filter names a field the provider fills after the rows are read (FDW-6273).
+    /// </summary>
+    /// <param name="logger">The logger instance to write to.</param>
+    /// <param name="resource">The resource that was queried.</param>
+    /// <param name="field">The filled field the filter names.</param>
+    /// <returns>A generic message containing the warning information.</returns>
+    [MessageLogging(
+        EventId = 20002,
+        Level = LogLevel.Warning,
+        Message = "Query over {resource} refused: '{field}' is filled from another domain after the rows are read (a description is kept in the descriptions table, in the caller's language), so the list's table holds no column of it and cannot be filtered on it")]
+    public static partial IGenericMessage QueryFilterOnFilledField(
+        ILogger logger,
+        string resource,
+        string field);
+
+    /// <summary>
+    /// Logs that a query over a resource was refused because it sorts on a field the provider fills after the rows are read (FDW-6273).
+    /// </summary>
+    /// <param name="logger">The logger instance to write to.</param>
+    /// <param name="resource">The resource that was queried.</param>
+    /// <param name="field">The filled field the sort names.</param>
+    /// <returns>A generic message containing the warning information.</returns>
+    [MessageLogging(
+        EventId = 20003,
+        Level = LogLevel.Warning,
+        Message = "Query over {resource} refused: '{field}' is filled from another domain after the rows are read (a description is kept in the descriptions table, in the caller's language), so the list's table holds no column of it and cannot be sorted on it")]
+    public static partial IGenericMessage QuerySortOnFilledField(
+        ILogger logger,
+        string resource,
+        string field);
 
     /// <summary>
     /// Logs that a query over a resource cannot be answered because its record has no registered mapper,

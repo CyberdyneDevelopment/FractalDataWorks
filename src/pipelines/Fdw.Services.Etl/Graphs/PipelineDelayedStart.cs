@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl.Graphs;
 
@@ -22,8 +23,12 @@ namespace Fdw.Services.Etl.Graphs;
 /// </remarks>
 public sealed class PipelineDelayedStart
 {
-    /// <summary>The longest delay, in seconds: 30 days. A longer hold is not a delay, and a timer cannot wait longer than about 49 days.</summary>
-    public const int MaximumSeconds = 2_592_000;
+    /// <summary>
+    /// The longest delay, in seconds, about 49 days: the longest a held run's timer can wait. The pipeline states its delay, and nothing
+    /// shorter is chosen for it here (FDW-7106; this was 30 days, a choice in code).
+    /// </summary>
+    [FormatLimit("A held run waits on a TimeProvider timer, whose due time is at most 4,294,967,294 milliseconds, about 49.7 days")]
+    public const int MaximumSeconds = 4_294_967;
 
     private const string TimeOfDayFormat = "HH:mm";
 
@@ -100,7 +105,7 @@ public sealed class PipelineDelayedStart
     {
         if (seconds < 1 || seconds > MaximumSeconds)
         {
-            problems.Add(("delayedStartSeconds", $"delayedStartSeconds is {seconds}, which is not between 1 and {MaximumSeconds} (30 days)"));
+            problems.Add(("delayedStartSeconds", $"delayedStartSeconds is {seconds}, which is not between 1 and {MaximumSeconds} (the longest a timer can wait, about 49 days)"));
         }
 
         if (timeZoneId is not null)

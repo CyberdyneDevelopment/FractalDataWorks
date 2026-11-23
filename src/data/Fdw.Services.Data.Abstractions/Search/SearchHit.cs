@@ -61,6 +61,11 @@ public sealed class SearchHit
     /// <summary>Gets the names the thing sits under, outermost first; empty until <see cref="IRankedSearch.Place"/> has read them.</summary>
     public IReadOnlyList<string> Parents { get; }
 
+    /// <summary>Gets a copy of this hit with the description read from where it is kept (FDW-6208).</summary>
+    /// <param name="description">What the thing is described by.</param>
+    /// <returns>The described hit.</returns>
+    public SearchHit Described(string? description) => new(Name, description, Key, Rank, ParentTable, ParentKey, Owner, Parents);
+
     /// <summary>Gets a copy of this hit that sits under the given names.</summary>
     /// <param name="parents">The names, outermost first.</param>
     /// <returns>The placed hit.</returns>

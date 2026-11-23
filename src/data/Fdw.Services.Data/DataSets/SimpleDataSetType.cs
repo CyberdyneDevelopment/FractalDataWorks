@@ -375,32 +375,17 @@ public sealed class SimpleDataSetType : DataSetTypeBase, IStreamingDataSetType
                 return (true, null, GenericResult<T>.Failure(DataGatewayLogger.DataSetValidationFailed(
                     ctx.Logger, ctx.Config.Name, "An aggregate definition has an empty output column name.")));
 
-            var sqlFunc = MapToSqlFunction(def.AggregateFunctionName);
-            if (sqlFunc is null)
+            var sqlFunc = SqlAggregates.OfAlias(def.AggregateFunctionName);
+            if (ReferenceEquals(sqlFunc, SqlAggregates.NotFound))
                 return (true, null, GenericResult<T>.Failure(DataGatewayLogger.DataSetValidationFailed(
                     ctx.Logger, ctx.Config.Name, $"Aggregate function '{def.AggregateFunctionName}' is not supported for SQL pushdown.")));
 
             var inner = string.IsNullOrWhiteSpace(def.InputFieldName) ? "*" : def.InputFieldName.Trim();
-            measures[def.AggregateColumnName.Trim()] = $"{sqlFunc}({inner})";
+            measures[def.AggregateColumnName.Trim()] = $"{sqlFunc.Sql}({inner})";
         }
 
         return (false, new AggregationExpression { GroupByFields = groupBy, Aggregations = measures }, null);
     }
-
-    /// <summary>
-    /// Maps a <c>DataSetAggregate.AggregateFunctionName</c> to the SQL-pushdownable keyword the query
-    /// translator emits, or <see langword="null"/> when the function has no SQL-aggregate form.
-    /// </summary>
-    private static string? MapToSqlFunction(string functionName)
-        => functionName.Trim().ToUpperInvariant() switch
-        {
-            "SUM" => "SUM",
-            "COUNT" => "COUNT",
-            "AVG" or "AVERAGE" or "MEAN" => "AVG",
-            "MIN" or "MINIMUM" => "MIN",
-            "MAX" or "MAXIMUM" => "MAX",
-            _ => null
-        };
 
     private static IReadOnlyDictionary<string, string>? ResolveFieldMappingsForSource(DataSetExecutionContext ctx, DataSetSourceConfiguration sourceConfig)
     {

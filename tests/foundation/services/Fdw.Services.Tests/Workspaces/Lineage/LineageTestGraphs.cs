@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Services.Workspaces.Endpoints;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Tests.Workspaces.Lineage;
 
@@ -39,10 +40,10 @@ internal static class LineageTestGraphs
     public static LineageGraph TwoStepChain() => LineageProjection.Of(
         [NewDataSet(1, "Feed"), NewDataSet(2, "Landing"), NewDataSet(3, "Stats"), NewPipeline(1, "Load"), NewPipeline(2, "Roll")],
         [Reads(DataSetId(1), PipelineId(1)), Writes(PipelineId(1), DataSetId(2)), Reads(DataSetId(2), PipelineId(2)), Writes(PipelineId(2), DataSetId(3))],
-        null);
+        null, NullLogger.Instance).Value!;
 
     public static LineageKindSelection KindsOf(string kinds, bool pipelinesAreNodes = false)
-        => LineageKindSelection.Parse(kinds, "DataSet", pipelinesAreNodes, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance).Value!;
+        => LineageKindSelection.Parse(kinds, "DataSet", pipelinesAreNodes, NullLogger.Instance).Value!;
 
     public static List<string> Ids(LineageWalk walk) => walk.Nodes.Select(placed => placed.Node.Id).ToList();
 }

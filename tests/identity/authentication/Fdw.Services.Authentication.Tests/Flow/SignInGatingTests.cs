@@ -156,6 +156,63 @@ public class SignInGatingTests
         result.Value.Steps.Single(s => s.Name == "gate").Configuration.ShouldBe(Gate("signin:password"));
     }
 
+    // ---------------------------------------------------------------- return URLs
+
+    // A flow that returns a browser also stores state, so its row names the execution key and the code lifetime beside ReturnUrls.
+    private static AuthenticationFlowImplementationConfiguration BrowserRow(string returnUrls)
+    {
+        var row = Row("PasswordLogin", isEnabled: true, ("resolves", null), ("authorizes", null));
+        row.ReturnUrls = returnUrls;
+        row.CodeLifetime = "PT1M";
+        row.SecretManagerName = "Secrets";
+        row.SecretKeyName = "ExecutionKey";
+        return row;
+    }
+
+    [Fact]
+    [Trait("Category", "Security")]
+    public async Task AReturnUrlThatIsALiteralIsKeptAsStated()
+    {
+        var provider = Provider(BrowserRow("https://console.test/auth/callback https://console-internal.test/auth/callback"));
+
+        var result = await provider.Get("PasswordLogin", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.ReturnUrls.ShouldBe(["https://console.test/auth/callback", "https://console-internal.test/auth/callback"]);
+    }
+
+    [Fact]
+    [Trait("Category", "Security")]
+    public async Task AReturnUrlThatStatesAPlaceholderIsFilledFromTheHostsOwnValue()
+    {
+        Environment.SetEnvironmentVariable("FDW5847_FLOW_CONSOLE", "console-from-host.test");
+        try
+        {
+            var provider = Provider(BrowserRow("https://${FDW5847_FLOW_CONSOLE}/auth/callback"));
+
+            var result = await provider.Get("PasswordLogin", TestContext.Current.CancellationToken);
+
+            result.IsSuccess.ShouldBeTrue();
+            result.Value!.ReturnUrls.ShouldBe(["https://console-from-host.test/auth/callback"]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FDW5847_FLOW_CONSOLE", null);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Security")]
+    public async Task AReturnUrlWhosePlaceholderHasNoValueMakesTheFlowKnownInvalidNamingTheKey()
+    {
+        var provider = Provider(BrowserRow("https://${FDW5847_FLOW_NEVER_SET}/auth/callback"));
+
+        var result = await provider.Get("PasswordLogin", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.Select(m => m.Message).ShouldContain(m => m.Contains("FDW5847_FLOW_NEVER_SET", StringComparison.Ordinal));
+    }
+
     // ---------------------------------------------------------------- admission
 
     [Fact]

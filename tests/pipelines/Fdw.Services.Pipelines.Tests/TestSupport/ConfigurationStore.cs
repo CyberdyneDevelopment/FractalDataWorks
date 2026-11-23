@@ -51,11 +51,16 @@ namespace Fdw.Services.Pipelines.Tests.TestSupport;
 /// </remarks>
 /// <typeparam name="TProvider">The domain provider under test.</typeparam>
 /// <typeparam name="TContract">The domain's implementation contract.</typeparam>
-internal sealed class ConfigurationStore<TProvider, TContract>
-    where TProvider : DomainConfigurationProviderBase<TContract>
+/// <typeparam name="TDomain">
+/// The domain's record: <see cref="DomainConfiguration"/>, or the record a domain that lists fields declares. The provider reads its rows as
+/// this type, so the fake has to answer for it.
+/// </typeparam>
+internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
+    where TProvider : DomainConfigurationProviderBase<TContract, TDomain>
     where TContract : IImplementationConfiguration
+    where TDomain : DomainConfiguration, new()
 {
-    private readonly List<DomainConfiguration> _rows = [];
+    private readonly List<TDomain> _rows = [];
     private readonly Dictionary<Guid, TContract> _byRow = [];
     private readonly Dictionary<Guid, IGenericMessage> _unreadable = [];
     private readonly List<Guid> _reads = [];
@@ -97,7 +102,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
     public IReadOnlyList<Guid> Reads => _reads;
 
     /// <summary>A store, empty, whose rows are written under <paramref name="implementationName"/>.</summary>
-    public static ConfigurationStore<TProvider, TContract> Empty(
+    public static ConfigurationStore<TProvider, TContract, TDomain> Empty(
         Func<IConfigurationGatewayProvider, TProvider> create,
         string implementationName)
     {
@@ -122,7 +127,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
 
         // The provider is built before the gateway is armed: it only stores the reference at
         // construction and reads through it later, so nothing is asked of the gateway yet.
-        var store = new ConfigurationStore<TProvider, TContract>(
+        var store = new ConfigurationStore<TProvider, TContract, TDomain>(
             create(gateways.Object),
             implementationName,
             new Mock<IConfigurationWriteParticipant<TContract>>(),
@@ -131,19 +136,19 @@ internal sealed class ConfigurationStore<TProvider, TContract>
         // Read late, not at setup time: a test adds rows after the store is built, and the command
         // decides which of them come back.
         gateway
-            .Setup(g => g.Execute<IEnumerable<DomainConfiguration>>(
+            .Setup(g => g.Execute<IEnumerable<TDomain>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IDataCommand command, DataStoreTarget _, CancellationToken __) =>
             {
                 store._reads.AddRange(Requested(command));
                 return store.FailureFor(command) is { } failure
-                    ? GenericResult<IEnumerable<DomainConfiguration>>.Failure(failure)
-                    : GenericResult<IEnumerable<DomainConfiguration>>.Success(store.Matching(command));
+                    ? GenericResult<IEnumerable<TDomain>>.Failure(failure)
+                    : GenericResult<IEnumerable<TDomain>>.Success(store.Matching(command));
             });
         gateway
-            .Setup(g => g.Execute<DomainConfiguration>(
+            .Setup(g => g.Execute<TDomain>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DomainConfiguration>.Success(new DomainConfiguration()));
+            .ReturnsAsync(GenericResult<TDomain>.Success(new TDomain()));
 
         // Minting a domain row writes it and reads back its key values; saving onto an existing one
         // reads that row's key values. The implementation participant is faked, so any key values
@@ -170,7 +175,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
         => new(StringComparer.Ordinal) { ["RowId"] = 1 };
 
     /// <summary>A store holding exactly these rows.</summary>
-    public static ConfigurationStore<TProvider, TContract> Holding(
+    public static ConfigurationStore<TProvider, TContract, TDomain> Holding(
         Func<IConfigurationGatewayProvider, TProvider> create,
         string implementationName,
         params TContract[] items)
@@ -189,7 +194,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
         // row for an id already held would return one record twice from a single read.
         _byRow[item.Id] = item;
         _rows.RemoveAll(row => row.Id == item.Id);
-        _rows.Add(new DomainConfiguration
+        _rows.Add(new TDomain
         {
             Id = item.Id,
             Name = item.Name,
@@ -208,7 +213,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
     /// on <c>IsCurrent</c>/<c>IsDeleted</c> would drop every row. Honouring identity is what lets a
     /// test say "the store holds datasets, but not THIS one" rather than only "the store is empty".
     /// </remarks>
-    private List<DomainConfiguration> Matching(IDataCommand command)
+    private List<TDomain> Matching(IDataCommand command)
     {
         if (command is not IQueryCommand { Filter.Root: { } root }) return _rows.ToList();
 
@@ -247,7 +252,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
         }
     }
 
-    private static bool Matches(DomainConfiguration row, IFilterCondition condition)
+    private static bool Matches(TDomain row, IFilterCondition condition)
         => condition.PropertyName switch
         {
             "Name" => string.Equals(row.Name, condition.Value as string, StringComparison.Ordinal),
@@ -378,11 +383,59 @@ internal static class ConfigurationStore
     public const string DataSetsImplementation = "DataSet";
 
     /// <summary>The datasets this store holds.</summary>
-    public static ConfigurationStore<DataSetConfigurationProvider, IDataSetImplementationConfiguration> DataSets(
+    public static ConfigurationStore<DataSetConfigurationProvider, IDataSetImplementationConfiguration, DataSetDomainConfiguration> DataSets(
         params IDataSetImplementationConfiguration[] items)
-        => ConfigurationStore<DataSetConfigurationProvider, IDataSetImplementationConfiguration>.Holding(
+        => ConfigurationStore<DataSetConfigurationProvider, IDataSetImplementationConfiguration, DataSetDomainConfiguration>.Holding(
             NewDataSetProvider, DataSetsImplementation, items);
 
     private static DataSetConfigurationProvider NewDataSetProvider(IConfigurationGatewayProvider gateways)
-        => new(NullLogger<DataSetConfigurationProvider>.Instance, gateways, StoreName, "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement());
+        => new(NullLogger<DataSetConfigurationProvider>.Instance, gateways, StoreName, "data", "DataSet", new Fdw.Services.Configuration.UnavailablePlacement(),
+            DescriptionWriter(), DescriptionReader());
+
+    // A data set read fills each description from the descriptions table (FDW-6208); this store holds none, so the reader answers every set empty and nothing stands in for a text.
+    private static Fdw.Services.Descriptions.Abstractions.IDescriptionReader DescriptionReader()
+    {
+        var none = new Dictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>();
+        var reader = new Mock<Fdw.Services.Descriptions.Abstractions.IDescriptionReader>(MockBehavior.Strict);
+        reader
+            .Setup(r => r.ReadMany(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyDictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>>.Success(none));
+        reader
+            .Setup(r => r.ReadOwnedBy(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyDictionary<Guid, Fdw.Services.Descriptions.Abstractions.DescriptionEntry>>.Success(none));
+        return reader.Object;
+    }
+
+    // A data set save writes its descriptions in its own unit (FDW-6121); this store holds no descriptions, so the writer states a language and accepts every write.
+    private static Fdw.Services.Descriptions.IDescriptionWriter DescriptionWriter()
+    {
+        var done = Task.FromResult<IGenericResult>(GenericResult.Success());
+        var writer = new Mock<Fdw.Services.Descriptions.IDescriptionWriter>(MockBehavior.Strict);
+        writer.Setup(w => w.Language()).Returns(GenericResult<string>.Success("en-US"));
+        writer
+            .Setup(w => w.Save(
+                It.IsAny<Fdw.Services.Descriptions.Abstractions.DescriptionKey>(), It.IsAny<string>(), It.IsAny<Fdw.Services.Descriptions.Abstractions.DescriptionOwner?>(),
+                It.IsAny<string>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+            .Returns(done);
+        writer
+            .Setup(w => w.Delete(It.IsAny<Fdw.Services.Descriptions.Abstractions.DescriptionKey>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+            .Returns(done);
+        writer
+            .Setup(w => w.DeleteAbout(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+            .Returns(done);
+        writer
+            .Setup(w => w.DeleteOwnedBy(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+            .Returns(done);
+        writer
+            .Setup(w => w.DeleteOwnedExcept(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<ConfigurationWriteScope>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(done);
+        writer
+            .Setup(w => w.DescribeOwned(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Fdw.Services.Descriptions.Abstractions.DescriptionOwner>(),
+                It.IsAny<IReadOnlyList<Fdw.Services.Descriptions.OwnedDescription>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
+            .Returns(done);
+        return writer.Object;
+    }
 }

@@ -49,4 +49,16 @@ public sealed class PipelineRunStart
     /// must await, so the completion is released.
     /// </summary>
     public required bool AwaitCompletion { get; init; }
+
+    /// <summary>
+    /// Gets the person the run that starts this one acts as (FDW-6137), or null when it acts as no person. The pipeline layer refuses a start whose person is
+    /// not its caller, so a run can never start a pipeline as anyone but the person it acts as.
+    /// </summary>
+    public Guid? PersonId { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the pipeline was named by a variable (FDW-6135) and so must be one the run's tenant and person are offered; the host refuses the start otherwise.
+    /// False for a pipeline its author stated, which is the author's choice and is not judged against offers.
+    /// </summary>
+    public bool RequiresOffer { get; init; }
 }

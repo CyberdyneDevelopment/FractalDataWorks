@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Abstractions;
 using Fdw.Services.Etl.Flow;
 using Fdw.Operations.Abstractions.Execution;
@@ -12,6 +13,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Flow;
+using Fdw.Services.Etl.Graphs.Building;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.EtlGateway;
@@ -37,6 +39,10 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
     private readonly IDataSetConfigurationProvider? _dataSets;
     private readonly IConnectionConfigurationProvider? _connectionConfigurations;
     private readonly Func<IPipelineRunStarter>? _runStarter;
+    private readonly IPipelineRunOutputs? _runOutputs;
+    private readonly IPipelineStepClaims? _stepClaims;
+    private readonly IRunStream? _runStream;
+    private readonly FlowAskServices? _askServices;
     private readonly IEtlGateway? _etlGateway;
     private readonly IRuleNotifier? _ruleNotifier;
     private readonly ITransformationConfigurationProvider? _transformations;
@@ -45,6 +51,7 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
     private readonly RunningFlows? _runningFlows;
     private readonly IThresholdEvaluator? _thresholds;
     private readonly TimeProvider? _clock;
+    private readonly FlowBuildContributions _contributions;
 
     /// <summary>Initializes a new instance of the <see cref="GraphPipelineFactory"/> class.</summary>
     /// <param name="logger">The factory's logger.</param>
@@ -64,6 +71,11 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
     /// <param name="runningFlows">What the live view reads; each pipeline made lists its run there while it runs (optional: a host without the view passes none).</param>
     /// <param name="thresholds">Passed to each pipeline made, to judge its components' figures against thresholds (a run refuses without it, and a host that runs pipelines refuses to start without it).</param>
     /// <param name="clock">Passed to each pipeline made, as the clock its Compute stages' calculations read the time from (optional).</param>
+    /// <param name="runStream">Passed to each pipeline made, to keep the pieces the run gives its person (FDW-6140; optional).</param>
+    /// <param name="stepClaims">Passed to each pipeline made, to claim a step that acts outside the run before it acts (FDW-6139; optional).</param>
+    /// <param name="askServices">Passed to each pipeline made, so an Ask component keeps its request and judges its call (FDW-6142; optional).</param>
+    /// <param name="runOutputs">Records the outputs a run of a graph that declares outputs gives back when it ends (FDW-6136; optional: a graph that declares outputs refuses to end successfully without it).</param>
+    /// <param name="contributions">Every build contribution the host registered, given to each pipeline's build so a component type from another package reads the services it needs (FDW-6132; optional: none is a host that registered none).</param>
     public GraphPipelineFactory(
         ILogger<GraphPipelineFactory> logger,
         ILoggerFactory loggerFactory,
@@ -81,7 +93,12 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
         IExecutionTracker? tracker = null,
         RunningFlows? runningFlows = null,
         IThresholdEvaluator? thresholds = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        IEnumerable<IFlowBuildContribution>? contributions = null,
+        IPipelineRunOutputs? runOutputs = null,
+        IPipelineStepClaims? stepClaims = null,
+        IRunStream? runStream = null,
+        FlowAskServices? askServices = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -100,6 +117,11 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
         _runningFlows = runningFlows;
         _thresholds = thresholds;
         _clock = clock;
+        _contributions = new FlowBuildContributions(contributions ?? []);
+        _runOutputs = runOutputs;
+        _stepClaims = stepClaims;
+        _runStream = runStream;
+        _askServices = askServices;
     }
 
     /// <summary>
@@ -139,7 +161,12 @@ public sealed class GraphPipelineFactory : IGraphPipelineFactory
                 _tracker,
                 _runningFlows,
                 _thresholds,
-                _clock)
+                _clock,
+                _contributions,
+                _runOutputs,
+                _stepClaims,
+                _runStream,
+                _askServices)
             {
                 CommittedReportSeconds = CommittedReportSeconds,
                 UnmatchedKeySample = UnmatchedKeySample,

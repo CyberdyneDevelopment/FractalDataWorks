@@ -30,7 +30,7 @@ public class MsSqlDdlGeneratorTests
         result.Value.ShouldNotBeNull();
         result.Value.ShouldContain("IF NOT EXISTS");
         result.Value.ShouldContain("CREATE SCHEMA [cfg]");
-        result.Value.ShouldContain("GO");
+        result.Value.TrimEnd().ShouldNotEndWith("GO");
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class MsSqlDdlGeneratorTests
         result.Value.ShouldNotBeNull();
         result.Value.ShouldContain("IF EXISTS");
         result.Value.ShouldContain("DROP SCHEMA [etl]");
-        result.Value.ShouldContain("GO");
+        result.Value.TrimEnd().ShouldNotEndWith("GO");
     }
 
     [Fact]
@@ -72,14 +72,14 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CREATE TABLE cfg.Connection");
+        result.Value.ShouldContain("CREATE TABLE [cfg].[Connection]");
         result.Value.ShouldContain("Id");
         result.Value.ShouldContain("INT");
         result.Value.ShouldContain("Name");
         result.Value.ShouldContain("VARCHAR(200)");
         result.Value.ShouldContain("NOT NULL");
-        result.Value.ShouldContain("CONSTRAINT PK_Connection PRIMARY KEY (Id)");
-        result.Value.ShouldContain("GO");
+        result.Value.ShouldContain("CONSTRAINT [PK_Connection] PRIMARY KEY ([Id])");
+        result.Value.TrimEnd().ShouldNotEndWith("GO");
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CREATE TABLE TestTable");
+        result.Value.ShouldContain("CREATE TABLE [TestTable]");
         // The table reference itself should not be schema-qualified
         result.Value.ShouldNotContain("CREATE TABLE .");
     }
@@ -175,8 +175,8 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CONSTRAINT FK_Child_Parent FOREIGN KEY (ParentId)");
-        result.Value.ShouldContain("REFERENCES cfg.Parent(Id)");
+        result.Value.ShouldContain("CONSTRAINT [FK_Child_Parent] FOREIGN KEY ([ParentId])");
+        result.Value.ShouldContain("REFERENCES [cfg].[Parent]([Id])");
         result.Value.ShouldContain("ON DELETE CASCADE");
     }
 
@@ -202,7 +202,7 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CONSTRAINT UQ_Users_Email UNIQUE (Email)");
+        result.Value.ShouldContain("CONSTRAINT [UQ_Users_Email] UNIQUE ([Email])");
     }
 
     [Fact]
@@ -217,8 +217,8 @@ public class MsSqlDdlGeneratorTests
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.ShouldContain("IF EXISTS");
-        result.Value.ShouldContain("DROP TABLE cfg.Connection");
-        result.Value.ShouldContain("GO");
+        result.Value.ShouldContain("DROP TABLE [cfg].[Connection]");
+        result.Value.TrimEnd().ShouldNotEndWith("GO");
     }
 
     [Fact]
@@ -246,8 +246,8 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("CREATE NONCLUSTERED INDEX IX_Connection_Name ON cfg.Connection (Name)");
-        result.Value.ShouldContain("GO");
+        result.Value.ShouldContain("CREATE NONCLUSTERED INDEX [IX_Connection_Name] ON [cfg].[Connection] ([Name])");
+        result.Value.TrimEnd().ShouldNotEndWith("GO");
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("INCLUDE (Name, Description)");
+        result.Value.ShouldContain("INCLUDE ([Name], [Description])");
     }
 
     [Fact]
@@ -350,8 +350,8 @@ public class MsSqlDdlGeneratorTests
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.ShouldContain("IF EXISTS");
-        result.Value.ShouldContain("DROP INDEX IX_Connection_Name ON cfg.Connection");
-        result.Value.ShouldContain("GO");
+        result.Value.ShouldContain("DROP INDEX [IX_Connection_Name] ON [cfg].[Connection]");
+        result.Value.TrimEnd().ShouldNotEndWith("GO");
     }
 
     [Fact]
@@ -375,7 +375,7 @@ public class MsSqlDdlGeneratorTests
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.ShouldContain("CREATE SCHEMA [cfg]");
-        result.Value.ShouldContain("CREATE TABLE cfg.Test");
+        result.Value.ShouldContain("CREATE TABLE [cfg].[Test]");
     }
 
     [Fact]
@@ -541,7 +541,7 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("UNIQUE CLUSTERED INDEX CIX_Test");
+        result.Value.ShouldContain("UNIQUE CLUSTERED INDEX [CIX_Test]");
     }
 
     [Fact]
@@ -555,7 +555,7 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("DROP TABLE PlainTable");
+        result.Value.ShouldContain("DROP TABLE [PlainTable]");
         result.Value.ShouldNotContain("DROP TABLE .PlainTable");
     }
 
@@ -575,7 +575,7 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("DROP INDEX IX_Test ON PlainTable");
+        result.Value.ShouldContain("DROP INDEX [IX_Test] ON [PlainTable]");
     }
 
     [Fact]
@@ -601,7 +601,7 @@ public class MsSqlDdlGeneratorTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("ON PlainTable (Col1)");
+        result.Value.ShouldContain("ON [PlainTable] ([Col1])");
     }
 
     [Fact]

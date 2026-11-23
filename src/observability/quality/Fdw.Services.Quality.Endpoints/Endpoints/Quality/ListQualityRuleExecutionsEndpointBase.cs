@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Quality;
 using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -52,7 +53,9 @@ public abstract class ListQualityRuleExecutionsEndpointBase : Endpoint<QualityRu
         Summary(s =>
         {
             s.Summary = "List the recorded executions of a quality rule";
-            s.Description = "The newest executions first. Take is required, from 1 to 500. Each row says how many rows met the rule, "
+            s.Description = "The newest executions first. Take is required: at least 1, and at most the "
+                + "MaxPaginationSize setting for the caller's tenant and role (ApiKeyMaxPaginationSize for an API key); a larger take is "
+                + "refused, never cut short. Each row says how many rows met the rule, "
                 + "how many violated it, and how many were not judged (with the reason when the rule could not run).";
         });
     }
@@ -60,10 +63,23 @@ public abstract class ListQualityRuleExecutionsEndpointBase : Endpoint<QualityRu
     /// <summary>Reads the newest recorded executions of the rule under the caller's active tenant.</summary>
     public override async Task HandleAsync(QualityRuleExecutionsRequest req, CancellationToken ct)
     {
-        if (req.Take is < 1 or > QualityRuleExecutions.MaxTake)
+        if (req.Take < 1)
         {
-            var refusal = GenericResult.Failure(QualityCheckEndpointLog.TakeOutOfRange(Logger, QualityRuleExecutions.MaxTake, req.Take));
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(refusal, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(QualityCheckEndpointLog.TakeNotPositive(Logger, req.Take)), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        // The largest page is the paging settings' every list is held to (FDW-7106); a take they would cut is refused, never cut short.
+        var page = PaginationQuery.Resolve(HttpContext, Logger, 0, req.Take);
+        if (page.IsFailure)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(page, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (page.Value!.Take < req.Take)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(QualityCheckEndpointLog.TakeOutOfRange(Logger, page.Value.Take, req.Take)), HttpContext)).ConfigureAwait(false);
             return;
         }
 

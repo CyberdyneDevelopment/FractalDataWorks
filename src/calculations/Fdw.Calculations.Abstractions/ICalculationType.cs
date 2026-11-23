@@ -11,6 +11,11 @@ namespace Fdw.Calculations.Abstractions;
 public interface ICalculationType : ITypeOption<int, CalculationTypeBase>
 {
     /// <summary>
+    /// Gets what the calculation computes, in a sentence.
+    /// </summary>
+    string Description { get; }
+
+    /// <summary>
     /// Performs the calculation on the provided rows, extracting values from the specified column.
     /// </summary>
     /// <param name="rows">The source data rows.</param>

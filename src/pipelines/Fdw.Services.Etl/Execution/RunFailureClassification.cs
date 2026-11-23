@@ -62,11 +62,5 @@ public sealed record RunFailureClassification(bool Classified, string? Category,
 
     /// <summary>Words the classification for the event's message.</summary>
     /// <returns>A sentence naming the category and whether it is transient, or saying the failure is unclassified.</returns>
-    public string Describe() => (Classified, Refused) switch
-    {
-        (true, true) => $"The run was refused with a {Category} failure ({Code}); a refusal is not the pipeline's own fault and is not counted",
-        (true, false) => $"The run failed with a {Category} failure ({Code}), which is {(Transient ? "transient" : "not transient")}",
-        (false, true) => $"The run was refused ({Code}); a refusal is not the pipeline's own fault and is not counted",
-        _ => "The run failed with a failure that carries no coded category",
-    };
+    public string Describe() => RunFailureKinds.Of(Classified, Refused).Describe(this);
 }

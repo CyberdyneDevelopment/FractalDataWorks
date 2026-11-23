@@ -25,16 +25,18 @@ public sealed class MsSqlVectorConverter()
         dbType: DbType.String)
 {
     /// <inheritdoc/>
-    public override object? ToClr(object? dbValue) => dbValue switch
+    public override object? ToClr(object? dbValue)
     {
-        null or DBNull => null,
-        SqlVector<float> { IsNull: true } => null,
-        SqlVector<float> vector => vector.Memory.ToArray(),
-        float[] values => values,
-        string text => DataTypes.Vector.Parse(text)
-            ?? throw new InvalidOperationException($"The vector column's text is not a vector: '{text}'."),
-        _ => throw new InvalidOperationException($"A vector column read as {dbValue.GetType().Name}, which is not a vector."),
-    };
+        if (dbValue is null or DBNull)
+        {
+            return null;
+        }
+
+        var reader = MsSqlVectorReaders.ByValueTypeName(dbValue.GetType().Name);
+        return ReferenceEquals(reader, MsSqlVectorReaders.NotFound)
+            ? throw new InvalidOperationException($"A vector column read as {dbValue.GetType().Name}, which is not a vector.")
+            : reader.Read(dbValue);
+    }
 
     /// <inheritdoc/>
     public override object? ToDb(object? clrValue) => clrValue is null ? null : DataTypes.Vector.Format(clrValue);

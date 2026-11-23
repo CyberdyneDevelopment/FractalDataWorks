@@ -11,6 +11,9 @@ public class GraphDescriptionPayload
     /// <summary>Gets or sets the problems the draft has, as a check of it would list them.</summary>
     public IList<GraphProblemPayload> Problems { get; set; } = [];
 
+    /// <summary>Gets or sets what the answer could not judge and does not count against the draft (FDW-6718): a draft that states no implementation says here that the requirements of the type were not judged.</summary>
+    public IList<GraphProblemPayload> Warnings { get; set; } = [];
+
     /// <summary>Gets or sets the parameters and variables the graph puts in scope for its steps, with their types (FDW-1549).</summary>
     public IList<GraphScopeEntryPayload> Scope { get; set; } = [];
 }

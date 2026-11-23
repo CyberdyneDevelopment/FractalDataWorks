@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Http.Operations;
 using Fdw.Data.Http.Paths;
+using Fdw.Data.Http.Results;
+using Fdw.Results;
 
 namespace Fdw.Data.Http.Containers;
 
@@ -42,7 +45,7 @@ public sealed class EndpointContainer : IStorageContainer
     public const string FlattenSeparatorKey = "FlattenSeparator";
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EndpointContainer"/> class.
+    /// Builds an endpoint container whose container type is the Endpoint option registered in <see cref="ContainerTypes"/>.
     /// </summary>
     /// <param name="name">The endpoint name.</param>
     /// <param name="path">The HTTP path to the endpoint.</param>
@@ -61,7 +64,11 @@ public sealed class EndpointContainer : IStorageContainer
     /// Separator character for flattened field names. Default is ".".
     /// Corresponds to <see cref="FlattenSeparatorKey"/> metadata entry.
     /// </param>
-    public EndpointContainer(
+    /// <returns>
+    /// The container, or a failure carrying <c>EndpointContainerTypeNotRegistered</c> when ContainerTypes holds no Endpoint option: a
+    /// container is never built with the NotFound sentinel as its type.
+    /// </returns>
+    public static IGenericResult<EndpointContainer> Create(
         string name,
         HttpPath path,
         IContainerSchema schema,
@@ -71,12 +78,32 @@ public sealed class EndpointContainer : IStorageContainer
         bool flattenNestedObjects = false,
         string flattenSeparator = ".")
     {
+        var containerType = ContainerTypes.ByName("Endpoint");
+        return ReferenceEquals(containerType, ContainerTypes.NotFound)
+            ? GenericResult<EndpointContainer>.Failure(
+                DataHttpResultCodes.ByName("EndpointContainerTypeNotRegistered"),
+                ResultDetails.Create().With("ContainerName", name))
+            : GenericResult<EndpointContainer>.Success(new EndpointContainer(
+                name, path, schema, format, httpMethods, containerType, recordSelector, flattenNestedObjects, flattenSeparator));
+    }
+
+    private EndpointContainer(
+        string name,
+        HttpPath path,
+        IContainerSchema schema,
+        IFormatType format,
+        string[] httpMethods,
+        IContainerType containerType,
+        string? recordSelector,
+        bool flattenNestedObjects,
+        string flattenSeparator)
+    {
         Name = name;
         Path = path;
         Schema = schema;
         Format = format;
         HttpMethods = httpMethods;
-        ContainerType = EndpointContainerType.Instance;
+        ContainerType = containerType;
         SupportedOperations = MapHttpMethodsToOperations(httpMethods);
 
         var meta = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -113,27 +140,20 @@ public sealed class EndpointContainer : IStorageContainer
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, object> Metadata { get; }
 
+    /// <summary>
+    /// Gets the keys of this endpoint: none. An HTTP endpoint is addressed by its path and states no primary or foreign key
+    /// in this model, so an empty list here is a statement, not a missing answer.
+    /// </summary>
+    public IReadOnlyList<IContainerKey> Keys => [];
+
     private static string[] MapHttpMethodsToOperations(string[] methods)
     {
         var operations = new List<string>();
         foreach (var method in methods.Select(m => m.ToUpperInvariant()))
         {
-            switch (method)
-            {
-                case "GET":
-                    operations.Add("Query");
-                    break;
-                case "POST":
-                    operations.Add("Insert");
-                    break;
-                case "PUT":
-                case "PATCH":
-                    operations.Add("Update");
-                    break;
-                case "DELETE":
-                    operations.Add("Delete");
-                    break;
-            }
+            var found = EndpointMethodOperations.ByMethod(method);
+            if (!ReferenceEquals(found, EndpointMethodOperations.NotFound))
+                operations.Add(found.Operation);
         }
         return operations.Distinct(StringComparer.Ordinal).ToArray();
     }

@@ -68,8 +68,20 @@ public sealed record PipelineExecutionOptions
     /// </summary>
     public IReadOnlyList<string>? RunRoles { get; init; }
 
+    /// <summary>
+    /// Gets the person the run acts as (FDW-6137), or null for a run that acts as no person. A pipeline the run starts acts as the same person, as it
+    /// acts with the same roles.
+    /// </summary>
+    public Guid? PersonId { get; init; }
+
+    /// <summary>Gets the first run of the chain of restarts the run belongs to (FDW-6139), or null for a run that is not a restart.</summary>
+    public Guid? ContinuesRun { get; init; }
+
     /// <summary>Gets the gate the run's flow steps wait at while the run is paused; empty for a run nobody can pause.</summary>
     public Fdw.Services.Etl.Abstractions.Flow.IFlowPauseGate? PauseGate { get; init; }
+
+    /// <summary>Gets the limit the run's flow takes each step from before it runs (FDW-6141); empty for a run whose pipeline states no step limit.</summary>
+    public Fdw.Services.Etl.Abstractions.Flow.IFlowStepLimit? StepLimit { get; init; }
 
     /// <summary>
     /// Gets the production-mode defaults (no test mode, no sample retention).

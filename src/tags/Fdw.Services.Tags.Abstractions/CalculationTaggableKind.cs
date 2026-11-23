@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Tags.Abstractions;
 
@@ -13,4 +14,7 @@ public sealed class CalculationTaggableKind : TaggableKindBase
         : base("Calculation", "calc", "CalculationTag", "CalculationId", "Calculation")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.Uncited("no check yet: a calculation tag has no foreign key to the calculation and its provider is not registered as a cited domain; FDW-6184");
 }

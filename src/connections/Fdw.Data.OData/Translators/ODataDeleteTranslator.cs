@@ -86,6 +86,16 @@ public sealed class ODataDeleteTranslator : ODataCommandTranslatorBase
                         ODataResultCodes.ByName("DeleteFilterInvalid")));
             }
 
+            // A resource is addressed by one id. A composite primary key is refused rather than matched on its first column, which would
+            // address every resource that shares that value (FDW-6309).
+            if (container.PrimaryKeyFieldNames().Count > 1)
+            {
+                return Task.FromResult<IGenericResult<HttpRequestMessage>>(
+                    GenericResult<HttpRequestMessage>.Failure(
+                        ODataResultCodes.ByName("CompositePrimaryKeyNotSupported"),
+                        ResultDetails.Create("Container", container.Name)));
+            }
+
             // Extract resource ID from filter
             var resourceId = ExtractResourceId(filter, container);
             if (resourceId == null)

@@ -10,7 +10,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 |---|---|---|
 | `IDataDestinationKind` | interface | Interface for data destination kind types. |
 | `IDataSourceKind` | interface | Interface for data source kind types. |
-| `IPipeline` | interface | General runtime base for any pipeline KIND (ETL today; other kinds in future). Carries the… |
+| `IPipeline` | interface | General runtime base for any pipeline, whatever its implementation (a `PipelineTypes` option). Carries the… |
 | `IPipelineClient` | interface | Defines the contract for interacting with the pipeline configuration API. |
 | `IPipelineJobClient` | interface | Defines the contract for interacting with the pipeline job service. |
 | `IPipelineStepType` | interface | Represents a pipeline step type that defines the role and configuration requirements of a step. |
@@ -47,6 +47,22 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `ConnectionKind` | class | Direct connection (ETL pattern) - reads directly from a physical connection. |
 | `CreatePipelineClientRequest` | class | Client-side request to create a new pipeline. |
 | `DataDestinationReference` | class | Framework-agnostic reference to a data destination. Can be a Connection (ETL) or DataSet (ELT). |
+
+## The run contract (FDW-6131)
+
+Every trigger starts, awaits, stops and follows a pipeline run through one seam, whatever the pipeline's implementation.
+
+| Type | Kind | Purpose |
+|---|---|---|
+| `IPipelineRuns` | interface | `Start(PipelineStart)`, `Await(executionId)`, `Stop(executionId, reason)`, `Follow(executionId)`. |
+| `PipelineStart` | class | What a caller states about a run: the pipeline by id xor name, cause, tenant, roles, parameters, parent, schedule, timeout, test rows, and an execution it already opened (`PipelineStartOpened`). Nothing has a default. |
+| `IPipelineRunner` | interface | Carries out the runs of one run mode; the package that hosts the mode registers it. |
+| `PipelineRunModes` | TypeCollection | How a run is carried out: `Queued` (recorded, kept, queued for the host's executor), `AtOnce` (in the host that took the request). |
+| `IPipelineType` | interface | An implementation of the Pipeline domain, an option of `PipelineTypes` (Fdw.Services.Pipelines, FDW-6244), found by the `Implementation` its `pipe.Pipeline` domain row names; `RunModeName` names its run mode. `Graph` -> `Queued`. Every option implements this one non-generic interface. |
+| `IPipeline<TIn, TOut>` | interface | A pipeline that takes a `TIn` and answers with a `TOut`; `IEtlPipeline` is its ETL closing. |
+| `PipelineRunFollow` | record | The run's live group (`execution:{id}`) and its state. |
+
+An implementation gets start, follow, stop, the run record and the live view by declaring a `PipelineTypes` option with its run mode; no trigger changes.
 
 ## Installation
 

@@ -21,6 +21,7 @@ The author and tenant of a comment are the caller's, never stated by the request
 |---|---|---|
 | `POST /ui-feedback` | signed in; write unless a question | `201` with the comment; `403` (`MESSAGING-100002`) when a caller without write saves anything but a question |
 | `GET /ui-feedback` | signed in | `200` with `{ items: [...] }`, no pictures; a caller with neither read nor write lists their own comments and the questions put to them |
+| `GET /ui-feedback/limits` | signed in | `200` with `{ maxBodyLength, maxPictureBytes, maxAnchors, maxAnchorLength, maxPageSize }`, the limits below as this host configured them |
 | `GET /ui-feedback/{id}` | signed in | `200` with the comment; `404` for one the caller may not see |
 | `GET /ui-feedback/{id}/screenshot` | signed in | `200` with the PNG; `404` when the comment has none or the caller may not see it |
 | `PATCH /ui-feedback/{id}` `{ body }` | write | `200`; `403` when the comment is another person's |
@@ -28,19 +29,31 @@ The author and tenant of a comment are the caller's, never stated by the request
 | `POST /ui-feedback/{id}/acknowledge` | read | `200` with `acknowledgedByMe` true; asking again changes nothing and still answers `200` |
 | `POST /ui-feedback/{id}/agree` | write | `200` with `agreedByMe` true and `agreeCount` (people who agree, the author not counted); asking again changes nothing; the author gets `409` |
 | `DELETE /ui-feedback/{id}/agree` | write | `200` with `agreedByMe` false; taking back an agreement not given changes nothing |
-| `POST /ui-feedback/{id}/comments` | signed in; write unless a question the caller asked or was asked | `403` (`MESSAGING-100003`) otherwise; `201` with the comment (`id`, `feedbackId`, `authorUserId`, `authorName`, `body`, `createdAt`); `body` is required, at most 4000 characters |
-| `GET /ui-feedback/{id}/comments?skip=&take=` | signed in, who may see the comment | `200` with `{items}`, oldest first; `take` from 1 to 200 |
+| `POST /ui-feedback/{id}/comments` | signed in; write unless a question the caller asked or was asked | `403` (`MESSAGING-100003`) otherwise; `201` with the comment (`id`, `feedbackId`, `authorUserId`, `authorName`, `body`, `createdAt`); `body` is required, at most `maxBodyLength` characters |
+| `GET /ui-feedback/{id}/comments?skip=&take=` | signed in, who may see the comment | `200` with `{items}`, oldest first; `take` from 1 to `maxPageSize` |
 | `POST /ui-feedback/{id}/resolve` | resolve | `200`; `409` when already resolved |
 | `POST /ui-feedback/{id}/reopen` | resolve | `200`; `409` when already open |
 
+### Limits
+
+Every limit is configuration (FDW-7058), never a number in code. The defaults are the messaging option's declared defaults (`DefaultMessagingServiceType.DeclaredDefaults`); a host changes one at registration with `ServiceTypeDefaults.Override(option, "MaxPictureBytes", value)`, and a value stated under `Messaging:Default:UiFeedback` wins (`DeclaredSetting.ConfiguredCount`, FDW-7103). A value that is not a whole number of at least 1 refuses registration, naming the key (`ABSTRACTIONS3-61037` for text that is not a number, `ABSTRACTIONS3-61036` for a number below 1). A refusal names the configured value. `GET /ui-feedback/limits` answers what applies, so a form checks against the same numbers.
+
+| Key | Default | What it limits |
+|---|---|---|
+| `MaxBodyLength` | 4000 | characters in a note or a comment on it. The store keeps these in `NVARCHAR(MAX)` columns (FDW-7101), so a larger value needs nothing else |
+| `MaxPictureBytes` | 16777216 (16 MiB) | bytes of the picture of the screen, once decoded. Sent as base64 it grows by a third: a host that states more than about 21 MiB also raises `Kestrel:Limits:MaxRequestBodySize` (30,000,000 bytes by default) |
+| `MaxAnchors` | 20 | components a comment is about |
+| `MaxAnchorLength` | 4000 | characters in one component's description |
+| `MaxPageSize` | 200 | comments, or comments on one, a list returns at once |
+
 ### Save
 
-`screen`, `route`, `area` `{ x, y, w, h }`, `viewport` `{ w, h }`, `urgency`, `tags` (a list, empty for none), `anchors` and `body` are required. `anchors` is the components the comment is about, in the order the reviewer chose them: at least one and at most 20, each a JSON object of at most 4000 characters, kept as sent and returned in the same order as `anchors` on every comment. `theme` and `screenshot` (a PNG data URL, at most 2 MB once decoded) are optional.
+`screen`, `route`, `area` `{ x, y, w, h }`, `viewport` `{ w, h }`, `urgency`, `tags` (a list, empty for none), `anchors` and `body` are required. `anchors` is the components the comment is about, in the order the reviewer chose them: at least one and at most `maxAnchors`, each a JSON object of at most `maxAnchorLength` characters, kept as sent and returned in the same order as `anchors` on every comment. `theme` and `screenshot` (a PNG data URL, at most `maxPictureBytes` once decoded) are optional.
 Nothing is cut or defaulted: a missing or wrong field is a `400` that names the field, and a picture that is too large or is not a PNG is refused whole. `urgency` and every tag must be an option of the `UiFeedbackUrgencies` and `UiFeedbackTags` type collections (`GET /type-collections/{name}/values`).
 
 ### List
 
-Query: `state` (`Open` or `Resolved`), `route`, `urgency`, `tag`, `mine=true` (only the caller's own), `askedOfMe=true` (only the questions put to the caller), `sort=urgency` (most urgent first, by the rank the urgency states), `skip`, `take` (1 to 200, 50 when left out). Newest first when `sort` is left out.
+Query: `state` (`Open` or `Resolved`), `route`, `urgency`, `tag`, `mine=true` (only the caller's own), `askedOfMe=true` (only the questions put to the caller), `sort=urgency` (most urgent first, by the rank the urgency states), `skip`, `take` (1 to `maxPageSize`, 50 when left out). Newest first when `sort` is left out.
 The store cannot filter by tag, by the questions put to the caller or order by rank, so with `tag`, `askedOfMe` or `sort=urgency`, and for a caller with neither read nor write, the list looks at the 1000 newest comments that match the other conditions and pages over those.
 
 ## Questions

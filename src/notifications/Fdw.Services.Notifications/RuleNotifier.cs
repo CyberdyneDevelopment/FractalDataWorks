@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -39,14 +40,14 @@ public sealed class RuleNotifier : IRuleNotifier
     /// <inheritdoc/>
     public async Task<IGenericResult> Exists(string ruleName, CancellationToken cancellationToken = default)
     {
-        var found = await _rules.Get(ruleName, cancellationToken).ConfigureAwait(false);
+        var found = await _rules.Get(ruleName, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         return found.IsSuccess && found.Value is not null ? GenericResult.Success() : NotFound(ruleName, found);
     }
 
     /// <inheritdoc/>
     public async Task<IGenericResult> Notify(RuleNotification notification, CancellationToken cancellationToken = default)
     {
-        var found = await _rules.Get(notification.RuleName, cancellationToken).ConfigureAwait(false);
+        var found = await _rules.Get(notification.RuleName, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!found.IsSuccess || found.Value is null)
         {
             return NotFound(notification.RuleName, found);

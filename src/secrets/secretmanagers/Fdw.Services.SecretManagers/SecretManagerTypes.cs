@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Fdw.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
 using Fdw.Services.SecretManagers.Commands;
 using Fdw.Services.SecretManagers.Logging;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -81,6 +82,10 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static SecretManagerTypes()
     {
+        // The secret manager provider writes each secret manager's description with the descriptions writer, in the unit of the write (FDW-6208): a host that registered this collection
+        // without the Descriptions service type is refused with a coded message, never given a provider that fails on its first save. Checked once at Initialize, after every registration.
+        Requires<IDescriptionWriter>(SecretManagerDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         var collectOptions = RegisterFunc;
 
         var providerService = typeof(ISecretManagerProvider).ToString();
@@ -95,7 +100,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // SecretManager configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
-            builder.Services.AddSingleton<ISecretManagerConfigurationProvider, SecretManagerConfigurationProvider>(sp => new SecretManagerConfigurationProvider(sp.GetRequiredService<ILogger<SecretManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SecretManagerTypes.ConfigurationConnection, "sec", "SecretManager"));
+            builder.Services.AddSingleton<ISecretManagerConfigurationProvider, SecretManagerConfigurationProvider>(sp => new SecretManagerConfigurationProvider(sp.GetRequiredService<ILogger<SecretManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SecretManagerTypes.ConfigurationConnection, "sec", "SecretManager", sp.GetRequiredService<IDescriptionWriter>()));
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ISecretManagerConfigurationProvider>());
             var declaredOptions = Options;

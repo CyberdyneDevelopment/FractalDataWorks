@@ -23,6 +23,7 @@ using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions
 using Fdw.Services.Connections.Http.Abstractions.Results;
 using Fdw.Services.Connections.Http.Logging;
 using Fdw.Services.Connections.Http.Paging;
+using Fdw.Services.Connections.Http.Protocols.FilterNodes;
 using Fdw.Services.Connections.Http.Security;
 using System.Linq;
 using Fdw.Services.Connections.RowQuery;
@@ -85,6 +86,9 @@ public abstract class RestProtocolBase : HttpProtocolBase
         {
             // The container travels on the context, so the paging it states for itself is the paging its request is written in (FDW-5562).
             context = context with { Container = container };
+            if (RefuseUnlistedCommandType(command) is { } unlisted)
+                return unlisted;
+
             var method = GetHttpMethod(command, container, context);
             var pathResult = GetRequestPath(command, container, context);
             if (!pathResult.IsSuccess)
@@ -103,26 +107,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
                 {
                     return GenericResult<HttpRequestMessage>.Failure(
                         HttpResultCodes.ByName("UnsupportedFilterOperator"),
-                        unsupported switch
-                        {
-                            IFilterCondition unsupportedCondition => ResultDetails.Create(
-                                "Protocol", Name,
-                                "Operator", unsupportedCondition.Operator.Name,
-                                "Field", unsupportedCondition.PropertyName),
-                            FilterGroup unsupportedGroup => ResultDetails.Create(
-                                "Protocol", Name,
-                                // The group's own logical operator may well be expressible (OData
-                                // supports "and" fine) -- what's actually unsupported is the SHAPE
-                                // (a nested group, or more children than this protocol can join into
-                                // one expression), so the count goes in the detail rather than
-                                // implying the operator itself is the problem.
-                                "Operator", $"{unsupportedGroup.Operator.Name} group of {unsupportedGroup.Nodes.Count}",
-                                "Field", "(group)"),
-                            _ => ResultDetails.Create(
-                                "Protocol", Name,
-                                "Operator", unsupported.GetType().Name,
-                                "Field", "(unrecognized filter node)"),
-                        });
+                        UnsupportedNodeDetails(unsupported));
                 }
 
                 var addressed = WithQueryString(path, queryCommand, context);
@@ -315,6 +300,22 @@ public abstract class RestProtocolBase : HttpProtocolBase
     /// for anything this protocol doesn't know how to render is "not expressed," never "fine, proceed"
     /// (the same principle <see cref="IQueryCapability"/> documents for a translator generally).
     /// </remarks>
+    // The details of the refusal for a node this protocol cannot express: the handler of the node's kind writes them. A node of no kind
+    // (neither a condition nor a group) is named by its type.
+    private ResultDetails UnsupportedNodeDetails(IFilterNode unsupported)
+    {
+        var kind = FilterNodeKinds.Of(unsupported);
+        var handler = ReferenceEquals(kind, FilterNodeKinds.NotFound)
+            ? RestFilterNodeHandlers.NotFound
+            : RestFilterNodeHandlers.ByName(kind.Name);
+        return ReferenceEquals(handler, RestFilterNodeHandlers.NotFound)
+            ? ResultDetails.Create(
+                "Protocol", Name,
+                "Operator", unsupported.GetType().Name,
+                "Field", "(unrecognized filter node)")
+            : handler.Describe(unsupported, Name);
+    }
+
     private IFilterNode? FirstUnsupportedNode(IFilterNode node)
     {
         if (node is IFilterCondition condition)

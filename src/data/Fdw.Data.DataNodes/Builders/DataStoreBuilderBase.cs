@@ -308,11 +308,13 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         if (keyCfg.KeyFields.Count == 0)
             return [];
 
-        var referencedField = ResolveReferencedField(keyCfg, owner.Config.Name, referencedBuilt);
+        var referencedFields = ResolveReferencedFields(keyCfg, owner.Config.Name, referencedBuilt);
 
         var result = new List<IContainerKeyField>(keyCfg.KeyFields.Count);
+        var position = -1;
         foreach (var kfCfg in keyCfg.KeyFields.OrderBy(kf => kf.Ordinal))
         {
+            position++;
             var fieldName = KeyFieldName(kfCfg, owner.Config);
             if (fieldName is null || !localFieldsByName.TryGetValue(fieldName, out var localField))
             {
@@ -320,7 +322,9 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
                 continue;
             }
 
-            result.Add(new ContainerKeyField(localField, referencedField, kfCfg.Ordinal));
+            // The key field at a position references the referenced key's field at that position: a composite foreign key pairs its
+            // columns with the referenced key's columns in key order, and the stored key names only the referenced key (FDW-6309).
+            result.Add(new ContainerKeyField(localField, position < referencedFields.Count ? referencedFields[position] : null, kfCfg.Ordinal));
         }
 
         return result;
@@ -338,16 +342,18 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     private static string KeyFieldReference(DataContainerKeyFieldConfiguration keyField)
         => keyField.DataContainerFieldId != Guid.Empty ? keyField.DataContainerFieldId.ToString() : keyField.Name;
 
-    private IDataField? ResolveReferencedField(
+    // The fields of the referenced key, in key order, each resolved to the referenced container's field of that name; a position the
+    // referenced container has no field for stays null. Empty when the key names no referenced container or key, or cannot be found.
+    private List<IDataField?> ResolveReferencedFields(
         DataContainerKeyConfiguration keyCfg,
         string ownerContainerName,
         BuiltContainer? referencedBuilt)
     {
         if (string.IsNullOrEmpty(keyCfg.ReferencedContainerName) || string.IsNullOrEmpty(keyCfg.ReferencedKeyName))
-            return null;
+            return [];
 
         if (referencedBuilt is null)
-            return null; // already logged in ResolveKeys
+            return []; // already logged in ResolveKeys
 
         var referencedKeyCfg = referencedBuilt.Config.Keys
             .FirstOrDefault(k => string.Equals(k.Name, keyCfg.ReferencedKeyName, StringComparison.Ordinal));
@@ -356,29 +362,38 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
         {
             DataStoreLoaderLog.BuilderReferencedKeyNotFound(
                 _logger, keyCfg.Name, ownerContainerName, keyCfg.ReferencedKeyName!, keyCfg.ReferencedContainerName!);
-            return null;
+            return [];
         }
 
-        var referencedFieldName = referencedKeyCfg.KeyFields
+        var referencedFieldNames = referencedKeyCfg.KeyFields
             .OrderBy(kf => kf.Ordinal)
             .Select(kf => KeyFieldName(kf, referencedBuilt.Config))
-            .FirstOrDefault(n => !string.IsNullOrEmpty(n));
+            .Where(n => !string.IsNullOrEmpty(n))
+            .ToList();
 
-        if (referencedFieldName is null)
+        if (referencedFieldNames.Count == 0)
         {
             DataStoreLoaderLog.BuilderReferencedKeyHasNoField(
                 _logger, keyCfg.Name, ownerContainerName, keyCfg.ReferencedKeyName!);
-            return null;
+            return [];
         }
 
         var referencedFieldIndex = IndexFields(referencedBuilt.Fields);
-        if (referencedFieldIndex.TryGetValue(referencedFieldName, out var field))
+        var resolved = new List<IDataField?>(referencedFieldNames.Count);
+        foreach (var referencedFieldName in referencedFieldNames)
         {
-            DataStoreLoaderLog.FkReferencedFieldResolved(_logger, keyCfg.Name, ownerContainerName, referencedFieldName);
-            return field;
+            if (referencedFieldIndex.TryGetValue(referencedFieldName!, out var field))
+            {
+                DataStoreLoaderLog.FkReferencedFieldResolved(_logger, keyCfg.Name, ownerContainerName, referencedFieldName!);
+                resolved.Add(field);
+            }
+            else
+            {
+                resolved.Add(null);
+            }
         }
 
-        return null;
+        return resolved;
     }
 
     // -------------------------------------------------------------------------

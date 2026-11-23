@@ -50,12 +50,24 @@ public sealed class MockConnectionType
         => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration>.None;
 
     /// <inheritdoc/>
+    /// <remarks>A test double reaches nothing, so it builds no provider.</remarks>
+
+    protected override Fdw.Results.IGenericResult<Fdw.Services.Abstractions.IImplementationServiceProvider<Fdw.Services.Connections.Abstractions.IGenericConnection, Fdw.Services.Connections.Abstractions.IConnectionImplementationConfiguration>> BuildImplementationProvider(
+        IMockConnectionFactory factory, Fdw.Services.SecretManagers.Abstractions.ISecretManagerProvider secretManagers, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory)
+        => Fdw.Results.GenericResult<Fdw.Services.Abstractions.IImplementationServiceProvider<Fdw.Services.Connections.Abstractions.IGenericConnection, Fdw.Services.Connections.Abstractions.IConnectionImplementationConfiguration>>.Failure(
+            Fdw.Services.Connections.Results.ConnectionsResultCodes.ByName("ImplementationProviderNotOffered"),
+            Fdw.Results.ResultDetails.Create("connectionType", Name));
+
+    /// <inheritdoc/>
     /// <remarks>A test double reaches nothing, so it presents no identity at all.</remarks>
     protected override IGenericResult<bool> DecideHostIdentity(MockConnectionConfiguration configuration)
         => GenericResult<bool>.Success(false);
 
     protected override Fdw.Results.IGenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots> DescribeCredentials(MockConnectionConfiguration configuration)
         => Fdw.Results.GenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots>.Success(Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots.None);
+
+    protected override Fdw.Results.IGenericResult<bool> DecideReadsStoredSecret(MockConnectionConfiguration configuration)
+        => Fdw.Results.GenericResult<bool>.Success(false);
 
     protected override Fdw.Results.IGenericResult BindCredentialReferences(
         MockConnectionConfiguration configuration,

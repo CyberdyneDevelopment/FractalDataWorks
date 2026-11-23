@@ -8,7 +8,7 @@ namespace Fdw.Data.MsSql;
 /// Container type for SQL Server stored procedures.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(ContainerTypes), "StoredProcedure", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ContainerTypes), "StoredProcedure")]
 public sealed class StoredProcedureContainerType : ContainerTypeBase
 {
     /// <summary>
@@ -19,7 +19,8 @@ public sealed class StoredProcedureContainerType : ContainerTypeBase
             name: "StoredProcedure",
             displayName: "SQL Stored Procedure",
             description: "SQL Server stored procedure container with parameter discovery",
-            supportsSchemaDiscovery: true)
+            supportsSchemaDiscovery: true,
+            supportedOperations: ["Execute"])
     {
     }
 }

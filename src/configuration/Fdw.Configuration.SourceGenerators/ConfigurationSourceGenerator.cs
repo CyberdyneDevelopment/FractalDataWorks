@@ -52,11 +52,16 @@ public sealed class ConfigurationSourceGenerator : IIncrementalGenerator
         // Collect all configurations for batch processing
         var allConfigurations = configurationClasses.Collect();
 
+        // The column sizes the build states for a field that states none (FDW-7107): MSBuild properties, never a number held here.
+        var columnSizes = context.AnalyzerConfigOptionsProvider
+            .Select(static (options, _) => ColumnSizes.From(options.GlobalOptions));
+
         // Generate DDL for each configuration
         context.RegisterSourceOutput(
-            allConfigurations,
-            static (context, configs) =>
+            allConfigurations.Combine(columnSizes),
+            static (context, input) =>
             {
+                var (configs, sizes) = input;
                 if (configs.IsDefaultOrEmpty)
                     return;
 
@@ -71,7 +76,19 @@ public sealed class ConfigurationSourceGenerator : IIncrementalGenerator
                         if (!config.GenerateDdl)
                             continue;
 
-                        var ddlSource = DdlGenerator.Generate(config, graph);
+                        // Why no DDL is written for it: a column without a size would be a guess, and the field or the build must state it.
+                        var unstated = DdlGenerator.UnstatedSizes(config, sizes);
+                        if (unstated.Count > 0)
+                        {
+                            foreach (var (field, property) in unstated)
+                            {
+                                ReportError(context, "CFG004", "Column size not stated", UnstatedSizeMessage(config.ClassName, field, property));
+                            }
+
+                            continue;
+                        }
+
+                        var ddlSource = DdlGenerator.Generate(config, graph, sizes);
                         context.AddSource($"{config.ClassName}.Ddl.g.cs", SourceText.From(ddlSource, Encoding.UTF8));
                     }
                 }
@@ -126,6 +143,13 @@ public sealed class ConfigurationSourceGenerator : IIncrementalGenerator
                 }
             });
     }
+
+    // What CFG004 says: the field, what it lacks, the attribute that sizes it and the MSBuild property that sizes every such field.
+    private static string UnstatedSizeMessage(string className, string field, string property)
+        => string.Equals(property, ColumnSizes.StringMaxLengthProperty, StringComparison.Ordinal)
+            ? $"'{className}.{field}' states no length: add [MaxLength(n)] or [DbType] to it, or set the MSBuild property {property} (FDW-7107)"
+            : $"'{className}.{field}' states no {(string.Equals(property, ColumnSizes.DecimalScaleProperty, StringComparison.Ordinal) ? "scale" : "precision")}: "
+              + $"add [Precision(precision, scale)] or [DbType] to it, or set the MSBuild property {property} (FDW-7107)";
 
     private static void ReportError(SourceProductionContext context, string id, string title, string message)
     {

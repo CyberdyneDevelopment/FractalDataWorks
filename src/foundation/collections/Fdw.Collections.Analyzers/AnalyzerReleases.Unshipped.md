@@ -7,6 +7,7 @@ TC001 | Usage | Warning | MissingTypeOptionAnalyzer - Type option missing requir
 TC002 | Usage | Error | MissingTypeOptionAnalyzer - TGeneric in base class doesn't match defaultReturnType in TypeCollection attribute
 TC003 | Usage | Error | MissingTypeOptionAnalyzer - TBase in base class doesn't match baseType in TypeCollection attribute
 TC004 | Usage | Error | GenericTypeArgumentMismatchAnalyzer - Generic type argument mismatch between TypeOption attribute and base class
+TC014 | Usage | Warning | RestrictedOptionCompilationAnalyzer - [TypeOption] with RestrictToCurrentCompilation = true whose collection is declared in another compilation (FDW-5136, FDW-6309)
 TYPECOLL001 | Collections | Warning | TypeLookupNamingConflictAnalyzer - TypeLookup generates method that conflicts with collection member
 
 ### Removed Rules

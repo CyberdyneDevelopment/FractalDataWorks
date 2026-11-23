@@ -123,6 +123,13 @@ public sealed class PipelineStatusBroadcaster
     }
 
     /// <inheritdoc/>
+    public Task BroadcastRunPiece(PipelineRunPieceUpdate piece)
+        => BroadcastToGroups(
+            piece,
+            (client, evt) => client.OnRunPiece(evt),
+            HubScopes.User(piece.PersonId.ToString("D")));
+
+    /// <inheritdoc/>
     public Task BroadcastComponents(PipelineComponentsUpdate update, Guid? orgId = null)
         => BroadcastToGroups(
             update,

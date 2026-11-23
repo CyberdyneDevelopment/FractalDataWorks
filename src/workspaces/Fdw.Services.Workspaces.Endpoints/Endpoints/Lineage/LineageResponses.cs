@@ -34,14 +34,14 @@ internal static class LineageResponses
 
     /// <summary>Shapes a neighbourhood walk.</summary>
     public static LineageNeighbourhoodResponse Neighbourhood(
-        LineageNode focus, LineageWalk walk, LineageKindSelection kinds, Dictionary<string, LineageViaDto> vias) => new()
+        LineageNode focus, LineageWalk walk, LineageKindSelection kinds, Dictionary<string, LineageViaDto> vias, int maxNodes) => new()
     {
         Focus = new LineageFocusDto { Id = focus.Id, Kind = focus.Kind, Name = focus.Name },
         Nodes = walk.Nodes.Select(Node).ToList(),
         Edges = walk.Flows.Select(flow => Edge(flow, vias)).ToList(),
         Pipelines = Pipelines(vias),
         Truncated = walk.Truncated,
-        MaxNodes = LineageLimits.MaxNodes,
+        MaxNodes = maxNodes,
         UnavailableKinds = kinds.Unavailable,
     };
 

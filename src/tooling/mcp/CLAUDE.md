@@ -37,6 +37,14 @@ The public interfaces and abstract bases the domain's `.Abstractions` projects d
 - Every async method takes `CancellationToken cancellationToken = default` and passes it on. Compare strings with an explicit `StringComparison`.
 - One type per file. Before adding a type, search the repo for one with the same name.
 
+## How a WebMCP tool describes its request (FDW-6143)
+
+- `WebMcpToolPlan.Create(tool, maxDepth, logger)` describes the endpoint's request type through `WebMcpRequestDescriber`: scalars as before, a list as `array` with `items`, a class as `object` with `properties` and `required`. A tool with only scalars produces the same schema it always did (the golden script test pins it). A member no shape describes (a dictionary, bytes, a framework type) is skipped and logged. Lists and objects are described only for a call that carries a JSON body.
+- The depth is the server setting `WebMcpToolSchemaMaxDepth` (seeded in databases-seed, read by `WebMcpHostSettingsReader`, no default in code). A request that nests deeper (`HOSTING-61015`) or reaches itself (`HOSTING-61016`) is refused when its plan is built, and the registry does not serve that tool.
+- The registry builds every plan once (`IWebMcpToolRegistry.Plans`); the script generator and the MCP catalog only render them.
+- `WebMcpArgumentValidator` holds an MCP call's arguments to the same description before `WebMcpToolInvoker` sends anything (`HOSTING-20002`, naming each member by path). The browser script describes the request but does not check a call: the endpoint's own validator refuses there.
+- Adding a member type means changing `WebMcpRequestDescriber` and the validator together, and adding the case to both transports' tests.
+
 ## Tests
 
 Run a test project from the repository root:

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Fdw.Services.Etl.Abstractions.Flow;
 
@@ -51,17 +53,50 @@ internal sealed class FlowChannelOutput : IFlowOutput
         // Why before the links: a node with no links drops its rows, and a rejected row that is dropped is the one the record must keep.
         _rejected?.Keep(_component, Name, batch.Rows);
 
-        // Why once: a batch is sized once however many links it fans out to, and every link counts the same rows.
+        // Why once: a batch is sized once however many links it fans out to, and every link counts the same rows. The size is stamped on the batch, so the input that
+        // reads it gives back exactly what was queued (FDW-5230).
         var bytes = RowSize.Of(batch);
+        var stamped = new FlowBatch(batch.Rows, bytes);
         for (var i = 0; i < _links.Count; i++)
         {
             var link = _links[i];
-            if (link.Writer is not null)
+            if (link.Input is { } input)
             {
-                await link.Writer.WriteAsync(i == 0 ? batch : batch.Copy(), cancellationToken).ConfigureAwait(false);
+                await Send(input.Writer, input, link, i == 0 ? stamped : stamped.Copy(), bytes, cancellationToken).ConfigureAwait(false);
             }
 
             link.Add(batch.Count, bytes);
+        }
+    }
+
+    // Hands a batch to a link's input, counted as queued there until the reader takes it, and times a write that has to wait because the input is full (FDW-5230).
+    // A write that completes at once reads no clock; one that does not happen gives its count back.
+    private static async Task Send(ChannelWriter<FlowBatch> writer, FlowInputState input, FlowLinkState link, FlowBatch batch, long bytes, CancellationToken cancellationToken)
+    {
+        input.Queue(bytes);
+        var handed = false;
+        try
+        {
+            var write = writer.WriteAsync(batch, cancellationToken);
+            if (write.IsCompletedSuccessfully)
+            {
+                await write.ConfigureAwait(false);
+            }
+            else
+            {
+                var started = Stopwatch.GetTimestamp();
+                await write.ConfigureAwait(false);
+                link.AddBlocked(Stopwatch.GetElapsedTime(started));
+            }
+
+            handed = true;
+        }
+        finally
+        {
+            if (!handed)
+            {
+                input.Dequeue(bytes);
+            }
         }
     }
 

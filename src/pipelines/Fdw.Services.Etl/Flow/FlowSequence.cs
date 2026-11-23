@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.Flow;
 
 namespace Fdw.Services.Etl.Flow;
@@ -72,6 +73,36 @@ internal static class FlowSequence
             return await step.Run(context, cancellationToken).ConfigureAwait(false);
         }
 
+        // A step is taken from the run's step limit before it runs (FDW-6141); a level is not a step, as it is not a record, so it takes none.
+        if (context.StepLimit is { } limit)
+        {
+            var taken = limit.TakeStep(step.Name);
+            if (taken.IsFailure)
+            {
+                return taken;
+            }
+        }
+
+        // The person the run is for follows it step by step (FDW-6140): the start and the end of each step are pieces of the run's stream, and a piece that cannot be kept fails the step, never goes missing.
+        var started = await Piece(context, RunStreamKinds.StepStarted, step.Name, null, cancellationToken).ConfigureAwait(false);
+        if (started.IsFailure)
+        {
+            return started;
+        }
+
+        var run = await RunRecorded(step, context, cancellationToken).ConfigureAwait(false);
+        var ended = await Piece(context, RunStreamKinds.StepEnded, step.Name, run.IsSuccess ? "Succeeded" : "Failed", cancellationToken).ConfigureAwait(false);
+        return run.IsFailure || ended.IsSuccess ? run : ended;
+    }
+
+    // One piece of the run's stream; a run that keeps none, or acts as no person, writes none.
+    internal static Task<IGenericResult> Piece(FlowStepContext context, string kind, string step, string? text, CancellationToken cancellationToken) =>
+        context.Stream is { } stream && context.Identity is { } identity
+            ? stream.Write(identity, kind, step, text, cancellationToken)
+            : Task.FromResult<IGenericResult>(GenericResult.Success());
+
+    private static async Task<IGenericResult> RunRecorded(IFlowStep step, FlowStepContext context, CancellationToken cancellationToken)
+    {
         if (context.Reporter is not { } reporter || await reporter.StepStarting(step.Name, context.ReportParent, cancellationToken).ConfigureAwait(false) is not { } stage)
         {
             return await step.Run(context, cancellationToken).ConfigureAwait(false);

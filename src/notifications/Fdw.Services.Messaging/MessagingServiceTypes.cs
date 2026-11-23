@@ -6,6 +6,9 @@ using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
+using Fdw.Services.Messaging.Logging;
 using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +48,10 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
     {
         var collectOptions = RegisterFunc;
 
+        // The messaging provider writes each description with the descriptions writer, in the unit of the write (FDW-7203): a host that registered this collection without
+        // the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<IDescriptionWriter>(MessagingDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         Registration((builder, loggerFactory) =>
         {
             var registered = collectOptions(builder, loggerFactory);
@@ -56,7 +63,8 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
             {
                 var domain = new MessagingConfigurationProvider(
                     sp.GetRequiredService<ILogger<MessagingConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), MessagingServiceTypes.ConfigurationConnection, "msg", "Messaging");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), MessagingServiceTypes.ConfigurationConnection, "msg", "Messaging",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("Messaging", sp.GetRequiredService<IMessagingImplementationConfigurationProvider>());
                 return domain;
             });

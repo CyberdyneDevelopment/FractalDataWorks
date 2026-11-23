@@ -12,6 +12,7 @@ using Fdw.Services.Connections.Http;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Configuration;
+using Fdw.Services.Descriptions;
 using Fdw.ServiceTypes;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.Settings;
@@ -173,6 +174,11 @@ public static class AegisHostRegistration
     /// Why the Settings service type is registered too (FDW-4459): the connection and data store domains ask the cross-tenant change policy it registers, and a host without it is refused at
     /// initialization with the domain's own coded message. This host has no tenants, so the policy never reads a setting; it is registered so the domains find the one they ask.
     /// </para>
+    /// <para>
+    /// Why the Descriptions service type is registered too (FDW-6208): the connection and secret manager domains write each description with the descriptions writer it registers, and a host without it is
+    /// refused at initialization with the domain's own coded message (CONNECTIONS-60381, SECRETMGR-60391). This host never saves a connection or a secret manager, so the writer is never called; it is
+    /// registered so the domains find the one they ask. It reads nothing from the configuration store until a description is read or written.
+    /// </para>
     /// </remarks>
     /// <param name="builder">The host application builder.</param>
     /// <param name="schemaFileName">The schema file, resolved against the application base directory.</param>
@@ -206,14 +212,20 @@ public static class AegisHostRegistration
         var settingsRegistered = settingsConfigured.IsFailure
             ? settingsConfigured
             : SettingsServiceTypes.Register(builder, loggerFactory);
-        if (settingsRegistered.IsFailure)
+        var descriptionsConfigured = settingsRegistered.IsFailure
+            ? settingsRegistered
+            : DescriptionServiceTypes.Configure(builder, loggerFactory);
+        var descriptionsRegistered = descriptionsConfigured.IsFailure
+            ? descriptionsConfigured
+            : DescriptionServiceTypes.Register(builder, loggerFactory);
+        if (descriptionsRegistered.IsFailure)
         {
-            AegisLog.HostPhaseFailed(logger, nameof(RegisterConfigurationSource), settingsRegistered.CurrentMessage);
-            return settingsRegistered;
+            AegisLog.HostPhaseFailed(logger, nameof(RegisterConfigurationSource), descriptionsRegistered.CurrentMessage);
+            return descriptionsRegistered;
         }
 
         AegisLog.HostPhaseCompleted(logger, nameof(RegisterConfigurationSource));
-        return settingsRegistered;
+        return descriptionsRegistered;
     }
 
     /// <summary>
@@ -232,13 +244,16 @@ public static class AegisHostRegistration
         var gatewayInitialized = connectionsInitialized.IsFailure
             ? connectionsInitialized
             : ConfigurationGatewayTypes.Initialize(host, loggerFactory);
-        if (gatewayInitialized.IsFailure)
+        var descriptionsInitialized = gatewayInitialized.IsFailure
+            ? gatewayInitialized
+            : DescriptionServiceTypes.Initialize(host, loggerFactory);
+        if (descriptionsInitialized.IsFailure)
         {
-            AegisLog.HostPhaseFailed(logger, nameof(InitializeConfigurationSource), gatewayInitialized.CurrentMessage);
-            return gatewayInitialized;
+            AegisLog.HostPhaseFailed(logger, nameof(InitializeConfigurationSource), descriptionsInitialized.CurrentMessage);
+            return descriptionsInitialized;
         }
 
         AegisLog.HostPhaseCompleted(logger, nameof(InitializeConfigurationSource));
-        return gatewayInitialized;
+        return descriptionsInitialized;
     }
 }

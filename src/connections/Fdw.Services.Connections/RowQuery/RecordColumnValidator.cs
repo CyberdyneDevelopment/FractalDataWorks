@@ -4,6 +4,7 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Logging;
+using Fdw.Services.Connections.RowQuery.FilterNodes;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.RowQuery;
@@ -76,29 +77,32 @@ public static class RecordColumnValidator
         IReadOnlyDictionary<string, IDataContainer> joinedContainers,
         ILogger logger)
     {
-        switch (node)
-        {
-            case null:
-                return GenericResult.Success();
+        if (node is null)
+            return GenericResult.Success();
 
-            case FilterCondition condition:
-                return ValidateCondition(condition, primaryContainer, joinedContainers, logger);
-
-            case FilterGroup group:
-                foreach (var child in group.Nodes)
-                {
-                    var childResult = ValidateFilterColumns(child, primaryContainer, joinedContainers, logger);
-                    if (!childResult.IsSuccess)
-                        return childResult;
-                }
-                return GenericResult.Success();
-
-            default:
-                return GenericResult.Failure(RecordQueryLog.UnsupportedFilterNodeType(logger, node.GetType().Name));
-        }
+        var handler = RowQueryNodes.HandlerFor(node);
+        return ReferenceEquals(handler, RowQueryNodeHandlers.NotFound)
+            ? RecordQueryValidator.UnsupportedNode(node, logger)
+            : handler.ValidateColumns(node, primaryContainer, joinedContainers, logger);
     }
 
-    private static IGenericResult ValidateCondition(
+    internal static IGenericResult ValidateGroupColumns(
+        FilterGroup group,
+        IDataContainer primaryContainer,
+        IReadOnlyDictionary<string, IDataContainer> joinedContainers,
+        ILogger logger)
+    {
+        foreach (var child in group.Nodes)
+        {
+            var childResult = ValidateFilterColumns(child, primaryContainer, joinedContainers, logger);
+            if (!childResult.IsSuccess)
+                return childResult;
+        }
+
+        return GenericResult.Success();
+    }
+
+    internal static IGenericResult ValidateCondition(
         FilterCondition condition,
         IDataContainer primaryContainer,
         IReadOnlyDictionary<string, IDataContainer> joinedContainers,

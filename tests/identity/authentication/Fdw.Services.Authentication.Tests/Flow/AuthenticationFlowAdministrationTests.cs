@@ -14,6 +14,7 @@ using Fdw.Services.Authentication.Flow;
 using Fdw.Services.Authorization;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Moq;
 using Shouldly;
@@ -255,6 +256,67 @@ public class AuthenticationFlowAdministrationTests
         flows[2].CanChangeRequiredPermissionReason.ShouldNotBeNull();
     }
 
+    // ---------------------------------------------------------------- descriptions (FDW-6208)
+
+    private static DescriptionEntry Text(Guid flowId, string name, string text)
+        => new(new DescriptionKey(AuthenticationFlowDescriptionType.OptionName, DescriptionTextSubType.OptionName, flowId, "en-US"), name, null, text);
+
+    [Fact]
+    public async Task ListingReadsEveryFlowsDescriptionOnceAndAFlowWithNoTextShowsNone()
+    {
+        var login = Row("PasswordLogin", ("password", null), ("authorizes", null));
+        login.Id = PasswordId;
+        var session = Row("PasswordSession", ("password", null), ("authorizes", null));
+        session.Id = EntraId;
+        var harness = new Harness([Password], login, session);
+        harness.Texts[PasswordId] = Text(PasswordId, "PasswordLogin", "Signs a caller in with a username and password");
+
+        var result = await harness.Administration.Get(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Single(f => f.Name == "PasswordLogin").Description.ShouldBe("Signs a caller in with a username and password");
+        result.Value!.Single(f => f.Name == "PasswordSession").Description.ShouldBeNull();
+        harness.Reader.Verify(r => r.ReadMany(AuthenticationFlowDescriptionType.OptionName, DescriptionTextSubType.OptionName,
+            It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 2), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AListingWhoseDescriptionReadFailsFailsAndNoTextStandsInForIt()
+    {
+        var harness = new Harness([Password], Row("PasswordLogin", ("password", null), ("authorizes", null))) { ReadFails = "DescriptionLanguageNotStated" };
+
+        var result = await harness.Administration.Get(TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task AChangeAnswersWithTheFlowsDescriptionReadOnceAndSavesTheFlowWithNoTextSoTheStoredOneIsKept()
+    {
+        var login = Row("PasswordLogin", ("password", null), ("authorizes", null));
+        login.Id = PasswordId;
+        var harness = new Harness([Password], login);
+        harness.Texts[PasswordId] = Text(PasswordId, "PasswordLogin", "Signs a caller in with a username and password");
+
+        var result = await harness.Administration.RequirePermission("PasswordLogin", Password, SignedInWithPassword, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Description.ShouldBe("Signs a caller in with a username and password");
+        harness.Saved!.Description.ShouldBeNull();
+        harness.Reader.Verify(r => r.ReadMany(AuthenticationFlowDescriptionType.OptionName, DescriptionTextSubType.OptionName,
+            It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 1 && ids.Contains(PasswordId)), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AChangeWhoseDescriptionReadFailsFailsAfterTheFlowIsSavedAndShowsNoText()
+    {
+        var harness = new Harness([Password], Row("PasswordLogin", ("password", null), ("authorizes", null))) { ReadFails = "DescriptionLanguageNotStated" };
+
+        var result = await harness.Administration.RequirePermission("PasswordLogin", Password, SignedInWithPassword, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+    }
+
     // ---------------------------------------------------------------- doubles and builders
 
     private static string Gate(string permission) => JsonSerializer.Serialize(new { RequiredPermission = permission });
@@ -305,6 +367,14 @@ public class AuthenticationFlowAdministrationTests
         public Guid[] CarriedByARole { get; init; } = [PasswordId, EntraId];
 
         public Mock<IAuthenticationFlowProvider> Flows { get; } = new();
+
+        /// <summary>The descriptions the reader holds, by the Id of the flow: the flow provider never fills a text, so the administration reads it.</summary>
+        public Dictionary<Guid, DescriptionEntry> Texts { get; } = [];
+
+        public Mock<IDescriptionReader> Reader { get; } = new();
+
+        /// <summary>When set, the reader fails with this code name (the description language is not stated).</summary>
+        public string? ReadFails { get; set; }
 
         public AuthenticationFlowImplementationConfiguration? Saved { get; private set; }
 
@@ -364,8 +434,13 @@ public class AuthenticationFlowAdministrationTests
                     Contributes = [ContextElements.Decision],
                 });
 
+            Reader.Setup(r => r.ReadMany(AuthenticationFlowDescriptionType.OptionName, DescriptionTextSubType.OptionName, It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => ReadFails is null
+                    ? GenericResult<IReadOnlyDictionary<Guid, DescriptionEntry>>.Success(Texts)
+                    : GenericResult<IReadOnlyDictionary<Guid, DescriptionEntry>>.Failure(new GenericMessage(ReadFails)));
+
             return new AuthenticationFlowAdministration(
-                configuration.Object, Flows.Object, permissions.Object, grants.Object, tenants.Object, held.Object,
+                configuration.Object, Flows.Object, Reader.Object, permissions.Object, grants.Object, tenants.Object, held.Object,
                 new AuthenticationContextAccessor(), steps.Lookup,
                 () => new[] { "password", "gate", "readonly-gate", "authorizes" }.Select(steps.Lookup).OfType<IAuthenticationStep>());
         }

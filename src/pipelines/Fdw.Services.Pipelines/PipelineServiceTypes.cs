@@ -1,3 +1,5 @@
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
@@ -24,8 +26,9 @@ using Fdw.Services.Results;
 namespace Fdw.Services.Pipelines;
 
 /// <summary>
-/// ServiceTypeCollection for the pipeline-service domain (gateway-backed pipeline
-/// configuration provider). Distinct from the EtlPipelineTypes engine collection.
+/// ServiceTypeCollection for the services a host gives pipelines (stored scripts, webhook triggers, the owner of a new
+/// pipeline). Distinct from <see cref="PipelineTypes"/>, the Pipeline domain, which registers the pipe.Pipeline
+/// configuration provider (FDW-6244).
 ///
 /// Why discovery is not restricted to this compilation: the orchestration domain
 /// (Fdw.Services.Etl.Projects) composes pipelines and so sits above this package, and its option
@@ -63,23 +66,13 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
     public static string? OperationalConnection { get; set; }
 
     /// <summary>
-    /// Sets this collection's Register body: the option collect, then this domain's configuration provider.
+    /// Sets this collection's Register body: the owner of a new pipeline, the stored scripts and webhook triggers, then the option collect.
     /// </summary>
     static PipelineServiceTypes()
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<IPipelineConfigurationProvider>(sp =>
-                new PipelineServiceConfigurationProvider(
-                    sp.GetRequiredService<ILogger<PipelineServiceConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "Pipeline",
-                    ConfigurationPlacementSource.From(sp)));
-            // Also published as the concrete class because the list, lookup, query and templates bases read the domain's records
-            // (IDomainRecordProvider<DomainConfiguration>), which the netstandard2.0 interface cannot declare (FDW-4638).
-            builder.Services.TryAddSingleton<PipelineServiceConfigurationProvider>(
-                sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>(
-                sp => sp.GetRequiredService<IPipelineConfigurationProvider>());
+            // The pipe.Pipeline configuration provider is the Pipeline domain's own and is registered by PipelineTypes (FDW-6244).
 
             // Decides which organization a new pipeline belongs to (FDW-4573). Scoped: it reads the caller's ambient authentication context and the scoped organization scope.
             builder.Services.TryAddScoped<PipelineOwner>(sp =>
@@ -101,7 +94,8 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                 var domain = new ScriptConfigurationProvider(
                     sp.GetRequiredService<ILogger<ScriptConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    PipelineServiceTypes.ConfigurationConnection, "pipe", "Script");
+                    PipelineServiceTypes.ConfigurationConnection, "pipe", "Script",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("Sql", sp.GetRequiredService<SqlScriptConfigurationProvider>());
                 return domain;
             });
@@ -121,7 +115,8 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                 var domain = new WebhookTriggerConfigurationProvider(
                     sp.GetRequiredService<ILogger<WebhookTriggerConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    PipelineServiceTypes.ConfigurationConnection, "pipe", "WebhookTrigger");
+                    PipelineServiceTypes.ConfigurationConnection, "pipe", "WebhookTrigger",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("Webhook", sp.GetRequiredService<WebhookTriggerImplementationProvider>());
                 return domain;
             });

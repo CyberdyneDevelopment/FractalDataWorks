@@ -84,6 +84,29 @@ public class TypeCollectionComponentShapeTests
     }
 
     [Fact]
+    public void ADeclaredSettingIsListedWithItsDataTypeAndWhetherItIsReadWhenTheStepRuns()
+    {
+        var summary = TypeCollectionResolver.ToSummary(new DeclaringComponentType());
+
+        var temperature = summary.Parameters.Single(p => p.Name == "temperature");
+        temperature.DataType.ShouldBe("Double");
+        temperature.ReadsWhenStepRuns.ShouldBeFalse();
+        temperature.Bindable.ShouldBeFalse();
+        var question = summary.Parameters.Single(p => p.Name == "question");
+        question.DataType.ShouldBe("String");
+        question.ReadsWhenStepRuns.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void FdwsOwnSettingsListNoDataTypeAndSayWhetherTheyShapeTheGraph()
+    {
+        var summary = TypeCollectionResolver.ToSummary(new MergeJoinComponentType());
+
+        summary.Parameters.ShouldAllBe(p => p.DataType == null);
+        summary.Parameters.Single(p => p.Name == "joinKind").ShapesGraph.ShouldBe(new MergeJoinComponentType().Settings.Single(s => s.Name == "joinKind").ShapesGraph);
+    }
+
+    [Fact]
     public void TheNodesAreListedByTheirNamesInTheJson()
     {
         var json = JsonSerializer.Serialize(TypeCollectionResolver.ToSummary(new LookupComponentType()), Web);

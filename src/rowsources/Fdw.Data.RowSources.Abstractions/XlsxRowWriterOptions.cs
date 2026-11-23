@@ -1,5 +1,6 @@
 using System.Linq;
 using Fdw.Data.RowSources.Abstractions;
+using Fdw.Conventions;
 
 namespace Fdw.Data.RowSources.Delimited.Abstractions;
 
@@ -7,12 +8,15 @@ namespace Fdw.Data.RowSources.Delimited.Abstractions;
 public sealed class XlsxRowWriterOptions : RowWriterOptions
 {
     /// <summary>The most rows a worksheet holds, the header row included, in a workbook Excel opens.</summary>
+    [FormatLimit("The Excel file format: a worksheet holds 1,048,576 rows")]
     public const int MaxRowsPerSheet = 1_048_576;
 
     /// <summary>The most columns a worksheet holds.</summary>
+    [FormatLimit("The Excel file format: a worksheet holds 16,384 columns (A to XFD)")]
     public const int MaxColumns = 16_384;
 
     /// <summary>The most characters a worksheet name holds.</summary>
+    [FormatLimit("The Excel file format: a worksheet name holds 31 characters")]
     public const int MaxSheetNameLength = 31;
 
     /// <summary>Gets whether Excel forbids the character in a worksheet name: <c>[ ] : * ? / \</c>.</summary>

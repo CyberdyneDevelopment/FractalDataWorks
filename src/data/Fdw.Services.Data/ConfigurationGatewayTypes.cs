@@ -138,6 +138,26 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton(schema);
 
+            // The secret managers the schema declares, built now from their declarations and kept out of the container (FDW-6360): the
+            // container's provider reads its managers from the configuration store, which nothing built below may touch. A host that
+            // declares none gets an empty one, so the connection kinds' providers are given a provider and not null; it answers any name
+            // with a coded refusal. Each refusal that follows stops the host: nothing is defaulted and nothing falls back to a bare factory.
+            using var factorySnapshot = builder.Services.BuildServiceProvider();
+            var declaredSecrets = SchemaSecretManagers.Build(schema, factorySnapshot, schemaLogger);
+            if (declaredSecrets.IsFailure || declaredSecrets.Value is not { } schemaSecretManagers)
+                return declaredSecrets.ToNewResult<IHostApplicationBuilder>();
+
+            var connectionSecrets = SchemaSecretManagers.CheckConnections(schema, schemaSecretManagers, schemaLogger);
+            if (connectionSecrets.IsFailure)
+                return connectionSecrets.ToNewResult<IHostApplicationBuilder>();
+
+            // Every store the host declares, built once from the declaration alone (no connection, secret, file or HTTP is touched), before any gateway
+            // exists. A store that does not build stops the host here, with one set of coded messages per store, each carrying the refusal of its own builder:
+            // the file names the store, so a host that started without it would be running on a fallback (FDW-6433).
+            var declaredStores = ConfigurationGateway.BuildFromSchema(schema, schemaLogger);
+            if (declaredStores.IsFailure)
+                return declaredStores.ToNewResult<IHostApplicationBuilder>();
+
             // The host's own declaration of which connection plays which role, recorded now, before anything reads a
             // holder. A host that declares none does not start; nothing here names a connection for it.
             var declared = ConnectionRoleDeclaration.Declare(schema, builder.Environment.ApplicationName, schemaLogger);
@@ -183,7 +203,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton(sp =>
                 new ConfigurationGatewayProvider(
-                    connectionName => Build(sp, connectionName, loggerFactory, serverTierCache, serverTierOptions),
+                    connectionName => Build(sp, connectionName, loggerFactory, schemaSecretManagers, serverTierCache, serverTierOptions),
                     sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
             builder.Services.TryAddSingleton<IConfigurationGatewayProvider>(sp => sp.GetRequiredService<ConfigurationGatewayProvider>());
             builder.Services.TryAddSingleton<IDatabaseGenerationCatalog>(sp => sp.GetRequiredService<ConfigurationGatewayProvider>());
@@ -205,6 +225,8 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 new DeclaredConnectionProvider(
                     sp.GetRequiredService<ConfigurationSchema>(),
                     sp,
+                    schemaSecretManagers,
+                    loggerFactory,
                     sp.GetService<ILogger<DeclaredConnectionProvider>>()));
 
             // Endpoint bases take IConfigurationGateway directly rather than the provider -- this is
@@ -292,6 +314,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
         System.IServiceProvider services,
         string connectionName,
         ILoggerFactory? loggerFactory,
+        ISecretManagerProvider secretManagers,
         DataGatewayResultCache serverTierCache,
         MainDataGatewayConfiguration serverTierOptions)
     {
@@ -310,24 +333,30 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionDeclaresNoKind(log, connectionName));
 
-        if (ConnectionTypes.ByName(declared.Implementation) is not IServiceType connectionType)
+        var connectionType = ConnectionTypes.ByName(declared.Implementation);
+        if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionKindNotRegistered(
                     log, connectionName, declared.Implementation));
 
-        // Resolve the FACTORY, not the connection's own implementation provider. Everything this
-        // gateway touches has to exist before any configuration has been read, and an
-        // implementation provider pulled from the container brings its whole graph -- a
-        // secret-manager provider, a logger -- which reaches the logging domain, which reads its
-        // configuration back through here. That cycle parks the host silently. The connections a
-        // gateway opens declare no secret, so there is nothing for a richer provider to do.
+        // The kind's own provider, built from the kind's factory and the secret managers the schema declares: one path for every host. The
+        // factory is resolved from the container, and its registration takes no secret-manager provider, so nothing resolved here reads the
+        // configuration store. The genuine cycle is the logger: the MsSql factory asks for ILogger<MsSqlConnectionFactory>, which re-enters
+        // the logging domain's configure callback, which reads the logging row back through this gateway. It is broken by the order the
+        // gateways are built in (the server tier first, see Register), not by leaving the provider out.
         if (services.GetService(connectionType.FactoryType) is not IConnectionFactory factory)
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionFactoryUnavailable(
                     log, connectionName, connectionType.FactoryType.Name));
 
-        var connectionProvider = new ConfigurationConnectionProvider(factory);
+        var provider = connectionType.ImplementationProvider(factory, secretManagers, loggerFactory);
+        if (provider.IsFailure || provider.Value is not { } connectionProvider)
+            return provider.ToNewResult<IConfigurationGateway>();
 
+        // The declared tree is built here, not on first read: a gateway whose declared stores do not build does not exist (FDW-6433).
+        var declaredTree = ConfigurationGateway.BuildFromSchema(schema, log);
+        if (declaredTree.IsFailure || declaredTree.Value is not { } declaredStores)
+            return declaredTree.ToNewResult<IConfigurationGateway>();
 
         return GenericResult<IConfigurationGateway>.Success(
             new ConfigurationGateway(
@@ -350,7 +379,8 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                 // and nothing is published at all when the platform store is that tier (there is no token container to write).
                 string.Equals(connectionName, ServerTierConnectionName, System.StringComparison.Ordinal) || !PublishesCacheChanges
                     ? null
-                    : services.GetService<ICacheChangePublisher>()));
+                    : services.GetService<ICacheChangePublisher>(),
+                declaredStores));
     }
 
 

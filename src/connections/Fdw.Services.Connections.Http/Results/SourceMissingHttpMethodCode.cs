@@ -8,7 +8,7 @@ namespace Fdw.Services.Connections.Http.Results;
 /// <summary>
 /// Source configuration is missing HttpMethod — cannot resolve to a container without knowing the HTTP verb.
 /// </summary>
-[TypeOption(typeof(HttpResultCodes), "SourceMissingHttpMethod", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(HttpResultCodes), "SourceMissingHttpMethod")]
 [ExcludeFromCodeCoverage]
 public sealed class SourceMissingHttpMethodCode : HttpResultCodeBase
 {

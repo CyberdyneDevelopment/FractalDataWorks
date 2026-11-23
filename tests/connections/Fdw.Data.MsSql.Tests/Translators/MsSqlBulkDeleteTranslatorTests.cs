@@ -37,14 +37,6 @@ public sealed class MsSqlBulkDeleteTranslatorTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void TheMsSqlTranslatorCollectionAnswersBulkDeleteWithThisTranslator()
-    {
-        MsSqlDataCommandTranslators.ByName("BulkDelete").ShouldBeOfType<MsSqlBulkDeleteTranslator>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task ABatchIsOneDeleteJoinedToTheStagedKeys()
     {

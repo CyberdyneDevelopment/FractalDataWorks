@@ -7,6 +7,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions.Thresholds;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Thresholds;
 
@@ -49,7 +50,7 @@ public sealed class WaitThresholdOwnerRelease
         if (string.IsNullOrWhiteSpace(name))
             return GenericResult.Failure(WaitThresholdLog.OwnerNameRequired(_logger, kind));
 
-        var gateway = _gateways.Get(EtlPipelineTypes.ConfigurationConnection);
+        var gateway = _gateways.Get(PipelineTypes.ConfigurationConnection);
         if (gateway.IsFailure || gateway.Value is null)
         {
             return gateway;

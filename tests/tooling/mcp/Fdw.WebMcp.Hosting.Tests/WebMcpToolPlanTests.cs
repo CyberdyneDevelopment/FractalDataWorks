@@ -15,8 +15,10 @@ public class WebMcpToolPlanTests
 {
     private static WebMcpToolPlan Plan(string name)
         => WebMcpToolPlan.Create(
-            WebMcpGoldenCatalogue.Tools().Single(tool => tool.Name == name),
-            NullLogger.Instance);
+                WebMcpGoldenCatalog.Tools().Single(tool => tool.Name == name),
+                WebMcpCompositeCatalog.MaxDepth,
+                NullLogger.Instance)
+            .Value.ShouldNotBeNull();
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -30,9 +32,9 @@ public class WebMcpToolPlanTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void APropertyNoSchemaTypeDescribesIsSkippedNotGuessedAt()
+    public void APropertyNoSchemaShapeDescribesIsSkippedNotGuessedAt()
     {
-        Plan("create_item").Inputs.ShouldNotContain(input => input.Name == "Tags");
+        Plan("create_item").Inputs.ShouldNotContain(input => input.Name == "Labels");
     }
 
     [Fact]
@@ -101,9 +103,9 @@ public class WebMcpToolPlanTests
         // descriptor was built by hand wrongly, and guessing a binding would hand the agent a URL
         // that cannot be built.
         var unbound = new WebMcpToolDescriptor("broken", "d", "/items/{Missing}", "GET", true,
-            typeof(WebMcpGoldenCatalogue.ItemNameRequest), null);
+            typeof(WebMcpGoldenCatalog.ItemNameRequest), null);
 
-        Should.Throw<InvalidOperationException>(() => WebMcpToolPlan.Create(unbound, NullLogger.Instance))
+        Should.Throw<InvalidOperationException>(() => WebMcpToolPlan.Create(unbound, WebMcpCompositeCatalog.MaxDepth, NullLogger.Instance))
             .Message.ShouldContain("Missing");
     }
 
@@ -113,9 +115,9 @@ public class WebMcpToolPlanTests
     public void APresetWithNoValueIsRefusedRatherThanSentEmpty()
     {
         var presetOnly = new WebMcpToolDescriptor("broken", "d", "/items", "POST", false,
-            typeof(WebMcpGoldenCatalogue.CreateItemRequest), null, PresetFieldName: "ServiceType");
+            typeof(WebMcpGoldenCatalog.CreateItemRequest), null, PresetFieldName: "ServiceType");
 
-        Should.Throw<InvalidOperationException>(() => WebMcpToolPlan.Create(presetOnly, NullLogger.Instance))
+        Should.Throw<InvalidOperationException>(() => WebMcpToolPlan.Create(presetOnly, WebMcpCompositeCatalog.MaxDepth, NullLogger.Instance))
             .Message.ShouldContain("ServiceType");
     }
 }

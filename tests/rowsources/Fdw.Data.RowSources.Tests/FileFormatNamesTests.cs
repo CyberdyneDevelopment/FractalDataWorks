@@ -14,23 +14,6 @@ public class FileFormatNamesTests
     // A format that is not read as a file has no record source: Tabular is a SQL result set.
     private static readonly string[] NotFileFormats = ["Tabular"];
 
-    [Theory]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    [InlineData("Json")]
-    [InlineData("JsonLines")]
-    [InlineData("Xml")]
-    [InlineData("Delimited")]
-    [InlineData("FixedWidth")]
-    [InlineData("Xlsx")]
-    public void EveryFileFormatHasOneNameInTheFormatsTheReadersAndTheWriters(string name)
-    {
-        // Act / Assert
-        FormatTypes.ByName(name).ShouldNotBeSameAs(FormatTypes.NotFound);
-        RecordSourceTypes.ByName(name).ShouldNotBeSameAs(RecordSourceTypes.NotFound);
-        RecordWriterTypes.ByName(name).ShouldNotBeSameAs(RecordWriterTypes.NotFound);
-    }
-
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]

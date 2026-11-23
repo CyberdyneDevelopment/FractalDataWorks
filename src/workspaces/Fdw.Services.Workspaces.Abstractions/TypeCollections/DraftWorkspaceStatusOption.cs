@@ -9,7 +9,7 @@ namespace Fdw.Services.Workspaces.Abstractions;
 public sealed class DraftWorkspaceStatusOption : WorkspaceStatusBase
 {
     /// <summary>Initializes a new instance of the <see cref="DraftWorkspaceStatusOption"/> class.</summary>
-    public DraftWorkspaceStatusOption() : base("Draft")
+    public DraftWorkspaceStatusOption() : base("Draft", isClosed: false)
     {
     }
 }

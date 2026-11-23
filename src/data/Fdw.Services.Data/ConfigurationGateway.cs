@@ -13,6 +13,7 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Data.RowSources.Abstractions;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
@@ -50,10 +51,9 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
     private const string ConnectionTypePostgreSql = "PostgreSql";
 
     private readonly ILogger<ConfigurationGateway> _logger;
-    // The same implementation provider every other caller reaches this connection type through.
-    // The gateway does not resolve secrets itself: that is the provider's job, here as everywhere.
-    // The same implementation provider every other caller reaches this connection type through.
-    // The gateway does not resolve secrets itself: that is the provider's job, here as everywhere.
+    // The connection kind's own implementation provider, which ConfigurationGatewayTypes.Build makes from the kind's factory and the secret managers the host's
+    // schema declares (FDW-6360): the same provider every other caller reaches this connection type through, for every host. The gateway does not resolve
+    // secrets itself: that is the provider's job, here as everywhere.
     private readonly IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> _connectionProvider;
     private readonly ConfigurationSchema _schema;
 
@@ -105,6 +105,32 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
         MainDataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
         ICacheChangePublisher? publisher = null)
+        : this(connectionName, connectionProvider, schema, logger, cache, options, authenticationContextAccessor, publisher, builtTree: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a gateway whose declared data store tree was already built, so nothing is built twice (FDW-6433).
+    /// </summary>
+    /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
+    /// <param name="connectionProvider">The Connection implementation provider that opens ConfigurationDb.</param>
+    /// <param name="schema">The host's schema.</param>
+    /// <param name="logger">Logger.</param>
+    /// <param name="cache">Optional process-wide result cache.</param>
+    /// <param name="options">Optional gateway options.</param>
+    /// <param name="authenticationContextAccessor">Optional accessor for the calling principal.</param>
+    /// <param name="publisher">Tells the other processes which configuration changed.</param>
+    /// <param name="builtTree">The whole tree <see cref="BuildFromSchema"/> built from <paramref name="schema"/>, or null when the gateway is to build it on first read.</param>
+    internal ConfigurationGateway(
+        string connectionName,
+        IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> connectionProvider,
+        ConfigurationSchema schema,
+        ILogger<ConfigurationGateway>? logger,
+        DataGatewayResultCache? cache,
+        MainDataGatewayConfiguration? options,
+        IAuthenticationContextAccessor? authenticationContextAccessor,
+        ICacheChangePublisher? publisher,
+        IReadOnlyList<IDataStore>? builtTree)
     {
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)
             ? throw new ArgumentNullException(nameof(connectionName))
@@ -122,7 +148,7 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
             LazyThreadSafetyMode.ExecutionAndPublication);
 
         _dataStores = new Lazy<IReadOnlyList<IDataStore>>(
-            () => BuildFromSchema(_schema, _logger),
+            () => builtTree is not null ? builtTree : DeclaredTree(_schema, _logger),
             LazyThreadSafetyMode.ExecutionAndPublication);
 
         ConfigurationGatewayLog.Initialised(_logger, ConnectionName);
@@ -873,35 +899,61 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
     // BuildPath/BuildContainer/ResolveKeys/BuildKeyFields/MakeReferencingKeysLazy)
     // =========================================================================
 
-    private static List<IDataStore> BuildFromSchema(
+    // Builds the tree of every store the host declares, once, schema only (no connection, secret, file or HTTP). A declared store is the host's own
+    // statement, so one that does not build is a failure and never a smaller tree: every store that fails adds its own coded messages to the result, in one pass,
+    // each carrying the refusal of the builder that stopped (the container named) (FDW-6433).
+    internal static IGenericResult<IReadOnlyList<IDataStore>> BuildFromSchema(
         ConfigurationSchema schema,
         ILogger logger)
     {
         if (schema.DataStores.Count == 0)
         {
             ConfigurationGatewayLog.SchemaEmpty(logger);
-            return [];
+            return GenericResult<IReadOnlyList<IDataStore>>.Success([]);
         }
 
         var builtStores = new List<IDataStore>(schema.DataStores.Count);
+        var refusals = new List<IGenericMessage>();
         var totalContainers = 0;
 
         foreach (var storeCfg in schema.DataStores)
         {
-            var store = BuildStore(storeCfg, logger);
-            if (store is null)
+            var built = BuildStore(storeCfg, logger);
+            if (built.IsFailure || built.Value is not { } store)
+            {
+                foreach (var failure in built.FailureMessages())
+                    refusals.Add(failure.Message);
+
                 continue;
+            }
 
             builtStores.Add(store);
             for (var i = 0; i < store.Paths.Count; i++)
                 totalContainers += store.Paths[i].Containers.Count;
         }
 
+        if (refusals.Count > 0)
+            return GenericResult<IReadOnlyList<IDataStore>>.Failure(refusals);
+
         ConfigurationGatewayLog.TreeBuiltFromSchema(logger, builtStores.Count, totalContainers);
-        return builtStores;
+        return GenericResult<IReadOnlyList<IDataStore>>.Success(builtStores);
     }
 
-    private static IDataStore? BuildStore(DataStoreImplementationConfiguration storeCfg, ILogger logger)
+    // The tree of a gateway made by a direct `new`: a declared store that does not build stops the first read with its coded messages, never an empty or partial
+    // list (FDW-6433). The better shape, a Create that answers a result in place of the constructor, is later.
+    private static IReadOnlyList<IDataStore> DeclaredTree(ConfigurationSchema schema, ILogger logger)
+    {
+        var tree = BuildFromSchema(schema, logger);
+        if (tree.IsSuccess && tree.Value is { } stores)
+            return stores;
+
+        throw new InvalidOperationException(
+            string.Join(" | ", tree.FailureMessages().Select(failure => string.Concat(failure.Message.Code, ": ", failure.Message.Message))));
+    }
+
+    // One declared store. A failure carries a message of this gateway that names the store, then the builder's own failure messages (the container and the
+    // reason), so the host that stops prints each with its code.
+    private static IGenericResult<IDataStore> BuildStore(DataStoreImplementationConfiguration storeCfg, ILogger logger)
     {
         var storeType = string.IsNullOrEmpty(storeCfg.Implementation)
             ? null
@@ -910,16 +962,19 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
 
         if (storeType is null)
         {
-            ConfigurationGatewayLog.ExecuteFailed(logger, storeCfg.Name,
-                $"DataStore transport '{storeCfg.Implementation}' is not a registered DataStoreType");
-            return null;
+            return GenericResult<IDataStore>.Failure(
+                ConfigurationGatewayProviderLog.DeclaredStoreImplementationNotRegistered(logger, storeCfg.Name, storeCfg.Implementation));
         }
 
         var builder = storeType.SupplyBuilder(logger);
 
         var configureResult = builder.Configure(storeCfg);
         if (!configureResult.IsSuccess)
-            return null;
+        {
+            return StoreRefused(
+                ConfigurationGatewayProviderLog.DeclaredStoreNotConfigured(logger, storeCfg.Name, configureResult.CurrentMessage ?? string.Empty),
+                configureResult);
+        }
 
         // Every store this gateway builds is one the host declared in configurationSchema.json; it carries that fact
         // so the main data gateway can refuse requests over it (FDW-1068).
@@ -930,12 +985,22 @@ public sealed partial class ConfigurationGateway : IConfigurationGateway, IDeriv
 #pragma warning restore VSTHRD002
         if (!buildResult.IsSuccess || buildResult.Value is null)
         {
-            ConfigurationGatewayLog.ExecuteFailed(logger, storeCfg.Name,
-                buildResult.CurrentMessage?.ToString() ?? string.Empty);
-            return null;
+            return StoreRefused(
+                ConfigurationGatewayProviderLog.DeclaredStoreNotBuilt(logger, storeCfg.Name, buildResult.CurrentMessage ?? string.Empty),
+                buildResult);
         }
 
-        return buildResult.Value;
+        return GenericResult<IDataStore>.Success(buildResult.Value);
+    }
+
+    // The message of this gateway that names the store, then each failure message the builder's own result carries.
+    private static IGenericResult<IDataStore> StoreRefused(IGenericMessage naming, IGenericResult builderResult)
+    {
+        var messages = new List<IGenericMessage> { naming };
+        foreach (var failure in builderResult.FailureMessages())
+            messages.Add(failure.Message);
+
+        return GenericResult<IDataStore>.Failure(messages);
     }
 
     // =========================================================================

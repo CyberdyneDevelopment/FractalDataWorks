@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Fdw.Configuration.SourceGenerators.Analysis;
 using Fdw.Configuration.SourceGenerators.Models;
 using Shouldly;
@@ -7,11 +8,16 @@ namespace Fdw.Configuration.SourceGenerators.Tests.Analysis;
 
 public class SqlTypeMapperTests
 {
+    // The sizes a build states (FDW-7107). Numbers no code holds, so a column that carries them came from the build.
+    private static readonly ColumnSizes Stated = new(321, 12, 3);
+
+    private static readonly ColumnSizes NoneStated = new(null, null, null);
+
     [Theory]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    [InlineData("string", "varchar", 500)]
-    [InlineData("String", "varchar", 500)]
+    [InlineData("string", "varchar", 321)]
+    [InlineData("String", "varchar", 321)]
     public void MapToColumnMapsStringToVarchar(string propertyType, string expectedSqlType, int expectedMaxLength)
     {
         // Arrange
@@ -23,7 +29,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe(expectedSqlType);
@@ -45,7 +51,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe(expectedSqlType);
@@ -71,7 +77,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe(expectedSqlType);
@@ -94,7 +100,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe(expectedSqlType);
@@ -113,7 +119,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("decimal");
@@ -138,7 +144,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe(expectedSqlType);
@@ -147,7 +153,7 @@ public class SqlTypeMapperTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    public void MapToColumnMapsDecimalWithDefaultPrecision()
+    public void MapToColumnSizesADecimalThatStatesNoneFromTheBuild()
     {
         // Arrange
         var property = new PropertyModel
@@ -157,12 +163,45 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("decimal");
-        column.Precision.ShouldBe(18);
-        column.Scale.ShouldBe(2);
+        column.Precision.ShouldBe(12);
+        column.Scale.ShouldBe(3);
+        column.SizesNotStated.ShouldBeEmpty();
+    }
+
+    // FDW-7107: a field that states no size, in a build that states none, gets no guessed size; the property it needed is recorded.
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "SourceGen")]
+    [InlineData("string", new[] { ColumnSizes.StringMaxLengthProperty })]
+    [InlineData("decimal", new[] { ColumnSizes.DecimalPrecisionProperty, ColumnSizes.DecimalScaleProperty })]
+    public void AFieldThatStatesNoSizeInABuildThatStatesNoneIsNotSized(string propertyType, string[] needed)
+    {
+        var column = SqlTypeMapper.MapToColumn(new PropertyModel { PropertyName = "Value", PropertyType = propertyType }, NoneStated);
+
+        column.MaxLength.ShouldBeNull();
+        column.Precision.ShouldBeNull();
+        column.Scale.ShouldBeNull();
+        column.SizesNotStated.ShouldBe(needed);
+    }
+
+    // FDW-7107: a field that states its own size needs nothing from the build.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "SourceGen")]
+    public void AFieldThatStatesItsSizeNeedsNoneFromTheBuild()
+    {
+        var text = SqlTypeMapper.MapToColumn(new PropertyModel { PropertyName = "Code", PropertyType = "string", MaxLength = 40 }, NoneStated);
+        var amount = SqlTypeMapper.MapToColumn(
+            new PropertyModel { PropertyName = "Amount", PropertyType = "decimal", Precision = 10, Scale = 4 }, NoneStated);
+
+        text.MaxLength.ShouldBe(40);
+        (amount.Precision, amount.Scale).ShouldBe((10, 4));
+        text.SizesNotStated.ShouldBeEmpty();
+        amount.SizesNotStated.ShouldBeEmpty();
     }
 
     [Fact]
@@ -180,7 +219,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("decimal");
@@ -201,7 +240,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("datetime2");
@@ -221,7 +260,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("datetimeoffset");
@@ -241,7 +280,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("date");
@@ -260,7 +299,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("time");
@@ -280,7 +319,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("bigint");
@@ -299,7 +338,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("uniqueidentifier");
@@ -318,7 +357,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("varbinary");
@@ -338,7 +377,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("varchar");
@@ -359,7 +398,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("varchar");
@@ -381,7 +420,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("varchar");
@@ -403,7 +442,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("int");
@@ -427,7 +466,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("nvarchar");
@@ -448,7 +487,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.SqlType.ShouldBe("varchar");
@@ -469,7 +508,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.IsNullable.ShouldBeTrue();
@@ -490,7 +529,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         // Current behavior: IsNullable = property.IsNullable || !property.IsRequired
@@ -512,7 +551,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.ColumnName.ShouldBe("srv_name");
@@ -531,7 +570,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.ColumnName.ShouldBe("ServerName");
@@ -551,7 +590,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.IsUnique.ShouldBeTrue();
@@ -571,7 +610,7 @@ public class SqlTypeMapperTests
         };
 
         // Act
-        var column = SqlTypeMapper.MapToColumn(property);
+        var column = SqlTypeMapper.MapToColumn(property, Stated);
 
         // Assert
         column.DefaultValue.ShouldBe("true");
@@ -692,27 +731,33 @@ public class SqlTypeMapperTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    public void DefaultStringMaxLengthIs500()
+    public void TheSizesAreReadFromTheBuildsProperties()
     {
-        // Assert
-        SqlTypeMapper.DefaultStringMaxLength.ShouldBe(500);
+        var sizes = ColumnSizes.From(new BuildPropertyOptions(new Dictionary<string, string>
+        {
+            [ColumnSizes.StringMaxLengthProperty] = "321",
+            [ColumnSizes.DecimalPrecisionProperty] = "12",
+            [ColumnSizes.DecimalScaleProperty] = "0",
+        }));
+
+        (sizes.StringMaxLength, sizes.DecimalPrecision, sizes.DecimalScale).ShouldBe((321, 12, 0));
     }
 
-    [Fact]
+    // FDW-7107: a property that is absent, empty, not a whole number or below its range is not stated, never read as a number.
+    [Theory]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    public void DefaultDecimalPrecisionIs18()
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("five hundred")]
+    [InlineData("-1")]
+    [InlineData("0")]
+    public void ALengthThatIsNotAWholeNumberOfAtLeastOneIsNotStated(string? text)
     {
-        // Assert
-        SqlTypeMapper.DefaultDecimalPrecision.ShouldBe(18);
-    }
+        var properties = new Dictionary<string, string>();
+        if (text is not null)
+            properties[ColumnSizes.StringMaxLengthProperty] = text;
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "SourceGen")]
-    public void DefaultDecimalScaleIs2()
-    {
-        // Assert
-        SqlTypeMapper.DefaultDecimalScale.ShouldBe(2);
+        ColumnSizes.From(new BuildPropertyOptions(properties)).StringMaxLength.ShouldBeNull();
     }
 }

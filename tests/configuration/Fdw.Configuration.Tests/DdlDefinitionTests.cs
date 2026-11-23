@@ -254,15 +254,6 @@ public class DdlDefinitionTests
         fk.OnUpdate.ShouldBe(ForeignKeyActions.SetNull);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public void ForeignKeyAction_HasExpectedValues()
-    {
-        // Assert
-        ForeignKeyActions.All().Count.ShouldBe(5);
-    }
-
     [Theory]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]

@@ -2,13 +2,14 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Graphs;
 
 /// <summary>Supplies the Graph pipeline implementation's own configuration.</summary>
 /// <remarks>
 /// The rows live in <c>pipe.GraphPipeline</c>, reached through the Pipeline domain row whose
-/// <c>Implementation</c> is this engine's name. <see cref="EtlPipelineTypes"/> registers this provider into
+/// <c>Implementation</c> is this engine's name. <see cref="PipelineTypes"/> registers this provider into
 /// the Pipeline domain provider under the option's name.
 /// <para>
 /// Why the contract is <see cref="IPipelineImplementationConfiguration"/> and not the narrower Etl one: the

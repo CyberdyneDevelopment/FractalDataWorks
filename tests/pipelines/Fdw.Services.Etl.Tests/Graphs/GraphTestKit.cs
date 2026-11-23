@@ -8,6 +8,7 @@ using Fdw.Services.Etl.Graphs.Building;
 using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.Notifications.Abstractions;
+using Fdw.Services.Etl.Tests.Flow;
 using Fdw.Services.Etl.Tests.Pipelines;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -161,7 +162,7 @@ internal static class GraphTestKit
 
     /// <summary>What a built pipeline runs against: the variables it declared and an executor that counts rows.</summary>
     public static FlowStepContext StepContext(FlowVariables variables, FlowRunTally tally) =>
-        new(variables, tally, new FlowRunOptions { LinkCapacity = 2 }, null, null);
+        new(variables, tally, new FlowRunOptions { LinkCapacity = 2 }, null, new FlowRunIdentity(Guid.NewGuid(), Guid.NewGuid(), []));
 
     public static PipelineDroppedOutputConfiguration Dropped(string component, string output = "output") =>
         new() { ComponentName = component, OutputName = output };
@@ -200,9 +201,13 @@ internal static class GraphTestKit
             NullLogger.Instance,
             TimeSpan.Zero,
             10,
+            FlowBuildContributions.None,
             etlGateway,
             notifier,
             null,
             null,
-            test);
+            test)
+        {
+            StepClaims = new InMemoryStepClaims(),
+        };
 }

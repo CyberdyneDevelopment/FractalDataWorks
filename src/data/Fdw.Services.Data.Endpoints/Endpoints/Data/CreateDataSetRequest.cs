@@ -16,6 +16,12 @@ public class CreateDataSetRequest
     /// <summary>Gets or sets the data set description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>Gets or sets the display name a person reads the data set by; left out or empty, the data set has none (FDW-6117).</summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>Gets or sets the abbreviation a person may read the data set by, at most 20 characters; left out or empty, the data set has none (FDW-6129).</summary>
+    public string? Abbreviation { get; set; }
+
     /// <summary>
     /// Gets or sets the <c>ClassificationId</c> of the data set's data classification level (see
     /// <c>GET /data-classifications</c>). Left out, it is <c>NotYetClassified</c>. An id that is not a level is refused.
@@ -41,16 +47,9 @@ public class CreateDataSetRequest
     public IList<DataSetFilterConditionPayload> Filters { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the dataset strategy discriminator: "Simple", "Compound", or "Federated"
-    /// (a registered <c>DataSetTypes</c> member). Bound from the wizard's <c>implementation</c> field.
-    /// </summary>
-    [JsonPropertyName("implementation")]
-    public string Implementation { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the federation strategy used to combine sources for a Federated dataset (e.g.
     /// "Sequential", "Parallel", "Optimized" — a registered <c>FederationStrategies</c> member).
-    /// Required when <see cref="Implementation"/> is "Federated"; must be null otherwise.
+    /// Allowed only when the sources make the data set Federated (FDW-6806: the kind is worked out from the sources, never stated).
     /// </summary>
     public string? FederationStrategy { get; set; }
 
@@ -65,6 +64,18 @@ public class CreateDataSetRequest
 
     /// <summary>Gets or sets the joins between sources.</summary>
     public IList<DataSetJoinPayload> Joins { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how a Compound or Federated data set's sources combine: "Join" (by its joins) or "Union" (their rows stacked; every source
+    /// maps every field), a <c>DataSetCompositionTypes</c> member that takes several sources (FDW-6946). Required when the data set has more than one source; nothing is assumed.
+    /// </summary>
+    public string? SourceCombination { get; set; }
+
+    /// <summary>
+    /// Gets or sets a Federated data set's own values of its strategy's options (FDW-6901), which win over the FDW-level settings: ReadsInParallel,
+    /// MaxParallelReads, OrdersSources. A name the strategy does not have, or a value that does not parse, is refused.
+    /// </summary>
+    public IList<DataSetFederationOptionPayload> FederationOptions { get; set; } = [];
 
     /// <summary>Gets or sets the aggregate measure definitions for this data set.</summary>
     public IList<CreateDataSetAggregateRequest> Aggregates { get; set; } = [];

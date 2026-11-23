@@ -36,9 +36,6 @@ public static class QualityRuleExecutions
     /// <summary>The container (table) that holds the executions.</summary>
     public const string ContainerName = "QualityRuleExecution";
 
-    /// <summary>The most executions one read answers.</summary>
-    public const int MaxTake = 500;
-
     /// <summary>Reads the tenant the caller is working in.</summary>
     /// <param name="user">The caller's claims.</param>
     /// <param name="logger">The logger.</param>
@@ -114,7 +111,7 @@ public static class QualityRuleExecutions
     /// <param name="operationalStore">The operational store the host names.</param>
     /// <param name="tenantId">The tenant.</param>
     /// <param name="ruleId">The rule.</param>
-    /// <param name="take">How many to answer, from 1 to <see cref="MaxTake"/>.</param>
+    /// <param name="take">How many to answer: at least 1, and no more than the paging settings give the caller (the endpoint refuses more).</param>
     /// <param name="logger">The logger.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The executions, newest first, or the failure that says they were not read.</returns>

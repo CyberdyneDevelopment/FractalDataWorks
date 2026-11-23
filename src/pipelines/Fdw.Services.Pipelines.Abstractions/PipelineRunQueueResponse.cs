@@ -18,4 +18,10 @@ public class PipelineRunQueueResponse
     /// <see langword="null"/> when the setting is not set or is not positive: nothing is assumed, and the page does not read again by itself.
     /// </summary>
     public int? RefreshSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this host relays its run events to the real-time hub (the setting <c>PipelineEventRelayEnabled</c>, FDW-5242): with it on, a page can follow
+    /// runs on the hub; with it off, it reads this list again. Always stated; a setting that cannot be read refuses the request instead.
+    /// </summary>
+    public bool RelayEnabled { get; set; }
 }

@@ -26,6 +26,9 @@ public sealed class ProbeFilesDataStoreType : DataStoreTypeBase<IDataStoreImplem
     public ProbeFilesDataStoreType() : base(DataStoreTypeSelectionProbes.ProbeStoreName, "Probe files", "A data store type only these tests register") { }
 
     public override IDataStoreBuilder SupplyBuilder(ILogger? logger = null) => throw new NotSupportedException();
+
+    // A probe: it holds the one container type (Endpoint, Fdw.Data.Http) that the tests which use it register.
+    public override IReadOnlyList<string> ContainerTypeNames => ["Endpoint"];
 }
 
 [ExcludeFromCodeCoverage]
@@ -37,11 +40,20 @@ public sealed class ProbeTransportConnectionType : ConnectionTypeBase<IGenericCo
     protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration> EndpointAuthenticationDeclaration
         => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration>.None;
 
+    protected override Fdw.Results.IGenericResult<Fdw.Services.Abstractions.IImplementationServiceProvider<Fdw.Services.Connections.Abstractions.IGenericConnection, Fdw.Services.Connections.Abstractions.IConnectionImplementationConfiguration>> BuildImplementationProvider(
+        IMockConnectionFactory factory, Fdw.Services.SecretManagers.Abstractions.ISecretManagerProvider secretManagers, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory)
+        => Fdw.Results.GenericResult<Fdw.Services.Abstractions.IImplementationServiceProvider<Fdw.Services.Connections.Abstractions.IGenericConnection, Fdw.Services.Connections.Abstractions.IConnectionImplementationConfiguration>>.Failure(
+            Fdw.Services.Connections.Results.ConnectionsResultCodes.ByName("ImplementationProviderNotOffered"),
+            Fdw.Results.ResultDetails.Create("connectionType", Name));
+
     protected override Fdw.Results.IGenericResult<bool> DecideHostIdentity(MockConnectionConfiguration configuration)
         => Fdw.Results.GenericResult<bool>.Success(false);
 
     protected override Fdw.Results.IGenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots> DescribeCredentials(MockConnectionConfiguration configuration)
         => Fdw.Results.GenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots>.Success(Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots.None);
+
+    protected override Fdw.Results.IGenericResult<bool> DecideReadsStoredSecret(MockConnectionConfiguration configuration)
+        => Fdw.Results.GenericResult<bool>.Success(false);
 
     protected override Fdw.Results.IGenericResult BindCredentialReferences(
         MockConnectionConfiguration configuration,
@@ -62,11 +74,20 @@ public sealed class ProbeNoStoresConnectionType : ConnectionTypeBase<IGenericCon
     protected override Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration> EndpointAuthenticationDeclaration
         => Fdw.Services.Connections.Abstractions.Authentication.ConnectionAuthentication<MockConnectionConfiguration>.None;
 
+    protected override Fdw.Results.IGenericResult<Fdw.Services.Abstractions.IImplementationServiceProvider<Fdw.Services.Connections.Abstractions.IGenericConnection, Fdw.Services.Connections.Abstractions.IConnectionImplementationConfiguration>> BuildImplementationProvider(
+        IMockConnectionFactory factory, Fdw.Services.SecretManagers.Abstractions.ISecretManagerProvider secretManagers, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory)
+        => Fdw.Results.GenericResult<Fdw.Services.Abstractions.IImplementationServiceProvider<Fdw.Services.Connections.Abstractions.IGenericConnection, Fdw.Services.Connections.Abstractions.IConnectionImplementationConfiguration>>.Failure(
+            Fdw.Services.Connections.Results.ConnectionsResultCodes.ByName("ImplementationProviderNotOffered"),
+            Fdw.Results.ResultDetails.Create("connectionType", Name));
+
     protected override Fdw.Results.IGenericResult<bool> DecideHostIdentity(MockConnectionConfiguration configuration)
         => Fdw.Results.GenericResult<bool>.Success(false);
 
     protected override Fdw.Results.IGenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots> DescribeCredentials(MockConnectionConfiguration configuration)
         => Fdw.Results.GenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots>.Success(Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots.None);
+
+    protected override Fdw.Results.IGenericResult<bool> DecideReadsStoredSecret(MockConnectionConfiguration configuration)
+        => Fdw.Results.GenericResult<bool>.Success(false);
 
     protected override Fdw.Results.IGenericResult BindCredentialReferences(
         MockConnectionConfiguration configuration,

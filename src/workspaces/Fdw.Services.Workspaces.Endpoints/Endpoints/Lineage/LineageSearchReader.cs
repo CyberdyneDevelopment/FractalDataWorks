@@ -52,10 +52,10 @@ internal static class LineageSearchReader
         var matches = new List<LineageNode>();
         foreach (var kind in KindsOf(query.Kinds))
         {
-            var rows = await ReadKind(kind, selection, sources, query, logger, ct).ConfigureAwait(false);
+            var rows = await ReadKind(kind.Name, selection, sources, query, logger, ct).ConfigureAwait(false);
             if (rows.IsFailure) return rows.ToNewResult<LineageSearchPage>();
 
-            matches.AddRange(rows.Value!.Select(row => new LineageNode(NodeId(kind, row.Id), kind, row.Name, scope.Workspace)));
+            matches.AddRange(rows.Value!.Select(row => new LineageNode(kind.NodeId(row.Id), kind.Name, row.Name, scope.Workspace)));
         }
 
         var ordered = matches
@@ -68,11 +68,11 @@ internal static class LineageSearchReader
             new LineageSearchPage(page, query.Skip, query.Take, ordered.Count > query.Skip + query.Take, Root(selection, scope)));
     }
 
-    private static IEnumerable<string> KindsOf(LineageKindSelection kinds)
+    private static IEnumerable<IMapKindOption> KindsOf(LineageKindSelection kinds)
     {
-        if (kinds.DataSets) yield return MapKinds.DataSet;
-        if (kinds.DataStores) yield return MapKinds.DataStore;
-        if (kinds.Pipelines) yield return MapKinds.Pipeline;
+        if (kinds.DataSets) yield return MapKindOptions.ByName(MapKinds.DataSet);
+        if (kinds.DataStores) yield return MapKindOptions.ByName(MapKinds.DataStore);
+        if (kinds.Pipelines) yield return MapKindOptions.ByName(MapKinds.Pipeline);
     }
 
     private static Task<IGenericResult<List<DomainConfiguration>>> ReadKind(
@@ -162,13 +162,6 @@ internal static class LineageSearchReader
             ? row.Name.StartsWith(query.Text, StringComparison.OrdinalIgnoreCase)
             : row.Name.Contains(query.Text, StringComparison.OrdinalIgnoreCase);
     }
-
-    private static string NodeId(string kind, Guid id) => kind switch
-    {
-        MapKinds.DataSet => MapNodeIds.DataSet(id),
-        MapKinds.DataStore => MapNodeIds.DataStore(id),
-        _ => MapNodeIds.Pipeline(id),
-    };
 
     // Only a workspace can root a path: the scope of a search over everything is not an object.
     private static LineagePathStepDto? Root(MapSelection selection, MapScopeDto scope)

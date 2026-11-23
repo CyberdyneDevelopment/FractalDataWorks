@@ -144,4 +144,119 @@ public static partial class GraphLog
     [MessageLogging(EventId = 60354, Level = LogLevel.Error,
         Message = "The setting {setting} is {size}; it must be at least 0 (0 carries only the count), or not set to take the pipeline type's default")]
     public static partial IGenericMessage UnmatchedKeySampleNegative(ILogger logger, string setting, int size);
+
+    /// <summary>
+    /// Logs a component whose component type's builder needs a build contribution this build was not given (FDW-6132, FDW-6240): the graph is refused before anything runs. The number
+    /// is in the Configuration category (6): the host is missing a registration, not the graph a setting.
+    /// </summary>
+    [MessageLogging(EventId = 60355, Level = LogLevel.Error,
+        Message = "Component '{component}' is of component type '{componentType}', whose builder needs the build contribution {contribution}, which this build was not given",
+        ClientMessage = "A component of this pipeline needs a service the host has not registered")]
+    public static partial IGenericMessage ComponentServiceMissing(ILogger logger, string component, string componentType, string contribution);
+
+    /// <summary>
+    /// Logs a component type whose builder needs a build contribution the host did not construct, found when the host starts (FDW-6132); one message for
+    /// each component type and contribution. The number is in the Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60356, Level = LogLevel.Critical,
+        Message = "The builder of component type '{componentType}' needs the build contribution {contribution}, which the host did not construct; the host does not start")]
+    public static partial IGenericMessage ComponentServicesUnregistered(ILogger logger, string componentType, string contribution);
+
+    /// <summary>
+    /// Logs a component type with no builder of the collection it needs, found when the host starts (FDW-6133, FDW-6240): an action or loop type with no step
+    /// builder of its name, or a type that moves rows with no component builder of its name. Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60357, Level = LogLevel.Critical,
+        Message = "Component type '{componentType}' has no {builder} of its name, so no graph that uses it could be built; add one in the package of the type; the host does not start")]
+    public static partial IGenericMessage ComponentTypeHasNoBuilder(ILogger logger, string componentType, string builder);
+
+    /// <summary>
+    /// Logs a component type that more than one builder names, found when the host starts (FDW-6240), so the build could not tell which makes its step.
+    /// Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60364, Level = LogLevel.Critical,
+        Message = "Component type '{componentType}' is named by {count} builders; a component type has exactly one, so remove the others; the host does not start")]
+    public static partial IGenericMessage ComponentTypeHasTwoBuilders(ILogger logger, string componentType, int count);
+
+    /// <summary>Logs a builder whose name is not a component type, found when the host starts (FDW-6240), so no component ever uses it. Configuration category (6).</summary>
+    [MessageLogging(EventId = 60365, Level = LogLevel.Critical,
+        Message = "The {builder} '{name}' names no component type; add the ComponentTypes option it builds, or remove it; the host does not start")]
+    public static partial IGenericMessage BuilderNamesNoComponentType(ILogger logger, string name, string builder);
+
+    /// <summary>
+    /// Logs a component type with a declared setting that states no data type, found when the host starts (FDW-6133); one message for each component type and
+    /// setting. Configuration category (6): the package of the component type declares the setting without saying what its value is.
+    /// </summary>
+    [MessageLogging(EventId = 60358, Level = LogLevel.Critical,
+        Message = "Component type '{componentType}' declares the setting '{setting}', which no column of the component holds, and states no data type for it; state its DataType in the package of the component type; the host does not start")]
+    public static partial IGenericMessage ComponentSettingDataTypeNotDeclared(ILogger logger, string componentType, string setting);
+
+    /// <summary>Logs a stored declared setting whose text cannot be read as the data type its component type declares (FDW-6133). Validation category (2).</summary>
+    [MessageLogging(EventId = 20370, Level = LogLevel.Error,
+        Message = "Component '{component}' of component type '{componentType}' states '{text}' for its setting '{setting}', which cannot be read as {dataType}")]
+    public static partial IGenericMessage ComponentSettingValueUnreadable(ILogger logger, string component, string componentType, string setting, string text, string dataType);
+
+    /// <summary>Logs a declared setting whose text, rendered from the variables when the step runs, cannot be read as its data type (FDW-6133). Validation category (2).</summary>
+    [MessageLogging(EventId = 20371, Level = LogLevel.Error,
+        Message = "Component '{component}' reads its setting '{setting}' from '{text}' when the step runs, and the value it gives cannot be read as {dataType}")]
+    public static partial IGenericMessage ComponentSettingRenderedUnreadable(ILogger logger, string component, string setting, string text, string dataType);
+
+    /// <summary>Logs a declared setting whose text names a variable that is not declared, or a parameter the run left blank, when the step runs (FDW-6133). Missing category (3).</summary>
+    [MessageLogging(EventId = 30370, Level = LogLevel.Error,
+        Message = "Component '{component}' reads its setting '{setting}' from '{text}' when the step runs, and a variable it names has no value: {reason}")]
+    public static partial IGenericMessage ComponentSettingVariableMissing(ILogger logger, Exception exception, string component, string setting, string text, string reason);
+
+    /// <summary>Logs a builder that asks for a declared setting the stored component does not state (FDW-6133). Missing category (3).</summary>
+    [MessageLogging(EventId = 30371, Level = LogLevel.Error,
+        Message = "Component '{component}' of component type '{componentType}' does not state its setting '{setting}'")]
+    public static partial IGenericMessage ComponentSettingNotStated(ILogger logger, string component, string componentType, string setting);
+
+    /// <summary>Logs a builder that asks for a setting its component type does not take (FDW-6133). Configuration category (6): the package of the component type and its builder disagree.</summary>
+    [MessageLogging(EventId = 60370, Level = LogLevel.Error,
+        Message = "The builder of component '{component}' asks for the setting '{setting}', which its component type '{componentType}' does not take")]
+    public static partial IGenericMessage ComponentSettingUndeclared(ILogger logger, string component, string componentType, string setting);
+
+    /// <summary>
+    /// Logs a builder that asks for a setting as a declared setting when the component holds it on a column, in child rows or in its stage (FDW-6133).
+    /// Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60371, Level = LogLevel.Error,
+        Message = "The builder of component '{component}' asks for the setting '{setting}' of component type '{componentType}' as a declared setting; the component holds it itself and the builder reads it from there")]
+    public static partial IGenericMessage ComponentSettingHeldOnComponent(ILogger logger, string component, string componentType, string setting);
+
+    /// <summary>Logs a builder that asks for a declared setting its component type states no data type for (FDW-6133). Configuration category (6).</summary>
+    [MessageLogging(EventId = 60372, Level = LogLevel.Error,
+        Message = "The builder of component '{component}' asks for the setting '{setting}', which its component type '{componentType}' declares with no data type")]
+    public static partial IGenericMessage ComponentSettingDataTypeMissing(ILogger logger, string component, string componentType, string setting);
+
+    /// <summary>Logs a build contribution the graph type registered because a collected builder needs it (FDW-6240). Logged-only category (1).</summary>
+    [MessageLogging(EventId = 10357, Level = LogLevel.Trace,
+        Message = "Registered the build contribution {contribution}, which the builder of '{builder}' needs")]
+    public static partial IGenericMessage ComponentContributionRegistered(ILogger logger, string contribution, string builder);
+
+    /// <summary>
+    /// Logs a builder that names, among what it needs, a type that is not a concrete class implementing IFlowBuildContribution (FDW-6240); the host does not
+    /// start. Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60359, Level = LogLevel.Critical,
+        Message = "The builder of '{builder}' needs {type}, which is not a concrete class that implements IFlowBuildContribution, so it cannot be registered; the host does not start")]
+    public static partial IGenericMessage ComponentNeedNotAContribution(ILogger logger, string builder, string type);
+
+    /// <summary>
+    /// Logs a build contribution registered more than once (FDW-6240): the graph type registers each one a builder needs, so a second is a hand registration
+    /// beside it, and the build could not tell which to use; the host does not start. Configuration category (6).
+    /// </summary>
+    [MessageLogging(EventId = 60361, Level = LogLevel.Critical,
+        Message = "The build contribution {contribution} is registered {count} times; the graph type registers every contribution a builder needs, so remove the other registration; the host does not start")]
+    public static partial IGenericMessage ComponentContributionRegisteredTwice(ILogger logger, string contribution, int count);
+
+    /// <summary>Logs build contributions that cannot be constructed, most often because a dependency of one is not registered (FDW-6240); the host does not start. Configuration category (6).</summary>
+    [MessageLogging(EventId = 60362, Level = LogLevel.Critical,
+        Message = "A build contribution cannot be constructed: {reason}; register what its constructor takes in that service's own domain; the host does not start")]
+    public static partial IGenericMessage ComponentContributionUnresolvable(ILogger logger, Exception exception, string reason);
+
+    /// <summary>Logs a registered build contribution that no collected builder names (FDW-6240); the host starts. Configuration category (6).</summary>
+    [MessageLogging(EventId = 60363, Level = LogLevel.Warning,
+        Message = "The build contribution {contribution} is registered and no builder needs it; nothing reads it")]
+    public static partial IGenericMessage ComponentContributionUnused(ILogger logger, string contribution);
 }

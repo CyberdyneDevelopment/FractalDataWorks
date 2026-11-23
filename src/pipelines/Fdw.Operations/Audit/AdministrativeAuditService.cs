@@ -238,12 +238,7 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
         AddCompare(conditions, "OccurredAt", "GreaterThanOrEqual", filter.From);
         AddCompare(conditions, "OccurredAt", "LessThan", filter.To);
 
-        return conditions.Count switch
-        {
-            0 => null,
-            1 => new FilterExpression { Root = conditions[0] },
-            _ => new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = [.. conditions] } }
-        };
+        return FilterGroup.AllOf(conditions) is { } root ? new FilterExpression { Root = root } : null;
     }
 
     private static void AddEqual(List<FilterCondition> conditions, string property, Guid? value)

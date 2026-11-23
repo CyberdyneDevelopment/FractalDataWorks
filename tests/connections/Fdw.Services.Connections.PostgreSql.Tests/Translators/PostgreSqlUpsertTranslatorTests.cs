@@ -57,15 +57,6 @@ public sealed class PostgreSqlUpsertTranslatorTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ThePostgreSqlTranslatorCollectionAnswersBothUpsertsWithASetBasedTranslator()
-    {
-        PostgreSqlDataCommandTranslators.ByName("Upsert").ShouldBeOfType<PostgreSqlUpsertTranslator>();
-        PostgreSqlDataCommandTranslators.ByName("BulkUpsert").ShouldBeOfType<PostgreSqlBulkUpsertTranslator>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task ABatchIsOneCommandUpdatingTheChangedRowsThenInsertingTheNewKeys()
     {

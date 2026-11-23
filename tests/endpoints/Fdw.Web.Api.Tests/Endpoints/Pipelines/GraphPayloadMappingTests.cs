@@ -34,6 +34,7 @@ public sealed class GraphPayloadMappingTests
 
         return new GraphPayload
         {
+            Implementation = "Graph",
             Name = "OrdersFlow",
             IsEnabled = true,
             LinkCapacity = 4,
@@ -421,6 +422,7 @@ public sealed class GraphPayloadMappingTests
 
         return new GraphPayload
         {
+            Implementation = "Graph",
             Name = "OrdersHistoryFlow",
             IsEnabled = true,
             LinkCapacity = 4,
@@ -626,6 +628,7 @@ public sealed class GraphPayloadMappingTests
         loop.Settings["end"] = Json("{\"parameter\":\"Last\"}");
         var payload = new GraphPayload
         {
+            Implementation = "Graph",
             Name = "Bound", IsEnabled = true, LinkCapacity = 4, MaxParallelRuns = 1, OverflowBehavior = "Queue",
             Components = [source, loop],
         };
@@ -655,6 +658,7 @@ public sealed class GraphPayloadMappingTests
         source.Settings["batchSize"] = Json("{\"name\":\"Size\"}");
         var payload = new GraphPayload
         {
+            Implementation = "Graph",
             Name = "Bad", IsEnabled = true, LinkCapacity = 4, MaxParallelRuns = 1, OverflowBehavior = "Queue",
             Components = [source],
         };

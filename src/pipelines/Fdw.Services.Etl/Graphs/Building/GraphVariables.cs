@@ -141,7 +141,7 @@ public static class GraphVariables
                     logger, graph.Name, variable.Name, $"'{variable.ValueText}' is not a value of the type '{variable.DataType}'"));
             }
 
-            variables.Declare(variable.Name, value);
+            variables.Declare(variable.Name, value, variable.DataType);
         }
 
         return GenericResult<FlowVariables>.Success(variables);

@@ -31,6 +31,6 @@ internal static class LineageSnapshot
 
         return stream.State.Outcome.IsFailure
             ? stream.State.Outcome.ToNewResult<LineageGraph>()
-            : GenericResult<LineageGraph>.Success(LineageProjection.Of(nodes, edges, stream.Scope.Workspace));
+            : LineageProjection.Of(nodes, edges, stream.Scope.Workspace, logger);
     }
 }

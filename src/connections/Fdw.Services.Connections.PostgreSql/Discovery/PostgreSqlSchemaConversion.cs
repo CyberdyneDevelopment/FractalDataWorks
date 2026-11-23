@@ -4,7 +4,10 @@ using Fdw.Conventions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.PostgreSql;
+using Fdw.Results;
 using Fdw.Schema;
+using Fdw.Services.Connections.PostgreSql.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.PostgreSql.Discovery;
 
@@ -54,9 +57,23 @@ public static class PostgreSqlSchemaConversion
             ? native.AbstractType
             : null;
 
-    /// <summary>Resolves an <see cref="IContainerType"/> by name from <see cref="ContainerTypes"/>.</summary>
-    public static IContainerType GetContainerType(string containerTypeName)
-        => ContainerTypes.ByName(containerTypeName);
+    /// <summary>
+    /// Resolves the container type option a PostgreSQL discovery gives what it found (FDW-6309, FDW-6387).
+    /// </summary>
+    /// <param name="logger">The logger the coded messages are written through.</param>
+    /// <param name="discoveredWord">The word the discoverer wrote for what it found: <c>Table</c> or <c>View</c>. A discovery fact, not an option name.</param>
+    /// <returns>
+    /// The connection type's own option, <c>PostgreSqlTable</c> or <c>PostgreSqlView</c>; a failure when the word maps to none, and a
+    /// failure when ContainerTypes does not hold the option (the lookup answers the NotFound placeholder, which is never used as a type).
+    /// </returns>
+    public static IGenericResult<IContainerType> GetContainerType(ILogger logger, string discoveredWord)
+    {
+        // This connection type names its options after the discoverer's word: Table is PostgreSqlTable, View is PostgreSqlView.
+        var option = ContainerTypes.ByName("PostgreSql" + discoveredWord);
+        return ReferenceEquals(option, ContainerTypes.NotFound)
+            ? GenericResult<IContainerType>.Failure(PostgreSqlSchemaDiscoveryLog.ContainerTypeWordNotMapped(logger, discoveredWord))
+            : GenericResult<IContainerType>.Success(option);
+    }
 
     /// <summary>
     /// Maps a PostgreSQL data type name to a CLR type.

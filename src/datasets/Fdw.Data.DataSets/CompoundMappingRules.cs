@@ -32,6 +32,10 @@ public static class CompoundMappingRules
         if (sources.IsFailure)
             return sources;
 
+        // A union reads every field from every source, which SourceCombinationRules has checked, and has no joins (FDW-6946).
+        if (SourceCombinationRules.IsUnion(dataSet))
+            return GenericResult.Success();
+
         var fields = Fields(dataSet, logger);
         return fields.IsFailure ? fields : Joins(dataSet, logger);
     }

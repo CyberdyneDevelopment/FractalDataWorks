@@ -21,7 +21,7 @@ internal static class PipelineRunRequestJson
 
     internal sealed record RequestRecord(
         Guid ExecutionId, Guid PipelineId, string PipelineName, string TriggerSource, string? ScheduleName, Guid? ScheduleId, Guid? TenantId,
-        IReadOnlyList<string> RunRoles, int? TestRowsPerSource, IReadOnlyList<ValueRecord>? Values, int? TimeoutSeconds);
+        IReadOnlyList<string> RunRoles, int? TestRowsPerSource, IReadOnlyList<ValueRecord>? Values, int? TimeoutSeconds, Guid? PersonId, Guid? ContinuesRun);
 
     internal sealed record ValueRecord(string Name, string? Type, bool IsList, JsonElement? Value);
 
@@ -49,7 +49,7 @@ internal static class PipelineRunRequestJson
 
         return GenericResult<string>.Success(JsonSerializer.Serialize(new RequestRecord(
             request.ExecutionId, request.PipelineId, request.PipelineName, request.TriggerSource, request.ScheduleName, request.ScheduleId, request.TenantId,
-            [.. request.RunRoles], request.TestRowsPerSource, values, request.TimeoutSeconds)));
+            [.. request.RunRoles], request.TestRowsPerSource, values, request.TimeoutSeconds, request.PersonId, request.ContinuesRun)));
     }
 
     /// <summary>Reads a request written by <see cref="Write"/>.</summary>
@@ -103,7 +103,9 @@ internal static class PipelineRunRequestJson
             Parameters = values,
             TestRowsPerSource = record.TestRowsPerSource,
             TimeoutSeconds = record.TimeoutSeconds,
-            HeldUntil = heldUntil
+            HeldUntil = heldUntil,
+            PersonId = record.PersonId,
+            ContinuesRun = record.ContinuesRun
         });
     }
 

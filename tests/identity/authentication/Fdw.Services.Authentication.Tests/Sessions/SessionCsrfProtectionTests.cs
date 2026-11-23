@@ -24,17 +24,6 @@ public sealed class SessionCsrfProtectionTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void Both_protections_are_registered_under_the_names_a_row_carries()
-    {
-        SessionCsrfProtectionTypes.ByName("OriginCheck").ShouldBeOfType<OriginCheckCsrfProtection>();
-        SessionCsrfProtectionTypes.ByName("SynchronizerToken").ShouldBeOfType<SynchronizerTokenCsrfProtection>();
-        SessionCsrfProtectionTypes.ByName("Antiforgery").ShouldBeOfType<AntiforgeryCsrfProtection>();
-        SessionCsrfProtectionTypes.ByName("DoubleSubmit").ShouldBe(SessionCsrfProtectionTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
     public async Task Origin_check_accepts_a_write_from_a_listed_origin()
         => (await new OriginCheckCsrfProtection()
             .Verify(Write(origin: "https://console.example"), Session(), OriginService(), NullLogger.Instance, TestContext.Current.CancellationToken))

@@ -28,6 +28,12 @@ internal sealed class FlowChannelInput : IFlowInput
         {
             if (_state.Reader.TryRead(out var batch))
             {
+                // A batch leaves the queue when it is taken; one no output stamped was never counted in it (FDW-5230).
+                if (batch.Bytes is { } bytes)
+                {
+                    _state.Dequeue(bytes);
+                }
+
                 return batch;
             }
         }

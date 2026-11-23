@@ -21,6 +21,10 @@ namespace Fdw.Web.RestEndpoints.Models;
 /// <see cref="Total"/> was asked for it, and the property is left out of the response otherwise: an
 /// absent total means not asked, where a zero would say the list is empty.
 /// </para>
+/// <para>
+/// A page whose request asked for something to be left out (<c>?description=false</c> on the data set list) says what it left out in <see cref="LeftOut"/>, so a client
+/// can tell a member left out from a member that has none. The property is left out of the response when nothing was asked to be left out (FDW-6124).
+/// </para>
 /// </remarks>
 public sealed class StreamedPageResponse<T>
 {
@@ -33,12 +37,15 @@ public sealed class StreamedPageResponse<T>
     /// <param name="items">The page's items, produced as they are written.</param>
     /// <param name="error">Reads how producing the items ended; asked only after they are written.</param>
     /// <param name="total">How many items the query selects in all, or <see langword="null"/> when the caller did not ask.</param>
-    public StreamedPageResponse(int skip, int take, bool hasMore, IAsyncEnumerable<T> items, Func<ProblemDetails?> error, int? total = null)
+    /// <param name="leftOut">The names of the members of each item the request asked to leave out, or <see langword="null"/> when it asked for none.</param>
+    public StreamedPageResponse(
+        int skip, int take, bool hasMore, IAsyncEnumerable<T> items, Func<ProblemDetails?> error, int? total = null, IReadOnlyList<string>? leftOut = null)
     {
         Skip = skip;
         Take = take;
         HasMore = hasMore;
         Total = total;
+        LeftOut = leftOut;
         Items = items;
         _error = error;
     }
@@ -60,11 +67,16 @@ public sealed class StreamedPageResponse<T>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Total { get; }
 
-    /// <summary>Gets the page's items.</summary>
+    /// <summary>Gets the names of the members of each item the request asked to leave out, or nothing when it asked for none.</summary>
     [JsonPropertyOrder(4)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? LeftOut { get; }
+
+    /// <summary>Gets the page's items.</summary>
+    [JsonPropertyOrder(5)]
     public IAsyncEnumerable<T> Items { get; }
 
     /// <summary>Gets why the page ended before its last item, or nothing when every item was produced.</summary>
-    [JsonPropertyOrder(5)]
+    [JsonPropertyOrder(6)]
     public ProblemDetails? Error => _error();
 }

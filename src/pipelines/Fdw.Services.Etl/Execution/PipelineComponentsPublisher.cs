@@ -88,12 +88,19 @@ public sealed class PipelineComponentsPublisher : BackgroundService
             return;
         }
 
+        // The figures are read once, at one time, so the run's totals and its components and links agree (FDW-5232).
+        var memory = FlowLiveResponses.Memory(components, links);
         var update = new PipelineComponentsUpdate
         {
             PipelineName = entry.Run.PipelineName,
             ExecutionId = executionId,
-            Components = FlowLiveResponses.Components(components),
+            Components = FlowLiveResponses.Components(components, links),
             Links = FlowLiveResponses.Links(links),
+            SampledAt = DateTimeOffset.UtcNow,
+            QueuedBytes = memory.QueuedBytes,
+            HeldBytes = memory.HeldBytes,
+            TotalBytes = memory.TotalBytes,
+            BytesMeasure = FlowLiveResponses.EstimatedValueBytes,
         };
         var fingerprint = JsonSerializer.Serialize(new { update.Components, update.Links });
         if (sent.TryGetValue(executionId, out var last) && string.Equals(last, fingerprint, StringComparison.Ordinal))

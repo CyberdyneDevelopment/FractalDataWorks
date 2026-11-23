@@ -36,16 +36,9 @@ public static class InMemoryQuery
     /// <param name="node">The filter node.</param>
     /// <returns>True when the row satisfies it.</returns>
     public static bool Matches(IReadOnlyDictionary<string, object?> row, IFilterNode node)
-        => node switch
-        {
-            FilterGroup group => ReferenceEquals(group.Operator, LogicalOperator.Or)
-                ? group.Nodes.Any(child => Matches(row, child))
-                : group.Nodes.All(child => Matches(row, child)),
-            FilterCondition condition => Satisfies(row, condition),
-            _ => throw new InvalidOperationException($"A filter node of type '{node.GetType().Name}' reached the in-memory reader; the query translator builds only groups and conditions."),
-        };
+        => FilterNodeKinds.Matches(node, condition => Satisfies(row, condition));
 
-    private static bool Satisfies(IReadOnlyDictionary<string, object?> row, FilterCondition condition)
+    private static bool Satisfies(IReadOnlyDictionary<string, object?> row, IFilterCondition condition)
     {
         if (condition.Operator is not FilterOperatorBase op)
             throw new InvalidOperationException($"Operator '{condition.Operator.Name}' cannot be applied in memory; only registered filter operators can.");

@@ -21,13 +21,11 @@ namespace Fdw.Services.Authorization;
 /// <remarks>
 /// The view applies the version predicates of every table it joins, so the rows are read as they are and no current-row filter is added.
 /// The person's id is asked for in both spellings of a Guid, since the text may have been written in either, and each row is then
-/// compared as the Guid it is (FDW-532). A person whose roles grant more than <see cref="MaxRows"/> rows fails the read.
+/// compared as the Guid it is (FDW-532). A person whose roles grant more rows than the configured most (FDW-7103: the option's declared <c>MaxGrantRows</c>, changed at registration or stated
+/// under <c>Authorization:Default</c>) fails the read.
 /// </remarks>
 public sealed class UserPermissionGrants : IUserPermissionGrants
 {
-    /// <summary>The most rows one person's grants may hold for a read to answer.</summary>
-    public const int MaxRows = 20000;
-
     private static readonly string[] ByRoleThenPermission = ["RoleName", "PermissionName"];
 
     // The tables the view authz.UserPermissionGrant is made of. A role given or taken away, or a role's permissions changed, is a write to one
@@ -40,14 +38,17 @@ public sealed class UserPermissionGrants : IUserPermissionGrants
 
     private readonly ConfigurationRowReader _rows;
     private readonly ILogger<UserPermissionGrants> _logger;
+    private readonly int _maxRows;
 
     /// <summary>Initializes a new instance of the <see cref="UserPermissionGrants"/> class.</summary>
     /// <param name="gateways">Reaches the configuration store.</param>
     /// <param name="dataStoreName">The data store the view is in.</param>
     /// <param name="pathName">The path of the authorization tables and views.</param>
+    /// <param name="maxRows">The most rows one person's grants may hold for a read to answer, as the authorization option's registration resolved it.</param>
     /// <param name="logger">The logger.</param>
-    public UserPermissionGrants(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, ILogger<UserPermissionGrants>? logger)
+    public UserPermissionGrants(IConfigurationGatewayProvider gateways, string dataStoreName, string pathName, int maxRows, ILogger<UserPermissionGrants>? logger)
     {
+        _maxRows = maxRows;
         _logger = logger ?? NullLogger<UserPermissionGrants>.Instance;
         _rows = new ConfigurationRowReader(gateways, dataStoreName, pathName, "UserPermissionGrant", _logger, ViewTables);
     }
@@ -62,15 +63,15 @@ public sealed class UserPermissionGrants : IUserPermissionGrants
                 Operator = FilterOperators.ByName("In"),
                 Value = new List<object> { userId.ToString("D").ToLowerInvariant(), userId.ToString("D").ToUpperInvariant() },
             },
-            ByRoleThenPermission, 0, MaxRows + 1, false, cancellationToken).ConfigureAwait(false);
+            ByRoleThenPermission, 0, _maxRows + 1, false, cancellationToken).ConfigureAwait(false);
         if (asked.IsFailure)
         {
             return asked.ToNewResult<IReadOnlyList<UserPermissionGrant>>();
         }
 
-        if (asked.Value!.Count > MaxRows)
+        if (asked.Value!.Count > _maxRows)
         {
-            return GenericResult<IReadOnlyList<UserPermissionGrant>>.Failure(UserPermissionGrantsLog.TooManyRows(_logger, userId.ToString("D"), MaxRows));
+            return GenericResult<IReadOnlyList<UserPermissionGrant>>.Failure(UserPermissionGrantsLog.TooManyRows(_logger, userId.ToString("D"), _maxRows));
         }
 
         try

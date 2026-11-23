@@ -78,13 +78,11 @@ public sealed class AddDurationToFieldFieldTransformer : FieldTransformationBase
 
         var duration = ResolveDuration(context.Parameters);
 
-        return Task.FromResult<IGenericResult<object?>>(sourceValue switch
-        {
-            DateTimeOffset dto => GenericResult<object?>.Success(dto.Add(duration)),
-            DateTime dt => GenericResult<object?>.Success(dt.Add(duration)),
-            _ => throw new InvalidOperationException(
+        var target = DurationTargetKinds.OfValue(sourceValue);
+        return Task.FromResult<IGenericResult<object?>>(ReferenceEquals(target, DurationTargetKinds.NotFound)
+            ? throw new InvalidOperationException(
                 $"AddDurationToField source field '{sourceField}' has type '{sourceValue.GetType().Name}'. Expected DateTime or DateTimeOffset.")
-        });
+            : GenericResult<object?>.Success(target.Add(sourceValue, duration)));
     }
 
     private static TimeSpan ResolveDuration(IReadOnlyDictionary<string, string> parameters)

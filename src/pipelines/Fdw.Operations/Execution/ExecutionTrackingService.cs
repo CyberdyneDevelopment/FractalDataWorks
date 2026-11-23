@@ -311,6 +311,15 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
 
         var item = itemResult.Value!;
+
+        // Why nothing is written to an item that has already ended (FDW-6986): its result is the first end's. Writing the code and the message before the transition is refused would leave a state
+        // that says one thing and a reason that says another, and a run's second end (a run cut off after the recovery of half-done runs closed it) must not do that.
+        var ended = ExecutionStateTypes.ByName(item.State);
+        if (ended.IsTerminal)
+        {
+            return GenericResult.Failure(OperationsLog.ExecutionItemAlreadyCompleted(_logger, executionItemId, ended.Name));
+        }
+
         item.ResultCode = resultCode;
         item.ResultMessage = resultMessage;
 
@@ -972,7 +981,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                 return;
             }
 
-            var rulesResult = await _notificationRuleProvider.Get(cancellationToken).ConfigureAwait(false);
+            var rulesResult = await _notificationRuleProvider.Get(ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
             if (!rulesResult.IsSuccess)
             {
                 OperationsLog.NotificationRulesLoadFailed(_logger, item.Id);

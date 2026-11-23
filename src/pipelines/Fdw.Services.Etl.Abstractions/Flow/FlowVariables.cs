@@ -45,20 +45,43 @@ public sealed class FlowVariables
     /// <param name="name">The name; not already declared in this scope.</param>
     /// <param name="value">The starting value.</param>
     /// <exception cref="InvalidOperationException">The name is already declared in this scope.</exception>
-    public void Declare(string name, object? value) => Add(name, new Entry(value, false, false));
+    public void Declare(string name, object? value) => Add(name, new Entry(value, false, false, null));
+
+    /// <summary>Declares a variable in this scope with the data type its graph states for it (FDW-6136), so a step that sets it from a value of another type can refuse.</summary>
+    /// <param name="name">The name; not already declared in this scope.</param>
+    /// <param name="value">The starting value.</param>
+    /// <param name="dataType">The <c>DataTypes</c> option name the variable is declared with.</param>
+    /// <exception cref="InvalidOperationException">The name is already declared in this scope.</exception>
+    public void Declare(string name, object? value, string dataType) => Add(name, new Entry(value, false, false, dataType));
+
+    /// <summary>Reads the data type a name was declared with.</summary>
+    /// <param name="name">The name.</param>
+    /// <returns>The <c>DataTypes</c> option name; <see langword="null"/> for a name nobody declared with a type, such as a run parameter or a variable declared without one.</returns>
+    public string? TypeOf(string name)
+    {
+        lock (_gate)
+        {
+            if (_values.TryGetValue(name, out var entry))
+            {
+                return entry.DataType;
+            }
+        }
+
+        return _parent?.TypeOf(name);
+    }
 
     /// <summary>Declares a parameter in this scope with the value the run was started with.</summary>
     /// <param name="name">The name; not already declared in this scope.</param>
     /// <param name="value">The value the run supplied.</param>
     /// <param name="isReadOnly">Whether a set on the parameter is refused.</param>
     /// <exception cref="InvalidOperationException">The name is already declared in this scope.</exception>
-    public void DeclareParameter(string name, object? value, bool isReadOnly) => Add(name, new Entry(value, isReadOnly, false));
+    public void DeclareParameter(string name, object? value, bool isReadOnly) => Add(name, new Entry(value, isReadOnly, false, null));
 
     /// <summary>Declares a parameter the run left blank: in scope, with no value.</summary>
     /// <param name="name">The name; not already declared in this scope.</param>
     /// <param name="isReadOnly">Whether a set on the parameter is refused; a blank read-only parameter stays blank.</param>
     /// <exception cref="InvalidOperationException">The name is already declared in this scope.</exception>
-    public void DeclareBlankParameter(string name, bool isReadOnly) => Add(name, new Entry(null, isReadOnly, true));
+    public void DeclareBlankParameter(string name, bool isReadOnly) => Add(name, new Entry(null, isReadOnly, true, null));
 
     /// <summary>Reads a name from this scope or a parent.</summary>
     /// <param name="name">The name.</param>
@@ -147,7 +170,7 @@ public sealed class FlowVariables
                     return false;
                 }
 
-                _values[name] = new Entry(value, false, false);
+                _values[name] = new Entry(value, false, false, entry.DataType);
                 return true;
             }
         }
@@ -191,12 +214,15 @@ public sealed class FlowVariables
 
     private sealed class Entry
     {
-        internal Entry(object? value, bool isReadOnly, bool isBlank)
+        internal Entry(object? value, bool isReadOnly, bool isBlank, string? dataType)
         {
+            DataType = dataType;
             Value = value;
             IsReadOnly = isReadOnly;
             IsBlank = isBlank;
         }
+
+        internal string? DataType { get; }
 
         internal object? Value { get; }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Collections;
 using System.Linq;
@@ -32,6 +33,10 @@ public sealed partial class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBa
         : base("Insert")
     {
     }
+
+    /// <inheritdoc />
+    /// <remarks>Read from what this translator emits: an INSERT.</remarks>
+    public override IReadOnlyList<string> Operations => ["Insert"];
 
     /// <inheritdoc/>
     public override Task<IGenericResult<SqlCommand>> Translate(

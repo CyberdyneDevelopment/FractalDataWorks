@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Results;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
@@ -37,7 +38,7 @@ public sealed class OrchestrationNodeOrchestratorBroadcastTests
         };
         var nodes = new Mock<IOrchestrationNodeConfigurationProvider>();
         nodes
-            .Setup(n => n.Get(Node, It.IsAny<CancellationToken>()))
+            .Setup(n => n.Get(Node,ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IOrchestrationNodeImplementationConfiguration>.Success(root));
         var policy = new ExecutionPolicySnapshot("ContinueStage", "ContinueProject", 1, false, false, false, null);
         var resolver = new Mock<IEffectivePolicyResolver>();
@@ -60,7 +61,7 @@ public sealed class OrchestrationNodeOrchestratorBroadcastTests
         configuration.SetupGet(c => c.OrgId).Returns(pipelineOrg);
         var pipelines = new Mock<IPipelineConfigurationProvider>();
         pipelines
-            .Setup(p => p.Get(Pipeline, It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(Pipeline,ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(configuration.Object));
         var broadcaster = new Mock<IPipelineStatusBroadcaster>();
 

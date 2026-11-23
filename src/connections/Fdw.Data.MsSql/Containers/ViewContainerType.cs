@@ -8,7 +8,7 @@ namespace Fdw.Data.MsSql;
 /// Container type for SQL Server views.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(ContainerTypes), "View", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ContainerTypes), "View")]
 public sealed class ViewContainerType : ContainerTypeBase
 {
     /// <summary>
@@ -19,7 +19,8 @@ public sealed class ViewContainerType : ContainerTypeBase
             name: "View",
             displayName: "SQL View",
             description: "SQL Server view container with schema discovery support",
-            supportsSchemaDiscovery: true)
+            supportsSchemaDiscovery: true,
+            supportedOperations: ["Query"])
     {
     }
 }

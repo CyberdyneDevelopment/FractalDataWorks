@@ -35,7 +35,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `MutableOrgContext` | class | Request-scoped org context implementation. Registered as a scoped service; OrgResolutionMiddleware calls… |
 | `MutableTenantContext` | class | Request-scoped tenant context implementation. |
 | `NullOrganizationProvider` | class | Null-object implementation of . Registered when multitenancy is disabled. All queries return failure so… |
-| `NullTenantProvider` | class | Null-object implementation of , registered by the SingleTenant multitenancy option. All operations… |
+| `NullTenantProvider` | class | Null-object implementation of the tenant provider: every operation fails with a coded "not available". Nothing that ships registers it (FDW-6528). |
 | `OrganizationConfiguration` | class | Configuration for an organization within a tenant. Maps to tenant.Organization. Each tenant has one or… |
 | `SetDefaultTenantResponse` | class | Response confirming the new default tenant. |
 | `SwitchTenantRequest` | class | Request to switch the current user's active tenant. |

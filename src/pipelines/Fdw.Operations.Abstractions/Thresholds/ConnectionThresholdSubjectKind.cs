@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Operations.Abstractions.Thresholds;
 
@@ -13,4 +14,7 @@ public sealed class ConnectionThresholdSubjectKind : ThresholdSubjectKindBase
         : base("Connection", "A connection", "conn", "ConnectionThreshold")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.EnforcedByDatabase("FK_ConnectionThreshold_Connection");
 }

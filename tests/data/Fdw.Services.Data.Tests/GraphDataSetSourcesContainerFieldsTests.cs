@@ -23,7 +23,7 @@ public sealed class GraphDataSetSourcesContainerFieldsTests
         store.SetupGet(s => s.Paths).Returns(paths.ToList());
         var provider = new Mock<IDataStoreConfigurationProvider>();
         provider
-            .Setup(p => p.Get("Crm", It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get("Crm", It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDataStoreImplementationConfiguration>.Success(store.Object));
         return provider;
     }
@@ -57,6 +57,7 @@ public sealed class GraphDataSetSourcesContainerFieldsTests
             p => p.Get(
                 "Crm", ConfigurationLevels.WholeAggregate,
                 It.Is<ChildNarrowing>(n => n.ChildType == typeof(DataContainerConfiguration) && n.Property == "Name" && n.Values.Count == 1 && n.Values[0] == "customers"),
+                It.Is<ConfigurationReadOptions>(o => !o.FillsMembers),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -128,7 +129,7 @@ public sealed class GraphDataSetSourcesContainerFieldsTests
     {
         var stores = new Mock<IDataStoreConfigurationProvider>();
         stores
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDataStoreImplementationConfiguration>.Success(default!));
 
         var answer = await Over(stores).ContainerFields("src", "Crm", null, "Customers", NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -144,7 +145,7 @@ public sealed class GraphDataSetSourcesContainerFieldsTests
     {
         var stores = new Mock<IDataStoreConfigurationProvider>();
         stores
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<ChildNarrowing>(), It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDataStoreImplementationConfiguration>.Failure(
                 DataServiceResultCodes.ByName("GraphDataSetContainerNotFound"), NullLogger.Instance, ResultDetails.Create("component", "src", "dataSet", "Crm", "container", "Customers").With("dataStore", "Crm")));
 

@@ -171,4 +171,39 @@ public sealed class SlotRoleTests : IDisposable
         Codes(created).ShouldContain("DATA-61110");
         Text(created).ShouldContain(missing);
     }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Slots")]
+    public void TheSlotNameIsTheSlotFilesOwnValueAsWritten()
+    {
+        var roleFile = RoleFile("live");
+        OnSlot($$"""{ "slot": "a", "role_file": "{{roleFile.Replace("\\", "\\\\", StringComparison.Ordinal)}}" }""");
+
+        var created = SlotRole.Create(NullLogger.Instance);
+
+        created.IsSuccess.ShouldBeTrue();
+        created.Value.ShouldNotBeNull().SlotName.ShouldBe("a");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Slots")]
+    public void ASlotFileThatStatesNoSlotGivesNoSlotName()
+    {
+        var gate = GateFor("live");
+
+        gate.SlotName.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Slots")]
+    public void AHostThatIsNotOnASlotHasNoSlotName()
+    {
+        var created = SlotRole.Create(NullLogger.Instance);
+
+        created.IsSuccess.ShouldBeTrue();
+        created.Value.ShouldNotBeNull().SlotName.ShouldBeNull();
+    }
 }

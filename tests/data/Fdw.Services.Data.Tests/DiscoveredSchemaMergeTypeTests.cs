@@ -126,6 +126,7 @@ public sealed class DiscoveredSchemaMergeTypeTests
         source.SetupGet(s => s.Format).Returns(format.Object);
         source.SetupGet(s => s.Path).Returns(path.Object);
         source.SetupGet(s => s.Schema).Returns(schema.Object);
+        source.SetupGet(s => s.Keys).Returns(new List<IContainerKey>());
         return source.Object;
     }
 }

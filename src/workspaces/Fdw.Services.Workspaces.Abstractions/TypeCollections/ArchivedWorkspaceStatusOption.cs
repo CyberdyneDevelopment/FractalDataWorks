@@ -9,7 +9,7 @@ namespace Fdw.Services.Workspaces.Abstractions;
 public sealed class ArchivedWorkspaceStatusOption : WorkspaceStatusBase
 {
     /// <summary>Initializes a new instance of the <see cref="ArchivedWorkspaceStatusOption"/> class.</summary>
-    public ArchivedWorkspaceStatusOption() : base("Archived")
+    public ArchivedWorkspaceStatusOption() : base("Archived", isClosed: true)
     {
     }
 }

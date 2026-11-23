@@ -29,7 +29,7 @@ public static class FilterValueComparer
             return left is null && right is null;
         }
 
-        if (TryAsDecimal(left, out var l) && TryAsDecimal(right, out var r))
+        if (FilterNumberKinds.Read(left) is { } l && FilterNumberKinds.Read(right) is { } r)
         {
             return l == r;
         }
@@ -50,12 +50,12 @@ public static class FilterValueComparer
             return 0;
         }
 
-        if (TryAsDecimal(left, out var l) && TryAsDecimal(right, out var r))
+        if (FilterNumberKinds.Read(left) is { } l && FilterNumberKinds.Read(right) is { } r)
         {
             return l.CompareTo(r);
         }
 
-        if (TryAsDateTimeOffset(left, out var ld) && TryAsDateTimeOffset(right, out var rd))
+        if (FilterMomentKinds.Read(left) is { } ld && FilterMomentKinds.Read(right) is { } rd)
         {
             return ld.CompareTo(rd);
         }
@@ -89,40 +89,5 @@ public static class FilterValueComparer
     }
 
     /// <summary>The value as text, invariant, never null.</summary>
-    public static string AsText(object? value) =>
-        value switch
-        {
-            null => string.Empty,
-            string s => s,
-            IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
-            _ => value.ToString() ?? string.Empty,
-        };
-
-    private static bool TryAsDecimal(object value, out decimal result)
-    {
-        switch (value)
-        {
-            case decimal d: result = d; return true;
-            case int or long or short or byte or sbyte or uint or ulong or ushort:
-                result = Convert.ToDecimal(value, CultureInfo.InvariantCulture); return true;
-            case double or float:
-                result = Convert.ToDecimal(value, CultureInfo.InvariantCulture); return true;
-            case string s:
-                return decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out result);
-            default: result = 0; return false;
-        }
-    }
-
-    private static bool TryAsDateTimeOffset(object value, out DateTimeOffset result)
-    {
-        switch (value)
-        {
-            case DateTimeOffset dto: result = dto; return true;
-            case DateTime dt: result = new DateTimeOffset(dt); return true;
-            case DateOnly d: result = new DateTimeOffset(d.ToDateTime(TimeOnly.MinValue)); return true;
-            case string s:
-                return DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
-            default: result = default; return false;
-        }
-    }
+    public static string AsText(object? value) => FilterTextKinds.Of(value);
 }

@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\tags\Fdw.Services.Tags\Fdw.Services.Tags.csproj" />
     <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\..\src\tags\Fdw.Services.Tags.Endpoints\Fdw.Services.Tags.Endpoints.csproj" />
   </ItemGroup>
 
 </Project>

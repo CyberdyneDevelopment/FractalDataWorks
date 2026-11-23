@@ -21,4 +21,10 @@ public static class DataSetDeclaredDefaults
 
     /// <summary>The key of a data set's cache key pattern, when its caching block does not say.</summary>
     public const string CachingKeyPattern = "Caching.KeyPattern";
+
+    /// <summary>
+    /// The key of the federation strategy a Federated or Graph data set that states none reads under (FDW-6806, FDW-6901), declared on the
+    /// Federated kind; the host's configuration states it at <c>DataStores:Federation:DefaultStrategy</c>.
+    /// </summary>
+    public const string FederationDefaultStrategy = "Federation:DefaultStrategy";
 }

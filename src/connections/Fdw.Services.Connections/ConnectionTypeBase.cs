@@ -21,6 +21,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Abstractions.Authentication;
 using Fdw.Services.Connections.Logging;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Validation;
 
 namespace Fdw.Services.Connections;
@@ -126,6 +127,46 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
 
     /// <inheritdoc/>
     /// <remarks>
+    /// The empty kind the collection returns for a name nobody registered is refused first: its members are stubbed with <see langword="default"/>, so
+    /// calling the hook on it would be a <see cref="NullReferenceException"/> and not an answer. A factory that is not this kind's is refused naming both. The rest is the kind's own, in
+    /// <see cref="BuildImplementationProvider"/>, which every kind states and none inherits.
+    /// </remarks>
+    public IGenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> ImplementationProvider(
+        IConnectionFactory factory, ISecretManagerProvider secretManagers, ILoggerFactory? loggerFactory)
+    {
+        if (ReferenceEquals(this, ConnectionTypes.NotFound))
+        {
+            return GenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>.Failure(
+                Results.ConnectionsResultCodes.ByName("ConnectionKindNotRegistered"),
+                ResultDetails.Create("connectionType", Name));
+        }
+
+        if (factory is not TFactory typed)
+        {
+            return GenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>.Failure(
+                Results.ConnectionsResultCodes.ByName("ConnectionFactoryOfAnotherKind"),
+                ResultDetails.Create(
+                    "connectionType", Name,
+                    "expectedFactory", typeof(TFactory).Name,
+                    "givenFactory", factory.GetType().Name));
+        }
+
+        return BuildImplementationProvider(typed, secretManagers, loggerFactory);
+    }
+
+    /// <summary>
+    /// Builds the provider of this kind that turns a connection's configuration into a connection.
+    /// </summary>
+    /// <param name="factory">The kind's own factory.</param>
+    /// <param name="secretManagers">The provider the kind's provider reads a connection's secret from.</param>
+    /// <param name="loggerFactory">Where the provider logs its refusals; nothing is logged when it is absent.</param>
+    /// <returns>The provider, or the coded failure that says why this kind cannot build one.</returns>
+    /// <remarks>Abstract so every kind states it: a kind that forgot cannot build a provider that reads no secret and is taken for one that does.</remarks>
+    protected abstract IGenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> BuildImplementationProvider(
+        TFactory factory, ISecretManagerProvider secretManagers, ILoggerFactory? loggerFactory);
+
+    /// <inheritdoc/>
+    /// <remarks>
     /// Why this refuses: a kind that says nothing offers no DDL dialect, and the answer is the coded refusal
     /// <c>DdlDialectNotOffered</c> naming the kind, not another engine's text (FDW-5959). A kind that has a generator for its
     /// engine overrides this and returns it, so the engine's text stays in the connection implementation.
@@ -183,6 +224,23 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
 
     /// <inheritdoc/>
     /// <remarks>
+    /// Narrows to this kind's own configuration and asks <see cref="DecideReadsStoredSecret"/>. A configuration of another kind cannot be
+    /// answered for, so it is refused rather than read as "reads none".
+    /// </remarks>
+    public IGenericResult<bool> ReadsStoredSecret(IConnectionImplementationConfiguration configuration)
+    {
+        if (configuration is TConfiguration typed)
+            return DecideReadsStoredSecret(typed);
+
+        return GenericResult<bool>.Failure(
+            Results.ConnectionsResultCodes.ByName("CredentialsUndetermined"),
+            ResultDetails.Create(
+                "name", configuration.Name,
+                "reason", $"its configuration is not a {typeof(TConfiguration).Name}, which connection type '{Name}' reads"));
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
     /// Narrows to this kind's own configuration and asks <see cref="BindCredentialReferences"/>; a configuration of
     /// another kind is refused.
     /// </remarks>
@@ -212,6 +270,21 @@ public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     /// for its <c>CredentialFields</c>; a kind with none answers <see cref="ConnectionCredentialSlots.None"/>.
     /// </remarks>
     protected abstract IGenericResult<ConnectionCredentialSlots> DescribeCredentials(TConfiguration configuration);
+
+    /// <summary>
+    /// Says whether a connection of this kind, configured as <paramref name="configuration"/>, reads a stored secret.
+    /// </summary>
+    /// <param name="configuration">The connection's configuration, already this kind's own.</param>
+    /// <returns>
+    /// Whether the authentication method it names has a secret credential. A connection that names no method answers
+    /// <see langword="false"/> here and is still refused by <see cref="DescribeCredentials"/>; a method the kind does not know is a
+    /// <c>CredentialsUndetermined</c> failure.
+    /// </returns>
+    /// <remarks>
+    /// Abstract so every kind states it, as it states <see cref="DecideHostIdentity"/>: a kind with no authentication methods answers
+    /// <see langword="false"/>, and a kind with some asks the method its configuration names (FDW-6387).
+    /// </remarks>
+    protected abstract IGenericResult<bool> DecideReadsStoredSecret(TConfiguration configuration);
 
     /// <summary>
     /// Points a connection of this kind at the secrets the server stored for its credential fields.

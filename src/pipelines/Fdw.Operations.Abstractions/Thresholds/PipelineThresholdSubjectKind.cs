@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Operations.Abstractions.Thresholds;
 
@@ -13,4 +14,7 @@ public sealed class PipelineThresholdSubjectKind : ThresholdSubjectKindBase
         : base("Pipeline", "A pipeline", "pipe", "PipelineThreshold")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.EnforcedByDatabase("FK_PipelineThreshold_Pipeline");
 }

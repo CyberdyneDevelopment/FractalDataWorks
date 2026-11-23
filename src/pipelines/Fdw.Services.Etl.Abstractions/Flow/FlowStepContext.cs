@@ -34,6 +34,8 @@ public sealed class FlowStepContext
     /// <param name="reporter">Records how the steps went; null when the run is untracked, which records nothing.</param>
     /// <param name="reportParent">The stage record a step started now is recorded under; null for a step of the run itself.</param>
     /// <param name="pauseGate">The gate a step waits at while its run is paused; null for a run nobody can pause.</param>
+    /// <param name="stepLimit">The limit a step is taken from before it runs; null for a run that states none.</param>
+    /// <param name="stream">Keeps the pieces the run gives its person (FDW-6140); null for a run that keeps none, which writes none.</param>
     public FlowStepContext(
         FlowVariables variables,
         IFlowExecutor executor,
@@ -42,7 +44,9 @@ public sealed class FlowStepContext
         FlowRunIdentity? identity,
         IFlowReporter? reporter,
         Guid? reportParent,
-        IFlowPauseGate? pauseGate = null)
+        IFlowPauseGate? pauseGate = null,
+        IFlowStepLimit? stepLimit = null,
+        IRunStream? stream = null)
     {
         Variables = variables;
         Executor = executor;
@@ -52,7 +56,12 @@ public sealed class FlowStepContext
         Reporter = reporter;
         ReportParent = reportParent;
         PauseGate = pauseGate;
+        StepLimit = stepLimit;
+        Stream = stream;
     }
+
+    /// <summary>Gets what keeps the pieces the run gives its person (FDW-6140); null when the run keeps none.</summary>
+    public IRunStream? Stream { get; }
 
     /// <summary>Gets the variables in scope.</summary>
     public FlowVariables Variables { get; }
@@ -78,12 +87,15 @@ public sealed class FlowStepContext
     /// <summary>Gets the gate a step waits at while its run is paused; empty for a run nobody can pause (a test run, a pipeline started in a step's own scope).</summary>
     public IFlowPauseGate? PauseGate { get; }
 
+    /// <summary>Gets the limit a step is taken from before it runs; empty for a run that states none (FDW-6141).</summary>
+    public IFlowStepLimit? StepLimit { get; }
+
     /// <summary>Makes the context a nested scope sees: the same run with a child variable scope.</summary>
     /// <returns>The child context.</returns>
-    public FlowStepContext CreateChild() => new(Variables.CreateChild(), Executor, Options, Starter, Identity, Reporter, ReportParent, PauseGate);
+    public FlowStepContext CreateChild() => new(Variables.CreateChild(), Executor, Options, Starter, Identity, Reporter, ReportParent, PauseGate, StepLimit);
 
     /// <summary>Makes the context the steps inside a step see: the same scope, recorded under that step's stage.</summary>
     /// <param name="stage">The stage record of the step.</param>
     /// <returns>The context for the step and the steps inside it.</returns>
-    public FlowStepContext WithReportParent(Guid stage) => new(Variables, Executor, Options, Starter, Identity, Reporter, stage, PauseGate);
+    public FlowStepContext WithReportParent(Guid stage) => new(Variables, Executor, Options, Starter, Identity, Reporter, stage, PauseGate, StepLimit, Stream);
 }

@@ -21,5 +21,6 @@ public interface IMessagingImplementationConfiguration : IImplementationConfigur
     string? PathName { get; set; }
 
     /// <summary>Gets or sets the human-readable description.</summary>
+    /// <remarks>Filled by the provider from the descriptions table and written there on a save (FDW-7203); never persisted on <c>msg.MessagingConfiguration</c>.</remarks>
     string? Description { get; set; }
 }

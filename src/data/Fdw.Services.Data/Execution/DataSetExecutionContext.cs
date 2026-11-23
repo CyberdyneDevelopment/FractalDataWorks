@@ -29,6 +29,7 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
     /// <param name="logger">Logger for execution diagnostics.</param>
     /// <param name="gateway">The gateway this execution runs for, which a kind that reads other data sets through it needs (optional).</param>
     /// <param name="graphRunner">What runs the graph of a Graph data set (optional; a host that does not register one cannot read a Graph data set).</param>
+    /// <param name="federation">The FDW-level federation settings (optional; without them a Federated data set that states no strategy is refused).</param>
     public DataSetExecutionContext(
         IDataSetImplementationConfiguration config,
         IDataConnectionProvider connectionProvider,
@@ -37,8 +38,10 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
         FieldMappingTransformationResolver fieldTransformations,
         ILogger logger,
         IDataGateway? gateway = null,
-        IGraphDataSetRunner? graphRunner = null)
+        IGraphDataSetRunner? graphRunner = null,
+        FederationSettings? federation = null)
     {
+        Federation = federation;
         FieldTransformations = fieldTransformations;
         Config = config;
         ConnectionProvider = connectionProvider;
@@ -63,6 +66,9 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
 
     /// <summary>Gets the predicate-pushdown analyzer for logical→physical filter translation.</summary>
     public PredicatePushdownAnalyzer Pushdown { get; }
+
+    /// <summary>Gets the FDW-level federation settings, or null when the host registers none (FDW-6806).</summary>
+    public FederationSettings? Federation { get; }
 
     /// <summary>Gets the resolver for the transformation chains attached to a source's field mappings.</summary>
     public FieldMappingTransformationResolver FieldTransformations { get; }

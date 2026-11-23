@@ -50,14 +50,18 @@ public sealed class SqlConversionTarget
 
     /// <summary>Gets the type as T-SQL declares it.</summary>
     /// <returns>The declaration, such as nvarchar(50).</returns>
-    public override string ToString() => Length switch
+    public override string ToString()
     {
-        TdsColumnType.Max => $"{SqlName}(max)",
-        > 0 => string.Create(CultureInfo.InvariantCulture, $"{SqlName}({Length})"),
-        _ => DataType.HasPrecision
+        if (Length == TdsColumnType.Max)
+            return $"{SqlName}(max)";
+
+        if (Length > 0)
+            return string.Create(CultureInfo.InvariantCulture, $"{SqlName}({Length})");
+
+        return DataType.HasPrecision
             ? string.Create(CultureInfo.InvariantCulture, $"{SqlName}({Precision},{Scale})")
-            : SqlName,
-    };
+            : SqlName;
+    }
 
     /// <summary>Converts a value to this type.</summary>
     /// <param name="value">The value; null for NULL, which converts to NULL.</param>

@@ -21,6 +21,7 @@ public sealed class SecretManagerTypeBaseTests
     private sealed class TestSecretManagerType
         : SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>
     {
+        public override bool BuildableFromDeclarationAlone => false;
 
         public TestSecretManagerType(
             string[] supportedSecretStores,

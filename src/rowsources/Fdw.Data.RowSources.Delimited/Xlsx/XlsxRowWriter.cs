@@ -33,7 +33,7 @@ public sealed class XlsxRowWriter : IRowWriter
     private const string Main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     private const int MaxText = 32_767;
     private const long MaxExactInteger = 999_999_999_999_999;
-    private static readonly DateTime Epoch = new(1899, 12, 30, 0, 0, 0, DateTimeKind.Unspecified);
+    internal static readonly DateTime Epoch = new(1899, 12, 30, 0, 0, 0, DateTimeKind.Unspecified);
     private static readonly DateTime FirstDay = new(1900, 3, 1, 0, 0, 0, DateTimeKind.Unspecified);
 
     private readonly ZipArchive _archive;
@@ -255,31 +255,23 @@ public sealed class XlsxRowWriter : IRowWriter
 
     private void Moment(string reference, object value)
     {
-        var (when, style) = value switch
+        var moment = XlsxMoments.OfValue(value);
+        if (ReferenceEquals(moment, XlsxMoments.NotFound))
         {
-            DateTime moment => (moment, 2),
-            DateTimeOffset moment => (moment.UtcDateTime, 2),
-            DateOnly day => (day.ToDateTime(TimeOnly.MinValue), 3),
-            _ => (Epoch.Add(((TimeOnly)value).ToTimeSpan()), 4),
-        };
+            throw new NotSupportedException($"Cell {reference} holds a {value.GetType().FullName}, which is not a date or a time a worksheet stores as a serial number.");
+        }
+
+        var when = moment.When(value);
 
         // Why text before 1900-03-01: Excel's calendar has no 1900-02-29 and no day before 1900-01-01, so a serial there is wrong or negative.
-        if (style != 4 && when < FirstDay)
+        if (moment.HasCalendarDate && when < FirstDay)
         {
-            Text(reference, IsoText(value), 0);
+            Text(reference, moment.IsoText(value), 0);
             return;
         }
 
-        Plain(reference, null, (when - Epoch).TotalDays.ToString("R", CultureInfo.InvariantCulture), style);
+        Plain(reference, null, (when - Epoch).TotalDays.ToString("R", CultureInfo.InvariantCulture), moment.Style);
     }
-
-    private static string IsoText(object value) => value switch
-    {
-        DateTime moment => moment.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFF", CultureInfo.InvariantCulture),
-        DateTimeOffset moment => moment.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFFzzz", CultureInfo.InvariantCulture),
-        DateOnly day => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-        _ => ((TimeOnly)value).ToString("HH:mm:ss.FFFFFFF", CultureInfo.InvariantCulture),
-    };
 
     private void Number(string reference, object value)
     {

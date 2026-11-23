@@ -17,7 +17,7 @@ internal static class DataSetSampleReader
 {
     public static async Task<IGenericResult<List<DataSetSampleResponse>>> ListForDataSet(
         IDataGateway gateway, string dataStoreName, string pathName,
-        Guid dataSetImplementationId, IReadOnlyDictionary<Guid, string> fieldNamesById, CancellationToken ct)
+        Guid dataSetImplementationId, IReadOnlyDictionary<Guid, string> fieldNamesById, IReadOnlyDictionary<Guid, string> descriptionsById, CancellationToken ct)
     {
         var sampleTarget = new DataStoreTarget(dataStoreName, pathName, "DataSetSample");
         var samplesCommand = new QueryCommand<DataSetSampleConfiguration>
@@ -36,7 +36,7 @@ internal static class DataSetSampleReader
             responses.Add(new DataSetSampleResponse
             {
                 Name = sample.Name,
-                Description = sample.Description,
+                Description = descriptionsById.TryGetValue(sample.Id, out var text) ? text : null,
                 IsDefault = sample.IsDefault,
                 Rows = rows.Value!,
             });

@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\data\Fdw.Data.SourceGenerators\Fdw.Data.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\calculations\Fdw.Services.Calculations.Abstractions\Fdw.Services.Calculations.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Etl.Abstractions\Fdw.Etl.Abstractions.csproj" />
+    <ProjectReference Include="..\..\identity\authentication\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

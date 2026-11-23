@@ -8,7 +8,7 @@ namespace Fdw.Data.PostgreSql;
 /// Container type for PostgreSQL tables.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(ContainerTypes), "PostgreSqlTable", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(ContainerTypes), "PostgreSqlTable")]
 public sealed class PostgreSqlTableContainerType : ContainerTypeBase
 {
     /// <summary>
@@ -19,7 +19,8 @@ public sealed class PostgreSqlTableContainerType : ContainerTypeBase
             name: "PostgreSqlTable",
             displayName: "PostgreSQL Table",
             description: "PostgreSQL table container with schema discovery support",
-            supportsSchemaDiscovery: true)
+            supportsSchemaDiscovery: true,
+            supportedOperations: ["Query", "Insert", "Update", "Delete"])
     {
     }
 }

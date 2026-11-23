@@ -301,6 +301,23 @@ public sealed class SchemaLoaderSlotFileTests : IDisposable
     }
 
     [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Configuration")]
+    public void APlaceholderDoesNotWeakenTheRefusalOfAKeyNoClassBinds()
+    {
+        Environment.SetEnvironmentVariable(SlotFile.EnvironmentVariableName, SlotFileWith("""{ "SLOTTEST_PLATFORM": "FromFile" }"""));
+        var path = Write(
+            "unbound.json",
+            """{ "ConfigurationSchema": { "Connections": [], "ConnectionRoles": { "Platform": "${SLOTTEST_PLATFORM}", "Server": "S", "NoClassBindsThis": "x" } } }""");
+
+        var result = ConfigurationSchemaLoader.Load(path, NullLogger.Instance);
+
+        result.IsFailure.ShouldBeTrue();
+        Codes(result).ShouldContain("DATA-61147");
+        Text(result).ShouldContain("NoClassBindsThis");
+    }
+
+    [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
     public void TheLoadThatThrowsStillThrowsWithTheFailuresMessage()

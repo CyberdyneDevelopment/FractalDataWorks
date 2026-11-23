@@ -14,9 +14,12 @@ using Fdw.Operations.Abstractions.Audit;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
+using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Abstractions.DataConfigurationRules;
 using Fdw.Services.Data.Logging;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Settings;
 using Fdw.Services.Workspaces;
@@ -28,8 +31,8 @@ namespace Fdw.Services.Data.DataConfigurationRules;
 /// <summary>
 /// The data configuration rules and their values (FDW-6345), read and written in the tables the settings name, through the configuration
 /// gateway of the store that holds them. A change keeps the old version (a save that replaces the current row; a remove marks the row deleted),
-/// and every write runs in one transaction on that store: write, record in the administrative audit, then commit, so a write that cannot be
-/// recorded does not take effect. A concurrent change is last writer wins.
+/// and every write runs in one unit of work (a <see cref="ConfigurationWriteScope"/>) on that store: write, record in the administrative audit, then
+/// commit, which also drops the cached reads of the tables written, so a write that cannot be recorded does not take effect. A concurrent change is last writer wins.
 /// </summary>
 /// <remarks>
 /// Not in this service: who may change a rule (FDW-6346), that an owner, a custodian or a column exists, and the longest text a field takes.
@@ -38,6 +41,9 @@ namespace Fdw.Services.Data.DataConfigurationRules;
 public sealed class DataConfigurationRuleService : IDataConfigurationRules
 {
     private const string ItemKind = "DataConfigurationRule";
+    private const string RuleDescriptionType = DataConfigurationRuleDescriptionType.OptionName;
+    private const string ValueDescriptionType = DataConfigurationRuleValueDescriptionType.OptionName;
+    private const string DescriptionSubType = DescriptionTextSubType.OptionName;
 
     private readonly ILogger<DataConfigurationRuleService> _logger;
     private readonly IConfigurationGatewayProvider _gateways;
@@ -49,6 +55,8 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
     private readonly IWorkspaceConfigurationProvider _workspaces;
     private readonly IWorkspaceAccessPolicy _workspaceAccess;
     private readonly IDataStoreProvider _stores;
+    private readonly IDescriptionWriter _writer;
+    private readonly IDescriptionReader _reader;
 
     /// <summary>Initializes a new instance of the <see cref="DataConfigurationRuleService"/> class.</summary>
     /// <param name="logger">The logger.</param>
@@ -61,6 +69,8 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
     /// <param name="workspaces">Answers a workspace owner by id.</param>
     /// <param name="workspaceAccess">Whether the caller may view a workspace owner.</param>
     /// <param name="stores">Answers a container with the fields it declares, for the limits.</param>
+    /// <param name="writer">Writes the description of a rule and of each of its values in the unit of the write (FDW-6208).</param>
+    /// <param name="reader">Reads the descriptions of the rules and values a read has just found, once for the page (FDW-6208).</param>
     public DataConfigurationRuleService(
         ILogger<DataConfigurationRuleService>? logger,
         IConfigurationGatewayProvider gateways,
@@ -71,7 +81,9 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         IPermissionHolders holders,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy workspaceAccess,
-        IDataStoreProvider stores)
+        IDataStoreProvider stores,
+        IDescriptionWriter writer,
+        IDescriptionReader reader)
     {
         _logger = logger ?? NullLogger<DataConfigurationRuleService>.Instance;
         _gateways = gateways;
@@ -83,6 +95,8 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         _workspaces = workspaces;
         _workspaceAccess = workspaceAccess;
         _stores = stores;
+        _writer = writer;
+        _reader = reader;
     }
 
     private static readonly IReadOnlyList<string> RuleClearable = DataConfigurationRuleCatalog.Clearable(DataConfigurationRuleCatalog.RuleOwner);
@@ -337,21 +351,7 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         var written = await Write(
             tables.Value,
             "add",
-            async transaction =>
-            {
-                var saved = await Save(transaction, record, false, tables.Value.Rules, cancellationToken).ConfigureAwait(false);
-                if (!saved.IsSuccess)
-                    return saved;
-
-                foreach (var value in values)
-                {
-                    saved = await Save(transaction, value, false, tables.Value.Values, cancellationToken).ConfigureAwait(false);
-                    if (!saved.IsSuccess)
-                        return saved;
-                }
-
-                return GenericResult.Success();
-            },
+            unit => SaveNew(unit, tables.Value, record, values, cancellationToken),
             entries,
             cancellationToken).ConfigureAwait(false);
         if (written.IsFailure)
@@ -390,7 +390,7 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
             && await Taken(tables, rule.Target, changed.Column, changed.Name, changed.Abbreviation, rule.Id, cancellationToken).ConfigureAwait(false) is { } taken)
             return GenericResult<DataConfigurationRule>.Failure(taken);
 
-        return await Replace(tables, caller, change.Key, "changed", changed, entries, cancellationToken).ConfigureAwait(false);
+        return await Replace(tables, caller, change.Key, "changed", changed, entries, true, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -419,7 +419,7 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
 
         var record = RecordOf(current.Value, active);
         return await Replace(tables.Value, caller.Value, key, active ? "switched on" : "switched off", record,
-            [Entry("ActiveChanged", record, current.Value.Active.ToString(), active.ToString())], cancellationToken).ConfigureAwait(false);
+            [Entry("ActiveChanged", record, current.Value.Active.ToString(), active.ToString())], false, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -447,7 +447,7 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         var written = await Write(
             tables.Value,
             "removed",
-            transaction => Retire(transaction, key.RuleId, tables.Value.Rules, cancellationToken),
+            unit => Retire(unit, key.RuleId, tables.Value.Rules, cancellationToken),
             [Entry("RuleRemoved", record, record.Name, null)],
             cancellationToken).ConfigureAwait(false);
         if (written.IsFailure)
@@ -483,7 +483,7 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
             return GenericResult<DataConfigurationRule>.Failure(taken);
 
         var record = RecordOf(current.Value, false);
-        return await Replace(tables.Value, caller.Value, key, "restored", record, [Entry("RuleRestored", record, null, record.Name)], cancellationToken).ConfigureAwait(false);
+        return await Replace(tables.Value, caller.Value, key, "restored", record, [Entry("RuleRestored", record, null, record.Name)], false, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -504,17 +504,7 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         var written = await Write(
             tables,
             "values added",
-            async transaction =>
-            {
-                foreach (var value in added)
-                {
-                    var saved = await Save(transaction, value, false, tables.Values, cancellationToken).ConfigureAwait(false);
-                    if (!saved.IsSuccess)
-                        return saved;
-                }
-
-                return GenericResult.Success();
-            },
+            unit => SaveValues(unit, tables, record, added, cancellationToken),
             [.. added.Select(value => Entry("ValueAdded", record, null, ValueText(value)))],
             cancellationToken).ConfigureAwait(false);
         if (written.IsFailure)
@@ -549,7 +539,13 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         var written = await Write(
             tables,
             "value changed",
-            transaction => Save(transaction, replaced, true, tables.Values, cancellationToken),
+            async unit =>
+            {
+                var saved = await Save(unit, replaced, true, tables.Values, cancellationToken).ConfigureAwait(false);
+                return saved.IsSuccess
+                    ? await DescribeValue(unit, record, replaced, cancellationToken).ConfigureAwait(false)
+                    : saved;
+            },
             [Entry("ValueChanged", record, ValueText(existing), ValueText(replaced))],
             cancellationToken).ConfigureAwait(false);
         if (written.IsFailure)
@@ -602,11 +598,11 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         var written = await Write(
             tables.Value,
             "values removed",
-            async transaction =>
+            async unit =>
             {
                 foreach (var value in removing)
                 {
-                    var retired = await Retire(transaction, value.Id, tables.Value.Values, cancellationToken).ConfigureAwait(false);
+                    var retired = await Retire(unit, value.Id, tables.Value.Values, cancellationToken).ConfigureAwait(false);
                     if (!retired.IsSuccess)
                         return retired;
                 }
@@ -916,6 +912,11 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         if (!byRule.IsSuccess || byRule.Value is null)
             return byRule.ToNewResult<IReadOnlyList<DataConfigurationRule>>();
 
+        // The rules' descriptions are not columns: one read of the descriptions table, in the language of the caller's tenant, for the whole page (FDW-6208).
+        var texts = await _reader.ReadMany(RuleDescriptionType, DescriptionSubType, ids.Value, cancellationToken).ConfigureAwait(false);
+        if (!texts.IsSuccess || texts.Value is null)
+            return texts.ToNewResult<IReadOnlyList<DataConfigurationRule>>();
+
         var changers = await Changers(ids.Value, cancellationToken).ConfigureAwait(false);
         if (!changers.IsSuccess || changers.Value is null)
             return changers.ToNewResult<IReadOnlyList<DataConfigurationRule>>();
@@ -924,14 +925,24 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         if (!holders.IsSuccess || holders.Value is null)
             return holders.ToNewResult<IReadOnlyList<DataConfigurationRule>>();
 
+        return Compose(tables, caller, rows, ids.Value, byRule.Value, texts.Value, changers.Value, holders.Value);
+    }
+
+    // The page's rules, each made from its row, its values, its description, who last changed it and whether its custodian still holds the permission (FDW-6208 moved the fill of
+    // the description into this read, which took Rules over the branch limit, so the making of each rule is a member of its own).
+    private IGenericResult<IReadOnlyList<DataConfigurationRule>> Compose(
+        Tables tables, Caller caller, List<Dictionary<string, object?>> rows, List<Guid> ids, Dictionary<Guid, List<DataConfigurationRuleValue>> byRule,
+        IReadOnlyDictionary<Guid, DescriptionEntry> texts, Dictionary<Guid, Guid> changers, IReadOnlyList<Guid> holders)
+    {
         var rules = new List<DataConfigurationRule>();
         for (var index = 0; index < rows.Count; index++)
         {
-            var id = ids.Value[index];
+            var id = ids[index];
             var rule = DataConfigurationRuleRows.ToRule(
-                rows[index], byRule.Value.GetValueOrDefault(id) ?? [], tables.Rules.Container, _logger,
-                (custodian, permission) => MayChange(caller, custodian, permission), ruleId => changers.Value.TryGetValue(ruleId, out var changer) ? changer : null,
-                custodian => holders.Value.Contains(custodian) ? DataOptionCustodianStates.Holder.Name : DataOptionCustodianStates.NoLongerHolder.Name);
+                rows[index], byRule.GetValueOrDefault(id) ?? [], tables.Rules.Container, _logger,
+                (custodian, permission) => MayChange(caller, custodian, permission), ruleId => changers.TryGetValue(ruleId, out var changer) ? changer : null,
+                custodian => holders.Contains(custodian) ? DataOptionCustodianStates.Holder.Name : DataOptionCustodianStates.NoLongerHolder.Name,
+                texts.TryGetValue(id, out var described) ? described.Text : null);
             if (!rule.IsSuccess || rule.Value is null)
                 return rule.ToNewResult<IReadOnlyList<DataConfigurationRule>>();
 
@@ -968,12 +979,17 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         if (!valueRows.IsSuccess || valueRows.Value is null)
             return valueRows.ToNewResult<Dictionary<Guid, List<DataConfigurationRuleValue>>>();
 
+        // The values' descriptions are not columns either: one read of the descriptions the rules own, for every rule of the page (FDW-6208).
+        var texts = await _reader.ReadOwnedBy(ValueDescriptionType, DescriptionSubType, ids, cancellationToken).ConfigureAwait(false);
+        if (!texts.IsSuccess || texts.Value is null)
+            return texts.ToNewResult<Dictionary<Guid, List<DataConfigurationRuleValue>>>();
+
         foreach (var row in valueRows.Value)
         {
             if (!DataConfigurationRuleRows.RuleIdOf(row, out var owner))
                 return GenericResult<Dictionary<Guid, List<DataConfigurationRuleValue>>>.Failure(DataOptionRulesLog.StoredRuleUnreadable(_logger, "DataConfigurationRuleId", tables.Values.Container));
 
-            var value = DataConfigurationRuleRows.ToValue(row, tables.Values.Container, _logger);
+            var value = DataConfigurationRuleRows.ToValue(row, tables.Values.Container, _logger, texts.Value);
             if (!value.IsSuccess || value.Value is null)
                 return value.ToNewResult<Dictionary<Guid, List<DataConfigurationRuleValue>>>();
 
@@ -1030,9 +1046,22 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
     }
 
     private async Task<IGenericResult<DataConfigurationRule>> Replace(
-        Tables tables, Caller caller, DataConfigurationRuleKey key, string operation, DataConfigurationRuleRecord record, IReadOnlyList<AdministrativeChangeEntry> entries, CancellationToken cancellationToken)
+        Tables tables, Caller caller, DataConfigurationRuleKey key, string operation, DataConfigurationRuleRecord record, IReadOnlyList<AdministrativeChangeEntry> entries, bool describes,
+        CancellationToken cancellationToken)
     {
-        var written = await Write(tables, operation, transaction => Save(transaction, record, true, tables.Rules, cancellationToken), entries, cancellationToken).ConfigureAwait(false);
+        // A change of the rule keeps its description in step in the same unit; a switch or a restore changes no text, so it writes none (FDW-6208).
+        var written = await Write(
+            tables,
+            operation,
+            async unit =>
+            {
+                var saved = await Save(unit, record, true, tables.Rules, cancellationToken).ConfigureAwait(false);
+                return saved.IsSuccess && describes
+                    ? await DescribeRule(unit, record, cancellationToken).ConfigureAwait(false)
+                    : saved;
+            },
+            entries,
+            cancellationToken).ConfigureAwait(false);
         if (written.IsFailure)
             return written.ToNewResult<DataConfigurationRule>();
 
@@ -1040,32 +1069,84 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
         return await Load(tables, caller, key, cancellationToken).ConfigureAwait(false);
     }
 
-    // The order of every write: write, record, commit. A failure before the commit rolls everything back, so a change that cannot be recorded does not take effect.
-    private async Task<IGenericResult> Write(
-        Tables tables, string operation, Func<IDataGatewayTransaction, Task<IGenericResult>> writes, IReadOnlyList<AdministrativeChangeEntry> entries, CancellationToken cancellationToken)
+    // A new rule's rows, then its descriptions, in the one unit: the rule, its description, and for each value its row and its description (FDW-6208).
+    private async Task<IGenericResult> SaveNew(
+        ConfigurationWriteScope unit, Tables tables, DataConfigurationRuleRecord rule, IReadOnlyList<DataConfigurationRuleValueRecord> values, CancellationToken cancellationToken)
     {
-        var begun = await tables.Gateway.BeginTransaction(tables.Rules.DataStore, cancellationToken).ConfigureAwait(false);
+        var saved = await Save(unit, rule, false, tables.Rules, cancellationToken).ConfigureAwait(false);
+        if (!saved.IsSuccess)
+            return saved;
+
+        saved = await DescribeRule(unit, rule, cancellationToken).ConfigureAwait(false);
+        return saved.IsSuccess
+            ? await SaveValues(unit, tables, rule, values, cancellationToken).ConfigureAwait(false)
+            : saved;
+    }
+
+    // New values of a rule: each row, then its description, in the unit (FDW-6208).
+    private async Task<IGenericResult> SaveValues(
+        ConfigurationWriteScope unit, Tables tables, DataConfigurationRuleRecord rule, IReadOnlyList<DataConfigurationRuleValueRecord> values, CancellationToken cancellationToken)
+    {
+        foreach (var value in values)
+        {
+            var saved = await Save(unit, value, false, tables.Values, cancellationToken).ConfigureAwait(false);
+            if (!saved.IsSuccess)
+                return saved;
+
+            saved = await DescribeValue(unit, rule, value, cancellationToken).ConfigureAwait(false);
+            if (!saved.IsSuccess)
+                return saved;
+        }
+
+        return GenericResult.Success();
+    }
+
+    // The description of the rule, kept in step in the unit of the write that saved the rule (FDW-6208): the text the write carries is saved in the language of today, and a write
+    // that carries none removes the description the rule had, so none is invented and none is left behind.
+    private Task<IGenericResult> DescribeRule(ConfigurationWriteScope unit, DataConfigurationRuleRecord record, CancellationToken cancellationToken)
+        => _writer.Describe(RuleDescriptionType, DescriptionSubType, record.Id, record.Name, record.Description, unit, cancellationToken);
+
+    // The description of one value of the rule, owned by the rule and named by the value it holds (a literal or a parameter, as the audit names it); the same rule as the rule's.
+    private async Task<IGenericResult> DescribeValue(ConfigurationWriteScope unit, DataConfigurationRuleRecord rule, DataConfigurationRuleValueRecord value, CancellationToken cancellationToken)
+    {
+        var language = _writer.Language();
+        if (language.IsFailure || language.Value is not { } tag)
+            return language;
+
+        var key = new DescriptionKey(ValueDescriptionType, DescriptionSubType, value.Id, tag);
+        return string.IsNullOrWhiteSpace(value.Description)
+            ? await _writer.Delete(key, unit, cancellationToken).ConfigureAwait(false)
+            : await _writer.Save(key, ValueText(value) ?? string.Empty, new DescriptionOwner(rule.Id, rule.Name), value.Description, unit, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The order of every write: write, record, commit. The unit is a ConfigurationWriteScope opened on the store the rule tables are on, so its commit also drops the gateway's
+    // cached reads of every table the unit wrote (FDW-7248): the read that follows a write is never the one kept from before it. A failure before the commit rolls everything back,
+    // so a change that cannot be recorded does not take effect.
+    private async Task<IGenericResult> Write(
+        Tables tables, string operation, Func<ConfigurationWriteScope, Task<IGenericResult>> writes, IReadOnlyList<AdministrativeChangeEntry> entries, CancellationToken cancellationToken)
+    {
+        var begun = await ConfigurationWriteScope.Begin(tables.Gateway, tables.Rules.DataStore, _logger, cancellationToken).ConfigureAwait(false);
         if (!begun.IsSuccess || begun.Value is null)
             return GenericResult.Failure(Caused(DataOptionRulesLog.OptionsStoreNotTransactional(_logger, tables.Rules.DataStore), begun));
 
-        var transaction = begun.Value;
-        await using (transaction.ConfigureAwait(false))
+        var unit = begun.Value;
+        await using (unit.ConfigureAwait(false))
         {
-            var written = await writes(transaction).ConfigureAwait(false);
+            var written = await writes(unit).ConfigureAwait(false);
             if (!written.IsSuccess)
             {
-                await transaction.Rollback(cancellationToken).ConfigureAwait(false);
+                await unit.Rollback(cancellationToken).ConfigureAwait(false);
                 return GenericResult.Failure(Caused(DataOptionRulesLog.RuleTablesRefusedWrite(_logger, operation, tables.Rules.Container, tables.Rules.DataStore), written));
             }
 
             var recorded = await _audit.RecordAll(entries, cancellationToken).ConfigureAwait(false);
             if (!recorded.IsSuccess)
             {
-                await transaction.Rollback(cancellationToken).ConfigureAwait(false);
+                await unit.Rollback(cancellationToken).ConfigureAwait(false);
                 return recorded;
             }
 
-            var committed = await transaction.Commit(cancellationToken).ConfigureAwait(false);
+            var committed = await unit.Commit(cancellationToken).ConfigureAwait(false);
             return committed.IsSuccess
                 ? committed
                 : GenericResult.Failure(Caused(DataOptionRulesLog.RuleTablesRefusedWrite(_logger, operation + " (commit)", tables.Rules.Container, tables.Rules.DataStore), committed));
@@ -1074,16 +1155,16 @@ public sealed class DataConfigurationRuleService : IDataConfigurationRules
 
     private static List<IGenericMessage> Caused(IGenericMessage first, IGenericResult cause) => [first, .. cause.Messages];
 
-    private static async Task<IGenericResult> Save<T>(IDataGatewayTransaction transaction, T record, bool replacesCurrent, DataStoreTarget table, CancellationToken cancellationToken)
+    private static async Task<IGenericResult> Save<T>(ConfigurationWriteScope unit, T record, bool replacesCurrent, DataStoreTarget table, CancellationToken cancellationToken)
         where T : class
     {
-        var saved = await transaction.Execute<ConfigurationWriteResult>(new ConfigurationSaveCommand<T>(record, replacesCurrent), table, cancellationToken).ConfigureAwait(false);
+        var saved = await unit.Write(new ConfigurationSaveCommand<T>(record, replacesCurrent), table, cancellationToken).ConfigureAwait(false);
         return saved;
     }
 
-    private static async Task<IGenericResult> Retire(IDataGatewayTransaction transaction, Guid id, DataStoreTarget table, CancellationToken cancellationToken)
+    private static async Task<IGenericResult> Retire(ConfigurationWriteScope unit, Guid id, DataStoreTarget table, CancellationToken cancellationToken)
     {
-        var retired = await transaction.Execute<ConfigurationWriteResult>(
+        var retired = await unit.Write(
             new ConfigurationRetireCommand(new Dictionary<string, object?>(StringComparer.Ordinal) { ["Id"] = id }, markDeleted: true), table, cancellationToken).ConfigureAwait(false);
         return retired;
     }

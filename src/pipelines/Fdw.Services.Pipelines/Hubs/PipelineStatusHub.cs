@@ -101,15 +101,21 @@ public class PipelineStatusHub : RealTimeHubBase<IPipelineStatusHubClient>
     /// <c>orgId</c> claim. When the connection carries no org claim the join is skipped and logged —
     /// never a global firehose (there is none) and never a substituted placeholder org (NO FALLBACKS).
     /// </remarks>
-    protected override Task OnJoin()
+    protected override async Task OnJoin()
     {
+        // Why the person's own group (FDW-6140): the pieces of a run are addressed to the person it is for and reach nobody else; the id is the connection's own sub claim, never a name the client sends.
+        if (CallerUserId is { } person)
+        {
+            await JoinScope(HubScopes.User(person)).ConfigureAwait(false);
+        }
+
         if (CallerOrgId is not { } orgId)
         {
             SignalRLog.HubOrgClaimMissing(Logger, Context.ConnectionId, HubName);
-            return Task.CompletedTask;
+            return;
         }
 
-        return JoinScope(HubScopes.Org(orgId, "pipeline-updates"));
+        await JoinScope(HubScopes.Org(orgId, "pipeline-updates")).ConfigureAwait(false);
     }
 
     /// <summary>

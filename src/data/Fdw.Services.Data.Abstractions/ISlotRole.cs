@@ -20,4 +20,13 @@ public interface ISlotRole
     /// <c>standby</c>; otherwise a failure that names the file and what it holds.
     /// </returns>
     IGenericResult<bool> BackgroundWorkMayRun();
+
+    /// <summary>
+    /// Gets the slot's own name, as the slot file states it (<c>a</c> or <c>b</c>), or <see langword="null"/> when this copy does not run on a slot or its slot file states none (FDW-6519).
+    /// </summary>
+    /// <remarks>
+    /// Stated once, by the one reader of the slot file, so a run's record can say which copy ran it (both copies always run and the live role swaps). Absence is
+    /// absence: a host off a slot has no slot name, and none is made up. The value is the file's own, never mapped or prettified.
+    /// </remarks>
+    string? SlotName { get; }
 }

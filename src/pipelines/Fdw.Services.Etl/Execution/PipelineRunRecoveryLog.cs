@@ -117,10 +117,15 @@ public static partial class PipelineRunRecoveryLog
         Message = "The execution record of pipeline run {executionId}, whose request is stored, cannot be read, so the run is not taken up and its request is kept: {reason}")]
     public static partial IGenericMessage RunRecordUnreadable(ILogger logger, Guid executionId, string? reason);
 
-    /// <summary>Logs a run left running because the host is stopping (FDW-3236).</summary>
+    /// <summary>Logs a run the host's stop cut off (FDW-3236); what becomes of it depends on its run mode (FDW-7403).</summary>
     [MessageLogging(EventId = 22130, Level = LogLevel.Information,
-        Message = "Pipeline run {executionId} of '{pipeline}' is left running because the host is stopping; the host starts it again when it starts")]
+        Message = "Pipeline run {executionId} of '{pipeline}' was still running when the host stopped: a run carried out at once ends as its pipeline's half-done rule says, a queued run keeps its stored request and the next start decides")]
     public static partial IGenericMessage RunStoppedWithHost(ILogger logger, Guid executionId, string pipeline);
+
+    /// <summary>Logs how many runs carried out at once the host's stop found in flight, and whether every one ended in the time the host gave (FDW-7403).</summary>
+    [MessageLogging(EventId = 22723, Level = LogLevel.Information,
+        Message = "The host stopped its runs carried out at once: {runs} in flight when it began to stop, every run's task ended in the time the host gave: {allEnded}. How each run ended is in its own lines: 60880 ended, 60881 to 60884 left open")]
+    public static partial IGenericMessage AtOnceDrainFinished(ILogger logger, int runs, bool allEnded);
 
     /// <summary>Logs a metrics row of a cut-off or restarted run that could not be written.</summary>
     [MessageLogging(EventId = 22136, Level = LogLevel.Warning,

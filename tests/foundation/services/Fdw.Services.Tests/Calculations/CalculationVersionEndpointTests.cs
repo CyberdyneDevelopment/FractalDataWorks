@@ -1,3 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
+using Fdw.ServiceTypes;
+using Fdw.Services.Workspaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +32,10 @@ namespace Fdw.Services.Tests.Calculations;
 [Collection(nameof(ServicesTestCollection))]
 public class CalculationVersionEndpointTests
 {
+    // The most versions one read holds, as the place option's registration registers it (FDW-7104); the endpoint reads it from the services.
+    private static readonly Action<DefaultHttpContext> WithVersionLimits =
+        ctx => ctx.AddTestServices(services => services.AddSingleton(new PlaceVersionLimits(DeclaredSetting.Count(new DefaultPlaceServiceType(), nameof(PlaceVersionLimits.MaxVersions), null).Value)));
+
     private static readonly Guid Tenant = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
     private static readonly Guid OtherTenant = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000002");
     private static readonly Guid Finance = Guid.Parse("44444444-0000-0000-0000-000000000001");
@@ -172,7 +180,7 @@ public class CalculationVersionEndpointTests
     public async Task AVersionAtTheCallersOrganizationAppliesAndTheCalculationItselfIsTheTenantsVersionBehindIt()
     {
         var setup = Create(versions: [Version("Organization", Finance, "Finance description")], organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new CalculationVersionsRequest { Id = CalculationId }, CancellationToken.None);
 
@@ -193,7 +201,7 @@ public class CalculationVersionEndpointTests
     public async Task AVersionHeldAtAnotherOrganizationIsNotListedSoTheCalculationItselfApplies()
     {
         var setup = Create(versions: [Version("Organization", Legal, "Legal description")], organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new CalculationVersionsRequest { Id = CalculationId }, CancellationToken.None);
 
@@ -210,7 +218,7 @@ public class CalculationVersionEndpointTests
         var setup = Create(
             versions: [Version("Workspace", Workspace, "Workspace description"), Version("Organization", Finance, "Finance description")],
             may: scope => scope.OrganizationId is null);
-        var endpoint = Factory.Create<ListVersions>(setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new CalculationVersionsRequest { Id = CalculationId, WorkspaceId = Workspace }, CancellationToken.None);
 
@@ -227,7 +235,7 @@ public class CalculationVersionEndpointTests
         var setup = Create();
         setup.Ancestry.Setup(a => a.Get(PlaceKinds.Workspace, Workspace, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<PlaceStep>>.Success([new PlaceStep(PlaceKinds.Workspace, Workspace, 0), new PlaceStep(PlaceKinds.Tenant, OtherTenant, 1)]));
-        var endpoint = Factory.Create<ListVersions>(setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new CalculationVersionsRequest { Id = CalculationId, WorkspaceId = Workspace }, CancellationToken.None);
 
@@ -240,7 +248,7 @@ public class CalculationVersionEndpointTests
     public async Task ACalculationThatDoesNotExistIsAnswered404()
     {
         var setup = Create(calculationExists: false, organization: Finance);
-        var endpoint = Factory.Create<ListVersions>(setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new CalculationVersionsRequest { Id = CalculationId }, CancellationToken.None);
 
@@ -253,7 +261,7 @@ public class CalculationVersionEndpointTests
     public async Task ACallerWhoIsNotSignedInListsNothing()
     {
         var setup = Create(signedIn: false);
-        var endpoint = Factory.Create<ListVersions>(setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
+        var endpoint = Factory.Create<ListVersions>(WithVersionLimits, setup.Calculations.Object, setup.Versions.Object, setup.Ancestry.Object, setup.Authority.Object, setup.Context.Object, setup.Names.Object);
 
         await endpoint.HandleAsync(new CalculationVersionsRequest { Id = CalculationId }, CancellationToken.None);
 

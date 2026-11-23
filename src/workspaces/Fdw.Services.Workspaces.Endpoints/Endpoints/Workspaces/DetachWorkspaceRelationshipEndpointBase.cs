@@ -81,7 +81,7 @@ public abstract class DetachWorkspaceRelationshipEndpointBase : Endpoint<DetachW
             return;
         }
 
-        // Found in the workspace's composed relationships: the row hangs from the workspace by RowId.
+        // Found in the workspace's composed relationships.
         var found = workspace.Value.Relationships.Where(x => x.Id == req.RelationshipId).ToList();
         if (found.Count == 0)
         {
@@ -92,14 +92,12 @@ public abstract class DetachWorkspaceRelationshipEndpointBase : Endpoint<DetachW
             return;
         }
 
-        // The relationship is a child of the workspace aggregate: saving the workspace without it retires the
-        // version that had it, and the new version is written without it.
-        workspace.Value.Relationships.Remove(found[0]);
-        var saved = await _workspaces.Update(
-            workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
-        if (saved.IsFailure)
+        // Retired by its Id through the workspace service, never by saving the workspace without it: the relationships list is upsert-only and its
+        // rows hang from the workspace's durable Id, so that save kept the row current and answered 204 for nothing (FDW-7093).
+        var removed = await Resolve<IWorkspaceChildRetirement>().DetachRelationship(workspace.Value, found[0], ct).ConfigureAwait(false);
+        if (removed.IsFailure)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(saved, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(removed, HttpContext)).ConfigureAwait(false);
             return;
         }
 

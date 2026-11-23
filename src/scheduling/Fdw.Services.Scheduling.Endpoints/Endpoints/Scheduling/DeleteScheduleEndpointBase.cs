@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Thresholds;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Services.Scheduling.Endpoints.Logging;
@@ -19,13 +20,15 @@ public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBa
 {
     private readonly ScheduleConfigurationProvider _provider;
     private readonly WaitThresholdOwnerRelease _release;
+    private readonly IRunGrants _runGrants;
 
     /// <summary>Initializes a new instance of the <see cref="DeleteScheduleEndpointBase{TConfig}"/> class.</summary>
     protected DeleteScheduleEndpointBase(
-        ILogger<DeleteScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
+        ILogger<DeleteScheduleEndpointBase<TConfig>> logger, ScheduleConfigurationProvider provider, IConfigurationGatewayProvider gateways, IRunGrants runGrants) : base(logger)
     {
         _provider = provider;
         _release = new WaitThresholdOwnerRelease(gateways, logger);
+        _runGrants = runGrants;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -63,6 +66,12 @@ public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBa
         {
             return GenericResult.Failure(
                 ScheduleEndpointLog.DeleteFailed(Logger, request.Name));
+        }
+
+        // The grant the schedule's runs acted under goes with it (FDW-6144); a failure to revoke is recorded by the grant service and does not undo the delete.
+        if (existing.RunGrantId is { } grantId)
+        {
+            _ = await _runGrants.Revoke(grantId, ct).ConfigureAwait(false);
         }
 
         return deleteResult;

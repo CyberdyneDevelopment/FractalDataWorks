@@ -1,28 +1,36 @@
+using Fdw.Data;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Endpoints;
 
 namespace Fdw.Web.Api.Tests.Endpoints.Pipelines;
 
 /// <summary>
-/// A pipeline's description is a column of the engine's own row, so every engine must carry it and the
-/// detail read must answer it. It is not a column of the shared <c>pipe.Pipeline</c> domain row: that row is
-/// written once (two tables cite its Id with a foreign key), and a listed field would re-version it on every
-/// change. These tests pin the engine side, because a missing half drops the description silently (FDW-837).
+/// A pipeline's description is a member of the engine's record, so every engine must carry it and the detail read
+/// must answer it. Since 1.6.0 (FDW-7323) it is not a column of any pipeline table: the member is <c>[NotStored]</c>,
+/// the mapper names no <c>Description</c>, and the pipeline provider writes and fills the text through the
+/// <c>Pipeline</c> description type. These tests pin the engine side, because a missing half drops the description
+/// silently (FDW-837).
 /// </summary>
 public sealed class PipelineDescriptionTests
 {
     [Theory]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    [InlineData(nameof(GraphPipelineConfiguration))]
-    public void EveryEngineCarriesADescription(string engine)
+    [InlineData(typeof(GraphPipelineConfiguration))]
+    public void EveryEngineCarriesADescriptionMemberThatIsNoColumnAndIsFilledFromThePipelineDescriptionType(Type engine)
     {
         // Arrange / Act
-        var properties = PocoMapperCollection.ByName(engine).GetPropertyNames();
+        var member = engine.GetProperty("Description");
+        var properties = PocoMapperCollection.ByName(engine.Name).GetPropertyNames();
 
         // Assert
-        properties.ShouldContain("Description");
+        member.ShouldNotBeNull();
+        member.PropertyType.ShouldBe(typeof(string));
+        member.GetCustomAttributes(typeof(NotStoredAttribute), inherit: false).ShouldNotBeEmpty();
+        properties.ShouldNotContain("Description");
+        DescriptionTypes.ByName(PipelineDescriptionType.OptionName).ShouldNotBeSameAs(DescriptionTypes.NotFound);
     }
 
     [Fact]

@@ -37,6 +37,9 @@ public sealed partial class MsSqlConnectionLimitConfiguration : ConnectionLimitC
     /// <summary>
     /// Gets or sets the optional description for this limit entry.
     /// </summary>
+    // Why [NotStored]: the column is gone from the limit table (FDW-6208) and nothing loads or saves a limit record today (the connection's Limits list carries no child-table attribute,
+    // and a limit row has no Id of its own, only a database-made default), so there is no description to move and no description type. The member stays, empty.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>

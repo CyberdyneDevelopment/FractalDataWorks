@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Scheduling.Endpoints.Logging;
 using Fdw.Services.Tags;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -65,8 +66,12 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
 
         var filtered = ApplyFilters(allSchedules, request);
         var sorted = ApplySort(filtered, request);
+        if (sorted.IsFailure || sorted.Value is null)
+        {
+            return sorted.ToNewResult<List<ScheduleSummaryDto>>();
+        }
 
-        var items = sorted
+        var items = sorted.Value
             .Select(MapToSummary)
             .ToList();
 
@@ -106,28 +111,20 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     }
 
     /// <summary>Applies sorting from the request to the schedule list.</summary>
-    protected virtual IEnumerable<IScheduleImplementationConfiguration> ApplySort(IReadOnlyList<IScheduleImplementationConfiguration> schedules, ListSchedulesRequest request)
+    protected virtual IGenericResult<IEnumerable<IScheduleImplementationConfiguration>> ApplySort(IReadOnlyList<IScheduleImplementationConfiguration> schedules, ListSchedulesRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.SortBy))
         {
-            return schedules.OrderBy(s => s.Name, StringComparer.Ordinal);
+            return GenericResult<IEnumerable<IScheduleImplementationConfiguration>>.Success(schedules.OrderBy(s => s.Name, StringComparer.Ordinal));
         }
 
-        var ordered = request.SortBy.ToLowerInvariant() switch
+        var field = ScheduleSortFields.ByKey(request.SortBy.ToLowerInvariant());
+        if (ReferenceEquals(field, ScheduleSortFields.NotFound))
         {
-            "name" => request.SortDescending
-                ? schedules.OrderByDescending(s => s.Name, StringComparer.Ordinal)
-                : schedules.OrderBy(s => s.Name, StringComparer.Ordinal),
-            "pipelinename" => request.SortDescending
-                ? schedules.OrderByDescending(s => s.PipelineName, StringComparer.Ordinal)
-                : schedules.OrderBy(s => s.PipelineName, StringComparer.Ordinal),
-            "nextruntime" => request.SortDescending
-                ? schedules.OrderByDescending(s => s.NextRunTime)
-                : schedules.OrderBy(s => s.NextRunTime),
-            _ => schedules.OrderBy(s => s.Name, StringComparer.Ordinal)
-        };
+            return GenericResult<IEnumerable<IScheduleImplementationConfiguration>>.Failure(ScheduleEndpointLog.UnknownSortField(Logger, request.SortBy));
+        }
 
-        return ordered;
+        return GenericResult<IEnumerable<IScheduleImplementationConfiguration>>.Success(field.Order(schedules, request.SortDescending));
     }
 
     /// <summary>Maps a single schedule configuration to a summary DTO.</summary>

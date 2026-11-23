@@ -61,7 +61,7 @@ public sealed class GraphDataSetSources : IGraphDataSetSources
         var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in names.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var read = await _dataStores.Get(name, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+            var read = await _dataStores.Get(name, ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
             if (read.IsFailure)
             {
                 return read.ToNewResult<IReadOnlySet<string>>();
@@ -83,7 +83,7 @@ public sealed class GraphDataSetSources : IGraphDataSetSources
         var answer = new Dictionary<string, IReadOnlyList<GraphDataSetFieldFact>>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in names.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var read = await _dataSets.Get(name, ConfigurationLevels.Children, cancellationToken).ConfigureAwait(false);
+            var read = await _dataSets.Get(name, ConfigurationLevels.Children, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
             if (read.IsFailure)
             {
                 return read.ToNewResult<IReadOnlyDictionary<string, IReadOnlyList<GraphDataSetFieldFact>>>();
@@ -109,7 +109,7 @@ public sealed class GraphDataSetSources : IGraphDataSetSources
         var read = await _dataStores.Get(
             dataStore,
             ConfigurationLevels.WholeAggregate,
-            new ChildNarrowing(typeof(DataContainerConfiguration), nameof(DataContainerConfiguration.Name), [.. names.Distinct(StringComparer.OrdinalIgnoreCase)]),
+            new ChildNarrowing(typeof(DataContainerConfiguration), nameof(DataContainerConfiguration.Name), [.. names.Distinct(StringComparer.OrdinalIgnoreCase)]), ConfigurationReadOptions.WithoutFilledMembers,
             cancellationToken).ConfigureAwait(false);
         var found = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         if (read.IsFailure)
@@ -152,7 +152,7 @@ public sealed class GraphDataSetSources : IGraphDataSetSources
         var read = await _dataStores.Get(
             dataStore,
             ConfigurationLevels.WholeAggregate,
-            new ChildNarrowing(typeof(DataContainerConfiguration), nameof(DataContainerConfiguration.Name), [container]),
+            new ChildNarrowing(typeof(DataContainerConfiguration), nameof(DataContainerConfiguration.Name), [container]), ConfigurationReadOptions.WithoutFilledMembers,
             cancellationToken).ConfigureAwait(false);
         if (read.IsFailure)
         {

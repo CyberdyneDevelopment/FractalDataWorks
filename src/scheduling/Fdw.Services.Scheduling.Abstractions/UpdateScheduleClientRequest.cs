@@ -61,4 +61,10 @@ public class UpdateScheduleClientRequest
     /// replaces them, must name at least one role, and only roles the caller holds in the tenant it acts in.
     /// </summary>
     public IList<string>? RunRoles { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the person states to have the schedule's runs act as them (FDW-6144): what the runs may do while they are away and until when. Needs the permission
+    /// <c>schedules:run-as-me</c>. Null leaves the schedule's runs acting as its tenant, as they always have.
+    /// </summary>
+    public ScheduleRunAsRequest? RunAs { get; set; }
 }

@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Logging;
 /// <summary>
 /// MessageLogging for starting a pipeline run under another execution (FDW-1381): the refusals of the run starter and the
 /// StartPipeline stage. Every refusal is logged and returned in the failure result.
-/// EventId range: 20801-20815.
+/// EventId range: 20801-20818, 20822-20824, 60826, 70827, 10832-10834, 150830-150831, 90830, 70831 and the numbers on each method.
 /// </summary>
 [MessageLoggingTypeCode("PIPELINERUN")]
 public static partial class PipelineRunStartLog
@@ -45,7 +45,7 @@ public static partial class PipelineRunStartLog
 
     /// <summary>Logs a start refused because the host names no operational store.</summary>
     [MessageLogging(EventId = 60805, Level = LogLevel.Error,
-        Message = "EtlPipelineTypes.OperationalConnection is not set; the host must name the operational store a run's start and end are kept in, so pipeline '{pipeline}' was not started")]
+        Message = "PipelineTypes.OperationalConnection is not set; the host must name the operational store a run's start and end are kept in, so pipeline '{pipeline}' was not started")]
     public static partial IGenericMessage OperationalStoreNotNamed(ILogger logger, string pipeline);
 
     /// <summary>Logs a start whose request the queue did not accept: the queue is full, or a threshold on waiting runs stops new runs (FDW-3161).</summary>
@@ -62,6 +62,11 @@ public static partial class PipelineRunStartLog
     [MessageLogging(EventId = 20808, Level = LogLevel.Information,
         Message = "Pipeline '{pipeline}' started as execution '{executionId}' under '{parentExecutionId}' by {triggerSource}")]
     public static partial IGenericMessage RunStarted(ILogger logger, string pipeline, Guid executionId, Guid parentExecutionId, string triggerSource);
+
+    /// <summary>Logs a run that started at once, in the host that took the request (FDW-6141).</summary>
+    [MessageLogging(EventId = 20843, Level = LogLevel.Information,
+        Message = "Pipeline '{pipeline}' started at once as execution '{executionId}' by {triggerSource}")]
+    public static partial IGenericMessage AtOnceRunStarted(ILogger logger, string pipeline, Guid executionId, string triggerSource);
 
     /// <summary>Logs a StartPipeline stage in a run that has nothing to start the pipeline under.</summary>
     [MessageLogging(EventId = 20809, Level = LogLevel.Error,
@@ -107,4 +112,73 @@ public static partial class PipelineRunStartLog
     [MessageLogging(EventId = 21803, Level = LogLevel.Error,
         Message = "Checking the parameters of a pipeline run needs the pipeline's name, and the name given is empty")]
     public static partial IGenericMessage CheckedPipelineNameRequired(ILogger logger);
+    /// <summary>Logs a run no other run started, queued by the Queued run mode (FDW-6131).</summary>
+    [MessageLogging(EventId = 10832, Level = LogLevel.Information,
+        Message = "Pipeline '{pipeline}' was started as execution '{executionId}' by {triggerSource} and queued")]
+    public static partial IGenericMessage RunQueued(ILogger logger, string pipeline, Guid executionId, string triggerSource);
+
+    /// <summary>Logs a run whose execution its caller had opened, queued by the Queued run mode (FDW-6131).</summary>
+    [MessageLogging(EventId = 10833, Level = LogLevel.Information,
+        Message = "Pipeline '{pipeline}' (execution '{executionId}', opened by its caller) was started by {triggerSource} and queued")]
+    public static partial IGenericMessage OpenedRunQueued(ILogger logger, string pipeline, Guid executionId, string triggerSource);
+
+    /// <summary>Logs a wait on a run whose completion this host does not keep (FDW-6131).</summary>
+    [MessageLogging(EventId = 20818, Level = LogLevel.Error,
+        Message = "Run '{executionId}' cannot be awaited: this host has no completion signaler")]
+    public static partial IGenericMessage RunCompletionNotKept(ILogger logger, Guid executionId);
+
+    /// <summary>Logs a run whose execution its caller had opened and that the queue did not take, with the queue's code (FDW-6131).</summary>
+    [MessageLogging(EventId = 10834, Level = LogLevel.Warning,
+        Message = "Pipeline '{pipeline}' (execution '{executionId}', opened by its caller) was not queued: {code}")]
+    public static partial IGenericMessage OpenedRunNotQueued(ILogger logger, string pipeline, Guid executionId, string code);
+
+    /// <summary>
+    /// The refusal of a run whose caller opened its execution, because the queue is full (FDW-6131). Its text is the queue's own reason, so the caller
+    /// answers with exactly what the queue said; <see cref="OpenedRunNotQueued"/> logs which run it was.
+    /// </summary>
+    [MessageLogging(EventId = 150830, Level = LogLevel.Warning, Message = "{reason}")]
+    public static partial IGenericMessage OpenedRunQueueFull(ILogger logger, string reason);
+
+    /// <summary>The refusal of a run whose caller opened its execution, because a threshold on waiting runs stops new runs (FDW-6131); its text is the queue's reason.</summary>
+    [MessageLogging(EventId = 150831, Level = LogLevel.Warning, Message = "{reason}")]
+    public static partial IGenericMessage OpenedRunStopped(ILogger logger, string reason);
+
+    /// <summary>The refusal of a run whose caller opened its execution, which the queue refused and whose refusal it could not record (FDW-6131); its text is the queue's reason.</summary>
+    [MessageLogging(EventId = 90830, Level = LogLevel.Error, Message = "{reason}")]
+    public static partial IGenericMessage OpenedRunRefusalNotRecorded(ILogger logger, string reason);
+
+    /// <summary>Logs a run no other run started whose execution record could not be created (FDW-6131).</summary>
+    [MessageLogging(EventId = 70831, Level = LogLevel.Error,
+        Message = "The execution record of pipeline '{pipeline}' could not be created: {reason}")]
+    public static partial IGenericMessage RootExecutionNotCreated(ILogger logger, string pipeline, string? reason);
+
+    /// <summary>Logs a run whose record cannot say where the run came from, because the run mode or the host's name is not stated (FDW-6519): no row is written.</summary>
+    [MessageLogging(EventId = 60842, Level = LogLevel.Error,
+        Message = "A run's record must state {missing}, and it is not stated, so the run is refused and no record is written")]
+    public static partial IGenericMessage RunOriginIncomplete(ILogger logger, string missing);
+
+    /// <summary>Logs a start under another run when the host does not set how long a chain of runs may be (FDW-6135): no limit is assumed.</summary>
+    [MessageLogging(EventId = 20822, Level = LogLevel.Error,
+        Message = "Pipeline '{pipeline}' was started under another run, and the setting {setting} is not set to a positive number, so the length of the chain cannot be judged and the start is refused; no limit is assumed")]
+    public static partial IGenericMessage PipelineChainLimitNotSet(ILogger logger, string pipeline, string setting);
+
+    /// <summary>Logs a start that would make a chain of runs longer than the setting allows (FDW-6135).</summary>
+    [MessageLogging(EventId = 20823, Level = LogLevel.Error,
+        Message = "Pipeline '{pipeline}' would be run number {depth} of a chain of runs started one by another, and at most {maximum} are allowed, so the start is refused")]
+    public static partial IGenericMessage PipelineChainLimitReached(ILogger logger, string pipeline, int depth, int maximum);
+
+    /// <summary>Logs a start of a pipeline a variable named that the run's tenant and person are not offered (FDW-6135).</summary>
+    [MessageLogging(EventId = 20824, Level = LogLevel.Error,
+        Message = "Pipeline '{pipeline}' is not offered to tenant {tenantId} and the person and roles of the run, so it is not started")]
+    public static partial IGenericMessage PipelineNotOffered(ILogger logger, string pipeline, Guid tenantId);
+
+    /// <summary>Logs a start that needs an offer on a host that has no way to read offers (FDW-6135): the start is refused, and nothing is assumed offered.</summary>
+    [MessageLogging(EventId = 60826, Level = LogLevel.Error,
+        Message = "Pipeline '{pipeline}' was named by a variable, so it must be offered to the run, and this host reads no offers, so the start is refused")]
+    public static partial IGenericMessage PipelineOffersUnavailable(ILogger logger, string pipeline);
+
+    /// <summary>Logs the read of the offers of a pipeline that failed (FDW-6135): the start is refused.</summary>
+    [MessageLogging(EventId = 70827, Level = LogLevel.Error,
+        Message = "The offers of pipeline '{pipeline}' could not be read: {reason}, so the start is refused")]
+    public static partial IGenericMessage PipelineOffersNotRead(ILogger logger, string pipeline, string? reason);
 }

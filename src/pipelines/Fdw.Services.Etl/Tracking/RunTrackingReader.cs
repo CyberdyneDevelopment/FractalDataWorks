@@ -144,20 +144,10 @@ public static class RunTrackingReader
     // The figures a destination's events state, as one.
     private readonly record struct Committed(long? Rows, bool? Emptied, bool? RepeatsToSameResult);
 
-    private static long? Greater(long? left, long? right) => (left, right) switch
-    {
-        ({ } l, { } r) => Math.Max(l, r),
-        ({ } l, null) => l,
-        _ => right,
-    };
+    private static long? Greater(long? left, long? right) => new[] { left, right }.Max();
 
     // True when either says true, false when one says false and none true, null when neither says anything.
-    private static bool? Either(bool? left, bool? right) => (left, right) switch
-    {
-        (true, _) or (_, true) => true,
-        (false, _) or (_, false) => false,
-        _ => null,
-    };
+    private static bool? Either(bool? left, bool? right) => new[] { left, right }.Max();
 
     private static ComponentTracking ComponentOf(IReadOnlyDictionary<string, object?>? data, IReadOnlyDictionary<string, Committed> committed)
     {

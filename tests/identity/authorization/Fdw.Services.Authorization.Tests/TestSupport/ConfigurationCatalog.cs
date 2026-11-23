@@ -35,20 +35,20 @@ internal static class ConfigurationCatalog
         => Of<RoleConfigurationProvider, IRoleImplementationConfiguration, RoleDomainConfiguration>(
             gateways => new RoleConfigurationProvider(
                 NullLogger<RoleConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Role",
-                Mock.Of<IUserRoleConfigurationProvider>(), Mock.Of<IRolePermissionConfigurationProvider>()), items);
+                Mock.Of<IUserRoleConfigurationProvider>(), Mock.Of<IRolePermissionConfigurationProvider>(), new NoDescriptions(), new NoDescriptions()), items);
 
     /// <summary>A role catalogue whose store cannot be read.</summary>
     public static RoleConfigurationProvider UnreadableRoles(string reason)
         => Unreadable<RoleConfigurationProvider, IRoleImplementationConfiguration, RoleDomainConfiguration>(
             gateways => new RoleConfigurationProvider(
                 NullLogger<RoleConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Role",
-                Mock.Of<IUserRoleConfigurationProvider>(), Mock.Of<IRolePermissionConfigurationProvider>()), reason);
+                Mock.Of<IUserRoleConfigurationProvider>(), Mock.Of<IRolePermissionConfigurationProvider>(), new NoDescriptions(), new NoDescriptions()), reason);
 
     /// <summary>The permission catalogue this store holds.</summary>
     public static PermissionConfigurationProvider Permissions(IEnumerable<IPermissionImplementationConfiguration> items)
         => Of<PermissionConfigurationProvider, IPermissionImplementationConfiguration, PermissionDomainConfiguration>(
             gateways => new PermissionConfigurationProvider(
-                NullLogger<PermissionConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Permission"), items);
+                NullLogger<PermissionConfigurationProvider>.Instance, gateways, "TestStore", "authz", "Permission", new NoDescriptions(), new NoDescriptions()), items);
 
     /// <summary>The role-to-permission grants this store holds.</summary>
     public static RolePermissionConfigurationProvider RolePermissions(IEnumerable<IRolePermissionImplementationConfiguration> items)

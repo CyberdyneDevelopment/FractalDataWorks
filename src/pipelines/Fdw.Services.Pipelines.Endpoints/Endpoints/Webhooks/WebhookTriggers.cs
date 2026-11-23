@@ -51,12 +51,15 @@ public sealed class WebhookTriggers
             return read.ToNewResult<WebhookTriggerConfiguration?>();
         }
 
-        return read.Value switch
+        if (read.Value is null)
         {
-            null => GenericResult<WebhookTriggerConfiguration?>.Success(null),
-            WebhookTriggerConfiguration trigger => GenericResult<WebhookTriggerConfiguration?>.Success(trigger),
-            var other => GenericResult<WebhookTriggerConfiguration?>.Failure(WebhookEndpointLog.NotAWebhookTrigger(_logger, name, other.Implementation)),
-        };
+            return GenericResult<WebhookTriggerConfiguration?>.Success(null);
+        }
+
+        // A typed read: a trigger of another implementation is refused with its own coded message, never read as a webhook.
+        return read.Value is WebhookTriggerConfiguration trigger
+            ? GenericResult<WebhookTriggerConfiguration?>.Success(trigger)
+            : GenericResult<WebhookTriggerConfiguration?>.Failure(WebhookEndpointLog.NotAWebhookTrigger(_logger, name, read.Value.Implementation));
     }
 
     /// <summary>Finds a trigger by name as the API answers it.</summary>
@@ -160,7 +163,7 @@ public sealed class WebhookTriggers
     private async Task<IGenericResult<WebhookPayload>> Save(
         IAuthenticationContext caller, WebhookPayload request, Guid id, WebhookSecretHash secret, bool mayCreate, CancellationToken ct)
     {
-        var pipeline = await _pipelines.Get(request.Pipeline, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
+        var pipeline = await _pipelines.Get(request.Pipeline, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
         if (pipeline.IsFailure || pipeline.Value is not { } found)
         {
             return WebhookRefusal.Of<WebhookPayload>($"the pipeline '{request.Pipeline}' does not exist");

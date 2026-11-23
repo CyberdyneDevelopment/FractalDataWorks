@@ -41,15 +41,10 @@ public static class GraphShapeValidator
     {
         if (graph.Components.Count == 0)
         {
-            return [new GraphProblem([], $"graph pipeline '{graph.Name}' has no components, so there is nothing to run")];
+            return [NoComponents(graph)];
         }
 
-        var problems = new List<GraphProblem>();
-        if (graph.LinkCapacity < 1)
-        {
-            problems.Add(new GraphProblem(["linkCapacity"], $"graph pipeline '{graph.Name}' does not state how many batches a link buffers ({graph.LinkCapacity} is not at least one)"));
-        }
-
+        var problems = new List<GraphProblem>(LinkCapacityProblems(graph));
         if (graph.MaxParallelRuns < 1)
         {
             problems.Add(new GraphProblem(["maxParallelRuns"], $"graph pipeline '{graph.Name}' does not state how many of its runs may run at once ({graph.MaxParallelRuns} is not at least one)"));
@@ -61,7 +56,38 @@ public static class GraphShapeValidator
         }
 
         problems.AddRange(DelayedStartProblems(graph));
-        problems.AddRange(LinkEndProblems(graph));
+        problems.AddRange(StructureProblems(graph, end, logger));
+        return problems;
+    }
+
+    /// <summary>Lists every rule a graph breaks as a graph (FDW-6131): its components, lines, variables, parameters and buffering, whatever kind holds it.</summary>
+    /// <remarks>
+    /// What the pipeline does with its runs (how many run at once, what happens when that many already run) is the pipeline's and is judged by
+    /// <see cref="Problems(GraphPipelineConfiguration, GraphEnd?, ILogger)"/>, which judges the graph by this too.
+    /// </remarks>
+    /// <param name="graph">The stored graph.</param>
+    /// <param name="end">The output a read takes the rows of; none for a graph that is run and not read.</param>
+    /// <param name="logger">The logger a condition's refusal is written to.</param>
+    /// <returns>The problems, each with its path; empty when the graph is sound.</returns>
+    public static IReadOnlyList<GraphProblem> GraphProblems(IGraphPipelineConfiguration graph, GraphEnd? end, ILogger logger)
+    {
+        return graph.Components.Count == 0
+            ? [NoComponents(graph)]
+            : [.. LinkCapacityProblems(graph), .. StructureProblems(graph, end, logger)];
+    }
+
+    private static GraphProblem NoComponents(IGraphPipelineConfiguration graph) =>
+        new([], $"graph pipeline '{graph.Name}' has no components, so there is nothing to run");
+
+    private static List<GraphProblem> LinkCapacityProblems(IGraphPipelineConfiguration graph) =>
+        graph.LinkCapacity < 1
+            ? [new GraphProblem(["linkCapacity"], $"graph pipeline '{graph.Name}' does not state how many batches a link buffers ({graph.LinkCapacity} is not at least one)")]
+            : [];
+
+    // The lines, the read's end, every component against its kind, and the flow of each level.
+    private static List<GraphProblem> StructureProblems(IGraphPipelineConfiguration graph, GraphEnd? end, ILogger logger)
+    {
+        var problems = new List<GraphProblem>(LinkEndProblems(graph));
         problems.AddRange(EndProblems(graph, end));
         var broken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         problems.AddRange(GraphComponentValidator.Problems(graph, broken, logger));
@@ -70,6 +96,7 @@ public static class GraphShapeValidator
             problems.AddRange(LevelProblems(graph, level, level is null ? end : null, broken, logger));
         }
 
+        problems.AddRange(DecisionProblems.Of(graph, logger));
         return problems;
     }
 
@@ -91,7 +118,7 @@ public static class GraphShapeValidator
 
     // A line whose end names a component the graph does not have. No level can judge it: a level takes the lines with an end among its own
     // components, and a line to a component that is nowhere is not a line between two components of one place.
-    private static IEnumerable<GraphProblem> LinkEndProblems(GraphPipelineConfiguration graph)
+    private static IEnumerable<GraphProblem> LinkEndProblems(IGraphPipelineConfiguration graph)
     {
         var names = new HashSet<string>(graph.Components.Select(component => component.Name), StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < graph.Links.Count; index++)
@@ -111,7 +138,7 @@ public static class GraphShapeValidator
     }
 
     // The top level and the body of each loop: the components that share a parent. A loop that is itself broken is not looked into twice.
-    private static IEnumerable<string?> Levels(GraphPipelineConfiguration graph)
+    private static IEnumerable<string?> Levels(IGraphPipelineConfiguration graph)
     {
         yield return null;
         foreach (var loop in graph.Components.Where(component => ComponentTypes.ByName(component.ComponentType).HoldsComponents))
@@ -122,7 +149,7 @@ public static class GraphShapeValidator
 
     // One level: the shape of its flow by the engine's own graph check, over components that have only their nodes, and a line that leaves
     // the level is refused (a loop's body runs again each round, so its lines cannot reach outside it).
-    private static IEnumerable<GraphProblem> LevelProblems(GraphPipelineConfiguration graph, string? parent, GraphEnd? end, HashSet<string> broken, ILogger logger)
+    private static IEnumerable<GraphProblem> LevelProblems(IGraphPipelineConfiguration graph, string? parent, GraphEnd? end, HashSet<string> broken, ILogger logger)
     {
         var members = graph.Components.Where(component => string.Equals(component.ParentComponent, parent, StringComparison.OrdinalIgnoreCase)).ToList();
         if (members.Count == 0)
@@ -162,8 +189,8 @@ public static class GraphShapeValidator
             yield break;
         }
 
-        var rows = CompletionLines.Rows(links);
-        foreach (var problem in ReservedNameProblems(movers, rows))
+        var rows = CompletionLines.Rows(links, graph.Components);
+        foreach (var problem in ReservedNameProblems(movers, rows, graph.Components))
         {
             yield return problem;
         }
@@ -176,7 +203,7 @@ public static class GraphShapeValidator
 
     // The engine's own graph check over the components that move rows and the lines that carry rows.
     private static IEnumerable<GraphProblem> FlowShapeProblems(
-        GraphPipelineConfiguration graph,
+        IGraphPipelineConfiguration graph,
         IReadOnlyList<PipelineComponentConfiguration> movers,
         IReadOnlyList<PipelineLinkConfiguration> rows,
         HashSet<string> inLevel,
@@ -187,7 +214,7 @@ public static class GraphShapeValidator
         var shapes = movers
             .Select(component =>
             {
-                var (inputs, outputs) = ComponentShapes.Of(component, rows);
+                var (inputs, outputs) = ComponentShapes.Of(component, rows, graph.Components);
                 return (IFlowComponent)new ShapeFlowComponent(component.Name, inputs, outputs, logger);
             })
             .ToList();
@@ -217,7 +244,7 @@ public static class GraphShapeValidator
 
     // An end whose component is not a top-level component of the graph: the read adds its component at the top level, so a component in a loop's body, or none, has no
     // output for it to take.
-    private static IEnumerable<GraphProblem> EndProblems(GraphPipelineConfiguration graph, GraphEnd? end)
+    private static IEnumerable<GraphProblem> EndProblems(IGraphPipelineConfiguration graph, GraphEnd? end)
     {
         if (end is not null && !graph.Components.Any(component => component.ParentComponent is null && string.Equals(component.Name, end.Component, StringComparison.OrdinalIgnoreCase)))
         {
@@ -227,9 +254,9 @@ public static class GraphShapeValidator
 
     // The completion lines of a level (FDW-3640): judged by the validator the run also uses, over every member, so a line from or to an action is covered.
     private static IEnumerable<GraphProblem> CompletionProblems(
-        GraphPipelineConfiguration graph, IReadOnlyList<PipelineComponentConfiguration> members, IReadOnlyList<PipelineLinkConfiguration> links, HashSet<string> broken)
+        IGraphPipelineConfiguration graph, IReadOnlyList<PipelineComponentConfiguration> members, IReadOnlyList<PipelineLinkConfiguration> links, HashSet<string> broken)
     {
-        var completions = CompletionLines.Completions(links);
+        var completions = CompletionLines.Completions(links, graph.Components);
         if (completions.Count == 0)
         {
             yield break;
@@ -238,7 +265,7 @@ public static class GraphShapeValidator
         var stages = ComponentStages.Of(members);
         var found = FlowCompletionValidator.Problems(
             [.. members.Select(member => member.Name)],
-            [.. CompletionLines.Rows(links).Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
+            [.. CompletionLines.Rows(links, graph.Components).Select(link => new FlowLink(link.FromComponent, link.FromOutput, link.ToComponent, link.ToInput))],
             [.. completions.Select(CompletionLines.ToCompletion)],
             name => FlowStage.RankIn(stages, name));
         foreach (var problem in found.Where(problem => problem.Component is null || !broken.Contains(problem.Component)))
@@ -253,9 +280,9 @@ public static class GraphShapeValidator
 
     // A row output a person names done would read as a completion output (FDW-3640): the name is refused, naming the component.
     private static IEnumerable<GraphProblem> ReservedNameProblems(
-        IReadOnlyList<PipelineComponentConfiguration> movers, IReadOnlyList<PipelineLinkConfiguration> rows) =>
+        IReadOnlyList<PipelineComponentConfiguration> movers, IReadOnlyList<PipelineLinkConfiguration> rows, IEnumerable<PipelineComponentConfiguration> components) =>
         movers
-            .Where(component => ComponentShapes.Of(component, rows).Outputs.Any(CompletionNodes.IsDone))
+            .Where(component => ComponentShapes.Of(component, rows, components).Outputs.Any(CompletionNodes.IsDone))
             .Select(component => new GraphProblem(
                 ["components", component.Name],
                 $"component '{component.Name}' has an output named '{CompletionNodes.Done}', which is the name every component's completion output has; give the output another name"));

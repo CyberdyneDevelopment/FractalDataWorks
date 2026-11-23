@@ -5,7 +5,9 @@ using Fdw.Results;
 namespace Fdw.Data.DataSets.Results;
 
 /// <summary>
-/// An update named a different implementation than the data set has. Each kind is its own implementation with its own table, so a data set cannot become another kind (FDW-1031). Caller-input validation failure: HTTP 400 (Validation category).
+/// A Graph data set update named a data set that is not a Graph data set. A data set's Simple, Compound or Federated kind follows its sources
+/// (FDW-6806) and is never named by a caller; turning one into a Graph data set is the conversion route's (FDW-6972), never a graph update.
+/// Caller-input validation failure: HTTP 400 (Validation category).
 /// </summary>
 [TypeOption(typeof(DataSetsResultCodes), "ImplementationChangeNotAllowed", RestrictToCurrentCompilation = true)]
 [ExcludeFromCodeCoverage]

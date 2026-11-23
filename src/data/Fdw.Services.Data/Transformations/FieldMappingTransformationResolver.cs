@@ -132,6 +132,55 @@ public sealed class FieldMappingTransformationResolver
         return GenericResult<IReadOnlyDictionary<string, IReadOnlyList<ResolvedFieldTransformation>>>.Success(chains);
     }
 
+    /// <summary>
+    /// Gets the stored links of every field mapping of <paramref name="source"/> that has attachments, keyed by logical field name and in chain
+    /// order: what a conversion to a Graph data set carries as an input mapping's chain (FDW-6973), which states each link by its transformation.
+    /// </summary>
+    /// <param name="source">The source whose stored mappings are read.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The links by field; a field with none has no entry.</returns>
+    public async Task<IGenericResult<IReadOnlyDictionary<string, IReadOnlyList<AttachedFieldTransformation>>>> Attached(
+        DataSetSourceConfiguration source, CancellationToken cancellationToken = default)
+    {
+        var links = new Dictionary<string, IReadOnlyList<AttachedFieldTransformation>>(StringComparer.Ordinal);
+        var mappings = source.Mappings.Where(m => m.IsCurrent && !m.IsDeleted).ToList();
+        if (mappings.Count == 0)
+            return GenericResult<IReadOnlyDictionary<string, IReadOnlyList<AttachedFieldTransformation>>>.Success(links);
+
+        var gateway = _gatewayProvider.Get(_transformations.DataStoreName);
+        if (gateway.IsFailure)
+            return gateway.ToNewResult<IReadOnlyDictionary<string, IReadOnlyList<AttachedFieldTransformation>>>();
+
+        var target = new DataStoreTarget(_transformations.DataStoreName, PathName, ContainerName);
+        foreach (var mapping in mappings)
+        {
+            var attachments = await gateway.Value!.Execute<IEnumerable<FieldMappingTransformationConfiguration>>(
+                new QueryCommand<FieldMappingTransformationConfiguration> { Filter = ActiveFor(mapping.Id) },
+                target,
+                cancellationToken).ConfigureAwait(false);
+            if (attachments.IsFailure)
+            {
+                FieldMappingTransformationResolverLog.AttachmentsUnreadable(_logger, source.SourceName, mapping.LogicalFieldName);
+                return attachments.ToNewResult<IReadOnlyDictionary<string, IReadOnlyList<AttachedFieldTransformation>>>();
+            }
+
+            var chain = new List<AttachedFieldTransformation>();
+            foreach (var attachment in attachments.Value!.OrderBy(a => a.Ordinal))
+            {
+                var transformation = await _transformations.Get(attachment.TransformationId, cancellationToken).ConfigureAwait(false);
+                if (transformation.IsFailure || transformation.Value is null)
+                    return GenericResult<IReadOnlyDictionary<string, IReadOnlyList<AttachedFieldTransformation>>>.Failure(
+                        FieldMappingTransformationResolverLog.TransformationMissing(_logger, mapping.LogicalFieldName, attachment.TransformationId));
+                chain.Add(new AttachedFieldTransformation(attachment.TransformationId, transformation.Value.Name, attachment.Ordinal));
+            }
+
+            if (chain.Count > 0)
+                links[mapping.LogicalFieldName] = chain;
+        }
+
+        return GenericResult<IReadOnlyDictionary<string, IReadOnlyList<AttachedFieldTransformation>>>.Success(links);
+    }
+
     private static FilterExpression ActiveFor(Guid fieldMappingId) => new()
     {
         Root = new FilterGroup

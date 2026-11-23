@@ -56,6 +56,9 @@ public sealed partial class CompoundDataSetConfiguration : ICompoundDataSetConfi
     public string? SourceDataSetName { get; set; }
 
     /// <summary>Gets or sets the description.</summary>
+    // Why [NotStored]: the text of a description is read from the descriptions table and filled in by the data set provider once for the whole read (FDW-6208); the column
+    // is gone from the table, so no read selects it and no save writes it. The member stays, so every caller of Description still gets the text.
+    [Fdw.Data.NotStored]
     public string Description { get; set; } = string.Empty;
 
     /// <summary>
@@ -84,6 +87,10 @@ public sealed partial class CompoundDataSetConfiguration : ICompoundDataSetConfi
 
     /// <summary>Gets or sets the joins between this data set's sources, saved to <c>data.DataSetJoin</c>.</summary>
     public IList<DataSetJoinConfiguration> Joins { get; set; } = new List<DataSetJoinConfiguration>();
+
+    /// <inheritdoc />
+    /// <remarks>Maps to <c>SourceCombination</c>; no default: the owner states it (FDW-6946).</remarks>
+    public string? SourceCombination { get; set; }
 
     /// <summary>Gets or sets the caching.</summary>
     public CachingConfiguration? Caching { get; set; }

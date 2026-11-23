@@ -20,11 +20,12 @@ public class GraphDataSetConfigurationTests
     {
         var children = new GraphDataSetComponentConfigurationPocoMapper().CascadeChildren.Select(child => child.ChildType).ToList();
 
-        children.Count.ShouldBe(4);
+        children.Count.ShouldBe(5);
         children.ShouldContain(typeof(GraphDataSetComponentFieldConfiguration));
         children.ShouldContain(typeof(GraphDataSetComponentColumnConfiguration));
         children.ShouldContain(typeof(GraphDataSetComponentSplitOutputConfiguration));
         children.ShouldContain(typeof(GraphDataSetStageConfiguration));
+        children.ShouldContain(typeof(GraphDataSetComponentSettingConfiguration));
     }
 
     [Fact]
@@ -78,11 +79,12 @@ public class GraphDataSetConfigurationTests
     {
         var children = new GraphDataSetConfigurationPocoMapper().CascadeChildren.Select(child => child.ChildType).ToList();
 
-        children.Count.ShouldBe(4);
+        children.Count.ShouldBe(5);
         children.ShouldContain(typeof(GraphDataSetFieldConfiguration));
         children.ShouldContain(typeof(GraphDataSetComponentConfiguration));
         children.ShouldContain(typeof(GraphDataSetLinkConfiguration));
         children.ShouldContain(typeof(GraphDataSetIntentConfiguration));
+        children.ShouldContain(typeof(DataSetFederationOptionConfiguration), "a Graph data set's own federation option values (FDW-6901)");
     }
 
     [Fact]

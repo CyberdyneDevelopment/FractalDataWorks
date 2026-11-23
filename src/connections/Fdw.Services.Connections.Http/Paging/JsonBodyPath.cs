@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json;
 using Fdw.Results;
+using Fdw.Services.Connections.Http.Paging.PageText;
 using Fdw.Services.Connections.Http.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -26,16 +27,14 @@ public static class JsonBodyPath
         try
         {
             using var document = JsonDocument.Parse(body);
-            var found = Find(document.RootElement, Segments(path), 0);
-            return found switch
-            {
-                null => GenericResult<string?>.Success(null),
-                { ValueKind: JsonValueKind.Null } => GenericResult<string?>.Success(null),
-                { ValueKind: JsonValueKind.String } text => GenericResult<string?>.Success(text.GetString()),
-                { ValueKind: JsonValueKind.Number } number => GenericResult<string?>.Success(number.GetRawText()),
-                { } other => GenericResult<string?>.Failure(HttpPagingLog.PageBodyUnreadable(
-                    logger, connectionName, page, path, $"it holds a {other.ValueKind}, not text")),
-            };
+            if (Find(document.RootElement, Segments(path), 0) is not { } found)
+                return GenericResult<string?>.Success(null);
+
+            var kind = PageTextKinds.ByValueKind(found.ValueKind);
+            return ReferenceEquals(kind, PageTextKinds.NotFound)
+                ? GenericResult<string?>.Failure(HttpPagingLog.PageBodyUnreadable(
+                    logger, connectionName, page, path, $"it holds a {found.ValueKind}, not text"))
+                : GenericResult<string?>.Success(kind.Read(found));
         }
         catch (JsonException ex)
         {

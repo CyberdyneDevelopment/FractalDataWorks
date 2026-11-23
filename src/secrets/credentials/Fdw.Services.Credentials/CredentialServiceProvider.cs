@@ -29,6 +29,10 @@ public sealed class CredentialServiceProvider
           ICredentialServiceConfigurationProvider>,
       ICredentialServiceProvider
 {
+    /// <summary>Gets how this provider reads the configuration it builds a service from.</summary>
+    /// <remarks>This domain has no description fill today, so its configuration is read whole (FDW-7354).</remarks>
+    protected override ConfigurationReadOptions ReadOptions => ConfigurationReadOptions.Whole;
+
     private readonly ILogger<CredentialServiceProvider> _logger;
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.Configuration.SourceGenerators.Models;
@@ -54,4 +55,10 @@ public sealed class SqlColumnDefinition
     /// Gets or sets whether this is an identity column.
     /// </summary>
     public bool IsIdentity { get; set; }
+
+    /// <summary>
+    /// Gets the MSBuild properties this column needed because its field states no size of its own, and the build did not state
+    /// (FDW-7107). A column with any is not written: its configuration is reported (CFG004) and gets no DDL.
+    /// </summary>
+    public List<string> SizesNotStated { get; } = [];
 }

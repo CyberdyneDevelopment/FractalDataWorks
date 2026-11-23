@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Channels;
 using Fdw.Services.Etl.Abstractions.Flow;
@@ -12,6 +13,7 @@ internal sealed class FlowLinkState
     private long _rows;
     private long _batches;
     private long _bytes;
+    private long _blockedTicks;
 
     /// <summary>Initializes a new instance of the <see cref="FlowLinkState"/> class.</summary>
     /// <param name="link">The link; for a dropped output its target names are empty.</param>
@@ -32,7 +34,14 @@ internal sealed class FlowLinkState
     public ChannelWriter<FlowBatch>? Writer => Input?.Writer;
 
     /// <summary>Gets what moved over the link.</summary>
-    public FlowLinkCount Count => new(Link, Interlocked.Read(ref _rows), Interlocked.Read(ref _batches), Interlocked.Read(ref _bytes));
+    /// <remarks>With the queue of the input it feeds and the time its writers have waited on that input (FDW-5230).</remarks>
+    public FlowLinkCount Count => new(Link, Interlocked.Read(ref _rows), Interlocked.Read(ref _batches), Interlocked.Read(ref _bytes))
+    {
+        // A dropped output feeds no input, so nothing waits in it.
+        QueuedBytes = Input is null ? 0 : Input.QueuedBytes,
+        QueuedBatches = Input is null ? 0 : Input.QueuedBatches,
+        Blocked = TimeSpan.FromTicks(Interlocked.Read(ref _blockedTicks)),
+    };
 
     /// <summary>Counts a batch written to the link.</summary>
     /// <param name="rows">The number of rows in it.</param>
@@ -43,4 +52,8 @@ internal sealed class FlowLinkState
         Interlocked.Increment(ref _batches);
         Interlocked.Add(ref _bytes, bytes);
     }
+
+    /// <summary>Adds a wait a writer spent on this link because the input it feeds was full (FDW-5230).</summary>
+    /// <param name="waited">How long the write waited.</param>
+    public void AddBlocked(TimeSpan waited) => Interlocked.Add(ref _blockedTicks, waited.Ticks);
 }

@@ -98,7 +98,7 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         // The rows alone: which connections are checked is decided by fields of each row, and ProbeOne
         // resolves each checked one by name, which reads it whole (FDW-970).
         var allResult = await serviceProvider.GetRequiredService<IConnectionConfigurationProvider>()
-            .Get(ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+            .Get(ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (!allResult.IsSuccess)
         {
             var reason = allResult.FailureReason().Message;

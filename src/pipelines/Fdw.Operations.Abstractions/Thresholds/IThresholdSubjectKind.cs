@@ -1,4 +1,5 @@
 using Fdw.Collections;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Operations.Abstractions.Thresholds;
 
@@ -10,4 +11,7 @@ public interface IThresholdSubjectKind : ITypeOption<int, IThresholdSubjectKind>
 
     /// <summary>Gets the name of the kind's threshold link table.</summary>
     string ContainerName { get; }
+
+    /// <summary>Gets what a link's subject id cites: the domain a link to this option asks whether the subject exists in, or why nothing is asked (FDW-6221).</summary>
+    Citation Cites { get; }
 }

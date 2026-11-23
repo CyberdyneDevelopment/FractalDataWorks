@@ -52,4 +52,24 @@ public class PipelineRunQueueItemResponse
     /// does not follow, as <see cref="Components"/>.
     /// </summary>
     public IList<PipelineRunLinkResponse>? Links { get; set; }
+
+    /// <summary>Gets or sets when the server read the run's figures, or <see langword="null"/> for a run that has none, as <see cref="Components"/> (FDW-5232).</summary>
+    public DateTimeOffset? SampledAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the estimated value bytes waiting in the run's links now, each input counted once, or <see langword="null"/> as <see cref="SampledAt"/> (FDW-5232).
+    /// </summary>
+    public long? QueuedBytes { get; set; }
+
+    /// <summary>Gets or sets the estimated value bytes the run's components hold now, or <see langword="null"/> as <see cref="SampledAt"/> (FDW-5232).</summary>
+    public long? HeldBytes { get; set; }
+
+    /// <summary>Gets or sets <see cref="QueuedBytes"/> and <see cref="HeldBytes"/> together: what the run holds now, or <see langword="null"/> as <see cref="SampledAt"/> (FDW-5232).</summary>
+    public long? TotalBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the byte figures measure: <c>EstimatedValueBytes</c>, an estimate of the memory the row values hold from their types, not process memory; or
+    /// <see langword="null"/> as <see cref="SampledAt"/> (FDW-5232).
+    /// </summary>
+    public string? BytesMeasure { get; set; }
 }

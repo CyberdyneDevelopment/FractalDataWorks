@@ -1,4 +1,6 @@
+using Fdw.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.SecretManagers.Abstractions;
 using System;
 using Fdw.Services.Results;
 using System.Collections.Generic;
@@ -130,9 +132,24 @@ public sealed class RoslynWorkspaceConnectionType
         => GenericResult<bool>.Success(true);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The provider of a workspace connection opens its solution through a workspace factory. A workspace factory states no setting and reads no secret, so one
+    /// is made here, and a connection of this kind reads no secret from the managers it is handed.
+    /// </remarks>
+    protected override IGenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> BuildImplementationProvider(
+        IRoslynWorkspaceConnectionFactory factory, ISecretManagerProvider secretManagers, ILoggerFactory? loggerFactory)
+        => GenericResult<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>.Success(
+            new RoslynWorkspaceConnectionProvider(factory, new RoslynWorkspaceFactory(loggerFactory?.CreateLogger<RoslynWorkspaceFactory>())));
+
+    /// <inheritdoc/>
     /// <remarks>A workspace connection opens files with the host process's own access; it carries no stored credential.</remarks>
     protected override IGenericResult<ConnectionCredentialSlots> DescribeCredentials(RoslynWorkspaceConnectionConfiguration configuration)
         => GenericResult<ConnectionCredentialSlots>.Success(ConnectionCredentialSlots.None);
+
+    /// <inheritdoc/>
+    /// <remarks>A workspace connection carries no stored credential, so it reads no secret.</remarks>
+    protected override IGenericResult<bool> DecideReadsStoredSecret(RoslynWorkspaceConnectionConfiguration configuration)
+        => GenericResult<bool>.Success(false);
 
     /// <inheritdoc/>
     protected override IGenericResult BindCredentialReferences(

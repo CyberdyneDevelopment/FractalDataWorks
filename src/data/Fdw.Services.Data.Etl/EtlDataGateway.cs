@@ -63,7 +63,7 @@ namespace Fdw.Services.Data.Etl;
 /// cursor. A limit that cannot be resolved refuses the call rather than lifting the limits (FDW-949).
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public sealed partial class EtlDataGateway : IEtlDataGateway
+public sealed partial class EtlDataGateway : IEtlDataGateway, IPushdownPlanningGateway
 {
     private readonly ILogger<EtlDataGateway> _logger;
     private readonly IDataConnectionProvider _connectionProvider;
@@ -79,6 +79,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
     private readonly IConnectionConfigurationProvider? _connectionConfigProvider;
     private readonly FieldMappingTransformationResolver _fieldTransformations;
     private readonly IGraphDataSetRunner? _graphRunner;
+    private readonly FederationSettings? _federation;
     private readonly DataGatewayResultCache? _cache;
     private readonly MainDataGatewayConfiguration? _options;
 
@@ -120,6 +121,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
     /// (<see cref="IDataStore.DeclaredByHost"/>). Without it such a request fails loud; a non-system request over one
     /// is refused either way (FDW-1068).
     /// </param>
+    /// <param name="federation">The FDW-level federation settings a Federated data set that states no strategy reads under (FDW-6806).</param>
     /// <param name="graphRunner">
     /// What runs the graph of a Graph data set when one is read (FDW-5291). Without it a read of a Graph data set fails loud with
     /// <c>GraphDataSetRunnerMissing</c>; every other kind of data set is read as before.
@@ -139,8 +141,10 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
         IConnectionConfigurationProvider? connectionConfigProvider = null,
         IConfigurationGatewayProvider? configurationGateways = null,
-        IGraphDataSetRunner? graphRunner = null)
+        IGraphDataSetRunner? graphRunner = null,
+        FederationSettings? federation = null)
     {
+        _federation = federation;
         var factory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = factory.CreateLogger<EtlDataGateway>();
 
@@ -556,6 +560,32 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The container and its connection are resolved as for any command; a store the host declares is read through the configuration gateway,
+    /// so it is not offered (<c>PushdownNotOffered</c>) and a planner reads it in memory as before.
+    /// </remarks>
+    public async Task<IGenericResult<PushdownContainer>> Describe(DataStoreTarget target, CancellationToken cancellationToken = default)
+    {
+        var hostDeclared = await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (hostDeclared.IsFailure)
+            return hostDeclared.ToNewResult<PushdownContainer>();
+
+        if (hostDeclared.Value)
+            return GenericResult<PushdownContainer>.Failure(
+                DataServiceResultCodes.ByName("PushdownNotOffered"), _logger,
+                ResultDetails.Create("container", target.Container, "dataStore", target.DataStore, "reason", "the host declares this store and reads it through the configuration gateway"));
+
+        var resolved = await ResolveTargetConnection(new QueryCommand<Dictionary<string, object?>>(), target, cancellationToken).ConfigureAwait(false);
+        if (!resolved.IsSuccess)
+            return resolved.ToNewResult<PushdownContainer>();
+
+        var store = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+        return store.IsSuccess && store.Value is { } record
+            ? GenericResult<PushdownContainer>.Success(PushdownContainers.Of(record.Id, resolved.Value.Container, resolved.Value.Connection))
+            : GenericResult<PushdownContainer>.Failure(DataGatewayLogger.DataStoreNotFoundForSource(_logger, target.DataStore));
+    }
+
+    /// <inheritdoc/>
     public async Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(
         IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
     {
@@ -749,7 +779,7 @@ public sealed partial class EtlDataGateway : IEtlDataGateway
 
         DataGatewayLogger.RoutingToDataSet(_logger, target.DataSet);
         return GenericResult<(IDataSetType, DataSetExecutionContext)>.Success(
-            (strategy, new DataSetExecutionContext(config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger, this, _graphRunner)));
+            (strategy, new DataSetExecutionContext(config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger, this, _graphRunner, _federation)));
     }
 
 

@@ -63,12 +63,4 @@ public interface ISchemaProvider
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the data preview result.</returns>
     Task<IGenericResult<DataPreviewResponsePayload>> PreviewData(SchemaPreviewRequest request, CancellationToken ct = default);
-
-    /// <summary>
-    /// Executes DDL against the current connection.
-    /// </summary>
-    /// <param name="ddl">The DDL script to execute.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A result containing the DDL execution result.</returns>
-    Task<IGenericResult<ExecuteDdlResponse>> ExecuteDdl(string ddl, CancellationToken ct = default);
 }

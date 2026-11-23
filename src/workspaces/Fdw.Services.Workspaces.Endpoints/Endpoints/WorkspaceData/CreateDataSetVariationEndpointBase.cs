@@ -6,6 +6,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Endpoints;
 using Fdw.Services.Workspaces.Logging;
 using Fdw.Services.Workspaces.Results;
 using Fdw.Web.RestEndpoints.Crud;
@@ -128,7 +129,8 @@ public abstract class CreateDataSetVariationEndpointBase
                 ResultDetails.Create("name", request.WorkspaceName, "field", invalid, "value", request.Name)));
         }
 
-        return Task.FromResult(DataClassificationValidator.Validate(request.ClassificationId, Logger));
+        var named = DataSetNames.Check(request.DisplayName, request.Abbreviation, request.Name, Logger);
+        return Task.FromResult<IGenericResult>(named.IsFailure ? named : DataClassificationValidator.Validate(request.ClassificationId, Logger));
     }
 
     /// <inheritdoc />
@@ -160,7 +162,6 @@ public abstract class CreateDataSetVariationEndpointBase
         {
             Name = $"{workspace.Value.Name}/{request.Name}",
             VariationName = request.Name,
-            DisplayName = request.DisplayName,
             ClassificationId = request.ClassificationId,
             OwnerWorkspaceId = workspace.Value.Id,
             // The root data set whatever the parent is, so every view of a data set lists with it and a view of a view runs it.
@@ -171,6 +172,7 @@ public abstract class CreateDataSetVariationEndpointBase
             // unset date would overwrite the column default (FDW-793).
             CreatedAt = DateTimeOffset.UtcNow,
         };
+        DataSetNames.Set(variation, request.DisplayName, request.Abbreviation);
         var saved = await _variations.Save(variation, variation.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<DataSetVariationResponse>();
 
@@ -180,6 +182,7 @@ public abstract class CreateDataSetVariationEndpointBase
             Id = variation.Id,
             Name = variation.VariationName,
             DisplayName = variation.DisplayName,
+            Abbreviation = variation.Abbreviation,
             WorkspaceName = workspace.Value.Name,
             BaseDataSetName = main.Name,
             ParentName = based.Value.Parent?.VariationName,

@@ -331,12 +331,11 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns("Test");
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
-        // A page follows the order the container declares (FDW-3454): its surrogate key here.
-        container.As<IStorageContainer>().Setup(c => c.Metadata).Returns(new Dictionary<string, object> { ["SurrogateKeyField"] = "Id" });
+        // A page follows the order the container declares (FDW-3454): its primary key here.
         container.Setup(c => c.Schema).Returns(containerSchema.Object);
         container.Setup(c => c.ReferencingKeys)
             .Returns(GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]));
-        container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
+        container.Setup(c => c.Keys).Returns(TestPrimaryKeys.On("Id"));
 
         var paging = new PagingExpression { Skip = 100, Take = 50 };
 

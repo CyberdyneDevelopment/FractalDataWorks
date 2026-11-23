@@ -10,8 +10,10 @@ namespace Fdw.WebMcp.Hosting;
 /// EventIds are categorized numbers (<c>Category = Id / 10000</c>). Failures take the catalogue's
 /// canonical numbers, so the number carries the meaning: 40000 InvalidState, 60000
 /// ConfigurationMissing, 60001 NotConfigured, 60002 NotRegistered, 60004 ConfigurationInvalid.
-/// Operational traces take this package's open band: 11018-11035 informational/operational, 51002
-/// auth, 61004-61014 configuration (61008-61014: where the host's own address comes from, FDW-5721).
+/// Operational traces take this package's open band: 11018-11036 informational/operational, 51002
+/// auth, 61004-61017 configuration (61008-61014: where the host's own address comes from, FDW-5721;
+/// 61015-61017: how a tool's request is described, FDW-6143). 20002 ValidationFailed is the canonical number for a call whose
+/// arguments do not match the tool's description.
 /// </summary>
 [ExcludeFromCodeCoverage(Justification = "MessageLogging partial class - implementation is source-generated")]
 [MessageLoggingTypeCode("HOSTING")]
@@ -84,6 +86,23 @@ internal static partial class WebMcpLog
     // Why Information: once per process, and an operator checking what agents can call starts here.
     [MessageLogging(EventId = 11035, Level = LogLevel.Information, Message = "WebMCP script mapped at {path} with {toolCount} tool(s)")]
     public static partial IGenericMessage ScriptMapped(ILogger logger, string path, int toolCount);
+
+    [MessageLogging(EventId = 61015, Level = LogLevel.Warning, Message = "WebMCP tool '{toolName}' skipped (request nests too deep): '{path}' is more than {maxDepth} list(s) and object(s) down, which is as deep as the setting WebMcpToolSchemaMaxDepth allows. Flatten the request or raise the setting")]
+    public static partial IGenericMessage SchemaTooDeep(ILogger logger, string toolName, string path, int maxDepth);
+
+    [MessageLogging(EventId = 61016, Level = LogLevel.Warning, Message = "WebMCP tool '{toolName}' skipped (request reaches itself): '{path}' is a {typeName}, which is already being described, so the request has no finite description")]
+    public static partial IGenericMessage SchemaCycle(ILogger logger, string toolName, string path, string typeName);
+
+    [MessageLogging(EventId = 61017, Level = LogLevel.Error, Message = "WebMCP cannot describe its tools: the setting WebMcpToolSchemaMaxDepth, how many lists and objects a tool's request may nest, is not set to a positive number")]
+    public static partial IGenericMessage SchemaMaxDepthNotSet(ILogger logger);
+
+    [MessageLogging(EventId = 20002, Level = LogLevel.Information,
+        Message = "WebMCP tool '{toolName}' refused a call whose arguments do not match its description: {details}",
+        ClientMessage = "The arguments for tool '{toolName}' do not match its description: {details}")]
+    public static partial IGenericMessage ArgumentsInvalid(ILogger logger, string toolName, string details);
+
+    [MessageLogging(EventId = 11036, Level = LogLevel.Debug, Message = "WebMCP tool '{toolName}' call checked against its description: {argumentCount} argument(s) match")]
+    public static partial IGenericMessage ArgumentsChecked(ILogger logger, string toolName, int argumentCount);
 
     [MessageLogging(EventId = 40000, Level = LogLevel.Error, Message = "WebMCP maps routes, and this host ({hostType}) has no route table")]
     public static partial IGenericMessage NoRouteTable(ILogger logger, string hostType);

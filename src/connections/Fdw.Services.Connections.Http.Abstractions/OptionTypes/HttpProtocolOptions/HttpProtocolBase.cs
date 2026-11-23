@@ -12,6 +12,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Connections.Http.Abstractions.OptionTypes.CommandVerbs;
 using Fdw.Services.Connections.Http.Abstractions.Results;
 using Microsoft.Extensions.Logging;
 
@@ -112,6 +113,9 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
     {
         try
         {
+            if (RefuseUnlistedCommandType(command) is { } unlisted)
+                return unlisted;
+
             // Get request components via virtual methods
             var method = GetHttpMethod(command, container, context);
             var path = GetRequestPath(command, container, context);
@@ -197,16 +201,23 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
         IStorageContainer container,
         HttpProtocolContext context)
     {
-        // Default: GET for queries, POST for mutations
-        return command.CommandType switch
-        {
-            "Query" => HttpMethod.Get,
-            "Insert" => HttpMethod.Post,
-            "Update" => HttpMethod.Put,
-            "Delete" => HttpMethod.Delete,
-            _ => HttpMethod.Post
-        };
+        // The verb of the command type: GET for a query, PUT for an update, DELETE for a delete, POST for the rest. A command type with no
+        // verb was refused by Translate before this is asked (CommandTypeUnsupported); asked directly, it is a defect of the caller.
+        var verb = HttpCommandVerbs.ByName(command.CommandType);
+        return ReferenceEquals(verb, HttpCommandVerbs.NotFound)
+            ? throw new InvalidOperationException($"Protocol '{Name}' has no HTTP verb for the data command type '{command.CommandType}'; Translate refuses it first.")
+            : new HttpMethod(verb.HttpMethodName);
     }
+
+    /// <summary>Refuses a data command type that has no entry in <see cref="HttpCommandVerbs"/>, so no HTTP method can be named for it.</summary>
+    /// <param name="command">The data command being translated.</param>
+    /// <returns>The coded failure, or null when the command type has a verb.</returns>
+    protected IGenericResult<HttpRequestMessage>? RefuseUnlistedCommandType(IDataCommand command)
+        => ReferenceEquals(HttpCommandVerbs.ByName(command.CommandType), HttpCommandVerbs.NotFound)
+            ? GenericResult<HttpRequestMessage>.Failure(
+                HttpResultCodes.ByName("CommandTypeUnsupported"),
+                ResultDetails.Create("Protocol", Name, "CommandType", command.CommandType))
+            : null;
 
     /// <summary>
     /// Gets the request path for the HTTP request.

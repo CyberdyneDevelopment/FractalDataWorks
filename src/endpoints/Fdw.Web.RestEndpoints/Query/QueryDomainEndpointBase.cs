@@ -38,6 +38,12 @@ namespace Fdw.Web.RestEndpoints.Query;
 /// column the record does not have is refused at the first query, loudly, not skipped.
 /// </para>
 /// <para>
+/// A field the provider fills after the rows are read (a description kept in the descriptions table, in the caller's
+/// language, FDW-6208) is declared filled (<see cref="QueryableField.Filled{TRecord}"/>), with a getter in place of a
+/// column. It may be asked for: the page comes through the provider, whose read observer has filled it. A filter or a
+/// sort on it is refused, each with its own code, because the list's table holds no column of it (FDW-6273).
+/// </para>
+/// <para>
 /// This is the answer to what a list <c>GET</c> cannot say: which members, in what order, only these
 /// fields, and how many in all. It carries the same envelope as the list, so a client reads one shape:
 /// <c>skip</c>, <c>take</c>, <c>hasMore</c>, <c>total</c> when asked, and the <c>items</c>, each keyed by
@@ -162,8 +168,12 @@ public abstract class QueryDomainEndpointBase<TDomain>
                 EndpointLogger.QueryFieldsUnavailable(Logger, ResourceName, typeof(TDomain).Name));
 
         var declared = QueryableFields;
-        var valid = Validate(declared, mapper);
+        var valid = QueryableFieldDeclarations.Check(ResourceName, typeof(TDomain).Name, declared, mapper, Logger);
         if (valid.IsFailure) return valid.ToNewResult<(ConfigurationPage<TDomain>, IPocoMapper, IReadOnlyList<QueryableField>)>();
+
+        // A filled field (a description kept in the descriptions table, FDW-6208) may be asked for, never filtered or sorted on (FDW-6273).
+        var refused = QueryableFieldDeclarations.Refuse(ResourceName, req, declared, Logger);
+        if (refused.IsFailure) return refused.ToNewResult<(ConfigurationPage<TDomain>, IPocoMapper, IReadOnlyList<QueryableField>)>();
 
         var refusals = new ResourceQueryRefusals(ResourceName, Logger);
         var translator = QueryTranslator.Create(declared, ResourceName, refusals);
@@ -196,29 +206,6 @@ public abstract class QueryDomainEndpointBase<TDomain>
         return new DomainQuery(new FilterExpression { Root = root }, query.Ordering, query.Skip, query.Take, query.IncludeTotal);
     }
 
-    // A declaration that does not fit the record is the resource's defect, not the caller's: it is refused
-    // as a failure of the resource, never narrowed to the fields that do fit.
-    private IGenericResult Validate(IReadOnlyList<QueryableField> declared, IPocoMapper mapper)
-    {
-        if (declared.Count == 0)
-            return GenericResult.Failure(EndpointLogger.QueryableFieldsInvalid(Logger, ResourceName, "it declares none"));
-
-        var columns = mapper.GetPropertyNames();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var field in declared)
-        {
-            if (!columns.Contains(field.Column, StringComparer.Ordinal))
-                return GenericResult.Failure(EndpointLogger.QueryableFieldsInvalid(
-                    Logger, ResourceName, $"'{field.Name}' names column '{field.Column}', which {typeof(TDomain).Name} does not have"));
-
-            if (!seen.Add(field.Name))
-                return GenericResult.Failure(EndpointLogger.QueryableFieldsInvalid(
-                    Logger, ResourceName, $"'{field.Name}' is declared more than once"));
-        }
-
-        return GenericResult.Success();
-    }
-
     // The fields the caller asked for, or every declared field when it asked for none.
     private IGenericResult<IReadOnlyList<QueryableField>> Selected(
         IReadOnlyList<string?>? asked, IReadOnlyList<QueryableField> declared, ResourceQueryRefusals refusals)
@@ -245,15 +232,9 @@ public abstract class QueryDomainEndpointBase<TDomain>
         IReadOnlyList<QueryableField> selected,
         [EnumeratorCancellation] CancellationToken ct)
     {
+        // A filled field is read off the record the provider's read observer filled for the page; a column through the mapper (FDW-6273).
         await foreach (var record in page.Items.WithCancellation(ct).ConfigureAwait(false))
-        {
-            var values = mapper.MapToParameters(record);
-            var row = new Dictionary<string, object?>(selected.Count, StringComparer.Ordinal);
-            foreach (var field in selected)
-                row[field.Name] = values[field.Column];
-
-            yield return row;
-        }
+            yield return QueryableFieldDeclarations.Row(record, mapper, selected);
     }
 
     private Microsoft.AspNetCore.Mvc.ProblemDetails? Error(IGenericResult outcome)

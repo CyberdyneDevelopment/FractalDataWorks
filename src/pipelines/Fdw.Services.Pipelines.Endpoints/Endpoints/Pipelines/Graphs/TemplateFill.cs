@@ -76,37 +76,9 @@ public static class TemplateFill
     // Replaces the references in every text under the node, in place; stops at the first refusal.
     private static IGenericResult Fill(JsonNode? node, string owner, IReadOnlyDictionary<string, object?> values, ILogger logger)
     {
-        switch (node)
-        {
-            case JsonObject properties:
-                foreach (var key in properties.Select(pair => pair.Key).ToList())
-                {
-                    var replaced = FillChild(properties[key], owner, values, logger);
-                    if (replaced.IsFailure)
-                    {
-                        return replaced;
-                    }
-
-                    properties[key] = replaced.Value;
-                }
-
-                return GenericResult.Success();
-            case JsonArray items:
-                for (var index = 0; index < items.Count; index++)
-                {
-                    var replaced = FillChild(items[index], owner, values, logger);
-                    if (replaced.IsFailure)
-                    {
-                        return replaced;
-                    }
-
-                    items[index] = replaced.Value;
-                }
-
-                return GenericResult.Success();
-            default:
-                return GenericResult.Success();
-        }
+        return TemplateNodeFills.All().FirstOrDefault(kind => kind.Matches(node)) is { } fill && node is not null
+            ? fill.Fill(node, child => FillChild(child, owner, values, logger))
+            : GenericResult.Success();
     }
 
     // A text is replaced by its filled text; an object or array is filled in place and kept.

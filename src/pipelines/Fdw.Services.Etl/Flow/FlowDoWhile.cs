@@ -22,6 +22,7 @@ namespace Fdw.Services.Etl.Flow;
 public sealed class FlowDoWhile : IFlowStep
 {
     private readonly Func<FlowVariables, bool> _condition;
+    private readonly bool _judgedOverRound;
     private readonly int _maximum;
     private readonly IReadOnlyList<IFlowStep> _body;
     private readonly ILogger _logger;
@@ -33,6 +34,18 @@ public sealed class FlowDoWhile : IFlowStep
     /// <param name="body">The steps run each iteration; at least one.</param>
     /// <param name="logger">The logger.</param>
     public FlowDoWhile(string name, Func<FlowVariables, bool> condition, int maximum, IReadOnlyList<IFlowStep> body, ILogger? logger = null)
+        : this(name, condition, false, maximum, body, logger)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="FlowDoWhile"/> class.</summary>
+    /// <param name="name">The step's name.</param>
+    /// <param name="condition">True to run the body again.</param>
+    /// <param name="judgedOverRound">True when the condition is judged over the scope of the round that just ran, where a decision of the body wrote what it fired (FDW-6134); false for the variables in scope.</param>
+    /// <param name="maximum">The most times the body may run; at least one.</param>
+    /// <param name="body">The steps run each iteration; at least one.</param>
+    /// <param name="logger">The logger.</param>
+    public FlowDoWhile(string name, Func<FlowVariables, bool> condition, bool judgedOverRound, int maximum, IReadOnlyList<IFlowStep> body, ILogger? logger = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentOutOfRangeException.ThrowIfLessThan(maximum, 1);
@@ -43,6 +56,7 @@ public sealed class FlowDoWhile : IFlowStep
 
         Name = name;
         _condition = condition;
+        _judgedOverRound = judgedOverRound;
         _maximum = maximum;
         _body = body;
         _logger = logger ?? NullLogger.Instance;
@@ -56,13 +70,14 @@ public sealed class FlowDoWhile : IFlowStep
     {
         for (var run = 1; run <= _maximum; run++)
         {
-            var ran = await FlowSequence.RunRound(_body, context.CreateChild(), run, cancellationToken).ConfigureAwait(false);
+            var round = context.CreateChild();
+            var ran = await FlowSequence.RunRound(_body, round, run, cancellationToken).ConfigureAwait(false);
             if (ran.IsFailure)
             {
                 return ran;
             }
 
-            if (!_condition(context.Variables))
+            if (!_condition(_judgedOverRound ? round.Variables : context.Variables))
             {
                 return GenericResult.Success();
             }

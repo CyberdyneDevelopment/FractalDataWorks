@@ -23,7 +23,7 @@ namespace Fdw.Services.Data.Graphs.Tests;
 public sealed class GraphDataSetRunnerTests
 {
     private static GraphDataSetRunner Runner(int rows = 10, int seconds = 5, int capacity = 2) =>
-        new(new GraphDataSetReadOptions(rows, seconds, capacity), NullLogger<GraphDataSetRunner>.Instance);
+        new(new GraphDataSetReadOptions(rows, seconds, capacity), NoContributions.Scopes(), NullLogger<GraphDataSetRunner>.Instance);
 
     private static GraphDataSetConfiguration Graph(string? component, string? output)
     {

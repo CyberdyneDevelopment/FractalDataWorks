@@ -13,8 +13,11 @@ namespace Fdw.Services.Identity.Abstractions;
 /// <c>[NotMapped] IIdentityServiceImplementationConfiguration? Configuration</c> populated on the read path,
 /// mirroring every other polymorphic header/typed-body domain (Connection, SecretManager,
 /// TokenManager).
+/// <para>
+/// Every identity carries a description (<see cref="IDescribedConfiguration"/>), kept in the descriptions table under the type Identity and never stored with the body (FDW-6208).
+/// </para>
 /// </remarks>
-public interface IIdentityServiceImplementationConfiguration : IImplementationConfiguration
+public interface IIdentityServiceImplementationConfiguration : IImplementationConfiguration, IDescribedConfiguration
 {
     /// <summary>
     /// Gets the identity provider's issuer URL — the authority this configuration obtains tokens

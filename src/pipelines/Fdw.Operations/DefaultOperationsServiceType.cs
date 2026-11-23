@@ -15,6 +15,8 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Descriptions;
+using Fdw.Services.Descriptions.Abstractions;
 using Fdw.Services.Notifications;
 using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Notifications.Configuration;
@@ -53,6 +55,10 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             "Default Operations Services",
             "Execution tracking, escalation, and escalation-policy configuration")
     {
+        // The escalation policy and threshold providers write each description with the descriptions writer, in the unit of the write (FDW-7205): a host that registered this
+        // option without the Descriptions service type is refused here with a coded message, never given a provider that fails on its first save.
+        Requires<IDescriptionWriter>(OperationsDescriptionsRegistrationLog.DescriptionWriterNotRegistered);
+
         // The implementation provider is registered under every threshold type, since the Implementation of a threshold row is the type's name (FDW-3936). Done here, after
         // Build, so a type that cannot be registered stops the host with a failed result instead of throwing out of a singleton factory.
         Initialization((host, loggerFactory) =>
@@ -84,7 +90,8 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             {
                 var domain = new EscalationConfigurationProvider(
                     sp.GetRequiredService<ILogger<EscalationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "EscalationPolicy");
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "EscalationPolicy",
+                    sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>());
                 domain.Register("EscalationPolicy", sp.GetRequiredService<IEscalationPolicyImplementationConfigurationProvider>());
                 return domain;
             });
@@ -95,14 +102,16 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             builder.Services.AddSingleton<IThresholdImplementationConfigurationProvider, ThresholdImplementationConfigurationProvider>(sp => new ThresholdImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ThresholdImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "ThresholdConfiguration"));
             builder.Services.TryAddSingleton<ThresholdConfigurationProvider>(sp => new ThresholdConfigurationProvider(
                 sp.GetRequiredService<ILogger<ThresholdConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "Threshold"));
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "Threshold",
+                sp.GetRequiredService<IDescriptionWriter>(), sp.GetRequiredService<IDescriptionReader>()));
             builder.Services.TryAddSingleton<IThresholdConfigurationProvider>(sp => sp.GetRequiredService<ThresholdConfigurationProvider>());
             builder.Services.TryAddScoped<IThresholdSource>(sp => new ThresholdSource(
                 sp.GetRequiredService<IConfigurationGatewayProvider>(), sp.GetRequiredService<IThresholdConfigurationProvider>(),
                 OperationsServiceTypes.ConfigurationConnection, sp.GetRequiredService<ILoggerFactory>().CreateLogger<ThresholdSource>()));
+            builder.Services.TryAddSingleton<ICitedConfigurations, CitedConfigurations>();
             builder.Services.TryAddScoped<IThresholdLinks>(sp => new ThresholdLinks(
                 sp.GetRequiredService<IConfigurationGatewayProvider>(), sp.GetRequiredService<IThresholdConfigurationProvider>(),
-                OperationsServiceTypes.ConfigurationConnection, sp.GetRequiredService<ILoggerFactory>().CreateLogger<ThresholdLinks>()));
+                sp.GetRequiredService<ICitedConfigurations>(), OperationsServiceTypes.ConfigurationConnection, sp.GetRequiredService<ILoggerFactory>().CreateLogger<ThresholdLinks>()));
             builder.Services.TryAddScoped<IThresholdNotifier>(sp => new ThresholdNotifier(
                 sp.GetService<INotificationServiceProvider>(), sp.GetService<INotificationRuleConfigurationProvider>(), sp.GetRequiredService<ILoggerFactory>().CreateLogger<ThresholdNotifier>()));
             builder.Services.TryAddSingleton<ThresholdEntryTracker>();

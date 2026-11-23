@@ -8,15 +8,13 @@ namespace Fdw.Data.MsSql;
 /// Path type for SQL Server database paths (Database.Schema.Object format).
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(PathTypes), "DatabasePath", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(PathTypes), "DatabasePath")]
 public sealed class DatabasePathType : PathTypeBase
 {
     /// <summary>
-    /// Singleton instance of DatabasePathType.
+    /// Initializes a new instance of the <see cref="DatabasePathType"/> class.
     /// </summary>
-    public static readonly DatabasePathType Instance = new();
-
-    private DatabasePathType()
+    public DatabasePathType()
         : base(
             name: "DatabasePath",
             displayName: "Database Path",

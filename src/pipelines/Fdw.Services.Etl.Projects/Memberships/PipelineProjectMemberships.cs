@@ -46,7 +46,7 @@ public sealed class PipelineProjectMemberships : IPipelineProjectMemberships
     /// <inheritdoc/>
     public async Task<IGenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>>> ByPipeline(CancellationToken cancellationToken = default)
     {
-        var read = await _nodes.GetFlat(ConfigurationLevels.Children, cancellationToken).ConfigureAwait(false);
+        var read = await _nodes.GetFlat(ConfigurationLevels.Children, ConfigurationReadOptions.WithoutFilledMembers, cancellationToken).ConfigureAwait(false);
         if (read.IsFailure)
             return read.ToNewResult<IReadOnlyDictionary<Guid, IReadOnlyList<string>>>();
 

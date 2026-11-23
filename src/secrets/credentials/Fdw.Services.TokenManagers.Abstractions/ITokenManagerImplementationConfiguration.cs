@@ -12,4 +12,6 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// </summary>
 public interface ITokenManagerImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the description a save states (FDW-6208): null states nothing and keeps the stored text, a blank removes it. It is never filled on load.</summary>
+    string? Description { get; set; }
 }

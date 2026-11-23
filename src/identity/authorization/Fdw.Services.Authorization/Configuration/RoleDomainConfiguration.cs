@@ -23,6 +23,9 @@ public partial class RoleDomainConfiguration : DomainConfiguration
     public string? DisplayName { get; set; }
 
     /// <summary>Gets or sets the description.</summary>
+    // Why [NotStored]: the text is a row of the descriptions table under the description type Role, filled by the role provider once for every set it reads and for every page of
+    // domain records it reads, and written in the unit of the role's save (FDW-6208); the column is gone from authz.Role, so no read selects it, no save writes it and it is no list field.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets whether the role is one tenant's own definition.</summary>

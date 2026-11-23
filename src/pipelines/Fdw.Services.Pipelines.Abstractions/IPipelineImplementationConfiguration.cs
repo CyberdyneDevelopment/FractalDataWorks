@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Configuration;
 
 namespace Fdw.Services.Pipelines.Abstractions;
@@ -25,14 +26,16 @@ public interface IPipelineImplementationConfiguration : IImplementationConfigura
     /// </remarks>
     Guid? OrgId { get; }
 
-    /// <summary>Gets what the pipeline is for, or <see langword="null"/> when nobody wrote one.</summary>
+    /// <summary>Gets or sets what the pipeline is for, or <see langword="null"/> when nobody wrote one.</summary>
     /// <remarks>
-    /// A column of the engine's own row, like every other setting of the pipeline, so saving the pipeline
-    /// stores it and reading the pipeline returns it. It is deliberately not a column of the shared
-    /// <c>pipe.Pipeline</c> domain row: a domain row that lists a field is re-versioned when that field changes,
-    /// and two tables cite <c>pipe.Pipeline(Id)</c> with a foreign key, which needs that row written once.
+    /// Kept in the descriptions table, not in a column of either pipeline table (FDW-7323): saving the pipeline writes it in the unit of the save, and reading
+    /// the pipeline fills it unless the read states <c>WithoutFilledMembers</c>, which leaves it empty (not read). A pipeline saved with no text removes the one it had.
     /// </remarks>
-    string? Description { get; }
+    string? Description { get; set; }
+
+    /// <summary>Gets the parameters of the pipeline that carry a description, none for an implementation that declares none (FDW-7323).</summary>
+    /// <remarks>The provider keeps their descriptions in the descriptions table, owned by this pipeline, beside the pipeline's own.</remarks>
+    IReadOnlyList<IDescribedPipelineParameter> DescribedParameters { get; }
 
     /// <summary>Gets when the engine's row for this version of the pipeline was written (FDW-1149).</summary>
     /// <remarks>

@@ -10,16 +10,20 @@ using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Multitenancy;
+using Fdw.Services.Settings;
 using Fdw.Services.Workspaces;
 using Fdw.Web.Endpoints.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// <c>POST /data-option-owners/search</c> (datastores:write), FDW-6339. Lists a page of the organizations or workspaces, of the kind the query names, that the caller may own a rule in.
-/// Built by FDW-6489: the organizations the organization provider lists, or the workspaces the workspace access policy lets the caller view; each is named by the names directory, so a
-/// choice with no name fails the list and is never shown empty. A kind left out is refused: nothing picks one.
+/// Built by FDW-6489: the organizations the organization provider lists, or the workspaces the workspace access policy lets the caller view; a choice with no name fails the list and is
+/// never shown empty. A kind left out is refused: nothing picks one. FDW-6717: an organization is read as a page of the organization domain's records (its list fields live on the
+/// domain record, which the composing read of a whole organization cannot carry), narrowed to the caller's tenant (FDW-4828) with the size of the read from the setting DataOptionOwnerReadSize, and is named by its record;
+/// a workspace is named by the names directory.
 /// </summary>
 public abstract class ListDataOptionOwnersEndpointBase : DataOptionRuleServiceEndpointBase<ListDataOptionOwnersRequest, PaginatedResponse<DataOptionOwnerChoicePayload>>
 {
@@ -61,11 +65,7 @@ public abstract class ListDataOptionOwnersEndpointBase : DataOptionRuleServiceEn
         if (!window.IsSuccess || window.Value is null)
             return window.ToNewResult<PaginatedResponse<DataOptionOwnerChoicePayload>>();
 
-        var ids = await ChoiceIds(kind, cancellationToken).ConfigureAwait(false);
-        if (!ids.IsSuccess || ids.Value is null)
-            return ids.ToNewResult<PaginatedResponse<DataOptionOwnerChoicePayload>>();
-
-        var named = await _names.Owners(kind, ids.Value, cancellationToken).ConfigureAwait(false);
+        var named = await Choices(kind, cancellationToken).ConfigureAwait(false);
         if (!named.IsSuccess || named.Value is null)
             return named.ToNewResult<PaginatedResponse<DataOptionOwnerChoicePayload>>();
 
@@ -92,20 +92,49 @@ public abstract class ListDataOptionOwnersEndpointBase : DataOptionRuleServiceEn
         ConfigureEndpoint();
     }
 
-    // The ids of the owners of one kind the caller may choose: every organization listed, or the workspaces the caller may view. A kind that is neither is refused with its own code.
-    private async Task<IGenericResult<IReadOnlyList<Guid>>> ChoiceIds(string kind, CancellationToken cancellationToken)
+    // The owners of one kind the caller may choose, each with its name. A kind that is neither organization nor workspace is refused with its own code.
+    private async Task<IGenericResult<IReadOnlyDictionary<Guid, string>>> Choices(string kind, CancellationToken cancellationToken)
     {
-        if (string.Equals(kind, DataOptionOwnerKinds.Workspace.Name, StringComparison.Ordinal))
-            return await ViewableWorkspaceIds(cancellationToken).ConfigureAwait(false);
+        if (string.Equals(kind, DataOptionOwnerKinds.Organization.Name, StringComparison.Ordinal))
+            return await OrganizationChoices(cancellationToken).ConfigureAwait(false);
 
-        if (!string.Equals(kind, DataOptionOwnerKinds.Organization.Name, StringComparison.Ordinal))
-            return GenericResult<IReadOnlyList<Guid>>.Failure(
+        if (!string.Equals(kind, DataOptionOwnerKinds.Workspace.Name, StringComparison.Ordinal))
+            return GenericResult<IReadOnlyDictionary<Guid, string>>.Failure(
                 DataOptionRulesLog.OwnerKindNotFound(EndpointLogger, kind, string.Join(", ", DataOptionOwnerKinds.All().Select(known => known.Name))));
 
-        var organizations = await _organizations.Get(cancellationToken).ConfigureAwait(false);
-        return organizations.IsSuccess && organizations.Value is { } listed
-            ? GenericResult<IReadOnlyList<Guid>>.Success([.. listed.Select(organization => organization.Id)])
-            : organizations.ToNewResult<IReadOnlyList<Guid>>();
+        var ids = await ViewableWorkspaceIds(cancellationToken).ConfigureAwait(false);
+        return ids.IsSuccess && ids.Value is { } viewable
+            ? await _names.Owners(kind, viewable, cancellationToken).ConfigureAwait(false)
+            : ids.ToNewResult<IReadOnlyDictionary<Guid, string>>();
+    }
+
+    // The organization domain keeps its fields (tenant, slug, flags) on its domain record and its implementation carries none of them, so the composing read of a whole organization can
+    // never answer for it (ListFieldNotOnImplementation); a page of domain records is the read the domain serves (FDW-4233). The tenant schema has no row-level security, so the read is
+    // narrowed to the caller's tenant by the one mechanism every organization list uses, TenantOrganizations (FDW-4828), with the read size from the setting DataOptionOwnerReadSize
+    // (FDW-6717); a tenant with more organizations than the size fails, because a list that silently dropped some would hide where a rule may be owned.
+    private async Task<IGenericResult<IReadOnlyDictionary<Guid, string>>> OrganizationChoices(CancellationToken cancellationToken)
+    {
+        var tenant = TenantOrganizations.CallerTenant(User, EndpointLogger, RouteName);
+        if (!tenant.IsSuccess)
+            return tenant.ToNewResult<IReadOnlyDictionary<Guid, string>>();
+
+        var organizations = await _organizations
+            .OfTenant(tenant.Value, HttpContext.RequestServices.GetRequiredService<IEffectiveSettingsProvider>(), SettingDefinitions.DataOptionOwnerReadSize, EndpointLogger, cancellationToken)
+            .ConfigureAwait(false);
+        if (!organizations.IsSuccess || organizations.Value is not { } rows)
+            return organizations.ToNewResult<IReadOnlyDictionary<Guid, string>>();
+
+        var named = new Dictionary<Guid, string>();
+        foreach (var row in rows)
+        {
+            if (string.IsNullOrWhiteSpace(row.Name))
+                return GenericResult<IReadOnlyDictionary<Guid, string>>.Failure(
+                    DataOptionRulesLog.OwnerNotFound(EndpointLogger, DataOptionOwnerKinds.Organization.Name, row.Id.ToString("D")));
+
+            named[row.Id] = row.Name;
+        }
+
+        return GenericResult<IReadOnlyDictionary<Guid, string>>.Success(named);
     }
 
     private async Task<IGenericResult<IReadOnlyList<Guid>>> ViewableWorkspaceIds(CancellationToken cancellationToken)

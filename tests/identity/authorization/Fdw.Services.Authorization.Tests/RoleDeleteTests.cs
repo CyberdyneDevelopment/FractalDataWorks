@@ -81,7 +81,7 @@ public sealed class RoleDeleteTests
         gateways.Setup(p => p.Get(It.IsAny<string>())).Returns(GenericResult<IConfigurationGateway>.Success(_gateway.Object));
 
         _roles = new RoleConfigurationProvider(
-            NullLogger<RoleConfigurationProvider>.Instance, gateways.Object, "TestStore", "authz", "Role", _userRoles.Object, _rolePermissions.Object);
+            NullLogger<RoleConfigurationProvider>.Instance, gateways.Object, "TestStore", "authz", "Role", _userRoles.Object, _rolePermissions.Object, new NoDescriptions(), new NoDescriptions());
         _roles.Register("Role", _roleBody.Object).IsSuccess.ShouldBeTrue();
     }
 

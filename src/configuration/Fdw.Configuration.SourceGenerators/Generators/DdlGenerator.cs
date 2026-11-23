@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Fdw.Configuration.SourceGenerators.Analysis;
@@ -12,9 +13,26 @@ namespace Fdw.Configuration.SourceGenerators.Generators;
 public static class DdlGenerator
 {
     /// <summary>
+    /// Says which fields of a configuration state no size of their own where the build states none either (FDW-7107).
+    /// </summary>
+    /// <param name="model">The configuration.</param>
+    /// <param name="sizes">The sizes the build states.</param>
+    /// <returns>Each such field with the MSBuild property it needed; empty when every column has its size.</returns>
+    public static IReadOnlyList<(string Field, string Property)> UnstatedSizes(ConfigurationModel model, ColumnSizes sizes)
+        => model.Properties
+            .Where(IsUserColumn)
+            .SelectMany(p => SqlTypeMapper.MapToColumn(p, sizes).SizesNotStated.Select(property => (p.PropertyName, property)))
+            .ToList();
+
+    /// <summary>
     /// Generates the source code for a configuration's DDL provider implementation.
     /// </summary>
-    public static string Generate(ConfigurationModel model, ParentChildGraph graph)
+    /// <param name="model">The configuration.</param>
+    /// <param name="graph">The parents and children of every configuration.</param>
+    /// <param name="sizes">The sizes the build states for a field that states none (FDW-7107); the caller has checked
+    /// <see cref="UnstatedSizes"/> is empty.</param>
+    /// <returns>The source.</returns>
+    public static string Generate(ConfigurationModel model, ParentChildGraph graph, ColumnSizes sizes)
     {
         var sb = new StringBuilder();
         var tableName = model.GetEffectiveTableName();
@@ -30,9 +48,8 @@ public static class DdlGenerator
         //   during the analysis phase; by the time Properties reaches here those entries are
         //   already removed by ConfigurationAnalyzer (which filters on !p.ExcludeFromDdl).
         var userColumns = model.Properties
-            .Where(p => !string.Equals(p.PropertyName, "Id", StringComparison.Ordinal) &&
-                       !string.Equals(p.PropertyName, "Name", StringComparison.Ordinal))
-            .Select(SqlTypeMapper.MapToColumn)
+            .Where(IsUserColumn)
+            .Select(p => SqlTypeMapper.MapToColumn(p, sizes))
             .ToList();
 
         // Header
@@ -414,6 +431,11 @@ public static class DdlGenerator
         sb.AppendLine("                        IsNullable = false");
         sb.AppendLine("                    },");
     }
+
+    // "Id" and "Name" are written as standard columns, so they are not the field's own columns.
+    private static bool IsUserColumn(PropertyModel property)
+        => !string.Equals(property.PropertyName, "Id", StringComparison.Ordinal) &&
+           !string.Equals(property.PropertyName, "Name", StringComparison.Ordinal);
 
     private static void GenerateColumnDefinition(StringBuilder sb, SqlColumnDefinition column)
     {

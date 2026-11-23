@@ -21,12 +21,17 @@ public abstract class WorkspaceResourceKindBase
     /// </summary>
     /// <param name="name">The kind name. This is the value persisted in the database.</param>
     /// <param name="canBeOwned">Whether a workspace may own this kind, not merely use it.</param>
-    protected WorkspaceResourceKindBase(string name, bool canBeOwned)
+    /// <param name="releasedOnArchive">Whether archiving the workspace that owns a resource of this kind gives it back to where it came from.</param>
+    protected WorkspaceResourceKindBase(string name, bool canBeOwned, bool releasedOnArchive)
         : base(name)
     {
         CanBeOwned = canBeOwned;
+        ReleasedOnArchive = releasedOnArchive;
     }
 
     /// <inheritdoc />
     public bool CanBeOwned { get; }
+
+    /// <inheritdoc />
+    public bool ReleasedOnArchive { get; }
 }

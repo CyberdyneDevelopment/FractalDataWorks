@@ -22,20 +22,7 @@ public sealed class GreaterThanOperator : FilterOperatorBase
     }
 
     /// <inheritdoc/>
-    public override string FormatODataValue(object? value)
-    {
-        if (value == null)
-            return "null";
-
-        return value switch
-        {
-            int or long or short or byte => value.ToString()!,
-            decimal or double or float => value.ToString()!,
-            DateTime dt => $"datetime'{dt:yyyy-MM-ddTHH:mm:ss}'",
-            DateTimeOffset dto => $"datetimeoffset'{dto:yyyy-MM-ddTHH:mm:sszzz}'",
-            _ => $"'{value}'"
-        };
-    }
+    public override string FormatODataValue(object? value) => ODataLiteralKinds.Format(value);
 
     /// <inheritdoc />
     public override bool Matches(object? left, object? right)

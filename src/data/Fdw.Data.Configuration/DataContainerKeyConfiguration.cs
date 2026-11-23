@@ -44,6 +44,9 @@ public sealed partial class DataContainerKeyConfiguration : IGenericConfiguratio
     public Guid? ReferencedKeyId { get; set; }
 
     /// <summary>Optional description of this key's purpose.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant, owned by the data store (FDW-6589), which this
+    // table cannot hold, so the column is gone; the data store provider fills it on every read that composes it. Off the mapper, it is no list field either.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Whether this is the current active version.</summary>

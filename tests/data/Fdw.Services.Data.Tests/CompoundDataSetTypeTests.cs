@@ -70,7 +70,8 @@ public sealed class CompoundDataSetTypeTests
         var resolver = new FieldMappingTransformationResolver(
             gateways.Object,
             new TransformationConfigurationProvider(
-                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation"));
+                NullLogger<TransformationConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "transform", "Transformation",
+                TransformationDescriptionDoubles.Writer(), TransformationDescriptionDoubles.Reader()));
 
         var config = new CompoundDataSetConfiguration
         {
@@ -81,6 +82,7 @@ public sealed class CompoundDataSetTypeTests
                 Source("Orders", "Order", 1, ("CustomerId", "cust_id"), ("OrderTotal", "total")),
                 Source("Customers", "Customer", 2, ("CustomerName", "name"), ("Id", "id")),
             ],
+            SourceCombination = "Join",
             Joins = [new DataSetJoinConfiguration { LeftSourceName = "Orders", LeftFieldName = "CustomerId", RightSourceName = "Customers", RightFieldName = "Id", JoinType = joinType, Ordinal = 1 }],
             Fields =
             [

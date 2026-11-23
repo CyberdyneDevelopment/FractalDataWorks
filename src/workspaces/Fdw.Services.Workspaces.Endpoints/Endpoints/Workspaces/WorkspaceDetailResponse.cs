@@ -66,6 +66,9 @@ public class WorkspaceDetailResponse
     /// <summary>Gets or sets the attached resources.</summary>
     public IList<WorkspaceResourceDto> Resources { get; set; } = [];
 
+    /// <summary>Gets or sets what closing the workspace gave back (FDW-6967): the paths and containers of shared data stores it owned. Empty for any other change.</summary>
+    public IList<WorkspaceResourceDto> Released { get; set; } = [];
+
     /// <summary>Gets or sets the declared relationships.</summary>
     public IList<WorkspaceRelationshipDto> Relationships { get; set; } = [];
 

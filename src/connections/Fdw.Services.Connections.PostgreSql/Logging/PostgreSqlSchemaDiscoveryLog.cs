@@ -218,4 +218,44 @@ public static partial class PostgreSqlSchemaDiscoveryLog
         Level = LogLevel.Error,
         Message = "[PostgreSql] Schema discovery exception for connection '{connectionName}'")]
     public static partial IGenericMessage SchemaDiscoveryException(ILogger logger, Exception exception, string connectionName);
+
+    // ── Keys of a discovery (FDW-6309) ─────────────────────────────────────────
+
+    /// <summary>
+    /// Logs a foreign key whose referenced container the discovery did not read.
+    /// </summary>
+    [MessageLogging(
+        EventId = 41010,
+        Level = LogLevel.Warning,
+        Message = "Foreign key '{keyName}' of '{schemaName}.{tableName}' references '{referencedSchema}.{referencedTable}', which this discovery did not read (its schema is left out, or it is not a table). The key stays on its table, its columns are foreign key columns, and no relationship is drawn")]
+    public static partial IGenericMessage ForeignKeyTargetNotDiscovered(ILogger logger, string keyName, string schemaName, string tableName, string referencedSchema, string referencedTable);
+
+    /// <summary>
+    /// Logs a key that names a column its table does not have, which refuses the discovery.
+    /// </summary>
+    [MessageLogging(
+        EventId = 91004,
+        Level = LogLevel.Error,
+        Message = "Key '{keyName}' of '{schemaName}.{tableName}' names column '{columnName}', which the discovery did not read for that table")]
+    public static partial IGenericMessage KeyColumnNotFound(ILogger logger, string keyName, string schemaName, string tableName, string columnName);
+
+    // ── Container types of a discovery (FDW-6309, FDW-6387) ────────────────────
+
+    /// <summary>
+    /// Logs a container type word the PostgreSQL discoverer wrote that this connection type maps to no container type option.
+    /// </summary>
+    [MessageLogging(
+        EventId = 31010,
+        Level = LogLevel.Error,
+        Message = "The discovery named a container of type '{containerTypeWord}', which PostgreSQL maps to no container type option (it maps Table and View)")]
+    public static partial IGenericMessage ContainerTypeWordNotMapped(ILogger logger, string containerTypeWord);
+
+    /// <summary>
+    /// Logs a container type option PostgreSQL discovery resolves that ContainerTypes does not hold.
+    /// </summary>
+    [MessageLogging(
+        EventId = 31011,
+        Level = LogLevel.Error,
+        Message = "Container type option '{optionName}' is not registered in ContainerTypes, so a discovered PostgreSQL container cannot be given its type")]
+    public static partial IGenericMessage ContainerTypeNotRegistered(ILogger logger, string optionName);
 }

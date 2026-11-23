@@ -83,7 +83,10 @@ public partial class ClientCredentialsConfiguration : IIdentityServiceImplementa
     /// <summary>Gets or sets the space-delimited scopes requested when no caller supplies them.</summary>
     public string? Scopes { get; set; }
 
-    /// <summary>Gets or sets an optional human-readable description for this configuration.</summary>
+    /// <summary>Gets or sets an optional human-readable description for this configuration; <see langword="null"/> on a record that was read.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table under the type Identity (FDW-6208), so the column is gone and no read selects it and no save writes it. This domain never fills
+    // a record on load, so the member is null on a record that was read and null on a save that states none, which keeps the stored text; a text is written and a stated blank removes it.
+    [NotStored]
     public string? Description { get; set; }
 
     // ── Tenant / visibility / audit ──────────────────────────────────────────

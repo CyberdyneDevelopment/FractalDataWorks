@@ -181,6 +181,14 @@ public static partial class SchemaEndpointLog
     [MessageLogging(EventId = 21004, Level = LogLevel.Warning, Message = "At least one column is required", ClientMessage = "At least one column is required")]
     public static partial IGenericMessage ExecuteDdlAtLeastOneColumnIs(ILogger logger);
 
+    /// <summary>Logs that the request failed: a column has no name.</summary>
+    [MessageLogging(EventId = 21010, Level = LogLevel.Warning, Message = "A column of the table has no name", ClientMessage = "A column of the table has no name")]
+    public static partial IGenericMessage ExecuteDdlColumnNameRequired(ILogger logger);
+
+    /// <summary>Logs that the request failed: a column names no SQL type; none is assumed for it.</summary>
+    [MessageLogging(EventId = 21011, Level = LogLevel.Warning, Message = "Column '{columnName}' names no SQL type; a column states its type and none is assumed", ClientMessage = "Column '{columnName}' names no SQL type; a column states its type and none is assumed")]
+    public static partial IGenericMessage ExecuteDdlColumnTypeRequired(ILogger logger, string columnName);
+
     /// <summary>Logs that the request failed: Unable to determine connection type.</summary>
     [MessageLogging(EventId = 21005, Level = LogLevel.Warning, Message = "Unable to determine connection type", ClientMessage = "Unable to determine connection type")]
     public static partial IGenericMessage GenerateDdlUnableToDetermineConnectionType(ILogger logger);
@@ -188,6 +196,10 @@ public static partial class SchemaEndpointLog
     /// <summary>Logs that the request failed: the connection's type is not a registered connection type.</summary>
     [MessageLogging(EventId = 31300, Level = LogLevel.Warning, Message = "Connection type '{connectionType}' is not a registered connection type", ClientMessage = "Connection type is not a registered connection type")]
     public static partial IGenericMessage GenerateDdlConnectionTypeUnknown(ILogger logger, string connectionType);
+
+    /// <summary>Logs that a foreign key of a table is not in the generated DDL.</summary>
+    [MessageLogging(EventId = 21009, Level = LogLevel.Warning, Message = "Foreign key '{keyName}' of '{schemaName}.{tableName}' is not in the generated DDL: the DDL states a foreign key as one column with its referential actions, and the discovery does not hold the actions", ClientMessage = "Foreign key '{keyName}' of '{schemaName}.{tableName}' is not in the generated DDL")]
+    public static partial IGenericMessage GenerateDdlForeignKeyNotGenerated(ILogger logger, string keyName, string schemaName, string tableName);
 
     /// <summary>Logs that the request failed: DDL generation failed.</summary>
     [MessageLogging(EventId = 91004, Level = LogLevel.Error, Message = "DDL generation failed", ClientMessage = "DDL generation failed")]

@@ -92,6 +92,7 @@ public abstract class CreateScheduleProxyEndpointBase : Endpoint<ProxyCreateSche
             IsEnabled = req.IsEnabled,
             Parameters = req.Parameters,
             RunRoles = req.RunRoles,
+            RunAs = req.RunAs,
         };
 
         var result = await _client.CreateSchedule(request, ct).ConfigureAwait(false);

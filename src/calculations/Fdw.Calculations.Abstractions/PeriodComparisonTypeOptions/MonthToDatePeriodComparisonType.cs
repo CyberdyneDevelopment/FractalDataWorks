@@ -15,7 +15,7 @@ public sealed class MonthToDatePeriodComparisonType : PeriodComparisonTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MonthToDatePeriodComparisonType"/> class.
     /// </summary>
-    public MonthToDatePeriodComparisonType() : base("MonthToDate", isCumulative: true) { }
+    public MonthToDatePeriodComparisonType() : base("MonthToDate", "Compares current month-to-date to previous month-to-date", isCumulative: true) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => null;

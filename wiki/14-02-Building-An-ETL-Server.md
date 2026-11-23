@@ -2,7 +2,7 @@
 
 The canonical reference implementation of an FDW ETL server lives in the **reference-etl** repository.
 
-`reference-etl/public/src/Reference.Etl.Server/Program.cs` is the authoritative shape for an FDW ETL server startup, including the three-phase ServiceTypeCollection registration (`EtlPipelineTypes`, `TransformationTypes`, plus the same connection / secret-manager / authentication / operations registrations as the API server) and the pipeline background executor (`AddFrameworkPipelineBackgroundExecutor`).
+`reference-etl/public/src/Reference.Etl.Server/Program.cs` is the authoritative shape for an FDW ETL server startup, including the three-phase ServiceTypeCollection registration (`PipelineTypes`, `TransformationTypes`, plus the same connection / secret-manager / authentication / operations registrations as the API server) and the pipeline background executor (`AddFrameworkPipelineBackgroundExecutor`).
 
 ## Required Steps
 
@@ -10,7 +10,7 @@ The canonical reference implementation of an FDW ETL server lives in the **refer
 2. **Reference the ETL packages:**
    - `Fdw.Services.Etl` and `Fdw.Services.Etl.Abstractions`
    - Per-transformation packages (`Fdw.Services.Transformations.*`)
-3. **Run the single `PlatformServices.Configure`/`Register`/`Initialize` sweep** — it drives `EtlPipelineTypes` and `TransformationTypes` (and every other `[ServiceTypeCollection]`) automatically in dependency-safe order; no hand-written per-domain calls.
+3. **Run the single `PlatformServices.Configure`/`Register`/`Initialize` sweep** — it drives `PipelineTypes` and `TransformationTypes` (and every other `[ServiceTypeCollection]`) automatically in dependency-safe order; no hand-written per-domain calls.
 4. **Register the background executor:**
 
    ```csharp

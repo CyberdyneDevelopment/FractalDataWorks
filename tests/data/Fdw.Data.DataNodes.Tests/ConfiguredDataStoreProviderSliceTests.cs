@@ -56,7 +56,7 @@ public sealed class ConfiguredDataStoreProviderSliceTests
                     [
                         new DataContainerConfiguration
                         {
-                            Id = Guid.NewGuid(), Name = container, Fields = [new DataContainerFieldConfiguration { Id = Guid.NewGuid(), Name = "Id", Ordinal = 0 }], Keys = keys,
+                            Id = Guid.NewGuid(), Name = container, TypeId = "Endpoint", Fields = [new DataContainerFieldConfiguration { Id = Guid.NewGuid(), Name = "Id", Ordinal = 0 }], Keys = keys,
                         },
                     ],
                 },

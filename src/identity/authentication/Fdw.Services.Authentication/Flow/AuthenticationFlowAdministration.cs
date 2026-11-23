@@ -12,6 +12,7 @@ using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Authorization;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Descriptions.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -44,6 +45,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
 
     private readonly IAuthenticationFlowConfigurationProvider _rows;
     private readonly IAuthenticationFlowProvider _flows;
+    private readonly IDescriptionReader _reader;
     private readonly IPermissionConfigurationProvider _permissions;
     private readonly IRolePermissionConfigurationProvider _rolePermissions;
     private readonly ITenantResolver _tenants;
@@ -56,6 +58,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
     /// <summary>Initializes a new instance of the <see cref="AuthenticationFlowAdministration"/> class.</summary>
     /// <param name="rows">Reads and writes the flow rows.</param>
     /// <param name="flows">The flows this host serves, reloaded after every change.</param>
+    /// <param name="reader">Reads the descriptions of the flows an answer shows, once for the answer (FDW-6208): the flow provider never fills them on load.</param>
     /// <param name="permissions">The permissions this platform defines, which a gate may name.</param>
     /// <param name="rolePermissions">Which roles carry which permissions, so a limit nobody can meet is refused.</param>
     /// <param name="tenants">Supplies the tenant an administrator's sign-in lands in.</param>
@@ -67,6 +70,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
     public AuthenticationFlowAdministration(
         IAuthenticationFlowConfigurationProvider rows,
         IAuthenticationFlowProvider flows,
+        IDescriptionReader reader,
         IPermissionConfigurationProvider permissions,
         IRolePermissionConfigurationProvider rolePermissions,
         ITenantResolver tenants,
@@ -78,6 +82,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
     {
         _rows = rows;
         _flows = flows;
+        _reader = reader;
         _permissions = permissions;
         _rolePermissions = rolePermissions;
         _tenants = tenants;
@@ -95,10 +100,15 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         if (rows.IsFailure || rows.Value is null)
             return GenericResult<IReadOnlyList<AuthenticationFlowState>>.Failure(FlowAdministrationLog.FlowsUnreadable(_logger));
 
+        // One read of the descriptions answers every flow; a read that fails fails the answer (no text stands in).
+        var texts = await Texts([.. rows.Value.Select(r => r.Id)], cancellationToken).ConfigureAwait(false);
+        if (texts.IsFailure || texts.Value is not { } described)
+            return texts.ToNewResult<IReadOnlyList<AuthenticationFlowState>>();
+
         var gate = Gate();
         var states = new List<AuthenticationFlowState>();
         foreach (var row in rows.Value.OrderBy(r => r.Name, StringComparer.Ordinal))
-            states.Add(await State(row, gate, cancellationToken).ConfigureAwait(false));
+            states.Add(await State(row, gate, TextOf(described, row.Id), cancellationToken).ConfigureAwait(false));
 
         FlowAdministrationLog.FlowsRead(_logger, states.Count);
         return GenericResult<IReadOnlyList<AuthenticationFlowState>>.Success(states);
@@ -175,7 +185,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         if (!changed.Value)
         {
             FlowAdministrationLog.FlowUnchanged(_logger, flowName);
-            return GenericResult<AuthenticationFlowState>.Success(await State(flow, gate, cancellationToken).ConfigureAwait(false));
+            return await Shown(flow, gate, cancellationToken).ConfigureAwait(false);
         }
 
         // Only a change that narrows who may sign in can take the administrator's way in away.
@@ -202,8 +212,25 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         if (reloaded.IsFailure)
             return reloaded.ToNewResult<AuthenticationFlowState>();
 
-        return GenericResult<AuthenticationFlowState>.Success(await State(flow, gate, cancellationToken).ConfigureAwait(false));
+        return await Shown(flow, gate, cancellationToken).ConfigureAwait(false);
     }
+
+    // The flow as it now stands, with its description read once for this answer (FDW-6208).
+    private async Task<IGenericResult<AuthenticationFlowState>> Shown(
+        AuthenticationFlowImplementationConfiguration flow, IGenericResult<IAdministrablePermissionGate> gate, CancellationToken cancellationToken)
+    {
+        var texts = await Texts([flow.Id], cancellationToken).ConfigureAwait(false);
+        return texts.IsFailure || texts.Value is not { } described
+            ? texts.ToNewResult<AuthenticationFlowState>()
+            : GenericResult<AuthenticationFlowState>.Success(await State(flow, gate, TextOf(described, flow.Id), cancellationToken).ConfigureAwait(false));
+    }
+
+    private Task<IGenericResult<IReadOnlyDictionary<Guid, DescriptionEntry>>> Texts(IReadOnlyCollection<Guid> flowIds, CancellationToken cancellationToken)
+        => _reader.ReadMany(AuthenticationFlowDescriptionType.OptionName, DescriptionTextSubType.OptionName, flowIds, cancellationToken);
+
+    // A flow with no description row has no text; nothing stands in for it.
+    private static string? TextOf(IReadOnlyDictionary<Guid, DescriptionEntry> texts, Guid flowId)
+        => texts.TryGetValue(flowId, out var entry) ? entry.Text : null;
 
     private IGenericResult<bool> Require(
         AuthenticationFlowImplementationConfiguration flow,
@@ -427,6 +454,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
     private async Task<AuthenticationFlowState> State(
         IAuthenticationFlowImplementationConfiguration row,
         IGenericResult<IAdministrablePermissionGate> gate,
+        string? description,
         CancellationToken cancellationToken)
     {
         var ordered = row.Steps.OrderBy(s => s.StepOrder).ToList();
@@ -449,7 +477,7 @@ public sealed class AuthenticationFlowAdministration : IAuthenticationFlowAdmini
         return new AuthenticationFlowState
         {
             Name = row.Name,
-            Description = row.Description,
+            Description = description,
             IsEnabled = row.IsEnabled,
             IsServing = served is { IsSuccess: true },
             Problem = served is { IsFailure: true } ? served.CurrentMessage : unreadable?.CurrentMessage,

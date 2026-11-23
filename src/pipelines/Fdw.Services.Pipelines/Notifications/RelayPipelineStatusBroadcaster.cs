@@ -81,6 +81,10 @@ public sealed class RelayPipelineStatusBroadcaster : IPipelineStatusBroadcaster
         => Send(new PipelineEventRequest { Kind = PipelineEventKinds.ComponentsChanged.Name, OrgId = orgId, Components = update });
 
     /// <inheritdoc />
+    public Task BroadcastRunPiece(PipelineRunPieceUpdate piece)
+        => Send(new PipelineEventRequest { Kind = PipelineEventKinds.RunPiece.Name, RunPiece = piece });
+
+    /// <inheritdoc />
     public Task BroadcastExecutionPaused(Guid executionId)
         => Send(new PipelineEventRequest { Kind = PipelineEventKinds.Paused.Name, ExecutionId = executionId });
 

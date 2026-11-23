@@ -76,7 +76,7 @@ public sealed class Cron : TriggerTypeBase
     /// Cron triggers require schedule persistence to track next execution times and
     /// do not execute immediately - they wait for their calculated schedule time.
     /// </remarks>
-    public Cron(ILogger<Cron>? logger = null) : base("Cron", requiresSchedule: true, isImmediate: false)
+    public Cron(ILogger<Cron>? logger = null) : base("Cron", requiresSchedule: true, isImmediate: false, description: "Time-based scheduling using a cron expression")
     {
         _logger = logger ?? NullLogger<Cron>.Instance;
     }

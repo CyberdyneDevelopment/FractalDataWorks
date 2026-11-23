@@ -33,6 +33,16 @@ public interface IDataConnection : IGenericConnection
     bool AggregatesInStore { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this connection carries a query's joins into the store (one statement the store runs, FDW-6969), rather
+    /// than refusing them.
+    /// </summary>
+    /// <value>
+    /// <see langword="false"/> unless the connection says otherwise. A planner that would push a join of two containers into one query asks
+    /// this first, and leaves the join in memory for a connection that does not.
+    /// </value>
+    bool JoinsInStore { get; }
+
+    /// <summary>
     /// Executes a data command against the unified container.
     /// </summary>
     /// <typeparam name="T">The expected return type.</typeparam>

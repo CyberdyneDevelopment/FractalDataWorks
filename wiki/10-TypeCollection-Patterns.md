@@ -10,7 +10,7 @@ FractalDataWorks provides two patterns for managing collections of types:
 
 | Pattern | Use Case | Examples |
 |---------|----------|----------|
-| ServiceTypeCollection | Services with behavior (register themselves) | ConnectionTypes, AuthenticationServiceTypes, EtlPipelineTypes |
+| ServiceTypeCollection | Services with behavior (register themselves) | ConnectionTypes, AuthenticationServiceTypes, PipelineTypes |
 | MutableTypeCollection | Configuration registries (optional sibling Provider carries any DI) | DataSetTypes (+ DataSetProvider), DataStoreTypes (+ ConfigurationGatewayDataStoreProvider), PropertyRoles, DataLayouts |
 
 ## Pattern 1: ServiceTypeCollection - For Services with Behavior
@@ -532,7 +532,7 @@ Does the type have behavior (Register method)?
 ├── YES → ServiceTypeCollection
 │         • Types register their own services
 │         • Auto-generated provider aggregates registrations
-│         • Examples: ConnectionTypes, AuthenticationServiceTypes, EtlPipelineTypes
+│         • Examples: ConnectionTypes, AuthenticationServiceTypes, PipelineTypes
 │
 └── NO  → MutableTypeCollection (bare collection)
           • Collection itself has no DI; options arrive via module-init / static-ctor RegisterMember

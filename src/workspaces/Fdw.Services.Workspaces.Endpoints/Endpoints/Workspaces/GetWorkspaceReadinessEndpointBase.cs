@@ -85,8 +85,8 @@ public abstract class GetWorkspaceReadinessEndpointBase : CrudGetEndpointBase<Wo
             // a more complete workspace than anybody can justify.
             if (dataSet.IsFailure || dataSet.Value is null)
             {
-                blocked.Add(attachment.Name);
-                response.Proposed++;
+                var unread = WorkspaceReadinessClasses.ByName("Proposed").Tally(response, blocked, attachment.Name, Logger);
+                if (unread.IsFailure) return unread.ToNewResult<WorkspaceReadinessResponse?>();
                 continue;
             }
 
@@ -101,13 +101,8 @@ public abstract class GetWorkspaceReadinessEndpointBase : CrudGetEndpointBase<Wo
             response.FieldsDefined += bindable.Count;
             response.FieldsBound += bound;
 
-            switch (Classify(bindable, bound))
-            {
-                case "Bound": response.Bound++; break;
-                case "Partial": response.Partial++; blocked.Add(dataSet.Value.Name); break;
-                case "Sketched": response.Sketched++; blocked.Add(dataSet.Value.Name); break;
-                default: response.Proposed++; blocked.Add(dataSet.Value.Name); break;
-            }
+            var counted = Classify(bindable, bound).Tally(response, blocked, dataSet.Value.Name, Logger);
+            if (counted.IsFailure) return counted.ToNewResult<WorkspaceReadinessResponse?>();
         }
 
         response.BlockedBy = blocked;
@@ -127,15 +122,15 @@ public abstract class GetWorkspaceReadinessEndpointBase : CrudGetEndpointBase<Wo
     /// <summary>Places one data set on the binding scale.</summary>
     /// <param name="bindable">The fields that could be bound — calculated fields already excluded.</param>
     /// <param name="bound">How many of them are.</param>
-    private static string Classify(List<DataSetFieldConfiguration> bindable, int bound)
+    private static IWorkspaceReadinessClass Classify(List<DataSetFieldConfiguration> bindable, int bound)
     {
         // No bindable field carrying a type means the set has been named and nothing more. TypeName
         // is checked with IsNullOrEmpty rather than for null because the configuration type still
         // defaults it to string.Empty even though the column is nullable -- see FDW-730.
         if (bindable.Count == 0 || bindable.All(f => string.IsNullOrEmpty(f.TypeName)))
-            return "Proposed";
+            return WorkspaceReadinessClasses.ByName("Proposed");
 
-        if (bound == 0) return "Sketched";
-        return bound == bindable.Count ? "Bound" : "Partial";
+        if (bound == 0) return WorkspaceReadinessClasses.ByName("Sketched");
+        return WorkspaceReadinessClasses.ByName(bound == bindable.Count ? "Bound" : "Partial");
     }
 }

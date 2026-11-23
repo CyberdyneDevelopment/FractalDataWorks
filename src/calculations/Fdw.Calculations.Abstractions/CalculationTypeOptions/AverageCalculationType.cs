@@ -18,6 +18,7 @@ public sealed class AverageCalculationType : CalculationTypeBase
     public AverageCalculationType() : base(
         name: "Average",
         category: "Aggregation",
+        description: "Calculates the arithmetic mean of all values",
         calculate: (rows, col, _) =>
         {
             var values = new List<decimal>();

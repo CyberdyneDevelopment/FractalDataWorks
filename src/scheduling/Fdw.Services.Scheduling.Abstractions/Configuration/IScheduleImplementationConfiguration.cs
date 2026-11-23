@@ -58,6 +58,31 @@ public interface IScheduleImplementationConfiguration : IImplementationConfigura
     int? TimeoutSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets the stored grant the schedule's runs act under (FDW-6144): the id of a <c>pipe.RunGrant</c>, which holds the person the runs act as, what they may do while the person is away and
+    /// when that ends. None for a schedule whose runs act as no person, as they always have.
+    /// </summary>
+    Guid? RunGrantId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many fires of the schedule in a row failed to start a run (FDW-6144): the one value the scheduler's recorder keeps and reports to the schedule's thresholds after each fire. A fire
+    /// that fails adds one, a fire that does not starts the count again, and enabling a paused schedule starts it again.
+    /// </summary>
+    int ConsecutiveFailures { get; set; }
+
+    /// <summary>Gets or sets when a threshold paused the schedule (FDW-6144); none for a schedule no threshold paused, or one a person has enabled again.</summary>
+    DateTimeOffset? PausedAt { get; set; }
+
+    /// <summary>Gets or sets why a threshold paused the schedule (FDW-6144): the threshold, its rule and the values it matched on; none when <see cref="PausedAt"/> is none.</summary>
+    string? PausedReason { get; set; }
+
+    /// <summary>
+    /// Enables or disables the schedule as a person does (FDW-6144). Enabling a schedule that was disabled clears what a pause recorded (<see cref="PausedAt"/>, <see cref="PausedReason"/>) and starts
+    /// the count of failed fires again, so a schedule a person enables is judged afresh.
+    /// </summary>
+    /// <param name="enabled">Whether the schedule is to run.</param>
+    void ChangeEnabled(bool enabled);
+
+    /// <summary>
     /// Gets or sets the run parameters the schedule passes to its pipeline on every run, by name.
     /// </summary>
     IDictionary<string, string?> Parameters { get; set; }

@@ -139,7 +139,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             // The rows alone: whether a connection is probed is decided by fields of its row, and Probe
             // reads the one it probes whole (FDW-970).
             var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
-            var allResult = await configProvider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+            var allResult = await configProvider.Get(ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
             {
                 if (IsConnectionContainerAbsent(allResult))
@@ -187,7 +187,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
 
             // The rows alone, as in RunStartupProbes: every scan read every connection whole (FDW-970).
             var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
-            var allResult = await configProvider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+            var allResult = await configProvider.Get(ConfigurationLevels.RecordOnly, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
             {
                 if (IsConnectionContainerAbsent(allResult))

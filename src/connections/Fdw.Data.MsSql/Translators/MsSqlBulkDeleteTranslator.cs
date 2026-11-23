@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Collections;
 using System.Linq;
@@ -31,6 +32,10 @@ public sealed class MsSqlBulkDeleteTranslator : MsSqlDataCommandTranslatorBase, 
         : base("BulkDelete")
     {
     }
+
+    /// <inheritdoc />
+    /// <remarks>Read from what this translator emits: a DELETE joined to the staged rows.</remarks>
+    public override IReadOnlyList<string> Operations => ["Delete"];
 
     /// <inheritdoc/>
     public override Task<IGenericResult<SqlCommand>> Translate(

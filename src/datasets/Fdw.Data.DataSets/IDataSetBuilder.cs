@@ -14,8 +14,8 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// Choosing <em>which</em> configuration belongs to the service that reads it, not to the builder.
 /// <para>
 /// It uses the Sources already composed onto the configuration to construct
-/// <see cref="IDataSetSource"/> and <see cref="IDataSetJoin"/> instances, infers the
-/// <see cref="IDataSetCompositionType"/> from the source and join count, and assembles the graph.
+/// <see cref="IDataSetSource"/> and <see cref="IDataSetJoin"/> instances, takes the
+/// <see cref="IDataSetCompositionType"/> the data set states (FDW-6946; never inferred from its joins), and assembles the graph.
 /// </para>
 /// </remarks>
 public interface IDataSetBuilder

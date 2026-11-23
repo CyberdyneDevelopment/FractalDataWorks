@@ -12,12 +12,10 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IAggregationSpec` | interface | Read-only surface for a single aggregation within an Aggregate transform request. |
 | `ICalculationSpec` | interface | Read-only surface for a single computed column within a Calculate transform request. |
 | `IEffectivePolicyResolver` | interface | Resolves the effective (inherited) policy snapshot for a Project, Stage, or Step by walking the parent… |
-| `IEtlPipeline` | interface | Represents an ETL pipeline that extracts, transforms, and loads data. The ETL KIND of the general… |
+| `IEtlPipeline` | interface | Represents an ETL pipeline that extracts, transforms, and loads data: the ETL closing of `IPipeline<TIn, TOut>`… |
 | `IEtlPipelineExecutionResult` | interface | Represents the result of a pipeline execution. |
 | `IEtlPipelineFactory` | interface | Marker interface for ETL pipeline factories. |
 | `IEtlPipelineFactory<TPipeline, TConfiguration>` | interface | Generic interface for ETL pipeline factories with typed configuration. |
-| `IEtlPipelineType` | interface | Non-generic interface for ETL pipeline type definitions. |
-| `IEtlPipelineType<TPipeline, TConfiguration, TFactory>` | interface | Generic interface for typed ETL pipeline type definitions. |
 | `IExecutionCompletionSignaler` | interface | Singleton registry that allows the project orchestrator to await pipeline completion without polling.… |
 | `IExpressionEvaluator` | interface | Interface for evaluating expressions in ETL transforms. |
 | `IFieldMapping` | interface | Represents a field mapping in a Map transform. |

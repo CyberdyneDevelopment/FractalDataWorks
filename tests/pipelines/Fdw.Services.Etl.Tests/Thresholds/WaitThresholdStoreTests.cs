@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Commands.Data;
@@ -50,7 +51,7 @@ public sealed class WaitThresholdStoreTests
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get(It.IsAny<string>())).Returns(GenericResult<IConfigurationGateway>.Success(_gateway.Object));
         var pipelines = new Mock<IPipelineConfigurationProvider>();
-        pipelines.Setup(p => p.Get(It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([.. _pipelines]));
+        pipelines.Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([.. _pipelines]));
         return new WaitThresholdStore(gateways.Object, pipelines.Object, NullLogger<WaitThresholdStore>.Instance);
     }
 

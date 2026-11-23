@@ -29,6 +29,10 @@ public sealed class NotificationServiceProvider
         INotificationConfigurationProvider>,
       INotificationServiceProvider
 {
+    /// <summary>Gets how this provider reads the configuration it builds a service from.</summary>
+    /// <remarks>A notification service is built from the configuration (its channel, its settings) and shows no description, and nothing saves the configuration back (FDW-7351).</remarks>
+    protected override ConfigurationReadOptions ReadOptions => ConfigurationReadOptions.WithoutFilledMembers;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationServiceProvider"/> class.
     /// </summary>

@@ -61,6 +61,11 @@ public sealed class UiFeedbackServiceTests
     private sealed class Fixture
     {
         public Fixture()
+            : this(Declared())
+        {
+        }
+
+        public Fixture(UiFeedbackLimits limits)
         {
             var gateway = new Mock<IDataGateway>(MockBehavior.Loose);
             gateway
@@ -150,7 +155,7 @@ public sealed class UiFeedbackServiceTests
                     : GenericResult<string>.Failure(new GenericMessage("the signed-in person has no account")));
 
             Service = new UiFeedbackService(
-                NullLogger<UiFeedbackService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, names.Object, holders.Object, messages.Object,
+                NullLogger<UiFeedbackService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, names.Object, holders.Object, messages.Object, limits,
                 new Lazy<IEffectiveSettingsProvider>(() => new StubSettings(this)));
         }
 
@@ -299,6 +304,21 @@ public sealed class UiFeedbackServiceTests
 
     private static Fixture AnaInA() => new Fixture().SignedInAs(Ana, TenantA, "Ana");
 
+    // The limits the messaging option declares, as a host that changes none of them and states none in its configuration gets them (FDW-7058).
+    private static UiFeedbackLimits Declared() => new(
+        MessagingDefaults.Of("MaxBodyLength"),
+        MessagingDefaults.Of("MaxPictureBytes"),
+        MessagingDefaults.Of("MaxAnchors"),
+        MessagingDefaults.Of("MaxAnchorLength"),
+        MessagingDefaults.Of("MaxPageSize"));
+
+    private static UiFeedbackLimits WithPictureLimit(int maxPictureBytes) => new(
+        MessagingDefaults.Of("MaxBodyLength"),
+        maxPictureBytes,
+        MessagingDefaults.Of("MaxAnchors"),
+        MessagingDefaults.Of("MaxAnchorLength"),
+        MessagingDefaults.Of("MaxPageSize"));
+
     private static CreateUiFeedbackRequest ValidRequest()
         => new()
         {
@@ -392,18 +412,18 @@ public sealed class UiFeedbackServiceTests
             case "anchor-not-json": request.AnchorsJson = ["{not json"]; break;
             case "anchor-not-an-object": request.AnchorsJson = ["{\"role\":\"table\"}", "[1,2]"]; break;
             case "anchor-blank": request.AnchorsJson = [" "]; break;
-            case "anchors-too-many": request.AnchorsJson = [.. Enumerable.Repeat("{\"role\":\"table\"}", UiFeedbackLimits.MaxAnchors + 1)]; break;
-            case "anchor-too-long": request.AnchorsJson = ["{\"name\":\"" + new string('x', UiFeedbackLimits.MaxAnchorLength) + "\"}"]; break;
+            case "anchors-too-many": request.AnchorsJson = [.. Enumerable.Repeat("{\"role\":\"table\"}", fixture.Service.Limits.MaxAnchors + 1)]; break;
+            case "anchor-too-long": request.AnchorsJson = ["{\"name\":\"" + new string('x', fixture.Service.Limits.MaxAnchorLength) + "\"}"]; break;
             case "urgency-missing": request.Urgency = null; break;
             case "urgency-unknown": request.Urgency = "Whenever"; break;
             case "tag-unknown": request.Tags = ["Annoying"]; break;
             case "tag-twice": request.Tags = ["UsabilityIssue", "UsabilityIssue"]; break;
             case "tags-missing": request.Tags = null; break;
             case "body-blank": request.Body = ""; break;
-            case "body-long": request.Body = new string('x', UiFeedbackLimits.MaxBodyLength + 1); break;
+            case "body-long": request.Body = new string('x', fixture.Service.Limits.MaxBodyLength + 1); break;
             case "shot-not-a-data-url": request.Screenshot = "https://elsewhere/shot.png"; break;
             case "shot-not-png": request.Screenshot = "data:image/png;base64," + Convert.ToBase64String(new byte[32]); break;
-            case "shot-too-big": request.Screenshot = PngDataUrl(UiFeedbackLimits.MaxPictureBytes + 10); break;
+            case "shot-too-big": request.Screenshot = PngDataUrl(fixture.Service.Limits.MaxPictureBytes + 10); break;
             default: throw new InvalidOperationException(mistake);
         }
 
@@ -412,6 +432,91 @@ public sealed class UiFeedbackServiceTests
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == code);
         result.CurrentMessage!.ShouldContain(field);
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task CreateKeepsAThreeMegabytePictureUnderTheDeclaredDefault()
+    {
+        // FDW-7058: the old 2 MB cap is gone; the declared default holds a picture larger than it.
+        var fixture = AnaInA();
+        var request = ValidRequest();
+        request.Screenshot = PngDataUrl(3 * 1024 * 1024);
+
+        var result = await fixture.Service.Create(request, Ct);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.HasScreenshot.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task CreateKeepsAPictureAboveTheDeclaredDefaultWhenTheHostConfiguresMore()
+    {
+        var configured = MessagingDefaults.Of("MaxPictureBytes") + 1024;
+        var fixture = new Fixture(WithPictureLimit(configured)).SignedInAs(Ana, TenantA, "Ana");
+        var request = ValidRequest();
+        request.Screenshot = PngDataUrl(MessagingDefaults.Of("MaxPictureBytes") + 512);
+
+        var result = await fixture.Service.Create(request, Ct);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        fixture.Writes.ShouldContain("UiFeedbackScreenshot");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task CreateRefusesAPictureOverAConfiguredLimitAndNamesThatLimit()
+    {
+        var fixture = new Fixture(WithPictureLimit(1000)).SignedInAs(Ana, TenantA, "Ana");
+        var request = ValidRequest();
+        request.Screenshot = PngDataUrl(2000);
+
+        var result = await fixture.Service.Create(request, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-21001");
+        result.CurrentMessage!.ShouldContain("screenshot");
+        result.CurrentMessage!.ShouldContain("1000 bytes");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task CreateKeepsANoteLongerThanTheDeclaredDefaultWhenTheHostConfiguresMore()
+    {
+        // FDW-7101: the note columns are NVARCHAR(MAX), so a configured length above the old 4000 is the only limit a note meets.
+        var fixture = new Fixture(new UiFeedbackLimits(MessagingDefaults.Of("MaxBodyLength") * 2, MessagingDefaults.Of("MaxPictureBytes"),
+            MessagingDefaults.Of("MaxAnchors"), MessagingDefaults.Of("MaxAnchorLength"), MessagingDefaults.Of("MaxPageSize")))
+            .SignedInAs(Ana, TenantA, "Ana");
+        var request = ValidRequest();
+        request.Body = new string('x', MessagingDefaults.Of("MaxBodyLength") + 1000);
+
+        var result = await fixture.Service.Create(request, Ct);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        result.Value!.Body.Length.ShouldBe(MessagingDefaults.Of("MaxBodyLength") + 1000);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task CreateRefusesANoteOverAConfiguredLengthAndNamesThatLength()
+    {
+        var fixture = new Fixture(new UiFeedbackLimits(10, MessagingDefaults.Of("MaxPictureBytes"), MessagingDefaults.Of("MaxAnchors"),
+            MessagingDefaults.Of("MaxAnchorLength"), MessagingDefaults.Of("MaxPageSize"))).SignedInAs(Ana, TenantA, "Ana");
+        var request = ValidRequest();
+        request.Body = new string('x', 11);
+
+        var result = await fixture.Service.Create(request, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage!.ShouldContain("longer than 10 characters");
         fixture.Writes.ShouldBeEmpty();
     }
 
@@ -881,7 +986,7 @@ public sealed class UiFeedbackServiceTests
         switch (mistake)
         {
             case "take-zero": query.Take = 0; break;
-            case "take-over": query.Take = UiFeedbackLimits.MaxPageSize + 1; break;
+            case "take-over": query.Take = fixture.Service.Limits.MaxPageSize + 1; break;
             case "skip-negative": query.Skip = -1; break;
             case "state-unknown": query.State = "Closed"; break;
             case "urgency-unknown": query.Urgency = "Whenever"; break;
@@ -1297,7 +1402,7 @@ public sealed class UiFeedbackServiceTests
         var fixture = ReviewerAna();
         var theirs = fixture.Add(TenantA, Ben);
 
-        var result = await fixture.Service.AddComment(theirs.Id, new string('x', UiFeedbackLimits.MaxBodyLength + 1), Ct);
+        var result = await fixture.Service.AddComment(theirs.Id, new string('x', fixture.Service.Limits.MaxBodyLength + 1), Ct);
 
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-21001");

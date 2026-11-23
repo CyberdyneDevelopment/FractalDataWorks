@@ -18,7 +18,7 @@ fractaldataworks:
 - `Fdw.Data.Files`
 - `Fdw.Data.Importers.Abstractions`
 - `Fdw.Data.Options.Abstractions`: Data options, abstractions (FDW-5344): the `DataOptions` root collection of option types, the context and outcome of applying an option, its `DATAOPTION` result codes and the fields of a stored option row.
-- `Fdw.Data.Options`: Data options (FDW-5344): the `SelectList` option type of `DataOptions`, with `Include` and `Exclude`. The `ReadDataOptions` pipeline step (`Fdw.Services.Etl`) reads the stored rows and keeps the resulting list in a variable.
+- `Fdw.Data.Options`: Data options (FDW-5344): the `SelectList` option type of `DataOptions`, with `Include` and `Exclude`. The `ReadDataOptions` pipeline step (`Fdw.Services.Etl`) reads the current, active data configuration rules of a column and their values (FDW-6344) and keeps the resulting list in a variable (`In` is `Include`, `NotIn` is `Exclude`).
 - `Fdw.Data.Serialization`
 - `Fdw.Data.SourceGenerators`: Incremental source generator that creates reflection-free POCO mappers from [GenerateMapper] attributes.
 - `Fdw.Services.Data`
@@ -26,6 +26,8 @@ fractaldataworks:
 - `Fdw.Services.Data.Clients`: API clients and DTOs for DataStore and DataSet management operations.
 - `Fdw.Services.Data.Clients.Models`: DTO models for data API client operations.
 - `Fdw.Services.Data.Endpoints`: HTTP endpoints for the Data domain, extracted from Fdw.Web.Api.
+- `Fdw.Services.Descriptions.Abstractions`: The descriptions contracts (FDW-6120): the `DescriptionTypes` and `DescriptionSubTypes` collections other domains add options to, the key of a description and `IDescriptionService`.
+- `Fdw.Services.Descriptions`: The descriptions domain (FDW-6120): `catalog.Description` and `catalog.DescriptionConfiguration`, their providers and the service that saves and deletes a description and the reader that fills a domain's records. The table sits beside the owning tables' description columns and is written by their providers.
 - `Fdw.Services.Data.Etl`: The ETL server's data gateway (FDW-1952): the data gateway, copied so it can be tuned for pipelines on its own, with the ability to read a declared container at another physical path and name. Only the ETL host references it.
 - `Fdw.Services.Data.Etl.Registration`: The ETL data gateway registration (FDW-1952): the [Implementation] only. Referencing THIS package brings the ETL data gateway and registers it in place of the standard data gateway factory; the ETL host references it and the API host does not.
 - `Fdw.Services.Data.SignalR`
@@ -91,6 +93,7 @@ Run a test project from the repository root:
 - `dotnet test public/tests/data/Fdw.Services.Data.Endpoints.Tests/Fdw.Services.Data.Endpoints.Tests.csproj -c Release`
 - `dotnet test public/tests/data/Fdw.Services.Data.Etl.Tests/Fdw.Services.Data.Etl.Tests.csproj -c Release`
 - `dotnet test public/tests/data/Fdw.Services.Data.Tests/Fdw.Services.Data.Tests.csproj -c Release`
+- `dotnet test public/tests/data/Fdw.Services.Descriptions.Tests/Fdw.Services.Descriptions.Tests.csproj -c Release`
 - `dotnet test public/tests/data/Fdw.Services.Execution.Abstractions.Tests/Fdw.Services.Execution.Abstractions.Tests.csproj -c Release`
 - `dotnet test public/tests/data/FdwReferenceData.Endpoints.Tests/FdwReferenceData.Endpoints.Tests.csproj -c Release` (in reference-servicetypes)
 - `dotnet test public/tests/data/FdwReferenceDataPaths.Templates.Tests/FdwReferenceDataPaths.Templates.Tests.csproj -c Release` (in reference-servicetypes)

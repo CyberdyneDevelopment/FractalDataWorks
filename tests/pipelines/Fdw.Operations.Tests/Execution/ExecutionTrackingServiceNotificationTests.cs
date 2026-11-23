@@ -145,7 +145,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
         var rule = BuildCatchAllRule("CatchAll", "console-channel");
         _mockRuleProvider
-            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
                 new List<NotificationRuleImplementationConfiguration> { rule }));
 
@@ -200,7 +200,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
         var rule = BuildCatchAllRule("CatchAll", "console-channel");
         _mockRuleProvider
-            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
                 new List<NotificationRuleImplementationConfiguration> { rule }));
 
@@ -245,7 +245,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
             Severity = "Normal"
         };
         _mockRuleProvider
-            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
                 new List<NotificationRuleImplementationConfiguration> { disabledRule }));
 
@@ -292,7 +292,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
             WorkflowId = Guid.NewGuid() // different workflow
         };
         _mockRuleProvider
-            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
                 new List<NotificationRuleImplementationConfiguration> { scopedRule }));
 
@@ -342,7 +342,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         _mockRuleProvider.Verify(
-            p => p.Get(It.IsAny<CancellationToken>()),
+            p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()),
             Times.Never);
         _mockNotificationSvc.Verify(
             s => s.Send(It.IsAny<INotificationRequest>(), It.IsAny<CancellationToken>()),
@@ -365,7 +365,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
         var rule = BuildCatchAllRule("BogusRule", "console-channel", severity: "Bogus");
         _mockRuleProvider
-            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
                 new List<NotificationRuleImplementationConfiguration> { rule }));
 
@@ -407,7 +407,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
         var rule = BuildCatchAllRule("CatchAll", "console-channel");
         _mockRuleProvider
-            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
                 new List<NotificationRuleImplementationConfiguration> { rule }));
 

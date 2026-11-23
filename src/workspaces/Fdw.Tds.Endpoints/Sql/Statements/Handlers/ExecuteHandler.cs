@@ -34,12 +34,10 @@ public sealed class ExecuteHandler : SqlStatementHandlerBase<ExecuteStatement>
     protected override async Task<IGenericResult<SqlStatementOutcome>> Run(ExecuteStatement statement, SqlExecutionContext context, CancellationToken cancellationToken)
     {
         var entity = statement.ExecuteSpecification.ExecutableEntity;
-        var ran = entity switch
-        {
-            ExecutableStringList text => await Text(text, context, cancellationToken).ConfigureAwait(false),
-            ExecutableProcedureReference procedure => await Procedure(procedure, context, cancellationToken).ConfigureAwait(false),
-            _ => SqlRefusal.Refuse(SqlServerErrors.NotSupported(SqlText.Of(statement), statement.StartLine), context.Logger),
-        };
+        var handler = entity is { } named ? ExecutableEntityHandlers.ByName(named.GetType().Name) : ExecutableEntityHandlers.NotFound;
+        var ran = ReferenceEquals(handler, ExecutableEntityHandlers.NotFound)
+            ? SqlRefusal.Refuse(SqlServerErrors.NotSupported(SqlText.Of(statement), statement.StartLine), context.Logger)
+            : await handler.Run(entity, context, cancellationToken).ConfigureAwait(false);
 
         return ran.IsFailure
             ? ran.ToNewResult<SqlStatementOutcome>()
@@ -47,7 +45,7 @@ public sealed class ExecuteHandler : SqlStatementHandlerBase<ExecuteStatement>
     }
 
     // EXEC('...'): the text runs as a batch with variables of its own, as SQL Server runs it.
-    private static async Task<IGenericResult> Text(ExecutableStringList list, SqlExecutionContext context, CancellationToken cancellationToken)
+    internal static async Task<IGenericResult> Text(ExecutableStringList list, SqlExecutionContext context, CancellationToken cancellationToken)
     {
         var text = new StringBuilder();
         foreach (var part in list.Strings)
@@ -66,7 +64,7 @@ public sealed class ExecuteHandler : SqlStatementHandlerBase<ExecuteStatement>
         return await SqlBatchRunner.Run(text.ToString(), nested.Value!, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<IGenericResult> Procedure(ExecutableProcedureReference reference, SqlExecutionContext context, CancellationToken cancellationToken)
+    internal static async Task<IGenericResult> Procedure(ExecutableProcedureReference reference, SqlExecutionContext context, CancellationToken cancellationToken)
     {
         if (reference.ProcedureReference?.ProcedureReference is not { } named)
             return SqlRefusal.Refuse(SqlServerErrors.NotSupported("EXEC of a procedure named by a variable", reference.StartLine), context.Logger);

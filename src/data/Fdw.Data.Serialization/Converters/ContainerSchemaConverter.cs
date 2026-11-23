@@ -17,30 +17,9 @@ public sealed class ContainerSchemaConverter : JsonConverter<IContainerSchema>
         if (reader.TokenType != JsonTokenType.StartObject)
             throw new JsonException("Expected StartObject token");
 
-        List<IField>? fields = null;
-
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject)
-                break;
-
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                var propertyName = reader.GetString();
-                reader.Read();
-
-                switch (propertyName)
-                {
-                    case "Fields":
-                        fields = JsonSerializer.Deserialize<List<IField>>(ref reader, options);
-                        break;
-                }
-            }
-        }
-
         return new ContainerSchema
         {
-            Fields = fields ?? []
+            Fields = JsonSerializer.Deserialize<ContainerSchemaWire>(ref reader, options)?.Fields ?? []
         };
     }
 

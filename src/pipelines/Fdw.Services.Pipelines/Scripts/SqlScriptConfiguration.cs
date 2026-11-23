@@ -38,6 +38,9 @@ public sealed partial class SqlScriptConfiguration : ISqlScriptImplementationCon
     public string ScriptText { get; set; } = string.Empty;
 
     /// <inheritdoc />
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-7323), which the {t} table cannot hold, so the
+    // column is gone; the provider fills the member for every set it reads. Off the mapper, it is no column of the table.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the parameters the text takes.</summary>

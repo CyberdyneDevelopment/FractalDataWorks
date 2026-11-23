@@ -84,14 +84,13 @@ public static class TdsValueReader
         return length == 0 ? Read.Of(null) : body(reader, length);
     }
 
-    private static Read IntN(TdsPayloadReader reader, int length) => length switch
+    private static Read IntN(TdsPayloadReader reader, int length)
     {
-        1 => Read.Of(reader.ReadByte()),
-        2 => Read.Of(reader.ReadInt16()),
-        4 => Read.Of(reader.ReadInt32()),
-        8 => Read.Of(reader.ReadInt64()),
-        _ => Read.Refused($"an integer of {length} bytes"),
-    };
+        var width = TdsIntegerWidths.ByWidth(length);
+        return ReferenceEquals(width, TdsIntegerWidths.NotFound)
+            ? Read.Refused($"an integer of {length} bytes")
+            : Read.Of(width.Read(reader));
+    }
 
     // A character or binary value: two-byte length (0xFFFF is NULL), or PLP chunks for a (max) type.
     private static Read Bytes(TdsPayloadReader reader, TdsTypeInfo typeInfo, Func<byte[], Read> decode)

@@ -78,11 +78,22 @@ public static class DataSetCategoryLinks
     /// <param name="kinds">The kinds asked for, as names <c>DataSetTypes</c> holds; empty for any.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The data sets, read without their children, or the failure.</returns>
+    public static Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Matching(
+        IDataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid>? categoryIds, IReadOnlyList<string> kinds, CancellationToken ct) =>
+        Matching(dataSets, categoryIds, kinds, ConfigurationReadOptions.Whole, ct);
+
+    /// <summary>Lists the data sets of the kinds asked for that sit under any of the categories asked about, read as the caller states (FDW-6124).</summary>
+    /// <param name="dataSets">The data sets.</param>
+    /// <param name="categoryIds">The categories asked about; null for any, or none at all.</param>
+    /// <param name="kinds">The kinds asked for, as names <c>DataSetTypes</c> holds; empty for any.</param>
+    /// <param name="options">Whether the read fills the text another domain supplies; a list that does not show the description states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/>.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The data sets, read without their children, or the failure.</returns>
     public static async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Matching(
-        IDataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid>? categoryIds, IReadOnlyList<string> kinds, CancellationToken ct)
+        IDataSetConfigurationProvider dataSets, IReadOnlyCollection<Guid>? categoryIds, IReadOnlyList<string> kinds, ConfigurationReadOptions options, CancellationToken ct)
     {
         var implementations = RequestedDataSetKinds.ImplementationNames(kinds);
-        var page = await dataSets.Get(0, AllRows, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        var page = await dataSets.Get(0, AllRows, ConfigurationLevels.RecordOnly, options, ct).ConfigureAwait(false);
         if (page.IsFailure || page.Value is null)
         {
             return page.ToNewResult<IReadOnlyList<IDataSetImplementationConfiguration>>();

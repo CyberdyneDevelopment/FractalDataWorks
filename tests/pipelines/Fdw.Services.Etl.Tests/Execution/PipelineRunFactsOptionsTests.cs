@@ -31,7 +31,7 @@ public sealed class PipelineRunFactsOptionsTests
     [Trait("Category", "Etl")]
     public void TheRunStatesWhenItStarted()
     {
-        var options = PipelineExecutionBackgroundService.OptionsOf(RequestWith(null), Started, null);
+        var options = PipelineRequestProcessor.OptionsOf(RequestWith(null), Started, null);
 
         options.RunStarted.ShouldBe(Started);
     }
@@ -41,7 +41,7 @@ public sealed class PipelineRunFactsOptionsTests
     [Trait("Category", "Etl")]
     public void ThePipelinesLastSuccessfulRunIsOfferedAsTheParameter()
     {
-        var options = PipelineExecutionBackgroundService.OptionsOf(RequestWith(null), Started, Last);
+        var options = PipelineRequestProcessor.OptionsOf(RequestWith(null), Started, Last);
 
         options.Parameters.ShouldNotBeNull();
         options.Parameters[RunFacts.LastSuccessfulRun].ShouldBe(Last);
@@ -55,7 +55,7 @@ public sealed class PipelineRunFactsOptionsTests
         var supplied = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var request = RequestWith(new Dictionary<string, object?> { [RunFacts.LastSuccessfulRun] = supplied });
 
-        var options = PipelineExecutionBackgroundService.OptionsOf(request, Started, Last);
+        var options = PipelineRequestProcessor.OptionsOf(request, Started, Last);
 
         options.Parameters.ShouldNotBeNull();
         options.Parameters[RunFacts.LastSuccessfulRun].ShouldBe(supplied);
@@ -68,7 +68,7 @@ public sealed class PipelineRunFactsOptionsTests
     {
         var request = RequestWith(new Dictionary<string, object?> { ["File"] = "BreweryMicro" });
 
-        var options = PipelineExecutionBackgroundService.OptionsOf(request, Started, Last);
+        var options = PipelineRequestProcessor.OptionsOf(request, Started, Last);
 
         options.Parameters.ShouldNotBeNull();
         options.Parameters["File"].ShouldBe("BreweryMicro");
@@ -80,7 +80,7 @@ public sealed class PipelineRunFactsOptionsTests
     [Trait("Category", "Etl")]
     public void ARunWithNoSuccessfulRunOnRecordOffersNoValue()
     {
-        var options = PipelineExecutionBackgroundService.OptionsOf(RequestWith(null), Started, null);
+        var options = PipelineRequestProcessor.OptionsOf(RequestWith(null), Started, null);
 
         options.Parameters.ShouldBeNull();
     }

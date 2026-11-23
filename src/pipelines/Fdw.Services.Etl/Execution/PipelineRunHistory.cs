@@ -7,6 +7,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Services.Etl.Execution;
 
@@ -27,7 +28,7 @@ public sealed class PipelineRunHistory : IPipelineRunHistory
 
     /// <inheritdoc />
     public Task<IGenericResult<IReadOnlyList<PipelineRunOutcome>>> Page(string pipelineName, int skip, int take, CancellationToken cancellationToken = default) =>
-        EtlPipelineTypes.OperationalConnection is { } connection
+        PipelineTypes.OperationalConnection is { } connection
             ? PipelineRunOutcomeReader.Page(_dataGateways.ByName(DataGatewayNames.Main), _tracker, _logger, connection, pipelineName, skip, take, cancellationToken)
             : Task.FromResult(GenericResult<IReadOnlyList<PipelineRunOutcome>>.Failure(PipelineFailureRuleLog.OperationalConnectionNotNamed(_logger, pipelineName)));
 }

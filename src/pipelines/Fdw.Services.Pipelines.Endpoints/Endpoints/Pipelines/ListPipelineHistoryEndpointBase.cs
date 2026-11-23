@@ -142,12 +142,7 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
             conditions.Add(Equal("Status", req.Status));
         }
 
-        return conditions.Count switch
-        {
-            0 => null,
-            1 => new FilterExpression { Root = conditions[0] },
-            _ => new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = conditions } }
-        };
+        return FilterGroup.AllOf(conditions) is { } root ? new FilterExpression { Root = root } : null;
     }
 
     private static FilterCondition Equal(string propertyName, string value) => new()
@@ -166,22 +161,7 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
     /// <summary>
     /// Maps a database record to an execution record DTO.
     /// </summary>
-    protected virtual PipelineExecutionRecord MapToExecutionRecord(PipelineExecutionDbRecord dbRecord) => new()
-    {
-        ExecutionId = dbRecord.Id,
-        PipelineName = dbRecord.PipelineName,
-        StartedAt = dbRecord.StartedAt?.UtcDateTime,
-        CompletedAt = dbRecord.CompletedAt?.UtcDateTime,
-        Status = dbRecord.Status,
-        Success = string.Equals(dbRecord.Status, "Succeeded", StringComparison.OrdinalIgnoreCase),
-        ErrorMessage = dbRecord.ErrorMessage,
-        RecordsExtracted = dbRecord.RecordsExtracted,
-        RecordsTransformed = dbRecord.RecordsTransformed,
-        RecordsLoaded = dbRecord.RecordsLoaded,
-        RecordsFailed = dbRecord.RecordsFailed,
-        TotalDurationMs = dbRecord.DurationMs,
-        ExecutedBy = dbRecord.ExecutedBy
-    };
+    protected virtual PipelineExecutionRecord MapToExecutionRecord(PipelineExecutionDbRecord dbRecord) => PipelineExecutionRecordMapping.From(dbRecord);
 
     /// <summary>Called when fetching execution history. Override for custom logging.</summary>
     protected virtual void OnFetchingExecutionHistory(string? pipelineName) { }

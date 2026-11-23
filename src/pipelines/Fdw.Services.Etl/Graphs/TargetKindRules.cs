@@ -113,14 +113,8 @@ public static class TargetKindRules
     }
 
     // The settings a kind may name; a name that is not one is a mistake in a kind, not in a graph.
-    private static string? Value(PipelineComponentConfiguration component, string setting) => setting switch
-    {
-        "container" => component.ContainerName,
-        "dataSet" => component.DataSetName,
-        "physicalPath" => component.PhysicalPath,
-        "physicalName" => component.PhysicalName,
-        "filesList" => component.FilesList,
-        "splitField" => component.SplitField,
-        _ => throw new ArgumentOutOfRangeException(nameof(setting), setting, "A target kind names a setting the component does not have.")
-    };
+    private static string? Value(PipelineComponentConfiguration component, string setting) =>
+        ReferenceEquals(TargetSettings.ByWord(setting), TargetSettings.NotFound)
+            ? throw new ArgumentOutOfRangeException(nameof(setting), setting, "A target kind names a setting the component does not have.")
+            : TargetSettings.ByWord(setting).ValueOf(component);
 }

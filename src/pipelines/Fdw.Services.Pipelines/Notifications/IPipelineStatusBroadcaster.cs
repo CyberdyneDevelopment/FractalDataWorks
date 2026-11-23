@@ -87,4 +87,11 @@ public interface IPipelineStatusBroadcaster
     /// <param name="update">The run's components.</param>
     /// <param name="orgId">The owning org for firehose scoping; see <see cref="BroadcastStatusChange"/>.</param>
     Task BroadcastComponents(PipelineComponentsUpdate update, Guid? orgId = null);
+
+    /// <summary>
+    /// Sends a piece of a run's stream to the group of the person it is addressed to (FDW-6140), and to no other.
+    /// </summary>
+    /// <param name="piece">The piece, with its sequence in the stored stream.</param>
+    /// <returns>A task that completes when the piece has been sent.</returns>
+    Task BroadcastRunPiece(PipelineRunPieceUpdate piece);
 }

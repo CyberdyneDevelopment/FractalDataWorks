@@ -1,7 +1,9 @@
 ﻿using System.Threading;
+using Fdw.Services.Abstractions;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Thresholds;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -18,13 +20,15 @@ public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBa
 {
     private readonly IPipelineConfigurationProvider _provider;
     private readonly WaitThresholdOwnerRelease _release;
+    private readonly IPipelineOfferService _offers;
 
     /// <summary>Initializes a new instance of the <see cref="DeletePipelineEndpointBase{TConfig}"/> class.</summary>
     protected DeletePipelineEndpointBase(
-        ILogger<DeletePipelineEndpointBase<TConfig>> logger, IPipelineConfigurationProvider provider, IConfigurationGatewayProvider gateways) : base(logger)
+        ILogger<DeletePipelineEndpointBase<TConfig>> logger, IPipelineConfigurationProvider provider, IConfigurationGatewayProvider gateways, IPipelineOfferService offers) : base(logger)
     {
         _provider = provider;
         _release = new WaitThresholdOwnerRelease(gateways, logger);
+        _offers = offers;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -36,14 +40,14 @@ public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBa
     /// <summary>Checks whether the pipeline exists before deletion.</summary>
     protected override async Task<IGenericResult<bool>> CheckExistsForDelete(PipelineNameRequest request, CancellationToken ct)
     {
-        var existingResult = await _provider.Get(request.Name, ct).ConfigureAwait(false);
+        var existingResult = await _provider.Get(request.Name, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
         return GenericResult<bool>.Success(existingResult.IsSuccess && existingResult.Value != null);
     }
 
     /// <summary>Deletes the pipeline configuration via the DataGateway.</summary>
     protected override async Task<IGenericResult> Delete(PipelineNameRequest request, CancellationToken ct)
     {
-        var existingResult = await _provider.Get(request.Name, ct).ConfigureAwait(false);
+        var existingResult = await _provider.Get(request.Name, ConfigurationLevels.WholeAggregate, ConfigurationReadOptions.WithoutFilledMembers, ct).ConfigureAwait(false);
         var existing = existingResult.IsSuccess ? existingResult.Value : null;
 
         if (existing == null)
@@ -56,6 +60,13 @@ public abstract class DeletePipelineEndpointBase<TConfig> : CrudDeleteEndpointBa
         if (released.IsFailure)
         {
             return released;
+        }
+
+        // The offers of the pipeline go with it (FDW-6135): an offer is the pipeline's own configuration and is nothing without it.
+        var offersRemoved = await _offers.RemoveAll(existing.Id, ct).ConfigureAwait(false);
+        if (offersRemoved.IsFailure)
+        {
+            return offersRemoved;
         }
 
         var deleteResult = await _provider.Delete(existing.Id, ct).ConfigureAwait(false);

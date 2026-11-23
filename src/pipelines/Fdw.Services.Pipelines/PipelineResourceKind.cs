@@ -22,7 +22,7 @@ public sealed class PipelineResourceKind : WorkspaceResourceKindBase
     /// once the project is archived.
     /// </remarks>
     public PipelineResourceKind()
-        : base("Pipeline", canBeOwned: true)
+        : base("Pipeline", canBeOwned: true, releasedOnArchive: false)
     {
     }
 }

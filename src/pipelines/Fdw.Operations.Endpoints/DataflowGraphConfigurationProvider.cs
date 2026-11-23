@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Connections;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Etl;
+using Fdw.Services.Pipelines;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -27,7 +30,7 @@ public class DataflowGraphConfigurationProvider
 {
 
 
-    private static string DataStoreName => EtlPipelineTypes.ConfigurationConnection;
+    private static string DataStoreName => PipelineTypes.ConfigurationConnection;
     private const string DataPath = "data";
     private const string PipePath = "pipe";
     private const int AllVariations = int.MaxValue - 1;
@@ -36,6 +39,7 @@ public class DataflowGraphConfigurationProvider
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IDataSetVariationConfigurationProvider _variations;
     private readonly ICategoryConfigurationProvider _categories;
+    private readonly IDataStoreConfigurationProvider _dataStores;
     private readonly ILogger<DataflowGraphConfigurationProvider> _logger;
 
     private Task<IGenericResult<IConfigurationGateway>> Gateway()
@@ -49,8 +53,10 @@ public class DataflowGraphConfigurationProvider
         IDataSetConfigurationProvider dataSets,
         IDataSetVariationConfigurationProvider variations,
         ICategoryConfigurationProvider categories,
+        IDataStoreConfigurationProvider dataStores,
         ILogger<DataflowGraphConfigurationProvider>? logger = null)
     {
+        _dataStores = dataStores;
         _gatewayProvider = gatewayProvider;
         _dataSets = dataSets;
         _variations = variations;
@@ -82,27 +88,15 @@ public class DataflowGraphConfigurationProvider
     }
 
     /// <summary>
-    /// Returns all current DataStore summary rows for graph node construction.
+    /// Returns every data store, read through the data store domain, for graph node construction.
     /// </summary>
-    public virtual async Task<IGenericResult<IReadOnlyList<DataStoreRecord>>> LoadDataStores(
+    /// <remarks>
+    /// A store's description is not a column of <c>data.DataStore</c> (FDW-6208): the data store provider fills it from the descriptions table, so the graph
+    /// takes each store from that provider and never queries the table itself. The store's own record is all a node draws, so nothing below it is read.
+    /// </remarks>
+    public virtual Task<IGenericResult<IReadOnlyList<IDataStoreImplementationConfiguration>>> LoadDataStores(
         CancellationToken cancellationToken = default)
-    {
-        var command = new QueryCommand<DataStoreRecord>();
-
-        var gatewayResult = await Gateway().ConfigureAwait(false);
-        if (gatewayResult.IsFailure || gatewayResult.Value is not { } gateway)
-            return GenericResult<IReadOnlyList<DataStoreRecord>>.Failure(
-                DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
-
-        var result = await gateway.Execute<IEnumerable<DataStoreRecord>>(
-                command, new DataStoreTarget(DataStoreName, DataPath, "DataStore"), cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!result.IsSuccess)
-            return result.ToNewResult<IReadOnlyList<DataStoreRecord>>();
-
-        return GenericResult<IReadOnlyList<DataStoreRecord>>.Success(result.Value?.ToList() ?? []);
-    }
+        => _dataStores.Get(ConfigurationLevels.RecordOnly, cancellationToken);
 
     /// <summary>
     /// Returns every configured data set with its sources, for graph edge construction.

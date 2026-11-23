@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.DataSets.Results;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -66,17 +67,37 @@ public sealed class DataSetVariationConfigurationProvider : IDataSetVariationCon
         => _list.Get(ids, ct);
 
     /// <inheritdoc/>
-    public Task<IGenericResult> Save(IDataSetVariationImplementationConfiguration variation, string name, CancellationToken ct = default)
+    public async Task<IGenericResult> Save(IDataSetVariationImplementationConfiguration variation, string name, CancellationToken ct = default)
     {
         DataSetVariationProviderLog.Saving(_logger, name);
-        return _dataSets.Save(variation, DomainName, VariationDataSetConfiguration.ImplementationName, name, ct);
+        var based = await RequireBase(variation, name, ct).ConfigureAwait(false);
+        return based.IsFailure
+            ? based
+            : await _dataSets.Save(variation, DomainName, VariationDataSetConfiguration.ImplementationName, name, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult> Update(IDataSetVariationImplementationConfiguration variation, string name, CancellationToken ct = default)
+    public async Task<IGenericResult> Update(IDataSetVariationImplementationConfiguration variation, string name, CancellationToken ct = default)
     {
         DataSetVariationProviderLog.Saving(_logger, name);
-        return _dataSets.Update(variation, DomainName, VariationDataSetConfiguration.ImplementationName, name, ct);
+        var based = await RequireBase(variation, name, ct).ConfigureAwait(false);
+        return based.IsFailure
+            ? based
+            : await _dataSets.Update(variation, DomainName, VariationDataSetConfiguration.ImplementationName, name, ct).ConfigureAwait(false);
+    }
+
+    // The variation cites the data set it varies by its durable Id with no foreign key (the data set's row is versioned on write, so the Id repeats
+    // across versions): the check the key made is made here, before anything is written (FDW-6129).
+    private async Task<IGenericResult> RequireBase(IDataSetVariationImplementationConfiguration variation, string name, CancellationToken ct)
+    {
+        var found = await _dataSets.Get(variation.BaseDataSetId, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        return found.IsFailure
+            ? found
+            : found.Value is null
+                ? GenericResult.Failure(
+                    DataSetsResultCodes.CitedDataSetNotFound, _logger,
+                    ResultDetails.Create("name", name, "dataSetId", variation.BaseDataSetId.ToString("D"), "citation", "base data set"))
+                : GenericResult.Success();
     }
 
     /// <inheritdoc/>

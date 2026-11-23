@@ -64,4 +64,8 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     /// <remarks>Null unless the transport overrides it: a store whose containers do not page states no paging rules.</remarks>
     public virtual IContainerPagingRules? ContainerPaging => null;
 
+    /// <inheritdoc />
+    /// <remarks>Abstract: every data store type states the container types its builder builds; none is assumed (FDW-6428).</remarks>
+    public abstract IReadOnlyList<string> ContainerTypeNames { get; }
+
 }

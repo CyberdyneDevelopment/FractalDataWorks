@@ -64,7 +64,7 @@ public sealed class GraphDataSetPreviewer : IGraphDataSetPreview
         if (request.Component is null && request.Output is null)
         {
             return DraftEnd(draft) is { } own
-                ? await _runner.RunGraph(gateway, draft.Name, graph, own, new GraphTestRun(cap, true), cancellationToken).ConfigureAwait(false)
+                ? await _runner.RunGraph(gateway, draft.Name, graph, own, new GraphTestRun(cap, true), draft.FederationStrategy, [.. draft.FederationOptions], cancellationToken).ConfigureAwait(false)
                 : _runner.NotBound(draft.Name);
         }
 
@@ -72,7 +72,7 @@ public sealed class GraphDataSetPreviewer : IGraphDataSetPreview
         return chosen.IsFailure || chosen.Value is null
             ? chosen.ToNewResult<IReadOnlyList<IDictionary<string, object?>>>()
             : await _runner.RunGraph(
-                gateway, draft.Name, GraphDataSetPipelines.UpTo(graph, chosen.Value), chosen.Value, new GraphTestRun(cap, true), cancellationToken).ConfigureAwait(false);
+                gateway, draft.Name, GraphDataSetPipelines.UpTo(graph, chosen.Value), chosen.Value, new GraphTestRun(cap, true), draft.FederationStrategy, [.. draft.FederationOptions], cancellationToken).ConfigureAwait(false);
     }
 
     // The caller's number when the caller states one, the configured number when not (stated in configuration, declared once on the service type).
@@ -103,7 +103,7 @@ public sealed class GraphDataSetPreviewer : IGraphDataSetPreview
             return EndNotFound(dataSet, request, "the draft has no component of that name");
         }
 
-        return ComponentShapes.Of(found, [.. graph.Links]).Outputs.Contains(output, StringComparer.OrdinalIgnoreCase)
+        return ComponentShapes.Of(found, [.. graph.Links], graph.Components).Outputs.Contains(output, StringComparer.OrdinalIgnoreCase)
             ? GenericResult<GraphEnd>.Success(new GraphEnd(found.Name, output))
             : EndNotFound(dataSet, request, "the component has no output of that name");
     }

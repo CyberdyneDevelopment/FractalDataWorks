@@ -25,6 +25,9 @@ public partial class DataStoreDomainConfiguration : DomainConfiguration
     public Guid ConnectionId { get; set; }
 
     /// <summary>Gets or sets the human-readable description.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table in the language of the caller's tenant (FDW-6208), which the domain table
+    // cannot hold, so the column is gone; the provider fills the member for every page it reads. Off the mapper, it is no list field either.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets when this data store's schema was last discovered.</summary>

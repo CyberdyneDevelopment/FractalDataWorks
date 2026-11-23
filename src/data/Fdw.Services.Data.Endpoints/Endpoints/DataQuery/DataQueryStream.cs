@@ -51,6 +51,7 @@ public sealed class DataQueryStream
     private readonly CancellationToken _cancellationToken;
 
     private DataQueryPage? _first;
+    private string _answerName;
 
     private DataQueryStream(
         DataSetQuery query, IDataSetImplementationConfiguration dataSet, DataQueryRequest request, List<QuerySort> order,
@@ -58,6 +59,7 @@ public sealed class DataQueryStream
     {
         _query = query;
         _dataSet = dataSet;
+        _answerName = dataSet.Name;
         _filter = request.Filter;
         _skip = request.Skip;
         _order = order;
@@ -69,7 +71,11 @@ public sealed class DataQueryStream
     }
 
     /// <summary>Gets the name of the data set read.</summary>
-    public string DataSetName => _dataSet.Name;
+    public string DataSetName => _answerName;
+
+    /// <summary>Sets the name the response is written under, which is the name the caller reached the data set by when that is not the data set's own (FDW-5446).</summary>
+    /// <param name="name">The name to answer under.</param>
+    internal void AnswerAs(string name) => _answerName = name;
 
     /// <summary>Gets the columns every row carries.</summary>
     public IReadOnlyList<DataQueryColumnDto> Columns { get; private set; } = [];

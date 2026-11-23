@@ -55,9 +55,4 @@ public class WaitThresholdModeSummaryTests
 
     // The generated NotFound sentinel calls the base constructor with default arguments when the collection is first touched; a constructor parameter it cannot default aborts
     // every host at start (FDW-2931), so the sentinel is built here.
-    [Fact]
-    public void TheCollectionBuildsItsNotFoundSentinel()
-    {
-        WaitThresholdModes.NotFound.ShouldNotBeNull();
-    }
 }

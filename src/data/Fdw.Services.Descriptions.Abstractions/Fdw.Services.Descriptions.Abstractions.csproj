@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Fdw.Services.Descriptions.Abstractions</RootNamespace>
+    <AssemblyName>Fdw.Services.Descriptions.Abstractions</AssemblyName>
+    <Nullable>enable</Nullable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <Title>Fdw Descriptions Abstractions</Title>
+    <Description>The descriptions contracts: the description types and sub-types an owning domain adds to, the key of a description, and the service that saves, deletes and reads one</Description>
+  </PropertyGroup>
+
+  <!--
+    Why this package is dependency-light: every domain that owns a described thing attaches its own [TypeOption] to DescriptionTypes, so those packages
+    reference this one. It holds the types, the key and the service contract, and nothing that reads or writes a row.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\..\foundation\collections\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\foundation\abstractions\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+    <ProjectReference Include="..\..\foundation\abstractions\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

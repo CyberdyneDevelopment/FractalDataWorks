@@ -21,9 +21,6 @@ namespace Fdw.Services.Workspaces;
 /// </summary>
 public static class PlaceVersions
 {
-    /// <summary>The most versions of one definition that are read; a definition has at most one per place.</summary>
-    public const int MaxVersions = 1000;
-
     /// <summary>Lists the versions of one definition at the places the caller may read.</summary>
     /// <typeparam name="TRow">The domain row of a version.</typeparam>
     /// <typeparam name="TPayload">What a version says.</typeparam>
@@ -37,6 +34,7 @@ public static class PlaceVersions
     /// <param name="payloadOf">Reads what a version row says.</param>
     /// <param name="origin">The place the caller reads at.</param>
     /// <param name="readRight">The right that lets the caller read a version at a place.</param>
+    /// <param name="maxVersions">The most versions one read holds, as the place option's registration resolved it (<see cref="PlaceVersionLimits"/>, FDW-7104).</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>
@@ -54,6 +52,7 @@ public static class PlaceVersions
         Func<TRow, TPayload> payloadOf,
         CallerPlace origin,
         string readRight,
+        int maxVersions,
         ILogger logger,
         CancellationToken cancellationToken = default)
         where TRow : class, IDomainConfiguration
@@ -64,7 +63,7 @@ public static class PlaceVersions
             return steps.ToNewResult<IReadOnlyList<PlaceVersion<TPayload>>>();
         }
 
-        var held = await Held(source, new FilterExpression { Root = Node(source.BaseIdProperty, "Equal", baseId) }, MaxVersions, cancellationToken).ConfigureAwait(false);
+        var held = await Held(source, new FilterExpression { Root = Node(source.BaseIdProperty, "Equal", baseId) }, maxVersions, cancellationToken).ConfigureAwait(false);
         if (held.IsFailure || held.Value is not { } rows)
         {
             return held.ToNewResult<IReadOnlyList<PlaceVersion<TPayload>>>();

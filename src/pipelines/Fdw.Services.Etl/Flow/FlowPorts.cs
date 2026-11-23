@@ -9,10 +9,16 @@ namespace Fdw.Services.Etl.Flow;
 /// <summary>
 /// The nodes of one component in one run (FDW-1386).
 /// </summary>
-internal sealed class FlowPorts : IFlowPorts
+internal sealed class FlowPorts : IFlowPorts, IFlowHeldPorts
 {
     private readonly Dictionary<string, FlowChannelInput> _inputs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, FlowChannelOutput> _outputs = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Gets the gauge of what the component holds in memory in this run (FDW-5231).</summary>
+    public FlowHeldGauge Held { get; } = new();
+
+    /// <inheritdoc />
+    FlowHeldGauge? IFlowHeldPorts.Held => Held;
 
     /// <summary>Adds an input node.</summary>
     /// <param name="input">The node.</param>

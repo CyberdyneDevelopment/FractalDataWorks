@@ -69,7 +69,23 @@ public class PipelineExecutionRecord
     public double? TotalDurationMs { get; set; }
 
     /// <summary>
-    /// Gets or sets who executed the pipeline.
+    /// Gets or sets the durable id of the person the run acted as (FDW-6519), or <see langword="null"/> for a run that acts as a tenant (a schedule) or one
+    /// written before 1.6.0.
     /// </summary>
-    public string? ExecutedBy { get; set; }
+    public Guid? ActingPersonId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the run mode that ran it (FDW-6519), or <see langword="null"/> for a run written before 1.6.0.
+    /// </summary>
+    public string? RunMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the application name of the host process that ran it (FDW-6519), or <see langword="null"/> for a run written before 1.6.0.
+    /// </summary>
+    public string? ExecutingHost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the slot's own name as the slot file states it, <c>a</c> or <c>b</c> (FDW-6519), or <see langword="null"/> when the host does not run on a slot.
+    /// </summary>
+    public string? ExecutingSlot { get; set; }
 }

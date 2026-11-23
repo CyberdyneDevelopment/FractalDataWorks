@@ -14,6 +14,9 @@ using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Data;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Pipelines.Runs;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -81,6 +84,13 @@ public abstract class CreateGraphFromTemplateEndpointBase : CrudCreateEndpointBa
             return GraphRefusal.Of<GraphPayload>($"'{request.Template}' is not a template: it does not exist, is not a graph pipeline, or is not marked as a template");
         }
 
+        // The type is the type the template was saved as, read from the stored row: the request takes none of its own, and one it states that differs is refused (FDW-6718).
+        var type = GraphTemplateType.Of(template, request.Implementation, Logger);
+        if (type.IsFailure || type.Value is null)
+        {
+            return type.ToNewResult<GraphPayload>();
+        }
+
         var filled = TemplateFill.Apply(
             GraphPayloadWriter.Write(template), template.ModifyDate, request.Name, [.. request.Values.Select(value => new KeyValuePair<string, string>(value.Name, value.Value))], Logger);
         if (filled.IsFailure || filled.Value is null)
@@ -88,10 +98,17 @@ public abstract class CreateGraphFromTemplateEndpointBase : CrudCreateEndpointBa
             return filled;
         }
 
+        filled.Value.Implementation = type.Value;
         var graph = GraphPayloadReader.Read(filled.Value, Guid.CreateVersion7(), await GraphChainLookup.Resolve(_chains, filled.Value, ct).ConfigureAwait(false));
         if (graph.IsFailure || graph.Value is null)
         {
             return graph.ToNewResult<GraphPayload>();
+        }
+
+        var limits = GraphRunLimitJudgment.Judge(graph.Value, Resolve<IEffectiveSettingsProvider>(), RunTenant.Of(new ClaimsPrincipalAuthenticationContext(User)), Logger);
+        if (limits.IsFailure)
+        {
+            return limits.ToNewResult<GraphPayload>();
         }
 
         return await GraphSave.Save(_provider, graph.Value, _owner, request.OrgId, _dataSets, Resolve<IDataStoreConfigurationProvider>(), GraphScriptPermission.For(HttpContext), Logger, ct).ConfigureAwait(false);

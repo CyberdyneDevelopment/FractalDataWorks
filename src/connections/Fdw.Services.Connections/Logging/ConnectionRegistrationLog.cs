@@ -15,4 +15,12 @@ public static partial class ConnectionRegistrationLog
         Message = "The connection domain is registered but nothing registered ICrossTenantChangePolicy, which it asks before a connection is enabled; register the Settings service type (Fdw.Services.Settings, SettingsServiceTypes), which registers it; the host does not start",
         ClientMessage = "The connection domain needs the Settings service type to be registered, and it is not")]
     public static partial IGenericMessage CrossTenantChangePolicyNotRegistered(ILogger logger);
+
+    /// <summary>The host registered the connection domain but nothing registered the descriptions writer it writes each connection's description with (FDW-6208).</summary>
+    /// <param name="logger">The logger.</param>
+    /// <returns>The message.</returns>
+    [MessageLogging(EventId = 60381, Level = LogLevel.Critical,
+        Message = "The connection domain is registered but nothing registered IDescriptionWriter, which it writes each connection's description with in the unit of the write; register the Descriptions service type (Fdw.Services.Descriptions, DescriptionServiceTypes); the host does not start",
+        ClientMessage = "The connection domain needs the Descriptions service type to be registered, and it is not")]
+    public static partial IGenericMessage DescriptionWriterNotRegistered(ILogger logger);
 }

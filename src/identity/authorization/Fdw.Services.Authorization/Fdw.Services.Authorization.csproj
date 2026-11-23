@@ -33,6 +33,8 @@
     <ProjectReference Include="..\..\multitenancy\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\commands\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\..\..\data\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\data\Fdw.Services.Descriptions\Fdw.Services.Descriptions.csproj" />
+    <ProjectReference Include="..\..\..\data\Fdw.Services.Descriptions.Abstractions\Fdw.Services.Descriptions.Abstractions.csproj" />
   </ItemGroup>
 
   <!-- Microsoft.Extensions.* packages provided by FrameworkReference Microsoft.AspNetCore.App -->

@@ -39,6 +39,7 @@ public sealed class DataStoreSliceBuildTests
     {
         Id = Guid.NewGuid(),
         Name = name,
+        TypeId = "Endpoint",
         Fields =
         [
             new DataContainerFieldConfiguration { Id = idField, Name = "Id", Ordinal = 0 },

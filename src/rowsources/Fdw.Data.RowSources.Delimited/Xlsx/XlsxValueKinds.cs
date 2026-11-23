@@ -16,4 +16,20 @@ namespace Fdw.Data.RowSources.Delimited.Xlsx;
 [TypeCollection(typeof(XlsxValueKindBase), typeof(IXlsxValueKind), typeof(XlsxValueKinds))]
 public abstract partial class XlsxValueKinds : TypeCollectionBase<XlsxValueKindBase, IXlsxValueKind>
 {
+
+    /// <summary>Finds the kind a built-in number format id makes a number.</summary>
+    /// <param name="formatId">A built-in number format id.</param>
+    /// <returns>The kind, or <c>NotFound</c> when no kind covers the id.</returns>
+    public static IXlsxValueKind OfBuiltInFormat(int formatId)
+    {
+        foreach (var kind in All())
+        {
+            if (kind.CoversBuiltInFormat(formatId))
+            {
+                return kind;
+            }
+        }
+
+        return NotFound;
+    }
 }

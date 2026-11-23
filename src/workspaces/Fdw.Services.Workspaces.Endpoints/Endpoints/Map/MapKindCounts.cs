@@ -5,6 +5,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Quality;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Workspaces.Results;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Workspaces.Endpoints;
@@ -16,9 +17,7 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// </remarks>
 internal sealed class MapKindCounts
 {
-    private readonly IConnectionConfigurationProvider _connections;
-    private readonly IQualityRuleConfigurationProvider _qualityRules;
-    private readonly IScheduleConfigurationProvider _schedules;
+    private readonly MapCountProviders _providers;
 
     /// <summary>Initializes the providers.</summary>
     /// <param name="connections">The connection domain.</param>
@@ -29,9 +28,7 @@ internal sealed class MapKindCounts
         IQualityRuleConfigurationProvider qualityRules,
         IScheduleConfigurationProvider schedules)
     {
-        _connections = connections;
-        _qualityRules = qualityRules;
-        _schedules = schedules;
+        _providers = new MapCountProviders(connections, qualityRules, schedules);
     }
 
     /// <summary>Gets the kinds this counts, in the order a client lists them.</summary>
@@ -42,12 +39,11 @@ internal sealed class MapKindCounts
     /// <param name="logger">Records the refusal when the registered provider cannot list its domain table.</param>
     /// <returns>The domain list, or the refusal.</returns>
     public IGenericResult<IDomainRecordProvider<DomainConfiguration>> Records(string kind, ILogger logger)
-        => MapSources.Records(Provider(kind) as IDomainRecordProvider<DomainConfiguration>, kind, logger);
-
-    private object Provider(string kind) => kind switch
     {
-        MapKinds.Connection => _connections,
-        MapKinds.QualityRule => _qualityRules,
-        _ => _schedules,
-    };
+        var option = MapKindOptions.ByName(kind);
+        return ReferenceEquals(option, MapKindOptions.NotFound)
+            ? GenericResult<IDomainRecordProvider<DomainConfiguration>>.Failure(
+                WorkspacesResultCodes.ByName("MapKindUnknown"), logger, ResultDetails.Create("kind", kind))
+            : option.Records(_providers, logger);
+    }
 }

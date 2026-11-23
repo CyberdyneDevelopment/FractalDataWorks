@@ -126,12 +126,10 @@ public static class PipelineRunOutcomeReader
         return GenericResult<PipelineRunOutcome>.Success(new PipelineRunOutcome(id, at, false, !transient && !refused, Text(kind.Data, "category"), Text(kind.Data, "code"), ConnectionOf(kind.Data)));
     }
 
-    private static DateTimeOffset ToOffset(object? value) => value switch
-    {
-        DateTimeOffset offset => offset,
-        DateTime time => new DateTimeOffset(DateTime.SpecifyKind(time, DateTimeKind.Utc)),
-        _ => throw new ArgumentException($"A run time of type {value?.GetType().Name} cannot be read.", nameof(value)),
-    };
+    private static DateTimeOffset ToOffset(object? value) =>
+        RunTimeShapes.All().FirstOrDefault(shape => shape.Matches(value)) is { } matched && value is not null
+            ? matched.ToOffset(value)
+            : throw new ArgumentException($"A run time of type {value?.GetType().Name} cannot be read.", nameof(value));
 
     // The connection a failed run recorded; a run that recorded none, or text that is not an Id, has none.
     private static Guid? ConnectionOf(IReadOnlyDictionary<string, object?> data) =>

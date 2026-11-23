@@ -39,6 +39,9 @@ public sealed class GraphRefusedComponentTypesTests
     [InlineData("ContainerDestination", "Destination", "GraphDataSetDestinationRefused")]
     [InlineData("ExecuteSql", "Action", "GraphDataSetActionRefused")]
     [InlineData("ForEach", "Loop", "GraphDataSetLoopRefused")]
+    [InlineData("While", "Loop", "GraphDataSetLoopRefused")]
+    [InlineData("Gate", "Control", "GraphDataSetControlRefused")]
+    [InlineData("Container", "Control", "GraphDataSetControlRefused")]
     public async Task AKindIsListedWithItsFamilyAndTheCodeASaveAnswers(string kind, string family, string codeName)
     {
         var answer = await new RefusedEndpoint().Load(TestContext.Current.CancellationToken);

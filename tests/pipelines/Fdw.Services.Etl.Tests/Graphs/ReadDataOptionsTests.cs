@@ -14,20 +14,26 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Etl.Tests.Graphs;
 
 /// <summary>
-/// Tests for the Read data options step (FDW-5347): it reads the stored options of a column in one query through the ETL gateway, applies
-/// them in the options' own order, and keeps the list they leave in a declared variable.
+/// Tests for the Read data options step (FDW-5347, FDW-6344): it reads the current, active rules of a column and their values in one query through the ETL gateway, applies
+/// them (In puts its values in the list, NotIn takes them out) and keeps the list they leave in a declared variable.
 /// </summary>
 public sealed class ReadDataOptionsTests
 {
-    private static Dictionary<string, object?> Row(string? value, string optionType, string option, object? active = null) =>
-        new Dictionary<string, object?> { ["Value"] = value, ["OptionType"] = optionType, ["Option"] = option, ["Active"] = active ?? true };
+    private const string InPath = "DataConfigurationRules:Comparison:In.To";
+    private const string NotInPath = "DataConfigurationRules:Comparison:NotIn.To";
 
-    private static Dictionary<string, object?> Include(string value, object? active = null) => Row(value, "SelectList", "Include", active);
+    private static Dictionary<string, object?> Row(string rule, string path, string? value, int ordinal = 1, string valueKind = "Literal", string? parameter = null) =>
+        new Dictionary<string, object?>
+        {
+            ["RuleId"] = rule, ["RuleName"] = "Rule " + rule, ["RulePath"] = path, ["ValueKind"] = valueKind, ["Value"] = value, ["Parameter"] = parameter, ["Ordinal"] = ordinal,
+        };
 
-    private static Dictionary<string, object?> Exclude(string value, object? active = null) => Row(value, "SelectList", "Exclude", active);
+    private static Dictionary<string, object?> Include(string value, int ordinal = 1, string rule = "A") => Row(rule, InPath, value, ordinal);
 
-    private static FlowReadDataOptions Step(ScriptingGateway fake, int maxRows = 10, string container = "cfg.DataOptions", string resultVariable = "Values") =>
-        new("options", fake.Gateway, "Settings", container, "Warehouse", "Orders", "Region", maxRows, resultVariable);
+    private static Dictionary<string, object?> Exclude(string value, int ordinal = 1, string rule = "B") => Row(rule, NotInPath, value, ordinal);
+
+    private static FlowReadDataOptions Step(ScriptingGateway fake, int maxRows = 10, string rulesContainer = "data.DataConfigurationRule", string resultVariable = "Values") =>
+        new("options", fake.Gateway, "Settings", rulesContainer, "data.DataConfigurationRuleValue", "Warehouse", "dbo", "Orders", "Region", maxRows, resultVariable);
 
     private static FlowVariables Declared(string name = "Values")
     {
@@ -46,9 +52,9 @@ public sealed class ReadDataOptionsTests
     }
 
     [Fact]
-    public async Task TheStepAppliesTheStoredOptionsAndKeepsTheListInTheVariable()
+    public async Task TheStepAppliesTheRulesAndKeepsTheListInTheVariable()
     {
-        var fake = new ScriptingGateway([Include("A"), Include("B"), Include("C"), Exclude("B")]);
+        var fake = new ScriptingGateway([Include("A", 1), Include("B", 2), Include("C", 3), Exclude("B")]);
         var variables = Declared();
 
         var ran = await Run(Step(fake), variables);
@@ -58,61 +64,59 @@ public sealed class ReadDataOptionsTests
     }
 
     [Fact]
-    public async Task AnInactiveRowChangesNothing()
+    public async Task TwoRulesOnOneColumnAreBothApplied()
     {
-        var fake = new ScriptingGateway([Include("A"), Include("B", active: false), Exclude("A", active: false)]);
+        var fake = new ScriptingGateway([Include("A", 1, "R1"), Include("B", 1, "R2"), Exclude("A", 1, "R3")]);
         var variables = Declared();
 
         var ran = await Run(Step(fake), variables);
 
         ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
+        Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["B"]);
+    }
+
+    [Fact]
+    public async Task TheValuesAreListedInTheRulesAndValuesOwnOrderWhateverOrderTheStoreReturnsThem()
+    {
+        var shuffled = new ScriptingGateway([Exclude("A"), Include("C", 3), Include("B", 2), Include("A", 1)]);
+        var variables = Declared();
+
+        await Run(Step(shuffled), variables);
+
+        Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["B", "C"]);
+    }
+
+    [Fact]
+    public async Task AValueTwoRulesPickIsInTheListOnce()
+    {
+        var fake = new ScriptingGateway([Include("A", 1, "R1"), Include("A", 1, "R2")]);
+        var variables = Declared();
+
+        await Run(Step(fake), variables);
+
         Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["A"]);
     }
 
-    [Theory]
-    [InlineData(1, true)]
-    [InlineData(0, false)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    public async Task AStoreMayKeepTheActiveFlagAsABooleanOrANumber(object active, bool listed)
-    {
-        var fake = new ScriptingGateway([Include("A", active)]);
-        var variables = Declared();
-
-        var ran = await Run(Step(fake), variables);
-
-        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
-        Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldNotBeNull().Count.ShouldBe(listed ? 1 : 0);
-    }
-
     [Fact]
-    public async Task TheRowsAreAppliedInTheOptionsOwnOrderWhateverOrderTheStoreReturnsThem()
+    public async Task TheRulesAreReadInOneQueryThatTakesOnlyCurrentNotDeletedActiveRulesAndValuesWithTheColumnAsParameters()
     {
-        var excludedFirst = new ScriptingGateway([Exclude("A"), Include("A"), Include("B")]);
-        var includedFirst = new ScriptingGateway([Include("A"), Include("B"), Exclude("A")]);
-        var first = Declared();
-        var second = Declared();
-
-        await Run(Step(excludedFirst), first);
-        await Run(Step(includedFirst), second);
-
-        Kept(first).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["B"]);
-        Kept(second).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["B"]);
-    }
-
-    [Fact]
-    public async Task TheOptionsAreReadInOneQueryWithTheColumnAsParameters()
-    {
-        var fake = new ScriptingGateway([Include("A"), Include("B")]);
+        var fake = new ScriptingGateway([Include("A")]);
 
         await Run(Step(fake, maxRows: 10), Declared());
 
         var (store, command) = fake.Commands.ShouldHaveSingleItem();
         store.ShouldBe("Settings");
         var stream = command.ShouldBeOfType<ScriptStreamCommand>();
-        stream.Parameters.ShouldBe([new ScriptParameter("DataStore", "Warehouse"), new ScriptParameter("Container", "Orders"), new ScriptParameter("Column", "Region")]);
+        stream.Parameters.ShouldBe(
+            [
+                new ScriptParameter("DataStore", "Warehouse"), new ScriptParameter("DataPath", "dbo"), new ScriptParameter("Container", "Orders"), new ScriptParameter("Column", "Region"),
+                new ScriptParameter("Active", true), new ScriptParameter("IsCurrent", true), new ScriptParameter("IsDeleted", false),
+            ]);
         stream.Take.ShouldBe(11);
-        stream.Text.ShouldContain("FROM cfg.DataOptions ");
+        stream.Text.ShouldContain("FROM data.DataConfigurationRule r INNER JOIN data.DataConfigurationRuleValue v ");
+        stream.Text.ShouldContain("\"IsCurrent\" = @IsCurrent");
+        stream.Text.ShouldContain("\"IsDeleted\" = @IsDeleted");
+        stream.Text.ShouldContain("\"Active\" = @Active");
     }
 
     [Fact]
@@ -126,47 +130,161 @@ public sealed class ReadDataOptionsTests
         Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBeEmpty();
     }
 
-    [Fact]
-    public async Task AnOptionTypeThatIsNotKnownFailsTheStepAndLeavesTheVariableAlone()
+    [Theory]
+    [InlineData("NoSuchRoot:Comparison:In.To")]
+    [InlineData("DataConfigurationRules:Nothing:In.To")]
+    [InlineData("DataConfigurationRules:Comparison:In.Nothing")]
+    public async Task APathThatDoesNotResolveFailsTheStepNamingTheRuleAndThePathAndLeavesTheVariableAlone(string path)
     {
         var variables = Declared();
 
-        var ran = await Run(Step(new ScriptingGateway([Row("A", "NoSuchType", "Include")])), variables);
+        var ran = await Run(Step(new ScriptingGateway([Include("A"), Row("R9", path, "A")])), variables);
 
         ran.IsFailure.ShouldBeTrue();
-        ran.Messages.ShouldContain(message => message.Code == "DATAOPTION-31000");
-        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("NoSuchType");
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Rule R9");
+        ran.CurrentMessage.ShouldContain(path);
         Kept(variables).ShouldBeNull();
     }
 
     [Fact]
-    public async Task AnOptionThatIsNotKnownFailsTheStepAndLeavesTheVariableAlone()
+    public async Task AStoredPathThatIsNotAPathAndAMethodFailsTheStep()
     {
         var variables = Declared();
 
-        var ran = await Run(Step(new ScriptingGateway([Row("A", "SelectList", "NoSuchOption")])), variables);
+        var ran = await Run(Step(new ScriptingGateway([Row("R9", "DataConfigurationRules:Comparison:In", "A")])), variables);
 
         ran.IsFailure.ShouldBeTrue();
-        ran.Messages.ShouldContain(message => message.Code == "DATAOPTION-30000");
-        Kept(variables).ShouldBeNull();
-    }
-
-    [Fact]
-    public async Task AnActiveRowWithNoValueFailsTheStepWithTheValueRequiredCode()
-    {
-        var variables = Declared();
-
-        var ran = await Run(Step(new ScriptingGateway([Include("A"), Row(null, "SelectList", "Include")])), variables);
-
-        ran.IsFailure.ShouldBeTrue();
-        ran.Messages.ShouldContain(message => message.Code == "DATAOPTION-20000");
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Rule R9");
         Kept(variables).ShouldBeNull();
     }
 
     [Theory]
-    [InlineData("OptionType")]
-    [InlineData("Option")]
-    public async Task ARowThatNamesNoOptionFailsTheStepNamingTheRowAndTheField(string field)
+    [InlineData("Equal")]
+    [InlineData("GreaterThan")]
+    [InlineData("Between")]
+    public async Task AKindThatIsNotAListOfPickedValuesFailsTheStepNamingTheRuleAndItsPath(string kind)
+    {
+        var variables = Declared();
+        var path = $"DataConfigurationRules:Comparison:{kind}.To";
+
+        var ran = await Run(Step(new ScriptingGateway([Include("A"), Row("R9", path, "A")])), variables);
+
+        ran.IsFailure.ShouldBeTrue();
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Rule R9");
+        ran.CurrentMessage.ShouldContain(path);
+        Kept(variables).ShouldBeNull();
+    }
+
+    private static FlowVariables DeclaredWithParameter(string name, object? value)
+    {
+        var variables = Declared();
+        variables.DeclareParameter(name, value, false);
+        return variables;
+    }
+
+    [Fact]
+    public async Task AValueThatIsAParameterIsReadFromTheRunsValueAndPlacedInTheList()
+    {
+        var variables = DeclaredWithParameter("Conference", "East");
+
+        var ran = await Run(Step(new ScriptingGateway([Include("A", 1), Row("R9", InPath, null, 2, "Parameter", "Conference")])), variables);
+
+        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
+        Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["A", "East"]);
+    }
+
+    [Fact]
+    public async Task AParameterValueOfARuleThatExcludesTakesTheValueOutOfTheList()
+    {
+        var variables = DeclaredWithParameter("Drop", "B");
+
+        var ran = await Run(Step(new ScriptingGateway([Include("A", 1), Include("B", 2), Row("R9", NotInPath, null, 1, "Parameter", "Drop")])), variables);
+
+        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
+        Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["A"]);
+    }
+
+    [Fact]
+    public async Task AParameterTheRunDoesNotCarryFailsTheStepWithTheResolversMessageAndSetsNoVariable()
+    {
+        var variables = Declared();
+
+        var ran = await Run(Step(new ScriptingGateway([Include("A"), Row("R9", InPath, null, 1, "Parameter", "Conference")])), variables);
+
+        ran.IsFailure.ShouldBeTrue();
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Conference");
+        ran.CurrentMessage.ShouldContain("Rule R9");
+        Kept(variables).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AParameterTheRunLeftBlankFailsTheStepAndIsNeverAnEmptyValue()
+    {
+        var variables = Declared();
+        variables.DeclareBlankParameter("Conference", false);
+
+        var ran = await Run(Step(new ScriptingGateway([Row("R9", InPath, null, 1, "Parameter", "Conference")])), variables);
+
+        ran.IsFailure.ShouldBeTrue();
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Conference");
+        Kept(variables).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AParameterValueThatCannotBePlacedFailsTheStep()
+    {
+        var variables = DeclaredWithParameter("Conference", "East and West");
+
+        var ran = await Run(Step(new ScriptingGateway([Row("R9", InPath, null, 1, "Parameter", "Conference")])), variables);
+
+        ran.IsFailure.ShouldBeTrue();
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Conference");
+        Kept(variables).ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(null, "Parameter is missing")]
+    [InlineData("  ", "Parameter is missing")]
+    [InlineData("Con ference", "Parameter is not a parameter name")]
+    [InlineData("1Conference", "Parameter is not a parameter name")]
+    [InlineData("A}} {{B", "Parameter is not a parameter name")]
+    public async Task AParameterRowWithNoNameOrANameThatIsNotAParameterNameFailsTheStep(string? parameter, string reason)
+    {
+        var variables = DeclaredWithParameter("Conference", "East");
+
+        var ran = await Run(Step(new ScriptingGateway([Row("R9", InPath, null, 1, "Parameter", parameter)])), variables);
+
+        ran.IsFailure.ShouldBeTrue();
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain(reason);
+        Kept(variables).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ALiteralThatHoldsBracesIsPlacedAsStoredAndIsNeverResolved()
+    {
+        var variables = DeclaredWithParameter("Conference", "East");
+
+        var ran = await Run(Step(new ScriptingGateway([Row("R9", InPath, "{{Conference}}")])), variables);
+
+        ran.IsSuccess.ShouldBeTrue(ran.CurrentMessage);
+        Kept(variables).ShouldBeAssignableTo<IReadOnlyList<string>>().ShouldBe(["{{Conference}}"]);
+    }
+
+    [Fact]
+    public async Task AValueKindThatIsNotAValueKindFailsTheStep()
+    {
+        var ran = await Run(Step(new ScriptingGateway([Row("R9", InPath, "A", 1, "Sometimes")])), Declared());
+
+        ran.IsFailure.ShouldBeTrue();
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("ValueKind");
+    }
+
+    [Theory]
+    [InlineData("RuleId")]
+    [InlineData("RuleName")]
+    [InlineData("RulePath")]
+    [InlineData("ValueKind")]
+    public async Task ARowThatNamesNoRuleFieldFailsTheStepNamingTheRowAndTheField(string field)
     {
         var row = Include("A");
         row[field] = null;
@@ -179,12 +297,15 @@ public sealed class ReadDataOptionsTests
     }
 
     [Fact]
-    public async Task AnActiveFlagThatIsNotAFlagFailsTheStep()
+    public async Task AnOrdinalThatIsNotAWholeNumberFailsTheStep()
     {
-        var ran = await Run(Step(new ScriptingGateway([Include("A", "yes")])), Declared());
+        var row = Include("A");
+        row["Ordinal"] = "first";
+
+        var ran = await Run(Step(new ScriptingGateway([row])), Declared());
 
         ran.IsFailure.ShouldBeTrue();
-        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Active");
+        ran.CurrentMessage.ShouldNotBeNull().ShouldContain("Ordinal");
     }
 
     [Fact]
@@ -192,7 +313,7 @@ public sealed class ReadDataOptionsTests
     {
         var variables = Declared();
 
-        var ran = await Run(Step(new ScriptingGateway([Include("A"), Include("B"), Include("C")]), maxRows: 2), variables);
+        var ran = await Run(Step(new ScriptingGateway([Include("A", 1), Include("B", 2), Include("C", 3)]), maxRows: 2), variables);
 
         ran.IsFailure.ShouldBeTrue();
         ran.CurrentMessage.ShouldNotBeNull().ShouldContain("more than the 2");
@@ -219,7 +340,7 @@ public sealed class ReadDataOptionsTests
     {
         var fake = new ScriptingGateway([Include("A")]);
 
-        var ran = await Run(Step(fake, container: container), Declared());
+        var ran = await Run(Step(fake, rulesContainer: container), Declared());
 
         ran.IsFailure.ShouldBeTrue();
         fake.Commands.ShouldBeEmpty();
@@ -239,7 +360,7 @@ public sealed class ReadDataOptionsTests
     [Fact]
     public async Task AForEachWithABatchSizeTakesTheListInBatches()
     {
-        var fake = new ScriptingGateway([Include("A"), Include("B"), Include("C")]);
+        var fake = new ScriptingGateway([Include("A", 1), Include("B", 2), Include("C", 3)]);
         var variables = Declared();
         var batches = new List<IReadOnlyList<string>>();
         var each = new FlowForEach("each", "Batch", "Values", [new Capture("capture", batches)], 2);
@@ -254,7 +375,7 @@ public sealed class ReadDataOptionsTests
     [Fact]
     public async Task TheListRendersQuotedAndCommaSeparatedWhereAVariableBecomesText()
     {
-        var fake = new ScriptingGateway([Include("A"), Include("B"), Include("C")]);
+        var fake = new ScriptingGateway([Include("A", 1), Include("B", 2), Include("C", 3)]);
         var variables = Declared();
         await Run(Step(fake), variables);
 
@@ -269,7 +390,7 @@ public sealed class ReadDataOptionsTests
         kind.IsAction.ShouldBeTrue();
         kind.HoldsComponents.ShouldBeFalse();
         kind.Settings.Where(setting => setting.IsRequired).Select(setting => setting.Name).ShouldBe(
-            ["optionsDataStore", "optionsContainer", "dataStore", "container", "field", "maxRows", "resultVariable"], ignoreOrder: true);
+            ["optionsDataStore", "optionsContainer", "optionValuesContainer", "dataStore", "path", "container", "field", "maxRows", "resultVariable"], ignoreOrder: true);
         kind.Settings.ShouldAllBe(setting => setting.Name == "stage" || ComponentSettingBindings.Find(setting.Name) != null);
     }
 
@@ -278,8 +399,10 @@ public sealed class ReadDataOptionsTests
         Name = "options",
         ComponentType = "ReadDataOptions",
         OptionsDataStoreName = "Settings",
-        OptionsContainerName = "cfg.DataOptions",
+        OptionsContainerName = "data.DataConfigurationRule",
+        OptionValuesContainerName = "data.DataConfigurationRuleValue",
         DataStoreName = "Warehouse",
+        PathName = "dbo",
         ContainerName = "Orders",
         FieldName = "Region",
         MaxRows = maxRows,

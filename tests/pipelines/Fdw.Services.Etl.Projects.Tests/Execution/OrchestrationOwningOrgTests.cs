@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
@@ -37,7 +38,7 @@ public sealed class OrchestrationOwningOrgTests
             var configuration = new Mock<IPipelineImplementationConfiguration>();
             configuration.SetupGet(c => c.OrgId).Returns(org);
             provider
-                .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
+                .Setup(p => p.Get(id,ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(configuration.Object));
         }
 
@@ -70,8 +71,8 @@ public sealed class OrchestrationOwningOrgTests
         var org = await Of(node, provider);
 
         org.ShouldBe(OrgA);
-        provider.Verify(p => p.Get(P1, It.IsAny<CancellationToken>()), Times.Once);
-        provider.Verify(p => p.Get(P2, It.IsAny<CancellationToken>()), Times.Once);
+        provider.Verify(p => p.Get(P1,ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
+        provider.Verify(p => p.Get(P2,ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public sealed class OrchestrationOwningOrgTests
     {
         var provider = Provider((P1, OrgA));
         provider
-            .Setup(p => p.Get(P3, It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(P3,ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Failure(Mock.Of<IGenericMessage>()));
 
         var org = await Of(Node("Step", null, P1, P3), provider);

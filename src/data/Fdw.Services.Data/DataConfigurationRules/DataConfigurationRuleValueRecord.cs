@@ -29,6 +29,9 @@ public sealed class DataConfigurationRuleValueRecord
     public string? Abbreviation { get; set; }
 
     /// <summary>Gets or sets the optional description.</summary>
+    // Why [NotStored]: the description is kept in the descriptions table, in the language of the caller's tenant (FDW-6208), so the column is gone and no save writes it; the service writes
+    // it in the unit of the save and fills the answer from the table.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the value's place among the rule's values, from 1.</summary>

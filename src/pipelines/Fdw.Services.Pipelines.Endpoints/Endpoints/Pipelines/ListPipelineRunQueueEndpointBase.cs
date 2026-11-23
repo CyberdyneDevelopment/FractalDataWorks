@@ -7,7 +7,7 @@ using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Flow;
-using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Pipelines.Runs;
 using Fdw.Services.Settings;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.AspNetCore.Http;
@@ -36,15 +36,13 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
 {
     private readonly PipelineRunScheduler _scheduler;
     private readonly RunningFlows _running;
-    private readonly ITenantContext _tenant;
 
     /// <summary>Initializes a new instance of the <see cref="ListPipelineRunQueueEndpointBase"/> class.</summary>
-    protected ListPipelineRunQueueEndpointBase(ILogger logger, PipelineRunScheduler scheduler, RunningFlows running, ITenantContext tenant)
+    protected ListPipelineRunQueueEndpointBase(ILogger logger, PipelineRunScheduler scheduler, RunningFlows running)
     {
         EndpointLogger = logger;
         _scheduler = scheduler;
         _running = running;
-        _tenant = tenant;
     }
 
     /// <summary>Gets the logger instance.</summary>
@@ -66,11 +64,20 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
     public override async Task HandleAsync(CancellationToken ct)
     {
         var reachesAll = Resolve<ISystemRoleConfiguration>().IsPlatformAdmin(User);
-        var caller = _tenant.TenantId;
+        var caller = RunTenant.Of(new ClaimsPrincipalAuthenticationContext(User));
         if (!reachesAll && caller is null)
         {
             OnNoTenant();
             await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(PipelinesAnswerLog.ListPipelineRunQueueTheRunQueueIsListed(EndpointLogger)), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        // Whether run events reach the hub on this tier is always stated (FDW-5242): a page picks the hub or this list from it, so a setting that cannot be read
+        // refuses the request; it is never taken as off.
+        if (!Resolve<IEffectiveSettingsProvider>().TryGetEffectiveValue<bool>(SettingDefinitions.PipelineEventRelayEnabled, out var relayEnabled))
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(
+                PipelinesAnswerLog.ListPipelineRunQueueRelaySettingNotRead(EndpointLogger, SettingDefinitions.PipelineEventRelayEnabled)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -81,6 +88,7 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
             Running = [.. snapshot.Running.Where(entry => Reaches(entry, reachesAll, caller)).Select(entry => Item(entry, reachesAll, caller, owners, _running))],
             Waiting = [.. snapshot.Waiting.Where(entry => Reaches(entry, reachesAll, caller)).Select(entry => Item(entry, reachesAll, caller, owners, _running))],
             RefreshSeconds = RefreshSecondsFor(caller),
+            RelayEnabled = relayEnabled,
         };
         OnQueueListed(caller, reachesAll, response.Running.Count, response.Waiting.Count);
         await Send.OkAsync(response, ct).ConfigureAwait(false);
@@ -112,7 +120,7 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
     private static PipelineRunQueueItemResponse Item(PipelineRunQueueEntry entry, bool reachesAll, Guid? caller, Dictionary<Guid, Guid?> owners, RunningFlows running)
     {
         var blockedBy = BlockerOf(entry.Waiting, reachesAll, caller, owners);
-        return new PipelineRunQueueItemResponse
+        return WithFigures(new PipelineRunQueueItemResponse
         {
             ExecutionId = entry.Run.ExecutionId,
             PipelineId = entry.Run.PipelineId,
@@ -125,22 +133,30 @@ public abstract class ListPipelineRunQueueEndpointBase : EndpointWithoutRequest<
             BlockedByExecutionId = blockedBy,
             Table = blockedBy is null ? null : entry.Waiting?.Table,
             HeldUntil = entry.Waiting?.HeldUntil,
-            Components = ComponentsOf(entry, running),
-            Links = LinksOf(entry, running)
-        };
+        }, entry, running);
     }
 
-    // Only a run in flight has components; one that waits for its turn has not begun. A run the host does not follow yet answers none, not an empty list.
-    private static List<PipelineRunComponentResponse>? ComponentsOf(PipelineRunQueueEntry entry, RunningFlows running) =>
-        entry.Waiting is not null || running.Components(entry.Run.ExecutionId) is not { } components
-            ? null
-            : FlowLiveResponses.Components(components);
+    // Only a run in flight has components, links and figures; one that waits for its turn has not begun, and a run the host does not follow yet answers none, not an
+    // empty list or zero (FDW-3382, FDW-3778). The figures are read once, at one time, so the run's totals agree with its components and links (FDW-5232).
+    private static PipelineRunQueueItemResponse WithFigures(PipelineRunQueueItemResponse item, PipelineRunQueueEntry entry, RunningFlows running)
+    {
+        if (entry.Waiting is not null
+            || running.Components(entry.Run.ExecutionId) is not { } components
+            || running.Links(entry.Run.ExecutionId) is not { } links)
+        {
+            return item;
+        }
 
-    // The links follow the same rule as the components (FDW-3778).
-    private static List<PipelineRunLinkResponse>? LinksOf(PipelineRunQueueEntry entry, RunningFlows running) =>
-        entry.Waiting is not null || running.Links(entry.Run.ExecutionId) is not { } links
-            ? null
-            : FlowLiveResponses.Links(links);
+        var memory = FlowLiveResponses.Memory(components, links);
+        item.Components = FlowLiveResponses.Components(components, links);
+        item.Links = FlowLiveResponses.Links(links);
+        item.SampledAt = DateTimeOffset.UtcNow;
+        item.QueuedBytes = memory.QueuedBytes;
+        item.HeldBytes = memory.HeldBytes;
+        item.TotalBytes = memory.TotalBytes;
+        item.BytesMeasure = FlowLiveResponses.EstimatedValueBytes;
+        return item;
+    }
 
     // The run that holds this one back, named only when the caller reaches it: every run for a platform administrator, the caller's tenant's
     // own otherwise.

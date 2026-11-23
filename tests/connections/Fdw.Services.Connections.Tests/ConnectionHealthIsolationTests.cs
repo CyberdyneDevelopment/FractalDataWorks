@@ -52,7 +52,7 @@ public sealed class ConnectionHealthIsolationTests
         // checks by Id (the worker) or by name (the health check), which reads them whole (FDW-970).
         var configurations = new Mock<IConnectionConfigurationProvider>();
         configurations
-            .Setup(p => p.Get(ConfigurationLevels.RecordOnly, It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(ConfigurationLevels.RecordOnly, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success(
                 new[] { broken.Object, working.Object }));
 

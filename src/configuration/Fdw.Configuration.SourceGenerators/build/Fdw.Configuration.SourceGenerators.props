@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    FDW-7107: the column sizes the configuration generator gives a field that states none of its own
+    (a string without [MaxLength], a decimal without [Precision]). They are build configuration, never
+    a number in the generator: a project changes one by setting the property itself, and the values
+    here apply only where it is empty. A field that needs a size the build does not state, as a whole
+    number, is reported (CFG004) and its configuration gets no DDL.
+  -->
+  <PropertyGroup>
+    <FDW_DdlStringMaxLength Condition="'$(FDW_DdlStringMaxLength)' == ''">500</FDW_DdlStringMaxLength>
+    <FDW_DdlDecimalPrecision Condition="'$(FDW_DdlDecimalPrecision)' == ''">18</FDW_DdlDecimalPrecision>
+    <FDW_DdlDecimalScale Condition="'$(FDW_DdlDecimalScale)' == ''">2</FDW_DdlDecimalScale>
+  </PropertyGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="FDW_DdlStringMaxLength" />
+    <CompilerVisibleProperty Include="FDW_DdlDecimalPrecision" />
+    <CompilerVisibleProperty Include="FDW_DdlDecimalScale" />
+  </ItemGroup>
+</Project>

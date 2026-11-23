@@ -10,7 +10,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace.Abstractions.CommandCapabilit
 /// Used by RoslynWorkspace connection types.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(CommandCapabilityTypes), "WorkspaceGraph", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(CommandCapabilityTypes), "WorkspaceGraph")]
 public sealed class WorkspaceGraphCapability : CommandCapabilityTypeBase
 {
     /// <summary>

@@ -15,6 +15,9 @@
     <!-- Registration generator scans referenced assemblies and generates the TypeOption module initializer in this entry point, so a run through a graph pipeline finds the transform types -->
     <ProjectReference Include="..\..\..\src\foundation\registration\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\..\src\pipelines\Fdw.Services.EtlGateway\Fdw.Services.EtlGateway.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines.TestDouble\Fdw.Services.Pipelines.TestDouble.csproj" />
+    <ProjectReference Include="..\..\..\src\identity\authentication\Fdw.Services.Authentication\Fdw.Services.Authentication.csproj" />
+    <ProjectReference Include="..\..\..\src\identity\multitenancy\Fdw.Services.Multitenancy\Fdw.Services.Multitenancy.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />

@@ -24,4 +24,19 @@ public sealed class PipelineComponentsUpdate
 
     /// <summary>Gets or sets when the list was read.</summary>
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Gets or sets when the server read the run's figures (FDW-5232).</summary>
+    public DateTimeOffset SampledAt { get; set; }
+
+    /// <summary>Gets or sets the estimated value bytes waiting in the run's links now, each input counted once (FDW-5232).</summary>
+    public long QueuedBytes { get; set; }
+
+    /// <summary>Gets or sets the estimated value bytes the run's components hold now (FDW-5232).</summary>
+    public long HeldBytes { get; set; }
+
+    /// <summary>Gets or sets <see cref="QueuedBytes"/> and <see cref="HeldBytes"/> together (FDW-5232).</summary>
+    public long TotalBytes { get; set; }
+
+    /// <summary>Gets or sets what the byte figures measure: <c>EstimatedValueBytes</c>, not process memory (FDW-5232).</summary>
+    public string BytesMeasure { get; set; } = string.Empty;
 }

@@ -82,13 +82,31 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
 
     // ── Resolution ──────────────────────────────────────────────────────────
 
+    /// <summary>Gets how this provider reads the configuration it builds a service from (FDW-7351).</summary>
+    /// <remarks>
+    /// Every provider states it, so one cannot be written without deciding. A provider whose service never shows the configuration's description and never saves the
+    /// configuration back states <see cref="ConfigurationReadOptions.WithoutFilledMembers"/>, and the read then costs no description query and needs no description language.
+    /// A provider whose domain has no description fill states <see cref="ConfigurationReadOptions.Whole"/>, which reads as every read did before the option existed.
+    /// </remarks>
+    protected abstract ConfigurationReadOptions ReadOptions { get; }
+
     /// <inheritdoc />
     public virtual async Task<IGenericResult<TService>> Get(string name, CancellationToken cancellationToken = default)
-        => await Build(name, ct => _domainConfigurationProvider!.Get(name, ct), cancellationToken).ConfigureAwait(false);
+        => await Build(
+            name,
+            ct => ReadOptions.FillsMembers
+                ? _domainConfigurationProvider!.Get(name, ct)
+                : _domainConfigurationProvider!.Get(name, ConfigurationLevels.WholeAggregate, ReadOptions, ct),
+            cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public virtual async Task<IGenericResult<TService>> Get(Guid id, CancellationToken cancellationToken = default)
-        => await Build(id.ToString(), ct => _domainConfigurationProvider!.Get(id, ct), cancellationToken).ConfigureAwait(false);
+        => await Build(
+            id.ToString(),
+            ct => ReadOptions.FillsMembers
+                ? _domainConfigurationProvider!.Get(id, ct)
+                : _domainConfigurationProvider!.Get(id, ConfigurationLevels.WholeAggregate, ReadOptions, ct),
+            cancellationToken).ConfigureAwait(false);
 
     // One read. The configuration comes back carrying the domain it belongs to, so the factory is
     // chosen from the thing already in hand rather than by reading the domain row a second time.
@@ -250,7 +268,9 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
                 ResultDetails.Create("Identifier", "(all)"));
         }
 
-        var configurations = await _domainConfigurationProvider.Get(cancellationToken).ConfigureAwait(false);
+        var configurations = await (ReadOptions.FillsMembers
+            ? _domainConfigurationProvider.Get(cancellationToken)
+            : _domainConfigurationProvider.Get(ConfigurationLevels.WholeAggregate, ReadOptions, cancellationToken)).ConfigureAwait(false);
         if (!configurations.IsSuccess || configurations.Value is null)
             return configurations.ToNewResult<IReadOnlyList<TService>>();
 

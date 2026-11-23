@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Fdw.Services.Pipelines.Abstractions.Runs;
+using Fdw.Conventions;
 
 namespace Fdw.Services.Etl.Abstractions.Execution;
 
@@ -95,10 +97,21 @@ public sealed class PipelineExecutionRequest
     /// </summary>
     public int? TimeoutSeconds { get; init; }
 
+    /// <summary>Gets how many steps the run may take (FDW-6141); null for a run whose pipeline states no step limit.</summary>
+    public int? MaxSteps { get; init; }
+
+    /// <summary>
+    /// Gets the time and step limits object the run takes its steps from (FDW-6701), or null when the run builds them from <see cref="TimeoutSeconds"/> and <see cref="MaxSteps"/>.
+    /// An at-once run states it, so a pipeline that run starts takes its steps from the same count. It is not part of the stored request: a run found again after a restart has
+    /// no parent run left to count against.
+    /// </summary>
+    public PipelineRunTimeAndStepLimits? Limits { get; init; }
+
     /// <summary>
     /// The longest timeout a request may state, in seconds, about 49 days: the longest delay the timer that stops the run can be given. A longer time is refused where
     /// the request is accepted, naming this limit, and never cut short.
     /// </summary>
+    [FormatLimit("A .NET timer takes a due time of at most 4,294,967,294 milliseconds, about 49.7 days, and the timer stops the run")]
     public const int MaxTimeoutSeconds = 4_294_967;
 
     /// <summary>
@@ -106,4 +119,17 @@ public sealed class PipelineExecutionRequest
     /// not recovered, whose hold the scheduler works out itself.
     /// </summary>
     public DateTimeOffset? HeldUntil { get; init; }
+
+    /// <summary>
+    /// Gets the person the run acts as (FDW-6137), or null for a run that acts as no person. The pipeline layer fills it from the run's authenticated
+    /// caller (<c>IPipelineRuns.Start</c>); nothing a caller sends names it. The executor runs the work as this person, narrowed to <see cref="RunRoles"/>.
+    /// </summary>
+    /// <remarks>Why on the request: the executor runs on a separate flow from the caller, so the person rides here, as the tenant and the roles do.</remarks>
+    public Guid? PersonId { get; init; }
+
+    /// <summary>
+    /// Gets the first run of the chain of restarts this run belongs to (FDW-6139), or null for a run that is not a restart. A run that starts again after a host went down carries the run it
+    /// continues, so the claims of the steps with an outside effect are found under that one run and no step acts twice.
+    /// </summary>
+    public Guid? ContinuesRun { get; init; }
 }

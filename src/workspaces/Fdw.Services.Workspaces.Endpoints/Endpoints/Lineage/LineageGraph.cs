@@ -55,10 +55,10 @@ internal sealed class LineageGraph
             .Take(take)
             .ToList();
 
-    /// <summary>Walks from the focus toward what feeds it, what it feeds, or both, to the depth asked for, up to the node cap.</summary>
-    public LineageWalk Neighbourhood(string focusId, ILineageDirection direction, int depth, LineageKindSelection kinds)
+    /// <summary>Walks from the focus toward what feeds it, what it feeds, or both, to the depth asked for, up to the node cap the host configured (FDW-7104).</summary>
+    public LineageWalk Neighbourhood(string focusId, ILineageDirection direction, int depth, LineageKindSelection kinds, int maxNodes)
     {
-        var traversal = new LineageTraversal(LineageLimits.MaxNodes);
+        var traversal = new LineageTraversal(maxNodes);
         var upstream = new List<string>();
         var downstream = new List<string>();
         var firstHop = 1;

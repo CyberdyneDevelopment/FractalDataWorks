@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,8 @@ using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Pipelines;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Etl.Tests.Execution;
 
@@ -37,6 +40,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     private static readonly Guid Organization = Guid.Parse("55555555-0000-0000-0000-000000000005");
 
     private readonly Mock<IExecutionTracker> _tracker = new();
+    private readonly Mock<IEffectiveSettingsProvider> _settings = new();
     private readonly Mock<IDataGateway> _gateway = new();
     private readonly Mock<IDataGatewayProvider> _gateways = new();
     private readonly Mock<IPipelineConfigurationProvider> _pipelines = new();
@@ -50,7 +54,8 @@ public sealed class PipelineRunStarterTests : IDisposable
 
     public PipelineRunStarterTests()
     {
-        EtlPipelineTypes.OperationalConnection = "OpsDb";
+        PipelineTypes.OperationalConnection = "OpsDb";
+        _settings.Setup(s => s.GetEffectiveValue<int>(SettingDefinitions.MaxPipelineChainDepth, It.IsAny<Guid?>(), It.IsAny<string?>())).Returns(10);
 
         var itemType = new Mock<IExecutionItemType>();
         itemType.SetupGet(t => t.Name).Returns("Job");
@@ -97,7 +102,7 @@ public sealed class PipelineRunStarterTests : IDisposable
 
     public void Dispose()
     {
-        EtlPipelineTypes.OperationalConnection = null;
+        PipelineTypes.OperationalConnection = null;
     }
 
     private static IExecutionItem ItemOf(Guid id, Guid? parentId, string pipelineName)
@@ -110,7 +115,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     }
 
     private PipelineRunStarter Sut(bool withSignaler = true) => new(
-        _tracker.Object, _gateways.Object, _pipelines.Object, _queue.Object, _scheduler, _broadcaster.Object,
+        _tracker.Object, _gateways.Object, _pipelines.Object, _queue.Object, _scheduler, _broadcaster.Object, TestRunOrigins.Create(), _settings.Object,
         withSignaler ? _signaler.Object : null, NullLogger<PipelineRunStarter>.Instance);
 
     private void Pipeline(params PipelineParameterConfiguration[] declared) => OwnedPipeline(null, declared);
@@ -119,10 +124,10 @@ public sealed class PipelineRunStarterTests : IDisposable
     {
         var configuration = new GraphPipelineConfiguration { Id = PipelineIdentity, Name = "Consolidate", OrgId = orgId, Parameters = [.. declared] };
         _pipelines
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<string>(),ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(configuration));
         _pipelines
-            .Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<Guid>(),ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(configuration));
     }
 
@@ -268,8 +273,8 @@ public sealed class PipelineRunStarterTests : IDisposable
         await Sut().Start(Start(id: PipelineIdentity), TestContext.Current.CancellationToken);
         await Sut().Start(Start(name: "Consolidate"), TestContext.Current.CancellationToken);
 
-        _pipelines.Verify(p => p.Get(PipelineIdentity, It.IsAny<CancellationToken>()), Times.Once);
-        _pipelines.Verify(p => p.Get("Consolidate", It.IsAny<CancellationToken>()), Times.Once);
+        _pipelines.Verify(p => p.Get(PipelineIdentity,ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
+        _pipelines.Verify(p => p.Get("Consolidate",ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]
@@ -306,7 +311,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     {
         var gated = new GraphPipelineConfiguration { Id = PipelineIdentity, Name = "Consolidate", RequireApprovalToRun = true };
         _pipelines
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<string>(),ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(gated));
 
         var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
@@ -325,7 +330,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     public async Task APipelineThatCannotBeFoundIsRefusedBeforeAnythingIsWritten()
     {
         _pipelines
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<string>(),ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Failure(new GenericMessage("not found")));
 
         var result = await Sut().Start(Start(name: "Gone"), TestContext.Current.CancellationToken);
@@ -378,7 +383,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     public async Task APipelineTheProviderAnswersWithNoValueIsRefusedSayingWhatThatMeans()
     {
         _pipelines
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<string>(),ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(default!));
 
         var result = await Sut().Start(Start(name: "Gone"), TestContext.Current.CancellationToken);
@@ -424,7 +429,7 @@ public sealed class PipelineRunStarterTests : IDisposable
         }
 
         _pipelines
-            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(p => p.Get(It.IsAny<string>(),ConfigurationLevels.WholeAggregate, It.Is<ConfigurationReadOptions>(o => !o.FillsMembers), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(configuration));
     }
 
@@ -491,7 +496,7 @@ public sealed class PipelineRunStarterTests : IDisposable
     public async Task AHostThatNamesNoOperationalStoreCannotStartARun()
     {
         Pipeline();
-        EtlPipelineTypes.OperationalConnection = null;
+        PipelineTypes.OperationalConnection = null;
 
         var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
 
@@ -616,5 +621,165 @@ public sealed class PipelineRunStarterTests : IDisposable
         childRanWhileWaiting.ShouldBeTrue();
         using var afterwards = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
         await Should.ThrowAsync<OperationCanceledException>(() => _scheduler.Enter(claim, afterwards.Token));
+    }
+
+    private void ChainLimit(int maximum) =>
+        _settings.Setup(s => s.GetEffectiveValue<int>(SettingDefinitions.MaxPipelineChainDepth, It.IsAny<Guid?>(), It.IsAny<string?>())).Returns(maximum);
+
+    private void Above(Guid id, Guid? parent, string pipeline) =>
+        _tracker.Setup(t => t.GetItem(id, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IExecutionItem>.Success(ItemOf(id, parent, pipeline)));
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AChainThatWouldBeLongerThanTheSettingAllowsIsRefusedNamingTheLengthAndTheMost()
+    {
+        Pipeline();
+        ChainLimit(2);
+        var grandparent = Guid.Parse("55555555-0000-0000-0000-000000000005");
+        Above(Parent, grandparent, "Orders");
+        Above(grandparent, null, "Intake");
+
+        var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("run number 3");
+        result.CurrentMessage.ShouldContain("at most 2");
+        _enqueued.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AChainExactlyAsLongAsTheSettingAllowsIsStarted()
+    {
+        Pipeline();
+        ChainLimit(2);
+
+        var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        _enqueued.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AStartUnderAnotherRunWhenTheChainSettingIsNotSetIsRefusedNamingTheSetting()
+    {
+        Pipeline();
+        ChainLimit(0);
+
+        var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain(SettingDefinitions.MaxPipelineChainDepth);
+        _enqueued.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AnItemAboveTheStartThatIsNotAPipelineRunIsNotCountedInTheChain()
+    {
+        Pipeline();
+        ChainLimit(2);
+        var node = Guid.Parse("66666666-0000-0000-0000-000000000006");
+        var item = new Mock<IExecutionItem>();
+        item.SetupGet(i => i.Id).Returns(node);
+        item.SetupGet(i => i.ParentId).Returns((Guid?)null);
+        item.SetupGet(i => i.Parameters).Returns(new Dictionary<string, object?>());
+        Above(Parent, node, "Orders");
+        _tracker.Setup(t => t.GetItem(node, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IExecutionItem>.Success(item.Object));
+
+        var result = await Sut().Start(Start(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+    }
+
+    private PipelineRunStarter SutWithOffers(IPipelineOffers? offers) => new(
+        _tracker.Object, _gateways.Object, _pipelines.Object, _queue.Object, _scheduler, _broadcaster.Object, TestRunOrigins.Create(), _settings.Object,
+        _signaler.Object, NullLogger<PipelineRunStarter>.Instance, offers);
+
+    private static PipelineRunStart NamedByAVariable() => new()
+    {
+        ParentExecutionId = Parent,
+        PipelineName = "Consolidate",
+        TenantId = Tenant,
+        RunRoles = ["etl-runner"],
+        TriggerSource = "Pipeline:Orders",
+        Parameters = [],
+        AwaitCompletion = false,
+        PersonId = Guid.Parse("77777777-0000-0000-0000-000000000007"),
+        RequiresOffer = true,
+    };
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AStartTheAuthorStatedIsNotJudgedAgainstOffers()
+    {
+        Pipeline();
+        var offers = new Mock<IPipelineOffers>(MockBehavior.Strict);
+
+        var result = await SutWithOffers(offers.Object).Start(Start(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AStartNamedByAVariableOnAHostThatReadsNoOffersIsRefused()
+    {
+        Pipeline();
+
+        var result = await SutWithOffers(null).Start(NamedByAVariable(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("reads no offers");
+        _enqueued.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AStartNamedByAVariableForAPipelineNotOfferedIsRefusedAndOneOfferedIsStarted()
+    {
+        Pipeline();
+        var offers = new Mock<IPipelineOffers>();
+        offers.Setup(o => o.IsOffered(PipelineIdentity, It.IsAny<Guid?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<bool>.Success(false));
+
+        var refused = await SutWithOffers(offers.Object).Start(NamedByAVariable(), TestContext.Current.CancellationToken);
+
+        refused.IsFailure.ShouldBeTrue();
+        refused.CurrentMessage.ShouldNotBeNull().ShouldContain("is not offered");
+        _enqueued.ShouldBeEmpty();
+
+        offers.Setup(o => o.IsOffered(PipelineIdentity, It.IsAny<Guid?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<bool>.Success(true));
+
+        var started = await SutWithOffers(offers.Object).Start(NamedByAVariable(), TestContext.Current.CancellationToken);
+
+        started.IsSuccess.ShouldBeTrue(started.CurrentMessage);
+        _enqueued.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnOfferThatCannotBeReadRefusesTheStartAndNothingIsAssumedOffered()
+    {
+        Pipeline();
+        var offers = new Mock<IPipelineOffers>();
+        offers.Setup(o => o.IsOffered(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<bool>.Failure(Mock.Of<IGenericMessage>(m => m.Message == "the store is down")));
+
+        var result = await SutWithOffers(offers.Object).Start(NamedByAVariable(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("could not be read");
+        _enqueued.ShouldBeEmpty();
     }
 }

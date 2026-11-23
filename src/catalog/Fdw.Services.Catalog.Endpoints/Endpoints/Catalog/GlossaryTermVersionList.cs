@@ -17,7 +17,7 @@ namespace Fdw.Services.Catalog.Endpoints;
 internal static class GlossaryTermVersionList
 {
     internal static async Task<IGenericResult<GlossaryTermVersionsResponse>> Run(
-        GlossaryTermVersionServices services, IPlaceNames names, Guid termId, CallerPlace origin, string readRight, ILogger logger, CancellationToken cancellationToken)
+        GlossaryTermVersionServices services, IPlaceNames names, Guid termId, CallerPlace origin, string readRight, int maxVersions, ILogger logger, CancellationToken cancellationToken)
     {
         var term = await services.Terms.Get(termId, cancellationToken).ConfigureAwait(false);
         if (term.IsFailure)
@@ -41,6 +41,7 @@ internal static class GlossaryTermVersionList
             row => (row.Definition, row.Owner),
             origin,
             readRight,
+            maxVersions,
             logger,
             cancellationToken).ConfigureAwait(false);
         if (versions.IsFailure || versions.Value is not { } found)

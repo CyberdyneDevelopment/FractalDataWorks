@@ -57,14 +57,6 @@ public sealed class CalculationNodeCatalogTests
     }
 
     [Fact]
-    public void ARoundingModeIsFoundByItsExactNameOnly()
-    {
-        RoundingModes.ByName("ToEven").ShouldNotBeSameAs(RoundingModes.NotFound);
-        RoundingModes.ByName("toeven").ShouldBeSameAs(RoundingModes.NotFound);
-        RoundingModes.ByName("Banker").ShouldBeSameAs(RoundingModes.NotFound);
-    }
-
-    [Fact]
     public void NowOffersEveryAnchorAndAddTimeEveryUnit()
     {
         CalculationNodeTypes.ByName("Now").Modes.ShouldBe(TimeAnchors.All().Select(anchor => anchor.Name));

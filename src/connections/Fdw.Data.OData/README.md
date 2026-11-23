@@ -21,6 +21,7 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | `DeleteFilterInvalidCode` | class | DeleteCommand has invalid Filter expression. |
 | `DeleteFilterRequiredCode` | class | DeleteCommand requires Filter in metadata for safety. |
 | `DeleteResourceIdNotFoundCode` | class | Cannot determine resource ID from Filter expression. |
+| `CompositePrimaryKeyNotSupportedCode` | class | The container's primary key has more than one column, and an OData resource is addressed by one id. |
 | `DeleteTranslationFailedCode` | class | Failed to translate DELETE command. |
 | `InsertDataRequiredCode` | class | InsertCommand requires Data in metadata. |
 | `InsertTranslationFailedCode` | class | Failed to translate INSERT command. |

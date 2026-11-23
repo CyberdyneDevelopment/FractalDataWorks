@@ -48,9 +48,15 @@ public abstract class GetDataStorePathsEndpointBase : CrudGetEndpointBase<DataSt
         // Without containers the paths are read as records only: the containers are not read to be left out (FDW-1194).
         var level = containers.Value ? ConfigurationLevels.Children : ConfigurationLevels.RecordOnly;
         var paths = await _dataStoreProvider.Get<DataPathConfiguration>(request.Name, level, ct).ConfigureAwait(false);
-        return paths.IsFailure
-            ? paths.ToNewResult<List<DataStorePathResponse>?>()
-            : GenericResult<List<DataStorePathResponse>?>.Success(paths.Value!.Select(MapPath).ToList());
+        if (paths.IsFailure)
+            return paths.ToNewResult<List<DataStorePathResponse>?>();
+
+        var owners = await DataStoreItemOwnerReads.Of(_dataStoreProvider, Resolve<IDataStoreItemOwnership>(), request.Name, Logger, ct).ConfigureAwait(false);
+        if (owners.IsFailure)
+            return owners.ToNewResult<List<DataStorePathResponse>?>();
+
+        return GenericResult<List<DataStorePathResponse>?>.Success(
+            paths.Value!.Select(path => DataStoreItemOwnerReads.Show(MapPath(path), path, owners.Value!)).ToList());
     }
 
     /// <summary>Maps a path configuration to a path DTO.</summary>

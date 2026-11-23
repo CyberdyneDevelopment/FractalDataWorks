@@ -10,6 +10,7 @@ using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Services.Users.Abstractions;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -19,7 +20,8 @@ namespace Fdw.Services.Users.Endpoints;
 /// <remarks>
 /// Who may read them is <see cref="AccountAuthority.ReadsSignIns"/>: the account itself, its home-tenant administrator, or a platform
 /// administrator. A page asks for one row more than it returns, which is how it knows whether older sign-ins follow without counting the log.
-/// A skip below zero, or a take outside 1 to <see cref="ListUserSignInsRequest.MaxTake"/>, is refused and not corrected.
+/// A skip below zero, or a take outside 1 to the configured most (<see cref="UserSignInPaging.MaxTake"/>, FDW-7103), is refused and not corrected; a request
+/// that states no take gets the configured default.
 /// </remarks>
 public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequest, SignInPageResponse>
 {
@@ -59,9 +61,13 @@ public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequ
     /// <inheritdoc />
     public override async Task HandleAsync(ListUserSignInsRequest req, CancellationToken ct)
     {
-        if (req.Skip < 0 || req.Take < 1 || req.Take > ListUserSignInsRequest.MaxTake)
+        // Why the page sizes are resolved here: they are the host's configuration, registered by the users option (FDW-7103), and the constructor of every
+        // concrete endpoint stays as it is.
+        var paging = Resolve<UserSignInPaging>();
+        var take = req.Take ?? paging.DefaultTake;
+        if (req.Skip < 0 || take < 1 || take > paging.MaxTake)
         {
-            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ListUserSignInsPagingInvalid(_logger, req.Skip, req.Take, ListUserSignInsRequest.MaxTake)), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(GenericResult.Failure(UserEndpointLog.ListUserSignInsPagingInvalid(_logger, req.Skip, take, paging.MaxTake)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -89,7 +95,7 @@ public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequ
             return;
         }
 
-        var read = await _signIns.SignIns(user.Id, req.Skip, req.Take + 1, ct).ConfigureAwait(false);
+        var read = await _signIns.SignIns(user.Id, req.Skip, take + 1, ct).ConfigureAwait(false);
         if (read.IsFailure)
         {
             var (statusCode, problem) = ResultHttpStatusMapper.Map(read, HttpContext);
@@ -97,14 +103,14 @@ public abstract class ListUserSignInsEndpointBase : Endpoint<ListUserSignInsRequ
             return;
         }
 
-        var page = read.Value!.Take(req.Take).ToList();
+        var page = read.Value!.Take(take).ToList();
         UserEndpointLog.SignInsListed(_logger, user.Id.ToString("D"), page.Count);
 
         await Send.OkAsync(new SignInPageResponse
         {
             Skip = req.Skip,
-            Take = req.Take,
-            HasMore = read.Value!.Count > req.Take,
+            Take = take,
+            HasMore = read.Value!.Count > take,
             Items = page.Select(sign => new SignInResponse
             {
                 SignedInAt = sign.SignedInAt,

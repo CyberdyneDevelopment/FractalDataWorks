@@ -2,7 +2,9 @@ using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Services.Data.Abstractions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Web.RestEndpoints.Pagination;
@@ -15,15 +17,12 @@ namespace Fdw.Web.RestEndpoints.Pagination;
 /// member; a blank one is not a search for blank. <c>match</c> names a way through <see cref="ListMatches"/> and one that
 /// names none is refused, never given the default. <c>id</c> keeps only the members with those identifiers, and combines
 /// with <c>q</c> as an AND. It may be repeated (<c>?id=a&amp;id=b</c>) or comma separated (<c>?id=a,b</c>); an identifier
-/// that is not a GUID is refused naming it, and more than <see cref="MaxIds"/> identifiers in one call is refused, never
-/// cut short; an identifier no member has simply does not appear. <c>total</c> is <c>true</c> or <c>false</c>; absent means
+/// that is not a GUID is refused naming it, and more identifiers than one statement carries is refused, never cut short
+/// (<see cref="IConfigurationGatewayProvider.KeyChunkSize"/>: the identifiers go into one In filter, one key each, FDW-7106); an identifier no member has simply does not appear. <c>total</c> is <c>true</c> or <c>false</c>; absent means
 /// not asked, and a page that was not asked for a total carries none, so an absent total never reads as zero.
 /// </remarks>
 public sealed class ListSearch
 {
-    /// <summary>Gets the most identifiers one call may name with <c>?id=</c>.</summary>
-    public const int MaxIds = 100;
-
     private ListSearch(string? text, IListMatch match, IReadOnlyList<Guid> ids, bool includeTotal)
     {
         Text = text;
@@ -94,7 +93,7 @@ public sealed class ListSearch
     /// <summary>Reads the search a list request asks for.</summary>
     /// <param name="context">The current request.</param>
     /// <param name="logger">The calling endpoint's logger.</param>
-    /// <returns>The search; a failure when <c>match</c> names no way to compare, an <c>id</c> is not a GUID or there are more than <see cref="MaxIds"/>, or <c>total</c> is not true or false.</returns>
+    /// <returns>The search; a failure when <c>match</c> names no way to compare, an <c>id</c> is not a GUID or there are more than <see cref="IConfigurationGatewayProvider.KeyChunkSize"/>, or <c>total</c> is not true or false.</returns>
     public static IGenericResult<ListSearch> Parse(HttpContext context, ILogger logger)
     {
         var query = context.Request.Query;
@@ -107,7 +106,7 @@ public sealed class ListSearch
         if (match.IsFailure)
             return match.ToNewResult<ListSearch>();
 
-        var ids = ReadIds(query, logger);
+        var ids = ReadIds(context, query, logger);
         if (ids.IsFailure)
             return ids.ToNewResult<ListSearch>();
 
@@ -129,12 +128,16 @@ public sealed class ListSearch
             : GenericResult<IListMatch>.Success(found);
     }
 
-    // The identifiers ?id= names, repeated or comma separated, each once; one that is not a GUID, or more than MaxIds, is refused.
-    private static IGenericResult<IReadOnlyList<Guid>> ReadIds(IQueryCollection query, ILogger logger)
+    // The identifiers ?id= names, repeated or comma separated, each once; one that is not a GUID, or more than one statement carries, is refused.
+    private static IGenericResult<IReadOnlyList<Guid>> ReadIds(HttpContext context, IQueryCollection query, ILogger logger)
     {
         var ids = new List<Guid>();
         if (!query.TryGetValue("id", out var named))
             return GenericResult<IReadOnlyList<Guid>>.Success(ids);
+
+        // Why the most is read here and only when ids are stated: it is the host's configuration (the keys one statement carries, FDW-7106).
+        if (context.RequestServices.GetService<IConfigurationGatewayProvider>() is not { } gateways)
+            return GenericResult<IReadOnlyList<Guid>>.Failure(EndpointLogger.ListSearchKeyLimitUnavailable(logger, nameof(IConfigurationGatewayProvider)));
 
         // StringValues joins a repeated parameter with commas, so ?id=a&id=b and ?id=a,b read the same.
         foreach (var part in named.ToString().Split(','))
@@ -146,9 +149,9 @@ public sealed class ListSearch
             if (!ids.Contains(id))
                 ids.Add(id);
 
-            if (ids.Count > MaxIds)
+            if (ids.Count > gateways.KeyChunkSize)
                 return GenericResult<IReadOnlyList<Guid>>.Failure(EndpointLogger.PaginationValueInvalid(
-                    logger, "id", $"more than {MaxIds} identifiers", $"at most {MaxIds} identifiers in one call"));
+                    logger, "id", $"more than {gateways.KeyChunkSize} identifiers", $"at most {gateways.KeyChunkSize} identifiers in one call"));
         }
 
         return GenericResult<IReadOnlyList<Guid>>.Success(ids);

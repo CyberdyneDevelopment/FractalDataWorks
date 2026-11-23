@@ -62,6 +62,38 @@ public sealed class ExecuteDdlFailureStatusTests
         endpoint.HttpContext.Response.StatusCode.ShouldBe(200);
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AColumnThatNamesNoTypeIsRefusedWith400AndNothingIsExecuted()
+    {
+        var outcome = new Outcome(GenericResult.Success());
+        var endpoint = Factory.Create<Probe>(outcome);
+        var request = Request();
+        request.Columns = [new DdlColumnRequest { Name = "Id" }];
+
+        await endpoint.HandleAsync(request, TestContext.Current.CancellationToken);
+
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(400);
+        outcome.Calls.ShouldBe(0);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AColumnThatHasNoNameIsRefusedWith400AndNothingIsExecuted()
+    {
+        var outcome = new Outcome(GenericResult.Success());
+        var endpoint = Factory.Create<Probe>(outcome);
+        var request = Request();
+        request.Columns = [new DdlColumnRequest { SqlType = "INT" }];
+
+        await endpoint.HandleAsync(request, TestContext.Current.CancellationToken);
+
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(400);
+        outcome.Calls.ShouldBe(0);
+    }
+
     private static ExecuteDdlRequest Request() => new()
     {
         Name = "Main",
@@ -70,11 +102,18 @@ public sealed class ExecuteDdlFailureStatusTests
     };
 
     // The result the hook answers with; a type of its own so the endpoint's constructor can be given it.
-    private sealed record Outcome(IGenericResult Result);
+    private sealed record Outcome(IGenericResult Result)
+    {
+        // How many times the hook ran.
+        public int Calls { get; set; }
+    }
 
     private sealed class Probe(Outcome outcome) : ExecuteDdlEndpointBase
     {
         protected override Task<IGenericResult> ExecuteDdl(ExecuteDdlRequest request, CancellationToken ct)
-            => Task.FromResult(outcome.Result);
+        {
+            outcome.Calls++;
+            return Task.FromResult(outcome.Result);
+        }
     }
 }

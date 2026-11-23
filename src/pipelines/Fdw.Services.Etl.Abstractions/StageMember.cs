@@ -1,3 +1,5 @@
+using Fdw.Data.Abstractions;
+
 namespace Fdw.Services.Etl.Abstractions;
 
 /// <summary>
@@ -34,6 +36,13 @@ namespace Fdw.Services.Etl.Abstractions;
 /// line of a script. A client shows the stated settings that have it, in the order the kind lists them, so a new action kind gets its summary by
 /// stating it here and not by an edit to the client.
 /// </param>
+/// <param name="DataType">
+/// The data type a declared setting's value is read as (FDW-6133). A declared setting is one a component type from another package states, which no column
+/// of the component holds, no child rows hold and no stage holds; it is stored as invariant text and read as this type. Such a setting must state
+/// it: one that does not is refused when the host starts, when a graph is saved and when its builder asks for it. Null on a setting that is held
+/// any other way, as every setting of FDW's own component types is. On a declared setting, <c>ReadsWhenStepRuns</c> says the text may name variables as
+/// <c>{{Name}}</c>, read when the step runs.
+/// </param>
 public sealed record StageMember(
     string Name, string Kind, bool IsRequired, string HelpText, bool ShapesGraph = false, bool TakesParameterText = false, bool TakesPairList = false,
-    bool ReadsWhenStepRuns = false, bool TakesConversions = false, bool SummarisesComponent = false);
+    bool ReadsWhenStepRuns = false, bool TakesConversions = false, bool SummarisesComponent = false, IDataType? DataType = null);

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.ValidationRuleTypeOptions;
 using Fdw.Orchestration.Pipelines.Results;
+using Fdw.Orchestration.Pipelines.TypeCollections.ValidationData;
 using Fdw.Results;
 using ValidationRuleTypesCollection = Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.ValidationRuleTypeOptions.ValidationRuleTypes;
 
@@ -75,17 +76,6 @@ public sealed class DataTypeValidationRuleType : ValidationRuleTypeBase
         if (stringValue == null)
             return false;
 
-        return dataType.ToUpperInvariant() switch
-        {
-            "INT" or "INT32" or "INTEGER" => int.TryParse(stringValue, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _),
-            "LONG" or "INT64" => long.TryParse(stringValue, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _),
-            "DECIMAL" or "NUMERIC" => decimal.TryParse(stringValue, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _),
-            "DOUBLE" or "FLOAT" => double.TryParse(stringValue, System.Globalization.NumberStyles.Float | System.Globalization.NumberStyles.AllowThousands, System.Globalization.CultureInfo.InvariantCulture, out _),
-            "BOOL" or "BOOLEAN" => bool.TryParse(stringValue, out _),
-            "DATE" or "DATETIME" => DateTime.TryParse(stringValue, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _),
-            "GUID" or "UUID" => Guid.TryParse(stringValue, out _),
-            "STRING" or "TEXT" => true,
-            _ => false
-        };
+        return ValidationDataKinds.ByWord(dataType) is { } kind && kind.Accepts(stringValue);
     }
 }

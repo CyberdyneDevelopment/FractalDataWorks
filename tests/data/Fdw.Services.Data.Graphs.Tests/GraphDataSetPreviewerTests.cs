@@ -26,7 +26,7 @@ public sealed class GraphDataSetPreviewerTests
     {
         var read = new GraphDataSetReadOptions(maxRows, 5, 2);
         return new GraphDataSetPreviewer(
-            new GraphDataSetRunner(read, NullLogger<GraphDataSetRunner>.Instance), read, new GraphDataSetPreviewOptions(rowsPerSource), NullLogger<GraphDataSetPreviewer>.Instance);
+            new GraphDataSetRunner(read, NoContributions.Scopes(), NullLogger<GraphDataSetRunner>.Instance), read, new GraphDataSetPreviewOptions(rowsPerSource), NullLogger<GraphDataSetPreviewer>.Instance);
     }
 
     private static GraphDataSetConfiguration Draft(string? component = "src", string? output = "output")

@@ -18,6 +18,9 @@ namespace Fdw.Data.MsSql;
 /// </remarks>
 public sealed class MsSqlViewContainer : DataContainer
 {
+    // The View option states the operations this container supports; the container does not choose them (FDW-6309).
+    private static readonly ViewContainerType ContainerOption = new();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlViewContainer"/> class.
     /// </summary>
@@ -49,10 +52,10 @@ public sealed class MsSqlViewContainer : DataContainer
             fields,
             keys,
             referencingKeys,
-            new ViewContainerType(),
+            ContainerOption,
             format,
             physicalPath,
-            ["Query"],
+            [.. ContainerOption.SupportedOperations],
             metadata,
             logger)
     {

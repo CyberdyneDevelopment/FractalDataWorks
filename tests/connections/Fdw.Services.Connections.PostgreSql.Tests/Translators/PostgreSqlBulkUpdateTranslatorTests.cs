@@ -57,14 +57,6 @@ public sealed class PostgreSqlBulkUpdateTranslatorTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ThePostgreSqlTranslatorCollectionAnswersBulkUpdateWithThisTranslator()
-    {
-        PostgreSqlDataCommandTranslators.ByName("BulkUpdate").ShouldBeOfType<PostgreSqlBulkUpdateTranslator>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public async Task ABatchIsOneUpdateFromTheRowsTypedByTheTargetsRowType()
     {

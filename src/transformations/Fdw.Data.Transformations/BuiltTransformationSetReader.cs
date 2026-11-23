@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
@@ -206,15 +205,11 @@ public static class BuiltTransformationSetReader
             return GenericResult<OutputColumnDefinition>.Success(new LiteralColumn(row.Name, null));
         }
 
-        return row.LiteralType switch
-        {
-            "Text" => GenericResult<OutputColumnDefinition>.Success(new LiteralColumn(row.Name, row.LiteralText)),
-            "Number" when decimal.TryParse(row.LiteralText, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) =>
-                GenericResult<OutputColumnDefinition>.Success(new LiteralColumn(row.Name, number)),
-            "Flag" when bool.TryParse(row.LiteralText, out var flag) =>
-                GenericResult<OutputColumnDefinition>.Success(new LiteralColumn(row.Name, flag)),
-            _ => Invalid<OutputColumnDefinition>(owner, $"column '{row.Name}' of output '{row.OutputName}' states '{row.LiteralText}' as a '{row.LiteralType}', which it is not"),
-        };
+        var literalType = row.LiteralType is { } typeName ? LiteralTypes.ByName(typeName) : LiteralTypes.NotFound;
+        var literal = ReferenceEquals(literalType, LiteralTypes.NotFound) ? null : literalType.Read(row.LiteralText);
+        return literal is null
+            ? Invalid<OutputColumnDefinition>(owner, $"column '{row.Name}' of output '{row.OutputName}' states '{row.LiteralText}' as a '{row.LiteralType}', which it is not")
+            : GenericResult<OutputColumnDefinition>.Success(new LiteralColumn(row.Name, literal));
     }
 
     // One formula of a table output; an absent optional formula (a row condition) is null, an absent required one is a refusal.

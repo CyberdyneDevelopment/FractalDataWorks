@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Operations.Abstractions.Thresholds;
 
@@ -16,4 +17,7 @@ public sealed class ServerThresholdSubjectKind : ThresholdSubjectKindBase
         : base("Server", "The server a host runs on", "workflow", "ServerThreshold")
     {
     }
+
+    /// <inheritdoc />
+    public override Citation Cites => Citation.Uncited("a server is the host a process runs on, not a row of a domain a check can ask");
 }

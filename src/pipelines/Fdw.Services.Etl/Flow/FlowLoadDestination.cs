@@ -161,13 +161,17 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound, IFlow
             }
         }
 
+        // A load that needs the whole set before it writes holds it until it ends (FDW-5231).
+        var gauge = FlowHeld.Of(ports);
         try
         {
-            var loaded = await LoadAll(input, cancellationToken).ConfigureAwait(false);
+            var loaded = await LoadAll(input, gauge, cancellationToken).ConfigureAwait(false);
             return loaded.IsFailure || _unit.StageKey is null ? loaded : await Sweep(cancellationToken).ConfigureAwait(false);
         }
         finally
         {
+            gauge?.ReleaseAll();
+
             // A figure held back by the interval is written however the destination ends, so the run's records say how far it got (FDW-4957).
             if (_reportHeld)
             {
@@ -234,7 +238,7 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound, IFlow
         return GenericResult.Success();
     }
 
-    private async Task<IGenericResult> LoadAll(IFlowInput input, CancellationToken cancellationToken)
+    private async Task<IGenericResult> LoadAll(IFlowInput input, FlowHeldGauge? gauge, CancellationToken cancellationToken)
     {
         var wholeSet = NeedsWholeSet(_unit);
         var held = new List<IDictionary<string, object?>>();
@@ -248,6 +252,7 @@ public sealed class FlowLoadDestination : IFlowComponent, IFlowStageBound, IFlow
 
             if (wholeSet)
             {
+                gauge?.Hold(batch);
                 held.AddRange(batch.Rows);
                 continue;
             }

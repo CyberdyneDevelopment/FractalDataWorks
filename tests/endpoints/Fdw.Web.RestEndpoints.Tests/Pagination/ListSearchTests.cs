@@ -2,9 +2,12 @@ using System;
 using System.Linq;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace Fdw.Web.RestEndpoints.Tests.Pagination;
 
@@ -16,9 +19,19 @@ namespace Fdw.Web.RestEndpoints.Tests.Pagination;
 [Trait("Category", "Api")]
 public sealed class ListSearchTests
 {
-    private static DefaultHttpContext Context(string query)
+    // The most identifiers one call states is the keys one statement carries (FDW-7106); a small number here, so a test can go past it.
+    private const int KeysPerStatement = 25;
+
+    private static DefaultHttpContext Context(string query) => Context(query, KeysPerStatement);
+
+    private static DefaultHttpContext Context(string query, int keysPerStatement)
     {
-        var context = new DefaultHttpContext();
+        var gateways = new Mock<IConfigurationGatewayProvider>(MockBehavior.Strict);
+        gateways.SetupGet(g => g.KeyChunkSize).Returns(keysPerStatement);
+        var context = new DefaultHttpContext
+        {
+            RequestServices = new ServiceCollection().AddSingleton(gateways.Object).BuildServiceProvider(),
+        };
         context.Request.QueryString = new QueryString(query);
         return context;
     }
@@ -125,15 +138,37 @@ public sealed class ListSearchTests
     }
 
     [Fact]
-    public void TheLimitIsStatedAndOneOverItIsRefusedNotCutShort()
+    public void TheLimitIsTheKeysOneStatementCarriesAndOneOverItIsRefusedNotCutShort()
     {
-        ListSearch.MaxIds.ShouldBe(100);
-
-        var atTheLimit = string.Join("&", Enumerable.Range(0, 100).Select(_ => $"id={Guid.NewGuid()}"));
+        var atTheLimit = string.Join("&", Enumerable.Range(0, KeysPerStatement).Select(_ => $"id={Guid.NewGuid()}"));
         var overTheLimit = atTheLimit + $"&id={Guid.NewGuid()}";
 
-        Parse("?" + atTheLimit).Ids.Count.ShouldBe(100);
-        ListSearch.Parse(Context("?" + overTheLimit), NullLogger.Instance).IsFailure.ShouldBeTrue();
+        Parse("?" + atTheLimit).Ids.Count.ShouldBe(KeysPerStatement);
+        var refused = ListSearch.Parse(Context("?" + overTheLimit), NullLogger.Instance);
+        refused.IsFailure.ShouldBeTrue();
+        refused.CurrentMessage!.ShouldContain($"at most {KeysPerStatement} identifiers");
+    }
+
+    [Fact]
+    public void AHostThatCarriesMoreKeysTakesMoreIdentifiers()
+    {
+        var many = string.Join("&", Enumerable.Range(0, KeysPerStatement * 4).Select(_ => $"id={Guid.NewGuid()}"));
+
+        ListSearch.Parse(Context("?" + many, KeysPerStatement * 4), NullLogger.Instance).Value!.Ids.Count.ShouldBe(KeysPerStatement * 4);
+    }
+
+    [Fact]
+    public void IdentifiersWithNoConfigurationGatewayAreRefusedAndARequestWithoutThemNeedsNone()
+    {
+        var bare = new DefaultHttpContext { RequestServices = new ServiceCollection().BuildServiceProvider() };
+        bare.Request.QueryString = new QueryString($"?id={First}");
+        var plain = new DefaultHttpContext { RequestServices = new ServiceCollection().BuildServiceProvider() };
+        plain.Request.QueryString = new QueryString("?q=brew");
+
+        var refused = ListSearch.Parse(bare, NullLogger.Instance);
+        refused.IsFailure.ShouldBeTrue();
+        refused.Messages.ShouldContain(m => m.Code == "RESTENDPOINTS-61005");
+        ListSearch.Parse(plain, NullLogger.Instance).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]

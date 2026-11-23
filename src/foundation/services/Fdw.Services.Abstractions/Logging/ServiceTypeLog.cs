@@ -1494,4 +1494,36 @@ public static partial class ServiceTypeLog
         string typeName,
         string field,
         int value);
+
+    /// <summary>Logs a host configuration that states a limit as text that is not a whole number (FDW-7103).</summary>
+    [MessageLogging(
+        EventId = 61037,
+        Level = LogLevel.Error,
+        Message = "The host's configuration states {key} as '{text}' for the {typeName} type; it must be a whole number of at least one, or left out to take the type's default")]
+    public static partial IGenericMessage StatedCountNotANumber(
+        ILogger logger,
+        string typeName,
+        string key,
+        string text);
+
+    /// <summary>Logs a host configuration that states a true-or-false setting as text that is neither (FDW-6901).</summary>
+    [MessageLogging(
+        EventId = 61047,
+        Level = LogLevel.Error,
+        Message = "The host's configuration states {key} as '{text}' for the {typeName} type; it must be true or false, or left out to take the type's default")]
+    public static partial IGenericMessage StatedFlagNotTrueOrFalse(
+        ILogger logger,
+        string typeName,
+        string key,
+        string text);
+
+    /// <summary>Logs a type that declares no name default for a configuration field (FDW-6901).</summary>
+    [MessageLogging(
+        EventId = 61048,
+        Level = LogLevel.Critical,
+        Message = "The {typeName} type declares no name default for {field}; declare one in the type's DeclaredDefaults or state it with ServiceTypeDefaults.Override before Register")]
+    public static partial IGenericMessage DeclaredNameNotDeclared(
+        ILogger logger,
+        string typeName,
+        string field);
 }

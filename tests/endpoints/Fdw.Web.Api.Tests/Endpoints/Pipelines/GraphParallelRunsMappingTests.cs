@@ -11,6 +11,7 @@ public sealed class GraphParallelRunsMappingTests
 {
     private static GraphPayload Payload() => new()
     {
+        Implementation = "Graph",
         Name = "Nightly",
         IsEnabled = true,
         LinkCapacity = 4,

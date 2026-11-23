@@ -70,8 +70,17 @@ public abstract class ListDataSetSamplesEndpointBase : Endpoint<DataSetNameReque
         var gateway = _configurationGateways.Get(_dataSets.DataStoreName);
         if (gateway.IsFailure) { await SendError(gateway, ct).ConfigureAwait(false); return; }
 
+        // A sample's description is in the descriptions table, in the language of the caller's tenant (FDW-6208): one read for every sample of the data set.
+        var descriptions = await _dataSets.SampleDescriptions(dataSet.Value.Id, ct).ConfigureAwait(false);
+        if (descriptions.IsFailure || descriptions.Value is not { } descriptionsById)
+        {
+            DataSetSampleEndpointLog.SamplesListFailed(_logger, req.Name);
+            await SendError(descriptions, ct).ConfigureAwait(false);
+            return;
+        }
+
         var samples = await DataSetSampleReader.ListForDataSet(
-            gateway.Value!, _dataSets.DataStoreName, _dataSets.PathName, dataSet.Value.Id, fieldNamesById, ct)
+            gateway.Value!, _dataSets.DataStoreName, _dataSets.PathName, dataSet.Value.Id, fieldNamesById, descriptionsById, ct)
             .ConfigureAwait(false);
         if (samples.IsFailure)
         {

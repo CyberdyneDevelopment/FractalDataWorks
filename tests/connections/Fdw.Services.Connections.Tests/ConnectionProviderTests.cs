@@ -143,6 +143,24 @@ public class ConnectionProviderTests
         public Task<IGenericResult<ConfigurationPage<IConnectionImplementationConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not page.");
 
+        public Task<IGenericResult<ConfigurationPage<IConnectionImplementationConfiguration>>> Get(int skip, int take, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not page.");
+
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(string name, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => Get(name, ct);
+
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(string name, int levels, ChildNarrowing narrowing, ConfigurationReadOptions options, CancellationToken ct = default)
+            => Get(name, ct);
+
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(Guid id, int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => Get(id, ct);
+
+        public Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> Get(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => Get(ct);
+
+        public Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> GetFlat(int levels, ConfigurationReadOptions options, CancellationToken ct = default)
+            => Get(ct);
+
         public Task<IGenericResult<IReadOnlyList<TChild>>> Get<TChild>(string name, int levels, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not read child sets.");
 

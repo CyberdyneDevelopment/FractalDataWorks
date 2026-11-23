@@ -29,6 +29,8 @@ public sealed class EscalationBackgroundServiceSlotRoleTests
 
     private sealed class ScriptedRole(params IGenericResult<bool>[] answers) : ISlotRole
     {
+        public string? SlotName => null;
+
         private int _next;
 
         public int Asked => _next;

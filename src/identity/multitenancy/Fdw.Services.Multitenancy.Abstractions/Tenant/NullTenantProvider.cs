@@ -9,10 +9,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Multitenancy.Abstractions;
 
 /// <summary>
-/// Null-object implementation of <see cref="ITenantProvider"/>, registered by the SingleTenant
-/// multitenancy option. All operations return failure so callers that guard on <c>IsSuccess</c>
-/// skip tenant resolution without crashing.
+/// Null-object implementation of <see cref="ITenantProvider"/>: every operation fails with a coded "not available", so a caller that guards on <c>IsSuccess</c>
+/// skips tenant resolution without crashing.
 /// </summary>
+/// <remarks>
+/// Nothing that ships registers it (FDW-6528). The SingleTenant multitenancy option used to, and a host that ran it could not judge a run started for a person, because
+/// the judge asks the tenant provider whether the person may act in the tenant and whether it is the global one; the option now registers the configured provider, which
+/// answers both from the configuration database. It stays for a consumer that builds its own host and wants a provider that answers nothing.
+/// </remarks>
 public sealed class NullTenantProvider : ITenantProvider
 {
     /// <inheritdoc />

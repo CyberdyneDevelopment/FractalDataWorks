@@ -51,6 +51,10 @@ public sealed partial class ScheduleImplementationConfiguration : IScheduleImple
     public string PipelineName { get; set; } = string.Empty;
 
     /// <inheritdoc/>
+    // Why [NotStored]: the text is a row of the descriptions table under the description type Schedule, filled by the schedule provider once for every set it reads and
+    // written in the unit of the schedule's save (FDW-6208); the column is gone from sched.ScheduleConfiguration, so no read selects it and no save writes it. The member
+    // stays, so every caller of Description still gets the text.
+    [NotStored]
     public string? Description { get; set; }
 
     /// <inheritdoc/>
@@ -94,6 +98,31 @@ public sealed partial class ScheduleImplementationConfiguration : IScheduleImple
 
     /// <inheritdoc/>
     public int? TimeoutSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public Guid? RunGrantId { get; set; }
+
+    /// <inheritdoc/>
+    public int ConsecutiveFailures { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset? PausedAt { get; set; }
+
+    /// <inheritdoc/>
+    public string? PausedReason { get; set; }
+
+    /// <inheritdoc/>
+    public void ChangeEnabled(bool enabled)
+    {
+        if (enabled && !IsEnabled)
+        {
+            ConsecutiveFailures = 0;
+            PausedAt = null;
+            PausedReason = null;
+        }
+
+        IsEnabled = enabled;
+    }
 
     /// <summary>
     /// Gets or sets the run parameters the schedule passes to its pipeline on every run, by name (FDW-1108).
