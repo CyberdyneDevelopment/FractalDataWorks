@@ -1,3 +1,8 @@
 {
-  "firstVersions": {}
+  "firstVersions": {
+    "Fdw.Services.Descriptions": "1.6.0",
+    "Fdw.Services.Descriptions.Abstractions": "1.6.0",
+    "Fdw.Services.LanguageModels": "1.6.0",
+    "Fdw.Services.LanguageModels.Abstractions": "1.6.0"
+  }
 }
